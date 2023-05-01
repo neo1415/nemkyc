@@ -1,23 +1,45 @@
-import logo from './logo.svg';
 import './App.css';
+import React from 'react';
+import { Routes, Route, Router} from 'react-router-dom';
+import Hero from './Containers/Hero';
+import Home from './Pages/Home';
+import List from './Admin/Table';
+import ProtectedRoute from './Admin/Authentication/ProtectedRoute';
+import ResetPassword from './Admin/Authentication/ResetPassword';
+import { AuthContextProvider } from './Context/AuthContext';
+import AnimateRouters from './Components/AnimateRouters';
+import SignIn from './Admin/Authentication/SignIn';
+import SignUp from './Admin/Authentication/SignUp';
+import AdminHome from './Admin/AdminHome';
+import Login from './Admin/Login/Login';
 
 function App() {
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <AuthContextProvider>
+      <AnimateRouters />  
+        <Routes>
+
+        {/* <Route exact path="/login"
+            element = {<Login />} /> */}
+        <Route exact path="/signin"
+            element = {<SignIn />} />
+        <Route exact path="/signup"
+            element = {<SignUp />} />
+        <Route exact path="/resetpassword"
+            element = {<ResetPassword />} />
+
+        <Route exact path="/adminHome">
+              <Route index element = {  <ProtectedRoute><AdminHome /></ProtectedRoute>  } />
+              {/* <Route path='/adminHome/:id' element = { <ProtectedRoute><SingleUser /></ProtectedRoute>} /> */}
+            </Route>
+            <Route exact path="/list">
+              <Route index element = { <ProtectedRoute><List /></ProtectedRoute>   } />
+              {/* <Route path='/list/:id' element = {<ProtectedRoute><SingleUser /></ProtectedRoute>} /> */}
+            </Route>
+        </Routes>
+      </AuthContextProvider>
     </div>
   );
 }

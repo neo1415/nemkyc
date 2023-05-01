@@ -1,0 +1,102 @@
+// Define variables for commonly used colors
+$primary-color: #007bff;
+$secondary-color: #6c757d;
+$light-color: #f8f9fa;
+$dark-color: #343a40;
+
+// Style the entire multistep form container
+.multistep-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  background-color: $light-color;
+  border: 1px solid $secondary-color;
+
+  // Style each form step
+  .form-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+
+    h2 {
+      margin-bottom: 1rem;
+      color: $primary-color;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: $dark-color;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="date"],
+    select {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+      border: 1px solid $secondary-color;
+      border-radius: 0.25rem;
+    }
+
+    // input[type="file"] {
+    //   margin-bottom: 1rem;
+    // }
+
+    input[type="text"] {
+      margin-bottom: 1.5rem;
+      width: 25rem;
+      border-radius: 10px;
+    }
+
+    .radio-group,
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 1rem;
+
+      label {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        color: $dark-color;
+
+        input[type="radio"],
+        input[type="checkbox"] {
+          margin-right: 0.5rem;
+        }
+      }
+    }
+
+    button {
+      margin-top: .5rem;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 15px;
+      font-size: 1rem;
+      color: $light-color;
+      background-color: $primary-color;
+      cursor: pointer;
+      width: 9rem;
+      
+
+      &:hover {
+        background-color: darken($primary-color, 10%);
+      }
+    }
+  }
+}
+
+.flex-form{
+  display:flex;
+  // align-items: center;
+  justify-content: center;
+  column-gap: 7rem;
+}
+.button-flex{
+  display: flex;
+  column-gap: 4rem;
+}

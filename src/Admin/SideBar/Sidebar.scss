@@ -1,0 +1,86 @@
+.sidebar{
+    
+    width: 180px !important;
+    min-height: 100vh;
+    border-right: .5px solid lightgray;
+    position: fixed;
+    z-index: 5;
+    left: 0;
+    // background-color: var(--secondary-color);
+    color:white;
+    .Top{
+        height: 50px;
+        margin-top: 1rem;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        display: flex;
+        flex-direction: column;
+        p{
+            font-size: 15px;
+            font-weight: bold;
+            padding-left: 1px;
+        }
+        .logo{
+            width: 10rem;
+        }
+    }
+    hr{
+        height: 0;
+        border: .5px solid lightgray;
+    }
+    .center{
+        padding-left: 1px;
+        ul{
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            li{
+                display: flex;
+                align-items: center;
+                padding: 5px;
+                height: 50px;
+                cursor: pointer;
+                color: white !important;
+                &:hover{
+                    // background-color: var(--primary-color) !important;
+                    color: #bf2e46 !important;
+                }
+                &:active{
+                    // background-color: var(--primary-color) !important;
+                    color: #bf2e46 !important;
+                }
+                a{
+                    display: flex;
+                    align-items: center;
+                    padding: 5px ;
+                    width: 100vw;
+                    cursor: pointer;
+                    color: white !important;
+                }
+            }
+        }
+    }
+}
+
+.bottom{
+    padding-left: 1px;
+    // background-color: var(--primary-color) !important; 
+    display: flex;
+    align-items: flex-start;
+    cursor: pointer;
+
+    li{
+        display: flex;
+        align-items: center;
+        padding: 5px;
+        height: 50px;
+        cursor: pointer;
+        color: white !important;
+        color: #bf2e46 !important;
+        &:hover{
+            // background-color: var(--primary-color) !important;
+            color: #bf2e46 !important;
+        }
+}
+}

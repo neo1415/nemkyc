@@ -1,0 +1,49 @@
+.login{
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+
+    .loginTitle{
+        text-align: center;
+    }
+
+    form{
+        display: flex;
+        flex-direction: column !important;
+    }
+
+    label{
+        text-align: center;
+    }
+
+    input{
+        width: 400px;
+        height: 50px;
+        margin: 30px 0;
+        border: 1px solid rgb(84, 170, 245);
+
+    }
+
+    .error{
+        font-size:12px ;
+        margin-top: 10px;
+        color: rgb(245, 29, 29);
+    }
+}
+.Inputs{
+    display: flex;
+    flex-direction: column;
+}
+
+.login button{
+
+        width: 150px;
+        height: 44px;
+        background-color: var(--secondary-color);
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+ 
+}

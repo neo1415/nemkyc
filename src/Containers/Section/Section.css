@@ -1,0 +1,142 @@
+section {
+  display: flex;
+  justify-content: center;
+  margin-top: -5rem;
+}
+
+.card {
+  position: relative;
+  margin: 50px;
+  width: 500px;
+  height: 400px;
+  overflow: hidden;
+  border-radius: 15px;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card::before section {
+  display: flex;
+  justify-content: center;
+}
+
+.card::before .card {
+  position: relative;
+  margin: 50px;
+  width: 500px;
+  height: 400px;
+  overflow: hidden;
+  border-radius: 15px;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card::before .card:hover {
+  transform: scale(1.05);
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.3);
+}
+
+.card::before .card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.card::before .card:hover img {
+  transform: translateY(-10px);
+}
+
+.card::before .overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 20px;
+  text-align: center;
+  transition: opacity 0.3s;
+  opacity: 0;
+}
+
+.card::before .card:hover .overlay {
+  opacity: 1;
+}
+
+.card::before .card:nth-child(1) {
+  animation: fadeUp 1s ease-in-out;
+}
+
+.card::before .card:nth-child(2) {
+  animation: fadeUp 1s ease-in-out 0.5s;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card:hover {
+  transform: scale(1.05);
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.3);
+}
+
+.card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.card:hover img {
+  transform: translateY(-10px);
+}
+
+.overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  right: 0;
+  top: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 20px;
+  text-align: center;
+  transition: opacity 0.3s;
+  opacity: 1;
+}
+
+.card:hover .overlay {
+  opacity: 1;
+}
+
+.card:nth-child(1) {
+  animation: fadeUp 1s ease-in-out;
+}
+
+.card:nth-child(2) {
+  animation: fadeUp 1s ease-in-out 0.5s;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+h2 {
+  font-size: 4rem;
+}

@@ -1,0 +1,86 @@
+.listContainer{
+       padding: 0px 20px;
+    margin: 0px;
+    display: flex;
+    flex:6;
+    z-index: 3;
+ 
+    
+    .AdminContainer{
+        display: flex;
+        flex-direction: column;
+        padding:  20px 5px 20px 20px; 
+        position: absolute;
+        margin-top: 2rem;
+        left: 12%;
+        width: 100%;
+
+      
+    }
+    .listTitle{
+        font-weight: 500;
+        color: gray;
+        margin-bottom: 15px;
+    }
+}
+
+.widget{
+    display: flex;
+    padding: 20px;
+    gap: 20px;
+    margin-top: 3rem;
+
+}
+.Middle{
+    -webkit-box-shadow:2px 4px 10px 1px rgba(0,0,0,0.082);
+    box-shadow: 2px 4px 10px 1px rgba(0, 0, 0, 0.082);
+    padding: 0px;
+}
+.topBar{
+    height: 65px;
+    -webkit-box-shadow:2px 4px 10px 1px rgba(0,0,0,0.082);
+    box-shadow: 2px 4px 10px 1px rgba(0, 0, 0, 0.082);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2rem 4rem 1rem;
+    position: fixed;
+    width: 85%;
+    top: 4%;
+    z-index: 1000;
+    background-color: var(--primary-color);
+    .adminSearch{
+        width: 16rem;
+        height: 2.5rem;
+        border-radius: 5px;
+        background-color: white;
+        border: 1px solid rgb(75, 144, 235);
+        border-right: 0px solid transparent !important;
+        border-bottom-right-radius: 0px !important;
+        border-top-right-radius: 0px !important;
+
+    }
+
+}
+
+.css-i4bv87-MuiSvgIcon-root {
+    height:-1em;
+}
+.searchIcon{
+    margin-top: 1.5rem;
+    border: 1px solid rgb(75, 144, 235);
+    border-left: 0px solid transparent !important;
+    border-bottom-left-radius: 0px !important;
+    border-top-left-radius: 0px !important;
+    height: 2.5rem;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.adminHead{
+    position:'relative';
+    
+}
