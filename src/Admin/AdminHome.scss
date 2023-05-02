@@ -2,7 +2,6 @@
        padding: 0px 20px;
     margin: 0px;
     display: flex;
-    flex:6;
     z-index: 3;
  
     
@@ -12,8 +11,8 @@
         padding:  20px 5px 20px 20px; 
         position: absolute;
         margin-top: 2rem;
-        left: 12%;
-        width: 100%;
+        left: 13%;
+        width: 85%;
 
       
     }
@@ -35,20 +34,20 @@
     -webkit-box-shadow:2px 4px 10px 1px rgba(0,0,0,0.082);
     box-shadow: 2px 4px 10px 1px rgba(0, 0, 0, 0.082);
     padding: 0px;
+    display: flex;
 }
 .topBar{
     height: 65px;
-    -webkit-box-shadow:2px 4px 10px 1px rgba(0,0,0,0.082);
-    box-shadow: 2px 4px 10px 1px rgba(0, 0, 0, 0.082);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 2rem 4rem 1rem;
+    padding: 2rem 0rem 1rem;
     position: fixed;
     width: 85%;
     top: 4%;
     z-index: 1000;
-    background-color: var(--primary-color);
+    background-color: white;
+    margin-right: 3rem;
     .adminSearch{
         width: 16rem;
         height: 2.5rem;
@@ -67,12 +66,11 @@
     height:-1em;
 }
 .searchIcon{
-    margin-top: 1.5rem;
     border: 1px solid rgb(75, 144, 235);
     border-left: 0px solid transparent !important;
     border-bottom-left-radius: 0px !important;
     border-top-left-radius: 0px !important;
-    height: 2.5rem;
+    height: 2.6rem;
     border-radius: 5px;
     display: flex;
     align-items: center;
@@ -84,3 +82,11 @@
     position:'relative';
     
 }
+
+.coList{
+ width: 60%;   
+}
+
+.inList{
+    width: 65%;   
+   }

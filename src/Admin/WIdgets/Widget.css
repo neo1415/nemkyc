@@ -1,5 +1,6 @@
 .widget {
   display: flex;
+  margin-top: 5rem;
   flex: 1;
   padding: 10px;
   justify-content: space-between;
@@ -18,7 +19,7 @@
 .widget .left .titler {
   font-weight: bold;
   font-size: 14px;
-  color: var(--gray-color);
+  color: brown;
 }
 
 .widget .left .counter {

@@ -9,6 +9,8 @@ import SideBar from './SideBar/SideBar';
 // import Account from './Accounts/Account';
 import { UserAuth } from '../Context/AuthContext'
 import { SearchOutlined } from '@material-ui/icons';
+import Individual from './homeAdmin/corporateAdmin';
+import List from './homeAdmin/Table';
 
 const AdminHome = () => {
   const {user} = UserAuth()
@@ -27,7 +29,6 @@ const AdminHome = () => {
       <div className='items' style={{display:'flex'}}>
       
         <p style={{color:'black', fontSize:18, fontWeight:"800", marginRight:10, color:'#bf2e46'}}> {user && user.displayName}Ademola Daniel</p>
-        <div style={{borderRadius:20, height:35, width:35,backgroundColor:'blue', display:'flex', justifyContent:'center'}}><p style={{color:'white',fontSize:20, fontWeight:800, position:'absolute'}}>A D</p></div>
 
       {/* <div className='item'>
         <NotificationsNoneOutlined />
@@ -41,19 +42,18 @@ const AdminHome = () => {
     <div className='list-container ' style={{display:'flex'}}>   
       <Widget type='user' />
       <Widget type='basic' />
-      <Widget type='exec' />
     </div>   
     <div className='Middle' style={{display:'flex', marginTop:35}}>
-    <div className='adminHead' style={{flex:3, position:'relative'}}>
-      <Table />
+
+    <div className='coList' style={{flex:3}}>
+      <List />
     </div>
-    {/* <div className='adminList' style={{flex:3}}>
-      <Account />
-    </div> */}
+
+    <div className='inList' style={{flex:3}}>
+     <Individual />
+    </div> 
     </div>   
-    {/* <div className='adminList' style={{flex:3}}>
-     <Contact />
-    </div>   */}
+ 
     </div>
     </div>
   )

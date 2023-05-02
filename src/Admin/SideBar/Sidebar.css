@@ -1,4 +1,5 @@
 .sidebar {
+  background-color: brown;
   width: 180px !important;
   min-height: 100vh;
   border-right: .5px solid lightgray;
@@ -11,8 +12,9 @@
 .sidebar .Top {
   height: 50px;
   margin-top: 1rem;
+  background-color: white;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   display: flex;
   flex-direction: column;
@@ -25,7 +27,7 @@
 }
 
 .sidebar .Top .logo {
-  width: 10rem;
+  width: 4rem;
 }
 
 .sidebar hr {
@@ -49,15 +51,19 @@
   padding: 5px;
   height: 50px;
   cursor: pointer;
-  color: white !important;
+  color: gold;
+  font-weight: 600;
+  text-decoration: none;
 }
 
 .sidebar .center ul li:hover {
-  color: #bf2e46 !important;
+  background-color: white;
+  color: brown;
 }
 
 .sidebar .center ul li:active {
-  color: #bf2e46 !important;
+  background-color: white;
+  color: brown;
 }
 
 .sidebar .center ul li a {
@@ -65,8 +71,9 @@
   align-items: center;
   padding: 5px;
   width: 100vw;
+  text-decoration: none;
   cursor: pointer;
-  color: white !important;
+  color: white;
 }
 
 .bottom {
@@ -82,10 +89,9 @@
   padding: 5px;
   height: 50px;
   cursor: pointer;
-  color: white !important;
-  color: #bf2e46 !important;
+  color: white;
 }
 
 .bottom li:hover {
-  color: #bf2e46 !important;
+  color: white;
 }

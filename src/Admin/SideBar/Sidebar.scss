@@ -1,5 +1,5 @@
 .sidebar{
-    
+    background-color: brown;
     width: 180px !important;
     min-height: 100vh;
     border-right: .5px solid lightgray;
@@ -11,8 +11,9 @@
     .Top{
         height: 50px;
         margin-top: 1rem;
+        background-color: white;
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         justify-content: center;
         display: flex;
         flex-direction: column;
@@ -22,7 +23,7 @@
             padding-left: 1px;
         }
         .logo{
-            width: 10rem;
+            width: 4rem;
         }
     }
     hr{
@@ -41,22 +42,25 @@
                 padding: 5px;
                 height: 50px;
                 cursor: pointer;
-                color: white !important;
+                color: gold ;
+                font-weight: 600;
+                text-decoration: none;
                 &:hover{
-                    // background-color: var(--primary-color) !important;
-                    color: #bf2e46 !important;
+                    background-color: white;
+                    color: brown ;
                 }
                 &:active{
-                    // background-color: var(--primary-color) !important;
-                    color: #bf2e46 !important;
+                    background-color: white;
+                    color: brown ;
                 }
                 a{
                     display: flex;
                     align-items: center;
                     padding: 5px ;
                     width: 100vw;
+                    text-decoration: none;
                     cursor: pointer;
-                    color: white !important;
+                    color: white;
                 }
             }
         }
@@ -76,11 +80,10 @@
         padding: 5px;
         height: 50px;
         cursor: pointer;
-        color: white !important;
-        color: #bf2e46 !important;
+        color: white;
         &:hover{
             // background-color: var(--primary-color) !important;
-            color: #bf2e46 !important;
+            color: white;
         }
 }
 }

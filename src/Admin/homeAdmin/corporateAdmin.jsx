@@ -1,26 +1,29 @@
-import { DataGrid } from "@mui/x-data-grid";
-import { userColumns} from "../Table/datatablesource";
-import { Link } from "react-router-dom";
+import { DataGrid } from '@mui/x-data-grid';
+import { userColumns} from "../Individual/datatablesource";
+// import { Link } from "react-router-dom";
 import { useState, useEffect,useContext } from "react";
-import { GridToolbar } from "@mui/x-data-grid";
-import { GridToolbarContainer } from "@mui/x-data-grid";
+
+// import { GridToolbar } from "@mui/x-data-grid";
+import {GridToolbarContainer} from '@mui/x-data-grid';
 import { GridToolbarExport } from "@mui/x-data-grid";
 import { useNavigate } from "react-router-dom";
 import { collection, getDocs, deleteDoc, doc,onSnapshot, orderBy, query } from "firebase/firestore";
-import {auth, db } from "../../APi/index";
-import { useAuthState } from 'react-firebase-hooks/auth';
+import { db } from "../../APi/index";
+// import {AuthContext} from '../../Context/AuthContext'
+import SideBar from "../SideBar/SideBar";
+// import Status from "./Status";
 
 
-const List = () => {
+
+const Individual = () => {
   const [data, setData] = useState([]);
-  const [approved, setApproved] = useState(false);
   // const {currentUser} = useContext(AuthContext)
-  const navigate=useNavigate()
+  // const navigate=useNavigate()
  
-    const [user] = useAuthState(auth)
+  
   
   useEffect(()=> {
-    const dataRef = collection(db, 'users')
+    const dataRef = collection(db, 'individuals')
     const q = query(dataRef, orderBy('createdAt', 'desc'));
     onSnapshot(q,(snapshot) => {
       const data = snapshot.docs.map((doc) => ({
@@ -41,7 +44,7 @@ const List = () => {
 
   const handleDelete = async (id) => {
     try {
-      await deleteDoc(doc(db, "users", id));
+      await deleteDoc(doc(db, "individuals", id));
       setData(data.filter((item) => item.id !== id));
     } catch (err) {
       console.log(err);
@@ -49,7 +52,7 @@ const List = () => {
   };
 
   const handleView = async (id) => {
-    navigate('/list/' + id)
+    // navigate('/list/' + id)
   };
 
   function CustomToolbar() {
@@ -96,10 +99,10 @@ const List = () => {
     },
   ];
   return (
-    <div className="list" style={{marginLeft:'-5rem', marginRight:'-4rem',height:'55vh', width:'81%', position:"relative",overflow:'hidden'}}>
-      <div className="datatable" style={{height:'65vh'}}>
-      <div className="datatableTitle" style={{fontSize:20}}>
-        CV Review
+    <div className="list"  style={{marginLeft:'-13rem',height:'50vh', width:'81%', position:"relative" ,overflow:'hidden'}}>
+      <div className="datatable">
+      <div className="datatableTitle">
+        Individual KYC
       </div>
       <DataGrid
 
@@ -107,7 +110,8 @@ const List = () => {
         className="datagrid"
         rows={data}
         columns={userColumns}
-        pageSize={4}
+        pageSize={2}
+        rowsPerPageOptions={[2,5]}
 
       />
     </div>
@@ -118,5 +122,5 @@ const List = () => {
 
 };
 
-export default List;
+export default Individual;
 

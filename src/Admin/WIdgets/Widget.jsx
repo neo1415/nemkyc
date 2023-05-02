@@ -19,7 +19,7 @@ let data;
 switch(type){
   case 'user':
     data={
-      title:'USERS',
+      title:'Corporate',
       query: 'users',
       link:'see all Users',
       icon: <PersonOutlineOutlined className='icon' />,
@@ -29,21 +29,11 @@ switch(type){
 
     case 'basic':
     data={
-      title:'Basic Pathway',
-      query: 'registration',
+      title:'Individuals',
+      query: 'individuals',
       link:'View all Customers',
       icon: <PersonOutlineOutlined className='icon' />,
-      to:'/employ'
-    };
-    break;
-
-    case 'exec':
-    data={
-      title:'Executive PathWay',
-      query: 'Exec-Registration',
-      link:'view All Customers',
-      icon: <PersonOutlineOutlined className='icon' />,
-      to:'/employ-exec'
+      to:'/individual-list'
     };
     break;
     default:
