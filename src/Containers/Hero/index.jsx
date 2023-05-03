@@ -1,22 +1,27 @@
 import React from "react";
 import "./index.scss";
-import image1 from './bg1.jpg'
-import image2 from './bg2.jpg'
-import image3 from './bg3.jpg'
+import image from './hero.png'
+import { Link } from 'react-router-dom';
 
 const Hero = () => {
   return (
-    <section className="hero">
-      <div className="hero-content">
-        <h1 className="hero-tagline"><span>Welcome</span> To NEM insurance</h1>
-        <button className="cta-button">Get Started</button>
-      </div>
-      <div className="hero-images">
-        {/* <img src={image1} alt="Image 1" /> */}
-        <img src={image2} alt="Image 2" />
-        <img src={image3} alt="Image 3" />
-      </div>
-    </section>
+    <div className="hero-flex">
+<div className="content">
+  <h2 class="heading">Trusted Identity Verification for Today's Digital World</h2>
+  <p class="sub">Streamlined KYC and CDD Solutions for Secure Online Transactions.</p>
+<a className="smooth-scroll" href='#section'>
+  <button class="main__button">Get started</button>
+  </a>
+</div>
+<div className="image">
+<img src={image} className="hero-image" />
+<div className="circle">c</div>
+</div>
+
+ 
+</div>
+
+
   );
 };
 

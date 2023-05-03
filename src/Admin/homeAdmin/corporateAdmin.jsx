@@ -1,5 +1,5 @@
 import { DataGrid } from '@mui/x-data-grid';
-import { userColumns} from "../Individual/datatablesource";
+import { UserColumns} from "../Individual/datatablesource";
 // import { Link } from "react-router-dom";
 import { useState, useEffect,useContext } from "react";
 
@@ -109,7 +109,7 @@ const Individual = () => {
 
         className="datagrid"
         rows={data}
-        columns={userColumns}
+        columns={UserColumns}
         pageSize={2}
         rowsPerPageOptions={[2,5]}
 

@@ -1,7 +1,6 @@
 import React,{useEffect} from 'react'
 import './Widget.scss'
-import { PersonOutlineOutlined } from '@material-ui/icons'
-import { KeyboardArrowDown, KeyboardArrowUp , ShoppingBagOutlined } from '@material-ui/icons'
+import { HiArrowCircleUp, HiArrowCircleDown, HiUser, HiUsers } from 'react-icons/hi'
 import { query, where, collection, getDocs, } from 'firebase/firestore';
 import { db } from '../../APi/index'
 import { useState } from 'react';
@@ -22,7 +21,7 @@ switch(type){
       title:'Corporate',
       query: 'users',
       link:'see all Users',
-      icon: <PersonOutlineOutlined className='icon' />,
+      icon: <HiUser className='icon' />,
       to:'/list'
     };
     break;
@@ -32,7 +31,7 @@ switch(type){
       title:'Individuals',
       query: 'individuals',
       link:'View all Customers',
-      icon: <PersonOutlineOutlined className='icon' />,
+      icon: <HiUsers className='icon' />,
       to:'/individual-list'
     };
     break;
@@ -92,7 +91,7 @@ useEffect(() => {
         </div>
         <div className='right'>
         <div className={`percentage ${diff < 0 ? "negative" : "positive"}`}>
-          {diff < 0 ? <KeyboardArrowDown/> : <KeyboardArrowUp/> }
+          {diff < 0 ? <HiArrowCircleDown/> : <HiArrowCircleUp/> }
           {diff} %
         </div>
             {data.icon}
