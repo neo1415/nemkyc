@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 
 const Section = () => {
   return (
-<section>
+<section id='section'>
 <Link to='/corporate-kyc'>
   <div class="card">
     <img src={image1} alt="Image 1" />

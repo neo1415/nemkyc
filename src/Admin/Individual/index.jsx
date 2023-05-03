@@ -1,5 +1,5 @@
 import { DataGrid } from '@mui/x-data-grid';
-import { userColumns} from "../Table/datatablesource";
+import { UserColumns} from "./datatablesource";
 // import { Link } from "react-router-dom";
 import { useState, useEffect,useContext } from "react";
 import './Table.scss'
@@ -114,7 +114,7 @@ const Individual = () => {
 
         className="datagrid"
         rows={data}
-        columns={userColumns.concat(actionColumn)}
+        columns={UserColumns.concat(actionColumn)}
         pageSize={9}
         rowsPerPageOptions={[9]}
         checkboxSelection

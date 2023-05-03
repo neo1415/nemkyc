@@ -8,7 +8,7 @@ import SideBar from './SideBar/SideBar';
 // import Contact from './homeAdmin/Contact';
 // import Account from './Accounts/Account';
 import { UserAuth } from '../Context/AuthContext'
-import { SearchOutlined } from '@material-ui/icons';
+import { HiSearch } from 'react-icons/hi';
 import Individual from './homeAdmin/corporateAdmin';
 import List from './homeAdmin/Table';
 
@@ -22,7 +22,7 @@ const AdminHome = () => {
       <div className='search' style={{display:'flex'}}>
         <input type='text' placeholder=' Search pages' className='adminSearch'/>
         <div className='searchIcon'>
-        <SearchOutlined />
+        <HiSearch />
         </div>
         
       </div>
