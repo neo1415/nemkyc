@@ -174,25 +174,20 @@ uploadTask.on('state_changed',
       <form onSubmit={handleSubmit}>
         {step === 1 && (
           <div className="form-step">
-            <h2>Step 1: Company Details</h2>
+            <h2>Personal Information</h2>
             <div className='flex-form'>
             <div className='flex-one'>
-            <label htmlFor="insured">Insured:</label>
-            <input type="text" id="insured" name="insured" value={formData.insured} onChange={handleChange} required />
+            <input type="text" id="insured" placeholder='Insured' name="insured" value={formData.insured} onChange={handleChange} required />
 
-            <label htmlFor="contactAddress">Contact Address:</label>
-            <input type="text" id="contactAddress" name="contactAddress" value={formData.contactAddress} onChange={handleChange} required />
+            <input type="text" id="contactAddress" placeholder="Contact's Address" name="contactAddress" value={formData.contactAddress} onChange={handleChange} required />
 
-            <label htmlFor="contactTelephoneNumber">Contact Telephone Number:</label>
-            <input type="text" id="contactTelephoneNumber" name="contactTelephoneNumber" value={formData.contactTelephoneNumber} onChange={handleChange} required />
+            <input type="text" id="contactTelephoneNumber" placeholder="Contact's Telephone Number" name="contactTelephoneNumber" value={formData.contactTelephoneNumber} onChange={handleChange} required />
 
-            <label htmlFor="occupation">Occupation:</label>
-            <input type="email" id="occupation" name="occupation" value={formData.occupation} onChange={handleChange} required />
+            <input type="text" placeholder='Occupation' id="occupation" name="occupation" value={formData.occupation} onChange={handleChange} required />
 
-            <label htmlFor="gender">Gender</label>
             <select id="gender" name="gender" size="1"
              value={formData.gender} onChange={handleChange} required >
-                <option value="Choose Company Type"></option>
+                <option value="Gender">Gender</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
             </select> 
@@ -202,23 +197,17 @@ uploadTask.on('state_changed',
             </div>
 
             <div className='flex-two'>
-            <label htmlFor="mothersMaidenName">Mother's Maiden Name:</label>
-            <input type="text" id="mothersMaidenName" name="mothersMaidenName" value={formData.mothersMaidenName} onChange={handleChange} required />
+            <input type="text" id="mothersMaidenName" placeholder="Mother's Maiden Name" name="mothersMaidenName" value={formData.mothersMaidenName} onChange={handleChange} required />
             
-            <label htmlFor="employersName">Employer's Name:</label>
-            <input type="text" id="employersName" name="employersName" value={formData.employersName} onChange={handleChange} required />
+            <input type="text" placeholder="Employer's Name" id="employersName" name="employersName" value={formData.employersName} onChange={handleChange} required />
 
-            <label htmlFor="employersTelephoneNumber">Employer's Telephone Number:</label>
-            <input type="text" id="employersTelephoneNumber" name="employersTelephoneNumber" value={formData.employersTelephoneNumber} onChange={handleChange} required />
+            <input type="text" id="employersTelephoneNumber" placeholder="Employer's Telephone Number" name="employersTelephoneNumber" value={formData.employersTelephoneNumber} onChange={handleChange} required />
             
-            <label htmlFor="employersAddress">Employer's Address:</label>
-            <input type="text" id="employersAddress" name="employersAddress" value={formData.employersAddress} onChange={handleChange} required />
+            <input type="text" id="employer'sAddress" placeholder='Employers Address' name="employersAddress" value={formData.employersAddress} onChange={handleChange} required />
 
-            <label htmlFor=" city">City:</label>
-            <input type="text" id=" city" name="city" value={formData.city} onChange={handleChange} required />
+            <input type="text" placeholder='City' id=" city" name="city" value={formData.city} onChange={handleChange} required />
             
-            <label htmlFor=" state">State:</label>
-            <input type="text" id=" state" name="state" value={formData.state} onChange={handleChange} required /> 
+            <input type="text" id=" state" placeholder='State' name="state" value={formData.state} onChange={handleChange} required /> 
         </div>
             </div>
      
@@ -229,37 +218,34 @@ uploadTask.on('state_changed',
         {step === 2 && (
           <div className="form-step">
             <h2>Step 2: Directors Prosignature</h2>
-
-            <label htmlFor="country">Country:</label>
-            <input type="text" id=" country" name="country" value={formData.country} onChange={handleChange} required />
+            <div className='flex-form'>
+            <div className='flex-one'>
+            <input type="text" id=" country" placeholder='Country' name="country" value={formData.country} onChange={handleChange} required />
             
-            <label htmlFor=" nationality">Nationality:</label>
-            <input type="text" id=" nationality" name="nationality" value={formData.nationality} onChange={handleChange} required />
+            <input type="text" id=" nationality" placeholder='Nationality' name="nationality" value={formData.nationality} onChange={handleChange} required />
             
-            <label htmlFor="residentialAddress">Residential Address:</label>
-            <input type="text" id="residentialAddress" name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required />
+            <input type="text" id="residentialAddress" placeholder='Residential Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required />
             
-            <label htmlFor="officeAddress">Office Address:</label>
-            <input type="text" id="officeAddress" name="officeAddress" value={formData.officeAddress} onChange={handleChange} required />
+            <input type="text" id="officeAddress" placeholder='Office Address' name="officeAddress" value={formData.officeAddress} onChange={handleChange} required />
 
-            <label htmlFor=" GSMno">GSM Number:</label>
-            <input type="text" id=" GSMno" name="GSMno" value={formData.GSMno} onChange={handleChange} required />
+            <input type="text" id=" GSMno" placeholder='GSM Number' name="GSMno" value={formData.GSMno} onChange={handleChange} required />
 
-             <label htmlFor=" emailAddress">Email Address:</label>
-            <input type="email" id="emailAddress" name="emailAddress" value={formData.emailAddress} onChange={handleChange} required />
+            </div>
+        
+            <div className='flex-two'>
 
-            <label htmlFor="identification">Gender</label>
+            <input type="email" id="emailAddress" placeholder='Email Address:' name="emailAddress" value={formData.emailAddress} onChange={handleChange} required />
+
             <select id="identification" name="identification" size="1"
              value={formData.identification} onChange={handleChange} required >
-                <option value="Choose Identification Type"></option>
+                <option value="Choose Identification Type">Identification</option>
                 <option value="drivers licence">Drivers Licence</option>
                 <option value="international passport">International Passport</option>
                 <option value="national ID">National ID</option>
                 <option value="voter's card">Voter's Card</option>
             </select> 
-
-            <label htmlFor="identificationNumber">Identification Number:</label>
-            <input type="text" id="identificationNumber" name="identificationNumber" value={formData.identificationNumber} onChange={handleChange} required />
+            
+            <input type="text" id="identificationNumber" placeholder='Identification Number' name="identificationNumber" value={formData.identificationNumber} onChange={handleChange} required />
 
             <label htmlFor="issuedDate">Issued Date:</label>
             <input type="date" id="issuedDate" name="issuedDate" value={formData.issuedDate} onChange={handleChange} required />
@@ -267,20 +253,32 @@ uploadTask.on('state_changed',
             <label htmlFor="expiryDate">expiry Date:</label>
             <input type="date" id="expiryDate" name="expiryDate" value={formData.expiryDate} onChange={handleChange} required />
 
-            <label htmlFor="annualIncomeRange">Annual Income Range</label>
+           
+          </div>
+          </div>
+
+        <div className='button-flex'>
+            <button  onClick={prevStep}>Previous</button>
+            <button type="button" onClick={nextStep}>Next</button>
+        </div>
+      </div>
+    )}
+
+ {step === 3 && (
+      <div className="form-step">
+        <h2>Step 3: Account Details</h2> 
             <select id="annualIncomeRange" name="annualIncomeRange" size="1"
              value={formData.annualIncomeRange} onChange={handleChange} required >
-                <option value="Choose Income Range"></option>
+                <option value="Choose Income Range">Annual Income Range</option>
                 <option value="lessThanIMillion">Less Than 1 Million</option>
                 <option value="1million-4million">1 Million - 4 Million</option>
                 <option value="4.1million-10million">4.1 Million - 10 Million</option>
                 <option value="morethan10million">More than 10 Million</option>
             </select> 
 
-            <label htmlFor="premiumPaymentSource">Premium Payment Source</label>
             <select id="premiumPaymentSource" name="premiumPaymentSource" size="1"
              value={formData.premiumPaymentSource} onChange={handleChange} required >
-                <option value="Choose Income Source"></option>
+                <option value="Choose Income Source">Premium Payment Source</option>
                 <option value="salaryOrBusinessIncome">Salary or Business Income</option>
                 <option value="investmentsOrDividends">Investments or Dividends</option>
             </select> 
@@ -294,60 +292,14 @@ uploadTask.on('state_changed',
                 {error && <div className='error'>{error}</div>}
                 {signature && <div className='error'>{signature.name}</div>}
               </div>
-{/* 
-        <label htmlFor="employmentStatus">Employment Status:</label>
-        <div className="checkbox-group">
-          <label htmlFor="employed">
-            <input type="checkbox" id="employed" name="employmentStatus" value="employed" onChange={handleChange} />
-            Employed
-          </label>
-          <label htmlFor="unemployed">
-            <input type="checkbox" id="unemployed" name="employmentStatus" value="unemployed" onChange={handleChange} />
-            Unemployed
-          </label>
-          <label htmlFor="student">
-            <input type="checkbox" id="student" name="employmentStatus" value="student" onChange={handleChange} />
-            Student
-          </label>
-        </div> */}
-        <div className='button-flex'>
-            <button disabled={per !== null && per < 100} type="button" onClick={prevStep}>Previous</button>
-            <button type="submit" onClick={handleSubmit}>Submit</button>
+
+              <div className='button-flex'>
+            <button type="button" onClick={prevStep}>Previous</button>
+            <button type="submit" disabled={per !== null && per < 100}  onClick={handleSubmit}>Submit</button>
         </div>
       </div>
-    )}
-
-    {/* {step === 3 && (
-      <div className="form-step">
-        <h2>Step 3: Account Details</h2> */}
-        {/* <label htmlFor="social-media">Social Media:</label>
-        <select id="social-media" name="howDidYouHear" value={formData.howDidYouHear} onChange={handleChange} multiple required>
-          <option value="">Select all that apply</option>
-          <option value="facebook">Facebook</option>
-          <option value="twitter">Twitter</option>
-          <option value="instagram">Instagram</option>
-          <option value="linkedin">LinkedIn</option>
-        </select>
-
-        <label htmlFor="other-source">Other Source:</label>
-        <input type="text" id="other-source" name="howDidYouHear" value={formData.howDidYouHear} onChange={handleChange} />
-
-       */}
-        {/* <label htmlFor="accountNumber">Account Number:</label>
-            <input type="text" id="accountNumber" name="accountNumber" value={formData.accountNumber} onChange={handleChange} required />
-
-            <label htmlFor="bankName">Bank Name:</label>
-            <input type="text" id="bankName" name="bankName" value={formData.bankName} onChange={handleChange} required />
-
-            <label htmlFor="bankBranch">Bank Branch Body:</label>
-            <input type="text" id="bankBranch" name="bankBranch" value={formData.bankBranch} onChange={handleChange} required />
-
-            <label htmlFor="accountOpeningDate">Account Opening Date:</label>
-            <input type="date" id="accountOpeningDate" name="accountOpeningDate" value={formData.accountOpeningDate} onChange={handleChange} required />
-
-      </div>
       
-    )} */}
+    )} 
 
     {step === 4 && (
       <div className="form-step">

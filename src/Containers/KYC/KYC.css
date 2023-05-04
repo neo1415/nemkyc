@@ -3,21 +3,23 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  margin-left: -5rem;
+  border: none;
   padding: 2rem;
-  background-color: brown;
-  border: 1px solid #6c757d;
+  background-color: white;
 }
 
 .multistep-form .form-step {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: center;
   width: 100%;
 }
 
 .multistep-form .form-step h2 {
   margin-bottom: 1rem;
-  color: #007bff;
+  color: brown;
 }
 
 .multistep-form .form-step label {
@@ -32,27 +34,17 @@
 .multistep-form .form-step select {
   width: 100%;
   padding: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   border: 1px solid #6c757d;
   border-radius: 0.25rem;
-}
-
-.multistep-form .form-step input[type="text"],
-.multistep-form .form-step input[type="radio"],
-.multistep-form .form-step input[type="checkbox"],
-.multistep-form .form-step input[type='date'],
-.multistep-form .form-step input[type="email"] {
-  margin-bottom: 1.5rem;
+  width: 20rem;
   border-radius: 10px;
 }
 
-.multistep-form .form-step input[type="text"]:focus,
-.multistep-form .form-step input[type="radio"]:focus,
-.multistep-form .form-step input[type="checkbox"]:focus,
-.multistep-form .form-step input[type='date']:focus,
-.multistep-form .form-step input[type="email"]:focus {
-  border: 2px solid brown;
-  outline: none;
+.multistep-form .form-step input[type="text"] {
+  margin-bottom: 1.5rem;
+  width: 20rem;
+  border-radius: 10px;
 }
 
 .multistep-form .form-step .radio-group,
@@ -90,8 +82,9 @@
 }
 
 .multistep-form .form-step button:hover {
-  background-color: gold;
-  color: brown;
+  background-color: #670a0a;
+  color: gold;
+  scale: 1.1;
 }
 
 .flex-form {
@@ -103,9 +96,4 @@
 .button-flex {
   display: flex;
   column-gap: 4rem;
-}
-
-.flex-one, .flex-two {
-  display: flex;
-  flex-direction: column;
 }

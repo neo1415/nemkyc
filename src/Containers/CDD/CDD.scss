@@ -9,8 +9,9 @@ $dark-color: #343a40;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   padding: 2rem;
-  background-color: $light-color;
+  background-color: brown;
   border: 1px solid $secondary-color;
 
   // Style each form step
@@ -46,10 +47,18 @@ $dark-color: #343a40;
     //   margin-bottom: 1rem;
     // }
 
-    input[type="text"] {
+    input[type="text"],
+    input[type="radio"],
+    input[type="checkbox"],
+    input[type='date'],
+    input[type="email"]{
       margin-bottom: 1.5rem;
-      width: 25rem;
       border-radius: 10px;
+    
+      &:focus {
+        border: 2px solid brown;
+        outline: none;
+      }
     }
 
     .radio-group,
@@ -78,13 +87,14 @@ $dark-color: #343a40;
       border-radius: 15px;
       font-size: 1rem;
       color: $light-color;
-      background-color: $primary-color;
+      background-color: brown;
       cursor: pointer;
       width: 9rem;
       
 
       &:hover {
-        background-color: darken($primary-color, 10%);
+        background-color: gold;
+        color: brown;
       }
     }
   }
@@ -99,4 +109,8 @@ $dark-color: #343a40;
 .button-flex{
   display: flex;
   column-gap: 4rem;
+}
+.flex-one, .flex-two{
+  display: flex;
+  flex-direction: column;
 }

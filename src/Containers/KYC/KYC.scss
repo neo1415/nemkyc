@@ -9,20 +9,23 @@ $dark-color: #343a40;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  margin-left: -5rem;
+  border: none;
   padding: 2rem;
-  background-color: $light-color;
-  border: 1px solid $secondary-color;
+  background-color: white;
 
   // Style each form step
   .form-step {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     align-items: center;
     width: 100%;
 
     h2 {
       margin-bottom: 1rem;
-      color: $primary-color;
+      color: brown;
     }
 
     label {
@@ -37,9 +40,11 @@ $dark-color: #343a40;
     select {
       width: 100%;
       padding: 0.5rem;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
       border: 1px solid $secondary-color;
       border-radius: 0.25rem;
+      width: 20rem;
+      border-radius: 10px;
     }
 
     // input[type="file"] {
@@ -48,7 +53,7 @@ $dark-color: #343a40;
 
     input[type="text"] {
       margin-bottom: 1.5rem;
-      width: 25rem;
+      width: 20rem;
       border-radius: 10px;
     }
 
@@ -78,13 +83,15 @@ $dark-color: #343a40;
       border-radius: 15px;
       font-size: 1rem;
       color: $light-color;
-      background-color: $primary-color;
+      background-color: brown;
       cursor: pointer;
       width: 9rem;
       
 
       &:hover {
-        background-color: darken($primary-color, 10%);
+        background-color: rgb(103, 10, 10);
+        color:gold;
+        scale: 1.1;
       }
     }
   }
@@ -100,3 +107,8 @@ $dark-color: #343a40;
   display: flex;
   column-gap: 4rem;
 }
+
+// input[type="date"]::before {
+//   content: "Date";
+
+// }
