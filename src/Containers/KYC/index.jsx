@@ -5,7 +5,9 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { setDoc,doc, Timestamp } from 'firebase/firestore'
 import { serverTimestamp } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
-import { motion } from "framer-motion"
+import { motion } from "framer-motion";
+import image from './pexels-polina-tankilevitch-7741615 (2).jpg'
+import { HiCloudUpload } from 'react-icons/hi';
 
 function KYC() {
   const [step, setStep] = useState(1);
@@ -166,15 +168,25 @@ uploadTask.on('state_changed',
   console.log(formData)
 
   return (
+    <div className='form-page'>
+       <div className='picture'>
+          <img src={image} className='form-img' />
+        </div>
     <motion.div
-    initial={{width:0}}
-    animate={{width:'100%'}}
-    exit={{x:window.innerWidth, transition:{duration:0.1}}}
+     initial={{ opacity: 0, x: 0}}
+        animate={{ opacity: 1, x: 0 }}
+        transition= {{ duration:.5, ease:'easeOut' }}
+        exit={{ opacity: 0, x: 0 }}
      className="multistep-form">
       <form onSubmit={handleSubmit}>
         {step === 1 && (
-          <div className="form-step">
-            <h2>Personal Information</h2>
+          <motion.div
+               initial={{ opacity: 0, x: 0}}
+            animate={{ opacity: 1, x: 0 }}
+            transition= {{ duration:.5, ease:'easeOut' }}
+            exit={{ opacity: 0, x: 50 }}
+           className="form-step">
+            <h3>Personal Information</h3>
             <div className='flex-form'>
             <div className='flex-one'>
             <input type="text" id="insured" placeholder='Insured' name="insured" value={formData.insured} onChange={handleChange} required />
@@ -212,12 +224,17 @@ uploadTask.on('state_changed',
             </div>
      
             <button type="button" onClick={nextStep}>Next</button>
-          </div>
+          </motion.div>
         )}
 
         {step === 2 && (
-          <div className="form-step">
-            <h2>Step 2: Directors Prosignature</h2>
+          <motion.div
+     initial={{ opacity: 0, x: 50}}
+            animate={{ opacity: 1, x:0 }}
+            transition= {{ duration:.5, ease:'easeOut' }}
+            exit={{ opacity: 0, x: 50 }}
+           className="form-step">
+            <h3>Directors Profile</h3>
             <div className='flex-form'>
             <div className='flex-one'>
             <input type="text" id=" country" placeholder='Country' name="country" value={formData.country} onChange={handleChange} required />
@@ -261,12 +278,17 @@ uploadTask.on('state_changed',
             <button  onClick={prevStep}>Previous</button>
             <button type="button" onClick={nextStep}>Next</button>
         </div>
-      </div>
+      </motion.div>
     )}
 
  {step === 3 && (
-      <div className="form-step">
-        <h2>Step 3: Account Details</h2> 
+  <motion.div
+        initial={{ opacity: 0, x: 50}}
+            animate={{ opacity: 1, x: 0 }}
+            transition= {{ duration:.5, ease:'easeOut' }}
+            exit={{ opacity: 0, x: 50 }}
+       className="form-step">
+        <h3>Account Details</h3> 
             <select id="annualIncomeRange" name="annualIncomeRange" size="1"
              value={formData.annualIncomeRange} onChange={handleChange} required >
                 <option value="Choose Income Range">Annual Income Range</option>
@@ -286,7 +308,14 @@ uploadTask.on('state_changed',
             <label htmlFor=" date">Date:</label>
             <input type="date" id=" date" name="date" value={formData.date} onChange={handleChange} required />
 
-            <label htmlFor="signature">Signature:</label>
+            <label htmlFor="signature" className='upload'>
+            <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
+           <h4>Upload Your Signature</h4> 
+           <div className='upload-icon'>
+           <HiCloudUpload />   
+           </div>
+            </div>
+            </label>
             <input type="file" id="signature" name="signature" onChange={changeHandler} />
             <div className='Output'>
                 {error && <div className='error'>{error}</div>}
@@ -297,13 +326,13 @@ uploadTask.on('state_changed',
             <button type="button" onClick={prevStep}>Previous</button>
             <button type="submit" disabled={per !== null && per < 100}  onClick={handleSubmit}>Submit</button>
         </div>
-      </div>
+      </motion.div>
       
     )} 
 
     {step === 4 && (
       <div className="form-step">
-        <h2> Confirmation</h2>
+        <h3> Confirmation</h3>
         
             <div className='button-flex'>
             <button type="button" onClick={prevStep}>Previous</button>
@@ -313,7 +342,8 @@ uploadTask.on('state_changed',
       
     )}
   </form>
-</motion.div>
+    </motion.div>
+    </div>
 );
 }
 

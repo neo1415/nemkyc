@@ -5,12 +5,18 @@ $light-color: #f8f9fa;
 $dark-color: #343a40;
 
 // Style the entire multistep form container
-.multistep-form {
-  display: flex;
-  flex-direction: column;
+.form-page{
+  margin-top: -5.5rem;
   align-items: center;
   justify-content: center;
-  margin-left: -5rem;
+}
+.multistep-form {
+  display: flex;
+  align-items: center;
+  padding-left: 0;
+  margin-left: 0;
+  justify-content: center;
+
   border: none;
   padding: 2rem;
   background-color: white;
@@ -21,7 +27,6 @@ $dark-color: #343a40;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    width: 100%;
 
     h2 {
       margin-bottom: 1rem;
@@ -36,12 +41,14 @@ $dark-color: #343a40;
 
     input[type="text"],
     input[type="email"],
-    input[type="date"],
-    select {
+    input[type="date"]
+    {
       width: 100%;
       padding: 0.5rem;
       margin-bottom: 1.5rem;
-      border: 1px solid $secondary-color;
+      height: 2rem;
+      border: none;
+      background-color: #6c757d1e;
       border-radius: 0.25rem;
       width: 20rem;
       border-radius: 10px;
@@ -72,6 +79,7 @@ $dark-color: #343a40;
         input[type="radio"],
         input[type="checkbox"] {
           margin-right: 0.5rem;
+          height: 1.5rem;
         }
       }
     }
@@ -80,7 +88,7 @@ $dark-color: #343a40;
       margin-top: .5rem;
       padding: 0.5rem 1rem;
       border: none;
-      border-radius: 15px;
+      border-radius: 8px;
       font-size: 1rem;
       color: $light-color;
       background-color: brown;
@@ -101,14 +109,59 @@ $dark-color: #343a40;
   display:flex;
   // align-items: center;
   justify-content: center;
-  column-gap: 7rem;
 }
 .button-flex{
   display: flex;
   column-gap: 4rem;
+  margin-bottom: 2rem;
 }
 
 // input[type="date"]::before {
 //   content: "Date";
 
 // }
+select{
+  height: 2.5rem !important;
+  padding: 0.5rem;
+  margin-bottom: 1.5rem;
+  border: none !important;
+  background-color: #6c757d1e;
+  border-radius: 0.25rem;
+  width: 20rem;
+  border-radius: 10px;
+}
+
+
+[type="file"]{
+display: none;
+}
+.upload{
+  background-color: brown;
+  color: white;
+  font-size: 1.2rem;
+  width: 9rem;
+  padding: 1rem;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  svg{
+    font-size: 4rem;
+    color: white;
+  }
+}
+h4{
+  color: white;
+  font-size: .9rem;
+  text-align: center;
+}
+.upload-icon{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 5rem;
+  height: 5rem;
+  border: 1px dotted white;
+  border-radius: 50%;
+}

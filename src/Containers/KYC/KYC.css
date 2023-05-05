@@ -19,7 +19,7 @@
 
 .multistep-form .form-step h2 {
   margin-bottom: 1rem;
-  color: brown;
+  color: #800020;
 }
 
 .multistep-form .form-step label {
@@ -76,7 +76,7 @@
   border-radius: 15px;
   font-size: 1rem;
   color: #f8f9fa;
-  background-color: brown;
+  background-color: #800020;
   cursor: pointer;
   width: 9rem;
 }
