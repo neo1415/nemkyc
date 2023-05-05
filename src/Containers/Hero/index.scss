@@ -18,7 +18,7 @@
 
 
 .main__button {
-  background: brown;
+  background: #800020;
   color: rgb(255, 238, 48);
   font-size: 1.3rem;
   font-weight: 500;
@@ -34,7 +34,7 @@
   animation: fade-in 0.6s ease-out both 0.2s;
   &:hover {
     background: rgb(255, 238, 48);
-    color: brown;
+    color: #800020;
     transform: scale(1.1); /* use transform instead of scale to animate the scaling */
 
   }
@@ -51,7 +51,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: brown;
+  color: #800020;
   z-index: 20;
   animation: slide-in-top 0.5s ease-out both 0.4s;
 }
@@ -69,14 +69,14 @@
   z-index: 0;
   height: 30rem;
   width: 30rem;
-  background-color: brown;
+  background-color: #800020;
   border-radius: 50%;
   position: absolute;
   animation: slide-in-right 0.5s ease-out both 0.3s;
 }
 
 .heading{
-  color: brown;
+  color: #800020;
 }
 
  /* Keyframe animations */

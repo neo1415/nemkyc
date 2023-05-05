@@ -1,5 +1,5 @@
 .sidebar{
-    background-color: brown;
+    background-color: #800020;
     width: 180px !important;
     min-height: 100vh;
     border-right: .5px solid lightgray;
@@ -47,11 +47,11 @@
                 text-decoration: none;
                 &:hover{
                     background-color: white;
-                    color: brown ;
+                    color: #800020 ;
                 }
                 &:active{
                     background-color: white;
-                    color: brown ;
+                    color: #800020 ;
                 }
                 a{
                     display: flex;

@@ -5,6 +5,7 @@ import { setDoc,doc, Timestamp } from 'firebase/firestore'
 import { serverTimestamp } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { motion } from "framer-motion"
+import image from './pexels-polina-tankilevitch-7741615 (2).jpg'
 
 function CDD() {
   const [step, setStep] = useState(1);
@@ -102,19 +103,27 @@ function CDD() {
   console.log(formData)
 
   return (
+    <div className='form-page'>
+       <div className='picture'>
+              <img src={image} className='form-img' />
+            </div>
     <motion.div
-    initial={{width:0}}
-    animate={{width:'100%'}}
-    exit={{x:window.innerWidth, transition:{duration:0.1}}}className="multistep-form">
+        initial={{ opacity: 0, x: 0}}
+        animate={{ opacity: 1, x: 0 }}
+        transition= {{ duration:.5, ease:'easeOut' }}
+        exit={{ opacity: 0, x: 0 }} className="multistep-form">
+
       <form onSubmit={handleSubmit}>
         {step === 1 && (
           <motion.div
-          initial={{width:0}}
-          animate={{width:'100%'}}
-          exit={{x:window.innerWidth, transition:{duration:0.1}}}
+               initial={{ opacity: 0, x: 0}}
+            animate={{ opacity: 1, x: 0 }}
+            transition= {{ duration:.5, ease:'easeOut' }}
+            exit={{ opacity: 0, x: 50 }}
            className="form-step">
-            <h2>Company Details</h2>
+            <h3>Company Details</h3>
             <div className='flex-form'>
+
             <div className='flex-one'>
             <input type="text" id="companyName" name="companyName" placeholder='Company Name' value={formData.companyName} onChange={handleChange} required />
 
@@ -140,7 +149,7 @@ function CDD() {
 
             <input type="text" placeholder='Incorporation State' id="incorporationState" name="incorporationState" value={formData.incorporationState} onChange={handleChange} required />
             
-            <select id="companyType" name="companyType" size="1"
+            <select id="companyType" name="companyType"
              value={formData.companyType} onChange={handleChange} required >
                 <option value="Choose Company Type">Company Type</option>
                 <option value="Sole-Proprietor">Sole Proprietor</option>
@@ -156,11 +165,13 @@ function CDD() {
 
         {step === 2 && (
           <motion.div
-    initial={{width:0}}
-    animate={{width:'100%'}}
-    exit={{x:window.innerWidth, transition:{duration:0.1}}} 
+     initial={{ opacity: 0, x: 50}}
+            animate={{ opacity: 1, x:0 }}
+            transition= {{ duration:.5, ease:'easeOut' }}
+            exit={{ opacity: 0, x: 50 }}
+
           className="form-step">
-            <h2>Director's Profile</h2>
+            <h3>Director's Profile</h3>
             <label htmlFor="dob">Date of Birth:</label>
             <input type="date" id="dob" name="dob" value={formData.dob} onChange={handleChange} required />
 
@@ -180,11 +191,12 @@ function CDD() {
 
     {step === 3 && (
       <motion.div
-    initial={{width:0}}
-    animate={{width:'100%'}}
-    exit={{x:window.innerWidth, transition:{duration:0.1}}}
+        initial={{ opacity: 0, x: 50}}
+            animate={{ opacity: 1, x: 0 }}
+            transition= {{ duration:.5, ease:'easeOut' }}
+            exit={{ opacity: 0, x: 50 }}
       className="form-step">
-        <h2>Account Details</h2>
+        <h3>Account Details</h3>
 
             <input type="text" id="accountNumber" placeholder='Account Number' name="accountNumber" value={formData.accountNumber} onChange={handleChange} required />
 
@@ -203,7 +215,8 @@ function CDD() {
 
     {step === 4 && (
       <div className="form-step">
-        <h2> Confirmation</h2>
+        <h3> Confirmation</h3>
+        
         
             <div className='button-flex'>
             <button type="button" onClick={prevStep}>Previous</button>
@@ -214,6 +227,7 @@ function CDD() {
     )}
   </form>
 </motion.div>
+  </div>
 );
 }
 

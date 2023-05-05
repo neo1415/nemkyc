@@ -5,21 +5,29 @@ $light-color: #f8f9fa;
 $dark-color: #343a40;
 
 // Style the entire multistep form container
+.form-page{
+  display: flex;
+  position: fixed;
+  margin-top: -5.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
 .multistep-form {
   display: flex;
-  flex-direction: column;
   align-items: center;
+
   justify-content: center;
   padding: 2rem;
   background-color: brown;
-  border: 1px solid $secondary-color;
+
 
   // Style each form step
   .form-step {
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 100%;
+ 
 
     h2 {
       margin-bottom: 1rem;
@@ -51,12 +59,19 @@ $dark-color: #343a40;
     input[type="radio"],
     input[type="checkbox"],
     input[type='date'],
-    input[type="email"]{
+    input[type="email"]
+    {
+      padding: 0.5rem;
       margin-bottom: 1.5rem;
+      height: 2.5rem;
+      border: none;
+      border-radius: 0.25rem;
+      width: 20rem;
       border-radius: 10px;
+      background-color: #6c757d1e;
     
       &:focus {
-        border: 2px solid brown;
+        border: .5px solid brown;
         outline: none;
       }
     }
@@ -104,7 +119,8 @@ $dark-color: #343a40;
   display:flex;
   // align-items: center;
   justify-content: center;
-  column-gap: 7rem;
+
+
 }
 .button-flex{
   display: flex;
@@ -113,4 +129,27 @@ $dark-color: #343a40;
 .flex-one, .flex-two{
   display: flex;
   flex-direction: column;
+  margin-left: 2rem;
+  margin-right: 2rem;
+}
+
+h3{
+  font-size: 1.5rem;
+
+}
+select{
+  height: 3rem !important;
+}
+.picture{
+  width: 30rem;
+  height: 100vh;
+  padding: 0;
+  margin: 0;
+  .form-img{
+    width: 100%;
+    height: 100vh;
+    filter: grayscale(0);
+    object-fit: cover;
+
+  }
 }
