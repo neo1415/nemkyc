@@ -1,12 +1,15 @@
 .app__container {
   width: 100%;
-  min-height: 100vh;
+  /* min-height: 100vh; */
   display: flex;
   flex-direction: column;
 
 }
+
 .app{
   display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .app__flex {
@@ -21,8 +24,8 @@
   padding: 0rem 0;
 }
 
-@media screen and (max-width: 450px) {
+/* @media screen and (max-width: 450px) {
   .app__wrapper {
     padding: 0rem 0rem 0rem;
   }
-}
+} */

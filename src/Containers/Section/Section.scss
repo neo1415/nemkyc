@@ -1,6 +1,10 @@
 section {
     display: flex;
     justify-content: center;
+    align-items: center;
+    @media screen and (max-width:768px) {
+      flex-direction: column;
+    }
     
   }
   
@@ -12,6 +16,10 @@ section {
     overflow: hidden;
     border-radius: 15px;
     transition: transform 0.3s, box-shadow 0.3s;
+    @media screen and (max-width:768px) {
+      width: 350px;
+      height: 350px;
+    }
     &::before{
         section {
   display: flex;
@@ -140,5 +148,5 @@ section {
   }
   
   h2{
-    font-size: 4rem;
+    font-size: 3rem;
   }

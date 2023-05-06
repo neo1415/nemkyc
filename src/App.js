@@ -13,11 +13,13 @@ import SignUp from './Admin/Authentication/SignUp';
 import AdminHome from './Admin/AdminHome';
 import Login from './Admin/Login/Login';
 import Individual from './Admin/Individual';
+import Navbar from './Components/Navbar';
 
 function App() {
 
   return (
     <div className="App">
+    {/* <Navbar /> */}
       <AuthContextProvider>
       <AnimateRouters />  
         <Routes>
