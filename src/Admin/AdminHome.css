@@ -25,7 +25,7 @@
   display: flex;
   padding: 20px;
   gap: 20px;
-  margin-top: 3rem;
+  margin-top: -3rem;
 }
 
 .Middle {
@@ -43,7 +43,7 @@
   padding: 2rem 0rem 1rem;
   position: fixed;
   width: 85%;
-  top: 4%;
+  top: 0;
   z-index: 1000;
   background-color: white;
   margin-right: 3rem;
@@ -85,5 +85,10 @@
 }
 
 .inList {
-  width: 65%;
+  width: 63%;
+  margin-left: -1rem;
+}
+
+.list-container {
+  margin-top: -6rem;
 }

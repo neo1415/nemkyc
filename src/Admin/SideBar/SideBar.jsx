@@ -24,7 +24,8 @@ const SideBar = () => {
   return (
     <div className='sidebar'>
         <div className='Top'>
-        <img className='logo' src={logo}/>
+        {/* <img className='logo' src={logo}/> */}
+        <h5>NEM</h5>
             <p>{user && user.displayName}</p>
         </div>
         <hr></hr>
