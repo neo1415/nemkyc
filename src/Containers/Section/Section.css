@@ -1,6 +1,13 @@
 section {
   display: flex;
   justify-content: center;
+  align-items: center;
+}
+
+@media screen and (max-width: 768px) {
+  section {
+    flex-direction: column;
+  }
 }
 
 .card {
@@ -11,6 +18,13 @@ section {
   overflow: hidden;
   border-radius: 15px;
   transition: transform 0.3s, box-shadow 0.3s;
+}
+
+@media screen and (max-width: 768px) {
+  .card {
+    width: 350px;
+    height: 350px;
+  }
 }
 
 .card::before section {
@@ -137,5 +151,5 @@ section {
 }
 
 h2 {
-  font-size: 4rem;
+  font-size: 3rem;
 }

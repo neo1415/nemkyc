@@ -10,6 +10,9 @@ nav {
     margin: 0 auto;
     z-index: 3;
     transform: translateY(-50%);
+    @media screen and (max-width:768px) {
+      
+    }
   }
   .nav-logo{
     width: 4rem;
