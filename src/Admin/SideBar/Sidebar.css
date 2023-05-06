@@ -6,13 +6,13 @@
   position: fixed;
   z-index: 5;
   left: 0;
+  margin-top: -80px;
   color: white;
 }
 
 .sidebar .Top {
   height: 50px;
   margin-top: 1rem;
-  background-color: white;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -94,4 +94,10 @@
 
 .bottom li:hover {
   color: white;
+}
+
+h5 {
+  color: white;
+  font-size: 2rem;
+  font-weight: 800;
 }

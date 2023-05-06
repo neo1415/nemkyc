@@ -12,7 +12,7 @@ $dark-color: #343a40;
   align-items: center;
   justify-content: center;
   background-image: url('./pexels-andrea-piacquadio-3762940.jpg');
-  @media screen and (max-width:768px) {
+  @media screen and (max-width:1000px) {
     position:relative;
   
   }
@@ -24,7 +24,7 @@ $dark-color: #343a40;
   justify-content: center;
   padding: 2rem;
   background-color: brown;
-  @media screen and (max-width:768px) {
+  @media screen and (max-width:1000px) {
     padding: 0;
 }
 
@@ -75,7 +75,7 @@ $dark-color: #343a40;
       width: 18rem;
       border-radius: 10px;
       background-color: #6c757d1e;
-      @media screen and (max-width:768px) {
+      @media screen and (max-width:1000px) {
         height: 1.5rem;
     }
     
@@ -129,7 +129,7 @@ $dark-color: #343a40;
   display:flex;
   // align-items: center;
   justify-content: center;
-  @media screen and (max-width:768px) {
+  @media screen and (max-width:1000px) {
     flex-direction: column;
 }
 }
@@ -157,7 +157,7 @@ select{
   height: 100vh;
   padding: 0;
   margin: 0;
-  @media screen and (max-width:768px) {
+  @media screen and (max-width:1000px) {
     display: none;
   }
   .form-img{

@@ -4,7 +4,7 @@ section {
   align-items: center;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 1000px) {
   section {
     flex-direction: column;
   }
@@ -20,7 +20,7 @@ section {
   transition: transform 0.3s, box-shadow 0.3s;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 1000px) {
   .card {
     width: 350px;
     height: 350px;

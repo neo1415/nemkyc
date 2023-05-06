@@ -5,7 +5,7 @@
   animation: fade-in 0.6s ease-out both;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 1000px) {
   .hero-flex {
     flex-direction: column;
     width: 100%;
@@ -20,7 +20,7 @@
   animation: slide-in-left 0.5s ease-out both 0.1s;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 1000px) {
   .content {
     width: 100%;
     margin-left: 0rem;
@@ -85,7 +85,7 @@
   animation: slide-in-bottom 0.5s ease-out both 0.5s;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 1000px) {
   .hero-image {
     width: 20rem;
     height: 30rem;
@@ -102,7 +102,7 @@
   animation: slide-in-right 0.5s ease-out both 0.3s;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 1000px) {
   .circle {
     height: 23rem;
     width: 23rem;
@@ -113,7 +113,7 @@
   color: #800020;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 1000px) {
   .heading {
     width: 100%;
     font-size: 2.5rem;
