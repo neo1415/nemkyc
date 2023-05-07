@@ -8,12 +8,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { motion } from "framer-motion";
 import image from './pexels-polina-tankilevitch-7741615 (2).jpg'
 import { HiCloudUpload } from 'react-icons/hi';
+import { HiXCircle } from 'react-icons/hi';
+import { Link } from 'react-router-dom';
 
 function KYC() {
   const [step, setStep] = useState(1);
   const [signature, setSignature] = useState('');
   const [per, setPerc] = useState(null)
   const [error , setError]= useState(null)
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     insured: '',
     contactAddress: '',
@@ -113,11 +116,48 @@ uploadTask.on('state_changed',
     }
   };
 
+  const resetForm = () => {
+    setFormData({ 
+      insured: '',
+      contactAddress: '',
+      occupation: '',
+      gender: '',
+      dateOfBirth: '',
+      mothersMaidenName: '',
+      employersName: '',
+      employersTelephoneNumber:'',
+      employersAddress:'',
+      city: '',
+      state:'',
+      country:'',                                                                                                                                                                                                                                               
+      nationality:'',
+      residentialAddress:'',
+      officeAddress:'',
+      GSMno:'',
+      emailAddress:'',
+      identification:[],
+      identificationNumber:'',
+      issuedDate:'',
+      expiryDate:'',
+      annualIncomeRange:[],
+      premiumPaymentSource:[],
+      date: '',
+      signature: null,
+     });
+    setIsSubmitted(false);
+  };
+
+  const closeModal = () => {
+    // setFormData({ date: '' });
+    setIsSubmitted(false);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
       console.log('Submitting form data...');
     try {
       console.log('it works')
+      setIsSubmitted(true);
       await setDoc(doc(db, "individuals", uuidv4()), {
         
         insured: formData.insured,
@@ -178,6 +218,17 @@ uploadTask.on('state_changed',
         transition= {{ duration:.5, ease:'easeOut' }}
         exit={{ opacity: 0, x: 0 }}
      className="multistep-form">
+
+{isSubmitted ? (
+        <div className="modal">
+          <div className="modal-content">
+          <div className='close' onClick={closeModal}><p><HiXCircle /> </p></div>
+            <h2>Thank you!</h2>
+            <p>Your form has been successfully submitted.</p>
+            <button onClick={resetForm}>Submit another form</button>
+          </div>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit}>
         {step === 1 && (
           <motion.div
@@ -223,7 +274,12 @@ uploadTask.on('state_changed',
         </div>
             </div>
      
+            <div className='button-flex'>
+            <Link to='/'>
+              <button type='button'>Home page</button>
+            </Link>
             <button type="button" onClick={nextStep}>Next</button>
+            </div>
           </motion.div>
         )}
 
@@ -342,6 +398,8 @@ uploadTask.on('state_changed',
       
     )}
   </form>
+      )
+}
     </motion.div>
     </div>
 );

@@ -123,4 +123,27 @@ export const userColumns = [
     headerName: "Account Opening Date",
     width: 125,     
   },
+  {
+    field: "$accountNumber",
+    headerName: "Dollar Account Number",
+    width: 125,     
+  },
+
+  {
+    field: "$bankName",
+    headerName: "Dollar Bank Name",
+    width: 125,     
+  },
+
+  {
+    field: "$bankBranch",
+    headerName: "Dollar Bank Branch",
+    width: 125,     
+  },
+
+  {
+    field: "$DollaraccountOpeningDate",
+    headerName: "Account Opening Date",
+    width: 125,     
+  },
 ];
