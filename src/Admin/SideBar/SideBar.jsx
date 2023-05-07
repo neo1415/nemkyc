@@ -3,6 +3,7 @@ import './Sidebar.scss'
 import logo from './logo-white.png'
 import { Link, useNavigate } from 'react-router-dom'
 import { UserAuth } from '../../Context/AuthContext'
+import { HiUser, HiUsers, HiDatabase } from 'react-icons/hi'
 
 const SideBar = () => {
   const {user, logout} = UserAuth()
@@ -33,17 +34,28 @@ const SideBar = () => {
             <ul>
               <Link to ='/adminHome'>
                   <li className='sideList'>
-                    Dashboard
+                  <p>
+                  Dashboard
+                  </p>
+                  <div className='icon'>
+                    <HiDatabase />
+                  </div>
                   </li>
                 </Link> 
               <Link to ='/list'>
                   <li className='sideList'>
-                    Corporate
+                    <p>Corporate</p>
+                    <div className='icon'>
+                    <HiUsers />
+                    </div> 
                   </li>
                 </Link> 
                 <Link to ='/individual-list'>
                   <li className='sideList'>
-                    Individual 
+                  <p>Individual</p>
+                  <div className='icon'>
+                    <HiUser />
+                    </div> 
                   </li>
                 </Link>
             </ul>
