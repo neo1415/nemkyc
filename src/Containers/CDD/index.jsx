@@ -6,9 +6,12 @@ import { serverTimestamp } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { motion } from "framer-motion"
 import image from './pexels-polina-tankilevitch-7741615 (2).jpg'
+import { HiXCircle } from 'react-icons/hi';
+import { Link } from 'react-router-dom';
 
 function CDD() {
   const [step, setStep] = useState(1);
+    const [isSubmitted, setIsSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     companyName: '',
     registeredCompanyAddress: '',
@@ -29,10 +32,10 @@ function CDD() {
     bankName:'',
     bankBranch:'',
     accountOpeningDate:'',
-    // accountNumber:'',
-    // bankName:'',
-    // bankBranch:'',
-    // accountOpeningDate:'',
+    $accountNumber:'',
+    $bankName:'',
+    $bankBranch:'',
+    $accountOpeningDate:'',
     // profilePicture: null,
     // gender: '',
     // dob: '',
@@ -55,11 +58,46 @@ function CDD() {
     }
   };
 
+    const resetForm = () => {
+    setFormData({
+    companyName: '',
+    registeredCompanyAddress: '',
+    contactTelephoneNumber: '',
+    emailAddress: '',
+    website: '',
+    contactPerson: '',
+    taxIdentificationNumber: '',
+    VATRegistrationNumber:'',
+    dateOfIncorporationRegistration:'',
+    incorporationState:'',
+    companyType:[],
+    firstName: '',
+    lastName:'',
+    residentialAddress:'',                                                                                                                                                                                                                                               
+    issuingBody:'',
+    accountNumber:'',
+    bankName:'',
+    bankBranch:'',
+    accountOpeningDate:'',
+    $accountNumber:'',
+    $bankName:'',
+    $bankBranch:'',
+    $accountOpeningDate:'',
+     })
+         setIsSubmitted(false)
+    }
+
+      const closeModal = () => {
+    // setFormData({ date: '' });
+    setIsSubmitted(false);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
       console.log('Submitting form data...');
     try {
       console.log('it works')
+      setIsSubmitted(true);
       await setDoc(doc(db, "users", uuidv4()), {
         
         companyName: formData.companyName,
@@ -113,6 +151,16 @@ function CDD() {
         transition= {{ duration:.5, ease:'easeOut' }}
         exit={{ opacity: 0, x: 0 }} className="multistep-form">
 
+        {isSubmitted ? (
+        <div className="modal">
+          <div className="modal-content">
+          <div className='close' onClick={closeModal}><p><HiXCircle /> </p></div>
+            <h2>Thank you!</h2>
+            <p>Your form has been successfully submitted.</p>
+            <button onClick={resetForm}>Submit another form</button>
+          </div>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit}>
         {step === 1 && (
           <motion.div
@@ -158,9 +206,14 @@ function CDD() {
             </select> 
         </div>
             </div>
-
+            <div className='button-flex'>
+            <Link to='/'>
+              <button type='button'>Home page</button>
+            </Link>
             <button type="button" onClick={nextStep}>Next</button>
+            </div>
           </motion.div>
+
         )}
 
         {step === 2 && (
@@ -207,7 +260,7 @@ function CDD() {
             <input type="date" id="accountOpeningDate" placeholder='Account Opening Date' name="accountOpeningDate" value={formData.accountOpeningDate} onChange={handleChange} required />
             <div className='button-flex'>
             <button type="button" onClick={prevStep}>Previous</button>
-            <button type="submit" onClick={handleSubmit}>Submit</button>
+            <button type="submit" onClick={nextStep}>Next</button>
         </div>
       </motion.div>
       
@@ -215,17 +268,32 @@ function CDD() {
 
     {step === 4 && (
       <div className="form-step">
-        <h3> Confirmation</h3>
-        
-        
+        <motion.div
+        initial={{ opacity: 0, x: 50}}
+            animate={{ opacity: 1, x: 0 }}
+            transition= {{ duration:.5, ease:'easeOut' }}
+            exit={{ opacity: 0, x: 50 }}
+      className="form-step">
+        <h3> Dollar Account Details</h3>
+
+            <input type="text" id="$accountNumber" placeholder='Account Number' name="$accountNumber" value={formData.$accountNumber} onChange={handleChange} required />
+
+            <input type="text" placeholder='Bank Name' id="$bankName" name="$bankName" value={formData.$bankName} onChange={handleChange} required />
+
+            <input type="text" id="$bankBranch" placeholder='Bank Branch Body' name="$bankBranch" value={formData.$bankBranch} onChange={handleChange} required />
+
+            <input type="date" id="$accountOpeningDate" placeholder='Account Opening Date' name="$accountOpeningDate" value={formData.$accountOpeningDate} onChange={handleChange} required />
             <div className='button-flex'>
             <button type="button" onClick={prevStep}>Previous</button>
-            <button type="submit">Submit</button>
+            <button type="submit" onClick={handleSubmit}>Submit</button>
+
         </div>
+      </motion.div>
       </div>
       
     )}
   </form>
+      )}
 </motion.div>
   </div>
 );

@@ -11,7 +11,7 @@ const Section = () => {
   <div class="card">
     <img src={image1} alt="Image 1" />
     <div class="overlay">
-      <h2>CORPORATE</h2>
+      <h2>CORPORATE<br/>FORM</h2>
     </div>
   </div>
   </Link>
@@ -19,7 +19,7 @@ const Section = () => {
   <div class="card">
     <img src={image2} alt="Image 2" />
     <div class="overlay">
-      <h2>INDIVIDUAL</h2>
+      <h2>INDIVIDUAL <br /> FORM</h2>
     </div>
   </div>
   </Link>

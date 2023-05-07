@@ -34,7 +34,7 @@ $dark-color: #343a40;
 
     h2 {
       margin-bottom: 1rem;
-      color: brown;
+      color: #800020;
     }
 
     label {
@@ -99,7 +99,7 @@ $dark-color: #343a40;
       border-radius: 8px;
       font-size: 1rem;
       color: $light-color;
-      background-color: brown;
+      background-color: #800020;
       cursor: pointer;
       width: 9rem;
       margin-bottom: 3.5rem;
@@ -148,7 +148,7 @@ select{
 display: none;
 }
 .upload{
-  background-color: brown;
+  background-color: #800020;
   color: white;
   font-size: 1.2rem;
   width: 9rem;
@@ -176,4 +176,55 @@ h4{
   height: 5rem;
   border: 1px dotted white;
   border-radius: 50%;
+}
+.modal {
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.modal-content h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.modal-content p {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.modal-content button {
+  background-color:#800020;
+  color: #fff;
+  padding: 1rem 2rem;
+  font-size: 1.5rem;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.modal-content button:hover {
+  background-color: rgb(122, 6, 6);
+}
+
+.close{
+  position: absolute;
+  right: 33%;
+  top: 30%;
+  color: #800020;
+  cursor: pointer;
 }

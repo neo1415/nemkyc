@@ -14,6 +14,7 @@ import AdminHome from './Admin/AdminHome';
 import Login from './Admin/Login/Login';
 import Individual from './Admin/Individual';
 import Navbar from './Components/Navbar';
+import Footer from './Containers/Footer';
 
 function App() {
 
@@ -48,6 +49,7 @@ function App() {
             </Route>
         </Routes>
       </AuthContextProvider>
+      <Footer />
     </div>
   );
 }
