@@ -28,11 +28,23 @@
   margin-top: -3rem;
 }
 
+@media screen and (max-width: 768px) {
+  .widget {
+    width: 35vh;
+  }
+}
+
 .Middle {
   -webkit-box-shadow: 2px 4px 10px 1px rgba(0, 0, 0, 0.082);
   box-shadow: 2px 4px 10px 1px rgba(0, 0, 0, 0.082);
   padding: 0px;
   display: flex;
+}
+
+@media screen and (max-width: 768px) {
+  .Middle {
+    flex-direction: column;
+  }
 }
 
 .topBar {
@@ -49,6 +61,12 @@
   margin-right: 3rem;
 }
 
+@media screen and (max-width: 768px) {
+  .topBar {
+    width: 55%;
+  }
+}
+
 .topBar .adminSearch {
   width: 16rem;
   height: 2.5rem;
@@ -58,6 +76,12 @@
   border-right: 0px solid transparent !important;
   border-bottom-right-radius: 0px !important;
   border-top-right-radius: 0px !important;
+}
+
+@media screen and (max-width: 768px) {
+  .topBar .adminSearch {
+    display: none;
+  }
 }
 
 .css-i4bv87-MuiSvgIcon-root {
@@ -76,6 +100,12 @@
   justify-content: center;
 }
 
+@media screen and (max-width: 768px) {
+  .searchIcon {
+    display: none;
+  }
+}
+
 .adminHead {
   position: 'relative';
 }
@@ -84,11 +114,46 @@
   width: 60%;
 }
 
+@media screen and (max-width: 1000px) {
+  .coList {
+    width: 100%;
+  }
+}
+
 .inList {
   width: 63%;
   margin-left: -1rem;
 }
 
+@media screen and (max-width: 1000px) {
+  .inList {
+    width: 100%;
+  }
+}
+
 .list-container {
   margin-top: -6rem;
+  display: flex;
+}
+
+@media screen and (max-width: 760px) {
+  .list-container {
+    flex-direction: column;
+  }
+}
+
+@media screen and (max-width: 1000) {
+  .corp {
+    margin-left: -3rem !important;
+    justify-self: center;
+    width: 92% !important;
+  }
+}
+
+@media screen and (max-width: 1000px) {
+  .ind {
+    margin-left: -3rem !important;
+    justify-self: center;
+    width: 92% !important;
+  }
 }

@@ -96,10 +96,10 @@ const List = () => {
     },
   ];
   return (
-    <div className="list" style={{marginLeft:'-5rem', marginRight:'-4rem',height:'55vh', width:'81%', position:"relative",overflow:'hidden'}}>
+    <div className="list corp " style={{marginLeft:'-5rem', marginRight:'-4rem',height:'55vh', width:'81%', position:"relative",overflow:'hidden'}}>
       <div className="datatable" style={{height:'65vh'}}>
       <div className="datatableTitle" style={{fontSize:20}}>
-        CV Review
+        Corporate KYC
       </div>
       <DataGrid
 

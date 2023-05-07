@@ -99,7 +99,7 @@ const Individual = () => {
     },
   ];
   return (
-    <div className="list"  style={{marginLeft:'-13rem',height:'50vh', width:'81%', position:"relative" ,overflow:'hidden'}}>
+    <div className="list ind"  style={{marginLeft:'-13rem',height:'50vh', width:'81%', position:"relative" ,overflow:'hidden'}}>
       <div className="datatable">
       <div className="datatableTitle">
         Individual KYC

@@ -28,7 +28,7 @@ const AdminHome = () => {
       </div>
       <div className='items' style={{display:'flex'}}>
       
-        <p style={{color:'black', fontSize:18, fontWeight:"800", marginRight:10, color:'#bf2e46'}}> {user && user.displayName}Ademola Daniel</p>
+        <p style={{color:'black', fontSize:18, fontWeight:"800", marginRight:10, color:'#bf2e46'}}> {user && user.displayName}Welcome</p>
 
       {/* <div className='item'>
         <NotificationsNoneOutlined />

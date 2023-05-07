@@ -17,7 +17,7 @@ section {
     border-radius: 15px;
     transition: transform 0.3s, box-shadow 0.3s;
     @media screen and (max-width:1000px) {
-      width: 350px;
+      width: 300px;
       height: 350px;
     }
     &::before{
