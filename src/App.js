@@ -15,6 +15,8 @@ import Login from './Admin/Login/Login';
 import Individual from './Admin/Individual';
 import Navbar from './Components/Navbar';
 import Footer from './Containers/Footer';
+import IndividualUser from './Admin/SingleUser/individualUser';
+import SingleUser from './Admin/SingleUser/SingleUser';
 
 function App() {
 
@@ -40,12 +42,12 @@ function App() {
             </Route>
             <Route exact path="/list">
               <Route index element = { <ProtectedRoute><List /></ProtectedRoute>   } />
-              {/* <Route path='/list/:id' element = {<ProtectedRoute><SingleUser /></ProtectedRoute>} /> */}
+              <Route path='/list/:id' element = {<ProtectedRoute><SingleUser /></ProtectedRoute>} />
             </Route>
 
             <Route exact path="/individual-list">
               <Route index element = { <ProtectedRoute><Individual /></ProtectedRoute>   } />
-              {/* <Route path='/list/:id' element = {<ProtectedRoute><SingleUser /></ProtectedRoute>} /> */}
+              <Route path='/individual-list/:id' element = {<ProtectedRoute><IndividualUser /></ProtectedRoute>} />
             </Route>
         </Routes>
       </AuthContextProvider>

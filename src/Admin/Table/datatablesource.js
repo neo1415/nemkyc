@@ -77,6 +77,12 @@ export const userColumns = [
   },
 
   {
+    field: "dob",
+    headerName: "Date Of Birth",
+    width: 125,     
+  },
+
+  {
     field: "firstName",
     headerName: "First Name",
     width: 125,     
@@ -99,6 +105,37 @@ export const userColumns = [
     headerName: "Issuing Body",
     width: 125,     
   },
+
+  {
+    field: "dob2",
+    headerName: "Date Of Birth 2",
+    width: 125,     
+  },
+
+  {
+    field: "firstName2",
+    headerName: "First Name 2",
+    width: 125,     
+  },
+
+  {
+    field: "lastName2",
+    headerName: "Last Name 2",
+    width: 125,     
+  },
+
+  {
+    field: "residentialAddress2",
+    headerName: "Residential Address 2",
+    width: 125,     
+  },
+
+  {
+    field: "issuingBody2",
+    headerName: "Issuing Body 2",
+    width: 125,     
+  },
+
 
   {
     field: "accountNumber",

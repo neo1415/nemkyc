@@ -18,7 +18,7 @@ import SideBar from "../SideBar/SideBar";
 const List = () => {
   const [data, setData] = useState([]);
   // const {currentUser} = useContext(AuthContext)
-  // const navigate=useNavigate()
+  const navigate=useNavigate()
  
   
   
@@ -52,7 +52,7 @@ const List = () => {
   };
 
   const handleView = async (id) => {
-    // navigate('/list/' + id)
+    navigate('/list/' + id)
   };
 
   function CustomToolbar() {
