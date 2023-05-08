@@ -10,6 +10,7 @@ import image from './pexels-polina-tankilevitch-7741615 (2).jpg'
 import { HiCloudUpload } from 'react-icons/hi';
 import { HiXCircle } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
+import Footer from '../Footer';
 
 function KYC() {
   const [step, setStep] = useState(1);
@@ -208,6 +209,7 @@ uploadTask.on('state_changed',
   console.log(formData)
 
   return (
+    <div className='forms' style={{display:'flex',flexDirection:'column' }}>
     <div className='form-page'>
        <div className='picture'>
           <img src={image} className='form-img' />
@@ -401,6 +403,9 @@ uploadTask.on('state_changed',
       )
 }
     </motion.div>
+
+    </div>
+    {/* <Footer /> */}
     </div>
 );
 }

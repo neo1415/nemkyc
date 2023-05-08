@@ -21,7 +21,7 @@ const Footer = () => {
     <li><a href="https://nem-insurance.com/career.php">Career</a></li>
     </ul>
     </div>
-    <hr></hr>
+    <hr className='hr'></hr>
     <div className="row">
     NEM insurance Plc Copyright © 2023 NEM Insurance Plc - All rights reserved 
     </div>
