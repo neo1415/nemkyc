@@ -24,10 +24,16 @@ function CDD() {
     dateOfIncorporationRegistration:'',
     incorporationState:'',
     companyType:[],
+    dob:'',
     firstName: '',
     lastName:'',
     residentialAddress:'',                                                                                                                                                                                                                                               
     issuingBody:'',
+    dob2:'',
+    firstName2: '',
+    lastName2:'',
+    residentialAddress2:'',                                                                                                                                                                                                                                               
+    issuingBody2:'',
     accountNumber:'',
     bankName:'',
     bankBranch:'',
@@ -71,10 +77,16 @@ function CDD() {
     dateOfIncorporationRegistration:'',
     incorporationState:'',
     companyType:[],
+    dob:'',
     firstName: '',
     lastName:'',
     residentialAddress:'',                                                                                                                                                                                                                                               
     issuingBody:'',
+    dob2:'',
+    firstName2: '',
+    lastName2:'',
+    residentialAddress2:'',                                                                                                                                                                                                                                               
+    issuingBody2:'',
     accountNumber:'',
     bankName:'',
     bankBranch:'',
@@ -111,10 +123,16 @@ function CDD() {
         dateOfIncorporationRegistration: formData.dateOfIncorporationRegistration,
         incorporationState:formData.incorporationState,
         companyType: formData.companyType,
+        dob: formData.dob,
         firstName: formData.firstName,
         lastName: formData.lastName,
         residentialAddress: formData.residentialAddress,
         issuingBody: formData.issuingBody,
+        dob2: formData.dob2,
+        firstName2: formData.firstName2,
+        lastName2: formData.lastName2,
+        residentialAddress2: formData.residentialAddress2,
+        issuingBody2: formData.issuingBody2,
         accountNumber: formData.accountNumber,
         bankName: formData.bankName,
         bankBranch: formData.bankBranch,
@@ -224,7 +242,10 @@ function CDD() {
             exit={{ opacity: 0, x: 50 }}
 
           className="form-step">
-            <h3>Director's Profile</h3>
+        <div className='flexer'>
+          <div className='flex-one'>
+   
+            <h3>Director's Profile 1</h3>
             <label htmlFor="dob">Date of Birth:</label>
             <input type="date" id="dob" name="dob" value={formData.dob} onChange={handleChange} required />
 
@@ -235,6 +256,23 @@ function CDD() {
             <input type="text" id="residentialAddress" placeholder='Residential Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required />
 
             <input type="text" id="issuingBody" placeholder='Issuing Body' name="issuingBody" value={formData.issuingBody} onChange={handleChange} required />
+          </div>
+          
+          <div className='flex-two'>
+            <h3>Director's Profile 2</h3>
+            <label htmlFor="dob">Date of Birth:</label>
+            <input type="date" id="dob2" name="dob2" value={formData.dob2} onChange={handleChange} required />
+
+            <input type="text" id=" firstName2" placeholder='First Name' name="firstName2" value={formData.firstName2} onChange={handleChange} required />
+
+            <input type="text" placeholder='Last Name' id="lastName2" name="lastName2" value={formData.lastName2} onChange={handleChange} required />
+
+            <input type="text" id="residentialAddress2" placeholder='Residential Address' name="residentialAddress2" value={formData.residentialAddress2} onChange={handleChange} required />
+
+            <input type="text" id="issuingBody2" placeholder='Issuing Body' name="issuingBody2" value={formData.issuingBody2} onChange={handleChange} required />
+            </div>
+            </div>
+
         <div className='button-flex'>
         <button type="button" onClick={prevStep}>Previous</button>
         <button type="button" onClick={nextStep}>Next</button>
