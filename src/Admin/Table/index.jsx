@@ -103,7 +103,7 @@ const List = () => {
         <SideBar />
       <div className="datatable">
       <div className="datatableTitle">
-        CV Review
+        Corporate KYC
       </div>
       <DataGrid
 

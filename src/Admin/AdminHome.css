@@ -54,7 +54,7 @@
   justify-content: space-between;
   padding: 2rem 0rem 1rem;
   position: fixed;
-  width: 85%;
+  width: 80%;
   top: 0;
   z-index: 1000;
   background-color: white;
@@ -111,7 +111,7 @@
 }
 
 .coList {
-  width: 60%;
+  width: 50%;
 }
 
 @media screen and (max-width: 1000px) {
@@ -121,13 +121,14 @@
 }
 
 .inList {
-  width: 63%;
-  margin-left: -1rem;
+  width: 50%;
+  margin-left: 3rem;
 }
 
 @media screen and (max-width: 1000px) {
   .inList {
     width: 100%;
+    margin-left: -1;
   }
 }
 
@@ -142,18 +143,27 @@
   }
 }
 
+.corp {
+  width: 95% !important;
+}
+
 @media screen and (max-width: 1000) {
   .corp {
-    margin-left: -3rem !important;
+    margin-left: -4rem !important;
     justify-self: center;
-    width: 92% !important;
+    width: 100% !important;
   }
+}
+
+.ind {
+  width: 95% !important;
+  margin-left: -7rem !important;
 }
 
 @media screen and (max-width: 1000px) {
   .ind {
-    margin-left: -3rem !important;
+    margin-left: -7rem !important;
     justify-self: center;
-    width: 92% !important;
+    width: 94% !important;
   }
 }

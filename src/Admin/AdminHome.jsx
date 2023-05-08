@@ -11,10 +11,12 @@ import { UserAuth } from '../Context/AuthContext'
 import { HiSearch } from 'react-icons/hi';
 import Individual from './homeAdmin/corporateAdmin';
 import List from './homeAdmin/Table';
+import Footer from '../Containers/Footer';
 
 const AdminHome = () => {
   const {user} = UserAuth()
   return (
+    <div className='AdminHome'>
     <div className='listContainer'>
         <SideBar />
     <div className='AdminContainer'>
@@ -55,6 +57,8 @@ const AdminHome = () => {
     </div>   
  
     </div>
+    </div>
+    {/* <Footer /> */}
     </div>
   )
 }

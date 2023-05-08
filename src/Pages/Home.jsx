@@ -5,6 +5,7 @@ import Hero from '../Containers/Hero';
 import CDD from './../Containers/CDD/index';
 import KYC from '../Containers/KYC';
 import Section from '../Containers/Section/section';
+import Footer from '../Containers/Footer';
 
 const Home = () => {
   return (
@@ -17,6 +18,7 @@ const Home = () => {
       <Navbar />
       <Hero />
       <Section />
+      <Footer />
     </motion.div>
   )
 }

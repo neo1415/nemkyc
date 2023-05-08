@@ -49,7 +49,7 @@ function App() {
             </Route>
         </Routes>
       </AuthContextProvider>
-      <Footer />
+    
     </div>
   );
 }
