@@ -6,7 +6,7 @@ import { setDoc,doc, Timestamp } from 'firebase/firestore'
 import { serverTimestamp } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { motion } from "framer-motion";
-import image from './pexels-polina-tankilevitch-7741615 (2).jpg'
+import image from './form2.jpg'
 import { HiCloudUpload } from 'react-icons/hi';
 import { HiXCircle } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
