@@ -37,7 +37,7 @@ const SingleUser = () => {
     const downloadPDF = () => {
         const doc = new jsPDF('p', 'pt', 'a4');
         const tableColumn = ['Field', 'Value'];
-        const tableRows = [      ['Company Name', data.companyName],
+        const tableRows = [ ['Company Name', data.companyName],
           ['Registered Company Address', data.registeredCompanyAddress],
           ['Contact Telephone Number', data.contactTelephoneNumber],
           ['Email Address', data.emailAddress],
@@ -211,19 +211,19 @@ const SingleUser = () => {
             <h1>Account Details(Dollars)</h1>
             <li className='form-list'>
                     <p>Account Number</p>
-                    <p className='info'>{data.accountNumber}</p>
+                    <p className='info'>{data.accountNumber2}</p>
             </li>
             <li className='form-list'>
                     <p>Bank Name</p>
-                    <p className='info'>{data.bankName}</p>
+                    <p className='info'>{data.bankName2}</p>
             </li>
             <li className='form-list'>
                     <p>Bank Branch Body</p>
-                    <p className='info'>{data.bankBranch}</p>
+                    <p className='info'>{data.bankBranch2}</p>
             </li>
             <li className='form-list'>
                     <p>Account Opening Date</p>
-                    <p className='info'>{data.accountOpeningDate}</p>
+                    <p className='info'>{data.accountOpeningDate2}</p>
             </li>
         </ul>
             </div>

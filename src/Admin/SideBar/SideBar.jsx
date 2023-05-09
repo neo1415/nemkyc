@@ -27,7 +27,7 @@ const SideBar = () => {
         <div className='Top'>
         {/* <img className='logo' src={logo}/> */}
         <h5>NEM</h5>
-            <p>{user && user.displayName}</p>
+            {/* <p>{user && user.email}</p> */}
         </div>
         <hr></hr>
         <div className='center'>
