@@ -137,6 +137,10 @@ function CDD() {
         bankName: formData.bankName,
         bankBranch: formData.bankBranch,
         accountOpeningDate: formData.accountOpeningDate,
+        $accountNumber: formData.$accountNumber,
+        $bankName: formData.$bankName,
+        $bankBranch: formData.$bankBranch,
+        $accountOpeningDate: formData.$accountOpeningDate,
         // complete:'Pending',
         createdAt: Timestamp.now().toDate().toString(),
         timestamp: serverTimestamp()
