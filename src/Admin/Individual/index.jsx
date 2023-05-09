@@ -52,7 +52,7 @@ const Individual = () => {
   };
 
   const handleView = async (id) => {
-    navigate('//individual-list/' + id)
+    navigate('/individual-list/' + id)
   };
 
   function CustomToolbar() {
