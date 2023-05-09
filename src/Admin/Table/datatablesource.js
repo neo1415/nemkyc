@@ -161,26 +161,26 @@ export const userColumns = [
     width: 125,     
   },
   {
-    field: "$accountNumber",
+    field: "accountNumber2",
     headerName: "Dollar Account Number",
     width: 125,     
   },
 
   {
-    field: "$bankName",
+    field: "bankName2",
     headerName: "Dollar Bank Name",
     width: 125,     
   },
 
   {
-    field: "$bankBranch",
+    field: "bankBranch2",
     headerName: "Dollar Bank Branch",
     width: 125,     
   },
 
   {
-    field: "$DollaraccountOpeningDate",
-    headerName: "Account Opening Date",
+    field: "accountOpeningDate2",
+    headerName: "Dollar Account Opening Date",
     width: 125,     
   },
 ];

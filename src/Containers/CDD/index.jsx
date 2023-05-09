@@ -38,10 +38,10 @@ function CDD() {
     bankName:'',
     bankBranch:'',
     accountOpeningDate:'',
-    $accountNumber:'',
-    $bankName:'',
-    $bankBranch:'',
-    $accountOpeningDate:'',
+    accountNumber2:'',
+    bankName2:'',
+    bankBranch2:'',
+    accountOpeningDate2:'',
     // profilePicture: null,
     // gender: '',
     // dob: '',
@@ -91,10 +91,10 @@ function CDD() {
     bankName:'',
     bankBranch:'',
     accountOpeningDate:'',
-    $accountNumber:'',
-    $bankName:'',
-    $bankBranch:'',
-    $accountOpeningDate:'',
+    accountNumber2:'',
+    bankName2:'',
+    bankBranch2:'',
+    accountOpeningDate2:'',
      })
          setIsSubmitted(false)
     }
@@ -137,10 +137,10 @@ function CDD() {
         bankName: formData.bankName,
         bankBranch: formData.bankBranch,
         accountOpeningDate: formData.accountOpeningDate,
-        $accountNumber: formData.$accountNumber,
-        $bankName: formData.$bankName,
-        $bankBranch: formData.$bankBranch,
-        $accountOpeningDate: formData.$accountOpeningDate,
+        accountNumber2: formData.accountNumber2,
+        bankName2: formData.bankName2,
+        bankBranch2: formData.bankBranch2,
+        accountOpeningDate2: formData.accountOpeningDate2,
         // complete:'Pending',
         createdAt: Timestamp.now().toDate().toString(),
         timestamp: serverTimestamp()
@@ -318,13 +318,13 @@ function CDD() {
       className="form-step">
         <h3> Dollar Account Details</h3>
 
-            <input type="text" id="$accountNumber" placeholder='Account Number' name="$accountNumber" value={formData.$accountNumber} onChange={handleChange} required />
+            <input type="text" id="accountNumber2" placeholder='Account Number' name="accountNumber2" value={formData.accountNumber2} onChange={handleChange} required />
 
-            <input type="text" placeholder='Bank Name' id="$bankName" name="$bankName" value={formData.$bankName} onChange={handleChange} required />
+            <input type="text" placeholder='Bank Name' id="bankName2" name="bankName2" value={formData.bankName2} onChange={handleChange} required />
 
-            <input type="text" id="$bankBranch" placeholder='Bank Branch Body' name="$bankBranch" value={formData.$bankBranch} onChange={handleChange} required />
+            <input type="text" id="bankBranch2" placeholder='Bank Branch Body' name="bankBranch2" value={formData.bankBranch2} onChange={handleChange} required />
 
-            <input type="date" id="$accountOpeningDate" placeholder='Account Opening Date' name="$accountOpeningDate" value={formData.$accountOpeningDate} onChange={handleChange} required />
+            <input type="date" id="accountOpeningDate2" placeholder='Account Opening Date' name="accountOpeningDate2" value={formData.accountOpeningDate2} onChange={handleChange} required />
             <div className='button-flex'>
             <button type="button" onClick={prevStep}>Previous</button>
             <button type="submit" onClick={handleSubmit}>Submit</button>
