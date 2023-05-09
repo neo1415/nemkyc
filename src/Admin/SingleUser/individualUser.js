@@ -16,7 +16,7 @@ const IndividualUser = () => {
 
     useEffect(
         ()=>{
-            const docRef = doc(db, 'registration', id);
+            const docRef = doc(db, 'individual-KYC', id);
             onSnapshot(docRef, (snapshot) =>{
                 setData({...snapshot.data(), id:snapshot.id});
             })

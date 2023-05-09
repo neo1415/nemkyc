@@ -174,5 +174,7 @@ select{
 
 .flexer{
   display: flex;
-  
+  @media screen and (max-width:1000px){
+    flex-direction:column;
+  }
 }
