@@ -12,7 +12,7 @@ import './single.scss'
 // import Status from '../Table/Status';
 // import Basic from './../Table/Basic';
 
-const IndividualUser = () => {
+const IndividualUser = (props) => {
 
     const [data, setData] = useState([]);
 
@@ -39,27 +39,32 @@ const IndividualUser = () => {
         // Add header
         doc.setFontSize(24);
         doc.setTextColor(128, 0, 32);
-        doc.text('NEM Insurance Corporate KYC Form', 50, 70);
+        doc.text('NEM Insurance Individual KYC Form', 50, 70);
       
         // Add section 1 - Company Information
         doc.setFontSize(18);
         doc.setTextColor(0, 0, 0);
 
         doc.setFontSize(16);
-        doc.text('Company Details', 60, 120);
+        doc.text('Personal Information', 60, 120);
       
-        const companyTableColumn = ['Company Information', ''];
-        const companyTableRows = [    ['Company Name', data.companyName],
-          ['Registered Company Address', data.registeredCompanyAddress],
+        const companyTableColumn = ['Personal Information', ''];
+        const companyTableRows = [    ['Insured', data.insured],
+          ['Contact Address', data.contactAddress],
           ['Contact Telephone Number', data.contactTelephoneNumber],
-          ['Email Address', data.emailAddress],
-          ['Website', data.website],
-          ['Contact Person', data.contactPerson],
-          ['Tax Identification Number', data.taxIdentificationNumber],
-          ['VAT Registration Number', data.VATRegistrationNumber],
-          ['Date of Incorporation Registration', data.dateOfIncorporationRegistration],
-          ['Incorporation State', data.incorporationState],
-          ['Company Type', data.companyType],
+          ['Occupation', data.occupation],
+          ['Gender', data.gender],
+          ['Date of Birth', data.dateOfBirth],
+          ['Mothers Naiden Name', data.mothersMaidenName],
+          ['Employers Name', data.employersName],
+          ['Employers Telephone Number', data.employersTelephoneNumber],
+          ['EMployers Address', data.employersAddress],
+          ['City', data.city],
+          ['Date of Birth', data.dob],
+          ['First Name', data.firstName],
+          ['Last Name', data.lastName],
+          ['Residential Address', data.residentialAddress],
+          ['Issuing Body', data.issuingBody],
         ];
       
         const companyTableProps = {
@@ -260,52 +265,52 @@ doc.save('KYC Form.pdf');
         <div className='form-contents'>
         <div className='flex-content'>
             <ul > 
-            <h1 className='content-h1'>Company Details</h1>
+            <h1 className='content-h1'>Personal Information</h1>
                 <li className='form-list'>
-                    <p>Company Name</p>
-                    <p className='info'>{data.companyName}</p>
+                    <p>Insured</p>
+                    <p className='info'>{data.insured}</p>
                 </li>
                 <li className='form-list'>
-                    <p>Registered Company Address</p>
-                    <p className='info'>{data.registeredCompanyAddress}</p>
+                    <p>Contact Address</p>
+                    <p className='info'>{data.contactAddress}</p>
                 </li>
                 <li className='form-list'>
                     <p>Contact Telephone Number</p>
                     <p className='info'>{data.contactTelephoneNumber}</p>
                 </li>
                 <li className='form-list'>
-                    <p>Email Address</p>
-                    <p className='info'>{data.emailAddress}</p>
+                    <p>Occupation</p>
+                    <p className='info'>{data.occupation}</p>
                 </li>
                 <li className='form-list'>
-                    <p>Website</p>
-                    <p className='info'>{data.website}</p>
+                    <p>Gender</p>
+                    <p className='info'>{data.gender}</p>
                 </li>
                 <li className='form-list'>
-                    <p>Contact Person</p>
-                    <p className='info'>{data.contactPerson}</p>
+                    <p>Date of Birth</p>
+                    <p className='info'>{data.dateOfBirth}</p>
                 </li>
                 </ul>
                 <ul className='form-ul'>
                 <li className='form-list'>
-                    <p>Tax Identification Number</p>
-                    <p className='info'>{data.taxIdentificationNumber}</p>
+                    <p>Mothers Maiden Name</p>
+                    <p className='info'>{data.mothersMaidenName}</p>
                 </li>
                 <li className='form-list'>
-                <p>VAT Registration Number</p>
-                <p className='info'>{data.VATRegistrationNumber}</p>
+                <p>Employers Name</p>
+                <p className='info'>{data.employersName}</p>
             </li>
             <li className='form-list'>
-                    <p>Date of Incorporation Registration</p>
-                    <p className='info'>{data.dateOfIncorporationRegistration}</p>
+                    <p>Employer's Telephone Number</p>
+                    <p className='info'>{data.employersTelephoneNumber}</p>
             </li>
             <li className='form-list'>
-                <p>Incorporation State</p>
-                <p className='info'>{data.incorporationState}</p>
+                <p>City</p>
+                <p className='info'>{data.city}</p>
             </li>
             <li className='form-list'>
-                    <p>Company Type</p>
-                    <p className='info'>{data.companyType}</p>
+                    <p>State</p>
+                    <p className='info'>{data.state}</p>
             </li>
             </ul>
             </div>
@@ -313,99 +318,76 @@ doc.save('KYC Form.pdf');
         <div className='form-contents'>
             <div className='flex-content'>
             <ul>
-            <h1>Directors Profile</h1>
+            <h1>More Information</h1>
             <li className='form-list'>
-                    <p>Date Of Birth</p>
-                    <p className='info'>{data.dob}</p>
+                    <p>Country</p>
+                    <p className='info'>{data.country}</p>
             </li>
             <li className='form-list'>
-                    <p>First Name</p>
-                    <p className='info'>{data.firstName}</p>
-            </li>
-            <li className='form-list'>
-                    <p>Last Name</p>
-                    <p className='info'>{data.lastName}</p>
+                    <p>Nationality</p>
+                    <p className='info'>{data.nationality}</p>
             </li>
             <li className='form-list'>
                     <p>Residential Address</p>
                     <p className='info'>{data.residentialAddress}</p>
             </li>
             <li className='form-list'>
-                    <p>Issuing Body</p>
-                    <p className='info'>{data.issuingBody}</p>
+                    <p>Office Address</p>
+                    <p className='info'>{data.officeAddress}</p>
+            </li>
+            <li className='form-list'>
+                    <p>GSM Number</p>
+                    <p className='info'>{data.GSMno}</p>
             </li>
             </ul>
             <ul>
-            <h1>Directors Profile 2</h1>
             <li className='form-list'>
-                    <p>Date Of Birth</p>
-                    <p className='info'>{data.dob2}</p>
+                    <p>Email Address</p>
+                    <p className='info'>{data.emailAddress}</p>
             </li>
             <li className='form-list'>
-                    <p>First Name</p>
-                    <p className='info'>{data.firstName2}</p>
+                    <p>Identification</p>
+                    <p className='info'>{data.identification}</p>
             </li>
             <li className='form-list'>
-                    <p>Last Name</p>
-                    <p className='info'>{data.lastName2}</p>
+                    <p>Identification Number</p>
+                    <p className='info'>{data.identificationNumber}</p>
             </li>
             <li className='form-list'>
-                    <p>Residential Address</p>
-                    <p className='info'>{data.residentialAddress2}</p>
+                    <p>Issued Date</p>
+                    <p className='info'>{data.issuedDate}</p>
             </li>
             <li className='form-list'>
-                    <p>Issuing Body</p>
-                    <p className='info'>{data.issuingBody2}</p>
+                    <p>Expiry Date</p>
+                    <p className='info'>{data.expiryDate}</p>
             </li>
             </ul>
             </div>
         </div>
         <div className='form-contents'>
-            <div className='flex-content'>
             <ul>
-            <h1>Account Details</h1>
+            <h1>Income Information</h1>
             <li className='form-list'>
-                    <p>Account Number</p>
-                    <p className='info'>{data.accountNumber}</p>
+                    <p>Annual Income Range</p>
+                    <p className='info'>{data.annualIncomeRange}</p>
             </li>
             <li className='form-list'>
-                    <p>Bank Name</p>
-                    <p className='info'>{data.bankName}</p>
+                    <p>Premium Payment Source</p>
+                    <p className='info'>{data.premiumPaymentSource}</p>
             </li>
             <li className='form-list'>
-                    <p>Bank Branch Body</p>
-                    <p className='info'>{data.bankBranch}</p>
-            </li>
-            <li className='form-list'>
-                    <p>Account Opening Date</p>
-                    <p className='info'>{data.accountOpeningDate}</p>
-            </li>
-            </ul>
-            <ul>
-            <h1>Account Details(Dollars)</h1>
-            <li className='form-list'>
-                    <p>Account Number</p>
-                    <p className='info'>{data.accountNumber2}</p>
-            </li>
-            <li className='form-list'>
-                    <p>Bank Name</p>
-                    <p className='info'>{data.bankName2}</p>
-            </li>
-            <li className='form-list'>
-                    <p>Bank Branch Body</p>
-                    <p className='info'>{data.bankBranch2}</p>
-            </li>
-            <li className='form-list'>
-                    <p>Account Opening Date</p>
-                    <p className='info'>{data.accountOpeningDate2}</p>
+                    <p>Date</p>
+                    <p className='info'>{data.date}</p>
             </li>
         </ul>
+        
             </div>
-        </div>
     </div>
     <div className='file-download'>
     <button className='form-button' onClick={downloadPDF}>Download Form <HiDownload style={style} /> </button>
     </div>
+    <button className='form-button' onClick={props.handleDownload}>Download Form <HiDownload style={style} /> </button>
+
     </div>
     
   )
