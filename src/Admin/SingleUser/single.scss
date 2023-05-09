@@ -43,7 +43,7 @@ li{
 .form-ul{
     margin-top: -4.2rem;
 }
-button{
+.form-button{
     margin: auto;
     background-color: brown;
     color: white;
@@ -54,4 +54,5 @@ button{
     justify-self: center;
     border: none;
     font-size: 1.1rem;
+    cursor:pointer;
 }
