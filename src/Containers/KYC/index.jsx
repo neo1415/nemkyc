@@ -11,6 +11,7 @@ import { HiCloudUpload } from 'react-icons/hi';
 import { HiXCircle } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
 import Footer from '../Footer';
+import IndividualUser from '../../Admin/SingleUser/individualUser';
 
 function KYC() {
   const [step, setStep] = useState(1);
@@ -92,16 +93,47 @@ uploadTask.on('state_changed',
       signature && uploadsignature();
   }, [signature]);
   
+  const handleDownload = () => {
+    console.log('downloading ...')
+    const xhr = new XMLHttpRequest();
+    xhr.responseType = "blob";
+    xhr.onload = () => {
+      const blob = new Blob([xhr.response], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "signature.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+    xhr.open("GET", formData.signature);
+    xhr.send();
+  };
+
   const changeHandler = (e) => {
-    let selected = e.target.files[0];
-    if (selected && types.includes(selected.type)) {
-      setSignature(selected);
+    let selectedFile = e.target.files[0];
+    if (selectedFile && types.includes(selectedFile.type)) {
+      setFormData({
+        ...formData,
+        [e.target.name]: selectedFile,
+        signature: signature, // Add signature value here
+      });
       setError('');
     } else {
-      setSignature(null);
-      setError('Please select a PDF document');
+      setFormData({ ...formData, [e.target.name]: null });
+      setError('Please select a PDF file');
     }
   };
+
+  
+  
+  
+  
+  
+  
+  
 
   const handleChange = (event) => {
     const { name, value, type, checked, signatures } = event.target;
@@ -240,6 +272,7 @@ uploadTask.on('state_changed',
             exit={{ opacity: 0, x: 50 }}
            className="form-step">
             <h3>Personal Information</h3>
+            
             <div className='flex-form'>
             <div className='flex-one'>
             <input type="text" id="insured" placeholder='Insured' name="insured" value={formData.insured} onChange={handleChange} required />
@@ -405,7 +438,7 @@ uploadTask.on('state_changed',
     </motion.div>
 
     </div>
-    {/* <Footer /> */}
+    <IndividualUser formData={formData} />
     </div>
 );
 }
