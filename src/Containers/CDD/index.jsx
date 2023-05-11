@@ -15,6 +15,7 @@ function CDD() {
   const [step, setStep] = useState(1);
   const [identification, setIdentification] = useState('');
   const [cac, setCac] = useState('');
+  const [privacy, setPrivacy] = useState(false);
   const [tax, setTax] = useState('');
   const [cacForm, setcacForm] = useState('');
   const [per, setPerc] = useState(null)
@@ -78,6 +79,7 @@ function CDD() {
     cac:null,
     tax:null,
     cacForm:null,
+    privacy:false,
   });
 
   const types= ['application/pdf'];
@@ -367,6 +369,7 @@ uploadTask.on('state_changed',
       cac:null,
       tax:null,
       cacForm:null,
+      privacy:false,
      })
          setIsSubmitted(false)
     }
@@ -441,6 +444,7 @@ uploadTask.on('state_changed',
         cac: formData.cac,
         tax: formData.tax,
         cacForm: formData.cacForm,
+        privacy:formData.privacy,
         // complete:'Pending',
         createdAt: Timestamp.now().toDate().toString(),
         timestamp: serverTimestamp()
@@ -454,6 +458,7 @@ uploadTask.on('state_changed',
 
   const nextStep = () => {
     setStep(step + 1);
+ 
   };
 
   const prevStep = () => {
@@ -461,6 +466,10 @@ uploadTask.on('state_changed',
   };
 
   console.log(formData)
+
+  const handlePrivacy = (e) => {
+    setPrivacy(e.target.checked);
+  }
 
   return (
     <div style={{display:'flex', justifyContent:'flex-start',marginTop:'-40px'}}>
@@ -809,6 +818,7 @@ uploadTask.on('state_changed',
               </div>
 
             </div>
+            
          
             <div className='button-flex'>
         <button type="button" onClick={prevStep}>Previous</button>
