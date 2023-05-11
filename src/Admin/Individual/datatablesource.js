@@ -114,8 +114,8 @@ export const UserColumns = [
   },
 
   {
-    field: "identification",
-    headerName: "Identification",
+    field: "identificationType",
+    headerName: "Identification Type",
     width: 85,     
   },
 
@@ -155,14 +155,14 @@ export const UserColumns = [
     width: 85,     
   },
 
-  {
-    field: "signature",
-    headerName: "signature",
-    width: 85,
-    type: 'link',
-    link: 'a',
-    renderCell: (cellValues) => {
-      return <a href={`${cellValues.row.signature}` } download target='blank'><HiDownload /></a>;
-    }     
-  },
+  // {
+  //   field: "signature",
+  //   headerName: "signature",
+  //   width: 85,
+  //   type: 'link',
+  //   link: 'a',
+  //   renderCell: (cellValues) => {
+  //     return <a href={`${cellValues.row.signature}` } download target='blank'><HiDownload /></a>;
+  //   }     
+  // },
 ];

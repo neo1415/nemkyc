@@ -3,6 +3,7 @@ import { userColumns} from "../Table/datatablesource";
 // import { Link } from "react-router-dom";
 import { useState, useEffect,useContext } from "react";
 import './Table.scss'
+import { v4 as uuidv4 } from 'uuid';
 // import { GridToolbar } from "@mui/x-data-grid";
 import {GridToolbarContainer} from '@mui/x-data-grid';
 import { GridToolbarExport } from "@mui/x-data-grid";
@@ -20,7 +21,7 @@ const List = () => {
   // const {currentUser} = useContext(AuthContext)
   const navigate=useNavigate()
  
-  
+  const getRowID = (row) => row.id;
   
   useEffect(()=> {
     const dataRef = collection(db, 'users')
@@ -113,6 +114,7 @@ const List = () => {
   }}
 
         className="datagrid"
+        getRowId={(row) => getRowID ? getRowID(row) : uuidv4()} 
         rows={data}
         columns={userColumns.concat(actionColumn)}
         pageSize={9}

@@ -7,11 +7,11 @@ $dark-color: #343a40;
 // Style the entire multistep form container
 .form-page{
   display: flex;
-  position: fixed;
+  // position: fixed;
   // margin-top: -5.5rem;
   align-items: center;
   justify-content: flex-start;
-  height: 100vh;
+  // height: 100vh;
   width: 100%;
   background-image: url('./form1.jpg');
   @media screen and (max-width:1000px) {
@@ -72,7 +72,7 @@ $dark-color: #343a40;
     {
       padding: 0.5rem;
       margin-bottom: 1.5rem;
-      height: 2.5rem;
+      height: 1.5rem;
       border: none;
       border-radius: 0.25rem;
       width: 18rem;
@@ -157,17 +157,21 @@ select{
 }
 .picture{
   width: 30rem;
-  height: 100vh;
+  height: 100%;
   padding: 0;
   margin: 0;
+  background-color: #800020;
+  background-image: url('./form2.jpg') !important;
   @media screen and (max-width:1000px) {
     display: none;
   }
   .form-img{
     width: 100%;
-    height: 100vh;
+    margin-top: -3rem;
+    height: 127vh;
     filter: grayscale(0);
     object-fit: cover;
+    object-position: center;
 
   }
 }

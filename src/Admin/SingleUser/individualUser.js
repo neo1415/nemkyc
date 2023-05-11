@@ -12,7 +12,7 @@ import './single.scss'
 // import Status from '../Table/Status';
 // import Basic from './../Table/Basic';
 
-const IndividualUser = (props) => {
+const IndividualUser = () => {
 
     const [data, setData] = useState([]);
 
@@ -382,12 +382,18 @@ doc.save('KYC Form.pdf');
         </ul>
         
             </div>
+            <div className='documents'>
+              <h1>Documents</h1>
+              <div className='documents-content'>
+              <a href={data.signature} target='__blank'> <button className='form-button'>Download Signature <HiDownload style={style} />  </button></a>
+              <a href={data.identification} target='__blank'> <button className='form-button'>Download Identification <HiDownload style={style} />  </button></a>
+              </div>
+            </div>
     </div>
     <div className='file-download'>
     <button className='form-button' onClick={downloadPDF}>Download Form <HiDownload style={style} /> </button>
     </div>
-    <button className='form-button' onClick={props.handleDownload}>Download Form <HiDownload style={style} /> </button>
-
+   
     </div>
     
   )
