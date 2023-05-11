@@ -56,3 +56,18 @@ li{
     font-size: 1.1rem;
     cursor:pointer;
 }
+.documents{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    margin-bottom: 3rem;
+}
+.documents-content{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    column-gap:3rem;
+    row-gap:3rem;
+    margin-bottom: 3rem;
+}

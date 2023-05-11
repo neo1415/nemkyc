@@ -11,10 +11,10 @@ import { HiCloudUpload } from 'react-icons/hi';
 import { HiXCircle } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
 import Footer from '../Footer';
-import IndividualUser from '../../Admin/SingleUser/individualUser';
 
 function KYC() {
   const [step, setStep] = useState(1);
+  const [identification, setIdentification] = useState('');
   const [signature, setSignature] = useState('');
   const [per, setPerc] = useState(null)
   const [error , setError]= useState(null)
@@ -37,7 +37,7 @@ function KYC() {
     officeAddress:'',
     GSMno:'',
     emailAddress:'',
-    identification:[],
+    identificationType:[],
     identificationNumber:'',
     issuedDate:'',
     expiryDate:'',
@@ -45,6 +45,7 @@ function KYC() {
     premiumPaymentSource:[],
     date: '',
     signature: null,
+    identification:null,
   });
 
   const types= ['application/pdf'];
@@ -92,53 +93,136 @@ uploadTask.on('state_changed',
     }
       signature && uploadsignature();
   }, [signature]);
+
+  useEffect(() => {
+    const uploadIdentification = () =>{
+      const name = identification.name;
+      const storageRef = ref(storage, name);
+      const uploadTask = uploadBytesResumable(storageRef, identification);
+    
+// Register three observers:
+// 1. 'state_changed' observer, called any time the state changes
+// 2. Error observer, called on failure
+// 3. Completion observer, called on successful completion
+uploadTask.on('state_changed', 
+  (snapshot) => {
+    // Observe state change events such as progress, pause, and resume
+    // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+    console.log('Upload is ' + progress + '% done');
+    setPerc(progress)
+    switch (snapshot.state) {
+      case 'paused':
+        console.log('Upload is paused');
+        break;
+      case 'running':
+        console.log('Upload is running');
+        break;
+        default:
+          break;
+    }
+  }, 
+  (error) => {
+    console.log(error)
+  }, 
+  () => {
+    // Handle successful uploads on complete
+    // For instance, get the download URL: https://firebasestorage.googleapis.com/...
+    getDownloadURL(storageRef).then((downloadURL) => {
+      setFormData((prev)=>({...prev, identification:downloadURL}))
+    });
+  }
+);
+
+    }
+      identification && uploadIdentification();
+  }, [identification]);
   
-  const handleDownload = () => {
-    console.log('downloading ...')
-    const xhr = new XMLHttpRequest();
-    xhr.responseType = "blob";
-    xhr.onload = () => {
-      const blob = new Blob([xhr.response], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "signature.pdf";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    };
-    xhr.open("GET", formData.signature);
-    xhr.send();
-  };
+  // const uploadIdentification = () =>{
+  //   const name = identification.name;
+  //   const storageRef = ref(storage, name);
+  //   const uploadTask = uploadBytesResumable(storageRef, identification);
+  
+  //   uploadTask.on('state_changed', 
+  //     (snapshot) => {
+  //       const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+  //       console.log('Upload is ' + progress + '% done');
+  //       setPerc(progress);
+  //       switch (snapshot.state) {
+  //         case 'paused':
+  //           console.log('Upload is paused');
+  //           break;
+  //         case 'running':
+  //           console.log('Upload is running');
+  //           break;
+  //         default:
+  //           break;
+  //       }
+  //     }, 
+  //     (error) => {
+  //       console.log(error)
+  //     }, 
+  //     () => {
+  //       getDownloadURL(storageRef).then((downloadURL) => {
+  //         setFormData((prev)=>({...prev, identification:downloadURL}));
+  //       });
+  //     }
+  //   );
+  // }
+  
 
   const changeHandler = (e) => {
-    let selectedFile = e.target.files[0];
-    if (selectedFile && types.includes(selectedFile.type)) {
-      setFormData({
-        ...formData,
-        [e.target.name]: selectedFile,
-        signature: signature, // Add signature value here
-      });
-      setError('');
+    let selected = e.target.files[0];
+    if (selected && types.includes(selected.type)) {
+      if (e.target.name === "signature") {
+        setSignature(selected);
+        setError('');
+      } else if (e.target.name === "identification") {
+        setIdentification(selected);
+        setError('');
+       
+      }
     } else {
-      setFormData({ ...formData, [e.target.name]: null });
-      setError('Please select a PDF file');
+      if (e.target.name === "signature") {
+        setSignature(null);
+        setError('Please select a PDF document');
+      } else if (e.target.name === "identification") {
+        setIdentification(null);
+        setError('Please select a PDF document');
+      }
     }
   };
+  
 
-  
-  
-  
-  
-  
-  
-  
+  const idChangeHandler = (e) => {
+    let selected = e.target.files[0];
+    if (selected && types.includes(selected.type)) {
+      setIdentification(selected);
+      setError('');
+    } else {
+      setIdentification(null);
+      setError('Please select a PDF document');
+    }
+  };
 
   const handleChange = (event) => {
     const { name, value, type, checked, signatures } = event.target;
     if (type === 'signature') {
       setFormData({ ...formData, [name]: signatures[0] });
+    } else if (type === 'checkbox') {
+      const updatedArray = checked
+        ? [...formData[name], value]
+        : formData[name].filter(item => item !== value);
+      setFormData({ ...formData, [name]: updatedArray });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const idChange = (event) => {
+    const { name, value, type, checked, id } = event.target;
+    if (type === 'id') {
+      setFormData({ ...formData, [name]: id[0] });
     } else if (type === 'checkbox') {
       const updatedArray = checked
         ? [...formData[name], value]
@@ -168,7 +252,7 @@ uploadTask.on('state_changed',
       officeAddress:'',
       GSMno:'',
       emailAddress:'',
-      identification:[],
+      identificationType:[],
       identificationNumber:'',
       issuedDate:'',
       expiryDate:'',
@@ -176,6 +260,7 @@ uploadTask.on('state_changed',
       premiumPaymentSource:[],
       date: '',
       signature: null,
+      identification:null
      });
     setIsSubmitted(false);
   };
@@ -211,7 +296,7 @@ uploadTask.on('state_changed',
         officeAddress: formData.officeAddress,
         GSMno: formData.GSMno,
         emailAddress: formData.emailAddress,
-        identification:formData.identification,
+        identificationType:formData.identification,
         identificationNumber: formData.identificationNumber,
         issuedDate: formData.issuedDate,
         expiryDate: formData.expiryDate,
@@ -219,6 +304,7 @@ uploadTask.on('state_changed',
         premiumPaymentSource: formData.premiumPaymentSource,
         date: formData.date,
         signature: formData.signature,
+        identification: formData.identification,
         // complete:'Pending',
         createdAt: Timestamp.now().toDate().toString(),
         timestamp: serverTimestamp()
@@ -272,7 +358,6 @@ uploadTask.on('state_changed',
             exit={{ opacity: 0, x: 50 }}
            className="form-step">
             <h3>Personal Information</h3>
-            
             <div className='flex-form'>
             <div className='flex-one'>
             <input type="text" id="insured" placeholder='Insured' name="insured" value={formData.insured} onChange={handleChange} required />
@@ -344,9 +429,9 @@ uploadTask.on('state_changed',
 
             <input type="email" id="emailAddress" placeholder='Email Address:' name="emailAddress" value={formData.emailAddress} onChange={handleChange} required />
 
-            <select id="identification" name="identification" size="1"
-             value={formData.identification} onChange={handleChange} required >
-                <option value="Choose Identification Type">Identification</option>
+            <select id="identificationType" name="identificationType" size="1"
+             value={formData.identificationType} onChange={handleChange} required >
+                <option value="Choose Identification Type">Identification Type</option>
                 <option value="drivers licence">Drivers Licence</option>
                 <option value="international passport">International Passport</option>
                 <option value="national ID">National ID</option>
@@ -408,9 +493,20 @@ uploadTask.on('state_changed',
             </div>
             </label>
             <input type="file" id="signature" name="signature" onChange={changeHandler} />
+
+            <label htmlFor="identification" className='upload'>
+            <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
+           <h4>Upload Your Identification</h4> 
+           <div className='upload-icon'>
+           <HiCloudUpload />   
+           </div>
+            </div>
+            </label>
+            <input type="file" id="identification" name="identification" onChange={changeHandler} />
             <div className='Output'>
                 {error && <div className='error'>{error}</div>}
                 {signature && <div className='error'>{signature.name}</div>}
+                {identification && <div className='error'>{identification.name}</div>}
               </div>
 
               <div className='button-flex'>
@@ -438,7 +534,7 @@ uploadTask.on('state_changed',
     </motion.div>
 
     </div>
-    <IndividualUser formData={formData} />
+    {/* <Footer /> */}
     </div>
 );
 }
