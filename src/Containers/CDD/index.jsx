@@ -748,7 +748,7 @@ uploadTask.on('state_changed',
             exit={{ opacity: 0, x: 50 }}
       className="form-step">
        <h3>File Uploads</h3>
-        <div className='flex-one'>
+        <div className='upload-form'>
            
         <label htmlFor="cac" className='upload'>
             <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>

@@ -11,16 +11,29 @@ li{
     justify-content: center;
     border-style:1px groove brown;
     margin-bottom: 3rem;
+    @media screen and (max-width:1000px) {
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+
 }
 .flex-content{
     display: flex;
     justify-content: center;
     align-items: center;
+    @media screen and (max-width:1000px) {
+        flex-direction: column;
+        justify-content: flex-start;
+    }
 }
 .flex-contents{
     display: flex;
     justify-content: center;
     align-items: center;
+    @media screen and (max-width:1000px) {
+        flex-direction: column;
+        justify-content: flex-start;
+    }
 }
 .content-h1{
     margin: auto;
@@ -39,6 +52,9 @@ li{
     border-radius: 10px;
     color: black;
     background-color: rgba(128, 128, 128, 0.253);
+    @media screen and (max-width:1000px) {
+       width: 16rem;
+    }
 }
 .form-ul{
     margin-top: -4.2rem;
@@ -62,6 +78,10 @@ li{
     align-items: center;
     flex-direction: column;
     margin-bottom: 3rem;
+    @media screen and (max-width:1000px) {
+        flex-direction: column;
+        justify-content: flex-start;
+    }
 }
 .documents-content{
     display: flex;
@@ -70,4 +90,8 @@ li{
     column-gap:3rem;
     row-gap:3rem;
     margin-bottom: 3rem;
+    @media screen and (max-width:1000px) {
+        flex-direction: column;
+        justify-content: flex-start;
+    }
 }

@@ -563,7 +563,7 @@ doc.save('KYC Form.pdf');
               <div className='documents-content'>
               <a href={data.identification} target='__blank'> <button className='form-button'>Download Identification <HiDownload style={style} />  </button></a>
               <a href={data.cac} target='__blank'> <button className='form-button'>Download CAC  <HiDownload style={style} />  </button></a>
-              <a href={data.tax} target='__blank'> <button className='form-button'>Download Tac Card <HiDownload style={style} />  </button></a>
+              <a href={data.tax} target='__blank'> <button className='form-button'>Download Tax Card <HiDownload style={style} />  </button></a>
               <a href={data.cacForm} target='__blank'> <button className='form-button'>Download CAC Form <HiDownload style={style} />  </button></a>
               </div>
             </div>
