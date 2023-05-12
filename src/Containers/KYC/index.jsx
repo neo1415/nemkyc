@@ -297,7 +297,7 @@ uploadTask.on('state_changed',
         officeAddress: formData.officeAddress,
         GSMno: formData.GSMno,
         emailAddress: formData.emailAddress,
-        identificationType:formData.identification,
+        identificationType:formData.identificationType,
         identificationNumber: formData.identificationNumber,
         issuedDate: formData.issuedDate,
         expiryDate: formData.expiryDate,
@@ -443,7 +443,7 @@ uploadTask.on('state_changed',
             transition= {{ duration:.5, ease:'easeOut' }}
             exit={{ opacity: 0, x: 50 }}
            className="form-step">
-            <h3>Directors Profile</h3>
+            <h3>Additional Details</h3>
             <div className='flex-form'>
             <div className='flex-one'>
             <input type="text" id=" country" placeholder='Country' name="country" value={formData.country} onChange={handleChange} required />
