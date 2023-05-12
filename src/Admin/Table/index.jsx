@@ -25,7 +25,7 @@ const List = () => {
   
   useEffect(()=> {
     const dataRef = collection(db, 'users')
-    const q = query(dataRef, orderBy('createdAt', 'asc'));
+    const q = query(dataRef, orderBy('createdAt', 'desc'));
     onSnapshot(q,(snapshot) => {
       const data = snapshot.docs.map((doc) => ({
         id:doc.id,
