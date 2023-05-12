@@ -14,6 +14,7 @@ import Footer from '../Footer';
 
 function KYC() {
   const [step, setStep] = useState(1);
+    const [formErrors, setFormErrors] = useState({});
   const [identification, setIdentification] = useState('');
   const [signature, setSignature] = useState('');
   const [per, setPerc] = useState(null)
@@ -46,6 +47,7 @@ function KYC() {
     date: '',
     signature: null,
     identification:null,
+     privacy:false,
   });
 
   const types= ['application/pdf'];
@@ -194,44 +196,23 @@ uploadTask.on('state_changed',
   };
   
 
-  const idChangeHandler = (e) => {
-    let selected = e.target.files[0];
-    if (selected && types.includes(selected.type)) {
-      setIdentification(selected);
-      setError('');
-    } else {
-      setIdentification(null);
-      setError('Please select a PDF document');
-    }
-  };
-
   const handleChange = (event) => {
     const { name, value, type, checked, signatures } = event.target;
     if (type === 'signature') {
       setFormData({ ...formData, [name]: signatures[0] });
     } else if (type === 'checkbox') {
       const updatedArray = checked
-        ? [...formData[name], value]
-        : formData[name].filter(item => item !== value);
+         ? [...(Array.isArray(formData[name]) ? formData[name] : []), value]
+      : (Array.isArray(formData[name]) ? formData[name].filter(item => item !== value) : []);
       setFormData({ ...formData, [name]: updatedArray });
     } else {
       setFormData({ ...formData, [name]: value });
+    }
+    if (formErrors[name]) {
+      setFormErrors({ ...formErrors, [name]: null });
     }
   };
 
-  const idChange = (event) => {
-    const { name, value, type, checked, id } = event.target;
-    if (type === 'id') {
-      setFormData({ ...formData, [name]: id[0] });
-    } else if (type === 'checkbox') {
-      const updatedArray = checked
-        ? [...formData[name], value]
-        : formData[name].filter(item => item !== value);
-      setFormData({ ...formData, [name]: updatedArray });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
-  };
 
   const resetForm = () => {
     setFormData({ 
@@ -273,6 +254,26 @@ uploadTask.on('state_changed',
   const handleSubmit = async (event) => {
     event.preventDefault();
       console.log('Submitting form data...');
+      const requiredFields = document.querySelectorAll('input[required]');
+    let allFieldsFilled = true;
+    requiredFields.forEach(field => {
+      if (!field.value) {
+        allFieldsFilled = false;
+        const fieldName = field.getAttribute('name');
+        setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
+      }
+    });
+
+    const privacyCheckbox = document.querySelector('input[name="privacy"]');
+    if (!privacyCheckbox.checked) {
+      allFieldsFilled = false;
+      setFormErrors({...formErrors, privacyPolicy: `Privacy policy must be accepted`});
+    }
+
+    // if any required field is not filled, prevent form from moving to next step
+    if (!allFieldsFilled) {
+      return;
+    }
     try {
       console.log('it works')
       setIsSubmitted(true);
@@ -305,6 +306,7 @@ uploadTask.on('state_changed',
         date: formData.date,
         signature: formData.signature,
         identification: formData.identification,
+        privacy:formData.privacy,
         // complete:'Pending',
         createdAt: Timestamp.now().toDate().toString(),
         timestamp: serverTimestamp()
@@ -317,6 +319,23 @@ uploadTask.on('state_changed',
   
 
   const nextStep = () => {
+    // check if all required fields are filled
+    const requiredFields = document.querySelectorAll('input[required]');
+    let allFieldsFilled = true;
+    requiredFields.forEach(field => {
+      if (!field.value) {
+        allFieldsFilled = false;
+        const fieldName = field.getAttribute('name');
+        setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
+      }
+    });
+
+    // if any required field is not filled, prevent form from moving to next step
+    if (!allFieldsFilled) {
+      return;
+    }
+
+    // if all required fields are filled, move to next step
     setStep(step + 1);
   };
 
@@ -361,12 +380,16 @@ uploadTask.on('state_changed',
             <div className='flex-form'>
             <div className='flex-one'>
             <input type="text" id="insured" placeholder='Insured' name="insured" value={formData.insured} onChange={handleChange} required />
+             {formErrors.insured && <span className="error-message">{formErrors.insured}</span>}
 
             <input type="text" id="contactAddress" placeholder="Contact's Address" name="contactAddress" value={formData.contactAddress} onChange={handleChange} required />
+             {formErrors.contactAddress && <span className="error-message">{formErrors.contactAddress}</span>}
 
             <input type="text" id="contactTelephoneNumber" placeholder="Contact's Telephone Number" name="contactTelephoneNumber" value={formData.contactTelephoneNumber} onChange={handleChange} required />
+             {formErrors.contactTelephoneNumber && <span className="error-message">{formErrors.contactTelephoneNumber}</span>}
 
             <input type="text" placeholder='Occupation' id="occupation" name="occupation" value={formData.occupation} onChange={handleChange} required />
+             {formErrors.occupation && <span className="error-message">{formErrors.occupation}</span>}
 
             <select id="gender" name="gender" size="1"
              value={formData.gender} onChange={handleChange} required >
@@ -374,23 +397,33 @@ uploadTask.on('state_changed',
                 <option value="male">Male</option>
                 <option value="female">Female</option>
             </select> 
-            
+             {formErrors.gender && <span className="error-message">{formErrors.gender}</span>}
+
             <label htmlFor="dateOfBirth">Date Of Birth:</label>
             <input type="date" id="dateOfBirth" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} required />
+             {formErrors.dateOfBirth && <span className="error-message">{formErrors.dateOfBirth}</span>}
+
             </div>
 
             <div className='flex-two'>
             <input type="text" id="mothersMaidenName" placeholder="Mother's Maiden Name" name="mothersMaidenName" value={formData.mothersMaidenName} onChange={handleChange} required />
-            
+             {formErrors.mothersMaidenName && <span className="error-message">{formErrors.mothersMaidenName}</span>}
+
             <input type="text" placeholder="Employer's Name" id="employersName" name="employersName" value={formData.employersName} onChange={handleChange} required />
+             {formErrors.employersName && <span className="error-message">{formErrors.employersName}</span>}
 
             <input type="text" id="employersTelephoneNumber" placeholder="Employer's Telephone Number" name="employersTelephoneNumber" value={formData.employersTelephoneNumber} onChange={handleChange} required />
-            
+             {formErrors.employersTelephoneNumber && <span className="error-message">{formErrors.employersTelephoneNumber}</span>}
+
             <input type="text" id="employer'sAddress" placeholder='Employers Address' name="employersAddress" value={formData.employersAddress} onChange={handleChange} required />
+             {formErrors.emailAddress && <span className="error-message">{formErrors.emailAddress}</span>}
 
             <input type="text" placeholder='City' id=" city" name="city" value={formData.city} onChange={handleChange} required />
-            
+             {formErrors.city && <span className="error-message">{formErrors.city}</span>}
+
             <input type="text" id=" state" placeholder='State' name="state" value={formData.state} onChange={handleChange} required /> 
+             {formErrors.state && <span className="error-message">{formErrors.state}</span>}
+
         </div>
             </div>
      
@@ -414,20 +447,26 @@ uploadTask.on('state_changed',
             <div className='flex-form'>
             <div className='flex-one'>
             <input type="text" id=" country" placeholder='Country' name="country" value={formData.country} onChange={handleChange} required />
-            
+             {formErrors.country && <span className="error-message">{formErrors.country}</span>}
+
             <input type="text" id=" nationality" placeholder='Nationality' name="nationality" value={formData.nationality} onChange={handleChange} required />
-            
+             {formErrors.nationality && <span className="error-message">{formErrors.nationality}</span>}
+
             <input type="text" id="residentialAddress" placeholder='Residential Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required />
-            
+             {formErrors.residentialAddress && <span className="error-message">{formErrors.residentialAddress}</span>}
+
             <input type="text" id="officeAddress" placeholder='Office Address' name="officeAddress" value={formData.officeAddress} onChange={handleChange} required />
+             {formErrors.officeAddress && <span className="error-message">{formErrors.officeAddress}</span>}
 
             <input type="text" id=" GSMno" placeholder='GSM Number' name="GSMno" value={formData.GSMno} onChange={handleChange} required />
+             {formErrors.GSMno && <span className="error-message">{formErrors.GSMno}</span>}
 
             </div>
         
             <div className='flex-two'>
 
             <input type="email" id="emailAddress" placeholder='Email Address:' name="emailAddress" value={formData.emailAddress} onChange={handleChange} required />
+             {formErrors.email && <span className="error-message">{formErrors.email}</span>}
 
             <select id="identificationType" name="identificationType" size="1"
              value={formData.identificationType} onChange={handleChange} required >
@@ -437,14 +476,18 @@ uploadTask.on('state_changed',
                 <option value="national ID">National ID</option>
                 <option value="voter's card">Voter's Card</option>
             </select> 
-            
+             {formErrors.identificationType && <span className="error-message">{formErrors.identificationType}</span>}
+
             <input type="text" id="identificationNumber" placeholder='Identification Number' name="identificationNumber" value={formData.identificationNumber} onChange={handleChange} required />
+             {formErrors.identificationNumber && <span className="error-message">{formErrors.identificationNumber}</span>}
 
             <label htmlFor="issuedDate">Issued Date:</label>
             <input type="date" id="issuedDate" name="issuedDate" value={formData.issuedDate} onChange={handleChange} required />
+             {formErrors.issuedDate && <span className="error-message">{formErrors.issuedDate}</span>}
 
             <label htmlFor="expiryDate">expiry Date:</label>
             <input type="date" id="expiryDate" name="expiryDate" value={formData.expiryDate} onChange={handleChange} required />
+             {formErrors.expiryDate && <span className="error-message">{formErrors.expiryDate}</span>}
 
            
           </div>
@@ -473,6 +516,7 @@ uploadTask.on('state_changed',
                 <option value="4.1million-10million">4.1 Million - 10 Million</option>
                 <option value="morethan10million">More than 10 Million</option>
             </select> 
+             {formErrors.annualIncomeRange && <span className="error-message">{formErrors.annualIncomeRange}</span>}
 
             <select id="premiumPaymentSource" name="premiumPaymentSource" size="1"
              value={formData.premiumPaymentSource} onChange={handleChange} required >
@@ -480,10 +524,15 @@ uploadTask.on('state_changed',
                 <option value="salaryOrBusinessIncome">Salary or Business Income</option>
                 <option value="investmentsOrDividends">Investments or Dividends</option>
             </select> 
+             {formErrors.premiumPaymentSource && <span className="error-message">{formErrors.premiumPaymentSource}</span>}
 
             <label htmlFor=" date">Date:</label>
             <input type="date" id=" date" name="date" value={formData.date} onChange={handleChange} required />
+               {formErrors.date && <span className="error-message">{formErrors.date}</span>}
 
+              <div className='upload-section'>
+               <div className='upload-form'>
+        <div className='uploader'>
             <label htmlFor="signature" className='upload'>
             <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
            <h4>Upload Your Signature</h4> 
@@ -491,27 +540,46 @@ uploadTask.on('state_changed',
            <HiCloudUpload />   
            </div>
             </div>
+            <input type="file" id="signature" name="signature" onChange={changeHandler}  />
             </label>
-            <input type="file" id="signature" name="signature" onChange={changeHandler} />
-
+            <div className='Output'>
+            {error && <div className='error'>{error}</div>}
+                {signature && <div className='error'>{signature.name}</div>}
+              </div>
+              </div>
+              </div>
+             <div className='upload-form'>
+        <div className='uploader'>
             <label htmlFor="identification" className='upload'>
             <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-           <h4>Upload Your Identification</h4> 
+           <h4>Upload Means of Identification</h4> 
            <div className='upload-icon'>
            <HiCloudUpload />   
            </div>
             </div>
+             <input type="file" id="identification" name="identification" onChange={changeHandler}  />
             </label>
-            <input type="file" id="identification" name="identification" onChange={changeHandler} />
+  
             <div className='Output'>
-                {error && <div className='error'>{error}</div>}
-                {signature && <div className='error'>{signature.name}</div>}
+            {error && <div className='error'>{error}</div>}
                 {identification && <div className='error'>{identification.name}</div>}
               </div>
+              </div>
+              </div>
+</div>
+            <label htmlFor="privacy">
+            <input type="checkbox" id="privacy" name="privacy" onChange={handleChange} required />
+            Please note that your data will be treated 
+            with the utmost respect and privacy as required by law.
+            By checking this box, you acknowledge and 
+            agree to the purpose set-out in this clause 
+            and our data privacy policy. Thank you.<span className="required-star">*</span>
+          </label>
+          {formErrors.privacy && <span className="error-message">{formErrors.privacy}</span>}
 
               <div className='button-flex'>
             <button type="button" onClick={prevStep}>Previous</button>
-            <button type="submit" disabled={per !== null && per < 100}  onClick={handleSubmit}>Submit</button>
+            <button type="button" onClick={nextStep}>Next</button>
         </div>
       </motion.div>
       
@@ -520,10 +588,20 @@ uploadTask.on('state_changed',
     {step === 4 && (
       <div className="form-step">
         <h3> Confirmation</h3>
-        
+        <h4 className='announce'>
+        I/we hereby declare that all information provided are true and complete to the best of my
+         knowledge and hereby agree that this information shall form the basis of the business relationship 
+         between me/us and NEM Insurance Plc. If there is any addition or alteration in the information provided
+         after the submission of this proposal form, the same shall be communicated to the Company.
+         </h4>
+        <label htmlFor="privacy">
+        <input type="checkbox" id="privacy" className='conf' name="privacy" onChange={handleChange} required />
+ I Agree.<span className="required-star">*</span>
+</label>
+{formErrors.privacy && <span className="error-message">{formErrors.privacy}</span>}
             <div className='button-flex'>
             <button type="button" onClick={prevStep}>Previous</button>
-            <button type="submit">Submit</button>
+            <button type="submit" disabled={per !== null && per < 100}  onClick={handleSubmit}>Submit</button>
         </div>
       </div>
       
