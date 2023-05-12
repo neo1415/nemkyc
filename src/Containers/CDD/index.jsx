@@ -14,6 +14,7 @@ import { Link } from 'react-router-dom';
 function CDD() {
   const [step, setStep] = useState(1);
   const [identification, setIdentification] = useState('');
+  const [formErrors, setFormErrors] = useState({});
   const [cac, setCac] = useState('');
   const [privacy, setPrivacy] = useState(false);
   const [tax, setTax] = useState('');
@@ -266,12 +267,16 @@ uploadTask.on('state_changed',
       setFormData({ ...formData, [name]: files[0] });
     } else if (type === 'checkbox') {
       const updatedArray = checked
-        ? [...formData[name], value]
-        : formData[name].filter(item => item !== value);
+      ? [...(Array.isArray(formData[name]) ? formData[name] : []), value]
+      : (Array.isArray(formData[name]) ? formData[name].filter(item => item !== value) : []);
       setFormData({ ...formData, [name]: updatedArray });
     } else {
       setFormData({ ...formData, [name]: value });
     }
+    if (formErrors[name]) {
+      setFormErrors({ ...formErrors, [name]: null });
+    }
+    
   };
 
   const changeHandler = (e) => {
@@ -379,9 +384,29 @@ uploadTask.on('state_changed',
     setIsSubmitted(false);
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-      console.log('Submitting form data...');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    const requiredFields = document.querySelectorAll('input[required]');
+    let allFieldsFilled = true;
+    requiredFields.forEach(field => {
+      if (!field.value) {
+        allFieldsFilled = false;
+        const fieldName = field.getAttribute('name');
+        setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
+      }
+    });
+
+    const privacyCheckbox = document.querySelector('input[name="privacy"]');
+    if (!privacyCheckbox.checked) {
+      allFieldsFilled = false;
+      setFormErrors({...formErrors, privacyPolicy: `Privacy policy must be accepted`});
+    }
+
+    // if any required field is not filled, prevent form from moving to next step
+    if (!allFieldsFilled) {
+      return;
+    }
     try {
       console.log('it works')
       setIsSubmitted(true);
@@ -457,19 +482,31 @@ uploadTask.on('state_changed',
   
 
   const nextStep = () => {
-    setStep(step + 1);
- 
-  };
+    // check if all required fields are filled
+    const requiredFields = document.querySelectorAll('input[required]');
+    let allFieldsFilled = true;
+    requiredFields.forEach(field => {
+      if (!field.value) {
+        allFieldsFilled = false;
+        const fieldName = field.getAttribute('name');
+        setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
+      }
+    });
 
+    // if any required field is not filled, prevent form from moving to next step
+    if (!allFieldsFilled) {
+      return;
+    }
+
+    // if all required fields are filled, move to next step
+    setStep(step + 1);
+  };
+  
   const prevStep = () => {
     setStep(step - 1);
   };
 
   console.log(formData)
-
-  const handlePrivacy = (e) => {
-    setPrivacy(e.target.checked);
-  }
 
   return (
     <div style={{display:'flex', justifyContent:'flex-start',marginTop:'-40px'}}>
@@ -507,28 +544,38 @@ uploadTask.on('state_changed',
 
             <div className='flex-one'>
             <input type="text" id="companyName" name="companyName" placeholder='Company Name' value={formData.companyName} onChange={handleChange} required />
+            {formErrors.companyName && <span className="error-message">{formErrors.companyName}</span>}
 
             <input type="text" id="registeredCompanyAddress" placeholder='Registered Company Address' name="registeredCompanyAddress" value={formData.registeredCompanyAddress} onChange={handleChange} required />
-            
+            {formErrors.registeredCompanyAddress && <span className="error-message">{formErrors.registeredCompanyAddress}</span>}
+
             <input type="text" id="contactTelephoneNumber" placeholder='Contact Telephone Number' name="contactTelephoneNumber" value={formData.contactTelephoneNumber} onChange={handleChange} required />
+            {formErrors.contactTelephoneNumber && <span className="error-message">{formErrors.contactTelephoneNumber}</span>}
 
             <input type="email" id="emailAddress" placeholder='Email Address' name="emailAddress" value={formData.emailAddress} onChange={handleChange} required />
+            {formErrors.email && <span className="error-message">{formErrors.email}</span>}
 
             <input type="email" id="website" placeholder='Website' name="website" value={formData.website} onChange={handleChange} required />
-            
+            {formErrors.website && <span className="error-message">{formErrors.website}</span>}
+
             <input type="text" id="contactPerson" name="contactPerson" placeholder='Contact Person' value={formData.contactPerson} onChange={handleChange} required />
+            {formErrors.contactPerson && <span className="error-message">{formErrors.contactPerson}</span>}
             </div>
 
             <div className='flex-two'>
 
             <input type="text" id="taxIdentificationNumber" placeholder='Tax Identification Number' name="taxIdentificationNumber" value={formData.taxIdentificationNumber} onChange={handleChange} required />
+            {formErrors.taxIdentificationNumber && <span className="error-message">{formErrors.taxIdentificationNumber}</span>}
             
             <input type="text" id="VATRegistrationNumber" placeholder='VAT Registration Number' name="VATRegistrationNumber" value={formData.VATRegistrationNumber} onChange={handleChange} required />
+            {formErrors.VATRegistrationNumber && <span className="error-message">{formErrors.VATRegistrationNumber}</span>}
 
             <label htmlFor="dateOfIncorporationRegistration">Date of Incorporation Registration:</label>
             <input type="date" id="dateOfIncorporationRegistration" name="dateOfIncorporationRegistration" value={formData.dateOfIncorporationRegistration} onChange={handleChange} required />
+            {formErrors.dateOfIncorporationRegistration && <span className="error-message">{formErrors.dateOfIncorporationRegistration}</span>}
 
             <input type="text" placeholder='Incorporation State' id="incorporationState" name="incorporationState" value={formData.incorporationState} onChange={handleChange} required />
+            {formErrors.incorporationState && <span className="error-message">{formErrors.incorporationState}</span>}
             
             <select id="companyType" name="companyType"
              value={formData.companyType} onChange={handleChange} required >
@@ -537,13 +584,14 @@ uploadTask.on('state_changed',
                 <option value="Limited-Liability-Company">Limited Liability Company</option>
                 <option value="Joint-Venture">Joint Venture</option>
             </select> 
+            {formErrors.companyType && <span className="error-message">{formErrors.companyType}</span>}
         </div>
             </div>
             <div className='button-flex'>
             <Link to='/'>
               <button type='button'>Home page</button>
             </Link>
-            <button type="button" onClick={nextStep}>Next</button>
+            <button type="button"  onClick={nextStep} >Next</button>
             </div>
           </motion.div>
 
@@ -562,27 +610,30 @@ uploadTask.on('state_changed',
      
           <div className='flex-one'>
    
-            <input type="text" id=" firstName" placeholder='First Name' name="firstName" value={formData.firstName} onChange={handleChange} required />
+            <input type="text" id=" firstName" placeholder='First Name' name="firstName" value={formData.firstName} onChange={handleChange} />
+          
 
-            <input type="text" placeholder='Last Name' id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required />
+            <input type="text" placeholder='Last Name' id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} />
+       
 
             <label htmlFor="dob">Date of Birth:</label>
-            <input type="date" id="dob" name="dob" value={formData.dob} onChange={handleChange} required />
+            <input type="date" id="dob" name="dob" value={formData.dob} onChange={handleChange} />
+          
             
-            <input type="text" id="placeOfBirth" placeholder='Place Of Birth' name="placeOfBirth" value={formData.placeOfBirth} onChange={handleChange} required />
+            <input type="text" id="placeOfBirth" placeholder='Place Of Birth' name="placeOfBirth" value={formData.placeOfBirth} onChange={handleChange} />
 
-            <input type="text" id="residentialAddress" placeholder='Residential Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required />
+            <input type="text" id="residentialAddress" placeholder='Residential Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange}/>
 
-            <input type="text" id="position" placeholder='Position' name="position" value={formData.position} onChange={handleChange} required />
+            <input type="text" id="position" placeholder='Position' name="position" value={formData.position} onChange={handleChange} />
 
           
            
-            <input type="text" id="occupation" placeholder='Occupation' name="occupation" value={formData.occupation} onChange={handleChange} required />
+            <input type="text" id="occupation" placeholder='Occupation' name="occupation" value={formData.occupation} onChange={handleChange} />
 
-            <input type="text" id="taxIDNumber" placeholder='Tax ID Number' name="taxIDNumber" value={formData.taxIDNumber} onChange={handleChange} required />
+            <input type="text" id="taxIDNumber" placeholder='Tax ID Number' name="taxIDNumber" value={formData.taxIDNumber} onChange={handleChange} />
 
             <select id="sourceOfIncome" name="sourceOfIncome" size=""
-             value={formData.sourceOfIncome} onChange={handleChange} required >
+             value={formData.sourceOfIncome} onChange={handleChange} >
                 <option value="Choose Income Source">Source Of Income</option>
                 <option value="salaryOrBusinessIncome">Salary or Business Income</option>
                 <option value="investmentsOrDividends">Investments or Dividends</option>
@@ -591,17 +642,17 @@ uploadTask.on('state_changed',
 </div>
      <div className='flex-two'>
         
-            <input type="email" id="email" placeholder='Email' name="email" value={formData.email} onChange={handleChange} required />
+            <input type="email" id="email" placeholder='Email' name="email" value={formData.email} onChange={handleChange} />
 
-            <input type="text" id="phoneNumber" placeholder='Phone Number' name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} required />
+            <input type="text" id="phoneNumber" placeholder='Phone Number' name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} />
 
             
 
        
-            <input type="text" id="nationality" placeholder='Nationality' name="nationality" value={formData.nationality} onChange={handleChange} required />
+            <input type="text" id="nationality" placeholder='Nationality' name="nationality" value={formData.nationality} onChange={handleChange} />
 
             <select id="idType" name="idType"
-             value={formData.idType} onChange={handleChange} required >
+             value={formData.idType} onChange={handleChange} >
                 <option value="Choose ID Type">Choose ID Type</option>
                 <option value="international passport">International passport</option>
                 <option value="NIMC">NIMC</option>
@@ -609,15 +660,15 @@ uploadTask.on('state_changed',
                 <option value="Voters Card">Voters Card</option>
             </select> 
 
-            <input type="text" id="idNumber" placeholder='ID Number' name="idNumber" value={formData.idNumber} onChange={handleChange} required />
+            <input type="text" id="idNumber" placeholder='ID Number' name="idNumber" value={formData.idNumber} onChange={handleChange}/>
 
             <label htmlFor="issuedDate">Issued Date</label>
-            <input type="date" id="issuedDate" placeholder='Issued Date' name="issuedDate" value={formData.issuedDate} onChange={handleChange} required />
+            <input type="date" id="issuedDate" placeholder='Issued Date' name="issuedDate" value={formData.issuedDate} onChange={handleChange} />
 
             <label htmlFor="expiryDate">Expiry date:</label>
-            <input type="date" id="expiryDate" placeholder='Expiry Date' name="expiryDate" value={formData.expiryDate} onChange={handleChange} required />
+            <input type="date" id="expiryDate" placeholder='Expiry Date' name="expiryDate" value={formData.expiryDate} onChange={handleChange} />
 
-            <input type="text" id="issuingBody" placeholder='Issuing Body' name="issuingBody" value={formData.issuingBody} onChange={handleChange} required />
+            <input type="text" id="issuingBody" placeholder='Issuing Body' name="issuingBody" value={formData.issuingBody} onChange={handleChange} />
           </div>
           
           
@@ -641,25 +692,25 @@ uploadTask.on('state_changed',
        <div className='flexer'>
         <div className='flex-one'>
            
-            <input type="text" id=" firstName2" placeholder='First Name' name="firstName2" value={formData.firstName2} onChange={handleChange} required />
+            <input type="text" id=" firstName2" placeholder='First Name' name="firstName2" value={formData.firstName2} onChange={handleChange} />
 
-            <input type="text" placeholder='Last Name' id="lastName2" name="lastName2" value={formData.lastName2} onChange={handleChange} required />
+            <input type="text" placeholder='Last Name' id="lastName2" name="lastName2" value={formData.lastName2} onChange={handleChange} />
 
             <label htmlFor="dob2">Date of Birth:</label>
-            <input type="date" id="dob2" name="dob2" value={formData.dob2} onChange={handleChange} required />
+            <input type="date" id="dob2" name="dob2" value={formData.dob2} onChange={handleChange} />
             
-            <input type="text" id="placeOfBirth2" placeholder='Place Of Birth' name="placeOfBirth2" value={formData.placeOfBirth2} onChange={handleChange} required />
+            <input type="text" id="placeOfBirth2" placeholder='Place Of Birth' name="placeOfBirth2" value={formData.placeOfBirth2} onChange={handleChange} />
 
-            <input type="text" id="residentialAddress2" placeholder='Residential Address' name="residentialAddress2" value={formData.residentialAddress2} onChange={handleChange} required />
+            <input type="text" id="residentialAddress2" placeholder='Residential Address' name="residentialAddress2" value={formData.residentialAddress2} onChange={handleChange} />
 
-            <input type="text" id="position2" placeholder='Position' name="position2" value={formData.position2} onChange={handleChange} required />
+            <input type="text" id="position2" placeholder='Position' name="position2" value={formData.position2} onChange={handleChange} />
 
-            <input type="text" id="occupation2" placeholder='Occupation' name="occupation2" value={formData.occupation2} onChange={handleChange} required />
+            <input type="text" id="occupation2" placeholder='Occupation' name="occupation2" value={formData.occupation2} onChange={handleChange} />
 
-            <input type="text" id="taxIDNumber2" placeholder='Tax ID Number' name="taxIDNumber2" value={formData.taxIDNumber2} onChange={handleChange} required />
+            <input type="text" id="taxIDNumber2" placeholder='Tax ID Number' name="taxIDNumber2" value={formData.taxIDNumber2} onChange={handleChange} />
     
             <select id="sourceOfIncome2" name="sourceOfIncome2" size=""
-             value={formData.sourceOfIncome} onChange={handleChange} required >
+             value={formData.sourceOfIncome} onChange={handleChange} >
                 <option value="Choose Income Source">Source Of Income</option>
                 <option value="salaryOrBusinessIncome2">Salary or Business Income</option>
                 <option value="investmentsOrDividends2">Investments or Dividends</option>
@@ -668,14 +719,14 @@ uploadTask.on('state_changed',
             </div>
             <div className='flex-two'>
         
-            <input type="email" id="email2" placeholder='Email' name="email2" value={formData.email2} onChange={handleChange} required />
+            <input type="email" id="email2" placeholder='Email' name="email2" value={formData.email2} onChange={handleChange} />
 
-            <input type="text" id="phoneNumber2" placeholder='Phone Number' name="phoneNumber2" value={formData.phoneNumber2} onChange={handleChange} required />
+            <input type="text" id="phoneNumber2" placeholder='Phone Number' name="phoneNumber2" value={formData.phoneNumber2} onChange={handleChange} />
 
-            <input type="text" id="nationality2" placeholder='Nationality' name="nationality2" value={formData.nationality2} onChange={handleChange} required />
+            <input type="text" id="nationality2" placeholder='Nationality' name="nationality2" value={formData.nationality2} onChange={handleChange} />
 
             <select id="idType2" name="idType2"
-             value={formData.idType2} onChange={handleChange} required >
+             value={formData.idType2} onChange={handleChange} >
                 <option value="Choose ID Type2">Choose ID Type</option>
                 <option value="international passport2">International passport</option>
                 <option value="NIMC2">NIMC</option>
@@ -683,15 +734,15 @@ uploadTask.on('state_changed',
                 <option value="Voters Card2">Voters Card</option>
             </select> 
 
-            <input type="text" id="idNumber2" placeholder='ID Number' name="idNumber2" value={formData.idNumber2} onChange={handleChange} required />
+            <input type="text" id="idNumber2" placeholder='ID Number' name="idNumber2" value={formData.idNumber2} onChange={handleChange} />
 
             <label htmlFor="issuedDate2">Issued Date</label>
-            <input type="date" id="issuedDate2" placeholder='Issued Date' name="issuedDate2" value={formData.issuedDate2} onChange={handleChange} required />
+            <input type="date" id="issuedDate2" placeholder='Issued Date' name="issuedDate2" value={formData.issuedDate2} onChange={handleChange} />
 
             <label htmlFor="expiryDate2">Expiry date:</label>
-            <input type="date" id="expiryDate2" placeholder='Expiry Date' name="expiryDate2" value={formData.expiryDate2} onChange={handleChange} required />
+            <input type="date" id="expiryDate2" placeholder='Expiry Date' name="expiryDate2" value={formData.expiryDate2} onChange={handleChange} />
 
-            <input type="text" id="issuingBody2" placeholder='Issuing Body' name="issuingBody2" value={formData.issuingBody2} onChange={handleChange} required />
+            <input type="text" id="issuingBody2" placeholder='Issuing Body' name="issuingBody2" value={formData.issuingBody2} onChange={handleChange} />
 
             </div>
             </div>
@@ -718,23 +769,30 @@ uploadTask.on('state_changed',
         <h3>Naira Account Details</h3>
 
 <input type="text" id="accountNumber" placeholder='Account Number' name="accountNumber" value={formData.accountNumber} onChange={handleChange} required />
-
+{formErrors.accountNumber && <span className="error-message">{formErrors.accountNumber}</span>}
 <input type="text" placeholder='Bank Name' id="bankName" name="bankName" value={formData.bankName} onChange={handleChange} required />
+{formErrors.bankName && <span className="error-message">{formErrors.bankName}</span>}
 
 <input type="text" id="bankBranch" placeholder='Bank Branch Body' name="bankBranch" value={formData.bankBranch} onChange={handleChange} required />
+{formErrors.bankBranch && <span className="error-message">{formErrors.bankBranch}</span>}
 
 <input type="date" id="accountOpeningDate" placeholder='Account Opening Date' name="accountOpeningDate" value={formData.accountOpeningDate} onChange={handleChange} required />
+{formErrors.accountOpeningDate && <span className="error-message">{formErrors.accountOpeningDate}</span>}
 </div>
 <div className='flex-two'>
         <h3> Dollar Account Details</h3>
 
             <input type="text" id="accountNumber2" placeholder='Account Number' name="accountNumber2" value={formData.accountNumber2} onChange={handleChange} required />
+            {formErrors.accountNumber2 && <span className="error-message">{formErrors.accountNumber2}</span>}
 
             <input type="text" placeholder='Bank Name' id="bankName2" name="bankName2" value={formData.bankName2} onChange={handleChange} required />
+            {formErrors.bankName2 && <span className="error-message">{formErrors.bankName}</span>}
 
             <input type="text" id="bankBranch2" placeholder='Bank Branch Body' name="bankBranch2" value={formData.bankBranch2} onChange={handleChange} required />
+            {formErrors.bankBranch2 && <span className="error-message">{formErrors.bankBranch2}</span>}
 
             <input type="date" id="accountOpeningDate2" placeholder='Account Opening Date' name="accountOpeningDate2" value={formData.accountOpeningDate2} onChange={handleChange} required />
+            {formErrors.accountOpeningDate2 && <span className="error-message">{formErrors.accountOpeningDate2}</span>}
 
             </div>
 
@@ -758,21 +816,25 @@ uploadTask.on('state_changed',
       className="form-step">
        <h3>File Uploads</h3>
         <div className='upload-form'>
-           
+        <div className='uploader'>
         <label htmlFor="cac" className='upload'>
             <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
            <h4>Upload Your CAC Certificate</h4> 
+         
            <div className='upload-icon'>
            <HiCloudUpload />   
            </div>
             </div>
             </label>
+           
             <input type="file" id="cac" name="cac" onChange={changeHandler} />
             <div className='Output'>
             {error && <div className='error'>{error}</div>}
             {cac && <div className='error'>{cac.name}</div>}
             </div>
-
+            </div>
+            <div className='upload-form'>
+        <div className='uploader'>
             <label htmlFor="identification" className='upload'>
             <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
            <h4>Upload Means of Identification</h4> 
@@ -781,12 +843,16 @@ uploadTask.on('state_changed',
            </div>
             </div>
             </label>
-            <input type="file" id="identification" name="identification" onChange={changeHandler} />
+  
+            <input type="file" id="identification" name="identification" onChange={changeHandler}  />
             <div className='Output'>
             {error && <div className='error'>{error}</div>}
                 {identification && <div className='error'>{identification.name}</div>}
               </div>
-
+              </div>
+              </div>
+              <div className='upload-form'>
+        <div className='uploader'>
             <label htmlFor="tax" className='upload'>
             <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
            <h4>Upload Your Tax Card</h4> 
@@ -800,7 +866,10 @@ uploadTask.on('state_changed',
             {error && <div className='error'>{error}</div>}
              {tax && <div className='error'>{tax.name}</div>}
               </div>
-
+            </div>
+            </div>
+            <div className='upload-form'>
+        <div className='uploader'>
             <label htmlFor="cacForm" className='upload'>
             <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
            <h4>Upload CAC Form 02 and 07</h4> 
@@ -809,23 +878,55 @@ uploadTask.on('state_changed',
            </div>
             </div>
             </label>
-            <input type="file" id="cacForm" name="cacForm" onChange={changeHandler} />
+            <input type="file" id="cacForm" name="cacForm" onChange={changeHandler}  />
             <div className='Output'>
             <div className='Output'>
                 {error && <div className='error'>{error}</div>}
                 {cacForm && <div className='error'>{cacForm.name}</div>}
                 </div>
               </div>
-
+              </div>
+              </div>
+              <label htmlFor="privacy">
+  <input type="checkbox" id="privacy" name="privacy" onChange={handleChange} required />
+  Please note that your data will be treated 
+  with the utmost respect and privacy as required by law.
+   By checking this box, you acknowledge and 
+   agree to the purpose set-out in this clause 
+  and our data privacy policy. Thank you.<span className="required-star">*</span>
+</label>
+{formErrors.privacy && <span className="error-message">{formErrors.privacy}</span>}
             </div>
             
          
             <div className='button-flex'>
         <button type="button" onClick={prevStep}>Previous</button>
-        <button type="submit" onClick={handleSubmit}>Submit</button>
+        <button type="button" onClick={nextStep}>Next</button>
         </div>
 
             </motion.div>
+      
+    )}
+
+    {step === 6 && (
+      <div className="form-step">
+        <h3> Confirmation</h3>
+        <h4 className='announce'>
+        I/we hereby declare that all information provided are true and complete to the best of my
+         knowledge and hereby agree that this information shall form the basis of the business relationship 
+         between me/us and NEM Insurance Plc. If there is any addition or alteration in the information provided
+         after the submission of this proposal form, the same shall be communicated to the Company.
+         </h4>
+        <label htmlFor="privacy">
+        <input type="checkbox" id="privacy" className='conf' name="privacy" onChange={handleChange} required />
+ I Agree.<span className="required-star">*</span>
+</label>
+{formErrors.privacy && <span className="error-message">{formErrors.privacy}</span>}
+            <div className='button-flex'>
+            <button type="button" onClick={prevStep}>Previous</button>
+            <button type="submit" disabled={per !== null && per < 100}  onClick={handleSubmit}>Submit</button>
+        </div>
+      </div>
       
     )}
   </form>
