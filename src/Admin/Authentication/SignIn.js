@@ -31,7 +31,7 @@ const handleSubmit = async(e) =>{
     <div className='login'>
     <div className='loginTitle'>
         <h2>Sign In To Your Account</h2>
-        <p>Dont Have an account yet? <Link to='/signup'>Sign up</Link></p>
+        {/* <p>Dont Have an account yet? <Link to='/signup'>Sign up</Link></p> */}
     </div>
     <form onSubmit={handleSubmit}> 
     <div className='Inputs'>
