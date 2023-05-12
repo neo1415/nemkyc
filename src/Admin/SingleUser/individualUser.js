@@ -50,8 +50,8 @@ const IndividualUser = () => {
       
         const companyTableColumn = ['Personal Information', ''];
         const companyTableRows = [    ['Insured', data.insured],
-          ['Contact Address', data.contactAddress],
-          ['Contact Telephone Number', data.contactTelephoneNumber],
+          ['Contact  Address', data.contactAddress],
+          ['Contacts Telephone Number', data.contactTelephoneNumber],
           ['Occupation', data.occupation],
           ['Gender', data.gender],
           ['Date of Birth', data.dateOfBirth],
@@ -60,11 +60,20 @@ const IndividualUser = () => {
           ['Employers Telephone Number', data.employersTelephoneNumber],
           ['EMployers Address', data.employersAddress],
           ['City', data.city],
-          ['Date of Birth', data.dob],
-          ['First Name', data.firstName],
-          ['Last Name', data.lastName],
+          ['State', data.state],
+          ['Country', data.country],
+          ['Nationality', data.nationality],
           ['Residential Address', data.residentialAddress],
-          ['Issuing Body', data.issuingBody],
+          ['Office Adress', data.officeAddress],
+          ['GSM Number', data.GSMno],
+          ['Email Address', data.emailAddress],
+          ['Identification Type', data.identificationType],
+          ['Identification Number', data.identificationNumber],
+          ['Issued Date', data.issuedDate],
+          ['Expiry Date', data.expiryDate],
+          ['Annual Income Range', data.officeAddress],
+          ['Premium Payment Source', data.premiumPaymentSource],
+          ['Date', data.date],
         ];
       
         const companyTableProps = {
@@ -92,168 +101,7 @@ const IndividualUser = () => {
       
         doc.autoTable(companyTableColumn, companyTableRows, companyTableProps);
       
-        // Add sub-section - Directors Information
-        doc.setFontSize(18);
-        doc.setTextColor(0, 0, 0);
-        doc.text('Directors Information', 40, doc.lastAutoTable.finalY + 60);
-
-      
-        const directorsTableColumn = ['Director One', ''];
-        const directorsTableRows = [    
-          ['Date of Birth', data.dob],
-          ['First Name', data.firstName],
-          ['Last Name', data.lastName],
-          ['Residential Address', data.residentialAddress],
-          ['Issuing Body', data.issuingBody],
-        ];
-      
-        const directorsTableProps = {
-          startY: doc.lastAutoTable.finalY + 80,
-          styles: {
-            halign: 'middle',
-            valign: 'middle',
-            fontSize: 12,
-            cellPadding: 8,
-            overflow: 'linebreak',
-            lineWidth: 0.1,
-          },
-          columnStyles: {
-            0: {
-              fillColor: [255, 255, 255],
-              textColor: [0, 0, 0],
-              fontStyle: 'bold',
-            },
-            1: {
-              fillColor: [255, 255, 255],
-              textColor: [0, 0, 0],
-            },
-          },
-        };
-      
-        doc.autoTable(directorsTableColumn, directorsTableRows, directorsTableProps);
-      
-        // Add sub-section - Second Director's Information
-      
-const secondDirectorsTableColumn = ['Director Two', ''];
-const secondDirectorsTableRows = [
-    ['Date of Birth', data.dob2],
-    ['First Name', data.firstName2],
-    ['Last Name', data.lastName2],
-    ['Residential Address', data.residentialAddress2],
-    ['Issuing Body', data.issuingBody2],
-];
-
-const secondDirectorsTableProps = {
-startY: doc.lastAutoTable.finalY + 50,
-startX: 300,
-styles: {
-halign: 'middle',
-valign: 'middle',
-fontSize: 12,
-cellPadding: 8,
-overflow: 'linebreak',
-lineWidth: 0.1,
-},
-columnStyles: {
-0: {
-fillColor: [255, 255, 255],
-textColor: [0, 0, 0],
-fontStyle: 'bold',
-},
-1: {
-fillColor: [255, 255, 255],
-textColor: [0, 0, 0],
-},
-},
-};
-
-doc.autoTable(secondDirectorsTableColumn, secondDirectorsTableRows, secondDirectorsTableProps);
-
-// Add section 2 - Beneficial Owners Information
-doc.setFontSize(18);
-doc.setTextColor(0, 0, 0);
-doc.text('Account Details', 40, doc.lastAutoTable.finalY + 60);
-
-const beneficialOwnersTableColumn = ['Naira Account', ''];
-const beneficialOwnersTableRows = [
-['Account Number', data.accountNumber],
-['Bank Name', data.bankName],
-['Bank Branch', data.bankBranch],
-['Acount Opening Date', data.accountOpeningDate],
-];
-
-const beneficialOwnersTableProps = {
-startY: doc.lastAutoTable.finalY + 80,
-styles: {
-halign: 'middle',
-valign: 'middle',
-fontSize: 12,
-cellPadding: 8,
-overflow: 'linebreak',
-lineWidth: 0.1,
-},
-columnStyles: {
-0: {
-fillColor: [255, 255, 255],
-textColor: [0, 0, 0],
-fontStyle: 'bold',
-},
-1: {
-fillColor: [255, 255, 255],
-textColor: [0, 0, 0],
-},
-},
-};
-
-doc.autoTable(beneficialOwnersTableColumn, beneficialOwnersTableRows, beneficialOwnersTableProps);
-
-// Add sub-section - Beneficial Owner 2 Information
-
-const secondBeneficialOwnersTableColumn = ['Dollar Account', ''];
-const secondBeneficialOwnersTableRows = [
-    ['Account Number', data.accountNumber2],
-    ['Bank Name', data.bankName2],
-    ['Bank Branch', data.bankBranch2],
-    ['Acount Opening Date', data.accountOpeningDate2],
-];
-
-const secondBeneficialOwnersTableProps = {
-startY: doc.lastAutoTable.finalY + 60,
-styles: {
-halign: 'middle',
-valign: 'middle',
-fontSize: 12,
-cellPadding: 8,
-overflow: 'linebreak',
-lineWidth: 0.1,
-},
-columnStyles: {
-0: {
-fillColor: [255, 255, 255],
-textColor: [0, 0, 0],
-fontStyle: 'bold',
-},
-1: {
-fillColor: [255, 255, 255],
-textColor: [0, 0, 0],
-},
-},
-};
-
-doc.autoTable(secondBeneficialOwnersTableColumn, secondBeneficialOwnersTableRows, secondBeneficialOwnersTableProps);
-
-// Add section 3 - Declaration and Signature
-// doc.setFontSize(18);
-// doc.setTextColor(0, 0, 0);
-// doc.text('Section 3 - Declaration and Signature', 40, doc.lastAutoTable.finalY + 60);
-
-// doc.setFontSize(12);
-// doc.text('I hereby declare that the information provided in this form is true and correct to the best of my knowledge and belief. I understand that any false or misleading statement may result in the rejection of this application.', 60, doc.lastAutoTable.finalY + 100);
-
-// doc.setFontSize(16);
-// doc.text('Signature:', 60, doc.lastAutoTable.finalY + 200);
-// doc.line(140, doc.lastAutoTable.finalY + 200, 350, doc.lastAutoTable.finalY + 200);
-
+       
 // Save the PDF
 doc.save('KYC Form.pdf');
     }
@@ -346,8 +194,8 @@ doc.save('KYC Form.pdf');
                     <p className='info'>{data.emailAddress}</p>
             </li>
             <li className='form-list'>
-                    <p>Identification</p>
-                    <p className='info'>{data.identification}</p>
+                    <p>Identification Type</p>
+                    <p className='info'>{data.identificationType}</p>
             </li>
             <li className='form-list'>
                     <p>Identification Number</p>
