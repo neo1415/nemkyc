@@ -7,7 +7,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { HiCloudUpload } from 'react-icons/hi';
 import { v4 as uuidv4 } from 'uuid';
 import { motion } from "framer-motion"
-import image from './form2.jpg'
+import image from './form3.jpg'
 import { HiXCircle } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
 
@@ -485,13 +485,13 @@ uploadTask.on('state_changed',
     // check if all required fields are filled
     const requiredFields = document.querySelectorAll('input[required]');
     let allFieldsFilled = true;
-    requiredFields.forEach(field => {
-      if (!field.value) {
-        allFieldsFilled = false;
-        const fieldName = field.getAttribute('name');
-        setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
-      }
-    });
+    // requiredFields.forEach(field => {
+    //   if (!field.value) {
+    //     allFieldsFilled = false;
+    //     const fieldName = field.getAttribute('name');
+    //     setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
+    //   }
+    // });
 
     // if any required field is not filled, prevent form from moving to next step
     if (!allFieldsFilled) {
@@ -543,40 +543,49 @@ uploadTask.on('state_changed',
             <div className='flex-form'>
 
             <div className='flex-one'>
+            <label htmlFor="companyName">Company Name <span className='required'>*</span></label>
             <input type="text" id="companyName" name="companyName" placeholder='Company Name' value={formData.companyName} onChange={handleChange} required />
             {formErrors.companyName && <span className="error-message">{formErrors.companyName}</span>}
-
+            
+            <label htmlFor="registeredCompanyAddress">Registered Company Address <span className='required'>*</span></label>
             <input type="text" id="registeredCompanyAddress" placeholder='Registered Company Address' name="registeredCompanyAddress" value={formData.registeredCompanyAddress} onChange={handleChange} required />
             {formErrors.registeredCompanyAddress && <span className="error-message">{formErrors.registeredCompanyAddress}</span>}
 
+            <label htmlFor="contactTelephoneNumber">Contact Telephone Number <span className='required'>*</span></label>
             <input type="text" id="contactTelephoneNumber" placeholder='Contact Telephone Number' name="contactTelephoneNumber" value={formData.contactTelephoneNumber} onChange={handleChange} required />
             {formErrors.contactTelephoneNumber && <span className="error-message">{formErrors.contactTelephoneNumber}</span>}
 
+            <label htmlFor="emailAddress">Email Address <span className='required'>*</span></label>
             <input type="email" id="emailAddress" placeholder='Email Address' name="emailAddress" value={formData.emailAddress} onChange={handleChange} required />
             {formErrors.email && <span className="error-message">{formErrors.email}</span>}
 
-            <input type="email" id="website" placeholder='Website' name="website" value={formData.website} onChange={handleChange} required />
-            {formErrors.website && <span className="error-message">{formErrors.website}</span>}
+            <label htmlFor="website">Website</label>
+            <input type="email" id="website" placeholder='Website' name="website" value={formData.website} onChange={handleChange}  />
 
+            <label htmlFor="contactPerson">Contact Person</label>
             <input type="text" id="contactPerson" name="contactPerson" placeholder='Contact Person' value={formData.contactPerson} onChange={handleChange} required />
             {formErrors.contactPerson && <span className="error-message">{formErrors.contactPerson}</span>}
             </div>
 
             <div className='flex-two'>
 
+            <label htmlFor="taxIdentificationNumber">Tax Identification Number <span className='required'>*</span></label>
             <input type="text" id="taxIdentificationNumber" placeholder='Tax Identification Number' name="taxIdentificationNumber" value={formData.taxIdentificationNumber} onChange={handleChange} required />
             {formErrors.taxIdentificationNumber && <span className="error-message">{formErrors.taxIdentificationNumber}</span>}
             
+            <label htmlFor="VATRegistrationNumber">VAT Registration Number <span className='required'>*</span></label>
             <input type="text" id="VATRegistrationNumber" placeholder='VAT Registration Number' name="VATRegistrationNumber" value={formData.VATRegistrationNumber} onChange={handleChange} required />
             {formErrors.VATRegistrationNumber && <span className="error-message">{formErrors.VATRegistrationNumber}</span>}
 
-            <label htmlFor="dateOfIncorporationRegistration">Date of Incorporation Registration:</label>
+            <label htmlFor="dateOfIncorporationRegistration">Date of Incorporation Registration: <span className='required'>*</span></label>
             <input type="date" id="dateOfIncorporationRegistration" name="dateOfIncorporationRegistration" value={formData.dateOfIncorporationRegistration} onChange={handleChange} required />
             {formErrors.dateOfIncorporationRegistration && <span className="error-message">{formErrors.dateOfIncorporationRegistration}</span>}
 
+            <label htmlFor="incorporationState">Incorporation State <span className='required'>*</span></label>
             <input type="text" placeholder='Incorporation State' id="incorporationState" name="incorporationState" value={formData.incorporationState} onChange={handleChange} required />
             {formErrors.incorporationState && <span className="error-message">{formErrors.incorporationState}</span>}
             
+            <label htmlFor="companyType">Company Type <span className='required'>*</span></label>
             <select id="companyType" name="companyType"
              value={formData.companyType} onChange={handleChange} required >
                 <option value="Choose Company Type">Company Type</option>
@@ -610,65 +619,92 @@ uploadTask.on('state_changed',
      
           <div className='flex-one'>
    
-            <input type="text" id=" firstName" placeholder='First Name' name="firstName" value={formData.firstName} onChange={handleChange} />
+            <label htmlFor="firstName">first Name <span className='required'>*</span></label>
+            <input type="text" id=" firstName" placeholder='First Name' name="firstName" value={formData.firstName} onChange={handleChange}  required />
+            {formErrors.firstName && <span className="error-message">{formErrors.firstName}</span>}
           
 
-            <input type="text" placeholder='Last Name' id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} />
-       
+            <label htmlFor="lastName">Last Name <span className='required'>*</span></label>
+            <input type="text" placeholder='Last Name' id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required />
+            {formErrors.lastName && <span className="error-message">{formErrors.lastName}</span>}
 
-            <label htmlFor="dob">Date of Birth:</label>
-            <input type="date" id="dob" name="dob" value={formData.dob} onChange={handleChange} />
-          
+            <label htmlFor="dob">Date of Birth: <span className='required'>*</span></label>
+            <input type="date" id="dob" name="dob" value={formData.dob} onChange={handleChange} required />
+            {formErrors.dob && <span className="error-message">{formErrors.dob}</span>}
             
-            <input type="text" id="placeOfBirth" placeholder='Place Of Birth' name="placeOfBirth" value={formData.placeOfBirth} onChange={handleChange} />
+            <label htmlFor="placeOfBirth">Place of Birth <span className='required'>*</span></label>
+            <input type="text" id="placeOfBirth" placeholder='Place Of Birth' name="placeOfBirth" value={formData.placeOfBirth} onChange={handleChange} required />
+            {formErrors.placeOfBirth && <span className="error-message">{formErrors.placeOfBirth}</span>}
 
-            <input type="text" id="residentialAddress" placeholder='Residential Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange}/>
+            <label htmlFor="residentialAddress">Residential Address <span className='required'>*</span></label>
+            <input type="text" id="residentialAddress" placeholder='Residential Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required/>
+            {formErrors.residentialAddress && <span className="error-message">{formErrors.residentialAddress}</span>}
 
-            <input type="text" id="position" placeholder='Position' name="position" value={formData.position} onChange={handleChange} />
+            <label htmlFor="position">Position <span className='required'>*</span></label>
+            <input type="text" id="position" placeholder='Position' name="position" value={formData.position} onChange={handleChange} required />
+            {formErrors.position && <span className="error-message">{formErrors.position}</span>}
 
           
-           
-            <input type="text" id="occupation" placeholder='Occupation' name="occupation" value={formData.occupation} onChange={handleChange} />
+            <label htmlFor="occupation">Occupation <span className='required'>*</span></label>
+            <input type="text" id="occupation" placeholder='Occupation' name="occupation" value={formData.occupation} onChange={handleChange} required />
+            {formErrors.occupation && <span className="error-message">{formErrors.occupation}</span>}
 
-            <input type="text" id="taxIDNumber" placeholder='Tax ID Number' name="taxIDNumber" value={formData.taxIDNumber} onChange={handleChange} />
+            <label htmlFor="taxIDNumber">Tax ID Number <span className='required'>*</span></label>
+            <input type="text" id="taxIDNumber" placeholder='Tax ID Number' name="taxIDNumber" value={formData.taxIDNumber} onChange={handleChange}  required/>
+            {formErrors.taxIDNumber && <span className="error-message">{formErrors.taxIDNumber}</span>}
 
+            <label htmlFor="sourceOfIncome">Source Of Income <span className='required'>*</span></label>
             <select id="sourceOfIncome" name="sourceOfIncome" size=""
-             value={formData.sourceOfIncome} onChange={handleChange} >
+             value={formData.sourceOfIncome} onChange={handleChange} required >
                 <option value="Choose Income Source">Source Of Income</option>
                 <option value="salaryOrBusinessIncome">Salary or Business Income</option>
                 <option value="investmentsOrDividends">Investments or Dividends</option>
             </select> 
+            {formErrors.sourceOfIncome && <span className="error-message">{formErrors.sourceOfIncome}</span>}
     
 </div>
      <div className='flex-two'>
         
-            <input type="email" id="email" placeholder='Email' name="email" value={formData.email} onChange={handleChange} />
+            <label htmlFor="email">email <span className='required'>*</span></label>
+            <input type="email" id="email" placeholder='Email' name="email" value={formData.email} onChange={handleChange}  required/>
+            {formErrors.email && <span className="error-message">{formErrors.email}</span>}
 
-            <input type="text" id="phoneNumber" placeholder='Phone Number' name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} />
-
+            <label htmlFor="phoneNumber">Phone Number <span className='required'>*</span></label>
+            <input type="text" id="phoneNumber" placeholder='Phone Number' name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} required />
+            {formErrors.phoneNumber && <span className="error-message">{formErrors.phoneNumber}</span>}
             
 
-       
-            <input type="text" id="nationality" placeholder='Nationality' name="nationality" value={formData.nationality} onChange={handleChange} />
+            <label htmlFor="nationality">Nationality <span className='required'>*</span></label>
+            <input type="text" id="nationality" placeholder='Nationality' name="nationality" value={formData.nationality} onChange={handleChange}  required/>
+            {formErrors.nationality && <span className="error-message">{formErrors.nationality}</span>}
 
+            <label htmlFor="idType">ID Type <span className='required'>*</span></label>
             <select id="idType" name="idType"
-             value={formData.idType} onChange={handleChange} >
+             value={formData.idType} onChange={handleChange}  required>
                 <option value="Choose ID Type">Choose ID Type</option>
                 <option value="international passport">International passport</option>
                 <option value="NIMC">NIMC</option>
                 <option value="Drivers licence">Drivers Licence</option>
                 <option value="Voters Card">Voters Card</option>
             </select> 
+            {formErrors.idType && <span className="error-message">{formErrors.idType}</span>}
 
-            <input type="text" id="idNumber" placeholder='ID Number' name="idNumber" value={formData.idNumber} onChange={handleChange}/>
+            <label htmlFor="idNumber">ID Number <span className='required'>*</span></label>
+            <input type="text" id="idNumber" placeholder='ID Number' name="idNumber" value={formData.idNumber} onChange={handleChange} required/>
+            {formErrors.idNumber && <span className="error-message">{formErrors.idNumber}</span>}
 
-            <label htmlFor="issuedDate">Issued Date</label>
-            <input type="date" id="issuedDate" placeholder='Issued Date' name="issuedDate" value={formData.issuedDate} onChange={handleChange} />
+            <label htmlFor="issuedDate">Issued Date <span className='required'>*</span></label>
+            <input type="date" id="issuedDate" placeholder='Issued Date' name="issuedDate" value={formData.issuedDate} onChange={handleChange}  required/>
+            {formErrors.issuedDate && <span className="error-message">{formErrors.issuedDate}</span>}
 
-            <label htmlFor="expiryDate">Expiry date:</label>
-            <input type="date" id="expiryDate" placeholder='Expiry Date' name="expiryDate" value={formData.expiryDate} onChange={handleChange} />
+            <label htmlFor="expiryDate">Expiry date <span className='required'>*</span></label>
+            <input type="date" id="expiryDate" placeholder='Expiry Date' name="expiryDate" value={formData.expiryDate} onChange={handleChange}  required/>
+            {formErrors.expiryDate && <span className="error-message">{formErrors.expiryDate}</span>}
 
-            <input type="text" id="issuingBody" placeholder='Issuing Body' name="issuingBody" value={formData.issuingBody} onChange={handleChange} />
+            <label htmlFor="issuingBody">Issuing Body <span className='required'>*</span></label>
+            <input type="text" id="issuingBody" placeholder='Issuing Body' name="issuingBody" value={formData.issuingBody} onChange={handleChange} required />
+            {formErrors.issuingBody && <span className="error-message">{formErrors.issuingBody}</span>}
+
           </div>
           
           
@@ -676,7 +712,7 @@ uploadTask.on('state_changed',
 
         <div className='button-flex'>
         <button type="button" onClick={prevStep}>Previous</button>
-        <button type="button" onClick={nextStep}>Next</button>
+        <button type="button"  onClick={nextStep} >Next</button>
         </div>
       </motion.div>
     )}
@@ -692,23 +728,31 @@ uploadTask.on('state_changed',
        <div className='flexer'>
         <div className='flex-one'>
            
+            <label htmlFor="firstName2">First Name</label>
             <input type="text" id=" firstName2" placeholder='First Name' name="firstName2" value={formData.firstName2} onChange={handleChange} />
 
+            <label  htmlFor="lastName2">Last Name</label>
             <input type="text" placeholder='Last Name' id="lastName2" name="lastName2" value={formData.lastName2} onChange={handleChange} />
 
             <label htmlFor="dob2">Date of Birth:</label>
             <input type="date" id="dob2" name="dob2" value={formData.dob2} onChange={handleChange} />
             
+            <label htmlFor="placeOfBirth2">Place of Birth</label>
             <input type="text" id="placeOfBirth2" placeholder='Place Of Birth' name="placeOfBirth2" value={formData.placeOfBirth2} onChange={handleChange} />
 
+            <label htmlFor="residentialAddress2">Residential Address</label>
             <input type="text" id="residentialAddress2" placeholder='Residential Address' name="residentialAddress2" value={formData.residentialAddress2} onChange={handleChange} />
 
+            <label htmlFor="position2">Position</label>
             <input type="text" id="position2" placeholder='Position' name="position2" value={formData.position2} onChange={handleChange} />
 
+            <label htmlFor="occupation2">Occupation</label>
             <input type="text" id="occupation2" placeholder='Occupation' name="occupation2" value={formData.occupation2} onChange={handleChange} />
 
+            <label htmlFor="taxIDNumber2">Tax ID Number</label>
             <input type="text" id="taxIDNumber2" placeholder='Tax ID Number' name="taxIDNumber2" value={formData.taxIDNumber2} onChange={handleChange} />
     
+            <label htmlFor="sourceOfIncome2">Source of Income</label>
             <select id="sourceOfIncome2" name="sourceOfIncome2" size=""
              value={formData.sourceOfIncome} onChange={handleChange} >
                 <option value="Choose Income Source">Source Of Income</option>
@@ -719,12 +763,16 @@ uploadTask.on('state_changed',
             </div>
             <div className='flex-two'>
         
+            <label htmlFor="email2">Email</label>
             <input type="email" id="email2" placeholder='Email' name="email2" value={formData.email2} onChange={handleChange} />
 
+            <label htmlFor="phoneNumber2">Phone Number</label>
             <input type="text" id="phoneNumber2" placeholder='Phone Number' name="phoneNumber2" value={formData.phoneNumber2} onChange={handleChange} />
 
+            <label htmlFor='nationality2'>Nationality</label>
             <input type="text" id="nationality2" placeholder='Nationality' name="nationality2" value={formData.nationality2} onChange={handleChange} />
 
+            <label htmlFor="stateOfOrigin2">State of Origin</label>
             <select id="idType2" name="idType2"
              value={formData.idType2} onChange={handleChange} >
                 <option value="Choose ID Type2">Choose ID Type</option>
@@ -734,6 +782,7 @@ uploadTask.on('state_changed',
                 <option value="Voters Card2">Voters Card</option>
             </select> 
 
+            <label htmlFor="idNumber2">ID Number</label>
             <input type="text" id="idNumber2" placeholder='ID Number' name="idNumber2" value={formData.idNumber2} onChange={handleChange} />
 
             <label htmlFor="issuedDate2">Issued Date</label>
@@ -742,6 +791,7 @@ uploadTask.on('state_changed',
             <label htmlFor="expiryDate2">Expiry date:</label>
             <input type="date" id="expiryDate2" placeholder='Expiry Date' name="expiryDate2" value={formData.expiryDate2} onChange={handleChange} />
 
+            <label htmlFor="issuingBody2">Issuing Body</label>
             <input type="text" id="issuingBody2" placeholder='Issuing Body' name="issuingBody2" value={formData.issuingBody2} onChange={handleChange} />
 
             </div>
@@ -768,29 +818,39 @@ uploadTask.on('state_changed',
       <div className='flex-one'>
         <h3>Naira Account Details</h3>
 
+<label htmlFor="accountName">Account Name <span className='required'>*</span></label>
 <input type="text" id="accountNumber" placeholder='Account Number' name="accountNumber" value={formData.accountNumber} onChange={handleChange} required />
 {formErrors.accountNumber && <span className="error-message">{formErrors.accountNumber}</span>}
+
+<label htmlFor="bankName">Bank Name <span className='required'>*</span></label>
 <input type="text" placeholder='Bank Name' id="bankName" name="bankName" value={formData.bankName} onChange={handleChange} required />
 {formErrors.bankName && <span className="error-message">{formErrors.bankName}</span>}
 
+<label htmlFor="bankBranch">Bank Branch <span className='required'>*</span></label>
 <input type="text" id="bankBranch" placeholder='Bank Branch Body' name="bankBranch" value={formData.bankBranch} onChange={handleChange} required />
 {formErrors.bankBranch && <span className="error-message">{formErrors.bankBranch}</span>}
 
+<label htmlFor="accountOpeningDate">Account Opening Date <span className='required'>*</span></label>
 <input type="date" id="accountOpeningDate" placeholder='Account Opening Date' name="accountOpeningDate" value={formData.accountOpeningDate} onChange={handleChange} required />
 {formErrors.accountOpeningDate && <span className="error-message">{formErrors.accountOpeningDate}</span>}
+
 </div>
 <div className='flex-two'>
         <h3> Dollar Account Details</h3>
 
+            <label htmlFor="accountName2">Account Name</label>
             <input type="text" id="accountNumber2" placeholder='Account Number' name="accountNumber2" value={formData.accountNumber2} onChange={handleChange} required />
             {formErrors.accountNumber2 && <span className="error-message">{formErrors.accountNumber2}</span>}
 
+            <label htmlFor="bankName2">Bank Name</label>
             <input type="text" placeholder='Bank Name' id="bankName2" name="bankName2" value={formData.bankName2} onChange={handleChange} required />
             {formErrors.bankName2 && <span className="error-message">{formErrors.bankName}</span>}
-
+            
+            <label htmlFor="bankBranch2">Bank Branch</label>
             <input type="text" id="bankBranch2" placeholder='Bank Branch Body' name="bankBranch2" value={formData.bankBranch2} onChange={handleChange} required />
             {formErrors.bankBranch2 && <span className="error-message">{formErrors.bankBranch2}</span>}
-
+            
+            <label htmlFor="accountOpeningDate2">Account Opening Date</label>
             <input type="date" id="accountOpeningDate2" placeholder='Account Opening Date' name="accountOpeningDate2" value={formData.accountOpeningDate2} onChange={handleChange} required />
             {formErrors.accountOpeningDate2 && <span className="error-message">{formErrors.accountOpeningDate2}</span>}
 
@@ -815,6 +875,8 @@ uploadTask.on('state_changed',
             exit={{ opacity: 0, x: 50 }}
       className="form-step">
        <h3>File Uploads</h3>
+       <div className='upload-flex'>
+        <div className='flex-upload'>
         <div className='upload-form'>
         <div className='uploader'>
         <label htmlFor="cac" className='upload'>
@@ -851,7 +913,11 @@ uploadTask.on('state_changed',
               </div>
               </div>
               </div>
-              <div className='upload-form'>
+            </div>
+        </div>
+
+        <div className='flex-upload'>
+            <div className='upload-form'>
         <div className='uploader'>
             <label htmlFor="tax" className='upload'>
             <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
@@ -886,8 +952,10 @@ uploadTask.on('state_changed',
                 </div>
               </div>
               </div>
+    
               </div>
-              <label htmlFor="privacy">
+        </div>
+        <label htmlFor="privacy">
   <input type="checkbox" id="privacy" name="privacy" onChange={handleChange} required />
   Please note that your data will be treated 
   with the utmost respect and privacy as required by law.
@@ -896,9 +964,8 @@ uploadTask.on('state_changed',
   and our data privacy policy. Thank you.<span className="required-star">*</span>
 </label>
 {formErrors.privacy && <span className="error-message">{formErrors.privacy}</span>}
-            </div>
-            
-         
+      </div>  
+       
             <div className='button-flex'>
         <button type="button" onClick={prevStep}>Previous</button>
         <button type="button" onClick={nextStep}>Next</button>

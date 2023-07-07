@@ -6,7 +6,7 @@ import { setDoc,doc, Timestamp } from 'firebase/firestore'
 import { serverTimestamp } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { motion } from "framer-motion";
-import image from './form2.jpg'
+import image from './form4.jpg'
 import { HiCloudUpload } from 'react-icons/hi';
 import { HiXCircle } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
@@ -170,8 +170,7 @@ uploadTask.on('state_changed',
   //       });
   //     }
   //   );
-  // }
-  
+  // }  
 
   const changeHandler = (e) => {
     let selected = e.target.files[0];
@@ -322,13 +321,13 @@ uploadTask.on('state_changed',
     // check if all required fields are filled
     const requiredFields = document.querySelectorAll('input[required]');
     let allFieldsFilled = true;
-    requiredFields.forEach(field => {
-      if (!field.value) {
-        allFieldsFilled = false;
-        const fieldName = field.getAttribute('name');
-        setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
-      }
-    });
+    // requiredFields.forEach(field => {
+    //   if (!field.value) {
+    //     allFieldsFilled = false;
+    //     const fieldName = field.getAttribute('name');
+    //     setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
+    //   }
+    // });
 
     // if any required field is not filled, prevent form from moving to next step
     if (!allFieldsFilled) {
@@ -347,7 +346,7 @@ uploadTask.on('state_changed',
 
   return (
     <div className='forms' style={{display:'flex',flexDirection:'column' }}>
-    <div className='form-page'>
+    <div className='forms-page'>
        <div className='picture'>
           <img src={image} className='form-img' />
         </div>
@@ -356,7 +355,7 @@ uploadTask.on('state_changed',
         animate={{ opacity: 1, x: 0 }}
         transition= {{ duration:.5, ease:'easeOut' }}
         exit={{ opacity: 0, x: 0 }}
-     className="multistep-form">
+     className="multisteps-form">
 
 {isSubmitted ? (
         <div className="modal">
@@ -379,18 +378,24 @@ uploadTask.on('state_changed',
             <h3>Personal Information</h3>
             <div className='flex-form'>
             <div className='flex-one'>
+
+            <label htmlFor="insuredName">Insured Name <span className='required'>*</span></label>
             <input type="text" id="insured" placeholder='Insured' name="insured" value={formData.insured} onChange={handleChange} required />
              {formErrors.insured && <span className="error-message">{formErrors.insured}</span>}
-
+            
+             <label htmlFor="contactAddress">Contact Address <span className='required'>*</span></label>
             <input type="text" id="contactAddress" placeholder="Contact's Address" name="contactAddress" value={formData.contactAddress} onChange={handleChange} required />
              {formErrors.contactAddress && <span className="error-message">{formErrors.contactAddress}</span>}
 
+             <label htmlFor="contactTelephoneNumber">Contact Telephone Number <span className='required'>*</span></label>
             <input type="text" id="contactTelephoneNumber" placeholder="Contact's Telephone Number" name="contactTelephoneNumber" value={formData.contactTelephoneNumber} onChange={handleChange} required />
              {formErrors.contactTelephoneNumber && <span className="error-message">{formErrors.contactTelephoneNumber}</span>}
-
+            
+             <label htmlFor="occupation">Occupation <span className='required'>*</span></label>
             <input type="text" placeholder='Occupation' id="occupation" name="occupation" value={formData.occupation} onChange={handleChange} required />
              {formErrors.occupation && <span className="error-message">{formErrors.occupation}</span>}
 
+             <label htmlFor="gender">Gender <span className='required'>*</span></label>
             <select id="gender" name="gender" size="1"
              value={formData.gender} onChange={handleChange} required >
                 <option value="Gender">Gender</option>
@@ -406,21 +411,27 @@ uploadTask.on('state_changed',
             </div>
 
             <div className='flex-two'>
+            <label htmlFor="mothersMaidenName">Mothers Maiden NAme <span className='required'>*</span></label>
             <input type="text" id="mothersMaidenName" placeholder="Mother's Maiden Name" name="mothersMaidenName" value={formData.mothersMaidenName} onChange={handleChange} required />
              {formErrors.mothersMaidenName && <span className="error-message">{formErrors.mothersMaidenName}</span>}
 
+             <label htmlFor="employersName">Employers Name <span className='required'>*</span></label>
             <input type="text" placeholder="Employer's Name" id="employersName" name="employersName" value={formData.employersName} onChange={handleChange} required />
              {formErrors.employersName && <span className="error-message">{formErrors.employersName}</span>}
 
+             <label htmlFor="employersTelephoneNumber">Employers Telephone Number <span className='required'>*</span></label>
             <input type="text" id="employersTelephoneNumber" placeholder="Employer's Telephone Number" name="employersTelephoneNumber" value={formData.employersTelephoneNumber} onChange={handleChange} required />
              {formErrors.employersTelephoneNumber && <span className="error-message">{formErrors.employersTelephoneNumber}</span>}
 
+             <label htmlFor="employersAddress">Employers Address <span className='required'>*</span></label>
             <input type="text" id="employer'sAddress" placeholder='Employers Address' name="employersAddress" value={formData.employersAddress} onChange={handleChange} required />
              {formErrors.emailAddress && <span className="error-message">{formErrors.emailAddress}</span>}
 
+             <label htmlFor="city">City <span className='required'>*</span></label>
             <input type="text" placeholder='City' id=" city" name="city" value={formData.city} onChange={handleChange} required />
              {formErrors.city && <span className="error-message">{formErrors.city}</span>}
 
+             <label htmlFor="state">State <span className='required'>*</span></label>
             <input type="text" id=" state" placeholder='State' name="state" value={formData.state} onChange={handleChange} required /> 
              {formErrors.state && <span className="error-message">{formErrors.state}</span>}
 
@@ -446,18 +457,23 @@ uploadTask.on('state_changed',
             <h3>Additional Details</h3>
             <div className='flex-form'>
             <div className='flex-one'>
+            <label htmlFor="country">Country <span className='required'>*</span></label>
             <input type="text" id=" country" placeholder='Country' name="country" value={formData.country} onChange={handleChange} required />
              {formErrors.country && <span className="error-message">{formErrors.country}</span>}
-
+            
+             <label htmlFor="nationality">Nationality <span className='required'>*</span></label>
             <input type="text" id=" nationality" placeholder='Nationality' name="nationality" value={formData.nationality} onChange={handleChange} required />
              {formErrors.nationality && <span className="error-message">{formErrors.nationality}</span>}
 
+             <label htmlFor="residentialAddress">Residential Address <span className='required'>*</span></label>
             <input type="text" id="residentialAddress" placeholder='Residential Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required />
              {formErrors.residentialAddress && <span className="error-message">{formErrors.residentialAddress}</span>}
 
+             <label htmlFor="officeAddress">Office Address <span className='required'>*</span></label>
             <input type="text" id="officeAddress" placeholder='Office Address' name="officeAddress" value={formData.officeAddress} onChange={handleChange} required />
              {formErrors.officeAddress && <span className="error-message">{formErrors.officeAddress}</span>}
 
+             <label htmlFor="GSMNumber">GSM Number <span className='required'>*</span></label>
             <input type="text" id=" GSMno" placeholder='GSM Number' name="GSMno" value={formData.GSMno} onChange={handleChange} required />
              {formErrors.GSMno && <span className="error-message">{formErrors.GSMno}</span>}
 
@@ -465,9 +481,11 @@ uploadTask.on('state_changed',
         
             <div className='flex-two'>
 
+            <label htmlFor="email">Email <span className='required'>*</span></label>
             <input type="email" id="emailAddress" placeholder='Email Address:' name="emailAddress" value={formData.emailAddress} onChange={handleChange} required />
              {formErrors.email && <span className="error-message">{formErrors.email}</span>}
 
+             <label htmlFor="identificationType">Identification Type <span className='required'>*</span></label>
             <select id="identificationType" name="identificationType" size="1"
              value={formData.identificationType} onChange={handleChange} required >
                 <option value="Choose Identification Type">Identification Type</option>
@@ -478,6 +496,7 @@ uploadTask.on('state_changed',
             </select> 
              {formErrors.identificationType && <span className="error-message">{formErrors.identificationType}</span>}
 
+             <label htmlFor="identificationNumber">Identification Number <span className='required'>*</span></label>
             <input type="text" id="identificationNumber" placeholder='Identification Number' name="identificationNumber" value={formData.identificationNumber} onChange={handleChange} required />
              {formErrors.identificationNumber && <span className="error-message">{formErrors.identificationNumber}</span>}
 
@@ -508,6 +527,7 @@ uploadTask.on('state_changed',
             exit={{ opacity: 0, x: 50 }}
        className="form-step">
         <h3>Account Details</h3> 
+        <label htmlFor="annualIncomeRange">Annual Income Range <span className='required'>*</span></label>
             <select id="annualIncomeRange" name="annualIncomeRange" size="1"
              value={formData.annualIncomeRange} onChange={handleChange} required >
                 <option value="Choose Income Range">Annual Income Range</option>
@@ -518,6 +538,7 @@ uploadTask.on('state_changed',
             </select> 
              {formErrors.annualIncomeRange && <span className="error-message">{formErrors.annualIncomeRange}</span>}
 
+             <label htmlFor="premiumPaymentSource">Premium Payment Source <span className='required'>*</span></label>
             <select id="premiumPaymentSource" name="premiumPaymentSource" size="1"
              value={formData.premiumPaymentSource} onChange={handleChange} required >
                 <option value="Choose Income Source">Premium Payment Source</option>
@@ -567,8 +588,8 @@ uploadTask.on('state_changed',
               </div>
               </div>
 </div>
-            <label htmlFor="privacy">
-            <input type="checkbox" id="privacy" name="privacy" onChange={handleChange} required />
+            <label htmlFor="private">
+            <input type="checkbox" id="privacy" className='conf' name="privacy" onChange={handleChange} required />
             Please note that your data will be treated 
             with the utmost respect and privacy as required by law.
             By checking this box, you acknowledge and 

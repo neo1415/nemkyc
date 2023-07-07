@@ -5,23 +5,25 @@ $light-color: #f8f9fa;
 $dark-color: #343a40;
 
 // Style the entire multistep form container
-.form-page{
+.forms-page{
   margin-top: -5.5rem;
   background-image: url('./form1.jpg');
   align-items: center;
   justify-content: flex-start;
 }
-.multistep-form {
+.multisteps-form {
   display: flex;
   align-items: center;
-  justify-content: center;
-
+  justify-content: flex-end;
+  width: 75%;
   border: none;
   padding: 2rem;
   background-image: url('./form1.jpg');
   @media screen and (max-width:1000px) {
     padding: 0;
     background-image: url('./form1.jpg');
+    width: 100%;
+    justify-content: center;
 }
 
 
@@ -38,9 +40,12 @@ $dark-color: #343a40;
     }
 
     label {
-      display: block;
+      display: flex !important;
+      align-items: center !important;
       margin-bottom: 0.5rem;
       color: $dark-color;
+      justify-content: space-between !important;
+
     }
 
     input[type="text"],
@@ -78,17 +83,12 @@ $dark-color: #343a40;
       flex-direction: column;
       margin-bottom: 1rem;
 
-      label {
-        display: flex;
-        align-items: center;
+      label{
+        display: flex !important;
+        align-items: center !important;
         margin-bottom: 0.5rem;
         color: $dark-color;
-
-        input[type="radio"],
-        input[type="checkbox"] {
-          margin-right: 0.5rem;
-          height: 1.5rem;
-        }
+        justify-content: space-between !important;
       }
     }
 
@@ -244,4 +244,22 @@ h4{
   cursor: pointer;
   padding: 0;
   height: 10px;
+}
+
+label[for="private"] {
+  display: flex !important;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  width: 37rem;
+  position: relative;
+  text-align: center;
+  font-size: 14px;
+  justify-content: center !important;
+  align-items: center !important;
+  font-weight: normal;
+  color: brown;
+  cursor: pointer;
+  @media screen and (max-width:1000px) {
+    width: 22rem;
+}
 }

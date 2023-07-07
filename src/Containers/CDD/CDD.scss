@@ -10,14 +10,14 @@ $dark-color: #343a40;
   // position: fixed;
   // margin-top: -5.5rem;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end !important;
   // height: 100vh;
   width: 100%;
   background-image: url('./form1.jpg');
   @media screen and (max-width:1000px) {
     position:relative;
     padding-top: 2rem;
-  
+    justify-content: center!important;
   }
 }
 
@@ -26,6 +26,7 @@ $dark-color: #343a40;
   align-items: center;
   justify-content: center;
   padding: 2rem;
+  width: 80%;
   @media screen and (max-width:1000px) {
     padding: 0;
     padding-top: 2rem;
@@ -36,7 +37,7 @@ $dark-color: #343a40;
     display: flex;
     flex-direction: column;
     align-items: center;
- 
+    justify-content: center;
 
     h2 {
       margin-bottom: 1rem;
@@ -44,9 +45,11 @@ $dark-color: #343a40;
     }
 
     label {
-      display: block;
+      display: flex !important;
+      align-items: center !important;
       margin-bottom: 0.5rem;
       color: $dark-color;
+      justify-content: space-between !important;
     }
 
     input[type="text"],
@@ -93,29 +96,31 @@ $dark-color: #343a40;
       flex-direction: column;
       margin-bottom: 1rem;
 
-      label {
-        display: flex;
-        align-items: center;
+      label{
+        display: flex !important;
+        align-items: center !important;
         margin-bottom: 0.5rem;
         color: $dark-color;
+        justify-content: space-between !important;
       }
     }
 
    
     label[for="privacy"] {
-      display: flex;
+      display: flex !important;
       margin-top: 2rem;
       margin-bottom: 2rem;
       width: 36rem;
       position: relative;
-      padding-left: 5rem;
-      margin-right: 4rem;
       font-size: 14px;
-      justify-content: center;
-      align-items: center;
+      justify-content: center !important;
+      align-items: center !important;
       font-weight: normal;
       color: brown;
       cursor: pointer;
+      @media screen and (max-width:1000px) {
+        width: 22rem;
+    }
     }
 
     input[type="radio"],
@@ -174,12 +179,16 @@ select{
   height: 3rem !important;
 }
 .picture{
-  width: 30rem;
+  width: 22rem;
   height: 100%;
+  position: fixed;
   padding: 0;
   margin: 0;
   background-color: #800020;
   background-image: url('./form2.jpg') !important;
+  @media screen and (max-width:1050px) {
+    width: 13rem;
+  }
   @media screen and (max-width:1000px) {
     display: none;
   }
@@ -242,7 +251,13 @@ label[for][required]:before {
   color: #800020;
   padding-left: 1rem;
   padding-right: 1rem;
-  width: 60rem;
+  width: 40rem;
+  @media screen and (max-width:1000px) {
+    width: 30rem;
+  }
+  @media screen and (max-width:420px) {
+    width: 20rem;
+  }
 }
 .conf{
   height: 2rem !important;
@@ -254,4 +269,21 @@ label[for][required]:before {
   @media screen and (max-width:1000px) {
     flex-direction: column;
   }
+}
+.required{
+  color: red;
+  font-size: 1.2rem;
+  margin-left: .5rem;
+
+}
+.upload-flex{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  column-gap: 3rem;
+}
+.flex-upload{
+  display: flex;
+  column-gap: 3rem;
 }
