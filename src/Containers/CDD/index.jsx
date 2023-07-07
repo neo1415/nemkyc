@@ -509,7 +509,7 @@ uploadTask.on('state_changed',
   console.log(formData)
 
   return (
-    <div style={{display:'flex', justifyContent:'flex-start',marginTop:'-40px'}}>
+    <div style={{display:'flex', justifyContent:'flex-start',marginTop:'-100px'}}>
            <div className='picture'>
               <img src={image} className='form-img' />
             </div>
