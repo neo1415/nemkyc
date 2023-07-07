@@ -9,7 +9,7 @@ const Section = () => {
 <section id='section'>
 <Link to='/corporate-kyc'>
   <div class="card">
-    <img src={image1} alt="Image 1" />
+    <img src={image2} alt="Image 1" />
     <div class="overlay">
       <h2>CORPORATE<br/>FORM</h2>
     </div>
@@ -17,7 +17,7 @@ const Section = () => {
   </Link>
   <Link to='/individual-kyc'>
   <div class="card">
-    <img src={image2} alt="Image 2" />
+    <img src={image1} alt="Image 2" />
     <div class="overlay">
       <h2>INDIVIDUAL <br /> FORM</h2>
     </div>
