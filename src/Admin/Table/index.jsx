@@ -23,19 +23,18 @@ const List = () => {
  
   const getRowID = (row) => row.id;
   
-  useEffect(()=> {
-    const dataRef = collection(db, 'users')
+  useEffect(() => {
+    const dataRef = collection(db, 'users');
     const q = query(dataRef, orderBy('createdAt', 'desc'));
-    onSnapshot(q,(snapshot) => {
+    onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
-        id:doc.id,
+        id: doc.id,
+        rowId: doc.data().createdAt, // Assign a timestamp-based row ID
         ...doc.data(),
-      }))
+      }));
       setData(data);
-   
-    })
-  },[])
-  console.log(data)
+    });
+  }, []);
 
 // const approve = async (id) => {
 //   try{
@@ -114,7 +113,7 @@ const List = () => {
   }}
 
         className="datagrid"
-        getRowId={(row) => getRowID ? getRowID(row) : uuidv4()} 
+        getRowId={(row) => row.rowId}
         rows={data}
         columns={userColumns.concat(actionColumn)}
         pageSize={9}
