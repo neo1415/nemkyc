@@ -41,6 +41,11 @@ export const userColumns = [
     width: 180,
   },
   {
+    field: "contactPersonNo",
+    headerName: "Contact Person Number",
+    width: 180,
+  },
+  {
     field: "taxIdentificationNumber",
     headerName: "Tax Identification Number",
     width: 160,

@@ -7,7 +7,10 @@ $dark-color: #343a40;
 // Style the entire multistep form container
 .forms-page{
   margin-top: -5.5rem;
-  background-image: url('./form1.jpg');
+  background-color: #ffffff;
+  opacity: 1;
+  background-image: radial-gradient(#800020 0.9px, #f7f7f8 0.9px);
+  background-size: 18px 18px;
   align-items: center;
   justify-content: flex-start;
 }
@@ -18,7 +21,7 @@ $dark-color: #343a40;
   width: 85%;
   border: none;
   padding: 2rem;
-  background-image: url('./form1.jpg');
+
   @media screen and (max-width:1000px) {
     padding: 0;
     background-image: url('./form1.jpg');
@@ -45,6 +48,7 @@ $dark-color: #343a40;
       display: flex !important;
       align-items: center !important;
       margin-bottom: 0.5rem;
+      font-weight:600;
       color: $dark-color;
       justify-content: space-between !important;
 
@@ -264,4 +268,8 @@ label[for="private"] {
   @media screen and (max-width:1000px) {
     width: 22rem;
 }
+}
+
+.upload-form{
+  cursor:pointer;
 }

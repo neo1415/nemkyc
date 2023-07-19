@@ -310,6 +310,11 @@ doc.save('KYC Form.pdf');
                     <p>Contact Person</p>
                     <p className='info'>{data.contactPerson}</p>
                 </li>
+                <li className='form-list'>
+                    <p>Contact Person Phone Number</p>
+                    <p className='info'>{data.contactPersonNo}</p>
+                </li>
+
                 </ul>
                 <ul className='form-ul'>
                 <li className='form-list'>
