@@ -5,6 +5,7 @@ const Uploads = ({changeHandler,cac, identification, cacForm, tax,formErrors, ha
   return (
     <div>
        <div className='upload-flex'>
+
         <div className='flex-upload'>
         <div className='upload-form'>
         <div className='uploader'>
@@ -46,7 +47,7 @@ const Uploads = ({changeHandler,cac, identification, cacForm, tax,formErrors, ha
         </div>
 
         <div className='flex-upload'>
-            <div className='upload-form'>
+            {/* <div className='upload-form'>
         <div className='uploader'>
             <label htmlFor="tax" className='upload'>
             <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
@@ -62,12 +63,13 @@ const Uploads = ({changeHandler,cac, identification, cacForm, tax,formErrors, ha
              {tax && <div className='error'>{tax.name}</div>}
               </div>
             </div>
-            </div>
+            </div> */}
             <div className='upload-form'>
         <div className='uploader'>
+        <h6>For Insurance Companies</h6>
             <label htmlFor="cacForm" className='upload'>
             <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-           <h4>Upload CAC Form 02 and 07</h4> 
+           <h4>NAICOM License Certificate</h4> 
            <div className='upload-icon'>
            <HiCloudUpload />   
            </div>
@@ -85,14 +87,14 @@ const Uploads = ({changeHandler,cac, identification, cacForm, tax,formErrors, ha
               </div>
         </div>
         <label htmlFor="privacy">
-  <input type="checkbox" id="privacy" name="privacy" onChange={handleChange}  />
-  Please note that your data will be treated 
-  with the utmost respect and privacy as  by law.
-   By checking this box, you acknowledge and 
-   agree to the purpose set-out in this clause 
-  and our data privacy policy. Thank you.<span className="-star">*</span>
-</label>
-{formErrors.privacy && <span className="error-message">{formErrors.privacy}</span>}
+                <input type="checkbox" id="privacy" name="privacy" onChange={handleChange}  />
+                Please note that your data will be treated 
+                with the utmost respect and privacy as  by law.
+                By checking this box, you acknowledge and 
+                agree to the purpose set-out in this clause 
+                and our data privacy policy. Thank you.<span className="-star">*</span>
+              </label>
+              {formErrors.privacy && <span className="error-message">{formErrors.privacy}</span>}
       </div>  
     </div>
   )

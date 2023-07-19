@@ -24,7 +24,7 @@ function CDD() {
   const [tax, setTax] = useState('');
   const [cacForm, setcacForm] = useState('');
   const [per, setPerc] = useState(null)
-  const [ setError]= useState(null)
+  const [error , setError]= useState(null)
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { formData, setFormData } = useFormData();
 
