@@ -1,6 +1,5 @@
 import moment from 'moment'
 
-
 export const userColumns = [ 
   {
     field: "createdAt",
@@ -15,17 +14,62 @@ export const userColumns = [
     headerName: "Company Name",
     width: 200,
   },
+
+  // {
+  //   field: "commercialName",
+  //   headerName: "Commercial Name",
+  //   width: 200,
+  // },
+
+  // {
+  //   field: "city",
+  //   headerName: "City",
+  //   width: 200,
+  // },
+
+  // {
+  //   field: "state",
+  //   headerName: "State",
+  //   width: 200,
+  // },
+
+  // {
+  //   field: "companyCountry",
+  //   headerName: "Country",
+  //   width: 200,
+  // },
+
   {
     field: "registeredCompanyAddress",
     headerName: "Registered Company Address",
     width: 180,
   },
+
   {
-    field: "contactTelephoneNumber",
-    headerName: "contact Telephone Number",
-    width: 120,
+    field: "incorporationNumber",
+    headerName: "Incorporation Number",
+    width: 180,
   },
+
   {
+    field: "incorporationState",
+    headerName: "Incorporation State",
+    width: 125,     
+  },
+
+  {
+    field: "companyLegalForm",
+    headerName: "Company Legal Form",
+    width: 180,
+  },
+
+  {
+    field: "dateOfIncorporationRegistration",
+    headerName: "Date Of Incorporation Registration",
+    width: 125,     
+  },
+
+    {
     field: "emailAddress",
     headerName: "Email Address",
     width: 180,
@@ -35,16 +79,13 @@ export const userColumns = [
     headerName: "Website",
     width: 80,
   },
+
   {
-    field: "contactPerson",
-    headerName: "Contact Person",
-    width: 180,
+    field: "companyType",
+    headerName: "Company Type",
+    width: 125,     
   },
-  {
-    field: "contactPersonNo",
-    headerName: "Contact Person Number",
-    width: 180,
-  },
+
   {
     field: "taxIdentificationNumber",
     headerName: "Tax Identification Number",
@@ -52,33 +93,9 @@ export const userColumns = [
   },
 
   {
-    field: "VATRegistrationNumber",
-    headerName: "VAT Registration Number",
-    width: 125,     
-  },
-
-  {
-    field: "dateOfIncorporationRegistration",
-    headerName: "Date Of Incorporation Registration",
-    width: 125,     
-  },
-
-  {
-    field: "incorporationState",
-    headerName: "Incorporation State",
-    width: 125,     
-  },
-
-  // {
-  //   field: "VATRegistrationNumber",
-  //   headerName: "VAT Registration Number",
-  //   width: 125,     
-  // },
-
-  {
-    field: "companyType",
-    headerName: "Company Type",
-    width: 125,     
+    field: "telephoneNumber",
+    headerName: "Telephone Number",
+    width: 120,
   },
 
   {
@@ -90,18 +107,6 @@ export const userColumns = [
   {
     field: "lastName",
     headerName: "Last Name",
-    width: 125,     
-  },
-
-  {
-    field: "residentialAddress",
-    headerName: "Residential Address",
-    width: 125,     
-  },
-
-  {
-    field: "position",
-    headerName: "Position",
     width: 125,     
   },
 
@@ -118,26 +123,31 @@ export const userColumns = [
   },
 
   {
+    field: "nationality",
+    headerName: "Nationality",
+    width: 180,
+  },
+  {
+    field: "country",
+    headerName: "Country",
+    width: 180,
+  },
+
+  {
     field: "occupation",
     headerName: "Occupation",
     width: 125,     
   },
 
   {
-    field: "taxIDNumber",
-    headerName: "tax ID Number",
+    field: "BVNNumber",
+    headerName: "BVN Number",
     width: 125,     
   },
 
   {
-    field: "sourceOfIncome",
-    headerName: "Source Of Income",
-    width: 125,     
-  },
-
-  {
-    field: "nationality",
-    headerName: "Nationality",
+    field: "employersName",
+    headerName: "Employers Name",
     width: 125,     
   },
 
@@ -148,8 +158,32 @@ export const userColumns = [
   },
 
   {
+    field: "residentialAddress",
+    headerName: "Residential Address",
+    width: 125,     
+  },
+
+    {
     field: "email",
     headerName: "Email",
+    width: 125,     
+  },
+
+  {
+    field: "taxIDNumber",
+    headerName: "tax ID Number",
+    width: 125,     
+  },
+
+  {
+    field: "intPassNo",
+    headerName: "International Passport Number",
+    width: 125,     
+  },
+
+  {
+    field: "passCountry",
+    headerName: "Passport Country",
     width: 125,     
   },
 
@@ -166,6 +200,12 @@ export const userColumns = [
   },
 
   {
+    field: "issuingBody",
+    headerName: "Issuing Body",
+    width: 125,     
+  },
+
+  {
     field: "issuedDate",
     headerName: "Issued Date",
     width: 125,     
@@ -178,114 +218,135 @@ export const userColumns = [
   },
 
   {
-    field: "issuingBody",
-    headerName: "Issuing Body",
+    field: "sourceOfIncome",
+    headerName: "Source Of Income",
     width: 125,     
   },
 
   {
     field: "firstName2",
-    headerName: "First Name 2",
+    headerName: "First Name",
     width: 125,     
   },
 
   {
     field: "lastName2",
-    headerName: "Last Name 2",
-    width: 125,     
-  },
-
-  {
-    field: "residentialAddress2",
-    headerName: "Residential Address 2",
-    width: 125,     
-  },
-
-  {
-    field: "position2",
-    headerName: "Position 2",
+    headerName: "Last Name",
     width: 125,     
   },
 
   {
     field: "dob2",
-    headerName: "Date Of Birth 2",
+    headerName: "Date Of Birth",
     width: 125,     
   },
 
   {
     field: "placeOfBirth2",
-    headerName: "Place of Birth 2",
-    width: 125,     
-  },
-
-  {
-    field: "occupation2",
-    headerName: "Occupation 2",
-    width: 125,     
-  },
-
-  {
-    field: "taxIDNumber2",
-    headerName: "tax ID Number 2",
-    width: 125,     
-  },
-
-  {
-    field: "sourceOfIncome2",
-    headerName: "Source Of Income 2",
+    headerName: "Place of Birth",
     width: 125,     
   },
 
   {
     field: "nationality2",
-    headerName: "Nationality 2",
+    headerName: "Nationality",
+    width: 180,
+  },
+  {
+    field: "country2",
+    headerName: "Country",
+    width: 180,
+  },
+
+  {
+    field: "occupation2",
+    headerName: "Occupation",
+    width: 125,     
+  },
+
+  {
+    field: "BVNNumber2",
+    headerName: "BVN Number",
+    width: 125,     
+  },
+
+  {
+    field: "employersName2",
+    headerName: "Employers Name",
     width: 125,     
   },
 
   {
     field: "phoneNumber2",
-    headerName: "Phone Number 2",
+    headerName: "Phone Number",
     width: 125,     
   },
 
   {
+    field: "residentialAddress2",
+    headerName: "Residential Address",
+    width: 125,     
+  },
+
+    {
     field: "email2",
-    headerName: "Email 2",
+    headerName: "Email",
+    width: 125,     
+  },
+
+  {
+    field: "taxIDNumber2",
+    headerName: "tax ID Number",
+    width: 125,     
+  },
+
+  {
+    field: "intPassNo2",
+    headerName: "International Passport Number",
+    width: 125,     
+  },
+
+  {
+    field: "passCountry2",
+    headerName: "Passport Country",
     width: 125,     
   },
 
   {
     field: "idType2",
-    headerName: "ID Type 2",
+    headerName: "ID Type",
     width: 125,     
   },
 
   {
     field: "idNumber2",
-    headerName: "ID Number 2",
-    width: 125,     
-  },
-
-  {
-    field: "issuedDate2",
-    headerName: "Issued Date 2",
-    width: 125,     
-  },
-
-  {
-    field: "expiryDate2",
-    headerName: "Expiry Date 2",
+    headerName: "ID Number",
     width: 125,     
   },
 
   {
     field: "issuingBody2",
-    headerName: "Issuing Body 2",
+    headerName: "Issuing Body",
     width: 125,     
   },
 
+  {
+    field: "issuedDate2",
+    headerName: "Issued Date",
+    width: 125,     
+  },
 
+  {
+    field: "expiryDate2",
+    headerName: "Expiry Date",
+    width: 125,     
+  },
+
+  {
+    field: "sourceOfIncome2",
+    headerName: "Source Of Income",
+    width: 125,     
+  },
   {
     field: "accountNumber",
     headerName: "Account Number",
