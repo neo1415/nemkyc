@@ -8,10 +8,16 @@ const AdditionalInfo = ({handleChange, formErrors, formData}) => {
         <div className='flex-form'>
             <div className='flex-one'>
 
-             <label htmlFor="businessType">Business Type <span className='required'>*</span></label>
-            <input type="text" id="businessType" placeholder='Busines Type' name="emailAddress" value={formData.businessType} onChange={handleChange} required />
-             {formErrors.businessType && <span className="error-message">{formErrors.businessType}</span>}
-            
+            <label htmlFor="businessType">Business Type <span className='required'>*</span></label>
+        <select id="businessType" name="businessType"
+        value={formData.businessType} onChange={handleChange} required >
+            <option value="Choose Company Type">Business Type</option>
+            <option value="Sole-Proprietor">Sole Proprietor</option>
+            <option value="Limited-Liability-Company">Limited Liability Company</option>
+            <option value="Joint-Venture">Joint Venture</option>
+        </select> 
+        {formErrors.businessType && <span className="error-message">{formErrors.businessType}</span>}
+
              <label htmlFor="employersEmail">Employers Email <span className='required'>*</span></label>
             <input type="email" id="employersEmail" placeholder='Employers Email' name="employersEmail" value={formData.employersEmail} onChange={handleChange} required />
              {formErrors.employersEmail && <span className="error-message">{formErrors.employersEmail}</span>}
@@ -26,15 +32,15 @@ const AdditionalInfo = ({handleChange, formErrors, formData}) => {
 
              <label htmlFor="employersAddress">Employers Address <span className='required'>*</span></label>
             <input type="text" id="employer'sAddress" placeholder='Employers Address' name="employersAddress" value={formData.employersAddress} onChange={handleChange} required />
-             {formErrors.emailAddress && <span className="error-message">{formErrors.emailAddress}</span>}
+             {formErrors.employersAddress && <span className="error-message">{formErrors.employersAddress}</span>}
 
              <label htmlFor="email">Email <span className='required'>*</span></label>
             <input type="email" id="emailAddress" placeholder='Email Address:' name="emailAddress" value={formData.emailAddress} onChange={handleChange} required />
              {formErrors.email && <span className="error-message">{formErrors.email}</span>}
 
-             <label htmlFor="identificationNumber">Tax Identification Number <span className='required'>*</span></label>
-            <input type="text" id="identificationNumber" placeholder='Identification Number' name="identificationNumber" value={formData.identificationNumber} onChange={handleChange} required />
-             {formErrors.identificationNumber && <span className="error-message">{formErrors.identificationNumber}</span>}
+             <label htmlFor="taxIDNumber">Tax Identification Number <span className='required'>*</span></label>
+            <input type="text" id="taxIDNumber" placeholder="Employer's Telephone Number" name="taxIDNumber" value={formData.taxIDNumber} onChange={handleChange} required />
+             {formErrors.taxIDNumber && <span className="error-message">{formErrors.taxIDNumber}</span>}
 
             </div>
         
@@ -75,7 +81,7 @@ const AdditionalInfo = ({handleChange, formErrors, formData}) => {
             <input type="text" id="passCountry" placeholder='Passport Country' name="passCountry" value={formData.passCountry} onChange={handleChange} required />
              {formErrors.passCountry && <span className="error-message">{formErrors.passCountry}</span>}
 
-          </div>
+            </div>
           </div>
     </div>
   )

@@ -366,11 +366,6 @@ export const userColumns = [
   },
 
   {
-    field: "accountOpeningDate",
-    headerName: "Account Opening Date",
-    width: 125,     
-  },
-  {
     field: "accountNumber2",
     headerName: "Dollar Account Number",
     width: 125,     
@@ -388,9 +383,4 @@ export const userColumns = [
     width: 125,     
   },
 
-  {
-    field: "accountOpeningDate2",
-    headerName: "Dollar Account Opening Date",
-    width: 125,     
-  },
 ];

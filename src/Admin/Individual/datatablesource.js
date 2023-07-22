@@ -116,6 +116,12 @@ export const UserColumns = [
   },
 
   {
+    field: "businessType",
+    headerName: "Business Type",
+    width: 85,     
+  },
+
+  {
     field: "intPassNo",
     headerName: "International Passport Number",
     width: 85,     
@@ -123,7 +129,7 @@ export const UserColumns = [
 
   {
     field: "passCountry",
-    headerName: "Pass Country",
+    headerName: "Passport Country",
     width: 85,     
   },
 
@@ -149,12 +155,6 @@ export const UserColumns = [
   {
     field: "employersEmail",
     headerName: "Employers Email",
-    width: 85,     
-  },
-
-  {
-    field: "businessType",
-    headerName: "Business Type",
     width: 85,     
   },
 
