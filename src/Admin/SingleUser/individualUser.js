@@ -49,32 +49,41 @@ const IndividualUser = () => {
         doc.text('Personal Information', 60, 120);
       
         const companyTableColumn = ['Personal Information', ''];
-        const companyTableRows = [    ['Insured', data.insured],
-          ['Contact  Address', data.contactAddress],
-          ['Contacts Telephone Number', data.contactTelephoneNumber],
-          ['Occupation', data.occupation],
-          ['Gender', data.gender],
-          ['Date of Birth', data.dateOfBirth],
-          ['Mothers Naiden Name', data.mothersMaidenName],
-          ['Employers Name', data.employersName],
-          ['Employers Telephone Number', data.employersTelephoneNumber],
-          ['EMployers Address', data.employersAddress],
-          ['City', data.city],
-          ['State', data.state],
-          ['Country', data.country],
-          ['Nationality', data.nationality],
-          ['Residential Address', data.residentialAddress],
-          ['Office Adress', data.officeAddress],
-          ['GSM Number', data.GSMno],
-          ['Email Address', data.emailAddress],
-          ['Identification Type', data.identificationType],
-          ['Identification Number', data.identificationNumber],
-          ['Issued Date', data.issuedDate],
-          ['Expiry Date', data.expiryDate],
-          ['Annual Income Range', data.officeAddress],
-          ['Premium Payment Source', data.premiumPaymentSource],
-          ['Date', data.date],
-        ];
+        const companyTableRows = [
+            ['Insured', data.insured],
+            ['Contact Address', data.contactAddress],
+            ['Gender', data.gender],
+            ['Nationality', data.nationality],
+            ['Country', data.country],
+            ['Date of Birth', data.dateOfBirth],
+            ['Place of Birth', data.placeOfBirth],
+            ['Occupation', data.occupation],
+            ['Position', data.position],
+            ['Premium Payment Source', data.premiumPaymentSource],
+            ['GSM Number', data.GSMno],
+            ['Residential Address', data.residentialAddress],
+            ['Email Address', data.emailAddress],
+            ['Tax ID Number', data.taxIDNumber],
+            ['BVN Number', data.BVNNumber],
+            ['Identification Type', data.identificationType],
+            ['Identification Number', data.identificationNumber],
+            ['Issuing Country', data.issuingCountry],
+            ['Issued Date', data.issuedDate],
+            ['Expiry Date', data.expiryDate],
+            ['International Passport Number', data.intPassNo],
+            ['Passport Country', data.passCountry],
+            ['Business Type', data.businessType],
+            ['Employer\'s Name', data.employersName],
+            ['Employer\'s Address', data.employersAddress],
+            ['Employer\'s Telephone Number', data.employersTelephoneNumber],
+            ['Employer\'s Email', data.employersEmail],
+            // ['Mother\'s Maiden Name', data.mothersMaidenName],
+            // ['City', data.city],
+            // ['State', data.state],
+            // ['Office Address', data.officeAddress],
+            ['Annual Income Range', data.annualIncomeRange],
+            ['Date', data.date],
+          ];
       
         const companyTableProps = {
           startY: 140,
@@ -108,135 +117,161 @@ doc.save('KYC Form.pdf');
 
 
   return (
-    <div className='singles'>
+  <div className='singles'>
     <div className='form-content'>
-        <div className='form-contents'>
+    <div className='form-contents'>
+  <div className='flex-content'>
+    <ul>
+      <h1 className='content-h1'>Personal Information</h1>
+      <li className='form-list'>
+        <p>Insured</p>
+        <p className='info'>{data.insured}</p>
+      </li>
+      <li className='form-list'>
+        <p>Contact Address</p>
+        <p className='info'>{data.contactAddress}</p>
+      </li>
+      <li className='form-list'>
+        <p>Gender</p>
+        <p className='info'>{data.gender}</p>
+      </li>
+      <li className='form-list'>
+        <p>Nationality</p>
+        <p className='info'>{data.nationality}</p>
+      </li>
+      <li className='form-list'>
+        <p>Country</p>
+        <p className='info'>{data.country}</p>
+      </li>
+      <li className='form-list'>
+        <p>Date of Birth</p>
+        <p className='info'>{data.dateOfBirth}</p>
+      </li>
+      <li className='form-list'>
+        <p>Place of Birth</p>
+        <p className='info'>{data.placeOfBirth}</p>
+      </li>
+      <li className='form-list'>
+        <p>Occupation</p>
+        <p className='info'>{data.occupation}</p>
+      </li>
+      <li className='form-list'>
+        <p>Position</p>
+        <p className='info'>{data.position}</p>
+      </li>
+      <li className='form-list'>
+        <p>Premium Payment Source</p>
+        <p className='info'>{data.premiumPaymentSource}</p>
+      </li>
+      <li className='form-list'>
+        <p>GSM Number</p>
+        <p className='info'>{data.GSMno}</p>
+      </li>
+      <li className='form-list'>
+        <p>Residential Address</p>
+        <p className='info'>{data.residentialAddress}</p>
+      </li>
+      <li className='form-list'>
+        <p>Email Address</p>
+        <p className='info'>{data.emailAddress}</p>
+      </li>
+    </ul>
+    <ul>
+      <li className='form-list'>
+        <p>Identification Number</p>
+        <p className='info'>{data.identificationNumber}</p>
+      </li>
+      <li className='form-list'>
+        <p>BVN Number</p>
+        <p className='info'>{data.BVNNumber}</p>
+      </li>
+      <li className='form-list'>
+        <p>Identification Type</p>
+        <p className='info'>{data.identificationType}</p>
+      </li>
+      <li className='form-list'>
+        <p>Issuing Country</p>
+        <p className='info'>{data.issuingCountry}</p>
+      </li>
+      <li className='form-list'>
+        <p>Issued Date</p>
+        <p className='info'>{data.issuedDate}</p>
+      </li>
+      <li className='form-list'>
+        <p>Expiry Date</p>
+        <p className='info'>{data.expiryDate}</p>
+      </li>
+      <li className='form-list'>
+        <p>International Passport Number</p>
+        <p className='info'>{data.intPassNo}</p>
+      </li>
+      <li className='form-list'>
+        <p>Passport Country</p>
+        <p className='info'>{data.passCountry}</p>
+      </li>
+      <li className='form-list'>
+        <p>Employer's Name</p>
+        <p className='info'>{data.employersName}</p>
+      </li>
+      <li className='form-list'>
+        <p>Employer's Address</p>
+        <p className='info'>{data.employersAddress}</p>
+      </li>
+      <li className='form-list'>
+        <p>Employer's Telephone Number</p>
+        <p className='info'>{data.employersTelephoneNumber}</p>
+      </li>
+      <li className='form-list'>
+        <p>Employer's Email</p>
+        <p className='info'>{data.employersEmail}</p>
+      </li>
+      <li className='form-list'>
+        <p>Business Type</p>
+        <p className='info'>{data.businessType}</p>
+      </li>
+      <li className='form-list'>
+        <p>Annual Income Range</p>
+        <p className='info'>{data.annualIncomeRange}</p>
+      </li>
+      <li className='form-list'>
+        <p>Date</p>
+        <p className='info'>{data.date}</p>
+      </li>
+    </ul>
+  </div>
+</div>
+
+      <div className='form-contents'>
         <div className='flex-content'>
-            <ul > 
-            <h1 className='content-h1'>Personal Information</h1>
-                <li className='form-list'>
-                    <p>Insured</p>
-                    <p className='info'>{data.insured}</p>
-                </li>
-                <li className='form-list'>
-                    <p>Contact Address</p>
-                    <p className='info'>{data.contactAddress}</p>
-                </li>
-                <li className='form-list'>
-                    <p>Contact Telephone Number</p>
-                    <p className='info'>{data.contactTelephoneNumber}</p>
-                </li>
-                <li className='form-list'>
-                    <p>Occupation</p>
-                    <p className='info'>{data.occupation}</p>
-                </li>
-                <li className='form-list'>
-                    <p>Gender</p>
-                    <p className='info'>{data.gender}</p>
-                </li>
-                <li className='form-list'>
-                    <p>Date of Birth</p>
-                    <p className='info'>{data.dateOfBirth}</p>
-                </li>
-                </ul>
-                <ul className='form-ul'>
-                <li className='form-list'>
-                    <p>Mothers Maiden Name</p>
-                    <p className='info'>{data.mothersMaidenName}</p>
-                </li>
-                <li className='form-list'>
-                <p>Employers Name</p>
-                <p className='info'>{data.employersName}</p>
+          <ul>
+            <h1>Documents</h1>
+            <li className='form-list'>
+              <p>Signature</p>
+              {data.signature ? (
+                <a href={data.signature} target='__blank'>
+                  <button className='form-button'>
+                    Download Signature <HiDownload style={style} />
+                  </button>
+                </a>
+              ) : (
+                <p className='info'>Signature not available</p>
+              )}
             </li>
             <li className='form-list'>
-                    <p>Employer's Telephone Number</p>
-                    <p className='info'>{data.employersTelephoneNumber}</p>
+              <p>Identification</p>
+              {data.identification ? (
+                <a href={data.identification} target='__blank'>
+                  <button className='form-button'>
+                    Download Identification <HiDownload style={style} />
+                  </button>
+                </a>
+              ) : (
+                <p className='info'>Identification not available</p>
+              )}
             </li>
-            <li className='form-list'>
-                <p>City</p>
-                <p className='info'>{data.city}</p>
-            </li>
-            <li className='form-list'>
-                    <p>State</p>
-                    <p className='info'>{data.state}</p>
-            </li>
-            </ul>
-            </div>
+          </ul>
         </div>
-        <div className='form-contents'>
-            <div className='flex-content'>
-            <ul>
-            <h1>More Information</h1>
-            <li className='form-list'>
-                    <p>Country</p>
-                    <p className='info'>{data.country}</p>
-            </li>
-            <li className='form-list'>
-                    <p>Nationality</p>
-                    <p className='info'>{data.nationality}</p>
-            </li>
-            <li className='form-list'>
-                    <p>Residential Address</p>
-                    <p className='info'>{data.residentialAddress}</p>
-            </li>
-            <li className='form-list'>
-                    <p>Office Address</p>
-                    <p className='info'>{data.officeAddress}</p>
-            </li>
-            <li className='form-list'>
-                    <p>GSM Number</p>
-                    <p className='info'>{data.GSMno}</p>
-            </li>
-            </ul>
-            <ul>
-            <li className='form-list'>
-                    <p>Email Address</p>
-                    <p className='info'>{data.emailAddress}</p>
-            </li>
-            <li className='form-list'>
-                    <p>Identification Type</p>
-                    <p className='info'>{data.identificationType}</p>
-            </li>
-            <li className='form-list'>
-                    <p>Identification Number</p>
-                    <p className='info'>{data.identificationNumber}</p>
-            </li>
-            <li className='form-list'>
-                    <p>Issued Date</p>
-                    <p className='info'>{data.issuedDate}</p>
-            </li>
-            <li className='form-list'>
-                    <p>Expiry Date</p>
-                    <p className='info'>{data.expiryDate}</p>
-            </li>
-            </ul>
-            </div>
-        </div>
-        <div className='form-contents'>
-            <ul>
-            <h1>Income Information</h1>
-            <li className='form-list'>
-                    <p>Annual Income Range</p>
-                    <p className='info'>{data.annualIncomeRange}</p>
-            </li>
-            <li className='form-list'>
-                    <p>Premium Payment Source</p>
-                    <p className='info'>{data.premiumPaymentSource}</p>
-            </li>
-            <li className='form-list'>
-                    <p>Date</p>
-                    <p className='info'>{data.date}</p>
-            </li>
-        </ul>
-        
-            </div>
-            <div className='documents'>
-              <h1>Documents</h1>
-              <div className='documents-content'>
-              <a href={data.signature} target='__blank'> <button className='form-button'>Download Signature <HiDownload style={style} />  </button></a>
-              <a href={data.identification} target='__blank'> <button className='form-button'>Download Identification <HiDownload style={style} />  </button></a>
-              </div>
-            </div>
+      </div>
     </div>
     <div className='file-download'>
     <button className='form-button' onClick={downloadPDF}>Download Form <HiDownload style={style} /> </button>

@@ -36,6 +36,11 @@ const PersonalInfo = ({handleChange, formData, formErrors}) => {
             <input type="date" id="dateOfBirth" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} required />
              {formErrors.dateOfBirth && <span className="error-message">{formErrors.dateOfBirth}</span>} 
 
+             <label htmlFor="placeOfBirth">Place of Birth <span className='required'>*</span></label>
+            <input type="text" id="placeOfBirth" placeholder='Place Of Birth' name="placeOfBirth" value={formData.placeOfBirth} onChange={handleChange} required />
+            {formErrors.placeOfBirth && <span className="error-message">{formErrors.placeOfBirth}</span>}
+
+
             </div>
 
             <div className='flex-two'>
@@ -43,18 +48,17 @@ const PersonalInfo = ({handleChange, formData, formErrors}) => {
             <input type="text" id="mothersMaidenName" placeholder="Mother's Maiden Name" name="mothersMaidenName" value={formData.mothersMaidenName} onChange={handleChange} required />
              {formErrors.mothersMaidenName && <span className="error-message">{formErrors.mothersMaidenName}</span>} */}
             
-             {/* <label htmlFor="officeAddress">Office Address <span className='required'>*</span></label>
-            <input type="text" id="officeAddress" placeholder='Office Address' name="officeAddress" value={formData.officeAddress} onChange={handleChange} required />
-             {formErrors.officeAddress && <span className="error-message">{formErrors.officeAddress}</span>} */}
-
-             <label htmlFor="placeOfBirth">Place of Birth <span className='required'>*</span></label>
-            <input type="text" id="placeOfBirth" placeholder='Place Of Birth' name="placeOfBirth" value={formData.placeOfBirth} onChange={handleChange} required />
-            {formErrors.placeOfBirth && <span className="error-message">{formErrors.placeOfBirth}</span>}
-
+             {/* <label htmlFor="residentialAddress">Office Address <span className='required'>*</span></label>
+            <input type="text" id="residentialAddress" placeholder='Office Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required />
+             {formErrors.residentialAddress && <span className="error-message">{formErrors.residentialAddress}</span>} */}
 
              <label htmlFor="GSMNumber">GSM Number <span className='required'>*</span></label>
             <input type="text" id=" GSMno" placeholder='GSM Number' name="GSMno" value={formData.GSMno} onChange={handleChange} required />
              {formErrors.GSMno && <span className="error-message">{formErrors.GSMno}</span>}
+
+            <label htmlFor="residentialAddress">Residential Address <span className='required'>*</span></label>
+            <input type="text" id="residentialAddress" placeholder='Office Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required />
+             {formErrors.residentialAddress && <span className="error-message">{formErrors.residentialAddress}</span>}
 
              <label htmlFor="city">City <span className='required'>*</span></label>
             <input type="text" placeholder='City' id=" city" name="city" value={formData.city} onChange={handleChange} required />
@@ -71,6 +75,10 @@ const PersonalInfo = ({handleChange, formData, formErrors}) => {
             <label htmlFor="occupation">Occupation <span className='required'>*</span></label>
             <input type="text" placeholder='Occupation' id="occupation" name="occupation" value={formData.occupation} onChange={handleChange} required />
              {formErrors.occupation && <span className="error-message">{formErrors.occupation}</span>}
+
+             <label htmlFor="position">Position <span className='required'>*</span></label>
+            <input type="text" id="position" placeholder="Employer's Telephone Number" name="position" value={formData.position} onChange={handleChange} required />
+             {formErrors.position && <span className="error-message">{formErrors.position}</span>}
 
 
         </div>
