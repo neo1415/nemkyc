@@ -1,15 +1,16 @@
-import React,{useState} from 'react';
+import React, { useState } from 'react';
 import Backdrop from '@mui/material/Backdrop';
 import Box from '@mui/material/Box';
 import Modal from '@mui/material/Modal';
 import Fade from '@mui/material/Fade';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+import { images } from '../../Constants';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import { Link } from 'react-router-dom';
 
-const style = {
+const modalStyle = {
     position: 'absolute',
     top: '50%',
     left: '50%',
@@ -20,9 +21,10 @@ const style = {
     border: '2px solid #000',
     boxShadow: 24,
     p: 4,
-};
+  };
+  
 
-export default function SubmitModal() {
+const CorporateWrapper = () => {
   const [open, setOpen] = useState(false);
   const [agreed, setAgreed] = useState(false); // Add the agreed state
   const handleOpen = () => setOpen(true);
@@ -32,15 +34,15 @@ export default function SubmitModal() {
     setAgreed(event.target.checked);
   };
 
-  const resetForm = () => {
-    //reload page
-    window.location.reload(false);
-
-  }
-
-
   return (
     <div>
+      <div class="card" onClick={handleOpen} >
+        <img src={images.bg2} alt="Image 1" />
+        <div class="overlay">
+          <h2>CORPORATE<br/>FORM</h2>
+        </div>
+      </div>
+
       <Modal
         aria-labelledby="transition-modal-title"
         aria-describedby="transition-modal-description"
@@ -53,14 +55,17 @@ export default function SubmitModal() {
             timeout: 500,
           },
         }}
-      >
+      > 
         <Fade in={open}>
-          <Box sx={style}>
+        <Box sx={modalStyle}>
             <Typography id="transition-modal-title" variant="h6" component="h2">
-             Thank You
+              Privacy policy
             </Typography>
             <Typography id="transition-modal-description" sx={{ mt: 2 }}>
-            Your form has been successfully submitted.
+              I/we hereby declare that all information provided are true and complete to the best of my
+              knowledge and hereby agree that this information shall form the basis of the business relationship
+              between me/us and NEM Insurance Plc. If there is any addition or alteration in the information provided
+              after the submission of this proposal form, the same shall be communicated to the Company.
             </Typography>
             <FormControlLabel
               control={
@@ -73,14 +78,17 @@ export default function SubmitModal() {
               label="I agree to the privacy policy"
             />
             <Button
+              component={Link}
+              to="/corporate-kyc"
               disabled={!agreed}
-              onClick={resetForm}
             >
-             Submit Another form
+              Continue
             </Button>
           </Box>
         </Fade>
       </Modal>
     </div>
   );
-}
+};
+
+export default CorporateWrapper;
