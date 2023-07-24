@@ -2,12 +2,14 @@ import React from 'react'
 import './index.scss'
 import { Link } from 'react-router-dom';
 import logo from './logo-white.png'
+import TransitionsModal from '../../Containers/Modals/Modal';
+import IndiModal from '../../Containers/Modals/IndiModal';
 
 const Navbar = () => {
   return (
     <div>
         <nav>
-  <div class="logo">
+  <div className="logo">
 
   <Link to="/">
   
@@ -15,9 +17,9 @@ const Navbar = () => {
   </Link>
   </div>
 
-  <div class="hamburger">
-  <Link to="/corporate-kyc">Corporate</Link>
-  <Link to="/individual-kyc">Individual</Link>
+  <div className="hamburger">
+  <TransitionsModal />
+  <IndiModal />
   <div id="indicator"></div>
   </div>
 </nav>

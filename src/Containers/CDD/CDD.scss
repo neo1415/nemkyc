@@ -7,11 +7,8 @@ $dark-color: #343a40;
 // Style the entire multistep form container
 .form-page{
   display: flex;
-  // position: fixed;
-  // margin-top: -5.5rem;
   align-items: center;
   justify-content: flex-end !important;
-  // height: 100vh;
   width: 100%;
   background-color: #ffffff;
   opacity: 1;
@@ -189,7 +186,6 @@ select{
   padding: 0;
   margin: 0;
   background-color: #800020;
-  background-image: url('./form2.jpg') !important;
   @media screen and (max-width:1050px) {
     width: 13rem;
   }

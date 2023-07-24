@@ -6,7 +6,6 @@ import { serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { v4 as uuidv4 } from 'uuid';
 import { motion } from "framer-motion"
-import image from './form3.jpg'
 import { HiXCircle } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
 import useFormData from './FormData';
@@ -15,6 +14,7 @@ import Director1 from './Inputs/Director1';
 import Director2 from './Inputs/Director2';
 import AccountDetails from './Inputs/AccountDetails';
 import Uploads from './Inputs/Uploads';
+import { images } from '../../Constants';
 
 function CDD() {
   const [step, setStep] = useState(1);
@@ -222,7 +222,7 @@ function CDD() {
   return (
     <div style={{display:'flex', justifyContent:'flex-start',marginTop:'-100px'}}>
       <div className='picture'>
-        <img src={image} className='form-img' />
+        <img src={images.form3} className='form-img' />
         </div>
     <div className='form-page'>
 
@@ -340,39 +340,17 @@ function CDD() {
          cac={cac}
          cacForm={cacForm} />
        
-        <div className='button-flex'>
+       <div className='button-flex'>
           <button type="button" onClick={prevStep}>Previous</button>
-          <button type="button" onClick={nextStep}>Next</button>
+          <button type="submit" disabled={per !== null && per < 100}  onClick={handleSubmit}>Submit</button>
         </div>
 
       </motion.div>
       
     )}
 
-    {step === 6 && (
-      <div className="form-step">
-
-        <h3> Confirmation</h3>
-        <h4 className='announce'>
-        I/we hereby declare that all information provided are true and complete to the best of my
-         knowledge and hereby agree that this information shall form the basis of the business relationship 
-         between me/us and NEM Insurance Plc. If there is any addition or alteration in the information provided
-         after the submission of this proposal form, the same shall be communicated to the Company.
-         </h4>
-
-        <label htmlFor="privacy">
-        <input type="checkbox" id="privacy" className='conf' name="privacy" onChange={handleChange} required />
-          I Agree.<span className="required-star">*</span>
-        </label>
-        {formErrors.privacy && <span className="error-message">{formErrors.privacy}</span>}
-           
-        <div className='button-flex'>
-          <button type="button" onClick={prevStep}>Previous</button>
-          <button type="submit" disabled={per !== null && per < 100}  onClick={handleSubmit}>Submit</button>
-        </div>
-      </div>
       
-    )}
+
   </form>
       )}
 </motion.div>

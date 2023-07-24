@@ -6,7 +6,7 @@ import { setDoc,doc, Timestamp } from 'firebase/firestore'
 import { serverTimestamp } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { motion } from "framer-motion";
-import image from './form4.jpg'
+import { images } from '../../Constants';
 import { HiXCircle } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
 import useFormData from './FormData';
@@ -159,7 +159,6 @@ function KYC() {
       return;
     }
     try {
-      console.log('it works')
       setIsSubmitted(true);
       await setDoc(doc(db, "individuals", uuidv4()), {
         ...formData,
@@ -175,20 +174,20 @@ function KYC() {
 
   const nextStep = () => {
      // check if all required fields are filled
-     const requiredFields = document.querySelectorAll('input[required]');
-     let allFieldsFilled = true;
-     requiredFields.forEach(field => {
-       if (!field.value) {
-         allFieldsFilled = false;
-         const fieldName = field.getAttribute('name');
-         setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
-       }
-     });
+    //  const requiredFields = document.querySelectorAll('input[required]');
+    //  let allFieldsFilled = true;
+    //  requiredFields.forEach(field => {
+    //    if (!field.value) {
+    //      allFieldsFilled = false;
+    //      const fieldName = field.getAttribute('name');
+    //      setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
+    //    }
+    //  });
  
     //  // if any required field is not filled, prevent form from moving to next step
-     if (!allFieldsFilled) {
-       return;
-     }
+    //  if (!allFieldsFilled) {
+    //    return;
+    //  }
  
     //  // if all required fields are filled, move to next step
      setStep(step + 1);
@@ -204,7 +203,7 @@ function KYC() {
     <div className='forms' style={{display:'flex',flexDirection:'column' }}>
       <div className='forms-page'>
         <div className='picture'>
-          <img src={image} className='form-img' alt='fixed-image' />
+          <img src={images.form4} className='form-img' alt='fixed-image' />
         </div>
       <motion.div
         initial={{ opacity: 0, x: 0}}
@@ -279,35 +278,14 @@ function KYC() {
             signature={signature}
             identification={identification} />
 
-        <div className='button-flex'>
-          <button type="button" onClick={prevStep}>Previous</button>
-          <button type="button" onClick={nextStep}>Next</button>
-        </div>
-      </motion.div>
-      
-    )} 
-
-    {step === 4 && (
-    <div className="form-step">
-        <h3> Confirmation</h3>
-        <h4 className='announce'>
-        I/we hereby declare that all information provided are true and complete to the best of my
-         knowledge and hereby agree that this information shall form the basis of the business relationship 
-         between me/us and NEM Insurance Plc. If there is any addition or alteration in the information provided
-         after the submission of this proposal form, the same shall be communicated to the Company.
-         </h4>
-        <label htmlFor="privacy">
-        <input type="checkbox" id="privacy" className='conf' name="privacy" onChange={handleChange} required />
-        I Agree.<span className="required-star">*</span>
-        </label>
-        {formErrors.privacy && <span className="error-message">{formErrors.privacy}</span>}
       <div className='button-flex'>
         <button type="button" onClick={prevStep}>Previous</button>
         <button type="submit" disabled={per !== null && per < 100}  onClick={handleSubmit}>Submit</button>
       </div>
-    </div>
+      </motion.div>
       
-    )}
+    )} 
+      
   </form>
       )
 }
