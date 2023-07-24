@@ -16,6 +16,7 @@ section {
   width: 500px;
   height: 400px;
   overflow: hidden;
+  cursor: pointer;
   border-radius: 15px;
   transition: transform 0.3s, box-shadow 0.3s;
 }

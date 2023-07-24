@@ -39,8 +39,14 @@ const CompanyDetails = ({handleChange,formErrors,formData}) => {
         <input type="text" placeholder='Incorporation State' id="incorporationState" name="incorporationState" value={formData.incorporationState} onChange={handleChange} required />
         {formErrors.incorporationState && <span className="error-message">{formErrors.incorporationState}</span>}
 
-        <label htmlFor="companyLegalForm">Comapny Legal Form <span className='required'>*</span></label>
-        <input type="text" placeholder='Comapny Legal Form' id="companyLegalForm" name="companyLegalForm" value={formData.companyLegalForm} onChange={handleChange} required />
+        <label htmlFor="companyLegalForm">Company Legal Form <span className='required'>*</span></label>
+        <select id="companyLegalForm" name="companyLegalForm"
+        value={formData.companyLegalForm} onChange={handleChange} required >
+            <option value="Choose Company Type">Company Type</option>
+            <option value="Sole-Proprietor">Sole Proprietor</option>
+            <option value="Limited-Liability-Company">Limited Liability Company</option>
+            <option value="Joint-Venture">Joint Venture</option>
+        </select> 
         {formErrors.companyLegalForm && <span className="error-message">{formErrors.companyLegalForm}</span>}
 
         <label htmlFor="dateOfIncorporationRegistration">Date of Incorporation Registration: <span className='required'>*</span></label>
@@ -57,17 +63,6 @@ const CompanyDetails = ({handleChange,formErrors,formData}) => {
 
         <label htmlFor="website">Website</label>
         <input type="email" id="website" placeholder='Website' name="website" value={formData.website} onChange={handleChange}  />
-
-
-        <label htmlFor="companyType">Company Type <span className='required'>*</span></label>
-        <select id="companyType" name="companyType"
-        value={formData.companyType} onChange={handleChange} required >
-            <option value="Choose Company Type">Company Type</option>
-            <option value="Sole-Proprietor">Sole Proprietor</option>
-            <option value="Limited-Liability-Company">Limited Liability Company</option>
-            <option value="Joint-Venture">Joint Venture</option>
-        </select> 
-        {formErrors.companyType && <span className="error-message">{formErrors.companyType}</span>}
 
         <label htmlFor="taxIdentificationNumber">Tax Identification Number <span className='required'>*</span></label>
         <input type="text" id="taxIdentificationNumber" placeholder='Tax Identification Number' name="taxIdentificationNumber" value={formData.taxIdentificationNumber} onChange={handleChange} required />
