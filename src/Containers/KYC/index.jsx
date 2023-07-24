@@ -174,20 +174,20 @@ function KYC() {
 
   const nextStep = () => {
      // check if all required fields are filled
-    //  const requiredFields = document.querySelectorAll('input[required]');
-    //  let allFieldsFilled = true;
-    //  requiredFields.forEach(field => {
-    //    if (!field.value) {
-    //      allFieldsFilled = false;
-    //      const fieldName = field.getAttribute('name');
-    //      setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
-    //    }
-    //  });
+     const requiredFields = document.querySelectorAll('input[required]');
+     let allFieldsFilled = true;
+     requiredFields.forEach(field => {
+       if (!field.value) {
+         allFieldsFilled = false;
+         const fieldName = field.getAttribute('name');
+         setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
+       }
+     });
  
     //  // if any required field is not filled, prevent form from moving to next step
-    //  if (!allFieldsFilled) {
-    //    return;
-    //  }
+     if (!allFieldsFilled) {
+       return;
+     }
  
     //  // if all required fields are filled, move to next step
      setStep(step + 1);
