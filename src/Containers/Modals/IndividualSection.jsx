@@ -79,7 +79,7 @@ const IndividualWrapper = () => {
             />
             <Button
               component={Link}
-              to="/corporate-kyc"
+              to="/individual-kyc"
               disabled={!agreed}
             >
               Continue
