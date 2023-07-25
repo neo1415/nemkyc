@@ -15,6 +15,8 @@ import Director2 from './Inputs/Director2';
 import AccountDetails from './Inputs/AccountDetails';
 import Uploads from './Inputs/Uploads';
 import { images } from '../../Constants';
+import SubmitModal from '../Modals/SubmitModal';
+import { FormDataProvider } from '../../Context/FormContext';
 
 function CDD() {
   const [step, setStep] = useState(1);
@@ -234,17 +236,13 @@ function CDD() {
 
       {isSubmitted ? (
         <div className="modal">
-          <div className="modal-content">
-            <div className='close' onClick={closeModal}><p><HiXCircle /> </p></div>
-              <h2>Thank you!</h2>
-              <p>Your form has been successfully submitted.</p>
-              <button onClick={resetForm}>Submit another form</button>
-            </div>
+         <SubmitModal closeModal={closeModal} resetForm={resetForm} />
         </div>
       ) : (
 
       <form onSubmit={handleSubmit}>
-        {step === 1 && (
+      <FormDataProvider>
+         {step === 1 && (
           <motion.div
           initial={{ opacity: 0, x: 0}}
           animate={{ opacity: 1, x: 0 }}
@@ -348,8 +346,7 @@ function CDD() {
       </motion.div>
       
     )}
-
-      
+    </FormDataProvider>
 
   </form>
       )}

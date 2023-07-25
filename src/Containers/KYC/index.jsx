@@ -13,6 +13,7 @@ import useFormData from './FormData';
 import PersonalInfo from './Inputs/PersonalInfo';
 import AdditionalInfo from './Inputs/AdditionalInfo';
 import FinancialInfo from './Inputs/FinancialInfo';
+import SubmitModal from '../Modals/SubmitModal';
 
 function KYC() {
   const [step, setStep] = useState(1);
@@ -213,13 +214,8 @@ function KYC() {
         className="multisteps-form">
 
         {isSubmitted ? (
-        <div className="modal">
-          <div className="modal-content">
-          <div className='close' onClick={closeModal}><p><HiXCircle /> </p></div>
-            <h2>Thank you!</h2>
-            <p>Your form has been successfully submitted.</p>
-            <button onClick={resetForm}>Submit another form</button>
-          </div>
+          <div className="modal">
+         <SubmitModal closeModal={closeModal} resetForm={resetForm} />
         </div>
       ) : (
       <form onSubmit={handleSubmit}>

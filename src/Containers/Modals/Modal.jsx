@@ -22,7 +22,7 @@ const style = {
     p: 4,
 };
 
-export default function SubmitModal() {
+export default function TransitionModal() {
   const [open, setOpen] = useState(false);
   const [agreed, setAgreed] = useState(false); // Add the agreed state
   const handleOpen = () => setOpen(true);
@@ -32,15 +32,9 @@ export default function SubmitModal() {
     setAgreed(event.target.checked);
   };
 
-  const resetForm = () => {
-    //reload page
-    window.location.reload(false);
-
-  }
-
-
   return (
     <div>
+      <Link onClick={handleOpen}>Corporate</Link>
       <Modal
         aria-labelledby="transition-modal-title"
         aria-describedby="transition-modal-description"
@@ -56,11 +50,14 @@ export default function SubmitModal() {
       >
         <Fade in={open}>
           <Box sx={style}>
-            <Typography id="transition-modal-title" variant="h6" component="h2">
-             Thank You
+          <Typography id="transition-modal-title" variant="h6" component="h2">
+              Privacy policy
             </Typography>
             <Typography id="transition-modal-description" sx={{ mt: 2 }}>
-            Your form has been successfully submitted.
+            I/we hereby declare that all information provided are true and complete to the best of my
+            knowledge and hereby agree that this information shall form the basis of the business relationship 
+            between me/us and NEM Insurance Plc. If there is any addition or alteration in the information provided
+            after the submission of this proposal form, the same shall be communicated to the Company.
             </Typography>
             <FormControlLabel
               control={
@@ -73,10 +70,11 @@ export default function SubmitModal() {
               label="I agree to the privacy policy"
             />
             <Button
+              component={Link}
+              to="/corporate-kyc"
               disabled={!agreed}
-              onClick={resetForm}
             >
-             Submit Another form
+             Continue
             </Button>
           </Box>
         </Fade>
