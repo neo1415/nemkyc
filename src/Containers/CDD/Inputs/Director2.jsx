@@ -1,6 +1,27 @@
-import React from 'react'
+import React,{useState} from 'react'
 
 const Director2 = ({handleChange,formData,formErrors}) => {
+  const [showOtherIdType2, setShowOtherIdType2] = useState(false);
+  const [showOtherSourceOfIncome2, setShowOtherSourceOfIncome2] = useState(false);
+  const [showOtherField2, setShowOtherField2] = useState(false);
+
+  const handleIdType2Change = (event) => {
+    const { value } = event.target;
+    // Check if the user selected "Other" option, then show/hide the text field accordingly
+    setShowOtherField2(value === 'Other');
+    // Update the form data state using the handleChange function
+    handleChange(event);
+  };
+
+  const handleSourceOfIncome2Change = (event) => {
+    const { value } = event.target;
+    // Check if the user selected "Other" option, then show/hide the text field accordingly
+    setShowOtherSourceOfIncome2(value === 'Other');
+    // Update the form data state using the handleChange function
+    handleChange(event);
+  };
+
+
   return (
     <div>
        
@@ -72,14 +93,32 @@ const Director2 = ({handleChange,formData,formErrors}) => {
         {formErrors.passCountry2 && <span className="error-message">{formErrors.passCountry2}</span>}
 
         <label htmlFor="idType2">ID Type </label>
-       <select id="idType2" name="idType2"
-        value={formData.idType2} onChange={handleChange} >
-           <option value="Choose ID Type">Choose ID Type</option>
-           <option value="international passport">International passport</option>
-           <option value="NIMC">NIMC</option>
-           <option value="Drivers licence">Drivers Licence</option>
-           <option value="Voters Card">Voters Card</option>
-       </select> 
+      {/* Show the select field with options */}
+      <select
+        id="idType2"
+        name="idType2"
+        value={formData.idType2}
+        onChange={handleIdType2Change}
+      >
+        <option value="Choose ID Type">Choose ID Type</option>
+        <option value="international passport">International passport</option>
+        <option value="NIMC">NIMC</option>
+        <option value="Drivers licence">Drivers Licence</option>
+        <option value="Voters Card">Voters Card</option>
+        <option value="Other">Other</option>
+      </select>
+
+      {showOtherField2 && (
+        // Show the text input for "Other" ID Type 2 option below the select field
+        <div style={{ marginTop: '8px' }}>
+          <input
+            type="text"
+            name="idType2" // Hardcoded name for the "Other" ID Type 2 field
+            value={formData.idType2}
+            onChange={handleChange}
+          />
+        </div>
+      )}
        {formErrors.idType2 && <span className="error-message">{formErrors.idType2}</span>}
 
        <label htmlFor="idNumber2">ID Number </label>
@@ -98,15 +137,32 @@ const Director2 = ({handleChange,formData,formErrors}) => {
        <input type="date" id="expiryDate2" placeholder='Expiry Date' name="expiryDate2" value={formData.expiryDate2} onChange={handleChange} />
        {formErrors.expiryDate2 && <span className="error-message">{formErrors.expiryDate2}</span>}
 
-       <label htmlFor="sourceOfIncome2">Source Of Income </label>
-       <select id="sourceOfIncome2" name="sourceOfIncome2" size=""
-        value={formData.sourceOfIncome2} onChange={handleChange} >
-           <option value="Choose Income Source">Source Of Income</option>
-           <option value="salaryOrBusinessIncome">Salary or Business Income</option>
-           <option value="investmentsOrDividends">Investments or Dividends</option>
-       </select> 
-       {formErrors.sourceOfIncome2 && <span className="error-message">{formErrors.sourceOfIncome2}</span>}
+       <label htmlFor="sourceOfIncome2">Source Of Income <span className='required'>*</span></label>
+      {/* Show the select field with options */}
+      <select
+        id="sourceOfIncome2"
+        name="sourceOfIncome2"
+        value={formData.sourceOfIncome2}
+        onChange={handleSourceOfIncome2Change}
+        required
+      >
+        <option value="Choose Income Source">Source Of Income</option>
+        <option value="salaryOrBusinessIncome">Salary or Business Income</option>
+        <option value="investmentsOrDividends">Investments or Dividends</option>
+        <option value="Other">Other</option>
+      </select>
 
+      {showOtherSourceOfIncome2 && (
+        // Show the text input for "Other" Source Of Income option below the select field
+        <div style={{ marginTop: '8px' }}>
+          <input
+            type="text"
+            name="sourceOfIncome2" // Hardcoded name for the "Other" Source Of Income field
+            value={formData.sourceOfIncome2}
+            onChange={handleChange}
+          />
+        </div>
+      )}
      </div>
      
      

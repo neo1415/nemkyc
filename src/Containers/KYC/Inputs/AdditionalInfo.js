@@ -1,6 +1,27 @@
-import React from 'react'
+import React,{useState} from 'react'
 
 const AdditionalInfo = ({handleChange, formErrors, formData}) => {
+
+  const [showOtherField, setShowOtherField] = useState(false);
+
+  const handleSelectChange = (event) => {
+    const { value } = event.target;
+    // Check if the user selected "Other" option, then show the text field
+    setShowOtherField(value === 'Other');
+    // Update the form data state using the handleChange function
+    handleChange(event);
+  };
+
+
+  const [showOtheridentificationType, setShowOtheridentificationType] = useState(false);
+  const handleidentificationTypeChange = (event) => {
+    const { value } = event.target;
+    // Check if the user selected "Other" option, then show/hide the text field accordingly
+    setShowOtheridentificationType(value === 'Other');
+    // Update the form data state using the handleChange function
+    handleChange(event);
+  };
+
   return (
 
     <div>
@@ -8,14 +29,31 @@ const AdditionalInfo = ({handleChange, formErrors, formData}) => {
         <div className='flex-form'>
             <div className='flex-one'>
 
-            <label htmlFor="businessType">Business Type <span className='required'>*</span></label>
-        <select id="businessType" name="businessType"
-        value={formData.businessType} onChange={handleChange} required >
-            <option value="Choose Company Type">Business Type</option>
-            <option value="Sole-Proprietor">Sole Proprietor</option>
-            <option value="Limited-Liability-Company">Limited Liability Company</option>
-            <option value="Joint-Venture">Joint Venture</option>
-        </select> 
+            <label htmlFor="businessType">Business Type</label>
+      {showOtherField ? (
+        // Show the text input for "Other" option
+        <input
+          type="text"
+          name="businessType" // Hardcoded name for the "Other" field
+          value={formData.businessType}
+          onChange={handleChange}
+        />
+      ) : (
+        // Show the select field with options
+        <select id="businessType" name="businessType" value={formData.businessType} onChange={handleSelectChange}>
+          <option value="Choose Company Type">Company Type</option>
+          <option value="Sole-Proprietor">Sole Proprietor</option>
+          <option value="Limited-Liability-Company">Limited Liability Company</option>
+          <option value="Joint-Venture">Joint Venture</option>
+          <option value="Other">Other</option>
+        </select>
+      )}
+          {formErrors.businessType && <span className="error-message">{formErrors.businessType}</span>}
+
+
+        <label htmlFor="dateOfIncorporationRegistration">Date of Incorporation Registration: <span className='required'>*</span></label>
+        <input type="date" id="dateOfIncorporationRegistration" name="dateOfIncorporationRegistration" value={formData.dateOfIncorporationRegistration} onChange={handleChange} required />
+
         {formErrors.businessType && <span className="error-message">{formErrors.businessType}</span>}
 
              <label htmlFor="employersEmail">Employers Email <span className='required'>*</span></label>
@@ -50,15 +88,34 @@ const AdditionalInfo = ({handleChange, formErrors, formData}) => {
             <input type="text" id="identificationNumber" placeholder='BVN' name="BVNNumber" value={formData.BVNNumber} onChange={handleChange} required />
              {formErrors.BVNNumber && <span className="error-message">{formErrors.BVNNumber}</span>}
 
-             <label htmlFor="identificationType">Identification Type <span className='required'>*</span></label>
-            <select id="identificationType" name="identificationType" size="1"
-             value={formData.identificationType} onChange={handleChange} required >
-                <option value="Choose Identification Type">Identification Type</option>
-                <option value="drivers licence">Drivers Licence</option>
-                <option value="international passport">International Passport</option>
-                <option value="national ID">National ID</option>
-                <option value="voter's card">Voter's Card</option>
-            </select> 
+      <label htmlFor="identificationType">ID Type <span className='required'>*</span></label>
+      {/* Show the select field with options */}
+      <select
+        id="identificationType"
+        name="identificationType"
+        value={formData.identificationType}
+        onChange={handleidentificationTypeChange}
+        required
+      >
+        <option value="Choose ID Type">Choose ID Type</option>
+        <option value="international passport">International passport</option>
+        <option value="NIMC">NIMC</option>
+        <option value="Drivers licence">Drivers Licence</option>
+        <option value="Voters Card">Voters Card</option>
+        <option value="Other">Other</option>
+      </select>
+
+      {showOtheridentificationType && (
+        // Show the text input for "Other" ID Type option below the select field
+        <div style={{ marginTop: '8px' }}>
+          <input
+            type="text"
+            name="identificationType" // Hardcoded name for the "Other" ID Type field
+            value={formData.identificationType}
+            onChange={handleChange}
+          />
+        </div>
+      )}
              {formErrors.identificationType && <span className="error-message">{formErrors.identificationType}</span>}
 
              <label htmlFor="issuingCountry">Issuing Country <span className='required'>*</span></label>

@@ -1,6 +1,17 @@
-import React from 'react'
+import React,{useState} from 'react'
 
-const CompanyDetails = ({handleChange,formErrors,formData}) => {
+const CompanyDetails = ({handleChange,formErrors,formData, otherFields}) => {
+
+  const [showOtherField, setShowOtherField] = useState(false);
+
+  const handleSelectChange = (event) => {
+    const { value } = event.target;
+    // Check if the user selected "Other" option, then show the text field
+    setShowOtherField(value === 'Other');
+    // Update the form data state using the handleChange function
+    handleChange(event);
+  };
+
   return (
     <div>
       
@@ -39,15 +50,27 @@ const CompanyDetails = ({handleChange,formErrors,formData}) => {
         <input type="text" placeholder='Incorporation State' id="incorporationState" name="incorporationState" value={formData.incorporationState} onChange={handleChange} required />
         {formErrors.incorporationState && <span className="error-message">{formErrors.incorporationState}</span>}
 
-        <label htmlFor="companyLegalForm">Company Legal Form <span className='required'>*</span></label>
-        <select id="companyLegalForm" name="companyLegalForm"
-        value={formData.companyLegalForm} onChange={handleChange} required >
-            <option value="Choose Company Type">Company Type</option>
-            <option value="Sole-Proprietor">Sole Proprietor</option>
-            <option value="Limited-Liability-Company">Limited Liability Company</option>
-            <option value="Joint-Venture">Joint Venture</option>
-        </select> 
-        {formErrors.companyLegalForm && <span className="error-message">{formErrors.companyLegalForm}</span>}
+        <label htmlFor="companyLegalForm">Company Legal Form:</label>
+      {showOtherField ? (
+        // Show the text input for "Other" option
+        <input
+          type="text"
+          name="companyLegalForm" // Hardcoded name for the "Other" field
+          value={formData.companyLegalForm}
+          onChange={handleChange}
+        />
+      ) : (
+        // Show the select field with options
+        <select id="companyLegalForm" name="companyLegalForm" value={formData.companyLegalForm} onChange={handleSelectChange}>
+          <option value="Choose Company Type">Company Type</option>
+          <option value="Sole-Proprietor">Sole Proprietor</option>
+          <option value="Limited-Liability-Company">Limited Liability Company</option>
+          <option value="Joint-Venture">Joint Venture</option>
+          <option value="Other">Other</option>
+        </select>
+      )}
+          {formErrors.companyLegalForm && <span className="error-message">{formErrors.companyLegalForm}</span>}
+
 
         <label htmlFor="dateOfIncorporationRegistration">Date of Incorporation Registration: <span className='required'>*</span></label>
         <input type="date" id="dateOfIncorporationRegistration" name="dateOfIncorporationRegistration" value={formData.dateOfIncorporationRegistration} onChange={handleChange} required />

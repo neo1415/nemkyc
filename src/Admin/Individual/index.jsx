@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { collection, deleteDoc, doc, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import { db } from "../../APi/index";
 import SideBar from "../SideBar/SideBar";
+import { GridToolbarExport } from "@mui/x-data-grid";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
@@ -78,6 +79,15 @@ const Individual = () => {
     setIsFilterApplied(false);
     setSelectedDateRange([null, null]);
   };
+
+  function CustomToolbar() {
+    return (
+      <GridToolbarContainer>
+        <GridToolbarExport />
+      </GridToolbarContainer>
+    );
+  }
+  
 
   const actionColumn = [
     {
@@ -159,9 +169,9 @@ const Individual = () => {
           </Grid>
         </div>
         <DataGrid
-          components={{
-            Toolbar: GridToolbarContainer,
-          }}
+      components={{
+      Toolbar: CustomToolbar,
+      }}
           className="datagrid"
           rows={filteredData}
           columns={UserColumns.concat(actionColumn)}
