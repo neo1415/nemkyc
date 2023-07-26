@@ -1,7 +1,7 @@
 .sidebar {
   background-color: #800020;
   width: 180px;
-  min-height: 100vh;
+  min-height: 200vh;
   border-right: .5px solid lightgray;
   position: fixed;
   z-index: 5;
