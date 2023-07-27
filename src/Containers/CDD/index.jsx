@@ -29,8 +29,57 @@ function CDD() {
   const [error , setError]= useState(null)
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { formData, setFormData } = useFormData();
+  const [showOtherField, setShowOtherField] = useState(false);
+  const [showOtherIdType, setShowOtherIdType] = useState(false);
+  const [showOtherSourceOfIncome, setShowOtherSourceOfIncome] = useState(false);
+  const [showOtherSourceOfIncome2, setShowOtherSourceOfIncome2] = useState(false);
+  const [showOtherField2, setShowOtherField2] = useState(false);
+
+
+  const handleIdType2Change = (event) => {
+    const { value } = event.target;
+    // Check if the user selected "Other" option, then show/hide the text field accordingly
+    setShowOtherField2(value === 'Other');
+    // Update the form data state using the handleChange function
+    handleChange(event);
+  };
+
+  const handleSourceOfIncome2Change = (event) => {
+    const { value } = event.target;
+    // Check if the user selected "Other" option, then show/hide the text field accordingly
+    setShowOtherSourceOfIncome2(value === 'Other');
+    // Update the form data state using the handleChange function
+    handleChange(event);
+  };
+
+
+  const handleIdTypeChange = (event) => {
+    const { value } = event.target;
+    // Check if the user selected "Other" option, then show/hide the text field accordingly
+    setShowOtherIdType(value === 'Other');
+    // Update the form data state using the handleChange function
+    handleChange(event);
+  };
+
+  const handleSourceOfIncomeChange = (event) => {
+    const { value } = event.target;
+    // Check if the user selected "Other" option, then show/hide the text field accordingly
+    setShowOtherSourceOfIncome(value === 'Other');
+    // Update the form data state using the handleChange function
+    handleChange(event);
+  };
+
+  const handleSelectChange = (event) => {
+    const { value } = event.target;
+    // Check if the user selected "Other" option, then show the text field
+    setShowOtherField(value === 'Other');
+    // Update the form data state using the handleChange function
+    handleChange(event);
+  };
+
 
   const types= ['application/pdf'];
+
 
   //store files in firebase bucket
   useEffect(() => {
@@ -88,7 +137,7 @@ function CDD() {
     let sanitizedValue = value;
     if (type === 'email') {
       // Validate email format using regex
-      const emailRegex = /^([a-z\d.\-]+)@([a-z\d\-]+)(\.[a-z]{2,5})(\.[a-z]{2,5})?$/;
+      const emailRegex = /^([a-z\d.]+)@([a-z\d]+)(\.[a-z]{2,5})(\.[a-z]{2,5})?$/;
       if (!emailRegex.test(value)) {
         // Invalid email format
         setFormErrors({ ...formErrors, [name]: 'Please enter a valid email address' });
@@ -241,7 +290,6 @@ function CDD() {
       ) : (
 
       <form onSubmit={handleSubmit}>
-      <FormDataProvider>
          {step === 1 && (
           <motion.div
           initial={{ opacity: 0, x: 0}}
@@ -251,7 +299,12 @@ function CDD() {
           className="form-step">
 
             <h3>Company Details</h3>
-              <CompanyDetails handleChange={handleChange} formData={formData} formErrors={formErrors} />
+              <CompanyDetails handleChange={handleChange}
+               formData={formData}
+              formErrors={formErrors}
+              showOtherField={showOtherField}
+              handleSelectChange={handleSelectChange}
+               />
            
             <div className='button-flex'>
             <Link to='/'>
@@ -272,7 +325,14 @@ function CDD() {
           className="form-step">
 
            <h3>Director's Profile</h3>
-            <Director1 handleChange={handleChange} formData={formData} formErrors={formErrors} />
+            <Director1 handleChange={handleChange}
+             formData={formData}
+            formErrors={formErrors}
+            handleIdTypeChange={handleIdTypeChange}
+            handleSourceOfIncomeChange={handleSourceOfIncomeChange}
+            showOtherIdType={showOtherIdType}
+            showOtherSourceOfIncome={showOtherSourceOfIncome}
+             />
 
         <div className='button-flex'>
         <button type="button" onClick={prevStep}>Previous</button>
@@ -290,7 +350,14 @@ function CDD() {
       className="form-step">
       
         <h3>Director's Profile 2</h3>
-        <Director2 handleChange={handleChange} formData={formData} formErrors={formErrors} />
+        <Director2 handleChange={handleChange} 
+        formData={formData}
+        formErrors={formErrors}
+        showOtherSourceOfIncome2={showOtherSourceOfIncome2}
+        showOtherField2={showOtherField2}
+        handleIdType2Change={handleIdType2Change}
+        handleSourceOfIncome2Change={handleSourceOfIncome2Change}
+         />
 
       <div className='button-flex'>
         <button type="button" onClick={prevStep}>Previous</button>
@@ -346,7 +413,6 @@ function CDD() {
       </motion.div>
       
     )}
-    </FormDataProvider>
 
   </form>
       )}

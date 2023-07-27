@@ -24,6 +24,8 @@ function KYC() {
   const [error , setError]= useState(null)
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { formData, setFormData } = useFormData();
+  const [showOtherField, setShowOtherField] = useState(false);
+  const [showOtheridentificationType, setShowOtheridentificationType] = useState(false);
 
   const types= ['application/pdf'];
 
@@ -127,6 +129,22 @@ function KYC() {
     if (formErrors[name]) {
       setFormErrors({ ...formErrors, [name]: null });
     }
+  };
+
+  const handleSelectChange = (event) => {
+    const { value } = event.target;
+    // Check if the user selected "Other" option, then show the text field
+    setShowOtherField(value === 'Other');
+    // Update the form data state using the handleChange function
+    handleChange(event);
+  };
+
+  const handleidentificationTypeChange = (event) => {
+    const { value } = event.target;
+    // Check if the user selected "Other" option, then show/hide the text field accordingly
+    setShowOtheridentificationType(value === 'Other');
+    // Update the form data state using the handleChange function
+    handleChange(event);
   };
 
   const resetForm = () => {
@@ -248,7 +266,15 @@ function KYC() {
           className="form-step">
 
             <h3>Additional Details</h3>
-            <AdditionalInfo handleChange={handleChange} formData={formData} formErrors={formErrors} />
+            <AdditionalInfo 
+            handleChange={handleChange} 
+            formData={formData} 
+            formErrors={formErrors} 
+            showOtherField={showOtherField}
+            handleSelectChange={handleSelectChange}
+            handleidentificationTypeChange={handleidentificationTypeChange}
+            showOtheridentificationType={showOtheridentificationType}
+            />
 
           <div className='button-flex'>
             <button  onClick={prevStep}>Previous</button>
