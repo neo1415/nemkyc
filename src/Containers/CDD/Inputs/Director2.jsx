@@ -1,26 +1,6 @@
-import React,{useState} from 'react'
+import React from 'react'
 
-const Director2 = ({handleChange,formData,formErrors}) => {
-  const [showOtherIdType2, setShowOtherIdType2] = useState(false);
-  const [showOtherSourceOfIncome2, setShowOtherSourceOfIncome2] = useState(false);
-  const [showOtherField2, setShowOtherField2] = useState(false);
-
-  const handleIdType2Change = (event) => {
-    const { value } = event.target;
-    // Check if the user selected "Other" option, then show/hide the text field accordingly
-    setShowOtherField2(value === 'Other');
-    // Update the form data state using the handleChange function
-    handleChange(event);
-  };
-
-  const handleSourceOfIncome2Change = (event) => {
-    const { value } = event.target;
-    // Check if the user selected "Other" option, then show/hide the text field accordingly
-    setShowOtherSourceOfIncome2(value === 'Other');
-    // Update the form data state using the handleChange function
-    handleChange(event);
-  };
-
+const Director2 = ({handleChange,formData,formErrors,handleIdType2Change, showOtherField2, showOtherSourceOfIncome2, handleSourceOfIncome2Change}) => {
 
   return (
     <div>

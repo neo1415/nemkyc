@@ -20,7 +20,6 @@ const List = () => {
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState([null, null]);
   const navigate = useNavigate(); 
-  const getRowID = (row) => row.id;
   
   useEffect(() => {
     const dataRef = collection(db, "users");

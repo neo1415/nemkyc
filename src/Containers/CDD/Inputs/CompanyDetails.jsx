@@ -1,16 +1,7 @@
 import React,{useState} from 'react'
 
-const CompanyDetails = ({handleChange,formErrors,formData, otherFields}) => {
+const CompanyDetails = ({handleChange,formErrors,formData, showOtherField, handleSelectChange}) => {
 
-  const [showOtherField, setShowOtherField] = useState(false);
-
-  const handleSelectChange = (event) => {
-    const { value } = event.target;
-    // Check if the user selected "Other" option, then show the text field
-    setShowOtherField(value === 'Other');
-    // Update the form data state using the handleChange function
-    handleChange(event);
-  };
 
   return (
     <div>

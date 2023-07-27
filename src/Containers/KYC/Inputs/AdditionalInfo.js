@@ -1,26 +1,6 @@
-import React,{useState} from 'react'
+import React from 'react'
 
-const AdditionalInfo = ({handleChange, formErrors, formData}) => {
-
-  const [showOtherField, setShowOtherField] = useState(false);
-
-  const handleSelectChange = (event) => {
-    const { value } = event.target;
-    // Check if the user selected "Other" option, then show the text field
-    setShowOtherField(value === 'Other');
-    // Update the form data state using the handleChange function
-    handleChange(event);
-  };
-
-
-  const [showOtheridentificationType, setShowOtheridentificationType] = useState(false);
-  const handleidentificationTypeChange = (event) => {
-    const { value } = event.target;
-    // Check if the user selected "Other" option, then show/hide the text field accordingly
-    setShowOtheridentificationType(value === 'Other');
-    // Update the form data state using the handleChange function
-    handleChange(event);
-  };
+const AdditionalInfo = ({handleChange, formErrors, formData,showOtherField, handleSelectChange, handleidentificationTypeChange, showOtheridentificationType}) => {
 
   return (
 
