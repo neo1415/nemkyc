@@ -20,14 +20,14 @@ const AdminHome = () => {
     <div className='listContainer'>
         <SideBar />
     <div className='AdminContainer'>
-    <div className='topBar' style={{display:'flex', marginTop:-30}}>
-      <div className='search' style={{display:'flex'}}>
+    <div className='topBar' style={{display:'flex', marginTop:-150}}>
+      {/* <div className='search' style={{display:'flex'}}>
         <input type='text' placeholder=' Search pages' className='adminSearch'/>
         <div className='searchIcon'>
         <HiSearch />
         </div>
         
-      </div>
+      </div> */}
       <div className='items' style={{display:'flex'}}>
       
         <p style={{color:'black', fontSize:18, fontWeight:"500", marginRight:10, color:'#bf2e46'}}>Welcome {user && user.email}</p>
