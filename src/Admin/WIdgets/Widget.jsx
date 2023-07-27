@@ -21,7 +21,7 @@ switch(type){
       title:'Corporate',
       query: 'users',
       link:'see all Users',
-      icon: <HiUser className='icon' />,
+      icon: <HiUsers className='icon' />,
       to:'/list'
     };
     break;
@@ -31,7 +31,7 @@ switch(type){
       title:'Individuals',
       query: 'individuals',
       link:'View all Customers',
-      icon: <HiUsers className='icon' />,
+      icon: <HiUser className='icon' />,
       to:'/individual-list'
     };
     break;
@@ -41,41 +41,37 @@ switch(type){
 
 useEffect(() => {
   const fetchData = async () => {
-    const today = new Date(new Date());
-    const lastMonth = new Date(new Date().setMonth(today.getMonth() - 1));
-    const prevMonth = new Date(new Date().setMonth(today.getMonth() - 2));
-    const thisMonth = new Date(new Date().setMonth(today.getMonth()));
+    const today = new Date();
+    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const prevMonth = new Date(today.getFullYear(), today.getMonth() - 2, 1);
 
     const lastMonthQuery = query(
       collection(db, data.query),
-      where("timestamp", "<=", today),
-      where("timestamp", ">", lastMonth)
+      where("timestamp", ">=", lastMonth),
+      where("timestamp", "<", today)
     );
     const prevMonthQuery = query(
       collection(db, data.query),
-      where("timestamp", "<=", lastMonth),
-      where("timestamp", ">", prevMonth)
+      where("timestamp", ">=", prevMonth),
+      where("timestamp", "<", lastMonth)
     );
 
-    const thisMonthQuery = query(
-      collection(db, data.query),
-      where("timestamp", "<=", thisMonth),
-      where("timestamp", ">", prevMonth)
-    );
+    const lastMonthDocs = await getDocs(lastMonthQuery);
+    const prevMonthDocs = await getDocs(prevMonthQuery);
 
-    const lastMonthData = await getDocs(lastMonthQuery);
-    const prevMonthData = await getDocs(prevMonthQuery);
-    const thisMonthData = await getDocs(thisMonthQuery);
+    const thisMonthAmount = lastMonthDocs.size;
+    const lastMonthAmount = lastMonthDocs.size;
+    const prevMonthAmount = prevMonthDocs.size;
 
-    setMoney(((thisMonthData.docs.length)*1000).toLocaleString("en-US") )
+    setMoney((thisMonthAmount * 1000).toLocaleString("en-US"));
+    setAmount(lastMonthAmount);
 
-    setAmount(lastMonthData.docs.length);
-    setDiff(
-      ((lastMonthData.docs.length - prevMonthData.docs.length) / prevMonthData.docs.length) *
-        100
-    );
-    console.log(amount)
-    console.log(diff)
+    if (prevMonthAmount !== 0) {
+      const diff = ((lastMonthAmount - prevMonthAmount) / prevMonthAmount) * 100;
+      setDiff(parseFloat(diff.toFixed(1)));
+    } else {
+      setDiff(0);
+    }
   };
   fetchData();
 }, []);

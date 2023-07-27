@@ -10,9 +10,21 @@
   color: white;
 }
 
+@media screen and (max-width: 600px) {
+  .sidebar {
+    width: 50px !important;
+  }
+}
+
 @media screen and (max-width: 768px) {
   .sidebar {
-    width: 50px;
+    width: 100px;
+  }
+}
+
+@media screen and (max-width: 1050px) {
+  .sidebar {
+    width: 125px;
   }
 }
 
@@ -62,7 +74,7 @@
   text-decoration: none;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 600px) {
   .sidebar .center ul li p {
     display: none;
   }

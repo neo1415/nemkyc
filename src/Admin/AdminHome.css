@@ -53,12 +53,11 @@
   align-items: center;
   justify-content: space-between;
   padding: 2rem 0rem 1rem;
-  position: fixed;
   width: 80%;
-  top: 0;
+  margin-bottom: 2rem;
   z-index: 1000;
   background-color: white;
-  margin-right: 3rem;
+  margin-left: 3rem;
 }
 
 @media screen and (max-width: 768px) {
