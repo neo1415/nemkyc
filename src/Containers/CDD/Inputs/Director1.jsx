@@ -37,9 +37,9 @@ const Director1 = ({handleChange,formErrors,formData,handleIdTypeChange, handleS
             <input type="text" id="occupation" placeholder='Occupation' name="occupation" value={formData.occupation} onChange={handleChange} required />
             {formErrors.occupation && <span className="error-message">{formErrors.occupation}</span>}
 
-            <label htmlFor="BVNNumber">BVN <span className='required'>*</span></label>
-            <input type="text" placeholder='BVN' id="BVNNumber" name="BVNNumber" value={formData.BVNNumber} onChange={handleChange} required />
-            {formErrors.BVNNumber && <span className="error-message">{formErrors.BVNNumber}</span>}
+            <label htmlFor="BVNNumber">BVN </label>
+            <input type="text" placeholder='BVN' id="BVNNumber" name="BVNNumber" value={formData.BVNNumber} onChange={handleChange} />
+            {/* {formErrors.BVNNumber && <span className="error-message">{formErrors.BVNNumber}</span>} */}
 
             <label htmlFor="employersName">Employers Name <span className='required'>*</span></label>
             <input type="text" placeholder='Employers Name' id="employersName" name="employersName" value={formData.employersName} onChange={handleChange} required />
@@ -49,28 +49,30 @@ const Director1 = ({handleChange,formErrors,formData,handleIdTypeChange, handleS
             <input type="number" id="phoneNumber" placeholder='Phone Number' name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} required />
             {formErrors.phoneNumber && <span className="error-message">{formErrors.phoneNumber}</span>}
 
-            <label htmlFor="residentialAddress">Residential Address <span className='required'>*</span></label>
+
+</div>
+     <div className='flex-two'>
+
+     <label htmlFor="residentialAddress">Residential Address <span className='required'>*</span></label>
             <input type="text" id="residentialAddress" placeholder='Residential Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required/>
             {formErrors.residentialAddress && <span className="error-message">{formErrors.residentialAddress}</span>}
           
-</div>
-     <div className='flex-two'>
         
      <label htmlFor="email">email <span className='required'>*</span></label>
             <input type="email" id="email" placeholder='Email' name="email" value={formData.email} onChange={handleChange}  required/>
             {formErrors.email && <span className="error-message">{formErrors.email}</span>}
 
-            <label htmlFor="taxIDNumber">Tax ID Number <span className='required'>*</span></label>
-            <input type="text" id="taxIDNumber" placeholder='Tax ID Number' name="taxIDNumber" value={formData.taxIDNumber} onChange={handleChange}  required/>
-            {formErrors.taxIDNumber && <span className="error-message">{formErrors.taxIDNumber}</span>}
+            <label htmlFor="taxIDNumber">Tax ID Number </label>
+            <input type="text" id="taxIDNumber" placeholder='Tax ID Number' name="taxIDNumber" value={formData.taxIDNumber} onChange={handleChange}/>
+            {/* {formErrors.taxIDNumber && <span className="error-message">{formErrors.taxIDNumber}</span>} */}
 
-            <label htmlFor="intPassNo">International Passport Number <span className='required'>*</span></label>
+            {/* <label htmlFor="intPassNo">International Passport Number <span className='required'>*</span></label>
             <input type="text" id="intPassNo" placeholder='International Passport Number' name="intPassNo" value={formData.intPassNo} onChange={handleChange} required />
-             {formErrors.intPassNo && <span className="error-message">{formErrors.intPassNo}</span>}
+             {formErrors.intPassNo && <span className="error-message">{formErrors.intPassNo}</span>} */}
 
-             <label htmlFor="passCountry">Passport country <span className='required'>*</span></label>
+             {/* <label htmlFor="passCountry">Passport country <span className='required'>*</span></label>
             <input type="text" id="passCountry" placeholder='Passport Country' name="passCountry" value={formData.passCountry} onChange={handleChange} required />
-             {formErrors.passCountry && <span className="error-message">{formErrors.passCountry}</span>}
+             {formErrors.passCountry && <span className="error-message">{formErrors.passCountry}</span>} */}
 
              <label htmlFor="idType">ID Type <span className='required'>*</span></label>
       {/* Show the select field with options */}
@@ -114,9 +116,9 @@ const Director1 = ({handleChange,formErrors,formData,handleIdTypeChange, handleS
             <input type="date" id="issuedDate" placeholder='Issued Date' name="issuedDate" value={formData.issuedDate} onChange={handleChange}  required/>
             {formErrors.issuedDate && <span className="error-message">{formErrors.issuedDate}</span>}
 
-            <label htmlFor="expiryDate">Expiry date <span className='required'>*</span></label>
-            <input type="date" id="expiryDate" placeholder='Expiry Date' name="expiryDate" value={formData.expiryDate} onChange={handleChange}  required/>
-            {formErrors.expiryDate && <span className="error-message">{formErrors.expiryDate}</span>}
+            <label htmlFor="expiryDate">Expiry date </label>
+            <input type="date" id="expiryDate" placeholder='Expiry Date' name="expiryDate" value={formData.expiryDate} onChange={handleChange} />
+            {/* {formErrors.expiryDate && <span className="error-message">{formErrors.expiryDate}</span>} */}
 
             <label htmlFor="sourceOfIncome">Source Of Income <span className='required'>*</span></label>
       {/* Show the select field with options */}

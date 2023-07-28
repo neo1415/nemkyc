@@ -7,10 +7,18 @@ const PersonalInfo = ({handleChange, formData, formErrors}) => {
          <div className='flex-form'>
             <div className='flex-one'>
 
-            <label htmlFor="insured">Insured Full Name <span className='required'>*</span></label>
-            <input type="text" id="insured" placeholder='Full Name and Title' name="insured" value={formData.insured} onChange={handleChange} required />
-             {formErrors.insured && <span className="error-message">{formErrors.insured}</span>}
+            <label htmlFor="title">Title <span className='required'>*</span></label>
+            <input type="text" id="title" placeholder='Title' name="title" value={formData.title} onChange={handleChange} required />
+             {formErrors.title && <span className="error-message">{formErrors.title}</span>}
             
+             <label htmlFor="firstName">first Name <span className='required'>*</span></label>
+            <input type="text" id=" firstName" placeholder='First Name' name="firstName" value={formData.firstName} onChange={handleChange}  required />
+            {formErrors.firstName && <span className="error-message">{formErrors.firstName}</span>}     
+
+            <label htmlFor="lastName">Last Name <span className='required'>*</span></label>
+            <input type="text" placeholder='Last Name' id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required />
+            {formErrors.lastName && <span className="error-message">{formErrors.lastName}</span>}
+
              <label htmlFor="contactAddress">Contact Address <span className='required'>*</span></label>
             <input type="text" id="contactAddress" placeholder="Contact's Address" name="contactAddress" value={formData.contactAddress} onChange={handleChange} required />
              {formErrors.contactAddress && <span className="error-message">{formErrors.contactAddress}</span>}
@@ -32,7 +40,7 @@ const PersonalInfo = ({handleChange, formData, formErrors}) => {
             <input type="text" id=" country" placeholder='Country' name="country" value={formData.country} onChange={handleChange} required />
              {formErrors.country && <span className="error-message">{formErrors.country}</span>}
 
-            <label htmlFor="dateOfBirth">Date Of Birth:</label>
+            <label htmlFor="dateOfBirth">Date Of Birth <span className='required'>*</span></label>
             <input type="date" id="dateOfBirth" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} required />
              {formErrors.dateOfBirth && <span className="error-message">{formErrors.dateOfBirth}</span>} 
 
@@ -52,7 +60,12 @@ const PersonalInfo = ({handleChange, formData, formErrors}) => {
             <input type="text" id="residentialAddress" placeholder='Office Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required />
              {formErrors.residentialAddress && <span className="error-message">{formErrors.residentialAddress}</span>} */}
 
-             <label htmlFor="GSMNumber">GSM Number <span className='required'>*</span></label>
+             <label htmlFor="email">Email <span className='required'>*</span></label>
+            <input type="email" id="emailAddress" placeholder='Email Address:' name="emailAddress" value={formData.emailAddress} onChange={handleChange} required />
+             {formErrors.email && <span className="error-message">{formErrors.email}</span>}
+
+
+             <label htmlFor="GSMNumber">Mobile Number <span className='required'>*</span></label>
             <input type="text" id=" GSMno" placeholder='GSM Number' name="GSMno" value={formData.GSMno} onChange={handleChange} required />
              {formErrors.GSMno && <span className="error-message">{formErrors.GSMno}</span>}
 
@@ -76,9 +89,9 @@ const PersonalInfo = ({handleChange, formData, formErrors}) => {
             <input type="text" placeholder='Occupation' id="occupation" name="occupation" value={formData.occupation} onChange={handleChange} required />
              {formErrors.occupation && <span className="error-message">{formErrors.occupation}</span>}
 
-             <label htmlFor="position">Position <span className='required'>*</span></label>
-            <input type="text" id="position" placeholder="Employer's Telephone Number" name="position" value={formData.position} onChange={handleChange} required />
-             {formErrors.position && <span className="error-message">{formErrors.position}</span>}
+             <label htmlFor="position">Position </label>
+            <input type="text" id="position" placeholder="Employer's Telephone Number" name="position" value={formData.position} onChange={handleChange} />
+             {/* {formErrors.position && <span className="error-message">{formErrors.position}</span>} */}
 
 
         </div>

@@ -148,7 +148,7 @@ function CDD() {
       // Ensure only numbers are allowed in the field
       // You can use regex or other techniques to validate/sanitize numbers if needed
     setFormErrors({ ...formErrors, [name]: 'Please enter a valid number' });
-      sanitizedValue = value.replace(/[^0-9]/g, '');
+      sanitizedValue = value.replace(/[^0-9]/);
     }
   
     if (type === 'file') {
