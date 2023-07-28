@@ -34,20 +34,21 @@ const CompanyDetails = ({handleChange,formErrors,formData, showOtherField, handl
         {formErrors.registeredCompanyAddress && <span className="error-message">{formErrors.registeredCompanyAddress}</span>}
 
         <label htmlFor="incorporationNumber">Incorporation Number <span className='required'>*</span></label>
-        <input type="number" id="incorporationNumber" placeholder='Incorporation Number' name="incorporationNumber" value={formData.incorporationNumber} onChange={handleChange} required />
+        <input type="text" id="incorporationNumber" placeholder='Incorporation Number' name="incorporationNumber" value={formData.incorporationNumber} onChange={handleChange} required />
         {formErrors.incorporationNumber && <span className="error-message">{formErrors.incorporationNumber}</span>}
 
-        <label htmlFor="incorporationState">Incorporation State <span className='required'>*</span></label>
-        <input type="text" placeholder='Incorporation State' id="incorporationState" name="incorporationState" value={formData.incorporationState} onChange={handleChange} required />
+        <label htmlFor="incorporationState">Registered Office <span className='required'>*</span></label>
+        <input type="text" placeholder='Registered Office' id="incorporationState" name="incorporationState" value={formData.incorporationState} onChange={handleChange} required />
         {formErrors.incorporationState && <span className="error-message">{formErrors.incorporationState}</span>}
 
-        <label htmlFor="companyLegalForm">Company Legal Form:</label>
+        <label htmlFor="companyLegalForm">Company Type</label>
       {showOtherField ? (
         // Show the text input for "Other" option
         <input
           type="text"
           name="companyLegalForm" // Hardcoded name for the "Other" field
           value={formData.companyLegalForm}
+          placeholder='Company Type'
           onChange={handleChange}
         />
       ) : (
@@ -63,9 +64,9 @@ const CompanyDetails = ({handleChange,formErrors,formData, showOtherField, handl
           {formErrors.companyLegalForm && <span className="error-message">{formErrors.companyLegalForm}</span>}
 
 
-        <label htmlFor="dateOfIncorporationRegistration">Date of Incorporation Registration: <span className='required'>*</span></label>
-        <input type="date" id="dateOfIncorporationRegistration" name="dateOfIncorporationRegistration" value={formData.dateOfIncorporationRegistration} onChange={handleChange} required />
-        {formErrors.dateOfIncorporationRegistration && <span className="error-message">{formErrors.dateOfIncorporationRegistration}</span>}
+        <label htmlFor="dateOfIncorporationRegistration">Date of Incorporation Registration</label>
+        <input type="date" id="dateOfIncorporationRegistration" name="dateOfIncorporationRegistration" value={formData.dateOfIncorporationRegistration} onChange={handleChange} />
+        {/* {formErrors.dateOfIncorporationRegistration && <span className="error-message">{formErrors.dateOfIncorporationRegistration}</span>} */}
 
         </div>
 

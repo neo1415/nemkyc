@@ -102,11 +102,11 @@ function KYC() {
     let sanitizedValue = value;
     if (type === 'email') {
       // Validate email format using regex
-      const emailRegex = /^([a-z\d.]+)@([a-z\d]+)(\.[a-z]{2,5})(\.[a-z]{2,5})?$/;
-      if (!emailRegex.test(value)) {
-        // Invalid email format
-        setFormErrors({ ...formErrors, [name]: 'Please enter a valid email address' });
-      }
+      // const emailRegex = /^([a-z\d.]+)@([a-z\d]+)(\.[a-z]{2,5})(\.[a-z]{2,5})?$/;
+      // if (!emailRegex.test(value)) {
+      //   // Invalid email format
+      //   setFormErrors({ ...formErrors, [name]: 'Please enter a valid email address' });
+      // }
       // Sanitize the email value if desired (e.g., remove leading/trailing spaces)
       sanitizedValue = value.trim();
     } else if (type === 'number') {

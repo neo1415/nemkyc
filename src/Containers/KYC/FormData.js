@@ -1,7 +1,9 @@
 import { useState } from 'react';
 
 const initialFormData = {
-    insured: '',
+    title: '',
+    firstName: '',
+    lastName: '',
     contactAddress: '',
     gender: '',
     nationality:'',

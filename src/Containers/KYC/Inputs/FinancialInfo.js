@@ -24,9 +24,9 @@ const FinancialInfo = ({handleChange, changeHandler, signature, identification, 
             </select> 
              {formErrors.premiumPaymentSource && <span className="formErrors-message">{formErrors.premiumPaymentSource}</span>}
 
-            <label htmlFor=" date">Date:</label>
+            {/* <label htmlFor=" date">Date:</label>
             <input type="date" id=" date" name="date" value={formData.date} onChange={handleChange} required />
-               {formErrors.date && <span className="formErrors-message">{formErrors.date}</span>}
+               {formErrors.date && <span className="formErrors-message">{formErrors.date}</span>} */}
 
               <div className='upload-section'>
                <div className='upload-form'>
