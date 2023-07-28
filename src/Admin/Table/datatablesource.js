@@ -1,5 +1,3 @@
-import moment from 'moment'
-
 export const userColumns = [ 
   {
     field: "createdAt",
@@ -59,7 +57,7 @@ export const userColumns = [
 
   {
     field: "companyLegalForm",
-    headerName: "Company Legal Form",
+    headerName: "Company Type",
     width: 180,
   },
 
@@ -175,17 +173,17 @@ export const userColumns = [
     width: 125,     
   },
 
-  {
-    field: "intPassNo",
-    headerName: "International Passport Number",
-    width: 125,     
-  },
+  // {
+  //   field: "intPassNo",
+  //   headerName: "International Passport Number",
+  //   width: 125,     
+  // },
 
-  {
-    field: "passCountry",
-    headerName: "Passport Country",
-    width: 125,     
-  },
+  // {
+  //   field: "passCountry",
+  //   headerName: "Passport Country",
+  //   width: 125,     
+  // },
 
   {
     field: "idType",
@@ -300,17 +298,17 @@ export const userColumns = [
     width: 125,     
   },
 
-  {
-    field: "intPassNo2",
-    headerName: "International Passport Number",
-    width: 125,     
-  },
+  // {
+  //   field: "intPassNo2",
+  //   headerName: "International Passport Number",
+  //   width: 125,     
+  // },
 
-  {
-    field: "passCountry2",
-    headerName: "Passport Country",
-    width: 125,     
-  },
+  // {
+  //   field: "passCountry2",
+  //   headerName: "Passport Country",
+  //   width: 125,     
+  // },
 
   {
     field: "idType2",

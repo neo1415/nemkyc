@@ -1,15 +1,11 @@
 import React,{useEffect, useState} from 'react'
 import './single.scss'
-import { collection, getDocs, deleteDoc, doc, getDoc, onSnapshot } from "firebase/firestore";
+import {doc, onSnapshot } from "firebase/firestore";
 import { db } from '../../APi/index';
-import { list } from 'firebase/storage';
 import { useParams } from 'react-router-dom';
-import { v4 as uuidv4 } from 'uuid';
 import { HiDownload } from 'react-icons/hi';
 import jsPDF from "jspdf";
 import "jspdf-autotable";
-// import Status from '../Table/Status';
-// import Status from './../Table/Status';
 
 const SingleUser = () => {
 
@@ -115,8 +111,8 @@ const SingleUser = () => {
                 ['Residential Address', data.residentialAddress],
                 ['Email', data.email],
                 ['Tax ID Number', data.taxIDNumber],
-                ['International Passport Number', data.intPassNo],
-                ['Passport Country', data.passCountry],
+                // ['International Passport Number', data.intPassNo],
+                // ['Passport Country', data.passCountry],
                 ['ID Type', data.idType],
                 ['ID Number', data.idNumber],
                 ['Issuing Body', data.issuingBody],
@@ -168,8 +164,8 @@ const secondDirectorsTableRows = [
         ['Residential Address', data.residentialAddress2],
         ['Email', data.email2],
         ['Tax ID Number', data.taxIDNumber2],
-        ['International Passport Number', data.intPassNo2],
-        ['Passport Country', data.passCountry2],
+        // ['International Passport Number', data.intPassNo2],
+        // ['Passport Country', data.passCountry2],
         ['ID Type', data.idType2],
         ['ID Number', data.idNumber2],
         ['Issuing Body', data.issuingBod2y],
@@ -317,7 +313,7 @@ doc.save('KYC Form.pdf');
               <p className='info'>{data.incorporationState}</p>
             </li>
             <li className='form-list'>
-              <p>Company Legal Form</p>
+              <p>Company Type</p>
               <p className='info'>{data.companyLegalForm}</p>
             </li>
             <li className='form-list'>
@@ -407,14 +403,14 @@ doc.save('KYC Form.pdf');
               <p>Tax ID Number</p>
               <p className='info'>{data.taxIDNumber}</p>
             </li>
-            <li className='form-list'>
+            {/* <li className='form-list'>
               <p>International Passport Number</p>
               <p className='info'>{data.intPassNo}</p>
             </li>
             <li className='form-list'>
               <p>Passport Country</p>
               <p className='info'>{data.passCountry}</p>
-            </li>
+            </li> */}
             <li className='form-list'>
               <p>ID Type</p>
               <p className='info'>{data.idType}</p>
@@ -498,14 +494,14 @@ doc.save('KYC Form.pdf');
               <p>Tax ID Number</p>
               <p className='info'>{data.taxIDNumber2}</p>
             </li>
-            <li className='form-list'>
+            {/* <li className='form-list'>
               <p>International Passport Number</p>
               <p className='info'>{data.intPassNo2}</p>
             </li>
             <li className='form-list'>
               <p>Passport Country</p>
               <p className='info'>{data.passCountry2}</p>
-            </li>
+            </li> */}
             <li className='form-list'>
               <p>ID Type</p>
               <p className='info'>{data.idType2}</p>
@@ -579,25 +575,25 @@ doc.save('KYC Form.pdf');
         <div className='documents'>
           <h1>Documents</h1>
           <div className='documents-content'>
-            <a href={data.identification} target='_blank'>
+            <a href={data.identification} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 Download Identification <HiDownload style={style} />{' '}
               </button>
             </a>
-            <a href={data.cac} target='_blank'>
+            <a href={data.cac} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 Download CAC <HiDownload style={style} />{' '}
               </button>
             </a>
-            {/* <a href={data.tax} target='_blank'>
+            {/* <a href={data.tax} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 Download Tax Card <HiDownload style={style} />{' '}
               </button>
             </a> */}
-            <a href={data.cacForm} target='_blank'>
+            <a href={data.cacForm} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 NAICOM Lisence Certificate <HiDownload style={style} />{' '}

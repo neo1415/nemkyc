@@ -1,16 +1,11 @@
 import React,{useEffect, useState} from 'react'
-// import './SingleUser.scss'
-import { collection, getDocs, deleteDoc, doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { db } from '../../APi/index';
-import { list } from 'firebase/storage';
 import { useParams } from 'react-router-dom';
-import { v4 as uuidv4 } from 'uuid';
 import { HiDownload } from 'react-icons/hi';
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import './single.scss'
-// import Status from '../Table/Status';
-// import Basic from './../Table/Basic';
 
 const IndividualUser = () => {
 
@@ -50,7 +45,9 @@ const IndividualUser = () => {
       
         const companyTableColumn = ['Personal Information', ''];
         const companyTableRows = [
-            ['Insured', data.insured],
+            ['Insured', data.title],
+            ['Insured', data.firstName],
+            ['Insured', data.lastName],
             ['Contact Address', data.contactAddress],
             ['Gender', data.gender],
             ['Nationality', data.nationality],
@@ -70,8 +67,8 @@ const IndividualUser = () => {
             ['Issuing Country', data.issuingCountry],
             ['Issued Date', data.issuedDate],
             ['Expiry Date', data.expiryDate],
-            ['International Passport Number', data.intPassNo],
-            ['Passport Country', data.passCountry],
+            // ['International Passport Number', data.intPassNo],
+            // ['Passport Country', data.passCountry],
             ['Business Type', data.businessType],
             ['Employer\'s Name', data.employersName],
             ['Employer\'s Address', data.employersAddress],
@@ -82,7 +79,7 @@ const IndividualUser = () => {
             // ['State', data.state],
             // ['Office Address', data.officeAddress],
             ['Annual Income Range', data.annualIncomeRange],
-            ['Date', data.date],
+            // ['Date', data.date],
           ];
       
         const companyTableProps = {
@@ -124,8 +121,16 @@ doc.save('KYC Form.pdf');
     <ul>
       <h1 className='content-h1'>Personal Information</h1>
       <li className='form-list'>
-        <p>Insured</p>
-        <p className='info'>{data.insured}</p>
+        <p>Title</p>
+        <p className='info'>{data.title}</p>
+      </li>
+      <li className='form-list'>
+        <p>First Name</p>
+        <p className='info'>{data.firstName}</p>
+      </li>
+      <li className='form-list'>
+        <p>Last Name</p>
+        <p className='info'>{data.lastName}</p>
       </li>
       <li className='form-list'>
         <p>Contact Address</p>
@@ -164,7 +169,7 @@ doc.save('KYC Form.pdf');
         <p className='info'>{data.premiumPaymentSource}</p>
       </li>
       <li className='form-list'>
-        <p>GSM Number</p>
+        <p>Mobile Number</p>
         <p className='info'>{data.GSMno}</p>
       </li>
       <li className='form-list'>
@@ -201,14 +206,14 @@ doc.save('KYC Form.pdf');
         <p>Expiry Date</p>
         <p className='info'>{data.expiryDate}</p>
       </li>
-      <li className='form-list'>
+      {/* <li className='form-list'>
         <p>International Passport Number</p>
         <p className='info'>{data.intPassNo}</p>
       </li>
       <li className='form-list'>
         <p>Passport Country</p>
         <p className='info'>{data.passCountry}</p>
-      </li>
+      </li> */}
       <li className='form-list'>
         <p>Employer's Name</p>
         <p className='info'>{data.employersName}</p>
@@ -233,10 +238,10 @@ doc.save('KYC Form.pdf');
         <p>Annual Income Range</p>
         <p className='info'>{data.annualIncomeRange}</p>
       </li>
-      <li className='form-list'>
+      {/* <li className='form-list'>
         <p>Date</p>
         <p className='info'>{data.date}</p>
-      </li>
+      </li> */}
     </ul>
   </div>
 </div>
