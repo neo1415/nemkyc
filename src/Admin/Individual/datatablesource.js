@@ -1,7 +1,3 @@
-import moment from 'moment'
-import { HiDownload } from 'react-icons/hi';
-
-
 export const UserColumns = [ 
   {
     field: "createdAt",
@@ -12,8 +8,20 @@ export const UserColumns = [
   },
 
   {
-    field: "insured",
-    headerName: "Full Name",
+    field: "title",
+    headerName: "Title",
+    width: 180,
+  },
+
+  {
+    field: "firstName",
+    headerName: "First Name",
+    width: 180,
+  },
+
+  {
+    field: "lastName",
+    headerName: "Last Name",
     width: 180,
   },
 
@@ -121,17 +129,17 @@ export const UserColumns = [
     width: 85,     
   },
 
-  {
-    field: "intPassNo",
-    headerName: "International Passport Number",
-    width: 85,     
-  },
+  // {
+  //   field: "intPassNo",
+  //   headerName: "International Passport Number",
+  //   width: 85,     
+  // },
 
-  {
-    field: "passCountry",
-    headerName: "Passport Country",
-    width: 85,     
-  },
+  // {
+  //   field: "passCountry",
+  //   headerName: "Passport Country",
+  //   width: 85,     
+  // },
 
 
   {
@@ -194,11 +202,11 @@ export const UserColumns = [
     width: 85,     
   },
 
-  {
-    field: "date",
-    headerName: "Date",
-    width: 85,     
-  },
+  // {
+  //   field: "date",
+  //   headerName: "Date",
+  //   width: 85,     
+  // },
 
   // {
   //   field: "signature",
