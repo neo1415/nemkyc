@@ -90,7 +90,7 @@ const PersonalInfo = ({handleChange, formData, formErrors}) => {
              {formErrors.occupation && <span className="error-message">{formErrors.occupation}</span>}
 
              <label htmlFor="position">Position </label>
-            <input type="text" id="position" placeholder="Employer's Telephone Number" name="position" value={formData.position} onChange={handleChange} />
+            <input type="text" id="position" placeholder="Position" name="position" value={formData.position} onChange={handleChange} />
              {/* {formErrors.position && <span className="error-message">{formErrors.position}</span>} */}
 
 

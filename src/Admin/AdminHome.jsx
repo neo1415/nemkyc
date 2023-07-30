@@ -1,20 +1,53 @@
-import React from 'react'
+import React,{ useEffect, useState } from 'react'
 import './AdminHome.scss'
 import Widget from './WIdgets/Widget';
-// import List from './homeAdmin/Table';
-import Table from './homeAdmin/Table';
-// import Header from './homeAdmin/Header';
 import SideBar from './SideBar/SideBar';
-// import Contact from './homeAdmin/Contact';
-// import Account from './Accounts/Account';
 import { UserAuth } from '../Context/AuthContext'
-import { HiSearch } from 'react-icons/hi';
+import { useNavigate } from 'react-router-dom'
+// import { HiSearch } from 'react-icons/hi';
 import Individual from './homeAdmin/corporateAdmin';
 import List from './homeAdmin/Table';
-import Footer from '../Containers/Footer';
 
 const AdminHome = () => {
-  const {user} = UserAuth()
+  const navigate = useNavigate()
+  const {user,logout} = UserAuth()
+
+    const [isActive, setIsActive] = useState(true);
+  
+    useEffect(() => {
+      const resetTimer = () => {
+        setIsActive(true);
+      };
+  
+      // Attach event listeners
+      window.addEventListener('mousemove', resetTimer);
+      window.addEventListener('keydown', resetTimer);
+      window.addEventListener('touchstart', resetTimer);
+  
+      // Set a timer to check inactivity and log out if needed
+      const logoutTimer = setInterval(async () => {
+        console.log('Checking activity...');
+        if (!isActive) {
+          console.log('Logging out...');
+          try {
+            await logout();
+            navigate('/signin');
+          } catch (e) {
+            console.error('Error during logout:', e.message);
+          }
+          console.log('User logged out due to inactivity.');
+        }
+      }, 5 * 1000)
+      // Clean up event listeners and timer on component unmount
+      return () => {
+        window.removeEventListener('mousemove', resetTimer);
+        window.removeEventListener('keydown', resetTimer);
+        window.removeEventListener('touchstart', resetTimer);
+        clearInterval(logoutTimer);
+      };
+    }, [isActive]);
+  
+  
   return (
     <div className='AdminHome'>
     <div className='listContainer'>
@@ -30,7 +63,7 @@ const AdminHome = () => {
       </div> */}
       <div className='items' style={{display:'flex'}}>
       
-        <p style={{color:'black', fontSize:18, fontWeight:"500", marginRight:10, color:'#bf2e46'}}>Welcome {user && user.email}</p>
+        <p style={{fontSize:18, fontWeight:"500", marginRight:10, color:'#bf2e46'}}>Welcome {user && user.email}</p>
 
       {/* <div className='item'>
         <NotificationsNoneOutlined />
