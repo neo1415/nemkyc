@@ -16,6 +16,8 @@ import AccountDetails from './Inputs/AccountDetails';
 import Uploads from './Inputs/Uploads';
 import { images } from '../../Constants';
 import SubmitModal from '../Modals/SubmitModal';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { FormDataProvider } from '../../Context/FormContext';
 
 function CDD() {
@@ -82,53 +84,58 @@ function CDD() {
 
 
   //store files in firebase bucket
-  useEffect(() => {
-    const handleFileUpload = async (file, name) => {
-      if (file) {
-        const storageRef = ref(storage, name);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-  
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            console.log('Upload is ' + progress + '% done');
-            setPerc(progress);
-            switch (snapshot.state) {
-              case 'paused':
-                console.log('Upload is paused');
-                break;
-              case 'running':
-                console.log('Upload is running');
-                break;
-              default:
-                break;
-            }
-          },
-          (error) => {
-            console.log(error);
-          },
-          () => {
-            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-              setFormData((prev) => ({ ...prev, [name]: downloadURL }));
-            });
+  const handleFileUpload = async (file, name) => {
+    if (file) {
+      const storageRef = ref(storage, name);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log('Upload is ' + progress + '% done');
+          setPerc(progress);
+          switch (snapshot.state) {
+            case 'paused':
+              console.log('Upload is paused');
+              break;
+            case 'running':
+              console.log('Upload is running');
+              break;
+            default:
+              break;
           }
-        );
-      }
-    };
-  
-    const fileFields = [
-      { field: cac, name: 'cac' },
-      { field: identification, name: 'identification' },
-      { field: tax, name: 'tax' },
-      { field: cacForm, name: 'cacForm' },
-    ];
-  
+        },
+        (error) => {
+          console.log(error);
+        },
+        () => {
+          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+            setFormData((prev) => ({ ...prev, [name]: downloadURL }));
+            showSuccessToast(); // Call the toast notification function here
+          });
+        }
+      );
+    }
+  };
+
+  const fileFields = [
+    { field: cac, name: 'cac' },
+    { field: identification, name: 'identification' },
+    { field: tax, name: 'tax' },
+    { field: cacForm, name: 'cacForm' },
+  ];
+
+  useEffect(() => {
+    // Call the file upload function when the component mounts
     fileFields.forEach(({ field, name }) => {
       handleFileUpload(field, name);
     });
   }, [cac, identification, tax, cacForm]);
-  
+
+  const showSuccessToast = () => {
+    toast.success('Your file has been uploaded successfully!');
+  };
   //handle inputs
   const handleChange = (event) => {
     const { name, value, type, checked, files } = event.target;
@@ -228,13 +235,22 @@ function CDD() {
     if (!allFieldsFilled) {
       return;
     }
+    const formatDate = (date) => {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = String(date.getFullYear());
+    
+      return `${day}/${month}/${year}`;
+    };
     try {
       console.log('it works')
       setIsSubmitted(true);
+      const now = new Date();
+      const formattedDate = formatDate(now);
       await setDoc(doc(db, "users", uuidv4()), {
         ...formData,
-        createdAt: Timestamp.now().toDate().toString(),
-        timestamp: serverTimestamp()
+        createdAt: formattedDate,
+        timestamp: serverTimestamp(),
         
       });
     } catch (err) {
@@ -256,9 +272,9 @@ function CDD() {
     });
 
     // if any required field is not filled, prevent form from moving to next step
-    if (!allFieldsFilled) {
-      return;
-    }
+    // if (!allFieldsFilled) {
+    //   return;
+    // }
 
     // if all required fields are filled, move to next step
     setStep(step + 1);

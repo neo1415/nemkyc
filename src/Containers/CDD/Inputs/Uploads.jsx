@@ -66,7 +66,7 @@ const Uploads = ({changeHandler,cac, identification, cacForm, tax,formErrors, ha
             </div> */}
             <div className='upload-form'>
         <div className='uploader'>
-        <h6>For Insurance Companies</h6>
+        <h6>For NAICOM Regulated Companies</h6>
             <label htmlFor="cacForm" className='upload'>
             <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
            <h4>NAICOM License Certificate</h4> 

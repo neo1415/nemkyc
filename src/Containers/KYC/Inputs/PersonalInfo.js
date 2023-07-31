@@ -41,7 +41,7 @@ const PersonalInfo = ({handleChange, formData, formErrors}) => {
              {formErrors.country && <span className="error-message">{formErrors.country}</span>}
 
             <label htmlFor="dateOfBirth">Date Of Birth <span className='required'>*</span></label>
-            <input type="date" id="dateOfBirth" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} required />
+            <input type="date" id="dateOfBirth" placeholder='Date Of Birth' name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} required />
              {formErrors.dateOfBirth && <span className="error-message">{formErrors.dateOfBirth}</span>} 
 
              <label htmlFor="placeOfBirth">Place of Birth <span className='required'>*</span></label>
@@ -66,11 +66,11 @@ const PersonalInfo = ({handleChange, formData, formErrors}) => {
 
 
              <label htmlFor="GSMNumber">Mobile Number <span className='required'>*</span></label>
-            <input type="text" id=" GSMno" placeholder='GSM Number' name="GSMno" value={formData.GSMno} onChange={handleChange} required />
+            <input type="text" id=" GSMno" placeholder='Moobile Number' name="GSMno" value={formData.GSMno} onChange={handleChange} required />
              {formErrors.GSMno && <span className="error-message">{formErrors.GSMno}</span>}
 
             <label htmlFor="residentialAddress">Residential Address <span className='required'>*</span></label>
-            <input type="text" id="residentialAddress" placeholder='Office Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required />
+            <input type="text" id="residentialAddress" placeholder='Residential Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required />
              {formErrors.residentialAddress && <span className="error-message">{formErrors.residentialAddress}</span>}
 
              <label htmlFor="city">City <span className='required'>*</span></label>

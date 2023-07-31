@@ -176,8 +176,9 @@ const List = () => {
       Toolbar: CustomToolbar,
       }}
         className="datagrid"
+        columns={actionColumn.concat(userColumns)}
         rows={filteredData}
-        columns={userColumns.concat(actionColumn)}
+     
         pageSize={9}
         rowsPerPageOptions={[9]}
         checkboxSelection
