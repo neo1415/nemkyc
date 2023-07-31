@@ -177,11 +177,20 @@ function KYC() {
     if (!allFieldsFilled) {
       return;
     }
+    const formatDate = (date) => {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = String(date.getFullYear());
+    
+      return `${day}/${month}/${year}`;
+    };
     try {
       setIsSubmitted(true);
+      const now = new Date();
+      const formattedDate = formatDate(now);
       await setDoc(doc(db, "individuals", uuidv4()), {
         ...formData,
-        createdAt: Timestamp.now().toDate().toString(),
+        createdAt: formattedDate,
         timestamp: serverTimestamp()
         
       });

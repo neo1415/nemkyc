@@ -4,7 +4,7 @@ export const userColumns = [
     headerName: "Date",
     width: 150,  
     dataType: 'date',  
-    format: 'dd/MM/yyyy hh:mm'   
+    format: 'dd/MM/yyyy'   
   },
 
   {

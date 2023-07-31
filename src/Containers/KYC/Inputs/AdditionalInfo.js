@@ -40,12 +40,12 @@ const AdditionalInfo = ({handleChange, formErrors, formData,showOtherField, hand
             <input type="email" id="employersEmail" placeholder='Employers Email' name="employersEmail" value={formData.employersEmail} onChange={handleChange} required />
              {formErrors.employersEmail && <span className="error-message">{formErrors.employersEmail}</span>}
 
-             <label htmlFor="employersName">Employers Name <span className='required'>*</span></label>
-             <input type="text" placeholder="Employer's Name" id="employersName" name="employersName" value={formData.employersName} onChange={handleChange} required />
+             <label htmlFor="employersName">Employers Name </label>
+             <input type="text" placeholder="Employer's Name" id="employersName" name="employersName" value={formData.employersName} onChange={handleChange}  />
              {formErrors.employersName && <span className="error-message">{formErrors.employersName}</span>}
 
-             <label htmlFor="employersTelephoneNumber">Employers Telephone Number <span className='required'>*</span></label>
-            <input type="text" id="employersTelephoneNumber" placeholder="Employer's Telephone Number" name="employersTelephoneNumber" value={formData.employersTelephoneNumber} onChange={handleChange} required />
+             <label htmlFor="employersTelephoneNumber">Employers Telephone Number</label>
+            <input type="text" id="employersTelephoneNumber" placeholder="Employer's Telephone Number" name="employersTelephoneNumber" value={formData.employersTelephoneNumber} onChange={handleChange} />
              {formErrors.employersTelephoneNumber && <span className="error-message">{formErrors.employersTelephoneNumber}</span>}
 
              <label htmlFor="employersAddress">Employers Address <span className='required'>*</span></label>
