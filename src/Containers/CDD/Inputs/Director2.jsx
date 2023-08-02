@@ -46,7 +46,7 @@ const Director2 = ({handleChange,formData,formErrors,handleIdType2Change, showOt
        {formErrors.employersName2 && <span className="error-message">{formErrors.employersName2}</span>}
 
        <label htmlFor="phoneNumber2">Phone Number </label>
-       <input type="number" id="phoneNumber2" placeholder='Phone Number' name="phoneNumber2" value={formData.phoneNumber2} onChange={handleChange} />
+       <input type="text" id="phoneNumber2" placeholder='Phone Number' name="phoneNumber2" value={formData.phoneNumber2} onChange={handleChange} />
        {formErrors.phoneNumber2 && <span className="error-message">{formErrors.phoneNumber2}</span>}
 
 

@@ -27,7 +27,7 @@ function CDD() {
   const [cac, setCac] = useState('');
   const [tax, setTax] = useState('');
   const [cacForm, setcacForm] = useState('');
-  const [per, setPerc] = useState(null)
+  const [perc, setPerc] = useState(null)
   const [error , setError]= useState(null)
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { formData, setFormData } = useFormData();
@@ -36,6 +36,7 @@ function CDD() {
   const [showOtherSourceOfIncome, setShowOtherSourceOfIncome] = useState(false);
   const [showOtherSourceOfIncome2, setShowOtherSourceOfIncome2] = useState(false);
   const [showOtherField2, setShowOtherField2] = useState(false);
+  const [uploading, setUploading] = useState(false); 
 
 
   const handleIdType2Change = (event) => {
@@ -85,10 +86,28 @@ function CDD() {
 
   //store files in firebase bucket
   const handleFileUpload = async (file, name) => {
+
+
     if (file) {
+
+         // File type validation: check if the file is a PDF
+       if (file.type !== 'application/pdf') {
+       // Show an error toast/message here for invalid file type
+          showErrorToast('Please upload a PDF file.');
+         return;
+         }
+        
+         // File size validation: check if the file size is within the limit (5MB)
+        const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+        if (file.size > maxSize) {
+       // Show an error toast/message here for exceeding file size
+        showErrorToast('File size exceeds the limit (5MB). Please upload a smaller file.');
+       return;
+      }
+
       const storageRef = ref(storage, name);
       const uploadTask = uploadBytesResumable(storageRef, file);
-
+  
       uploadTask.on(
         'state_changed',
         (snapshot) => {
@@ -112,29 +131,35 @@ function CDD() {
         () => {
           getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
             setFormData((prev) => ({ ...prev, [name]: downloadURL }));
-            showSuccessToast(); // Call the toast notification function here
+              // Check if the upload is complete for this file and show the success toast
+            showSuccessToast();
+  
+            // Set the uploading state back to false after the file is uploaded
+            setUploading(false);
+  
+            // Reset the progress state after upload is completed
+            setPerc(0);
           });
         }
       );
+            setUploading(true);
     }
   };
 
-  const fileFields = [
-    { field: cac, name: 'cac' },
-    { field: identification, name: 'identification' },
-    { field: tax, name: 'tax' },
-    { field: cacForm, name: 'cacForm' },
-  ];
-
-  useEffect(() => {
-    // Call the file upload function when the component mounts
-    fileFields.forEach(({ field, name }) => {
-      handleFileUpload(field, name);
-    });
-  }, [cac, identification, tax, cacForm]);
-
   const showSuccessToast = () => {
     toast.success('Your file has been uploaded successfully!');
+  };
+
+  const showErrorToast = (message) => {
+    toast.error(message, {
+      position: toast.POSITION.TOP_RIGHT,
+      autoClose: 3000, // Adjust the duration as needed
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: false,
+      draggable: true,
+      progress: undefined,
+    });
   };
   //handle inputs
   const handleChange = (event) => {
@@ -179,28 +204,35 @@ function CDD() {
     const fieldName = e.target.name;
   
     const isPDF = selectedFile && types.includes(selectedFile.type);
-    const errorMessage = isPDF ? '' : 'Please select a PDF document';
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    const isSizeValid = selectedFile && selectedFile.size <= maxSize;
   
-    setError(errorMessage);
-  
-    switch (fieldName) {
-      case "identification":
-        setIdentification(isPDF ? selectedFile : null);
-        break;
-      case "cac":
-        setCac(isPDF ? selectedFile : null);
-        break;
-      case "tax":
-        setTax(isPDF ? selectedFile : null);
-        break;
-      case "cacForm":
-        setcacForm(isPDF ? selectedFile : null);
-        break;
-      default:
-        break;
+    if (!isPDF) {
+      showErrorToast('Please select a PDF document.');
+    } else if (!isSizeValid) {
+      showErrorToast('File size exceeds the limit (5MB). Please upload a smaller file.');
+    } else {
+      setError('');
+      switch (fieldName) {
+        case 'identification':
+          setIdentification(selectedFile);
+          break;
+        case 'cac':
+          setCac(selectedFile);
+          break;
+        case 'tax':
+          setTax(selectedFile);
+          break;
+        case 'cacForm':
+          setcacForm(selectedFile);
+          break;
+        default:
+          break;
+      }
+      handleFileUpload(selectedFile, fieldName);
     }
   };
-
+  
   //reset form 
   const resetForm = () => {
     //reload page
@@ -272,9 +304,9 @@ function CDD() {
     });
 
     // if any required field is not filled, prevent form from moving to next step
-    if (!allFieldsFilled) {
-      return;
-    }
+    // if (!allFieldsFilled) {
+    //   return;
+    // }
 
     // if all required fields are filled, move to next step
     setStep(step + 1);
@@ -413,6 +445,8 @@ function CDD() {
       className="form-step">
 
         <h3>File Uploads</h3>
+        {!uploading && perc === 100 && <div>File uploaded successfully!</div>}
+
         <Uploads changeHandler={changeHandler} 
         formErrors={formErrors} 
         handleChange={handleChange}
@@ -421,9 +455,10 @@ function CDD() {
          cac={cac}
          cacForm={cacForm} />
        
+       <ToastContainer />
        <div className='button-flex'>
           <button type="button" onClick={prevStep}>Previous</button>
-          <button type="submit" disabled={per !== null && per < 100}  onClick={handleSubmit}>Submit</button>
+          <button type="submit"  onClick={handleSubmit}>Submit</button>
         </div>
 
       </motion.div>

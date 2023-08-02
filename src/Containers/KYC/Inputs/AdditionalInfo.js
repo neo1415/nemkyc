@@ -96,7 +96,7 @@ const AdditionalInfo = ({handleChange, formErrors, formData,showOtherField, hand
              {formErrors.identificationType && <span className="error-message">{formErrors.identificationType}</span>}
 
              <label htmlFor="intPassNo">Identification Number <span className='required'>*</span></label>
-            <input type="text" id="intPassNo" placeholder='International Passport Number' name="intPassNo" value={formData.intPassNo} onChange={handleChange} required />
+            <input type="text" id="intPassNo" placeholder='Identification Number' name="intPassNo" value={formData.intPassNo} onChange={handleChange} required />
              {formErrors.intPassNo && <span className="error-message">{formErrors.intPassNo}</span>}
 
 

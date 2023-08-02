@@ -23,7 +23,7 @@ const initialFormData = {
     issuingCountry:'',
     issuedDate:'',
     expiryDate:'',
-    // intPassNo:'',
+    intPassNo:'',
     // passCountry:'',
     businessType:[],
     employersName: '',

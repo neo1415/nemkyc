@@ -41,11 +41,11 @@ const Director1 = ({handleChange,formErrors,formData,handleIdTypeChange, handleS
             <input type="text" placeholder='BVN' id="BVNNumber" name="BVNNumber" value={formData.BVNNumber} onChange={handleChange} />
             {/* {formErrors.BVNNumber && <span className="error-message">{formErrors.BVNNumber}</span>} */}
 
-            <label htmlFor="employersName">Employ</label>
+            <label htmlFor="employersName">Employers Name</label>
             <input type="text" placeholder='Employers Name' id="employersName" name="employersName" value={formData.employersName} onChange={handleChange} />
            
             <label htmlFor="phoneNumber">Phone Number </label>
-            <input type="number" id="phoneNumber" placeholder='Phone Number' name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} />
+            <input type="text" id="phoneNumber" placeholder='Phone Number' name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} />
            
 </div>
      <div className='flex-two'>

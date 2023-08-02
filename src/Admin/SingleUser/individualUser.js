@@ -63,11 +63,10 @@ const IndividualUser = () => {
             ['Tax ID Number', data.taxIDNumber],
             ['BVN Number', data.BVNNumber],
             ['Identification Type', data.identificationType],
-            ['Identification Number', data.identificationNumber],
+            ['International Passport Number', data.intPassNo],
             ['Issuing Country', data.issuingCountry],
             ['Issued Date', data.issuedDate],
             ['Expiry Date', data.expiryDate],
-            // ['International Passport Number', data.intPassNo],
             // ['Passport Country', data.passCountry],
             ['Business Type', data.businessType],
             ['Employer\'s Name', data.employersName],
@@ -184,7 +183,7 @@ doc.save('KYC Form.pdf');
     <ul>
       <li className='form-list'>
         <p>Identification Number</p>
-        <p className='info'>{data.identificationNumber}</p>
+        <p className='info'>{data.intPassNo}</p>
       </li>
       <li className='form-list'>
         <p>BVN Number</p>
