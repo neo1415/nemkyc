@@ -174,7 +174,7 @@ const Individual = () => {
       }}
           className="datagrid"
           rows={filteredData}
-          columns={UserColumns.concat(actionColumn)}
+          columns={actionColumn.concat(UserColumns)}
           pageSize={9}
           rowsPerPageOptions={[9]}
           checkboxSelection

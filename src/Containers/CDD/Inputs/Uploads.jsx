@@ -1,7 +1,7 @@
 import React from 'react'
 import { HiCloudUpload } from 'react-icons/hi';
 
-const Uploads = ({changeHandler,cac, identification, cacForm, tax,formErrors, handleChange}) => {
+const Uploads = ({changeHandler,cac, identification, cacForm, formErrors, handleChange}) => {
   return (
     <div>
        <div className='upload-flex'>

@@ -87,7 +87,7 @@ export const UserColumns = [
 
   
   {
-    field: "identificationNumber",
+    field: "intPassNo",
     headerName: "Identification Number",
     width: 230,
   },

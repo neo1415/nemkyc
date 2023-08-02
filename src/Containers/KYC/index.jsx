@@ -14,86 +14,129 @@ import PersonalInfo from './Inputs/PersonalInfo';
 import AdditionalInfo from './Inputs/AdditionalInfo';
 import FinancialInfo from './Inputs/FinancialInfo';
 import SubmitModal from '../Modals/SubmitModal';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function KYC() {
   const [step, setStep] = useState(1);
     const [formErrors, setFormErrors] = useState({});
   const [identification, setIdentification] = useState('');
   const [signature, setSignature] = useState('');
-  const [per, setPerc] = useState(null)
+  const [perc, setPerc] = useState(null)
   const [error , setError]= useState(null)
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { formData, setFormData } = useFormData();
   const [showOtherField, setShowOtherField] = useState(false);
   const [showOtheridentificationType, setShowOtheridentificationType] = useState(false);
+  const [uploading, setUploading] = useState(false); 
 
   const types= ['application/pdf'];
 
-  useEffect(() => {
-    const handleFileUpload = async (file, name) => {
-      if (file) {
-        const storageRef = ref(storage, name);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-  
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            console.log('Upload is ' + progress + '% done');
-            setPerc(progress);
-            switch (snapshot.state) {
-              case 'paused':
-                console.log('Upload is paused');
-                break;
-              case 'running':
-                console.log('Upload is running');
-                break;
-              default:
-                break;
+  const handleFileUpload = async (file, name) => {
+    if (file) {
+
+         // File type validation: check if the file is a PDF
+         if (file.type !== 'application/pdf') {
+          // Show an error toast/message here for invalid file type
+             showErrorToast('Please upload a PDF file.');
+            return;
             }
-          },
-          (error) => {
-            console.log(error);
-          },
-          () => {
-            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-              setFormData((prev) => ({ ...prev, [name]: downloadURL }));
-            });
+           
+            // File size validation: check if the file size is within the limit (5MB)
+           const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+           if (file.size > maxSize) {
+          // Show an error toast/message here for exceeding file size
+           showErrorToast('File size exceeds the limit (5MB). Please upload a smaller file.');
+          return;
+         }
+
+      const storageRef = ref(storage, name);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+  
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log('Upload is ' + progress + '% done');
+          setPerc(progress);
+          switch (snapshot.state) {
+            case 'paused':
+              console.log('Upload is paused');
+              break;
+            case 'running':
+              console.log('Upload is running');
+              break;
+            default:
+              break;
           }
-        );
-      }
-    };
+        },
+        (error) => {
+          console.log(error);
+        },
+        () => {
+          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+            setFormData((prev) => ({ ...prev, [name]: downloadURL }));
+          // Check if the upload is complete for this file and show the success toast
+            showSuccessToast();
   
-    const fileFields = [
-      { field: signature, name: 'signature' },
-      { field: identification, name: 'identification' },
-    ];
-  
-    fileFields.forEach(({ field, name }) => {
-      handleFileUpload(field, name);
+            // Set the uploading state back to false after the file is uploaded
+           setUploading(false);
+                
+             // Reset the progress state after upload is completed
+             setPerc(0);
+          });
+        }
+      );
+      setUploading(true);
+    }
+  };
+
+  const showSuccessToast = () => {
+    toast.success('Your file has been uploaded successfully!');
+  };
+
+  const showErrorToast = (message) => {
+    toast.error(message, {
+      position: toast.POSITION.TOP_RIGHT,
+      autoClose: 3000, // Adjust the duration as needed
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: false,
+      draggable: true,
+      progress: undefined,
     });
-  }, [signature, identification]);
+  };
   
+  // Change handler
   const changeHandler = (e) => {
     const selectedFile = e.target.files[0];
     const fieldName = e.target.name;
   
     const isPDF = selectedFile && types.includes(selectedFile.type);
-    const errorMessage = isPDF ? '' : 'Please select a PDF document';
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    const isSizeValid = selectedFile && selectedFile.size <= maxSize;
   
-    setError(errorMessage);
-  
+    if (!isPDF) {
+      showErrorToast('Please select a PDF document.');
+    } else if (!isSizeValid) {
+      showErrorToast('File size exceeds the limit (5MB). Please upload a smaller file.');
+    } else {
+      setError('');
     switch (fieldName) {
-      case "identification":
+      case 'identification':
         setIdentification(isPDF ? selectedFile : null);
         break;
-      case "signature":
+      case 'signature':
         setSignature(isPDF ? selectedFile : null);
         break;
       default:
         break;
     }
+  
+      handleFileUpload(selectedFile, fieldName);
+  }
   };
+
 
   const handleChange = (event) => {
     const { name, value, type, checked, files } = event.target;
@@ -213,9 +256,9 @@ function KYC() {
      });
  
     //  // if any required field is not filled, prevent form from moving to next step
-     if (!allFieldsFilled) {
-       return;
-     }
+    //  if (!allFieldsFilled) {
+    //    return;
+    //  }
  
     //  // if all required fields are filled, move to next step
      setStep(step + 1);
@@ -299,7 +342,7 @@ function KYC() {
       transition= {{ duration:.5, ease:'easeOut' }}
       exit={{ opacity: 0, x: 50 }}
       className="form-step">
-
+            {!uploading && perc === 100 && <div>File uploaded successfully!</div>}
         <h3>Financial Details</h3>
           <FinancialInfo 
             changeHandler={changeHandler} 
@@ -308,10 +351,11 @@ function KYC() {
             formErrors={formErrors}
             signature={signature}
             identification={identification} />
+                <ToastContainer />
 
       <div className='button-flex'>
         <button type="button" onClick={prevStep}>Previous</button>
-        <button type="submit" disabled={per !== null && per < 100}  onClick={handleSubmit}>Submit</button>
+        <button type="submit"  onClick={handleSubmit}>Submit</button>
       </div>
       </motion.div>
       

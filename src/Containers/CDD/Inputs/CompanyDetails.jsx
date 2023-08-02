@@ -37,9 +37,9 @@ const CompanyDetails = ({handleChange,formErrors,formData, showOtherField, handl
         <input type="text" id="incorporationNumber" placeholder='Incorporation Number' name="incorporationNumber" value={formData.incorporationNumber} onChange={handleChange} required />
         {formErrors.incorporationNumber && <span className="error-message">{formErrors.incorporationNumber}</span>}
 
-        {/* <label htmlFor="incorporationState">Registered Office <span className='required'>*</span></label>
+        <label htmlFor="incorporationState">Registered Office <span className='required'>*</span></label>
         <input type="text" placeholder='Registered Office' id="incorporationState" name="incorporationState" value={formData.incorporationState} onChange={handleChange} required />
-        {formErrors.incorporationState && <span className="error-message">{formErrors.incorporationState}</span>} */}
+        {formErrors.incorporationState && <span className="error-message">{formErrors.incorporationState}</span>}
 
         <label htmlFor="companyLegalForm">Company Type</label>
       {showOtherField ? (

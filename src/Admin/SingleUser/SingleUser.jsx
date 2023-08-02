@@ -153,7 +153,7 @@ const secondDirectorsTableRows = [
         ['First Name', data.firstName2],
         ['Last Name', data.lastName2],
         ['Date of Birth', data.dob2],
-        ['Position', data.position2],
+        // ['Position', data.position2],
         ['Place of Birth', data.placeOfBirth2],
         ['Nationality', data.nationality2],
         ['Country', data.country2],
@@ -168,7 +168,7 @@ const secondDirectorsTableRows = [
         // ['Passport Country', data.passCountry2],
         ['ID Type', data.idType2],
         ['ID Number', data.idNumber2],
-        ['Issuing Body', data.issuingBod2y],
+        ['Issuing Body', data.issuingBody2],
         ['Issued Date', data.issuedDate2],
         ['Expiry Date', data.expiryDate2],
         ['Source of Income', data.sourceOfIncome2],
@@ -332,7 +332,7 @@ doc.save('KYC Form.pdf');
             </li>
             <li className='form-list'>
               <p>Company Type</p>
-              <p className='info'>{data.companyType}</p>
+              <p className='info'>{data.companyLegalForm}</p>
             </li>
             <li className='form-list'>
               <p>Tax Identification Number</p>
