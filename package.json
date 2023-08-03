@@ -62,6 +62,7 @@
     ]
   },
   "devDependencies": {
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "env-cmd": "^10.1.0"
   }
 }
