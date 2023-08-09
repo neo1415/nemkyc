@@ -18,7 +18,6 @@ import { images } from '../../Constants';
 import SubmitModal from '../Modals/SubmitModal';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { FormDataProvider } from '../../Context/FormContext';
 
 function CDD() {
   const [step, setStep] = useState(1);

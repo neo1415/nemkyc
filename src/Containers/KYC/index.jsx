@@ -72,6 +72,7 @@ function KYC() {
         },
         (error) => {
           console.log(error);
+          showErrorToast('File size exceeds the limit (5MB). Please upload a smaller file.');
         },
         () => {
           getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
@@ -238,7 +239,9 @@ function KYC() {
         
       });
     } catch (err) {
+      showErrorToast('There was an error submitting your form. please try again');
       console.log(err);
+
     }
   };
   
