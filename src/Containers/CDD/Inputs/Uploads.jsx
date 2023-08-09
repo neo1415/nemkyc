@@ -87,7 +87,7 @@ const Uploads = ({changeHandler,cac, identification, cacForm, formErrors, handle
               </div>
         </div>
         <label htmlFor="privacy">
-                <input type="checkbox" id="privacy" name="privacy" onChange={handleChange}  />
+                <input type="checkbox" id="privacy" name="privacy" onChange={handleChange} style={{border:'3rem solid black'}} />
                 Please note that your data will be treated 
                 with the utmost respect and privacy as  by law.
                 By checking this box, you acknowledge and 

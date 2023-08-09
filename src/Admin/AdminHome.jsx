@@ -12,41 +12,53 @@ const AdminHome = () => {
   const navigate = useNavigate()
   const {user,logout} = UserAuth()
 
-    const [isActive, setIsActive] = useState(true);
-  
-    useEffect(() => {
-      const resetTimer = () => {
-        setIsActive(true);
-      };
-  
-      // Attach event listeners
-      window.addEventListener('mousemove', resetTimer);
-      window.addEventListener('keydown', resetTimer);
-      window.addEventListener('touchstart', resetTimer);
-  
-      // Set a timer to check inactivity and log out if needed
-      const logoutTimer = setInterval(async () => {
-        console.log('Checking activity...');
-        if (!isActive) {
-          console.log('Logging out...');
-          try {
-            await logout();
-            navigate('/signin');
-          } catch (e) {
-            console.error('Error during logout:', e.message);
-          }
-          console.log('User logged out due to inactivity.');
-        }
-      }, 5 * 1000)
-      // Clean up event listeners and timer on component unmount
-      return () => {
-        window.removeEventListener('mousemove', resetTimer);
-        window.removeEventListener('keydown', resetTimer);
-        window.removeEventListener('touchstart', resetTimer);
-        clearInterval(logoutTimer);
-      };
-    }, [isActive]);
-  
+  // const [isActive, setIsActive] = useState(true);
+
+  // useEffect(() => {
+  //   const resetTimer = () => {
+  //     setIsActive(true);
+  //   };
+
+  //   const setInactive = () => {
+  //     setIsActive(false);
+  //   };
+
+  //   // Attach event listeners
+  //   window.addEventListener('mousemove', resetTimer);
+  //   window.addEventListener('keydown', resetTimer);
+  //   window.addEventListener('touchstart', resetTimer);
+  //   window.addEventListener('blur', setInactive);
+  //   window.addEventListener('visibilitychange', setInactive);
+
+  //   // Set a timer to check inactivity and log out if needed
+  //   const logoutTimer = setInterval(() => {
+  //     console.log('Checking activity...');
+  //     if (!isActive) {
+  //       console.log('Logging out...');
+  //       // Use the IIFE to handle the asynchronous logout function
+  //       (async () => {
+  //         try {
+  //           await logout();
+  //           navigate('/signin');
+  //         } catch (e) {
+  //           console.error('Error during logout:', e.message);
+  //         }
+  //         console.log('User logged out due to inactivity.');
+  //       })();
+  //     }
+  //   }, 5 * 1000);
+
+  //   // Clean up event listeners and timer on component unmount
+  //   return () => {
+  //     window.removeEventListener('mousemove', resetTimer);
+  //     window.removeEventListener('keydown', resetTimer);
+  //     window.removeEventListener('touchstart', resetTimer);
+  //     window.removeEventListener('blur', setInactive);
+  //     window.removeEventListener('visibilitychange', setInactive);
+  //     clearInterval(logoutTimer);
+  //   };
+  // }, [isActive, logout, navigate]);
+
   
   return (
     <div className='AdminHome'>
