@@ -122,6 +122,9 @@ $dark-color: #343a40;
       @media screen and (max-width:1000px) {
         width: 22rem;
     }
+    @media screen and (max-width:720px) {
+      flex-direction: column-reverse;
+  }
     }
 
     input[type="radio"],
@@ -129,7 +132,14 @@ $dark-color: #343a40;
       margin-right: 1rem;
       height: 3rem;
       width: 3rem;
+      @media screen and (max-width:720px) {
+        height: 2rem;
+        width: 2rem;
+    }
 
+  #privacy{
+    border: 2rem solid black;
+  }
     }
     button {
       margin-top: .5rem;

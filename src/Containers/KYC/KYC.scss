@@ -264,6 +264,9 @@ label[for="private"] {
   font-weight: normal;
   color: brown;
   cursor: pointer;
+  @media screen and (max-width:720px) {
+    flex-direction: column-reverse;
+}
   @media screen and (max-width:1000px) {
     width: 22rem;
 }
