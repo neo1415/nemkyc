@@ -58,7 +58,7 @@ const CompanyDetails = ({handleChange,formErrors,formData, showOtherField, handl
           <option value="Sole-Proprietor">Sole Proprietor</option>
           <option value="Limited-Liability-Company">Limited Liability Company</option>
           <option value="Joint-Venture">Joint Venture</option>
-          <option value="Other">Other</option>
+          <option value="Other">Other(please specify)</option>
         </select>
       )}
           {formErrors.companyLegalForm && <span className="error-message">{formErrors.companyLegalForm}</span>}
