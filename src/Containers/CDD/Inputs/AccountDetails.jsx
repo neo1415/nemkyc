@@ -12,7 +12,7 @@ const AccountDetails = ({formData,formErrors,handleChange}) => {
 {formErrors.bankName && <span className="error-message">{formErrors.bankName}</span>}
 
 <label htmlFor="accountName">Account Number <span className='required'>*</span></label>
-<input type="text" id="accountNumber" placeholder='Account Number' name="accountNumber" value={formData.accountNumber} onChange={handleChange} required />
+<input type="number" id="accountNumber" placeholder='Account Number' name="accountNumber" value={formData.accountNumber} onChange={handleChange} required />
 {formErrors.accountNumber && <span className="error-message">{formErrors.accountNumber}</span>}
 
 <label htmlFor="bankBranch">Bank Branch <span className='required'>*</span></label>
@@ -31,7 +31,7 @@ const AccountDetails = ({formData,formErrors,handleChange}) => {
             <input type="text" placeholder='Bank Name' id="bankName2" name="bankName2" value={formData.bankName2} onChange={handleChange} />
 
             <label htmlFor="accountName2">Domiciliary Account Number</label>
-            <input type="text" id="accountNumber2" placeholder='Account Number' name="accountNumber2" value={formData.accountNumber2} onChange={handleChange} />
+            <input type="number" id="accountNumber2" placeholder='Account Number' name="accountNumber2" value={formData.accountNumber2} onChange={handleChange} />
 
             <label htmlFor="bankBranch2">Bank Branch</label>
             <input type="text" id="bankBranch2" placeholder='Bank Branch Body' name="bankBranch2" value={formData.bankBranch2} onChange={handleChange} />

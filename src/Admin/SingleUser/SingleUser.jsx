@@ -105,11 +105,12 @@ const SingleUser = () => {
                 ['Nationality', data.nationality],
                 ['Country', data.country],
                 ['Occupation', data.occupation],
+                ['Email', data.email],
+                ['Phone Number', data.phoneNumber],
                 ['BVN Number', data.BVNNumber],
                 ['Employer\'s Name', data.employersName],
-                ['Phone Number', data.phoneNumber],
+                ['Enployers Phone Number', data.employersPhoneNumber],
                 ['Residential Address', data.residentialAddress],
-                ['Email', data.email],
                 ['Tax ID Number', data.taxIDNumber],
                 // ['International Passport Number', data.intPassNo],
                 // ['Passport Country', data.passCountry],
@@ -158,11 +159,12 @@ const secondDirectorsTableRows = [
         ['Nationality', data.nationality2],
         ['Country', data.country2],
         ['Occupation', data.occupation2],
+        ['Email', data.email2],
+        ['Phone Number', data.phoneNumber2],
         ['BVN Number', data.BVNNumber2],
         ['Employer\'s Name', data.employersName2],
-        ['Phone Number', data.phoneNumber2],
+        ['Employers Phone Number', data.employersPhoneNumber2],
         ['Residential Address', data.residentialAddress2],
-        ['Email', data.email2],
         ['Tax ID Number', data.taxIDNumber2],
         // ['International Passport Number', data.intPassNo2],
         // ['Passport Country', data.passCountry2],
@@ -380,6 +382,14 @@ doc.save('KYC Form.pdf');
               <p className='info'>{data.occupation}</p>
             </li>
             <li className='form-list'>
+              <p>Email</p>
+              <p className='info'>{data.email}</p>
+            </li>
+            <li className='form-list'>
+              <p>Phone Number</p>
+              <p className='info'>{data.phoneNumber}</p>
+            </li>
+            <li className='form-list'>
               <p>BVN Number</p>
               <p className='info'>{data.BVNNumber}</p>
             </li>
@@ -388,17 +398,14 @@ doc.save('KYC Form.pdf');
               <p className='info'>{data.employersName}</p>
             </li>
             <li className='form-list'>
-              <p>Phone Number</p>
-              <p className='info'>{data.phoneNumber}</p>
+              <p>Employer's Phone Number</p>
+              <p className='info'>{data.employersPhoneNumber}</p>
             </li>
             <li className='form-list'>
               <p>Residential Address</p>
               <p className='info'>{data.residentialAddress}</p>
             </li>
-            <li className='form-list'>
-              <p>Email</p>
-              <p className='info'>{data.email}</p>
-            </li>
+
             <li className='form-list'>
               <p>Tax ID Number</p>
               <p className='info'>{data.taxIDNumber}</p>
@@ -471,6 +478,14 @@ doc.save('KYC Form.pdf');
               <p className='info'>{data.occupation2}</p>
             </li>
             <li className='form-list'>
+              <p>Email</p>
+              <p className='info'>{data.email2}</p>
+            </li>
+            <li className='form-list'>
+              <p>Phone Number</p>
+              <p className='info'>{data.phoneNumber2}</p>
+            </li>
+            <li className='form-list'>
               <p>BVN Number</p>
               <p className='info'>{data.BVNNumber2}</p>
             </li>
@@ -479,17 +494,14 @@ doc.save('KYC Form.pdf');
               <p className='info'>{data.employersName2}</p>
             </li>
             <li className='form-list'>
-              <p>Phone Number</p>
-              <p className='info'>{data.phoneNumber2}</p>
+              <p>Employers Phone Number</p>
+              <p className='info'>{data.employersPhoneNumber2}</p>
             </li>
             <li className='form-list'>
               <p>Residential Address</p>
               <p className='info'>{data.residentialAddress2}</p>
             </li>
-            <li className='form-list'>
-              <p>Email</p>
-              <p className='info'>{data.email2}</p>
-            </li>
+
             <li className='form-list'>
               <p>Tax ID Number</p>
               <p className='info'>{data.taxIDNumber2}</p>

@@ -168,7 +168,7 @@ function CDD() {
     let sanitizedValue = value;
     if (type === 'email') {
       // Validate email format using regex
-      const emailRegex = /^([a-z\d.]+)@([a-z\d]+)(\.[a-z]{2,5})(\.[a-z]{2,5})?$/;
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       if (!emailRegex.test(value)) {
         // Invalid email format
         setFormErrors({ ...formErrors, [name]: 'Please enter a valid email address' });
@@ -176,10 +176,23 @@ function CDD() {
       // Sanitize the email value if desired (e.g., remove leading/trailing spaces)
       sanitizedValue = value.trim();
     } else if (type === 'number') {
-      // Ensure only numbers are allowed in the field
-      // You can use regex or other techniques to validate/sanitize numbers if needed
-    setFormErrors({ ...formErrors, [name]: 'Please enter a valid number' });
-      sanitizedValue = value.replace(/[^0-9]/);
+      // Check if the field has a length limit
+      if (name === 'accountNumber' || name ==='accountNumber2') {
+        // Ensure only numbers are allowed in the field
+        sanitizedValue = value.replace(/[^+0-9]/g, "");
+  
+        // Check if the value is longer than 11 characters
+        if (sanitizedValue.length > 10) {
+          setFormErrors({ ...formErrors, [name]: 'Number must be at most 10 digits long' });
+          // Truncate the value to the first 11 digits if desired
+          sanitizedValue = sanitizedValue.slice(0, 11);
+        }
+      } else {
+        // Handle the other number field without a length limit here
+        sanitizedValue = value.replace(/[^+0-9]/g, "");
+      }
+    
+
     }
   
     if (type === 'file') {
@@ -303,9 +316,9 @@ function CDD() {
     });
 
     // if any required field is not filled, prevent form from moving to next step
-    if (!allFieldsFilled) {
-      return;
-    }
+    // if (!allFieldsFilled) {
+    //   return;
+    // }
 
     // if all required fields are filled, move to next step
     setStep(step + 1);

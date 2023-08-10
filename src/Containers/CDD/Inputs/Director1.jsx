@@ -37,28 +37,33 @@ const Director1 = ({handleChange,formErrors,formData,handleIdTypeChange, handleS
             <input type="text" id="occupation" placeholder='Occupation' name="occupation" value={formData.occupation} onChange={handleChange} required />
             {formErrors.occupation && <span className="error-message">{formErrors.occupation}</span>}
 
+            <label htmlFor="email">email <span className='required'>*</span></label>
+            <input type="email" id="email" placeholder='Email' name="email" value={formData.email} onChange={handleChange}  required/>
+            {formErrors.email && <span className="error-message">{formErrors.email}</span>}
+
+                       
+            <label htmlFor="phoneNumber">Phone Number  <span className='required'>*</span> </label>
+            <input type="number" id="phoneNumber" placeholder='Phone Number' name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} required />
+           
+
             <label htmlFor="BVNNumber">BVN </label>
-            <input type="text" placeholder='BVN' id="BVNNumber" name="BVNNumber" value={formData.BVNNumber} onChange={handleChange} />
+            <input type="number" placeholder='BVN' id="BVNNumber" name="BVNNumber" value={formData.BVNNumber} onChange={handleChange} />
             {/* {formErrors.BVNNumber && <span className="error-message">{formErrors.BVNNumber}</span>} */}
+
+</div>
+     <div className='flex-two'>
 
             <label htmlFor="employersName">Employers Name</label>
             <input type="text" placeholder='Employers Name' id="employersName" name="employersName" value={formData.employersName} onChange={handleChange} />
            
-            <label htmlFor="phoneNumber">Phone Number </label>
-            <input type="text" id="phoneNumber" placeholder='Phone Number' name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} />
+            <label htmlFor="employersPhoneNumber">Employer's Phone Number </label>
+            <input type="number" id="employersPhoneNumber" placeholder='Phone Number' name="employersPhoneNumber" value={formData.employersPhoneNumber} onChange={handleChange} />
            
-</div>
-     <div className='flex-two'>
 
      <label htmlFor="residentialAddress">Residential Address <span className='required'>*</span></label>
             <input type="text" id="residentialAddress" placeholder='Residential Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required/>
             {formErrors.residentialAddress && <span className="error-message">{formErrors.residentialAddress}</span>}
           
-        
-     <label htmlFor="email">email <span className='required'>*</span></label>
-            <input type="email" id="email" placeholder='Email' name="email" value={formData.email} onChange={handleChange}  required/>
-            {formErrors.email && <span className="error-message">{formErrors.email}</span>}
-
             <label htmlFor="taxIDNumber">Tax ID Number </label>
             <input type="text" id="taxIDNumber" placeholder='Tax ID Number' name="taxIDNumber" value={formData.taxIDNumber} onChange={handleChange}/>
             {/* {formErrors.taxIDNumber && <span className="error-message">{formErrors.taxIDNumber}</span>} */}
