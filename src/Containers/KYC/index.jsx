@@ -191,19 +191,21 @@ function KYC() {
   };
 
   const handleSelectChange = (event) => {
-    const { value } = event.target;
+    const { value, name } = event.target;
     // Check if the user selected "Other" option, then show the text field
     setShowOtherField(value === 'Other');
-    // Update the form data state using the handleChange function
-    handleChange(event);
+    // Update the form data state, setting the value to empty if "Other" is selected
+    const newValue = value === 'Other' ? '' : value;
+    handleChange({ target: { name, value: newValue } });
   };
 
   const handleidentificationTypeChange = (event) => {
-    const { value } = event.target;
+    const { value, name } = event.target;
     // Check if the user selected "Other" option, then show/hide the text field accordingly
     setShowOtheridentificationType(value === 'Other');
     // Update the form data state using the handleChange function
-    handleChange(event);
+    const newValue = value === 'Other' ? '' : value;
+    handleChange({ target: { name, value: newValue } });
   };
 
   const resetForm = () => {

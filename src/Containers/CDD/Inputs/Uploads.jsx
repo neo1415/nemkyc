@@ -75,7 +75,25 @@ const Uploads = ({changeHandler,cac, identification, cacForm, formErrors, handle
            </div>
             </div>
             </label>
-            <input type="file" id="cacForm" name="cacForm" onChange={changeHandler}  />
+            <input type="file" id="cacForm" name="cacForm" onChange={changeHandler
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            }  />
             <div className='Output'>
             <div className='Output'>
             {formErrors.tax && <span className="error-message">{formErrors.tax}</span>}

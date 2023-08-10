@@ -14,6 +14,7 @@ const AdditionalInfo = ({handleChange, formErrors, formData,showOtherField, hand
         // Show the text input for "Other" option
         <input
           type="text"
+          placeholder='Specify your Business type'
           name="businessType" // Hardcoded name for the "Other" field
           value={formData.businessType}
           onChange={handleChange}
@@ -88,6 +89,7 @@ const AdditionalInfo = ({handleChange, formErrors, formData,showOtherField, hand
         <div style={{ marginTop: '8px' }}>
           <input
             type="text"
+            placeholder='Specify your Means of Identification'
             name="identificationType" // Hardcoded name for the "Other" ID Type field
             value={formData.identificationType}
             onChange={handleChange}

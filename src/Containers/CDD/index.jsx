@@ -39,44 +39,49 @@ function CDD() {
 
 
   const handleIdType2Change = (event) => {
-    const { value } = event.target;
+    const { value, name } = event.target;
     // Check if the user selected "Other" option, then show/hide the text field accordingly
     setShowOtherField2(value === 'Other');
     // Update the form data state using the handleChange function
-    handleChange(event);
+    const newValue = value === 'Other' ? '' : value;
+    handleChange({ target: { name, value: newValue } });
   };
 
   const handleSourceOfIncome2Change = (event) => {
-    const { value } = event.target;
+    const { value, name } = event.target;
     // Check if the user selected "Other" option, then show/hide the text field accordingly
     setShowOtherSourceOfIncome2(value === 'Other');
     // Update the form data state using the handleChange function
-    handleChange(event);
+    const newValue = value === 'Other' ? '' : value;
+    handleChange({ target: { name, value: newValue } });
   };
 
 
   const handleIdTypeChange = (event) => {
-    const { value } = event.target;
+    const { value, name } = event.target;
     // Check if the user selected "Other" option, then show/hide the text field accordingly
     setShowOtherIdType(value === 'Other');
     // Update the form data state using the handleChange function
-    handleChange(event);
+    const newValue = value === 'Other' ? '' : value;
+    handleChange({ target: { name, value: newValue } });
   };
 
   const handleSourceOfIncomeChange = (event) => {
-    const { value } = event.target;
+    const { value, name } = event.target;
     // Check if the user selected "Other" option, then show/hide the text field accordingly
     setShowOtherSourceOfIncome(value === 'Other');
     // Update the form data state using the handleChange function
-    handleChange(event);
+    const newValue = value === 'Other' ? '' : value;
+    handleChange({ target: { name, value: newValue } });
   };
 
   const handleSelectChange = (event) => {
-    const { value } = event.target;
+    const { value, name } = event.target;
     // Check if the user selected "Other" option, then show the text field
     setShowOtherField(value === 'Other');
     // Update the form data state using the handleChange function
-    handleChange(event);
+    const newValue = value === 'Other' ? '' : value;
+    handleChange({ target: { name, value: newValue } });
   };
 
 
