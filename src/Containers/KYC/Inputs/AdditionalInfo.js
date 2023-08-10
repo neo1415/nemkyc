@@ -24,6 +24,7 @@ const AdditionalInfo = ({handleChange, formErrors, formData,showOtherField, hand
           <option value="Choose Company Type">Company Type</option>
           <option value="Sole-Proprietor">Sole Proprietor</option>
           <option value="Limited-Liability-Company">Limited Liability Company</option>
+          <option value="Public-Limited-Company">Public Limited Company</option>
           <option value="Joint-Venture">Joint Venture</option>
           <option value="Other">Other</option>
         </select>
@@ -45,7 +46,7 @@ const AdditionalInfo = ({handleChange, formErrors, formData,showOtherField, hand
              {formErrors.employersName && <span className="error-message">{formErrors.employersName}</span>}
 
              <label htmlFor="employersTelephoneNumber">Employers Telephone Number</label>
-            <input type="text" id="employersTelephoneNumber" placeholder="Employer's Telephone Number" name="employersTelephoneNumber" value={formData.employersTelephoneNumber} onChange={handleChange} />
+            <input type="number" id="employersTelephoneNumber" placeholder="Employer's Telephone Number" name="employersTelephoneNumber" value={formData.employersTelephoneNumber} onChange={handleChange} />
              {formErrors.employersTelephoneNumber && <span className="error-message">{formErrors.employersTelephoneNumber}</span>}
 
              <label htmlFor="employersAddress">Employers Address <span className='required'>*</span></label>
@@ -62,7 +63,7 @@ const AdditionalInfo = ({handleChange, formErrors, formData,showOtherField, hand
             <div className='flex-two'>
 
              <label htmlFor="BVNNumber">BVN</label>
-            <input type="text" id="identificationNumber" placeholder='BVN' name="BVNNumber" value={formData.BVNNumber} onChange={handleChange} />
+            <input type="number" id="identificationNumber" placeholder='BVN' name="BVNNumber" value={formData.BVNNumber} onChange={handleChange} />
              {/* {formErrors.BVNNumber && <span className="error-message">{formErrors.BVNNumber}</span>} */}
 
       <label htmlFor="identificationType">ID Type <span className='required'>*</span></label>

@@ -84,29 +84,30 @@ function CDD() {
 
 
   //store files in firebase bucket
-  const handleFileUpload = async (file, name) => {
-
-
+  const handleFileUpload = async (file, fieldName) => {
     if (file) {
-
-         // File type validation: check if the file is a PDF
-       if (file.type !== 'application/pdf') {
-       // Show an error toast/message here for invalid file type
-          showErrorToast('Please upload a PDF file.');
-         return;
-         }
-        
-         // File size validation: check if the file size is within the limit (5MB)
-        const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-        if (file.size > maxSize) {
-       // Show an error toast/message here for exceeding file size
-        showErrorToast('File size exceeds the limit (5MB). Please upload a smaller file.');
-       return;
+      // Generate a unique filename using a timestamp
+      const timestamp = Date.now();
+      const fileName = `${timestamp}_${file.name}`;
+    
+      // File type validation: check if the file is a PDF, JPG, or PNG
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        showErrorToast('Please upload a PDF, JPG, or PNG file.');
+        return;
       }
-
-      const storageRef = ref(storage, name);
+    
+      // File size validation: check if the file size is within the limit (5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        showErrorToast('File size exceeds the limit (5MB). Please upload a smaller file.');
+        return;
+      }
+    
+      // Construct the storage path
+      const storagePath = `form_submissions/${fieldName}/${fileName}`;
+      const storageRef = ref(storage, storagePath);
       const uploadTask = uploadBytesResumable(storageRef, file);
-  
       uploadTask.on(
         'state_changed',
         (snapshot) => {
@@ -126,24 +127,25 @@ function CDD() {
         },
         (error) => {
           console.log(error);
+          showErrorToast('An error occurred during file upload. Please try again.'); // Show error toast for upload error
         },
         () => {
           getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-            setFormData((prev) => ({ ...prev, [name]: downloadURL }));
-              // Check if the upload is complete for this file and show the success toast
+            setFormData((prev) => ({ ...prev, [fieldName]: downloadURL })); // Use fieldName here
             showSuccessToast();
-  
+    
             // Set the uploading state back to false after the file is uploaded
             setUploading(false);
-  
+    
             // Reset the progress state after upload is completed
             setPerc(0);
           });
         }
       );
-            setUploading(true);
+      setUploading(true);
     }
   };
+  
 
   const showSuccessToast = () => {
     toast.success('Your file has been uploaded successfully!');
@@ -177,7 +179,7 @@ function CDD() {
       sanitizedValue = value.trim();
     } else if (type === 'number') {
       // Check if the field has a length limit
-      if (name === 'accountNumber' || name ==='accountNumber2') {
+      if (name === 'accountNumber') {
         // Ensure only numbers are allowed in the field
         sanitizedValue = value.replace(/[^+0-9]/g, "");
   
@@ -191,8 +193,6 @@ function CDD() {
         // Handle the other number field without a length limit here
         sanitizedValue = value.replace(/[^+0-9]/g, "");
       }
-    
-
     }
   
     if (type === 'file') {
@@ -215,15 +215,17 @@ function CDD() {
     const selectedFile = e.target.files[0];
     const fieldName = e.target.name;
   
-    const isPDF = selectedFile && types.includes(selectedFile.type);
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
     const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    
+    const isTypeValid = selectedFile && allowedTypes.includes(selectedFile.type);
     const isSizeValid = selectedFile && selectedFile.size <= maxSize;
   
-    if (!isPDF) {
-      showErrorToast('Please select a PDF document.');
+    if (!isTypeValid) {
+      showErrorToast('Please select a PDF, JPG, or PNG file.');
     } else if (!isSizeValid) {
       showErrorToast('File size exceeds the limit (5MB). Please upload a smaller file.');
-    } else {
+    }  else {
       setError('');
       switch (fieldName) {
         case 'identification':
@@ -299,6 +301,7 @@ function CDD() {
       });
     } catch (err) {
       console.log(err);
+      showErrorToast('An error occurred during submission. Please try again.'); // Show error toast for upload error
     }
   };
   
