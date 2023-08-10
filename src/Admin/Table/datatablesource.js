@@ -138,14 +138,8 @@ export const userColumns = [
   },
 
   {
-    field: "BVNNumber",
-    headerName: "BVN Number",
-    width: 125,     
-  },
-
-  {
-    field: "employersName",
-    headerName: "Employers Name",
+    field: "email",
+    headerName: "Email",
     width: 125,     
   },
 
@@ -156,14 +150,25 @@ export const userColumns = [
   },
 
   {
-    field: "residentialAddress",
-    headerName: "Residential Address",
+    field: "BVNNumber",
+    headerName: "BVN Number",
+    width: 125,     
+  },
+  {
+    field: "employersName",
+    headerName: "Employers Name",
     width: 125,     
   },
 
-    {
-    field: "email",
-    headerName: "Email",
+  {
+    field: " employersPhoneNumber",
+    headerName: "Employers Phone Number",
+    width: 125,     
+  },
+
+  {
+    field: "residentialAddress",
+    headerName: "Residential Address",
     width: 125,     
   },
 
@@ -263,6 +268,18 @@ export const userColumns = [
   },
 
   {
+    field: "email2",
+    headerName: "Email",
+    width: 125,     
+  },
+
+  {
+    field: "phoneNumber2",
+    headerName: "Phone Number",
+    width: 125,     
+  },
+
+  {
     field: "BVNNumber2",
     headerName: "BVN Number",
     width: 125,     
@@ -275,20 +292,14 @@ export const userColumns = [
   },
 
   {
-    field: "phoneNumber2",
-    headerName: "Phone Number",
+    field: "employersPhoneNumber2",
+    headerName: "Employers Phone Number",
     width: 125,     
   },
 
   {
     field: "residentialAddress2",
     headerName: "Residential Address",
-    width: 125,     
-  },
-
-    {
-    field: "email2",
-    headerName: "Email",
     width: 125,     
   },
 

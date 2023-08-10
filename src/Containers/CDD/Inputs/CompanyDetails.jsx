@@ -57,6 +57,7 @@ const CompanyDetails = ({handleChange,formErrors,formData, showOtherField, handl
           <option value="Choose Company Type">Company Type</option>
           <option value="Sole-Proprietor">Sole Proprietor</option>
           <option value="Limited-Liability-Company">Limited Liability Company</option>
+          <option value="Public-Limited-Company">Public Limited Company</option>
           <option value="Joint-Venture">Joint Venture</option>
           <option value="Other">Other(please specify)</option>
         </select>
@@ -73,7 +74,7 @@ const CompanyDetails = ({handleChange,formErrors,formData, showOtherField, handl
         <div className='flex-two'>
 
         <label htmlFor="emailAddress">Email Address <span className='required'>*</span></label>
-        <input type="text" id="emailAddress" placeholder='Email Address' name="emailAddress" value={formData.emailAddress} onChange={handleChange} required />
+        <input type="email" id="emailAddress" placeholder='Email Address' name="emailAddress" value={formData.emailAddress} onChange={handleChange} required />
         {formErrors.email && <span className="error-message">{formErrors.email}</span>}
 
         <label htmlFor="website">Website</label>
@@ -84,7 +85,7 @@ const CompanyDetails = ({handleChange,formErrors,formData, showOtherField, handl
         {formErrors.taxIdentificationNumber && <span className="error-message">{formErrors.taxIdentificationNumber}</span>}
         
         <label htmlFor="telephoneNumber">Telephone Number <span className='required'>*</span></label>
-        <input type="text" id="telephoneNumber" placeholder='Telephone Number' name="telephoneNumber" value={formData.telephoneNumber} onChange={handleChange} required />
+        <input type="number" id="telephoneNumber" placeholder='Telephone Number' name="telephoneNumber" value={formData.telephoneNumber} onChange={handleChange} required />
         {formErrors.telephoneNumber && <span className="error-message">{formErrors.telephoneNumber}</span>}
 
     </div>

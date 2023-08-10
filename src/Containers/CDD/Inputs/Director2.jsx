@@ -37,30 +37,35 @@ const Director2 = ({handleChange,formData,formErrors,handleIdType2Change, showOt
        <input type="text" id="occupation2" placeholder='Occupation2' name="occupation2" value={formData.occupation2} onChange={handleChange} />
        {formErrors.occupation2 && <span className="error-message">{formErrors.occupation2}</span>}
 
-       <label htmlFor="BVNNumber2">BVN </label>
-       <input type="text" placeholder='BVN' id="BVNNumber2" name="BVNNumber2" value={formData.BVNNumber2} onChange={handleChange} />
-       {formErrors.BVNNumber2 && <span className="error-message">{formErrors.BVNNumber2}</span>}
+       <label htmlFor="email2">Email </label>
+       <input type="email" id="email2" placeholder='Email2' name="email2" value={formData.email2} onChange={handleChange} />
+       {formErrors.email2 && <span className="error-message">{formErrors.email2}</span>}
 
-       <label htmlFor="employersName2">Employers Name </label>
-       <input type="text" placeholder='Employers Name' id="employersName2" name="employersName2" value={formData.employersName2} onChange={handleChange} />
-       {formErrors.employersName2 && <span className="error-message">{formErrors.employersName2}</span>}
 
        <label htmlFor="phoneNumber2">Phone Number </label>
-       <input type="text" id="phoneNumber2" placeholder='Phone Number' name="phoneNumber2" value={formData.phoneNumber2} onChange={handleChange} />
+       <input type="number" id="phoneNumber2" placeholder='Phone Number' name="phoneNumber2" value={formData.phoneNumber2} onChange={handleChange} />
        {formErrors.phoneNumber2 && <span className="error-message">{formErrors.phoneNumber2}</span>}
+
+       <label htmlFor="BVNNumber2">BVN </label>
+       <input type="number" placeholder='BVN' id="BVNNumber2" name="BVNNumber2" value={formData.BVNNumber2} onChange={handleChange} />
+       {formErrors.BVNNumber2 && <span className="error-message">{formErrors.BVNNumber2}</span>}
 
 
 </div>
 <div className='flex-two'>
+
+      <label htmlFor="employersName2">Employers Name </label>
+       <input type="text" placeholder='Employers Name' id="employersName2" name="employersName2" value={formData.employersName2} onChange={handleChange} />
+       {formErrors.employersName2 && <span className="error-message">{formErrors.employersName2}</span>}
+
+       <label htmlFor="employersPhoneNumber2">Employer's Phone Number </label>
+      <input type="number" id="employersPhoneNumber2" placeholder='Phone Number' name="employersPhoneNumber2" value={formData.employersPhoneNumber2} onChange={handleChange} />
+           
    
-<label htmlFor="residentialAddress2">Residential Address </label>
+        <label htmlFor="residentialAddress2">Residential Address </label>
        <input type="text" id="residentialAddress2" placeholder='Residential Address' name="residentialAddress2" value={formData.residentialAddress2} onChange={handleChange}/>
        {formErrors.residentialAddress2 && <span className="error-message">{formErrors.residentialAddress2}</span>}
      
-
-<label htmlFor="email2">Email </label>
-       <input type="email" id="email2" placeholder='Email2' name="email2" value={formData.email2} onChange={handleChange} />
-       {formErrors.email2 && <span className="error-message">{formErrors.email2}</span>}
 
        <label htmlFor="taxIDNumber2">Tax ID Number </label>
        <input type="text" id="taxIDNumber2" placeholder='Tax ID Number' name="taxIDNumber2" value={formData.taxIDNumber2} onChange={handleChange} />
