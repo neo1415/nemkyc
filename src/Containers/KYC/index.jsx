@@ -32,27 +32,30 @@ function KYC() {
 
   const types= ['application/pdf'];
 
-  const handleFileUpload = async (file, name) => {
+  const handleFileUpload = async (file, fieldName) => {
     if (file) {
-
-         // File type validation: check if the file is a PDF
-         if (file.type !== 'application/pdf') {
-          // Show an error toast/message here for invalid file type
-             showErrorToast('Please upload a PDF file.');
-            return;
-            }
-           
-            // File size validation: check if the file size is within the limit (5MB)
-           const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-           if (file.size > maxSize) {
-          // Show an error toast/message here for exceeding file size
-           showErrorToast('File size exceeds the limit (5MB). Please upload a smaller file.');
-          return;
-         }
-
-      const storageRef = ref(storage, name);
+      // Generate a unique filename using a timestamp
+      const timestamp = Date.now();
+      const fileName = `${timestamp}_${file.name}`;
+    
+      // File type validation: check if the file is a PDF, JPG, or PNG
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        showErrorToast('Please upload a PDF, JPG, or PNG file.');
+        return;
+      }
+    
+      // File size validation: check if the file size is within the limit (5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        showErrorToast('File size exceeds the limit (5MB). Please upload a smaller file.');
+        return;
+      }
+    
+      // Construct the storage path
+      const storagePath = `form_submissions/${fieldName}/${fileName}`;
+      const storageRef = ref(storage, storagePath);
       const uploadTask = uploadBytesResumable(storageRef, file);
-  
       uploadTask.on(
         'state_changed',
         (snapshot) => {
@@ -72,26 +75,25 @@ function KYC() {
         },
         (error) => {
           console.log(error);
-          showErrorToast('File size exceeds the limit (5MB). Please upload a smaller file.');
+          showErrorToast('An error occurred during file upload. Please try again.'); // Show error toast for upload error
         },
         () => {
           getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-            setFormData((prev) => ({ ...prev, [name]: downloadURL }));
-          // Check if the upload is complete for this file and show the success toast
+            setFormData((prev) => ({ ...prev, [fieldName]: downloadURL })); // Use fieldName here
             showSuccessToast();
-  
+    
             // Set the uploading state back to false after the file is uploaded
-           setUploading(false);
-                
-             // Reset the progress state after upload is completed
-             setPerc(0);
+            setUploading(false);
+    
+            // Reset the progress state after upload is completed
+            setPerc(0);
           });
         }
       );
       setUploading(true);
     }
   };
-
+  
   const showSuccessToast = () => {
     toast.success('Your file has been uploaded successfully!');
   };
@@ -113,22 +115,24 @@ function KYC() {
     const selectedFile = e.target.files[0];
     const fieldName = e.target.name;
   
-    const isPDF = selectedFile && types.includes(selectedFile.type);
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
     const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    
+    const isTypeValid = selectedFile && allowedTypes.includes(selectedFile.type);
     const isSizeValid = selectedFile && selectedFile.size <= maxSize;
   
-    if (!isPDF) {
-      showErrorToast('Please select a PDF document.');
+    if (!isTypeValid) {
+      showErrorToast('Please select a PDF, JPG, or PNG file.');
     } else if (!isSizeValid) {
       showErrorToast('File size exceeds the limit (5MB). Please upload a smaller file.');
-    } else {
+    }  else {
       setError('');
     switch (fieldName) {
       case 'identification':
-        setIdentification(isPDF ? selectedFile : null);
+        setIdentification(selectedFile);
         break;
       case 'signature':
-        setSignature(isPDF ? selectedFile : null);
+        setSignature(selectedFile);
         break;
       default:
         break;
@@ -146,18 +150,29 @@ function KYC() {
     let sanitizedValue = value;
     if (type === 'email') {
       // Validate email format using regex
-      // const emailRegex = /^([a-z\d.]+)@([a-z\d]+)(\.[a-z]{2,5})(\.[a-z]{2,5})?$/;
-      // if (!emailRegex.test(value)) {
-      //   // Invalid email format
-      //   setFormErrors({ ...formErrors, [name]: 'Please enter a valid email address' });
-      // }
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(value)) {
+        // Invalid email format
+        setFormErrors({ ...formErrors, [name]: 'Please enter a valid email address' });
+      }
       // Sanitize the email value if desired (e.g., remove leading/trailing spaces)
       sanitizedValue = value.trim();
     } else if (type === 'number') {
-      // Ensure only numbers are allowed in the field
-      // You can use regex or other techniques to validate/sanitize numbers if needed
-    setFormErrors({ ...formErrors, [name]: 'Please enter a valid number' });
-      sanitizedValue = value.replace(/[^0-9]/g, '');
+      // Check if the field has a length limit
+      if (name === 'accountNumber' || name ==='accountNumber2') {
+        // Ensure only numbers are allowed in the field
+        sanitizedValue = value.replace(/[^+0-9]/g, "");
+  
+        // Check if the value is longer than 11 characters
+        if (sanitizedValue.length > 10) {
+          setFormErrors({ ...formErrors, [name]: 'Number must be at most 10 digits long' });
+          // Truncate the value to the first 11 digits if desired
+          sanitizedValue = sanitizedValue.slice(0, 11);
+        }
+      } else {
+        // Handle the other number field without a length limit here
+        sanitizedValue = value.replace(/[^+0-9]/g, "");
+      }
     }
   
     if (type === 'file') {

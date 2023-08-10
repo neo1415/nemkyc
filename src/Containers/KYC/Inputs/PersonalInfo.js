@@ -24,7 +24,7 @@ const PersonalInfo = ({handleChange, formData, formErrors}) => {
              {formErrors.contactAddress && <span className="error-message">{formErrors.contactAddress}</span>}
 
              <label htmlFor="contactTelephoneNumber">Contact Telephone Number <span className='required'>*</span></label>
-            <input type="text" id="contactTelephoneNumber" placeholder="Contact's Telephone Number" name="contactTelephoneNumber" value={formData.contactTelephoneNumber} onChange={handleChange} required />
+            <input type="number" id="contactTelephoneNumber" placeholder="Contact's Telephone Number" name="contactTelephoneNumber" value={formData.contactTelephoneNumber} onChange={handleChange} required />
              {formErrors.contactTelephoneNumber && <span className="error-message">{formErrors.contactTelephoneNumber}</span>}
             
              <label htmlFor="gender">Gender <span className='required'>*</span></label>
@@ -66,7 +66,7 @@ const PersonalInfo = ({handleChange, formData, formErrors}) => {
 
 
              <label htmlFor="GSMNumber">Mobile Number <span className='required'>*</span></label>
-            <input type="text" id=" GSMno" placeholder='Moobile Number' name="GSMno" value={formData.GSMno} onChange={handleChange} required />
+            <input type="number" id=" GSMno" placeholder='Moobile Number' name="GSMno" value={formData.GSMno} onChange={handleChange} required />
              {formErrors.GSMno && <span className="error-message">{formErrors.GSMno}</span>}
 
             <label htmlFor="residentialAddress">Residential Address <span className='required'>*</span></label>
