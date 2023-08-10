@@ -100,6 +100,7 @@ const Director2 = ({handleChange,formData,formErrors,handleIdType2Change, showOt
         <div style={{ marginTop: '8px' }}>
           <input
             type="text"
+            placeholder='Specify your Means of Identification'
             name="idType2" // Hardcoded name for the "Other" ID Type 2 field
             value={formData.idType2}
             onChange={handleChange}
@@ -144,6 +145,7 @@ const Director2 = ({handleChange,formData,formErrors,handleIdType2Change, showOt
         <div style={{ marginTop: '8px' }}>
           <input
             type="text"
+            placeholder='Specify your Source of Income'
             name="sourceOfIncome2" // Hardcoded name for the "Other" Source Of Income field
             value={formData.sourceOfIncome2}
             onChange={handleChange}

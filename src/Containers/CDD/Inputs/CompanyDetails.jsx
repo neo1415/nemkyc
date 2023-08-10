@@ -48,7 +48,7 @@ const CompanyDetails = ({handleChange,formErrors,formData, showOtherField, handl
           type="text"
           name="companyLegalForm" // Hardcoded name for the "Other" field
           value={formData.companyLegalForm}
-          placeholder='Company Type'
+          placeholder='Specify Your Company Type'
           onChange={handleChange}
         />
       ) : (
