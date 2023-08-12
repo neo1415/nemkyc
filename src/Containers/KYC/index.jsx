@@ -62,19 +62,19 @@ function KYC() {
           const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
           console.log('Upload is ' + progress + '% done');
           setPerc(progress);
-          switch (snapshot.state) {
-            case 'paused':
-              console.log('Upload is paused');
-              break;
-            case 'running':
-              console.log('Upload is running');
-              break;
-            default:
-              break;
-          }
+          // switch (snapshot.state) {
+          //   case 'paused':
+          //     console.log('Upload is paused');
+          //     break;
+          //   case 'running':
+          //     console.log('Upload is running');
+          //     break;
+          //   default:
+          //     break;
+          // }
         },
         (error) => {
-          console.log(error);
+          // console.log(error);
           showErrorToast('An error occurred during file upload. Please try again.'); // Show error toast for upload error
         },
         () => {
@@ -257,7 +257,7 @@ function KYC() {
       });
     } catch (err) {
       showErrorToast('There was an error submitting your form. please try again');
-      console.log(err);
+      // console.log(err);
 
     }
   };
@@ -288,7 +288,7 @@ function KYC() {
     setStep(step - 1);
   };
 
-  console.log(formData)
+  // console.log(formData)
 
   return (
     <div className='forms' style={{display:'flex',flexDirection:'column' }}>
