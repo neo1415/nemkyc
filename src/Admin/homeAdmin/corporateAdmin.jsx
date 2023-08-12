@@ -34,7 +34,7 @@ const Individual = () => {
    
     })
   },[])
-  console.log(data)
+  // console.log(data)
 
 // const approve = async (id) => {
 //   try{

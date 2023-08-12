@@ -119,19 +119,19 @@ function CDD() {
           const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
           console.log('Upload is ' + progress + '% done');
           setPerc(progress);
-          switch (snapshot.state) {
-            case 'paused':
-              console.log('Upload is paused');
-              break;
-            case 'running':
-              console.log('Upload is running');
-              break;
-            default:
-              break;
-          }
+          // switch (snapshot.state) {
+          //   case 'paused':
+          //     console.log('Upload is paused');
+          //     break;
+          //   case 'running':
+          //     console.log('Upload is running');
+          //     break;
+          //   default:
+          //     break;
+          // }
         },
         (error) => {
-          console.log(error);
+          // console.log(error);
           showErrorToast('An error occurred during file upload. Please try again.'); // Show error toast for upload error
         },
         () => {
@@ -294,7 +294,7 @@ function CDD() {
       return `${day}/${month}/${year}`;
     };
     try {
-      console.log('it works')
+      // console.log('it works')
       setIsSubmitted(true);
       const now = new Date();
       const formattedDate = formatDate(now);
@@ -305,7 +305,7 @@ function CDD() {
         
       });
     } catch (err) {
-      console.log(err);
+      // console.log(err);
       showErrorToast('An error occurred during submission. Please try again.'); // Show error toast for upload error
     }
   };
@@ -336,7 +336,7 @@ function CDD() {
     setStep(step - 1);
   };
 
-  console.log(formData)
+  // console.log(formData)
 
   return (
     <div style={{display:'flex', justifyContent:'flex-start',marginTop:'-100px'}}>

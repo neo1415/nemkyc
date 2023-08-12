@@ -21,7 +21,7 @@ const handleSubmit = async(e) =>{
         navigate('/adminHome')
     } catch(e){
         setError(e.message)
-        console.log(e.message)
+        // console.log(e.message)
     }
 
 

@@ -19,14 +19,16 @@ const IndividualUser = () => {
         color:'white'
     }
 
-    useEffect(
-        ()=>{
-            const docRef = doc(db, 'individuals', id);
-            onSnapshot(docRef, (snapshot) =>{
-                setData({...snapshot.data(), id:snapshot.id});
-            })
-        }
-    )
+    useEffect(() => {
+      const docRef = doc(db, 'individuals', id);
+      const unsubscribe = onSnapshot(docRef, (snapshot) => {
+          setData({...snapshot.data(), id: snapshot.id});
+      });
+  
+      // Return a cleanup function to unsubscribe the listener when the component unmounts
+      return () => unsubscribe();
+  }, [id]);
+
       
     const downloadPDF = () => {
         const doc = new jsPDF('p', 'pt', 'a4');

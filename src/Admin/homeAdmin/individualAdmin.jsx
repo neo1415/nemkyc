@@ -40,7 +40,7 @@ const Contact = () => {
           ...doc.data(),
         }))
         setData(data);
-        console.log(data)
+        // console.log(data)
       })
     },[])
 
