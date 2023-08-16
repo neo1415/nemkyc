@@ -36,19 +36,34 @@ const List = () => {
   }, []);
 
   
-  useEffect(() => {
-    const [startDate, endDate] = selectedDateRange;
+useEffect(() => {
+  const [startDate, endDate] = selectedDateRange;
+
+  if (startDate && endDate) {
+    // Adjust the end date to include the entire day
+    const adjustedEndDate = new Date(endDate);
+    adjustedEndDate.setDate(adjustedEndDate.getDate() + 1);
+
+    const filteredData = data.filter((item) => {
+      const createdAtDate = parseDate(item.createdAt);
+      return createdAtDate >= startDate && createdAtDate < adjustedEndDate; // Use < instead of <=
+    });
+    setFilteredData(filteredData);
+  } else {
+    setFilteredData(data);
+  }
+}, [selectedDateRange, data]);
+
   
-    if (startDate && endDate) {
-      const filteredData = data.filter((item) => {
-        const createdAtDate = new Date(item.createdAt);
-        return createdAtDate >= startDate && createdAtDate <= new Date(endDate.getTime() + 86400000); // Add one day (86400000 milliseconds) to include the end date
-      });
-      setFilteredData(filteredData);
-    } else {
-      setFilteredData(data);
-    }
-  }, [selectedDateRange, data]);
+  // Function to parse formatted date into JavaScript Date object
+  const parseDate = (formattedDate) => {
+    const parts = formattedDate.split('/');
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // JavaScript months are 0-based
+    const year = parseInt(parts[2], 10);
+    return new Date(year, month, day);
+  };
+  
 
   const handleFilterButtonAction = () => {
     if (isDateFilterActive) {
