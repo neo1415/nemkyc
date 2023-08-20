@@ -1,5 +1,5 @@
 import React,{useState} from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { UserAuth } from '../../Context/AuthContext'
 import './form.scss'
 
@@ -31,7 +31,6 @@ const handleSubmit = async(e) =>{
     <div className='login'>
     <div className='loginTitle'>
         <h2>Sign In To Your Account</h2>
-        {/* <p>Dont Have an account yet? <Link to='/signup'>Sign up</Link></p> */}
     </div>
     <form onSubmit={handleSubmit}> 
     <div className='Inputs'>
@@ -43,7 +42,6 @@ const handleSubmit = async(e) =>{
         </div>
         { error && <span className='error'>Wrong Email or Password</span>}
         <button>Log In</button>
-        <p><Link to='/resetpassword'>Forgot Password</Link></p>
 
     </form>
 </div>

@@ -1,63 +1,24 @@
-import React,{ useEffect, useState } from 'react'
+import React from 'react'
 import './AdminHome.scss'
 import Widget from './WIdgets/Widget';
 import SideBar from './SideBar/SideBar';
 import { UserAuth } from '../Context/AuthContext'
-import { useNavigate } from 'react-router-dom'
 // import { HiSearch } from 'react-icons/hi';
 import Individual from './homeAdmin/corporateAdmin';
 import List from './homeAdmin/Table';
+import useAutoLogout from '../Components/Timeout';
 
 const AdminHome = () => {
-  const navigate = useNavigate()
-  const {user,logout} = UserAuth()
+  const {user} = UserAuth()
 
-  // const [isActive, setIsActive] = useState(true);
+  const { logout } = UserAuth(); // Replace UserAuth with your authentication context
 
-  // useEffect(() => {
-  //   const resetTimer = () => {
-  //     setIsActive(true);
-  //   };
-
-  //   const setInactive = () => {
-  //     setIsActive(false);
-  //   };
-
-  //   // Attach event listeners
-  //   window.addEventListener('mousemove', resetTimer);
-  //   window.addEventListener('keydown', resetTimer);
-  //   window.addEventListener('touchstart', resetTimer);
-  //   window.addEventListener('blur', setInactive);
-  //   window.addEventListener('visibilitychange', setInactive);
-
-  //   // Set a timer to check inactivity and log out if needed
-  //   const logoutTimer = setInterval(() => {
-  //     console.log('Checking activity...');
-  //     if (!isActive) {
-  //       console.log('Logging out...');
-  //       // Use the IIFE to handle the asynchronous logout function
-  //       (async () => {
-  //         try {
-  //           await logout();
-  //           navigate('/signin');
-  //         } catch (e) {
-  //           console.error('Error during logout:', e.message);
-  //         }
-  //         console.log('User logged out due to inactivity.');
-  //       })();
-  //     }
-  //   }, 5 * 1000);
-
-  //   // Clean up event listeners and timer on component unmount
-  //   return () => {
-  //     window.removeEventListener('mousemove', resetTimer);
-  //     window.removeEventListener('keydown', resetTimer);
-  //     window.removeEventListener('touchstart', resetTimer);
-  //     window.removeEventListener('blur', setInactive);
-  //     window.removeEventListener('visibilitychange', setInactive);
-  //     clearInterval(logoutTimer);
-  //   };
-  // }, [isActive, logout, navigate]);
+  // Use the custom hook to implement automatic logout
+  useAutoLogout({
+    timeoutDuration: 10 * 60 * 1000 ,//(adjust as needed)
+    logout, // Use the logout function from your context
+    redirectPath: '/signin', // Specify the redirect path
+  });
 
   
   return (
@@ -76,13 +37,6 @@ const AdminHome = () => {
       <div className='items' style={{display:'flex'}}>
       
         <p style={{fontSize:18, fontWeight:"500", marginRight:10, color:'#bf2e46'}}>Welcome {user && user.email}</p>
-
-      {/* <div className='item'>
-        <NotificationsNoneOutlined />
-      </div>
-      <div className='item'>    
-        <ChatBubbleOutlineOutlined />
-      </div> */}
       </div>
     </div>
     
@@ -103,7 +57,6 @@ const AdminHome = () => {
  
     </div>
     </div>
-    {/* <Footer /> */}
     </div>
   )
 }

@@ -6,10 +6,21 @@ import { useParams } from 'react-router-dom';
 import { HiDownload } from 'react-icons/hi';
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import useAutoLogout from '../../Components/Timeout';
+import { UserAuth } from '../../Context/AuthContext';
 
 const SingleUser = () => {
 
     const [data, setData] = useState([]);
+
+    const { logout } = UserAuth(); // Replace UserAuth with your authentication context
+
+    // Use the custom hook to implement automatic logout
+    useAutoLogout({
+      timeoutDuration: 10 * 60 * 1000 ,//(adjust as needed)
+      logout, // Use the logout function from your context
+      redirectPath: '/signin', // Specify the redirect path
+    });
 
     const {id} = useParams();
 

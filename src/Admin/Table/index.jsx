@@ -4,13 +4,15 @@ import { useState, useEffect} from "react";
 import './Table.scss'
 import {GridToolbarContainer} from '@mui/x-data-grid';
 import { GridToolbarExport } from "@mui/x-data-grid";
+import { UserAuth } from '../../Context/AuthContext';
 import { useNavigate } from "react-router-dom";
-import { collection, getDocs, deleteDoc, doc,onSnapshot, orderBy, query } from "firebase/firestore";
+import { collection, deleteDoc, doc,onSnapshot, orderBy, query } from "firebase/firestore";
 import { db } from "../../APi/index";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import SideBar from "../SideBar/SideBar";
+import useAutoLogout from '../../Components/Timeout';
 
 
 const List = () => {
@@ -20,6 +22,16 @@ const List = () => {
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState([null, null]);
   const navigate = useNavigate(); 
+
+  const { logout } = UserAuth(); // Replace UserAuth with your authentication context
+
+  // Use the custom hook to implement automatic logout
+  useAutoLogout({
+    timeoutDuration: 10 * 60 * 1000, // (adjust as needed)
+    logout, // Use the logout function from your context
+    redirectPath: '/signin', // Specify the redirect path
+  });
+
   
   useEffect(() => {
     const dataRef = collection(db, "users");
@@ -114,9 +126,7 @@ useEffect(() => {
       renderCell: (params, id) => {
         return (
           <div className="cellAction">
-            {/* <Link to={"/adminid/" + id} style={{ textDecoration: "none" }}>
-              <div className="viewButton">View</div>
-            </Link> */}
+
             <div
               className="deleteButton"
               onClick={() => handleDelete(params.row.id)}

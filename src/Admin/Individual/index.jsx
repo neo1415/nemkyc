@@ -9,6 +9,8 @@ import { GridToolbarExport } from "@mui/x-data-grid";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
+import { UserAuth } from "../../Context/AuthContext";
+import useAutoLogout from "../../Components/Timeout";
 
 import { UserColumns } from "./datatablesource";
 
@@ -19,6 +21,15 @@ const Individual = () => {
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState([null, null]);
   const navigate = useNavigate();
+
+  const { logout } = UserAuth(); // Replace UserAuth with your authentication context
+
+  // Use the custom hook to implement automatic logout
+  useAutoLogout({
+    timeoutDuration: 10 * 60 * 1000 ,//(adjust as needed)
+    logout, // Use the logout function from your context
+    redirectPath: '/signin', // Specify the redirect path
+  });
 
   useEffect(() => {
     const dataRef = collection(db, "individuals");

@@ -1,12 +1,11 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState} from 'react';
 import './CDD.scss'
 import { db,storage } from '../../APi';
-import { setDoc,doc, Timestamp } from 'firebase/firestore'
+import { setDoc,doc} from 'firebase/firestore'
 import { serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { v4 as uuidv4 } from 'uuid';
 import { motion } from "framer-motion"
-import { HiXCircle } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
 import useFormData from './FormData';
 import CompanyDetails from './Inputs/CompanyDetails';
@@ -83,10 +82,6 @@ function CDD() {
     const newValue = value === 'Other' ? '' : value;
     handleChange({ target: { name, value: newValue } });
   };
-
-
-  const types= ['application/pdf'];
-
 
   //store files in firebase bucket
   const handleFileUpload = async (file, fieldName) => {
@@ -341,7 +336,7 @@ function CDD() {
   return (
     <div style={{display:'flex', justifyContent:'flex-start',marginTop:'-100px'}}>
       <div className='picture'>
-        <img src={images.form3} className='form-img' />
+        <img src={images.form3} className='form-img' alt='cdd ' />
         </div>
     <div className='form-page'>
 

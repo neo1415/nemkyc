@@ -1,13 +1,12 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState } from 'react';
 import './KYC.scss'
 import { db,storage } from '../../APi';
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { setDoc,doc, Timestamp } from 'firebase/firestore'
+import { setDoc,doc } from 'firebase/firestore'
 import { serverTimestamp } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { motion } from "framer-motion";
 import { images } from '../../Constants';
-import { HiXCircle } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
 import useFormData from './FormData';
 import PersonalInfo from './Inputs/PersonalInfo';
@@ -29,8 +28,6 @@ function KYC() {
   const [showOtherField, setShowOtherField] = useState(false);
   const [showOtheridentificationType, setShowOtheridentificationType] = useState(false);
   const [uploading, setUploading] = useState(false); 
-
-  const types= ['application/pdf'];
 
   const handleFileUpload = async (file, fieldName) => {
     if (file) {
@@ -294,7 +291,7 @@ function KYC() {
     <div className='forms' style={{display:'flex',flexDirection:'column' }}>
       <div className='forms-page'>
         <div className='picture'>
-          <img src={images.form4} className='form-img' alt='fixed-image' />
+          <img src={images.form4} className='form-img' alt='fixed' />
         </div>
       <motion.div
         initial={{ opacity: 0, x: 0}}

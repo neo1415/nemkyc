@@ -1,7 +1,7 @@
 import React from 'react'
 import './index.scss'
 import { Link } from 'react-router-dom';
-import logo from './logo-white.png'
+import {images} from '../../Constants'
 import TransitionsModal from '../../Containers/Modals/Modal';
 import IndiModal from '../../Containers/Modals/IndiModal';
 
@@ -13,7 +13,7 @@ const Navbar = () => {
 
   <Link to="/">
   
-    <img src={logo} className='nav-logo' alt="logo" />
+    <img src={images.logo} className='nav-logo' alt="logo" />
   </Link>
   </div>
 

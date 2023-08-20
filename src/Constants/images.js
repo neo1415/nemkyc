@@ -5,6 +5,9 @@ import form3 from '../Assets/form3.jpg'
 import form4 from '../Assets/form4.jpg'
 import bg1 from '../Assets/bg1.jpg'
 import bg2 from '../Assets/bg2.jpg'
+import logo from '../Assets/logo.png'
+import hero from '../Assets/hero.png'
+import hero1 from '../Assets/hero1.jpg'
 
 export default {
     form0,
@@ -13,6 +16,9 @@ export default {
     form3,
     form4,
     bg1,
-    bg2
+    bg2,
+    logo,
+    hero,
+    hero1
 
 }
