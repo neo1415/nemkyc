@@ -47,23 +47,7 @@ const Uploads = ({changeHandler,cac, identification, cacForm, formErrors, handle
         </div>
 
         <div className='flex-upload'>
-            {/* <div className='upload-form'>
-        <div className='uploader'>
-            <label htmlFor="tax" className='upload'>
-            <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-           <h4>Upload Your Tax Card</h4> 
-           <div className='upload-icon'>
-           <HiCloudUpload />   
-           </div>
-            </div>
-            </label>
-            <input type="file" id="tax" name="tax" onChange={changeHandler}  />
-            <div className='Output'>
-            {formErrors.tax && <span className="error-message">{formErrors.tax}</span>}
-             {tax && <div className='error'>{tax.name}</div>}
-              </div>
-            </div>
-            </div> */}
+
             <div className='upload-form'>
         <div className='uploader'>
         <h6>For NAICOM Regulated Companies</h6>
@@ -75,25 +59,7 @@ const Uploads = ({changeHandler,cac, identification, cacForm, formErrors, handle
            </div>
             </div>
             </label>
-            <input type="file" id="cacForm" name="cacForm" onChange={changeHandler
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            }  />
+            <input type="file" id="cacForm" name="cacForm" onChange={changeHandler}  />
             <div className='Output'>
             <div className='Output'>
             {formErrors.tax && <span className="error-message">{formErrors.tax}</span>}
