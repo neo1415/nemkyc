@@ -1,12 +1,11 @@
 import React from 'react'
 import './Sidebar.scss'
-import logo from './logo-white.png'
 import { Link, useNavigate } from 'react-router-dom'
 import { UserAuth } from '../../Context/AuthContext'
 import { HiUser, HiUsers, HiDatabase } from 'react-icons/hi'
 
 const SideBar = () => {
-  const {user, logout} = UserAuth()
+  const {logout} = UserAuth()
 
   const navigate = useNavigate()
 
@@ -25,7 +24,6 @@ const SideBar = () => {
   return (
     <div className='sidebar'>
         <div className='Top'>
-        {/* <img className='logo' src={logo}/> */}
         <h5>NEM</h5>
             {/* <p>{user && user.email}</p> */}
         </div>

@@ -1,7 +1,6 @@
 import React from "react";
 import "./index.scss";
-import image from './hero.png'
-import { Link } from 'react-router-dom';
+import { images } from "../../Constants";
 
 const Hero = () => {
   return (
@@ -14,7 +13,7 @@ const Hero = () => {
   </a>
 </div>
 <div className="image">
-<img src={image} className="hero-image" />
+<img src={images.hero} className="hero-image" alt="hero" />
 <div className="circle"></div>
 </div>
 
