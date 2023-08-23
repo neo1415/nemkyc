@@ -38,7 +38,7 @@ const CorporateWrapper = () => {
     <div>
       <div class="card" onClick={handleOpen} >
         <img src={images.bg2} alt="Image 1" />
-        <div class="overlay">
+        <div className="overlay">
           <h2>CORPORATE<br/>FORM</h2>
         </div>
       </div>
