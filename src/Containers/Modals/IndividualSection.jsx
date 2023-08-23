@@ -37,8 +37,8 @@ const IndividualWrapper = () => {
   return (
     <div>
   <div class="card " onClick={handleOpen}>
-    <img src={images.bg1} alt="Image 2" />
-    <div class="overlay">
+    <img src={images.bg1} alt="2" />
+    <div className="overlay">
       <h2>INDIVIDUAL <br /> FORM</h2>
     </div>
   </div>

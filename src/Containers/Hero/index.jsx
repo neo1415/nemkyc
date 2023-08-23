@@ -6,10 +6,10 @@ const Hero = () => {
   return (
     <div className="hero-flex">
 <div className="content">
-  <h2 class="heading">NEM INSURANCE KYC/CDD Information Collection Center</h2>
-  <p class="sub">Streamlined KYC and CDD Solutions for Secure Online Transactions.</p>
+  <h2 className="heading">NEM INSURANCE KYC/CDD Information Collection Center</h2>
+  <p className="sub">Streamlined KYC and CDD Solutions for Secure Online Transactions.</p>
 <a className="smooth-scroll" href='#section'>
-  <button class="main__button">Get started</button>
+  <button className="main__button">Get started</button>
   </a>
 </div>
 <div className="image">
