@@ -16,7 +16,7 @@ const AdminHome = () => {
   // Use the custom hook to implement automatic logout
   useAutoLogout({
     timeoutDuration: 10 * 60 * 1000 ,//(adjust as needed)
-    logout, // Use the logout function from your context
+    logout, 
     redirectPath: '/signin', // Specify the redirect path
   });
 
