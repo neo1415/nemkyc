@@ -1,57 +1,103 @@
-// import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
-// import React,{useState} from 'react'
-// import { Link,useNavigate } from 'react-router-dom'
-// import { UserAuth } from '../../Context/AuthContext';
-// import './form.scss'
-// import { auth } from '../../APi/index';
+import React, { useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import {
+  TextField,
+  Button,
+  Typography,
+  Container,
+  Grid,
+} from '@mui/material';
 
-// const SignUp = () => {
+const UserRegistration = ({ onUserAdded }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-//     const [error, setError] = useState(false)
-//     const [email, setEmail] = useState('')
-//     const [password, setPassword] = useState('')
-//     const [name, setName] = useState('')
+  const handleRegistration = async () => {
+    setError('');
 
-//     const {createUser}= UserAuth()
+    // Define the server URL
+    const serverURL = 'http://localhost:3001';
 
-//     const navigate= useNavigate()
+    // Define the registration endpoint
+    const registrationEndpoint = `${serverURL}/register`;
 
-//     const handleSubmit = async(e) =>{
-//         e.preventDefault()
-//         setError('')
-//         try{
-//             await createUser(email, password,name);
-//             updateProfile(auth.currentUser,{displayName:name})
-//             navigate('/adminHome')
-//         } catch(e){
-//             setError(e.message)
-//             console.log(e.message)
-//         }
+    try {
+      const response = await axios.post(registrationEndpoint, {
+        email,
+        password,
+        name,
+      });
 
+      if (response.status === 201) {
+        // Registration was successful
+        alert('user added succesfully'); // Redirect to the login page after registration
+        if (onUserAdded) {
+          onUserAdded({ email, name, role: 'Default' });
+        }
+      } else {
+        setError('Error during registration. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error during registration:', error);
+      setError('Error during registration. Please try again.');
+    }
+  };
 
-//     }
+  return (
+    <Container>
+      <Grid container spacing={2} justify="center">
+        <Grid item xs={12} sm={6}>
+          <Typography variant="h2" align="center">
+            User Registration
+          </Typography>
+          <form>
+            <TextField
+              label="Email Address"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <TextField
+              label="Name"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <TextField
+              label="Password"
+              type="password"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            {error && (
+              <Typography variant="body1" color="error" align="center">
+                {error}
+              </Typography>
+            )}
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              onClick={handleRegistration}
+            >
+              Register
+            </Button>
+          </form>
+        </Grid>
+      </Grid>
+    </Container>
+  );
+};
 
-
-//   return (
-//     <div className='login'>
-//         <div className='loginTitle'>
-//             <h2>Sign Up To Your Account</h2>
-//             <p>Already Have an account? <Link to='/signin'>Sign in</Link></p>
-//         </div>
-//         <form onSubmit={handleSubmit}>
-//             <div className='Inputs'>
-//                 <label>Email Address</label>
-//                 <input type='email' onChange={(e)=> setEmail(e.target.value)} />
-//                 <label>Name</label>
-//                 <input type='text' onChange={(e)=> setName(e.target.value)} />
-//                 <label>Password</label>
-//                 <input type='password' onChange={(e)=> setPassword(e.target.value)} />
-//             </div>
-//             <button className='sign'>Sign Up</button>
-
-//         </form>
-//     </div>
-//   )
-// }
-
-// export default SignUp
+export default UserRegistration;

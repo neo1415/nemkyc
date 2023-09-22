@@ -9,7 +9,6 @@ import {
   onAuthStateChanged 
 } from 'firebase/auth';
 
-
 export const UserContext = createContext()
 
 
