@@ -15,8 +15,9 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
     const fetchUserRole = async () => {
       if (user) {
         try {
+          const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
           // Make an HTTP request to your server's endpoint to fetch the user's role
-          const response = await axios.post(`http://localhost:3001/check-user-role/${user.uid}`);
+          const response = await axios.post(`${serverURL}/check-user-role/${user.uid}`);
           const role = response.data.role; // Assuming the response contains a 'role' field
           setUserRole(role);
           setIsLoading(false);
