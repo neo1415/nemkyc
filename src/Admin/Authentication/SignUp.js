@@ -7,13 +7,29 @@ import {
   Typography,
   Container,
   Grid,
+  createTheme,
+  ThemeProvider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
 } from '@mui/material';
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#800020', // Replace with your desired burgundy color code
+    },
+  },
+});
 
 const UserRegistration = ({ onUserAdded }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleRegistration = async () => {
@@ -26,6 +42,7 @@ const UserRegistration = ({ onUserAdded }) => {
     const registrationEndpoint = `${serverURL}/register`;
 
     try {
+      setIsLoading(true);
       const response = await axios.post(registrationEndpoint, {
         email,
         password,
@@ -33,8 +50,8 @@ const UserRegistration = ({ onUserAdded }) => {
       });
 
       if (response.status === 201) {
+        openSuccessModal();
         // Registration was successful
-        alert('user added succesfully'); // Redirect to the login page after registration
         if (onUserAdded) {
           onUserAdded({ email, name, role: 'Default' });
         }
@@ -44,16 +61,26 @@ const UserRegistration = ({ onUserAdded }) => {
     } catch (error) {
       console.error('Error during registration:', error);
       setError('Error during registration. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const openSuccessModal = () => {
+    setSuccessModalOpen(true);
+
+    // Close the success modal after 3 seconds (adjust the timing as needed)
+    setTimeout(() => {
+      setSuccessModalOpen(false);
+    }, 3000);
+  };
+
   return (
+    <ThemeProvider theme={theme}>
+    <div style={{display:'flex', alignItems:"center", justifyContent:'center',}}>
     <Container>
       <Grid container spacing={2} justify="center">
         <Grid item xs={12} sm={6}>
-          <Typography variant="h2" align="center">
-            User Registration
-          </Typography>
           <form>
             <TextField
               label="Email Address"
@@ -97,6 +124,33 @@ const UserRegistration = ({ onUserAdded }) => {
         </Grid>
       </Grid>
     </Container>
+    </div>
+
+        {/* Success Modal */}
+        <Dialog open={successModalOpen} onClose={() => setSuccessModalOpen(false)}>
+        <DialogTitle>Registration Successful</DialogTitle>
+        <DialogContent>
+          <div className="success-message">
+            {isLoading ? (
+              <CircularProgress />
+            ) : (
+              <>
+                Your account has been created successfully.
+                <span role="img" aria-label="checkmark">
+                  ✅
+                </span>
+              </>
+            )}
+          </div>
+        </DialogContent>
+        {/* <DialogActions>
+          <Button onClick={() => navigate('/login')} color="primary">
+            Go to Login
+          </Button>
+        </DialogActions> */}
+      </Dialog>
+
+    </ThemeProvider>
   );
 };
 

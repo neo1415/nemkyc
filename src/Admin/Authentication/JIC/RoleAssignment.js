@@ -22,9 +22,20 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  createTheme,
+  ThemeProvider,
 } from '@mui/material';
 
 import { BsBadge4K, BsBadge8K } from 'react-icons/bs';
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#800020', // Replace with your desired burgundy color code
+    },
+  },
+});
+
 
 const RoleAssignment = () => {
   const [users, setUsers] = useState([]);
@@ -60,6 +71,31 @@ const RoleAssignment = () => {
     }
   };
 
+  const deleteUser = async (uid) => {
+    try {
+      const endpoint = endpoints.deleteUser(uid); // Use the endpoint with the UID
+      console.log('Delete User Endpoint:', endpoint); // Log the endpoint
+      const response = await axios.delete(endpoint);
+  
+      if (response.status === 200) {
+        alert('User deleted successfully');
+        // Remove the deleted user from the state
+        setUsers((prevUsers) => prevUsers.filter((user) => user.uid !== uid));
+      } else {
+        console.error('Error deleting user:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+    }
+  };
+  
+  const handleSelectedUser = (uid) => {
+    setSelectedRole((prevSelectedRoles) => ({
+      ...prevSelectedRoles,
+      [uid]: prevSelectedRoles[uid] ? '' : 'admin', // Default to 'admin' or an initial role of your choice
+    }));
+  };
+
   // const fetchUserRoles = async () => {
   //   try {
   //     const roles = {}; // Create an object to store user roles
@@ -93,6 +129,12 @@ const checkUserRole = async (uid, role) => {
     return false; // Default to false if there's an error
   }
 };
+
+const handleUserAdded = (newUser) => {
+  // Update the users state with the new user
+  setUsers((prevUsers) => [...prevUsers, newUser]);
+};
+
 
 const assignRole = async () => {
   try {
@@ -179,9 +221,9 @@ return (
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.role}</TableCell>
                 <TableCell>
-                  <Button
+                <Button
                     variant="outlined"
-                    onClick={() => setSelectedUser(user.uid)}
+                    onClick={() => handleSelectedUser(user.uid)}
                   >
                     Change Roles
                   </Button>
@@ -193,7 +235,7 @@ return (
                       >
                         <MenuItem value="">Select Role</MenuItem>
                         <MenuItem value="admin">Admin</MenuItem>
-                        <MenuItem value="moderator">User</MenuItem>
+                        <MenuItem value="moderator">Moderator</MenuItem>
                         <MenuItem value="default">Default</MenuItem>
                       </Select>
                       <Button
@@ -205,6 +247,12 @@ return (
                       </Button>
                     </div>
                   )}
+                  <Button
+                    variant="outlined"
+                    onClick={() => deleteUser(user.uid)}
+                  >
+                    Delete User
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -217,7 +265,7 @@ return (
         <DialogTitle>Add User</DialogTitle>
         <DialogContent>
           {/* Render the UserRegistration component here */}
-          <UserRegistration />
+          <UserRegistration onUserAdded={handleUserAdded} />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseModal} color="primary">

@@ -16,15 +16,26 @@ import {
   Button,
   Select,
   MenuItem,
-  FormControl,
-  InputLabel,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  createTheme,
+  ThemeProvider,
+  CircularProgress,
+  Backdrop,
 } from '@mui/material';
-
+import Sidebar from '../SideBar/SideBar';
 import { BsBadge4K, BsBadge8K } from 'react-icons/bs';
+import './roles.scss'
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#800020', // Replace with your desired burgundy color code
+    },
+  },
+});
 
 const RoleAssignment = () => {
   const [users, setUsers] = useState([]);
@@ -33,41 +44,85 @@ const RoleAssignment = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [openModal, setOpenModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState({});
+const [roleDropdownOpen, setRoleDropdownOpen] = useState({});
   const [userRoles, setUserRoles] = useState({}); // Store user roles in a state
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Fetch the list of users from your backend
-    fetchUsers();
-  }, []);
+useEffect(() => {
+  const fetchData = async () => {
+    // Fetching data from the server endpoint that uses the real-time listener
+    const response = await axios.get(endpoints.getUsers);
 
-  // useEffect(() => {
-  //   // Fetch user roles when the component mounts
-  //   fetchUserRoles();
-  // }, []);
-
-  const fetchUsers = async () => {
-    try {
-      const response = await axios.get(endpoints.getUsers);
-
-      if (response.status === 200) {
-        setUsers(response.data.users);
-      } else {
-        console.error('Error fetching users:', response.statusText);
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
+    if (response.status === 200) {
+      setUsers(response.data.users);
+      console.log('Initial users fetched successfully:', response.data.users);
+    } else {
+      console.error('Error fetching initial users:', response.statusText);
     }
   };
 
+  // Function to handle real-time updates
+  const handleRealTimeUpdates = (updatedUsers) => {
+    setUsers(updatedUsers);
+    console.log('Users updated in real-time:', updatedUsers);
+  };
+
+  fetchData();
+
+  // Set up a real-time listener for changes in the Firestore data
+const realTimeListener = () => {
+  const eventSource = new EventSource(endpoints.listenForUpdates);
+
+  eventSource.onmessage = (event) => {
+    const responseData = JSON.parse(event.data);
+
+    if (Array.isArray(responseData.users)) {
+      // Make sure responseData.users is an array before mapping
+      setUsers(responseData.users);
+      console.log('Users updated in real-time:', responseData.users);
+    } else {
+      console.error('Received data is not an array:', responseData);
+    }
+  };
+
+  eventSource.onerror = (error) => {
+    console.error('Error with real-time listener:', error);
+    eventSource.close();
+  };
+};
+
+
+  // Initialize the real-time listener
+  realTimeListener();
+
+  return () => {
+    // No cleanup is needed here because the real-time listener on the server handles updates.
+  };
+}, []);
+
+
+const openSuccessModal = () => {
+  setSuccessModalOpen(true);
+
+  // Close the success modal after 3 seconds (adjust the timing as needed)
+  setTimeout(() => {
+    setSuccessModalOpen(false);
+  }, 3000);
+};
+
+
   const deleteUser = async (uid) => {
+    setIsLoading(true);
     try {
       const endpoint = endpoints.deleteUser(uid); // Use the endpoint with the UID
       console.log('Delete User Endpoint:', endpoint); // Log the endpoint
       const response = await axios.delete(endpoint);
   
       if (response.status === 200) {
+        openSuccessModal();
         alert('User deleted successfully');
         // Remove the deleted user from the state
         setUsers((prevUsers) => prevUsers.filter((user) => user.uid !== uid));
@@ -76,16 +131,24 @@ const RoleAssignment = () => {
       }
     } catch (error) {
       console.error('Error deleting user:', error);
+    }finally{
+      setIsLoading(false);
     }
   };
 
   
   
-  const handleSelectedUser = (uid) => {
-    setSelectedUser((prevSelectedUser) => {
-      return prevSelectedUser === uid ? '' : uid; // Toggle selected user
-    });
-  };
+const handleSelectedUser = (uid) => {
+  setSelectedUser((prevSelectedUser) => {
+    // Toggle selected user
+    const newValue = prevSelectedUser === uid ? '' : uid;
+
+    // Close the role selection dropdown when a user is selected
+    setRoleDropdownOpen(false);
+
+    return newValue;
+  });
+};
   // const fetchUserRoles = async () => {
   //   try {
   //     const roles = {}; // Create an object to store user roles
@@ -126,7 +189,9 @@ const handleUserAdded = (newUser) => {
 };
 
 const assignRole = async () => {
+  setIsLoading(true);
   try {
+    openSuccessModal();
     if (!selectedUser || !selectedRole) {
       setErrorMessage('Please select a user and a role.');
       return;
@@ -166,12 +231,17 @@ const assignRole = async () => {
 
     setSuccessMessage(response.data.message);
     setErrorMessage('');
-   alert('role assigned succesfully'); // Redirect to the admin dashboard or another page after role assignment
+      // Close the role selection dropdown after successful role assignment
+  setSelectedUser('');
+// Redirect to the admin dashboard or another page after role assignment
   } catch (error) {
     console.error('Error assigning role:', error);
     setErrorMessage('Error assigning role. Please try again.');
     setSuccessMessage('');
+  }finally{
+    setIsLoading(false);
   }
+
 };
 
 const handleAddUserClick = () => {
@@ -183,8 +253,12 @@ const handleCloseModal = () => {
 };
 
 return (
-  <div>
-    <h2>Role Assignment</h2>
+  
+  <div className='user-management'>
+  <Sidebar />
+  <ThemeProvider theme={theme}>
+  <div className='user-manage'>
+    <h2>User Management</h2>
     <Button variant="outlined" onClick={handleAddUserClick}>
       Add User
     </Button>
@@ -192,7 +266,6 @@ return (
     <ToastContainer />
 
       {/* Display user details in a table */}
-      <h2>User Details</h2>
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -210,32 +283,39 @@ return (
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.role}</TableCell>
                 <TableCell>
-                <Button
-                    variant="outlined"
-                    onClick={() => handleSelectedUser(user.uid)}
-                  >
-                    Change Roles
-                  </Button>
-                  {selectedUser === user.uid && (
-                    <div>
-                      <Select
-                        value={selectedRole}
-                        onChange={(e) => setSelectedRole(e.target.value)}
-                      >
-                        <MenuItem value="">Select Role</MenuItem>
-                        <MenuItem value="admin">Admin</MenuItem>
-                        <MenuItem value="moderator">Moderator</MenuItem>
-                        <MenuItem value="default">Default</MenuItem>
-                      </Select>
-                      <Button
-                        variant="outlined"
-                        startIcon={<BsBadge4K />}
-                        onClick={() => assignRole(user.uid)}
-                      >
-                        Assign Role
-                      </Button>
-                    </div>
-                  )}
+           <Button
+  variant="outlined"
+  onClick={() => {
+    // Toggle the selected user when clicking "Change Roles"
+    setSelectedUser((prevSelectedUser) =>
+      prevSelectedUser === user.uid ? '' : user.uid
+    );
+  }}
+>
+  {selectedUser === user.uid ? 'Close Roles' : 'Change Roles'}
+</Button>
+{selectedUser === user.uid && (
+  <div>
+    <Select
+      value={selectedRole}
+      onChange={(e) => setSelectedRole(e.target.value)}
+    >
+      <MenuItem value="">Select Role</MenuItem>
+      <MenuItem value="admin">Admin</MenuItem>
+      <MenuItem value="moderator">Moderator</MenuItem>
+      <MenuItem value="default">Default</MenuItem>
+    </Select>
+    <Button
+      variant="outlined"
+      startIcon={<BsBadge4K />}
+      onClick={() => assignRole(user.uid)}
+    >
+      Assign Role
+    </Button>
+  </div>
+)}
+
+
                   <Button
                     variant="outlined"
                     onClick={() => deleteUser(user.uid)}
@@ -265,7 +345,27 @@ return (
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Dialog open={successModalOpen} onClose={() => setSuccessModalOpen(false)}>
+  {/* <DialogTitle>Success</DialogTitle> */}
+  <DialogContent>
+    <div className="success-message">
+      {isLoading ? (
+        <CircularProgress />
+      ) : (
+        <>
+          {successMessage}
+          <span role="img" aria-label="checkmark">
+            ✅
+          </span>
+        </>
+      )}
+    </div>
+  </DialogContent>
+</Dialog>
       <ToastContainer />
+      </div>
+      </ThemeProvider>
     </div>
   );
 };

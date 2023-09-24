@@ -12,15 +12,43 @@ admin.initializeApp({
 const app = express();
 const port = process.env.PORT || 3001;
 app.use(cors());
+const db = admin.firestore();
 
 app.use(express.json());
+
+app.get('/listenForUpdates', (req, res) => {
+  try {
+    // Set the response headers to indicate Server-Sent Events
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const userRolesCollection = db.collection('userroles');
+
+    userRolesCollection.onSnapshot((snapshot) => {
+      const userList = snapshot.docs.map((doc) => ({
+        uid: doc.id,
+        name: doc.data().name,
+        email: doc.data().email,
+        role: doc.data().role,
+      }));
+
+      // Send the updated user list as an event
+      res.write(`data: ${JSON.stringify({ users: userList })}\n\n`);
+    });
+  } catch (error) {
+    console.error('Error listening for updates:', error);
+    res.status(500).json({ error: 'Failed to listen for updates' });
+  }
+});
+
 
 async function fetchUsersFromFirestore() {
   try {
     const usersSnapshot = await admin
       .firestore()
       .collection('userroles')
-      .orderBy('timestamp', 'desc') // Order by timestamp in descending order (latest first)
+      // .orderBy('timestamp', 'desc') // Order by timestamp in descending order (latest first)
       .get();
 
     const userList = usersSnapshot.docs.map((doc) => ({
@@ -38,7 +66,7 @@ async function fetchUsersFromFirestore() {
   }
 }
 
-// Route to get the list of users
+// Modify your '/get-users' endpoint to simply fetch and return user data
 app.get('/get-users', async (req, res) => {
   try {
     const users = await fetchUsersFromFirestore();
@@ -62,12 +90,14 @@ app.post('/register', async (req, res) => {
       displayName: name,
     });
 
+    //  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+
     // Set the user's role and email in Firestore
     await admin.firestore().collection('userroles').doc(userRecord.uid).set({
-      role: 'user',
+      role: 'default',
       email,
       name,
-      timestamp, 
+      // timestamp, 
     });
 
     res.status(201).json({ message: 'User registered successfully' });

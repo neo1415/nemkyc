@@ -159,6 +159,7 @@ useEffect(() => {
                 <div className="dateRangePicker">
           <Grid container spacing={2} alignItems="center">
             {isDateFilterActive && (
+            
               <>
                 <Grid item xs={6}>
                   <TextField
