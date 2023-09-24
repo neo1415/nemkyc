@@ -12,12 +12,14 @@ import IndividualUser from './Admin/SingleUser/individualUser';
 import SingleUser from './Admin/SingleUser/SingleUser';
 import UserRegistration from './Admin/Authentication/SignUp';
 import RoleAssignment from './Admin/Authentication/RoleAssignment';
+import { UserRoleProvider } from './Context/UserRole';
 
 
 function App() {
 
   return (
     <div className="App">
+    <UserRoleProvider>
       <AuthContextProvider>
         <AnimateRouters />
  
@@ -27,7 +29,7 @@ function App() {
   exact
   path="/role-assignment"
   element={
-    <ProtectedRoute adminOnly={false}>
+    <ProtectedRoute adminOnly={true}>
       <RoleAssignment />
     </ProtectedRoute>
   }
@@ -36,7 +38,7 @@ function App() {
               exact
               path="/user-registration"
               element={
-                <ProtectedRoute adminOnly={false}>
+                <ProtectedRoute adminOnly={true}>
                   <UserRegistration />
                 </ProtectedRoute>
               }
@@ -87,6 +89,7 @@ function App() {
           </Routes>
       
       </AuthContextProvider>
+      </UserRoleProvider>
     </div>
   );
 }
