@@ -36,9 +36,9 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
   console.log('User Role:', userRole);
 
   // Check if the loading state is true, render loading component
-  if (isLoading) {
-    return <PageLoad />; // Replace with your loading component
-  }
+  // if (isLoading) {
+  //   return <PageLoad />; // Replace with your loading component
+  // }
 
   // Check if the user is logged in
   if (!user) {
