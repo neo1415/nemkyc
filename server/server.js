@@ -11,7 +11,21 @@ admin.initializeApp({
 
 const app = express();
 const port = process.env.PORT || 3001;
-app.use(cors());
+const allowedOrigins = ['https://nkyc.netlify.app', 'http://localhost:3000'];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (allowedOrigins.includes(origin) || !origin) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  })
+);
 const db = admin.firestore();
 
 app.use(express.json());
