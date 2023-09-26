@@ -36,7 +36,7 @@ const UserRegistration = ({ onUserAdded }) => {
     setError('');
 
     // Define the server URL
-    const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+    const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001' ;
 
     // Define the registration endpoint
     const registrationEndpoint = `${serverURL}/register`;
