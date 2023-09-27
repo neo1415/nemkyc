@@ -11,7 +11,7 @@ admin.initializeApp({
 
 const app = express();
 const port = process.env.PORT || 3001;
-const allowedOrigins = ['https://nkyc.netlify.app', 'http://localhost:3000', 'https://nemkyc.vercel.app'];
+const allowedOrigins = ['https://nkyc.netlify.app', 'http://localhost:3000', 'https://n-server.vercel.app'];
 
 app.use(
   cors({
