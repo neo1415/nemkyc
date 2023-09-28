@@ -3,8 +3,6 @@ import { UserAuth } from '../../Context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import axios from 'axios';
 import { endpoints } from './Points';
-import { db } from '../../APi';
-import { doc, getDoc } from 'firebase/firestore'; 
 import Unauthourized from '../../Components/Unauthourized';
 import PageLoad from '../../Components/PageLoad';
 
@@ -13,29 +11,27 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
   const [isLoading, setIsLoading] = useState(true); // Loading state
   const [userRole, setUserRole] = useState(null); // State to store user role
 
-
   useEffect(() => {
     const fetchUserRole = async () => {
       if (user) {
-        const userDocRef = doc(db, 'userroles', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-  
-        if (userDocSnap.exists()) {
-          setUserRole(userDocSnap.data().role);
+        try {
+          const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+          // Make an HTTP request to your server's endpoint to fetch the user's role
+          const response = await axios.post(`${serverURL}/check-user-role/${user.uid}`);
+          const role = response.data.role; // Assuming the response contains a 'role' field
+          setUserRole(role);
+          setIsLoading(false);
+          console.log('User Role:', role);
+        } catch (error) {
+          console.error('Error checking user role:', error);
+          // setUserRole('guest'); // Default to 'guest' role if there's an error
+          setIsLoading(false);
         }
-
-        // Once the user role is fetched, set isLoading to false
-        setIsLoading(false);
       }
     };
-  
-    fetchUserRole();
-  }, [user]); 
 
-  // Check if the loading state is true, render "Checking permissions" message
-  if (isLoading) {
-    return <div>Checking permissions...</div>;
-  }
+    fetchUserRole();
+  }, [user]);
 
   console.log('User Role:', userRole);
 
