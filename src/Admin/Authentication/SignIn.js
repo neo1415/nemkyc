@@ -1,6 +1,7 @@
 import React,{useState} from 'react'
 import { useNavigate } from 'react-router-dom'
 import { UserAuth } from '../../Context/AuthContext'
+import { Link } from 'react-router-dom'
 import './form.scss'
 
 const SignIn = () => {
@@ -42,6 +43,8 @@ const handleSubmit = async(e) =>{
         </div>
         { error && <span className='error'>Wrong Email or Password</span>}
         <button>Log In</button>
+
+        <p><Link to='/resetpassword'>Reset Password</Link></p>
 
     </form>
 </div>
