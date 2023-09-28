@@ -13,6 +13,7 @@ import SingleUser from './Admin/SingleUser/SingleUser';
 import UserRegistration from './Admin/Authentication/SignUp';
 import RoleAssignment from './Admin/Authentication/RoleAssignment';
 import { UserRoleProvider } from './Context/UserRole';
+import ResetPassword from './Admin/Authentication/ResetPassword';
 
 
 function App() {
@@ -25,10 +26,13 @@ function App() {
  
           <Routes>
             <Route exact path="/signin" element={<SignIn />} />
+
+            <Route exact path="/resetpassword"
+            element = {<ResetPassword />} />
             <Route
-  exact
-  path="/role-assignment"
-  element={
+              exact
+              path="/role-assignment"
+              element={
     <ProtectedRoute adminOnly={true}>
       <RoleAssignment />
     </ProtectedRoute>
