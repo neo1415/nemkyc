@@ -58,7 +58,7 @@ useEffect(() => {
 
     if (response.status === 200) {
       setUsers(response.data.users);
-      console.log('Initial users fetched successfully:', response.data.users);
+      // console.log('Initial users fetched successfully:', response.data.users);
     } else {
       console.error('Error fetching initial users:', response.statusText);
     }
@@ -82,7 +82,7 @@ const realTimeListener = () => {
     if (Array.isArray(responseData.users)) {
       // Make sure responseData.users is an array before mapping
       setUsers(responseData.users);
-      console.log('Users updated in real-time:', responseData.users);
+      // console.log('Users updated in real-time:', responseData.users);
     } else {
       console.error('Received data is not an array:', responseData);
     }
