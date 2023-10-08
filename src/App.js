@@ -33,7 +33,7 @@ function App() {
               exact
               path="/role-assignment"
               element={
-    <ProtectedRoute>
+    <ProtectedRoute  adminOnly={true}>
       <RoleAssignment />
     </ProtectedRoute>
   }

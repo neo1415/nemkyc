@@ -66,6 +66,11 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
     if (moderatorOnly && userRole !== 'moderator') {
       return <Unauthourized />;
     }
+
+// Check if the user role is 'default' and show the Unauthourized component
+  if (userRole === 'default') {
+    return <Unauthourized />;
+  }
   }
 
   return children;
