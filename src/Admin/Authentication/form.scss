@@ -27,6 +27,9 @@
         margin: 30px 0;
         background-color: rgba(128, 128, 128, 0.098);
         border: none;
+        @media screen and (max-width:768px) {
+            width: 300px;
+        }
 
     }
 

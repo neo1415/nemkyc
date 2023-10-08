@@ -32,7 +32,7 @@ h1 {
     }
     
     &::before {
-      top: -30px;
+      top: 45px;
       border: 5px solid #333;
       border-bottom-color: transparent;
       border-radius: 15px 15px 0 0;
@@ -41,7 +41,7 @@ h1 {
     }
     
     &::after {
-      top: -10px; 
+      top: 60px; 
       border-right: 5px solid transparent;
       animation: spin $animationTime;
     }
@@ -62,7 +62,7 @@ h1 {
   @keyframes spin {
     0% {
       transform: scaleX(-1);
-      left: calc(50% - 30px);
+      left: calc(50% - 10px);
     }
     65% {
       transform: scaleX(1);
@@ -75,10 +75,10 @@ h1 {
       transform: translateY(0px);
     }
     50% {
-      transform: translateY(10px);
+      transform: translateY(-10px);
     }
     100% {
-      transform: translateY(0px);
+      transform: translateY(20px);
     }
   }
   
