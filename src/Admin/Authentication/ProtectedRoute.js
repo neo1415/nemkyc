@@ -14,23 +14,27 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
     const fetchUserRole = async () => {
       if (user) {
         try {
+          // Check if the user role is already cached in localStorage
+          const cachedRole = localStorage.getItem('userRole');
+          if (cachedRole) {
+            setUserRole(cachedRole);
+          }
+
           const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
           const response = await axios.post(`${serverURL}/check-user-role/${user.uid}`);
           const role = response.data.role;
 
-          // Update the user role in the cache if it's different from the cached value
-          if (role !== userRole) {
-            localStorage.setItem('userRole', role);
-            setUserRole(role);
-          }
+          // Update the user role and cache it
+          setUserRole(role);
+          localStorage.setItem('userRole', role);
         } catch (error) {
           console.error('Error checking user role:', error);
         } finally {
-          setIsLoading(false); // Set isLoading to false regardless of success or failure
+          setIsLoading(false);
         }
       }
     };
-  
+
     fetchUserRole();
   }, [user]);
 
