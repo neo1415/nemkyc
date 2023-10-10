@@ -1,30 +1,45 @@
-// import React from 'react'
-// import './PageLoad.scss'
+import React from 'react';
+import './PageLoad.scss'; // Replace with the correct path to your SCSS file
 
-// const PageLoad = () => {
-//   return (
-//     <div>
-//     <div className="about">
-//     <a className="bg_links social portfolio" href="https://www.rafaelalucas.com" target="_blank">
-//        <span className="icon"></span>
-//     </a>
-//     <a className="bg_links social dribbble" href="https://dribbble.com/rafaelalucas" target="_blank">
-//        <span className="icon"></span>
-//     </a>
-//     <a className="bg_links social linkedin" href="https://www.linkedin.com/in/rafaelalucas/" target="_blank">
-//        <span className="icon"></span>
-//     </a>
-//     <a className="bg_links logo"></a>
-//  </div>
- 
-//  <div className="content">
-//     <div className="loading">
-//  <p>loading</p>
-//        <span></span>
-//     </div>
-//  </div>
-//  </div>
-//   )
-// }
+function PageLoad() {
+  return (
+    <div className='loaderPage'>
+      <div className="loading-container">
+        <div className="loading-text">
+          <span className="letter">C</span>
+          <span className="letter">h</span>
+          <span className="letter">e</span>
+          <span className="letter">c</span>
+          <span className="letter">k</span>
+          <span className="letter">i</span>
+          <span className="letter">n</span>
+          <span className="letter">g</span>
+          <span className="letter">&nbsp;</span>
+          <span className="letter">p</span>
+          <span className="letter">e</span>
+          <span className="letter">r</span>
+          <span className="letter">m</span>
+          <span className="letter">i</span>
+          <span className="letter">s</span>
+          <span className="letter">s</span>
+          <span className="letter">i</span>
+          <span className="letter">o</span>
+          <span className="letter">n</span>
+          <span className="letter">s</span>
+        </div>
+      </div>
+      <div className="socials">
+        <a className="social-link" href="https://twitter.com/aybukeceylan" target="_top">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="feather feather-twitter">
+            <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/>
+          </svg>
+        </a>
+        <a className="social-link" href="https://www.linkedin.com/in/ayb%C3%BCkeceylan/" target="_top">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="feather feather-linkedin"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        </a>
+      </div>
+    </div>
+  );
+}
 
-// export default PageLoad
+export default PageLoad;

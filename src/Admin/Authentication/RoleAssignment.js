@@ -45,9 +45,9 @@ const RoleAssignment = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [openModal, setOpenModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState({});
-const [roleDropdownOpen, setRoleDropdownOpen] = useState({});
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState({});
   const [userRoles, setUserRoles] = useState({}); // Store user roles in a state
   const navigate = useNavigate();
 
