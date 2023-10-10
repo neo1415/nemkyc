@@ -20,6 +20,7 @@
   max-width: 520px;
   text-align: center;
   color: #fff;
+  padding: 2rem;
   position: relative;
   margin: 0 32px;
 }
@@ -64,6 +65,12 @@
   margin-bottom: 32px;
   display: flex;
   justify-content: space-evenly;
+}
+
+@media screen and (max-width: 600px) {
+  .loading-text {
+    font-size: 4vw;
+  }
 }
 
 .loading-text span {
