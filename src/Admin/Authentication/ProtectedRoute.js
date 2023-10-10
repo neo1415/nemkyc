@@ -44,9 +44,7 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
   // Check if the loading state is true, render loading component
   if (isLoading) {
     return (
-      <div>
-        <h1>Checking permissions</h1>
-      </div>
+<PageLoad />
     ); // Replace with your loading component
   }
 
