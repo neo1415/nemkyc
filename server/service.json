@@ -1,13 +1,13 @@
 {
-  "type": "${process.env.TYPE}",
-  "project_id": "${process.env.PROJECT_ID}",
-  "private_key_id": "${process.env.PRIVATE_KEY_ID}",
-  "private_key": "${process.env.PRIVATE_KEY}",
-  "client_email": "${process.env.CLIENT_EMAIL}",
-  "client_id": "${process.env.CLIENT_ID}",
-  "auth_uri": "${process.env.AUTH_URI}",
-  "token_uri": "${process.env.TOKEN_URI}",
-  "auth_provider_x509_cert_url": "${process.env.AUTH_PROVIDER_X509_CERT_URL}",
-  "client_x509_cert_url": "${process.env.CLIENT_X509_CERT_URL}",
-  "universe_domain": "${process.env.UNIVERSE_DOMAIN}"
+  "type": "service_account",
+  "project_id": "nem-kyc",
+  "private_key_id": "bfef2e8b36f758a31d5d4f1e5d053fe942b7ab63",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDkKJK3JJPRckEx\nEmfnExAlZ5p+eCj84LU8YqridylE3FDplQt1dNiiAg1aREyXIt4/pTvBHZMb1r6i\nFlQFQfH+PQLh/9+OF8LIeK2dCCjN6rWSSoXtSI4DJ64ce/FmZz1+y5HV7k+biEjA\nMLTC0ZdEUygCEUs7yjMmPtfIoBwwCFxaMy/DpaPN6P5ibksSI1gcvSZrxmw6Qqel\n60QRu9VqFq5O4hKNZbzJbwGHFqhZJkrGgasE75q+2+jjLcE4uxKRauqHxN9seXm+\nOaEzCAUf9rhXYjZWO4vMgF9HHlCoP8qEodVvsUpB0xWFfTAnLtHriAYJhBNR+YBf\nlIEzY5hzAgMBAAECggEALrr8qdQtDnX3UkSx0Us/QFoC86pKwtiHZlHTLEU5x6fU\nTrM/QJRpFm2TLIzWnxH+MUz3eytCiS4np20pUlZaaTc30vAkaqcFNyg4bvRP3zUW\ncVsgKSR2KcFD0QO1wsKcfs7VFNsVpQZ52BthupFRCSZ7CElgfmOArHGsoqPgghmh\nSIyVclLFr3afrUZ2KqO7p28IHVGMshGFICU7c2dBGLceL8GNlxNhYVPz63mCCOJm\nu5a3tVSgz1A2GEww4DNvmKKYWVD92NRPRk6WNSSwCR3Ms33atDrNvzOKs6GOni4q\nSo5WTHw+MxWP5nzMSJRMmdH27IsLxfWj+8Bg8Oq3KQKBgQDyBNmD8Euf+eKsnT/Y\n4PXVoFYoDS/h0RRuc++KbMQbqRRJWSxNZgT15PWcc0pyh8lSfXU0lZAIQDSWAuwH\nmU/AJD5ZMwP5D0cHWofoZAqBQTotm8JClgF6o5fknBFDJNF1Ax2koQW/bDP7ewlw\nybNyJMTe5ojSMyLhILqQxyJRhQKBgQDxVr67gRwvJ5w4e6g/tQ+PvNUpHySMcJOH\nYG9sDGY8n/Q09WjsaRmN6WNrYcYd2zIkXD7ObmAL3lErPDcZTFY2ozhCTKkdQYVe\naNijNJZkCwYzUlGycphbsSuTTjlQRP6Gxgd215XYPYxHOIkEUkaUgevu4me1l2vN\nZENfpMVnlwKBgQCI6atv03nE16WfRxo+hA0uvBThdYxX8GLhlV627Y8HouAiGntQ\nkd1OiidUSXidUCnZK7YpeE7SDBhzoNWL+vQ924MWDSE7PaROCa4HDslOk+rosEv2\nRUwy5+de4dd2J5cC3i9f2eQZhYnmw5T0pHaKpThmbP6MA3fA6jYA/1ZvzQKBgETc\nx5ehA3XBC6ZiQmPLOiF9dCVDqZ4ZET9zmNdvwkxSJ9BkpgevBYekrKWbRHiIbwpI\n9/LXM7ivOuHnUKF7Uq5MbGUekrKyW2fQ6t/GxZLOQnqqZn1QjYC8UP67N0dcKHQ0\nVTTn1u3Ywgoga5g8Eb+WQsfq+kSqbCwzC7ZiwaEJAoGBAK8fqY+C/lUR0olXPe5r\n1sLd0dATcTr4rBVGYc1qC5/ZcMj856PAIZhSlk/sShC3X+VvPRoXYQncuPrPyDZr\nCnIBpsOq7DCfqE3jFVgAijt08jaUh9GSzUKDSYTHfYJ7J8Fu0IITyZP3R43KhHz9\nXCPTJnjIgfKEAgzl042LRysO\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-u5v1k@nem-kyc.iam.gserviceaccount.com",
+  "client_id": "104855180234593581000",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-u5v1k%40nem-kyc.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
 }
