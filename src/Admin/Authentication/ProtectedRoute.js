@@ -7,30 +7,31 @@ import PageLoad from '../../Components/PageLoad';
 
 const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
   const { user } = UserAuth();
-  const [isLoading, setIsLoading] = useState(!localStorage.getItem('userRole')); // Display loading only if user role is not in cache
-  const [userRole, setUserRole] = useState(localStorage.getItem('userRole'));
+  const [isLoading, setIsLoading] = useState(true); // Display loading until the user role is fetched
+  const [userRole, setUserRole] = useState(null); // Initialize userRole as null
 
   useEffect(() => {
     const fetchUserRole = async () => {
       if (user) {
         try {
-          const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
-
           const cachedRole = localStorage.getItem('userRole');
+
           if (cachedRole) {
             setUserRole(cachedRole);
+            setIsLoading(false); // Set isLoading to false if userRole is cached
           }
 
+          const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
           const response = await axios.post(`${serverURL}/check-user-role/${user.uid}`);
           const role = response.data.role;
 
+          // Update the user role and cache it
           setUserRole(role);
           localStorage.setItem('userRole', role);
-
-          // Update isLoading when the user role is available
-          setIsLoading(false);
         } catch (error) {
           console.error('Error checking user role:', error);
+        } finally {
+          setIsLoading(false);
         }
       }
     };
@@ -50,7 +51,7 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
     return <Navigate to="/signin" />;
   }
 
-  if (userRole !== 'loading') {
+  if (userRole !== null) {
     if (adminOnly && userRole !== 'admin') {
       return <Unauthourized />;
     }
