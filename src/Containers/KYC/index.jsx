@@ -15,6 +15,8 @@ import FinancialInfo from './Inputs/FinancialInfo';
 import SubmitModal from '../Modals/SubmitModal';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import CircularProgress from '@mui/material/CircularProgress';
+import Backdrop from '@mui/material/Backdrop';
 
 function KYC() {
   const [step, setStep] = useState(1);
@@ -28,12 +30,15 @@ function KYC() {
   const [showOtherField, setShowOtherField] = useState(false);
   const [showOtheridentificationType, setShowOtheridentificationType] = useState(false);
   const [uploading, setUploading] = useState(false); 
+  const [isUploading, setIsUploading] = useState(false);
+  
 
   const handleFileUpload = async (file, fieldName) => {
     if (file) {
       // Generate a unique filename using a timestamp
       const timestamp = Date.now();
       const fileName = `${timestamp}_${file.name}`;
+      setIsUploading(true);
     
       // File type validation: check if the file is a PDF, JPG, or PNG
       const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
@@ -73,12 +78,13 @@ function KYC() {
         (error) => {
           // console.log(error);
           showErrorToast('An error occurred during file upload. Please try again.'); // Show error toast for upload error
+          setIsUploading(false); 
         },
         () => {
           getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
             setFormData((prev) => ({ ...prev, [fieldName]: downloadURL })); // Use fieldName here
             showSuccessToast();
-    
+            setIsUploading(false); 
             // Set the uploading state back to false after the file is uploaded
             setUploading(false);
     
@@ -254,7 +260,7 @@ function KYC() {
       });
     } catch (err) {
       showErrorToast('There was an error submitting your form. please try again');
-      // console.log(err);
+      console.log(err);
 
     }
   };
@@ -360,6 +366,14 @@ function KYC() {
       exit={{ opacity: 0, x: 50 }}
       className="form-step">
             {!uploading && perc === 100 && <div>File uploaded successfully!</div>}
+            {isUploading && (
+        <Backdrop open={isUploading} sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <CircularProgress color="inherit" />
+            <p>Uploading File</p>
+          </div>
+        </Backdrop>
+      )}
         <h3>Financial Details</h3>
           <FinancialInfo 
             changeHandler={changeHandler} 
