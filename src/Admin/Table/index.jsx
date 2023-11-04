@@ -204,8 +204,8 @@ useEffect(() => {
         className="datagrid"
         columns={actionColumn.concat(userColumns)}
         rows={filteredData}
-     
-        pageSize={9}
+      
+        pageSize={100}
         rowsPerPageOptions={[9]}
         checkboxSelection
 

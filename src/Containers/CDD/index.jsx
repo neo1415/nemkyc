@@ -466,6 +466,8 @@ function CDD() {
       className="form-step">
 
         <h3>File Uploads</h3>
+        <p className='file-type'>Uploads should not be more than 5mb</p>
+        <p className='file-type'>Only pdf, jpg and png files are allowed</p>
         {!uploading && perc === 100 && <div>File uploaded successfully!</div>}
         {isUploading && (
         <Backdrop open={isUploading} sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}>

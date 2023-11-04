@@ -374,7 +374,9 @@ function KYC() {
           </div>
         </Backdrop>
       )}
-        <h3>Financial Details</h3>
+        <h3>Financial Details</h3>\
+        <p className='file-type'>Uploads should not be more than 5mb</p>
+        <p className='file-type'>Only pdf, jpg and png files are allowed</p>
           <FinancialInfo 
             changeHandler={changeHandler} 
             handleChange={handleChange} 
