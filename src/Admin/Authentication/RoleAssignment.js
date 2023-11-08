@@ -149,25 +149,6 @@ const handleSelectedUser = (uid) => {
     return newValue;
   });
 };
-  // const fetchUserRoles = async () => {
-  //   try {
-  //     const roles = {}; // Create an object to store user roles
-
-  //     // Fetch the roles for each user
-  //     for (const user of users) {
-  //       const role = await checkUserRole(user.uid);
-  //       roles[user.uid] = role;
-  //     }
-
-  //     // Update the state with user roles
-  //     setUserRoles(roles);
-  //   } catch (error) {
-  //     console.error('Error fetching user roles:', error);
-  //   }
-  // };
-
-
-// ...
 
 const checkUserRole = async (uid, role) => {
   try {
@@ -316,18 +297,18 @@ return (
 )}
 
 
-                  <Button
-                    variant="outlined"
-                    onClick={() => deleteUser(user.uid)}
-                  >
-                    Delete User
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+    <Button
+      variant="outlined"
+      onClick={() => deleteUser(user.uid)}
+      >
+      Delete User
+      </Button>
+      </TableCell>
+      </TableRow>
+    ))}
+   </TableBody>
+  </Table>
+</TableContainer>
       {errorMessage && <p className="error">{errorMessage}</p>}
         {/* User Registration Modal */}
         <Dialog open={openModal} onClose={handleCloseModal}>

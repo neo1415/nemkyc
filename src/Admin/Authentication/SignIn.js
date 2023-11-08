@@ -10,11 +10,11 @@ const SignIn = () => {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
 
-const {signIn} = UserAuth()
+    const {signIn} = UserAuth()
 
-const navigate=useNavigate()
+    const navigate=useNavigate()
 
-const handleSubmit = async(e) =>{
+    const handleSubmit = async(e) =>{
     e.preventDefault()
     setError('')
     try{
@@ -24,7 +24,6 @@ const handleSubmit = async(e) =>{
         setError(e.message)
         // console.log(e.message)
     }
-
 
 }
 

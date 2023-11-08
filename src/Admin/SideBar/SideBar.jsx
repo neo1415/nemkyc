@@ -3,7 +3,7 @@ import './Sidebar.scss';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserAuth } from '../../Context/AuthContext';
 import { HiUser, HiUsers, HiDatabase } from 'react-icons/hi';
-import { doc, getDoc } from 'firebase/firestore'; // Import Firestore functions
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../APi/index';
 import { HiUserAdd } from 'react-icons/hi';
 

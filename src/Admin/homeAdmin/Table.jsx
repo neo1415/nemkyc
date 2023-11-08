@@ -1,21 +1,13 @@
 import { DataGrid } from "@mui/x-data-grid";
 import { userColumns} from "../Table/datatablesource";
-import { Link } from "react-router-dom";
-import { useState, useEffect,useContext } from "react";
-import { GridToolbar } from "@mui/x-data-grid";
-import { GridToolbarContainer } from "@mui/x-data-grid";
-import { GridToolbarExport } from "@mui/x-data-grid";
-import { useNavigate } from "react-router-dom";
-import { collection, getDocs, deleteDoc, doc,onSnapshot, orderBy, query } from "firebase/firestore";
+import { useState, useEffect } from "react";
+import { collection,onSnapshot, orderBy, query } from "firebase/firestore";
 import {auth, db } from "../../APi/index";
 import { useAuthState } from 'react-firebase-hooks/auth';
 
 
 const List = () => {
   const [data, setData] = useState([]);
-  const [approved, setApproved] = useState(false);
-  // const {currentUser} = useContext(AuthContext)
-  const navigate=useNavigate()
  
     const [user] = useAuthState(auth)
   
@@ -31,70 +23,8 @@ const List = () => {
    
     })
   },[])
-  // console.log(data)
 
-// const approve = async (id) => {
-//   try{
-//     setApproved(true)
-//   }
-// }
 
-  const handleDelete = async (id) => {
-    try {
-      await deleteDoc(doc(db, "users", id));
-      setData(data.filter((item) => item.id !== id));
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const handleView = async (id) => {
-    navigate('/list/' + id)
-  };
-
-  function CustomToolbar() {
-    return (
-      <GridToolbarContainer>
-        <GridToolbarExport />
-      </GridToolbarContainer>
-    );
-  }
-  
-
-  const actionColumn = [
-    {
-      field: "action",
-      headerName: "Action",
-      width: 200,
-      renderCell: (params, id) => {
-        return (
-          <div className="cellAction">
-            {/* <Link to={"/adminid/" + id} style={{ textDecoration: "none" }}>
-              <div className="viewButton">View</div>
-            </Link> */}
-            <div
-              className="deleteButton"
-              onClick={() => handleDelete(params.row.id)}
-            >
-              Delete
-            </div>
-            <div
-              className="viewButton"
-              onClick={() => handleView(params.row.id)}
-            >
-              View
-            </div>
-
-            <div>
-            
-           
-           </div>
-      
-          </div>
-        );
-      },
-    },
-  ];
   return (
     <div className="list corp " style={{marginLeft:'-4rem', marginRight:'-4rem',height:'55vh', width:'81%', position:"relative",overflow:'hidden'}}>
       <div className="datatable" style={{height:'65vh'}}>
@@ -102,13 +32,10 @@ const List = () => {
         Corporate KYC
       </div>
       <DataGrid
-
-
         className="datagrid"
         rows={data}
         columns={userColumns}
         pageSize={4}
-
       />
     </div>
     </div>

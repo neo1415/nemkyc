@@ -26,8 +26,8 @@ const Individual = () => {
 
   // Use the custom hook to implement automatic logout
   useAutoLogout({
-    timeoutDuration: 10 * 60 * 1000 ,//(adjust as needed)
-    logout, // Use the logout function from your context
+    timeoutDuration: 10 * 60 * 1000 ,
+    logout, // Use the logout function from context
     redirectPath: '/signin', // Specify the redirect path
   });
 
@@ -45,6 +45,7 @@ const Individual = () => {
     });
   }, []);
 
+  //date filter
   useEffect(() => {
     const [startDate, endDate] = selectedDateRange;
   
@@ -122,9 +123,6 @@ const Individual = () => {
       renderCell: (params, id) => {
         return (
           <div className="cellAction">
-            {/* <Link to={"/adminid/" + id} style={{ textDecoration: "none" }}>
-              <div className="viewButton">View</div>
-            </Link> */}
             <div
               className="deleteButton"
               onClick={() => handleDelete(params.row.id)}
@@ -139,8 +137,7 @@ const Individual = () => {
             </div>
 
             <div>
-            
-           
+             
            </div>
       
           </div>

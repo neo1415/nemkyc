@@ -7,6 +7,7 @@ import PageLoad from '../../Components/PageLoad';
 
 const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
   const { user } = UserAuth();
+  
   const [isLoading, setIsLoading] = useState(true); // Display loading until the user role is fetched
   const [userRole, setUserRole] = useState(null); // Initialize userRole as null
 
