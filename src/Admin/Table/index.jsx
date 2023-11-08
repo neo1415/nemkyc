@@ -47,7 +47,7 @@ const List = () => {
     });
   }, []);
 
-  
+  //date filter
 useEffect(() => {
   const [startDate, endDate] = selectedDateRange;
 
@@ -204,7 +204,6 @@ useEffect(() => {
         className="datagrid"
         columns={actionColumn.concat(userColumns)}
         rows={filteredData}
-      
         pageSize={100}
         rowsPerPageOptions={[9]}
         checkboxSelection
