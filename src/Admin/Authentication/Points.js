@@ -12,4 +12,5 @@ export const endpoints = {
   updateUserRole: (userId) => `${serverURL}/update-user-role/${userId}`,
   deleteUser: (userId) => `${serverURL}/delete-user/${userId}`,
   listenForUpdates: `${serverURL}/listenForUpdates`,
+  submitForm: `${serverURL}/submit-form`,
 };

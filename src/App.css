@@ -29,3 +29,18 @@
     padding: 0rem 0rem 0rem;
   }
 } */
+
+.css-rtrcn9-MuiTablePagination-root {
+  overflow: auto;
+  color: rgba(0, 0, 0, 0.87);
+  font-size: 0.875rem;
+  float: left;
+  width: 100%;
+  display: flex;
+}
+
+.css-1w5m2wr-MuiDataGrid-virtualScroller {
+  overflow: auto;
+  position: relative;
+  height: auto !important;
+}

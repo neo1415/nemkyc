@@ -195,6 +195,25 @@ function CDD() {
           // Truncate the value to the first 11 digits if desired
           sanitizedValue = sanitizedValue.slice(0, 11);
         }
+
+        
+      } else {
+        // Handle the other number field without a length limit here
+        sanitizedValue = value.replace(/[^+0-9]/g, "");
+      }
+
+      if (name === 'telephoneNumber') {
+        // Ensure only numbers are allowed in the field
+        sanitizedValue = value.replace(/[^+0-9]/g, "");
+  
+        // Check if the value is longer than 11 characters
+        if (sanitizedValue.length > 11) {
+          setFormErrors({ ...formErrors, [name]: 'Phone Number must be at most 11 digits long' });
+          // Truncate the value to the first 11 digits if desired
+          sanitizedValue = sanitizedValue.slice(0, 12);
+        }
+
+        
       } else {
         // Handle the other number field without a length limit here
         sanitizedValue = value.replace(/[^+0-9]/g, "");
