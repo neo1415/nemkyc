@@ -16,6 +16,9 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* for development */
+
 .css-rtrcn9-MuiTablePagination-root {
   overflow: auto;
   color: rgba(0, 0, 0, 0.87);
@@ -31,4 +34,16 @@ code {
   height: auto !important;
 }
 
-/* try */
+/* for production */
+
+.css-whi0l6 {
+  overflow: auto;
+  color: rgba(0, 0, 0, 0.87);
+  font-size: 0.875rem;
+  width: 100%;
+  display: flex;
+}
+
+.css-iclwpf {
+overflow: auto !important;
+}
