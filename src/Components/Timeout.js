@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function useAutoLogout({ timeoutDuration, logout, redirectPath }) {
+
   const navigate = useNavigate();
+  
   const [isActive, setIsActive] = useState(true);
 
   useEffect(() => {
