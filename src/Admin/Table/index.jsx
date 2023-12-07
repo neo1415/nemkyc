@@ -207,11 +207,9 @@ useEffect(() => {
         pageSize={100}
         rowsPerPageOptions={[9]}
         checkboxSelection
-
       />
     </div>
     </div>
-
     
   );
 
