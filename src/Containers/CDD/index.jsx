@@ -19,6 +19,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import CircularProgress from '@mui/material/CircularProgress';
 import Backdrop from '@mui/material/Backdrop';
+import DOMPurify from 'dompurify';
 
 function CDD() {
   const [step, setStep] = useState(1);
@@ -168,58 +169,55 @@ function CDD() {
       progress: undefined,
     });
   };
+
   //handle inputs
   const handleChange = (event) => {
     const { name, value, type, checked, files } = event.target;
   
     // Input validation and sanitization
     let sanitizedValue = value;
+
     if (type === 'email') {
-      // Validate email format using regex
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!emailRegex.test(value)) {
-        // Invalid email format
+      // Only trigger validation error if the input is not in progress
+      if (value.trim() !== '' && value.indexOf('com') !== -1 && !emailRegex.test(value)) {
         setFormErrors({ ...formErrors, [name]: 'Please enter a valid email address' });
+      } else {
+        setFormErrors({ ...formErrors, [name]: null });
+        sanitizedValue = value.trim();
       }
-      // Sanitize the email value if desired (e.g., remove leading/trailing spaces)
-      sanitizedValue = value.trim();
     } else if (type === 'number') {
-      // Check if the field has a length limit
-      if (name === 'accountNumber') {
-        // Ensure only numbers are allowed in the field
+      if (name === 'accountNumber' || name === 'telephoneNumber') {
         sanitizedValue = value.replace(/[^+0-9]/g, "");
   
-        // Check if the value is longer than 11 characters
-        if (sanitizedValue.length > 10) {
-          setFormErrors({ ...formErrors, [name]: 'Number must be at most 10 digits long' });
-          // Truncate the value to the first 11 digits if desired
+        if (sanitizedValue.length > 11) {
+          setFormErrors({ ...formErrors, [name]: `${name} must be at most 11 digits long` });
           sanitizedValue = sanitizedValue.slice(0, 11);
         }
-
-        
       } else {
-        // Handle the other number field without a length limit here
         sanitizedValue = value.replace(/[^+0-9]/g, "");
       }
-
-      if (name === 'telephoneNumber') {
-        // Ensure only numbers are allowed in the field
-        sanitizedValue = value.replace(/[^+0-9]/g, "");
+    } else if (type === 'text') {
+      // Allow spaces and sanitize HTML
+      sanitizedValue = DOMPurify.sanitize(value, { ALLOWED_TAGS: [] });
   
-        // Check if the value is longer than 11 characters
-        if (sanitizedValue.length > 11) {
-          setFormErrors({ ...formErrors, [name]: 'Phone Number must be at most 11 digits long' });
-          // Truncate the value to the first 11 digits if desired
-          sanitizedValue = sanitizedValue.slice(0, 12);
-        }
-
-        
+      // Validate text input, allowing only certain characters
+      const textRegex = /^[a-zA-Z0-9,\s]*$/; // Allow alphanumeric, commas, and spaces
+      if (value.trim() !== '' && !textRegex.test(value)) {
+        setFormErrors({ ...formErrors, [name]: 'Invalid characters in the text field' });
+        return;
+      }
+  
+      const maxLength = 120; // Adjust the maximum length as needed
+      if (sanitizedValue.length > maxLength) {
+        setFormErrors({ ...formErrors, [name]: `Maximum ${maxLength} characters allowed` });
+        sanitizedValue = sanitizedValue.slice(0, maxLength);
       } else {
-        // Handle the other number field without a length limit here
-        sanitizedValue = value.replace(/[^+0-9]/g, "");
+        setFormErrors({ ...formErrors, [name]: null }); // Clear error for valid input
       }
     }
   
+    // Other field types (file, checkbox)
     if (type === 'file') {
       setFormData({ ...formData, [name]: files[0] });
     } else if (type === 'checkbox') {
@@ -230,6 +228,7 @@ function CDD() {
     } else {
       setFormData({ ...formData, [name]: sanitizedValue });
     }
+  
     if (formErrors[name]) {
       setFormErrors({ ...formErrors, [name]: null });
     }
