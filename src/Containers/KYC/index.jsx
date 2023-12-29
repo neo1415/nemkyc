@@ -17,6 +17,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import CircularProgress from '@mui/material/CircularProgress';
 import Backdrop from '@mui/material/Backdrop';
+import DOMPurify from 'dompurify';
 
 function KYC() {
   const [step, setStep] = useState(1);
@@ -151,33 +152,48 @@ function KYC() {
   
     // Input validation and sanitization
     let sanitizedValue = value;
+
     if (type === 'email') {
-      // Validate email format using regex
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!emailRegex.test(value)) {
-        // Invalid email format
+      // Only trigger validation error if the input is not in progress
+      if (value.trim() !== '' && value.indexOf('com') !== -1 && !emailRegex.test(value)) {
         setFormErrors({ ...formErrors, [name]: 'Please enter a valid email address' });
+      } else {
+        setFormErrors({ ...formErrors, [name]: null });
+        sanitizedValue = value.trim();
       }
-      // Sanitize the email value if desired (e.g., remove leading/trailing spaces)
-      sanitizedValue = value.trim();
     } else if (type === 'number') {
-      // Check if the field has a length limit
-      if (name === 'accountNumber' || name ==='accountNumber2') {
-        // Ensure only numbers are allowed in the field
+      if (name === 'accountNumber' || name === 'contactTelephoneNumber' || name ==='GSMno') {
         sanitizedValue = value.replace(/[^+0-9]/g, "");
   
-        // Check if the value is longer than 11 characters
-        if (sanitizedValue.length > 10) {
-          setFormErrors({ ...formErrors, [name]: 'Number must be at most 10 digits long' });
-          // Truncate the value to the first 11 digits if desired
+        if (sanitizedValue.length > 11) {
+          setFormErrors({ ...formErrors, [name]: `${name} must be at most 11 digits long` });
           sanitizedValue = sanitizedValue.slice(0, 11);
         }
       } else {
-        // Handle the other number field without a length limit here
         sanitizedValue = value.replace(/[^+0-9]/g, "");
+      }
+    } else if (type === 'text') {
+      // Allow spaces and sanitize HTML
+      sanitizedValue = DOMPurify.sanitize(value, { ALLOWED_TAGS: [] });
+  
+      // Validate text input, allowing only certain characters
+      const textRegex = /^[a-zA-Z0-9,\s]*$/; // Allow alphanumeric, commas, and spaces
+      if (value.trim() !== '' && !textRegex.test(value)) {
+        setFormErrors({ ...formErrors, [name]: 'Invalid characters in the text field' });
+        return;
+      }
+  
+      const maxLength = 120; // Adjust the maximum length as needed
+      if (sanitizedValue.length > maxLength) {
+        setFormErrors({ ...formErrors, [name]: `Maximum ${maxLength} characters allowed` });
+        sanitizedValue = sanitizedValue.slice(0, maxLength);
+      } else {
+        setFormErrors({ ...formErrors, [name]: null }); // Clear error for valid input
       }
     }
   
+    // Other field types (file, checkbox)
     if (type === 'file') {
       setFormData({ ...formData, [name]: files[0] });
     } else if (type === 'checkbox') {
@@ -188,10 +204,12 @@ function KYC() {
     } else {
       setFormData({ ...formData, [name]: sanitizedValue });
     }
+  
     if (formErrors[name]) {
       setFormErrors({ ...formErrors, [name]: null });
     }
   };
+
 
   const handleSelectChange = (event) => {
     const { value, name } = event.target;
@@ -264,6 +282,53 @@ function KYC() {
 
     }
   };
+
+  // for server side
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault()
+  //   const requiredFields = document.querySelectorAll('input[required]');
+  //   let allFieldsFilled = true;
+  //   requiredFields.forEach(field => {
+  //     if (!field.value) {
+  //       allFieldsFilled = false;
+  //       const fieldName = field.getAttribute('name');
+  //       setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
+  //     }
+  //   });
+
+  //   const privacyCheckbox = document.querySelector('input[name="privacy"]');
+  //   if (!privacyCheckbox.checked) {
+  //     allFieldsFilled = false;
+  //     setFormErrors({...formErrors, privacyPolicy: `Privacy policy must be accepted`});
+  //   }
+
+  //   // if any required field is not filled, prevent form from moving to next step
+  //   if (!allFieldsFilled) {
+  //     return;
+  //   }
+  //   const formatDate = (date) => {
+  //     const day = String(date.getDate()).padStart(2, '0');
+  //     const month = String(date.getMonth() + 1).padStart(2, '0');
+  //     const year = String(date.getFullYear());
+    
+  //     return `${day}/${month}/${year}`;
+  //   };
+  //   try {
+  //     setIsSubmitted(true);
+  //     const response = await axios.post(endpoints.submitIndividualForm, formData);
+  
+  //     if (response.status === 201) {
+  //       console.log('Form submitted successfully');
+  //       showSuccessToast('Form Submitted succesfully.'); 
+  //     } else {
+  //       console.error('Error during form submission:', response.statusText);
+  //     }
+  //   } catch (err) {
+  //     console.error('server error during form submission:', err);
+  //     showErrorToast('An error occurred during submission. Please try again.'); 
+  //   }
+  // };
+  
   
 
   const nextStep = () => {

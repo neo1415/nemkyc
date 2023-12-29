@@ -4,6 +4,8 @@ export const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3
 
 export const endpoints = {
   getUsers: `${serverURL}/get-users`,
+  getCorporateData: `${serverURL}/get-corporate-data`,
+  getIndividualData: `${serverURL}/get-individual-data`,
   assignAdminRole: (userId) => `${serverURL}/assign-admin-role/${userId}`,
   assignModeratorRole: (userId) => `${serverURL}/assign-moderator-role/${userId}`, // Add this line
   assignDefaultRole: (userId) => `${serverURL}/assign-default-role/${userId}`, // Add this line
@@ -12,5 +14,6 @@ export const endpoints = {
   updateUserRole: (userId) => `${serverURL}/update-user-role/${userId}`,
   deleteUser: (userId) => `${serverURL}/delete-user/${userId}`,
   listenForUpdates: `${serverURL}/listenForUpdates`,
-  submitForm: `${serverURL}/submit-form`,
+  submitCorporateForm: `${serverURL}/submit-corporate-form`,
+  submitIndividualForm: `${serverURL}/submit-individual-form`,
 };
