@@ -189,7 +189,7 @@ function CDD() {
         sanitizedValue = value.trim();
       }
     } else if (type === 'number') {
-      if (name === 'accountNumber' || name === 'telephoneNumber') {
+      if (name === 'accountNumber' || name === 'telephoneNumber' || name ==='employersPhoneNumber' || name ==='phoneNumber') {
         sanitizedValue = value.replace(/[^+0-9]/g, "");
   
         if (sanitizedValue.length > 11) {
