@@ -11,8 +11,9 @@ import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import { UserAuth } from "../../Context/AuthContext";
 import useAutoLogout from "../../Components/Timeout";
-
 import { UserColumns } from "./datatablesource";
+import axios from "axios";
+import { endpoints } from "../Authentication/Points";
 
 const Individual = () => {
   const [data, setData] = useState([]);
@@ -32,18 +33,20 @@ const Individual = () => {
   });
 
   useEffect(() => {
-    const dataRef = collection(db, "individuals");
-
-    let q = query(dataRef, orderBy("createdAt", "desc"));
-
-    onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setData(data);
-    });
+    const fetchData = async () => {
+      const response = await axios.get(endpoints.getIndividualData);
+  
+      if (response.status === 200) {
+        setData(response.data);
+        console.log(response.data)
+      } else {
+        console.error('Error fetching users:', response.statusText);
+      }
+    };
+  
+    fetchData();
   }, []);
+  
 
   //date filter
   useEffect(() => {

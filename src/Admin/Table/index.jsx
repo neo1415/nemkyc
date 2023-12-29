@@ -6,13 +6,15 @@ import {GridToolbarContainer} from '@mui/x-data-grid';
 import { GridToolbarExport } from "@mui/x-data-grid";
 import { UserAuth } from '../../Context/AuthContext';
 import { useNavigate } from "react-router-dom";
-import { collection, deleteDoc, doc,onSnapshot, orderBy, query } from "firebase/firestore";
+import { collection, deleteDoc,Timestamp, doc,onSnapshot, orderBy, query } from "firebase/firestore";
 import { db } from "../../APi/index";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import SideBar from "../SideBar/SideBar";
 import useAutoLogout from '../../Components/Timeout';
+import axios from "axios";
+import { endpoints } from '../Authentication/Points';
 
 
 const List = () => {
@@ -34,19 +36,20 @@ const List = () => {
 
   
   useEffect(() => {
-    const dataRef = collection(db, "users");
-
-    let q = query(dataRef, orderBy("createdAt", "desc"));
-
-    onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setData(data);
-    });
+    const fetchData = async () => {
+      const response = await axios.get(endpoints.getCorporateData);
+  
+      if (response.status === 200) {
+        setData(response.data);
+        console.log(response.data)
+      } else {
+        console.error('Error fetching users:', response.statusText);
+      }
+    };
+  
+    fetchData();
   }, []);
-
+  
   //date filter
 useEffect(() => {
   const [startDate, endDate] = selectedDateRange;
@@ -55,10 +58,9 @@ useEffect(() => {
     // Adjust the end date to include the entire day
     const adjustedEndDate = new Date(endDate);
     adjustedEndDate.setDate(adjustedEndDate.getDate() + 1);
-
     const filteredData = data.filter((item) => {
       const createdAtDate = parseDate(item.createdAt);
-      return createdAtDate >= startDate && createdAtDate < adjustedEndDate; // Use < instead of <=
+      return createdAtDate >= startDate && createdAtDate < adjustedEndDate;
     });
     setFilteredData(filteredData);
   } else {
@@ -68,14 +70,13 @@ useEffect(() => {
 
   
   // Function to parse formatted date into JavaScript Date object
-  const parseDate = (formattedDate) => {
-    const parts = formattedDate.split('/');
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // JavaScript months are 0-based
-    const year = parseInt(parts[2], 10);
-    return new Date(year, month, day);
-  };
-  
+const parseDate = (formattedDate) => {
+  const parts = formattedDate.split('/');
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // JavaScript months are 0-based
+  const year = parseInt(parts[2], 10);
+  return new Date(year, month, day); // Return a JavaScript Date object
+};
 
   const handleFilterButtonAction = () => {
     if (isDateFilterActive) {
@@ -204,7 +205,7 @@ useEffect(() => {
         className="datagrid"
         columns={actionColumn.concat(userColumns)}
         rows={filteredData}
-        pageSize={100}
+        pageSize={8}
         rowsPerPageOptions={[9]}
         checkboxSelection
       />
