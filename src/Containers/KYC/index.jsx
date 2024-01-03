@@ -237,53 +237,6 @@ function KYC() {
     setIsSubmitted(false);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    const requiredFields = document.querySelectorAll('input[required]');
-    let allFieldsFilled = true;
-    requiredFields.forEach(field => {
-      if (!field.value) {
-        allFieldsFilled = false;
-        const fieldName = field.getAttribute('name');
-        setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
-      }
-    });
-
-    const privacyCheckbox = document.querySelector('input[name="privacy"]');
-    if (!privacyCheckbox.checked) {
-      allFieldsFilled = false;
-      setFormErrors({...formErrors, privacyPolicy: `Privacy policy must be accepted`});
-    }
-
-    // if any required field is not filled, prevent form from moving to next step
-    if (!allFieldsFilled) {
-      return;
-    }
-    const formatDate = (date) => {
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = String(date.getFullYear());
-    
-      return `${day}/${month}/${year}`;
-    };
-    try {
-      setIsSubmitted(true);
-      const now = new Date();
-      const formattedDate = formatDate(now);
-      await setDoc(doc(db, "individuals", uuidv4()), {
-        ...formData,
-        createdAt: formattedDate,
-        timestamp: serverTimestamp()
-        
-      });
-    } catch (err) {
-      showErrorToast('There was an error submitting your form. please try again');
-      console.log(err);
-
-    }
-  };
-
-  // for server side
   // const handleSubmit = async (e) => {
   //   e.preventDefault()
   //   const requiredFields = document.querySelectorAll('input[required]');
@@ -315,19 +268,60 @@ function KYC() {
   //   };
   //   try {
   //     setIsSubmitted(true);
-  //     const response = await axios.post(endpoints.submitIndividualForm, formData);
-  
-  //     if (response.status === 201) {
-  //       console.log('Form submitted successfully');
-  //       showSuccessToast('Form Submitted succesfully.'); 
-  //     } else {
-  //       console.error('Error during form submission:', response.statusText);
-  //     }
+  //     const now = new Date();
+  //     const formattedDate = formatDate(now);
+  //     await setDoc(doc(db, "individuals", uuidv4()), {
+  //       ...formData,
+  //       createdAt: formattedDate,
+  //       timestamp: serverTimestamp()
+        
+  //     });
   //   } catch (err) {
-  //     console.error('server error during form submission:', err);
-  //     showErrorToast('An error occurred during submission. Please try again.'); 
+  //     showErrorToast('There was an error submitting your form. please try again');
+  //     console.log(err);
+
   //   }
   // };
+
+  // for server side
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    const requiredFields = document.querySelectorAll('input[required]');
+    let allFieldsFilled = true;
+    requiredFields.forEach(field => {
+      if (!field.value) {
+        allFieldsFilled = false;
+        const fieldName = field.getAttribute('name');
+        setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
+      }
+    });
+
+    const privacyCheckbox = document.querySelector('input[name="privacy"]');
+    if (!privacyCheckbox.checked) {
+      allFieldsFilled = false;
+      setFormErrors({...formErrors, privacyPolicy: `Privacy policy must be accepted`});
+    }
+
+    // if any required field is not filled, prevent form from moving to next step
+    if (!allFieldsFilled) {
+      return;
+    }
+
+    try {
+      setIsSubmitted(true);
+      const response = await axios.post(endpoints.submitIndividualForm, formData);
+  
+      if (response.status === 201) {
+        console.log('Form submitted successfully');
+        showSuccessToast('Form Submitted succesfully.'); 
+      } else {
+        console.error('Error during form submission:', response.statusText);
+      }
+    } catch (err) {
+      console.error('server error during form submission:', err);
+      showErrorToast('An error occurred during submission. Please try again.'); 
+    }
+  };
   
   
 
