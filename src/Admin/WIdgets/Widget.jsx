@@ -18,8 +18,8 @@ let data;
 switch(type){
   case 'user':
     data={
-      title:'Corporate',
-      query: 'users',
+      title:'Corporate-kyc',
+      query: 'corporate-kyc',
       link:'see all Users',
       icon: <HiUsers className='icon' />,
       to:'/list'
@@ -28,8 +28,8 @@ switch(type){
 
     case 'basic':
     data={
-      title:'Individuals',
-      query: 'individuals',
+      title:'Individual-kyc',
+      query: 'individual-kyc',
       link:'View all Customers',
       icon: <HiUser className='icon' />,
       to:'/individual-list'

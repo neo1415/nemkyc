@@ -18,6 +18,9 @@ import 'react-toastify/dist/ReactToastify.css';
 import CircularProgress from '@mui/material/CircularProgress';
 import Backdrop from '@mui/material/Backdrop';
 import DOMPurify from 'dompurify';
+import axios from 'axios';
+import { endpoints } from '../../Admin/Authentication/Points';
+
 
 function KYC() {
   const [step, setStep] = useState(1);
@@ -56,7 +59,7 @@ function KYC() {
       }
     
       // Construct the storage path
-      const storagePath = `form_submissions/${fieldName}/${fileName}`;
+      const storagePath = `individual-kyc-file-submissions/${fieldName}/${fileName}`;
       const storageRef = ref(storage, storagePath);
       const uploadTask = uploadBytesResumable(storageRef, file);
       uploadTask.on(
@@ -270,7 +273,7 @@ function KYC() {
   //     setIsSubmitted(true);
   //     const now = new Date();
   //     const formattedDate = formatDate(now);
-  //     await setDoc(doc(db, "individuals", uuidv4()), {
+  //     await setDoc(doc(db, "individual-kyc", uuidv4()), {
   //       ...formData,
   //       createdAt: formattedDate,
   //       timestamp: serverTimestamp()
@@ -306,7 +309,13 @@ function KYC() {
     if (!allFieldsFilled) {
       return;
     }
-
+    const formatDate = (date) => {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = String(date.getFullYear());
+    
+      return `${day}/${month}/${year}`;
+    };
     try {
       setIsSubmitted(true);
       const response = await axios.post(endpoints.submitIndividualForm, formData);

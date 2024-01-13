@@ -1,53 +1,56 @@
-import React,{useState} from 'react'
-import { useNavigate } from 'react-router-dom'
-import { UserAuth } from '../../Context/AuthContext'
-import { Link } from 'react-router-dom'
-import './form.scss'
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { UserAuth } from '../../Context/AuthContext';
+import { Link } from 'react-router-dom';
+import './form.scss';
 
 const SignIn = () => {
+  const [error, setError] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-    const [error, setError] = useState(false)
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
+  const { signIn } = UserAuth();
+  const navigate = useNavigate();
 
-    const {signIn} = UserAuth()
-
-    const navigate=useNavigate()
-
-    const handleSubmit = async(e) =>{
-    e.preventDefault()
-    setError('')
-    try{
-        await signIn(email, password);
-        navigate('/adminHome')
-    } catch(e){
-        setError(e.message)
-        // console.log(e.message)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      const userCredential = await signIn(email, password);
+      // Check for the custom claim
+      const idTokenResult = await userCredential.user.getIdTokenResult();
+      if (idTokenResult.claims.forcePasswordReset) {
+        // Redirect user to the password reset flow
+        navigate('/requestpasswordreset');
+      } else {
+        // Redirect user to the admin home page or other appropriate page
+        navigate('/adminHome');
+      }
+    } catch (e) {
+      setError('Invalid email or password or check your internet connectiuon');
     }
-
-}
+  };
 
   return (
     <div className='login'>
-    <div className='loginTitle'>
+      <div className='loginTitle'>
         <h2>Sign In To Your Account</h2>
-    </div>
-    <form onSubmit={handleSubmit}> 
-    <div className='Inputs'>
-            <label>Email Address</label>
-            <input type='email' onChange={(e)=> setEmail(e.target.value)} />
+      </div>
+      <form onSubmit={handleSubmit}>
+        <div className='Inputs'>
+          <label>Email Address</label>
+          <input type='email' value={email} onChange={(e) => setEmail(e.target.value)} />
 
-            <label>Password</label>
-            <input type='password'  onChange={(e)=> setPassword(e.target.value)} />
+          <label>Password</label>
+          <input type='password' value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
-        { error && <span className='error'>Wrong Email or Password</span>}
-        <button>Log In</button>
+        {error && <span className='error'>{error}</span>}
+        <button type="submit">Log In</button>
 
-        <p><Link to='/resetpassword'>Reset Password</Link></p>
+        <p><Link to='/requestpasswordreset'>Reset Password</Link></p>
+      </form>
+    </div>
+  );
+};
 
-    </form>
-</div>
-  )
-}
-
-export default SignIn
+export default SignIn;

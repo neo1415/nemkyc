@@ -12,7 +12,7 @@ const List = () => {
     const [user] = useAuthState(auth)
   
   useEffect(()=> {
-    const dataRef = collection(db, 'users')
+    const dataRef = collection(db, 'corporate-kyc')
     const q = query(dataRef, orderBy('createdAt', 'desc'));
     onSnapshot(q,(snapshot) => {
       const data = snapshot.docs.map((doc) => ({

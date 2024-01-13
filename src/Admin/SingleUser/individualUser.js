@@ -32,7 +32,7 @@ const IndividualUser = () => {
     }
 
     useEffect(() => {
-      const docRef = doc(db, 'individuals', id);
+      const docRef = doc(db, 'individual-kyc', id);
       const unsubscribe = onSnapshot(docRef, (snapshot) => {
           setData({...snapshot.data(), id: snapshot.id});
       });

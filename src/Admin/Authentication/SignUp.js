@@ -34,13 +34,13 @@ const UserRegistration = ({ onUserAdded }) => {
 
   const handleRegistration = async () => {
     setError('');
-
+  
     // Define the server URL
-    const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001' ;
-
+    const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+  
     // Define the registration endpoint
     const registrationEndpoint = `${serverURL}/register`;
-
+  
     try {
       setIsLoading(true);
       const response = await axios.post(registrationEndpoint, {
@@ -48,7 +48,7 @@ const UserRegistration = ({ onUserAdded }) => {
         password,
         name,
       });
-
+  
       if (response.status === 201) {
         openSuccessModal();
         // Registration was successful
@@ -56,15 +56,25 @@ const UserRegistration = ({ onUserAdded }) => {
           onUserAdded({ email, name, role: 'Default' });
         }
       } else {
-        setError('Error during registration. Please try again.');
+        setError('An unexpected error occurred. Please try again.');
       }
     } catch (error) {
       console.error('Error during registration:', error);
-      setError('Error during registration. Please try again.');
+      // Check if the error response has a data property with a message
+      if (error.response && error.response.data && error.response.data.message) {
+        // Use the server-provided error message
+        setError(error.response.data.message);
+      } else if (error.message.includes('Network Error')) {
+        setError('Unable to connect to the server. Please check your internet connection.');
+      } else {
+        // Fallback error message
+        setError('An error occurred during registration. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
+  
 
   const openSuccessModal = () => {
     setSuccessModalOpen(true);
