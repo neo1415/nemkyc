@@ -1,6 +1,6 @@
 // config.js
 
-export const serverURL = 'https://nem-server-rhdb.onrender.com' || 'http://localhost:3001';
+export const serverURL = 'https://nem-server-rhdb.onrender.com' 
 
 export const endpoints = {
   getUsers: `${serverURL}/get-users`,
