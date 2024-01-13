@@ -120,7 +120,7 @@ const ResetPassword = () => {
             label={showPassword ? 'Hide password' : 'Show password'}
           />
         </div>
-        <button type="submit">Reset Password</button>
+        <button type="submit" onClick={handlePasswordReset}>Reset Password</button>
         {error && <p className="error-message">{error}</p>}
       </form>
     </div>
