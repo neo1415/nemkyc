@@ -88,7 +88,7 @@ const Individual = () => {
 
   const handleDelete = async (id) => {
     try {
-      await deleteDoc(doc(db, "individuals", id));
+      await deleteDoc(doc(db, "individual-kyc", id));
     } catch (err) {
       console.log(err);
     }

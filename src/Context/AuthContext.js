@@ -6,7 +6,8 @@ import {
    signInWithEmailAndPassword, 
   signOut,
   sendPasswordResetEmail,
-  onAuthStateChanged 
+  onAuthStateChanged ,
+  confirmPasswordReset as firebaseConfirmPasswordReset 
 } from 'firebase/auth';
 
 export const UserContext = createContext()
@@ -27,6 +28,10 @@ const signIn = (email, password) => {
 const resetPassword=(email)=>{
   return sendPasswordResetEmail(auth,email)
 }
+
+const confirmPasswordReset = (code, newPassword) => {
+  return firebaseConfirmPasswordReset(auth, code, newPassword); // Use the Firebase function
+};
 
 const logout= ()=>{
   return signOut(auth)
@@ -61,11 +66,11 @@ useEffect(() => {
   // Clean up the observer on unmount
   return () => unsubscribe();
 }, []);
-  return(
-    <UserContext.Provider value={{createUser, user, logout, signIn, resetPassword}}>
-      {children}
-    </UserContext.Provider>
-  )
+return (
+  <UserContext.Provider value={{ createUser, user, logout, signIn, resetPassword, confirmPasswordReset }}>
+    {children}
+  </UserContext.Provider>
+);
 }
 
 export const UserAuth=() => {

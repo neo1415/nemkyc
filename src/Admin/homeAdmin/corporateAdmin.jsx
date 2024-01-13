@@ -8,7 +8,7 @@ const Individual = () => {
   const [data, setData] = useState([]);
 
   useEffect(()=> {
-    const dataRef = collection(db, 'individuals')
+    const dataRef = collection(db, 'individual-kyc')
     const q = query(dataRef, orderBy('createdAt', 'desc'));
     onSnapshot(q,(snapshot) => {
       const data = snapshot.docs.map((doc) => ({

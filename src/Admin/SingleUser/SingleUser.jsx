@@ -31,7 +31,7 @@ const SingleUser = () => {
     }
 
     useEffect(() => {
-      const docRef = doc(db, 'users', id);
+      const docRef = doc(db, 'corporate-kyc', id);
       const unsubscribe = onSnapshot(docRef, (snapshot) => {
           setData({...snapshot.data(), id: snapshot.id});
       });

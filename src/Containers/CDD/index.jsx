@@ -20,8 +20,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import CircularProgress from '@mui/material/CircularProgress';
 import Backdrop from '@mui/material/Backdrop';
 import DOMPurify from 'dompurify';
-// import axios from 'axios';
-// import { endpoints } from '../Authentication/Points';
+import axios from 'axios';
+import { endpoints } from '../../Admin/Authentication/Points';
 
 function CDD() {
   const [step, setStep] = useState(1);
@@ -112,7 +112,7 @@ function CDD() {
       }
     
       // Construct the storage path
-      const storagePath = `form_submissions/${fieldName}/${fileName}`;
+      const storagePath = `corporate-kyc-file-submissions/${fieldName}/${fileName}`;
       const storageRef = ref(storage, storagePath);
       const uploadTask = uploadBytesResumable(storageRef, file);
       uploadTask.on(
@@ -202,13 +202,14 @@ function CDD() {
     } else if (type === 'text') {
       // Allow spaces and sanitize HTML
       sanitizedValue = DOMPurify.sanitize(value, { ALLOWED_TAGS: [] });
-  
+    
       // Validate text input, allowing only certain characters
-      const textRegex = /^[a-zA-Z0-9,\s]*$/; // Allow alphanumeric, commas, and spaces
+      const textRegex = /^[a-zA-Z0-9,\s-]*$/; // Allow alphanumeric, commas, spaces, and dashes
       if (value.trim() !== '' && !textRegex.test(value)) {
         setFormErrors({ ...formErrors, [name]: 'Invalid characters in the text field' });
         return;
       }
+    
   
       const maxLength = 120; // Adjust the maximum length as needed
       if (sanitizedValue.length > maxLength) {
@@ -358,7 +359,7 @@ function CDD() {
   //     setIsSubmitted(true);
   //     const now = new Date();
   //     const formattedDate = formatDate(now);
-  //     await setDoc(doc(db, "users", uuidv4()), {
+  //     await setDoc(doc(db, "corporate-kyc", uuidv4()), {
   //       ...formData,
   //       createdAt: formattedDate,
   //       timestamp: serverTimestamp(),
@@ -556,7 +557,6 @@ function CDD() {
 
   </form>
       )}
-
 </motion.div>
   </div>
   </div>

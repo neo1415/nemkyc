@@ -13,8 +13,8 @@ import SingleUser from './Admin/SingleUser/SingleUser';
 import UserRegistration from './Admin/Authentication/SignUp';
 import RoleAssignment from './Admin/Authentication/RoleAssignment';
 import { UserRoleProvider } from './Context/UserRole';
+import RequestPasswordReset from './Admin/Authentication/RequestPasswordReset';
 import ResetPassword from './Admin/Authentication/ResetPassword';
-
 
 function App() {
 
@@ -27,6 +27,8 @@ function App() {
           <Routes>
             <Route exact path="/signin" element={<SignIn />} />
 
+            <Route exact path="/requestpasswordreset"
+            element = {<RequestPasswordReset />} />
             <Route exact path="/resetpassword"
             element = {<ResetPassword />} />
             <Route
