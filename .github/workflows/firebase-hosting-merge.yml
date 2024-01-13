@@ -14,6 +14,7 @@ jobs:
      REACT_APP_STORAGE_BUCKET: ${{ secrets.REACT_APP_STORAGE_BUCKET }}
      REACT_APP_AUTH_DOMAIN: ${{ secrets.REACT_APP_AUTH_DOMAIN }}
      REACT_APP_PROJECT_ID: ${{ secrets.REACT_APP_PROJECT_ID }}
+     REACT_APP_SERVER_URL: ${{ secrets.REACT_APP_SERVER_URL }}
    steps:
      - uses: actions/checkout@v4
      - run: npm ci && npm run build
