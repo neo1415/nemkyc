@@ -156,6 +156,13 @@ function KYC() {
     // Input validation and sanitization
     let sanitizedValue = value;
 
+    setFormErrors((prevErrors) => {
+      const newErrors = { ...prevErrors };
+      delete newErrors[name];
+      return newErrors;
+    });
+  
+
     if (type === 'email') {
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       // Only trigger validation error if the input is not in progress
@@ -240,82 +247,31 @@ function KYC() {
     setIsSubmitted(false);
   };
 
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault()
-  //   const requiredFields = document.querySelectorAll('input[required]');
-  //   let allFieldsFilled = true;
-  //   requiredFields.forEach(field => {
-  //     if (!field.value) {
-  //       allFieldsFilled = false;
-  //       const fieldName = field.getAttribute('name');
-  //       setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
-  //     }
-  //   });
-
-  //   const privacyCheckbox = document.querySelector('input[name="privacy"]');
-  //   if (!privacyCheckbox.checked) {
-  //     allFieldsFilled = false;
-  //     setFormErrors({...formErrors, privacyPolicy: `Privacy policy must be accepted`});
-  //   }
-
-  //   // if any required field is not filled, prevent form from moving to next step
-  //   if (!allFieldsFilled) {
-  //     return;
-  //   }
-  //   const formatDate = (date) => {
-  //     const day = String(date.getDate()).padStart(2, '0');
-  //     const month = String(date.getMonth() + 1).padStart(2, '0');
-  //     const year = String(date.getFullYear());
-    
-  //     return `${day}/${month}/${year}`;
-  //   };
-  //   try {
-  //     setIsSubmitted(true);
-  //     const now = new Date();
-  //     const formattedDate = formatDate(now);
-  //     await setDoc(doc(db, "individual-kyc", uuidv4()), {
-  //       ...formData,
-  //       createdAt: formattedDate,
-  //       timestamp: serverTimestamp()
-        
-  //     });
-  //   } catch (err) {
-  //     showErrorToast('There was an error submitting your form. please try again');
-  //     console.log(err);
-
-  //   }
-  // };
-
-  // for server side
+  
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    const requiredFields = document.querySelectorAll('input[required]');
-    let allFieldsFilled = true;
-    requiredFields.forEach(field => {
-      if (!field.value) {
-        allFieldsFilled = false;
-        const fieldName = field.getAttribute('name');
-        setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
-      }
-    });
-
+    e.preventDefault();
+  
+    const requiredFields = Array.from(document.querySelectorAll('input[required]'));
     const privacyCheckbox = document.querySelector('input[name="privacy"]');
-    if (!privacyCheckbox.checked) {
-      allFieldsFilled = false;
-      setFormErrors({...formErrors, privacyPolicy: `Privacy policy must be accepted`});
+    
+    const allFieldsFilled = requiredFields.every(field => field.value);
+    const privacyChecked = privacyCheckbox.checked;
+  
+    const newFormErrors = requiredFields.reduce((errors, field) => {
+      const fieldName = field.getAttribute('name');
+      return field.value ? errors : { ...errors, [fieldName]: `${fieldName} is required` };
+    }, {});
+  
+    if (!privacyChecked) {
+      newFormErrors.privacyPolicy = 'Privacy policy must be accepted';
     }
-
-    // if any required field is not filled, prevent form from moving to next step
-    if (!allFieldsFilled) {
+  
+    setFormErrors(newFormErrors);
+  
+    if (!allFieldsFilled || !privacyChecked) {
       return;
     }
-    const formatDate = (date) => {
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = String(date.getFullYear());
-    
-      return `${day}/${month}/${year}`;
-    };
+  
     try {
       setIsSubmitted(true);
       const response = await axios.post(endpoints.submitIndividualForm, formData);
@@ -330,10 +286,10 @@ function KYC() {
       console.error('server error during form submission:', err);
       showErrorToast('An error occurred during submission. Please try again.'); 
     }
+    
   };
   
   
-
   const nextStep = () => {
      // check if all required fields are filled
      const requiredFields = document.querySelectorAll('input[required]');
@@ -347,9 +303,9 @@ function KYC() {
      });
  
     //  // if any required field is not filled, prevent form from moving to next step
-     if (!allFieldsFilled) {
-       return;
-     }
+    //  if (!allFieldsFilled) {
+    //    return;
+    //  }
  
     //  // if all required fields are filled, move to next step
      setStep(step + 1);

@@ -287,26 +287,27 @@ function CDD() {
 // for server side
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const requiredFields = document.querySelectorAll('input[required]');
-    let allFieldsFilled = true;
-    requiredFields.forEach(field => {
-      if (!field.value) {
-        allFieldsFilled = false;
-        const fieldName = field.getAttribute('name');
-        setFormErrors({...formErrors, [fieldName]: `${fieldName} is required`});
-      }
-    });
+   
+  const requiredFields = Array.from(document.querySelectorAll('input[required]'));
+  const privacyCheckbox = document.querySelector('input[name="privacy"]');
+  
+  const allFieldsFilled = requiredFields.every(field => field.value);
+  const privacyChecked = privacyCheckbox.checked;
 
-    const privacyCheckbox = document.querySelector('input[name="privacy"]');
-    if (!privacyCheckbox.checked) {
-      allFieldsFilled = false;
-      setFormErrors({...formErrors, privacyPolicy: `Privacy policy must be accepted`});
-    }
+  const newFormErrors = requiredFields.reduce((errors, field) => {
+    const fieldName = field.getAttribute('name');
+    return field.value ? errors : { ...errors, [fieldName]: `${fieldName} is required` };
+  }, {});
 
-    // if any required field is not filled, prevent form from moving to next step
-    if (!allFieldsFilled) {
-      return;
-    }
+  if (!privacyChecked) {
+    newFormErrors.privacyPolicy = 'Privacy policy must be accepted';
+  }
+
+  setFormErrors(newFormErrors);
+
+  if (!allFieldsFilled || !privacyChecked) {
+    return;
+  }
 
     try {
       setIsSubmitted(true);
