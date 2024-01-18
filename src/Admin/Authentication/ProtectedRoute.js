@@ -22,8 +22,7 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
             setIsLoading(false); // Set isLoading to false if userRole is cached
           }
 
-          const serverURL ='https://nem-server-rhdb.onrender.com'
-          //  || 'http://localhost:3001';
+          const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
           const response = await axios.post(`${serverURL}/check-user-role/${user.uid}`);
           const role = response.data.role;
 
