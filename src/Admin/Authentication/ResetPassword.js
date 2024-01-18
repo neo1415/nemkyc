@@ -52,7 +52,7 @@ const ResetPassword = () => {
   return (
     <div className='login'>
       <div className='loginTitle'>
-        <h2>Reset Your Password</h2>
+        <h2>Reset Your Password .</h2>
       </div>
       <form onSubmit={handlePasswordReset}>
         <div className='Inputs'>
