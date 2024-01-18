@@ -38,7 +38,7 @@ const FinancialInfo = ({handleChange, changeHandler, signature, identification, 
            <HiCloudUpload />   
            </div>
             </div>
-            <input type="file" id="signature" name="signature" onChange={changeHandler}  />
+            <input type="file" id="signature" name="signature" onChange={changeHandler} required />
             </label>
             <div className='Output'>
             {formErrors.signature && <div className='error'>{formErrors.signature}</div>}
@@ -55,7 +55,7 @@ const FinancialInfo = ({handleChange, changeHandler, signature, identification, 
            <HiCloudUpload />   
            </div>
             </div>
-             <input type="file" id="identification" name="identification" onChange={changeHandler}  />
+             <input type="file" id="identification" name="identification" onChange={changeHandler} required  />
             </label>
   
             <div className='Output'>
@@ -73,7 +73,7 @@ const FinancialInfo = ({handleChange, changeHandler, signature, identification, 
             agree to the purpose set-out in this clause 
             and our data privacy policy. Thank you.<span className="required-star">*</span>
           </label>
-          {formErrors.privacy && <span className="formErrors-message">{formErrors.privacy}</span>}
+          {formErrors.privacyPolicy && <span className="error">{formErrors.privacyPolicy}</span>}
 
     </div>
   )

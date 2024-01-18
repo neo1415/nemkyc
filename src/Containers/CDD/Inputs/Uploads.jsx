@@ -19,7 +19,7 @@ const Uploads = ({changeHandler,cac, identification, cacForm, formErrors, handle
             </div>
             </label>
            
-            <input type="file" id="cac" name="cac" onChange={changeHandler}  />
+            <input type="file" id="cac" name="cac" onChange={changeHandler} required />
             <div className='Output'>
             {formErrors.cac && <span className="error-message">{formErrors.cac}</span>}
             {cac && <div className='error'>{cac.name}</div>}
@@ -36,10 +36,10 @@ const Uploads = ({changeHandler,cac, identification, cacForm, formErrors, handle
             </div>
             </label>
   
-            <input type="file" id="identification" name="identification" onChange={changeHandler}   />
+            <input type="file" id="identification" name="identification" onChange={changeHandler} required  />
             <div className='Output'>
             {formErrors.identification && <span className="error-message">{formErrors.identification}</span>}
-                {identification && <div className='error'>{identification.name}</div>}
+            {identification && <div className='error'>{identification.name}</div>}
               </div>
               </div>
               </div>
@@ -59,10 +59,10 @@ const Uploads = ({changeHandler,cac, identification, cacForm, formErrors, handle
            </div>
             </div>
             </label>
-            <input type="file" id="cacForm" name="cacForm" onChange={changeHandler}  />
+            <input type="file" id="cacForm" name="cacForm" onChange={changeHandler} required />
             <div className='Output'>
             <div className='Output'>
-            {formErrors.tax && <span className="error-message">{formErrors.tax}</span>}
+            {formErrors.cacForm && <span className="error-message">{formErrors.cacForm}</span>}
                 {cacForm && <div className='error'>{cacForm.name}</div>}
                 </div>
               </div>
@@ -78,7 +78,7 @@ const Uploads = ({changeHandler,cac, identification, cacForm, formErrors, handle
                 agree to the purpose set-out in this clause 
                 and our data privacy policy. Thank you.<span className="-star">*</span>
               </label>
-              {formErrors.privacy && <span className="error-message">{formErrors.privacy}</span>}
+              {formErrors.privacyPolicy && <span className="error-message">{formErrors.privacyPolicy}</span>}
       </div>  
     </div>
   )

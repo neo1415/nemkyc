@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "nem-kyc"
-  }
+    "default": "nem-kyc",
+    "nem-feedback": "nem-customer-feedback-8d3fb"
+  },
+  "targets": {},
+  "etags": {}
 }
