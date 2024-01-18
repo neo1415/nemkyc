@@ -303,9 +303,9 @@ function KYC() {
      });
  
     //  // if any required field is not filled, prevent form from moving to next step
-    //  if (!allFieldsFilled) {
-    //    return;
-    //  }
+     if (!allFieldsFilled) {
+       return;
+     }
  
     //  // if all required fields are filled, move to next step
      setStep(step + 1);
