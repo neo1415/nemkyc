@@ -1,6 +1,6 @@
 {
   "projects": {
-    "default": "nem-kyc",
+    "default": "nem-customer-feedback-8d3fb",
     "nem-feedback": "nem-customer-feedback-8d3fb"
   },
   "targets": {},
