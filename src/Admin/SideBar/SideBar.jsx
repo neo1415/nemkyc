@@ -72,7 +72,7 @@ const Sidebar = () => {
           {userRole === 'admin' && (
             <Link to="/role-assignment">
               <li className="sideList">
-                <p>Role Assignment</p>
+                <p>User Management</p>
                 <div className="icon">
                   <HiUserAdd />
                 </div>

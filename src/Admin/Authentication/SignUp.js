@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import {
   TextField,
   Button,
@@ -12,7 +11,6 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   CircularProgress,
 } from '@mui/material';
 const theme = createTheme({
@@ -30,13 +28,12 @@ const UserRegistration = ({ onUserAdded }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
-  const navigate = useNavigate();
 
   const handleRegistration = async () => {
     setError('');
   
     // Define the server URL
-    const serverURL = process.env.REACT_APP_SERVER_URL || 'https://nem-server-rhdb.onrender.com';
+    const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
   
     // Define the registration endpoint
     const registrationEndpoint = `${serverURL}/register`;

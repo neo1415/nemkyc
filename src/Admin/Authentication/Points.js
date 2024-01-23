@@ -1,6 +1,6 @@
 // config.js
 
-export const serverURL = process.env.REACT_APP_SERVER_URL || 'https://nem-server-rhdb.onrender.com';
+export const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
 
 export const endpoints = {
   getUsers: `${serverURL}/get-users`,
