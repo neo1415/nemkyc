@@ -6,7 +6,7 @@ import {GridToolbarContainer} from '@mui/x-data-grid';
 import { GridToolbarExport } from "@mui/x-data-grid";
 import { UserAuth } from '../../Context/AuthContext';
 import { useNavigate } from "react-router-dom";
-import { collection, deleteDoc,Timestamp, doc,onSnapshot, orderBy, query } from "firebase/firestore";
+import { deleteDoc,getDoc,doc } from "firebase/firestore";
 import { db } from "../../APi/index";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
@@ -21,9 +21,26 @@ const List = () => {
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [isDateFilterActive, setIsDateFilterActive] = useState(false);
-  const [isFilterApplied, setIsFilterApplied] = useState(false);
+  const [setIsFilterApplied] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState([null, null]);
   const navigate = useNavigate(); 
+  const { user } = UserAuth();
+  const [userRole, setUserRole] = useState('');
+  
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (user) {
+        const userDocRef = doc(db, 'userroles', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+  
+        if (userDocSnap.exists()) {
+          setUserRole(userDocSnap.data().role);
+        }
+      }
+    };
+  
+    fetchUserRole();
+  }, [user]);
 
   const { logout } = UserAuth(); // Replace UserAuth with your authentication context
 
@@ -41,7 +58,7 @@ const List = () => {
   
       if (response.status === 200) {
         setData(response.data);
-        console.log(response.data)
+        // console.log(response.data)
       } else {
         console.error('Error fetching users:', response.statusText);
       }
@@ -127,25 +144,20 @@ const parseDate = (formattedDate) => {
       renderCell: (params, id) => {
         return (
           <div className="cellAction">
-
-            <div
-              className="deleteButton"
-              onClick={() => handleDelete(params.row.id)}
-            >
-              Delete
-            </div>
+            {userRole ==='admin' && (
+              <div
+                className="deleteButton"
+                onClick={() => handleDelete(params.row.id)}
+              >
+                Delete
+              </div>
+            )}
             <div
               className="viewButton"
               onClick={() => handleView(params.row.id)}
             >
               View
             </div>
-
-            <div>
-            
-           
-           </div>
-      
           </div>
         );
       },

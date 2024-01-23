@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { endpoints } from './Points';
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import UserRegistration from './SignUp';
 import {
@@ -23,10 +22,9 @@ import {
   createTheme,
   ThemeProvider,
   CircularProgress,
-  Backdrop,
 } from '@mui/material';
 import Sidebar from '../SideBar/SideBar';
-import { BsBadge4K, BsBadge8K } from 'react-icons/bs';
+import { BsBadge4K } from 'react-icons/bs';
 import './roles.scss'
 
 const theme = createTheme({
@@ -46,31 +44,27 @@ const RoleAssignment = () => {
   const [openModal, setOpenModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
-  const [selectedRoles, setSelectedRoles] = useState({});
-  const [roleDropdownOpen, setRoleDropdownOpen] = useState({});
-  const [userRoles, setUserRoles] = useState({}); // Store user roles in a state
-  const navigate = useNavigate();
 
 useEffect(() => {
-  const fetchData = async () => {
-    // Fetching data from the server endpoint that uses the real-time listener
-    const response = await axios.get(endpoints.getUsers);
+  // const fetchData = async () => {
+  //   // Fetching data from the server endpoint that uses the real-time listener
+  //   const response = await axios.get(endpoints.getUsers);
 
-    if (response.status === 200) {
-      setUsers(response.data.users);
-      // console.log('Initial users fetched successfully:', response.data.users);
-    } else {
-      console.error('Error fetching initial users:', response.statusText);
-    }
-  };
+  //   if (response.status === 200) {
+  //     setUsers(response.data.users);
+  //     // console.log('Initial users fetched successfully:', response.data.users);
+  //   } else {
+  //     console.error('Error fetching initial users:', response.statusText);
+  //   }
+  // };
 
   // Function to handle real-time updates
-  const handleRealTimeUpdates = (updatedUsers) => {
-    setUsers(updatedUsers);
-    console.log('Users updated in real-time:', updatedUsers);
-  };
+  // const handleRealTimeUpdates = (updatedUsers) => {
+  //   setUsers(updatedUsers);
+  //   console.log('Users updated in real-time:', updatedUsers);
+  // };
 
-  fetchData();
+  // fetchData();
 
   // Set up a real-time listener for changes in the Firestore data
 const realTimeListener = () => {
@@ -138,17 +132,17 @@ const openSuccessModal = () => {
 
   
   
-const handleSelectedUser = (uid) => {
-  setSelectedUser((prevSelectedUser) => {
-    // Toggle selected user
-    const newValue = prevSelectedUser === uid ? '' : uid;
+// const handleSelectedUser = (uid) => {
+//   setSelectedUser((prevSelectedUser) => {
+//     // Toggle selected user
+//     const newValue = prevSelectedUser === uid ? '' : uid;
 
-    // Close the role selection dropdown when a user is selected
-    setRoleDropdownOpen(false);
+//     // Close the role selection dropdown when a user is selected
+//     setRoleDropdownOpen(false);
 
-    return newValue;
-  });
-};
+//     return newValue;
+//   });
+// };
 
 const checkUserRole = async (uid, role) => {
   try {

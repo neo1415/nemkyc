@@ -1,10 +1,10 @@
 import React, { useState} from 'react';
 import './CDD.scss'
-import { db,storage } from '../../APi';
-import { setDoc,doc} from 'firebase/firestore'
-import { serverTimestamp } from 'firebase/firestore';
+import { storage } from '../../APi';
+// import { setDoc,doc} from 'firebase/firestore'
+// import { serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { v4 as uuidv4 } from 'uuid';
+// import { v4 as uuidv4 } from 'uuid';
 import { motion } from "framer-motion"
 import { Link } from 'react-router-dom';
 import useFormData from './FormData';
@@ -31,7 +31,7 @@ function CDD() {
   const [tax, setTax] = useState('');
   const [cacForm, setcacForm] = useState('');
   const [perc, setPerc] = useState(null)
-  const [error , setError]= useState(null)
+  const [ setError]= useState(null)
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { formData, setFormData } = useFormData();
   const [showOtherField, setShowOtherField] = useState(false);
@@ -105,9 +105,9 @@ function CDD() {
       }
     
       // File size validation: check if the file size is within the limit (5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      const maxSize = 2 * 1024 * 1024; // 5MB in bytes
       if (file.size > maxSize) {
-        showErrorToast('File size exceeds the limit (5MB). Please upload a smaller file.');
+        showErrorToast('File size exceeds the limit (2MB). Please upload a smaller file.');
         return;
       }
     
@@ -243,7 +243,7 @@ function CDD() {
     const fieldName = e.target.name;
   
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
     
     const isTypeValid = selectedFile && allowedTypes.includes(selectedFile.type);
     const isSizeValid = selectedFile && selectedFile.size <= maxSize;
@@ -251,7 +251,7 @@ function CDD() {
     if (!isTypeValid) {
       showErrorToast('Please select a PDF, JPG, or PNG file.');
     } else if (!isSizeValid) {
-      showErrorToast('File size exceeds the limit (5MB). Please upload a smaller file.');
+      showErrorToast('File size exceeds the limit (2MB). Please upload a smaller file.');
     }  else {
       setError('');
       switch (fieldName) {

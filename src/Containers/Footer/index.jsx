@@ -1,6 +1,6 @@
 import React from 'react'
 import './index.scss'
-import {BsTwitter, BsFacebook, BsInstagram, BsLinkedin, BsEnvelopeFill, BsPhoneFill, BsPinMapFill} from 'react-icons/bs'
+import {BsTwitter, BsFacebook, BsInstagram, BsLinkedin} from 'react-icons/bs'
 
 const Footer = () => {
   return (
@@ -17,13 +17,11 @@ const Footer = () => {
     <li><a href="https://nem-insurance.com/contact/Contact-Us">Contact us</a></li>
     <li><a href="https://nem-insurance.com/#">Our Services</a></li>
     <li><a href="https://nem-insurance.com/site/privacy-policy">Privacy Policy</a></li>
-    <li><a href="https://nem-insurance.com/site/terms-of-use">Terms & Conditions</a></li>
-    <li><a href="https://nem-insurance.com/career.php">Career</a></li>
     </ul>
     </div>
     <hr className='hr'></hr>
     <div className="row">
-    NEM insurance Plc Copyright © 2023 NEM Insurance Plc - All rights reserved 
+    NEM insurance Plc Copyright © 2024 NEM Insurance Plc - All rights reserved 
     </div>
     </div>
   )
