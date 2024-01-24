@@ -2,14 +2,11 @@ import { DataGrid } from "@mui/x-data-grid";
 import { userColumns} from "../Table/datatablesource";
 import { useState, useEffect } from "react";
 import { collection,onSnapshot, orderBy, query } from "firebase/firestore";
-import {auth, db } from "../../APi/index";
-import { useAuthState } from 'react-firebase-hooks/auth';
-
+import {db } from "../../APi/index";
 
 const List = () => {
   const [data, setData] = useState([]);
  
-    const [user] = useAuthState(auth)
   
   useEffect(()=> {
     const dataRef = collection(db, 'corporate-kyc')

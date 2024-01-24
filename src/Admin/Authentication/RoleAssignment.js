@@ -22,6 +22,7 @@ import {
   createTheme,
   ThemeProvider,
   CircularProgress,
+  Backdrop
 } from '@mui/material';
 import Sidebar from '../SideBar/SideBar';
 import { BsBadge4K } from 'react-icons/bs';
@@ -67,7 +68,9 @@ useEffect(() => {
   // fetchData();
 
   // Set up a real-time listener for changes in the Firestore data
+  setIsLoading(true);
 const realTimeListener = () => {
+
   const eventSource = new EventSource(endpoints.listenForUpdates);
 
   eventSource.onmessage = (event) => {
@@ -80,6 +83,7 @@ const realTimeListener = () => {
     } else {
       console.error('Received data is not an array:', responseData);
     }
+    setIsLoading(false); // Set loading to false after fetching the users
   };
 
   eventSource.onerror = (error) => {
@@ -239,6 +243,15 @@ return (
     </Button>
 
     <ToastContainer />
+
+         {/* Display loading spinner */}
+         <Backdrop
+          sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+          open={isLoading}
+        >
+          <CircularProgress color="inherit" />
+        </Backdrop>
+
 
       {/* Display user details in a table */}
       <TableContainer component={Paper}>

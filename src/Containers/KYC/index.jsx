@@ -28,7 +28,7 @@ function KYC() {
   const [identification, setIdentification] = useState('');
   const [signature, setSignature] = useState('');
   const [perc, setPerc] = useState(null)
-  const [setError]= useState(null)
+  const [error,setError]= useState(null)
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { formData, setFormData } = useFormData();
   const [showOtherField, setShowOtherField] = useState(false);
@@ -399,7 +399,7 @@ function KYC() {
         </Backdrop>
       )}
         <h3>Financial Details</h3>\
-        <p className='file-type'>Uploads should not be more than 5mb</p>
+        <p className='file-type'>Uploads should not be more than 2mb</p>
         <p className='file-type'>Only pdf, jpg and png files are allowed</p>
           <FinancialInfo 
             changeHandler={changeHandler} 

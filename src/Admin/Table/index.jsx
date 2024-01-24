@@ -8,6 +8,7 @@ import { UserAuth } from '../../Context/AuthContext';
 import { useNavigate } from "react-router-dom";
 import { deleteDoc,getDoc,doc } from "firebase/firestore";
 import { db } from "../../APi/index";
+import { CircularProgress } from '@mui/material';
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
@@ -16,6 +17,22 @@ import useAutoLogout from '../../Components/Timeout';
 import axios from "axios";
 import { endpoints } from '../Authentication/Points';
 
+function CustomLoadingOverlay() {
+  return (
+    <div style={{
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}>
+      <CircularProgress />
+    </div>
+  );
+}
 
 const List = () => {
   const [data, setData] = useState([]);
@@ -23,6 +40,7 @@ const List = () => {
   const [isDateFilterActive, setIsDateFilterActive] = useState(false);
   const [setIsFilterApplied] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState([null, null]);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate(); 
   const { user } = UserAuth();
   const [userRole, setUserRole] = useState('');
@@ -54,14 +72,16 @@ const List = () => {
   
   useEffect(() => {
     const fetchData = async () => {
+      setIsLoading(true); // Set loading to true before fetching the data
       const response = await axios.get(endpoints.getCorporateData);
-  
+      
       if (response.status === 200) {
         setData(response.data);
         // console.log(response.data)
       } else {
-        console.error('Error fetching users:', response.statusText);
+        // console.error('Error fetching users:', response.statusText);
       }
+      setIsLoading(false);
     };
   
     fetchData();
@@ -210,17 +230,19 @@ const parseDate = (formattedDate) => {
           </Grid>
         </div>
       </div>
-      <DataGrid
-      components={{
-      Toolbar: CustomToolbar,
-      }}
-        className="datagrid"
-        columns={actionColumn.concat(userColumns)}
-        rows={filteredData}
-        pageSize={8}
-        rowsPerPageOptions={[9]}
-        checkboxSelection
-      />
+          <DataGrid
+            components={{
+              Toolbar: CustomToolbar,
+              LoadingOverlay: CustomLoadingOverlay,// Custom loading overlay
+            }}
+            className="datagrid"
+            columns={actionColumn.concat(userColumns)}
+            rows={filteredData}
+            pageSize={8}
+            rowsPerPageOptions={[9]}
+            checkboxSelection
+            loading={isLoading} // Use the loading prop
+          />
     </div>
     </div>
     

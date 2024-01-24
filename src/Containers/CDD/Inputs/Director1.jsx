@@ -1,4 +1,4 @@
-import React,{useState} from 'react'
+import React from 'react'
 
 const Director1 = ({handleChange,formErrors,formData,handleIdTypeChange, handleSourceOfIncomeChange, showOtherIdType,
   showOtherSourceOfIncome}) => {
