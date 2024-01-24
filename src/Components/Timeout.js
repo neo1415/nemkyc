@@ -47,7 +47,7 @@ function useAutoLogout({ timeoutDuration, logout, redirectPath }) {
       window.removeEventListener('visibilitychange', setInactive);
       clearInterval(logoutTimer);
     };
-  }, [isActive, logout, navigate, redirectPath]);
+  }, [isActive,timeoutDuration, logout, navigate, redirectPath]);
 }
 
 export default useAutoLogout;

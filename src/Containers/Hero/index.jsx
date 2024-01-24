@@ -7,7 +7,7 @@ const Hero = () => {
     <div className="hero-flex">
 <div className="content">
   <h2 className="heading">NEM INSURANCE CUSTOMER FEEDBACK</h2>
-  <p className="sub">Your Digital Gateway to Seamless, Comprehensive Insurance Services</p>
+  <p className="sub">For Efficient Communication and prompt feedback services</p>
 <a className="smooth-scroll" href='#section'>
   <button className="main__button">Get started</button>
   </a>

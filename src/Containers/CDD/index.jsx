@@ -31,7 +31,7 @@ function CDD() {
   const [tax, setTax] = useState('');
   const [cacForm, setcacForm] = useState('');
   const [perc, setPerc] = useState(null)
-  const [ setError]= useState(null)
+  const [ error,setError]= useState(null)
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { formData, setFormData } = useFormData();
   const [showOtherField, setShowOtherField] = useState(false);
@@ -527,7 +527,7 @@ function CDD() {
       className="form-step">
 
         <h3>File Uploads</h3>
-        <p className='file-type'>Uploads should not be more than 5mb</p>
+        <p className='file-type'>Uploads should not be more than 2mb</p>
         <p className='file-type'>Only pdf, jpg and png files are allowed</p>
         {!uploading && perc === 100 && <div>File uploaded successfully!</div>}
         {isUploading && (

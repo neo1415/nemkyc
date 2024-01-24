@@ -74,7 +74,7 @@ useEffect(() => {
     }
   };
   fetchData();
-}, []);
+});
 
 
 
