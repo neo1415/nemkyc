@@ -2,12 +2,9 @@ import React from 'react'
 
 const CompanyDetails = ({handleChange,formErrors,formData, showOtherField, handleSelectChange}) => {
 
-
   return (
-    <div>
-      
+    <div>    
         <div className='flex-form'>
-
         <div className='flex-one'>
         <label htmlFor="companyName">Company Name <span className='required'>*</span></label>
         <input type="text" id="companyName" name="companyName" placeholder='Company Name' value={formData.companyName} onChange={handleChange} required />
@@ -64,14 +61,13 @@ const CompanyDetails = ({handleChange,formErrors,formData, showOtherField, handl
       )}
           {formErrors.companyLegalForm && <span className="error-message">{formErrors.companyLegalForm}</span>}
 
+        </div>
+
+        <div className='flex-two'>
 
         <label htmlFor="dateOfIncorporationRegistration">Date of Incorporation Registration</label>
         <input type="date" id="dateOfIncorporationRegistration" name="dateOfIncorporationRegistration" value={formData.dateOfIncorporationRegistration} onChange={handleChange} />
         {/* {formErrors.dateOfIncorporationRegistration && <span className="error-message">{formErrors.dateOfIncorporationRegistration}</span>} */}
-
-        </div>
-
-        <div className='flex-two'>
 
         <label htmlFor="emailAddress">Email Address <span className='required'>*</span></label>
         <input type="email" id="emailAddress" placeholder='Email Address' name="emailAddress" value={formData.emailAddress} onChange={handleChange} required />

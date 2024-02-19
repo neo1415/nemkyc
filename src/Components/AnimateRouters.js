@@ -4,6 +4,7 @@ import Home from '../Pages/Home';
 import { AnimatePresence } from 'framer-motion';
 import CDD from '../Containers/CDD';
 import KYC from './../Containers/KYC';
+import Corporate from '../Containers/Corporate';
 
 const AnimateRouters = () => {
 
@@ -20,6 +21,8 @@ const AnimateRouters = () => {
             element = {<CDD />} />
             <Route exact path="/individual-kyc"
             element = {<KYC />} />
+            <Route exact path="/corporate"
+            element={<Corporate />} />  
         </Routes>
     </AnimatePresence>
 

@@ -64,8 +64,8 @@ const AdditionalInfo = ({handleChange, formErrors, formData,showOtherField, hand
             <div className='flex-two'>
 
              <label htmlFor="BVNNumber">BVN</label>
-            <input type="number" id="identificationNumber" placeholder='BVN' name="BVNNumber" value={formData.BVNNumber} onChange={handleChange} />
-             {/* {formErrors.BVNNumber && <span className="error-message">{formErrors.BVNNumber}</span>} */}
+            <input type="number" id="identificationNumber" placeholder='BVN' name="BVNNumber" value={formData.BVNNumber} onChange={handleChange} required />
+             {formErrors.BVNNumber && <span className="error-message">{formErrors.BVNNumber}</span>}
 
       <label htmlFor="identificationType">ID Type <span className='required'>*</span></label>
       {/* Show the select field with options */}
@@ -81,7 +81,6 @@ const AdditionalInfo = ({handleChange, formErrors, formData,showOtherField, hand
         <option value="NIMC">NIMC</option>
         <option value="Drivers licence">Drivers Licence</option>
         <option value="Voters Card">Voters Card</option>
-        <option value="Other">Other</option>
       </select>
 
       {showOtheridentificationType && (
