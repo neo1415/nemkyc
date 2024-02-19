@@ -92,7 +92,6 @@ const Director2 = ({handleChange,formData,formErrors,handleIdType2Change, showOt
         <option value="NIMC">NIMC</option>
         <option value="Drivers licence">Drivers Licence</option>
         <option value="Voters Card">Voters Card</option>
-        <option value="Other">Other</option>
       </select>
 
       {showOtherField2 && (
@@ -125,7 +124,7 @@ const Director2 = ({handleChange,formData,formErrors,handleIdType2Change, showOt
        <input type="date" id="expiryDate2" placeholder='Expiry Date' name="expiryDate2" value={formData.expiryDate2} onChange={handleChange} />
        {formErrors.expiryDate2 && <span className="error-message">{formErrors.expiryDate2}</span>}
 
-       <label htmlFor="sourceOfIncome2">Source Of Income <span className='required'>*</span></label>
+       <label htmlFor="sourceOfIncome2">Source Of Income </label>
       {/* Show the select field with options */}
       <select
         id="sourceOfIncome2"

@@ -180,14 +180,14 @@ function CDD() {
     let sanitizedValue = value;
 
     if (type === 'email') {
-      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      // Only trigger validation error if the input is not in progress
-      if (value.trim() !== '' && value.indexOf('com') !== -1 && !emailRegex.test(value)) {
-        setFormErrors({ ...formErrors, [name]: 'Please enter a valid email address' });
-      } else {
-        setFormErrors({ ...formErrors, [name]: null });
-        sanitizedValue = value.trim();
-      }
+      const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+
+      sanitizedValue = DOMPurify.sanitize(value).trim();
+    if (sanitizedValue !== '' && !emailRegex.test(sanitizedValue)) {
+      setFormErrors({ ...formErrors, [name]: 'Please enter a valid email address' });
+    } else {
+      setFormErrors({ ...formErrors, [name]: null });
+    }
     } else if (type === 'number') {
       if (name === 'accountNumber' || name === 'telephoneNumber' || name ==='employersPhoneNumber' || name ==='phoneNumber') {
         sanitizedValue = value.replace(/[^+0-9]/g, "");

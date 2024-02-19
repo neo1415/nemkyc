@@ -44,23 +44,24 @@ const Director1 = ({handleChange,formErrors,formData,handleIdTypeChange, handleS
                        
             <label htmlFor="phoneNumber">Phone Number  <span className='required'>*</span> </label>
             <input type="number" id="phoneNumber" placeholder='Phone Number' name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} required />
-           
+            {formErrors.phoneNumber && <span className="error-message">{formErrors.phoneNumber}</span>}
 
-            <label htmlFor="BVNNumber">BVN </label>
-            <input type="number" placeholder='BVN' id="BVNNumber" name="BVNNumber" value={formData.BVNNumber} onChange={handleChange} />
-            {/* {formErrors.BVNNumber && <span className="error-message">{formErrors.BVNNumber}</span>} */}
+            <label htmlFor="BVNNumber">BVN  <span className='required'>*</span> </label>
+            <input type="number" placeholder='BVN' id="BVNNumber" name="BVNNumber" value={formData.BVNNumber} onChange={handleChange} required />
+            {formErrors.BVNNumber && <span className="error-message">{formErrors.BVNNumber}</span>}
 
 </div>
      <div className='flex-two'>
 
-            <label htmlFor="employersName">Employers Name</label>
-            <input type="text" placeholder='Employers Name' id="employersName" name="employersName" value={formData.employersName} onChange={handleChange} />
-           
-            <label htmlFor="employersPhoneNumber">Employer's Phone Number </label>
-            <input type="number" id="employersPhoneNumber" placeholder='Phone Number' name="employersPhoneNumber" value={formData.employersPhoneNumber} onChange={handleChange} />
-           
+            <label htmlFor="employersName"> Employers Name <span className='required'>*</span> </label>
+            <input type="text" placeholder='Employers Name' id="employersName" name="employersName" value={formData.employersName} onChange={handleChange} required/>
+            {formErrors.employersName && <span className="error-message">{formErrors.employersName}</span>}
 
-     <label htmlFor="residentialAddress">Residential Address <span className='required'>*</span></label>
+            <label htmlFor="employersPhoneNumber">Employer's Phone Number <span className='required'>*</span> </label>
+            <input type="number" id="employersPhoneNumber" placeholder='Phone Number' name="employersPhoneNumber" value={formData.employersPhoneNumber} onChange={handleChange} required />
+            {formErrors.employersPhoneNumber && <span className="error-message">{formErrors.employersPhoneNumber}</span>}
+
+            <label htmlFor="residentialAddress">Residential Address <span className='required'>*</span></label>
             <input type="text" id="residentialAddress" placeholder='Residential Address' name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} required/>
             {formErrors.residentialAddress && <span className="error-message">{formErrors.residentialAddress}</span>}
           
@@ -90,7 +91,6 @@ const Director1 = ({handleChange,formErrors,formData,handleIdTypeChange, handleS
         <option value="NIMC">NIMC</option>
         <option value="Drivers licence">Drivers Licence</option>
         <option value="Voters Card">Voters Card</option>
-        <option value="Other">Other</option>
       </select>
 
       {showOtherIdType && (
