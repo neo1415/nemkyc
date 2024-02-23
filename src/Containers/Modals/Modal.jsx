@@ -71,7 +71,7 @@ export default function TransitionModal() {
             />
             <Button
               component={Link}
-              to="/corporate-kyc"
+              to="/corporate"
               disabled={!agreed}
             >
              Continue

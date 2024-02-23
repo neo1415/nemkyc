@@ -17,12 +17,12 @@ const AnimateRouters = () => {
         <Routes location={location} key={location.pathname} >
             <Route exact path="/"
             element = {<Home />} />
-            <Route exact path="/corporate-kyc"
-            element = {<CDD />} />
+            <Route exact path="/corporate"
+            element = {<Corporate />} />
             <Route exact path="/individual-kyc"
             element = {<KYC />} />
-            <Route exact path="/corporate"
-            element={<Corporate />} />  
+            {/* <Route exact path="/corporate"
+            element={<Corporate />} />   */}
         </Routes>
     </AnimatePresence>
 

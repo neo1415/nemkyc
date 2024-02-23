@@ -2,10 +2,14 @@ import React,{useState} from 'react'
 import {Controller} from 'react-hook-form'
 import '../CDD.scss'
 
-const Director2 = ({register, errors, formValues, watch, control}) => {
+const Director2 = ({register, errors, formValues, control}) => {
 
-  const IDType= watch("idType2", "");
-  const sourceOfIncome2= watch("sourceOfIncome2", "");
+  const [showOtherIncomeField2, setShowOtherIncomeField2] = useState(false);
+
+  const handleIncomeSelectChange2 = (value) => {
+    setShowOtherIncomeField2(value === 'Other');
+    return value === 'Other' ? '' : value;
+  };
 
   console.log('Form values:', formValues); 
   return (
@@ -36,7 +40,7 @@ const Director2 = ({register, errors, formValues, watch, control}) => {
       <input type='text' {...register("country2", { required: false })} placeholder='Country' />
       {errors.country2 && <span className="error-message">This field is required</span>}
 
-      <label htmlFor="occupation2">Place Of Birth </label>
+      <label htmlFor="occupation2">Occupation </label>
       <input type='text' {...register("occupation2", { required: false })} placeholder='Occupation' />
       {errors.occupation2 && <span className="error-message">This field is required</span>}
 
@@ -62,7 +66,6 @@ const Director2 = ({register, errors, formValues, watch, control}) => {
 
       <label htmlFor="employersPhoneNumber2">employers Phone Number </label>
       <input  type="number"{...register("employersPhoneNumber2",{ required: false })} placeholder='employersPhoneNumber' />
-      {errors.emailAddress2 && <span className="error-message">Please enter a valid number</span>}
 
       <label htmlFor="residentialAddress2">Residential Address </label>
       <input type='text' {...register("residentialAddress2", { required: false,})} placeholder='Residential Address' />
@@ -70,7 +73,6 @@ const Director2 = ({register, errors, formValues, watch, control}) => {
 
       <label htmlFor="taxIDNumber2">Tax ID Number </label>
       <input type='text' {...register("taxIDNumber2",  { required: false })} placeholder='Tax Identification Number' />
-      {errors.taxIDNumber2 && <span className="error-message">THis field is required</span>}
 
       <label htmlFor="idType2">ID Type</label>
         <Controller
@@ -90,7 +92,6 @@ const Director2 = ({register, errors, formValues, watch, control}) => {
           )}
         />
     
-      {errors.idType2 && <span className="error-message">This field is required</span>}
 
       <label htmlFor="idNumber2">Identification Number </label>
       <input type="text" {...register("idNumber2", { required: false, minLength: 5, maxLength: 15 })} placeholder='Identification Number' />
@@ -108,21 +109,29 @@ const Director2 = ({register, errors, formValues, watch, control}) => {
       <input type="date" {...register("expiryDate2", { required: false, minLength: 10, maxLength: 15 })} placeholder='Expiry Date' />
       {errors.expiryDate2 && <span className="error-message">This Field is Required</span>}
 
-      <label htmlFor="sourceOfIncome2">ID Type</label>
-        <Controller
-          name="sourceOfIncome2"
-          control={control}
-          defaultValue=""
-          render={({ field }) => (
-            <select {...field}>
-              <option value="Choose Income Source">Choose Income Source</option>
-              <option value="salaryOrBusinessIncome">Salary Or Business Income</option>
-              <option value="investmentsOrDividends">Investments Or Dividends</option>
-              {/* <option value="Other">Other(please specify)</option> */}
-            </select>
-          )}
-        />
-      {errors.sourceOfIncome2 && <span className="error-message">This field is required</span>}
+      <label htmlFor="sourceOfIncome2">ID Type </label>
+<Controller
+  name="sourceOfIncome2"
+  control={control}
+  rules={{ required: 'ID Type is required' }}
+  defaultValue=""
+  render={({ field }) => (
+    showOtherIncomeField2 ? (
+      <input
+        {...field}
+        type="text"
+        placeholder='Specify Your Income Source'
+      />
+    ) : (
+      <select {...field} onChange={(e) => field.onChange(handleIncomeSelectChange2(e.target.value))}>
+        <option value="Choose Income Source">Choose Income Source</option>
+        <option value="salaryOrBusinessIncome">Salary Or Business Income</option>
+        <option value="investmentsOrDividends">Investments Or Dividends</option>
+        <option value="Other">Other(please specify)</option>
+      </select>
+    )
+  )}
+/>
 
         </div>
         </div>

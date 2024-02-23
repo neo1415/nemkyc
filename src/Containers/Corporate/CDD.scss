@@ -193,7 +193,7 @@ h3{
 
 }
 select{
-  height: 4rem !important;
+  height: 2.5rem !important;
 }
 .picture{
   width: 22rem;
@@ -332,4 +332,16 @@ h6{
   font-weight: 400;
   font-size: 1rem;
   margin-top: -0.7rem;
+}
+
+.sub-checkbox{
+  text-align: center !important;
+  width: auto;
+  @media screen and (min-width:1000px){
+    width: 45rem;
+  }
+}
+
+.checkerror{
+  text-align: center !important;
 }
