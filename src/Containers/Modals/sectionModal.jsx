@@ -79,7 +79,7 @@ const CorporateWrapper = () => {
             />
             <Button
               component={Link}
-              to="/corporate-kyc"
+              to="/corporate"
               disabled={!agreed}
             >
               Continue

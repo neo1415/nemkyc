@@ -1,10 +1,9 @@
 import React from 'react';
-import Backdrop from '@mui/material/Backdrop';
-import Box from '@mui/material/Box';
-import Modal from '@mui/material/Modal';
-import Fade from '@mui/material/Fade';
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
-import Typography from '@mui/material/Typography';
 
 const style = {
   position: 'absolute',
@@ -19,7 +18,7 @@ const style = {
   p: 10,
 };
 
-const SubmitModal = ({closeModal, resetForm}) => {
+const SubmitModal = ({closeModal, resetForm, isSubmitted}) => {
   const handleClose = () => {
     closeModal()
   };
@@ -30,29 +29,20 @@ const SubmitModal = ({closeModal, resetForm}) => {
 
   return (
     <div>
-      <Modal
-        aria-labelledby="transition-modal-title"
-        aria-describedby="transition-modal-description"
-        open={true}
-        onClose={handleClose}
-        closeAfterTransition
-        slots={{ backdrop: Backdrop }}
-        slotProps={{
-          backdrop: {
-            timeout: 500,
-          },
-        }}
-      >
-        <Fade in={true}>
-          <Box sx={style}>
-            <Typography id="transition-modal-title" variant="h6" component="h2">
-              Thank you, your form has been submitted!
-            </Typography>
-            <Button onClick={newForm}>Submit a New Form</Button>
-            <Button onClick={handleClose}>Close</Button>
-          </Box>
-        </Fade>
-      </Modal>
+   <Dialog open={isSubmitted} onClose={closeModal} aria-labelledby="form-dialog-title">
+  <DialogTitle id="form-dialog-title">Form Submitted</DialogTitle>
+  <DialogContent>
+    <p>Your form has been successfully submitted!</p>
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={closeModal} color="primary">
+      Close
+    </Button>
+        <Button onClick={resetForm} color="primary">
+      Reset Form
+    </Button>
+  </DialogActions>
+</Dialog>
     </div>
   );
 };

@@ -6,8 +6,8 @@ const Hero = () => {
   return (
     <div className="hero-flex">
 <div className="content">
-  <h2 className="heading">NEM INSURANCE CUSTOMER FEEDBACK</h2>
-  <p className="sub">For Efficient Communication and prompt feedback services</p>
+<h2 className="heading">NEM INSURANCE KYC/CDD Information Collection Center</h2>
+  <p className="sub">Streamlined KYC and CDD Solutions for Secure Online Transactions.</p>
 <a className="smooth-scroll" href='#section'>
   <button className="main__button">Get started</button>
   </a>

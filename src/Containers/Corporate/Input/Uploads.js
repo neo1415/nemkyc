@@ -1,6 +1,5 @@
 import React,{useState} from 'react';
 import { useForm,FormProvider } from 'react-hook-form';
-import HandleFileUpload from '../HandleFileUpload';
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -16,10 +15,10 @@ import Fade from '@mui/material/Fade';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
-const FileUpload = ({control, setFileUrls, errors}) => {
+const FileUpload = ({control, setFileUrls, errors,fileNames, setFileNames, trigger}) => {
   
   const [perc, setPerc] = useState(null)
-  const [fileNames, setFileNames] = useState({});
+
   const [open, setOpen] = useState(false);
 
   const methods = useForm();
@@ -43,12 +42,6 @@ const FileUpload = ({control, setFileUrls, errors}) => {
 
   const handleFileUpload = async (file, fieldName) => {
     if (file) {
-      // Generate a unique filename using a timestamp
-
-      const timestamp = Date.now();
-      const fileName = `${timestamp}_${file.name}`;
-      setFileNames(prevState => ({...prevState, [fieldName]: file.name}));
-    
       // File type validation: check if the file is a PDF, JPG, or PNG
       const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
       if (!allowedTypes.includes(file.type)) {
@@ -62,6 +55,13 @@ const FileUpload = ({control, setFileUrls, errors}) => {
         showErrorToast('File size exceeds the limit (2MB). Please upload a smaller file.');
         return;
       }
+
+      // Generate a unique filename using a timestamp
+
+      const timestamp = Date.now();
+      const fileName = `${timestamp}_${file.name}`;
+      setFileNames(prevState => ({...prevState, [fieldName]: file.name}));
+    
     
       // Construct the storage path
       const storagePath = `corporate-kyc-file-submissions/${fieldName}/${fileName}`;
@@ -84,10 +84,18 @@ const FileUpload = ({control, setFileUrls, errors}) => {
           setOpen(false);
         },
         () => {
-          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-            // Update the fileUrls state instead of setting the value of the file input
-            setFileUrls(prevState => ({...prevState, [fieldName]: downloadURL}));
-  
+            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+              // Update the fileUrls state and then trigger validation
+              setFileUrls(prevState => {
+                const updatedState = {...prevState, [fieldName]: downloadURL};
+                console.log(`File uploaded: ${fieldName} URL: ${downloadURL}`);
+                
+                // Trigger validation after state update
+                trigger(fieldName);
+            
+                return updatedState;
+              });
+            
             showSuccessToast();
               // Close the dialog
             setOpen(false);
@@ -105,11 +113,16 @@ const FileUpload = ({control, setFileUrls, errors}) => {
     <FormProvider {...methods}>
     <div>
        <div className='upload-flex'>
-       <div className='flex-upload'></div>
-       <Controller
+       <div className='flex-upload'>
+        <div className='upload-form'>
+          <Controller
         name="cac"
         control={control}
-        rules={{ required: true }}
+        rules={{
+          validate: {
+            required: value => value[0] || 'CAC Certificate is required',
+          },
+        }}
         render={({ field, fieldState: { error } }) => (
     <div className='uploader'>
       <label htmlFor="cac" className='upload'>
@@ -132,7 +145,7 @@ const FileUpload = ({control, setFileUrls, errors}) => {
         }}
         style={{ display: 'none' }} // Hide the actual input but keep it functional
       />
-      {error && <span className="error-message">This field is required</span>}
+     {error && !fileNames.cac && <span className="error-message">This field is required</span>}
       {/* Display the file name and errors here */}
       <div className='Output'>
       {fileNames.cac && <div>{fileNames.cac}</div>}
@@ -140,11 +153,16 @@ const FileUpload = ({control, setFileUrls, errors}) => {
     </div>
         )}
         />
-
-      <Controller
+          </div>
+          <div className='upload-form'>
+          <Controller
         name="identification"
         control={control}
-        rules={{ required: true }}
+        rules={{
+    validate: {
+      required: value => value.length > 0 || 'Identification is required',
+    },
+  }}
         render={({ field, fieldState: { error } }) => (
     <div className='uploader'>
       <label htmlFor="identification" className='upload'>
@@ -167,24 +185,32 @@ const FileUpload = ({control, setFileUrls, errors}) => {
         }}
         style={{ display: 'none' }} // Hide the actual input but keep it functional
       />
-      {error && <span className="error-message">This field is required</span>}
+  {error && !fileNames.identification && <span className="error-message">This field is required</span>}
       {/* Display the file name and errors here */}
       <div className='Output'>
       {fileNames.identification && <div>{fileNames.identification}</div>}
+    
       </div>
     </div>
         )}
         />
+          </div>
+        </div>
       
     </div>
 
-    <div className='flex-upload'>
-    <h6>For NAICOM Regulated Companies</h6>
+    <div className='upload-flex'>
+    <div className='upload-form'>
     <div className='uploader'>
+    <h6>For NAICOM Regulated Companies</h6>
     <Controller
         name="cacForm"
         control={control}
-        rules={{ required: true }}
+        rules={{
+          validate: {
+            required: value => value[0] || 'NAICOM Certificate is required',
+          },
+        }}
         render={({ field, fieldState: { error } }) => (
     <div className='uploader'>
       <label htmlFor="cacForm" className='upload'>
@@ -207,7 +233,7 @@ const FileUpload = ({control, setFileUrls, errors}) => {
         }}
         style={{ display: 'none' }} // Hide the actual input but keep it functional
       />
-      {error && <span className="error-message">This field is required</span>}
+      {error && !fileNames.cacForm && <span className="error-message">This field is required</span>}
       {/* Display the file name and errors here */}
       <div className='Output'>
       {fileNames.cacForm && <div>{fileNames.cacForm}</div>}
@@ -216,10 +242,14 @@ const FileUpload = ({control, setFileUrls, errors}) => {
         )}
         />
         </div>
-        <Controller
+    </div>
+    </div>
+    <Controller
           name="checkbox"
           control={control}
-          rules={{ required: true }}
+          rules={{
+    required: 'Checkbox is required' // This is the message that will be displayed if the checkbox is not checked
+  }}
           render={({ field }) => (
             <FormControlLabel
             className='sub-checkbox'
@@ -232,9 +262,7 @@ const FileUpload = ({control, setFileUrls, errors}) => {
             />
           )}
         />
-        {errors.checkbox && <Typography color="error">* Checkbox is required</Typography>}
-    </div>
-    
+       {errors.checkbox && <Typography className='checkerror' color="error">{errors.checkbox.message}</Typography>}
     <Modal
       open={open}
       onClose={() => setOpen(false)}
@@ -270,15 +298,6 @@ const FileUpload = ({control, setFileUrls, errors}) => {
 
       </Fade>
     </Modal>
-        {/* <label htmlFor="privacy">
-                <input type="checkbox" id="privacy" name="privacy" onChange={handleChange} style={{border:'3rem solid black'}} />
-                Please note that your data will be treated 
-                with the utmost respect and privacy as  by law.
-                By checking this box, you acknowledge and 
-                agree to the purpose set-out in this clause 
-                and our data privacy policy. Thank you.<span className="-star">*</span>
-              </label>
-              {formErrors.privacyPolicy && <span className="error-message">{formErrors.privacyPolicy}</span>} */}
       </div>  
   
   </FormProvider>
