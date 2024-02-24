@@ -1,5 +1,5 @@
 import * as yup from 'yup';
-import { sanitizeDate, sanitizeNumber, sanitizeURL,sanitizeEmail, sanitizeString } from '../../Components/SanitizationUtils';
+import { sanitizeEmail, sanitizeString } from '../../Components/SanitizationUtils';
 
 export const schema1 = yup.object().shape({
   companyName: yup.string().required('Company Name is required').min(3).max(50).transform(sanitizeString),
