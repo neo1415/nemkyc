@@ -11,11 +11,12 @@ import { db } from "../../APi/index";
 import { CircularProgress } from '@mui/material';
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
-import Grid from "@mui/material/Grid";
 import SideBar from "../SideBar/SideBar";
 import useAutoLogout from '../../Components/Timeout';
 import axios from "axios";
 import { endpoints } from '../Authentication/Points';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 
 function CustomLoadingOverlay() {
   return (
@@ -36,11 +37,14 @@ function CustomLoadingOverlay() {
 
 const List = () => {
   const [data, setData] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [filteredData, setFilteredData] = useState([]);
-  const [isDateFilterActive, setIsDateFilterActive] = useState(false);
-  const [setIsFilterApplied] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState([null, null]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showFilterOptions, setShowFilterOptions] = useState(false);
+const [activeFilter, setActiveFilter] = useState(null);
+const [anchorEl, setAnchorEl] = useState(null);
+
   const navigate = useNavigate(); 
   const { user } = UserAuth();
   const [userRole, setUserRole] = useState('');
@@ -69,6 +73,43 @@ const List = () => {
     redirectPath: '/signin', // Specify the redirect path
   });
 
+  // Function to handle the date range change
+  const handleDateRangeChange = (date, isStartDate) => {
+    // Convert the date to YYYY-MM-DD format for the input
+    const formattedDate = date ? date.toISOString().split('T')[0] : null;
+    setSelectedDateRange((prevDates) => {
+      if (isStartDate) {
+        return [formattedDate, prevDates[1]];
+      } else {
+        return [prevDates[0], formattedDate];
+      }
+    });
+  };
+  
+  
+  const handleClick = (event) => {
+    if (showFilterOptions || activeFilter) {
+      // Reset filters when closing the filter options
+      setActiveFilter(null);
+      setSelectedDateRange([null, null]);
+      setSearchTerm('');
+      setShowFilterOptions(false);
+    } else {
+      setAnchorEl(event.currentTarget);
+    }
+  };
+  
+
+const handleClose = () => {
+  setAnchorEl(null);
+};
+
+const selectFilterOption = (filterOption) => {
+  setActiveFilter(filterOption);
+  setShowFilterOptions(false); // Close the filter options menu
+  handleClose(); // Close the menu
+};
+
   
   useEffect(() => {
     const fetchData = async () => {
@@ -88,51 +129,40 @@ const List = () => {
   }, []);
   
   //date filter
-useEffect(() => {
-  const [startDate, endDate] = selectedDateRange;
-
-  if (startDate && endDate) {
-    // Adjust the end date to include the entire day
-    const adjustedEndDate = new Date(endDate);
-    adjustedEndDate.setDate(adjustedEndDate.getDate() + 1);
-    const filteredData = data.filter((item) => {
-      const createdAtDate = parseDate(item.createdAt);
-      return createdAtDate >= startDate && createdAtDate < adjustedEndDate;
-    });
-    setFilteredData(filteredData);
-  } else {
-    setFilteredData(data);
-  }
-}, [selectedDateRange, data]);
-
+  useEffect(() => {
+    let filtered = data;
   
-  // Function to parse formatted date into JavaScript Date object
-const parseDate = (formattedDate) => {
-  const parts = formattedDate.split('/');
-  const day = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10) - 1; // JavaScript months are 0-based
-  const year = parseInt(parts[2], 10);
-  return new Date(year, month, day); // Return a JavaScript Date object
-};
-
-  const handleFilterButtonAction = () => {
-    if (isDateFilterActive) {
-      handleClearFilter();
-    } else {
-      handleFilterApply();
+    // Apply search filter if search is active
+    if (searchTerm) {
+      filtered = filtered.filter((item) => {
+        return Object.values(item).some(val =>
+          String(val).toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      });
     }
-    setIsDateFilterActive(!isDateFilterActive);
-  };
+     // Apply date range filter if dates are selected
+      const [startDate, endDate] = selectedDateRange;
+      if (startDate && endDate) {
+        const adjustedEndDate = new Date(endDate);
+        adjustedEndDate.setDate(adjustedEndDate.getDate() + 1);
 
-  const handleFilterApply = () => {
-    setIsFilterApplied(true);
-    setSelectedDateRange(selectedDateRange);
-  };
+        filtered = filtered.filter((item) => {
+          const createdAtDate = parseDate(item.createdAt);
+          return createdAtDate >= new Date(startDate) && createdAtDate < adjustedEndDate;
+        });
+      }
+          setFilteredData(filtered);
+  }, [selectedDateRange, data, searchTerm]);   
 
-  const handleClearFilter = () => {
-    setIsFilterApplied(false);
-    setSelectedDateRange([null, null]);
-  };
+  // Function to parse formatted date into JavaScript Date object
+    const parseDate = (formattedDate) => {
+      const parts = formattedDate.split('/');
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // JavaScript months are 0-based
+      const year = parseInt(parts[2], 10);
+      return new Date(year, month, day); // Return a JavaScript Date object
+    };
+
 
   const handleDelete = async (id) => {
     try {
@@ -183,51 +213,58 @@ const parseDate = (formattedDate) => {
       },
     },
   ];
+
   return (
     <div className="list">
         <SideBar />
       <div className="datatable">
       <div className="datatableTitle">
         Corporate KYC
-                <div className="dateRangePicker">
-          <Grid container spacing={2} alignItems="center">
-            {isDateFilterActive && (
-            
-              <>
-                <Grid item xs={6}>
-                  <TextField
-                    label="Start Date"
-                    type="date"
-                    value={selectedDateRange[0] ? selectedDateRange[0].toISOString().split('T')[0] : ""}
-                    onChange={(e) =>
-                      setSelectedDateRange([e.target.value ? new Date(e.target.value) : null, selectedDateRange[1]])
-                    }
-                    InputLabelProps={{
-                      shrink: true,
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    label="End Date"
-                    type="date"
-                    value={selectedDateRange[1] ? selectedDateRange[1].toISOString().split('T')[0] : ""}
-                    onChange={(e) =>
-                      setSelectedDateRange([selectedDateRange[0], e.target.value ? new Date(e.target.value) : null])
-                    }
-                    InputLabelProps={{
-                      shrink: true,
-                    }}
-                  />
-                </Grid>
-              </>
-            )}
-            <Grid item xs={12}>
-              <Button variant="contained" onClick={handleFilterButtonAction}>
-                {isDateFilterActive ? "Clear Filter" : "Date Filter"}
-              </Button>
-            </Grid>
-          </Grid>
+        <div className="searchAndFilter">
+          <Button onClick={handleClick}>
+            {showFilterOptions || activeFilter ? 'Close Filter' : 'Filter'}
+          </Button>
+          <Menu
+            id="simple-menu"
+            anchorEl={anchorEl}
+            keepMounted
+            open={Boolean(anchorEl)}
+            onClose={handleClose}
+          >
+            <MenuItem onClick={() => selectFilterOption('search')}>Search</MenuItem>
+            <MenuItem onClick={() => selectFilterOption('dateRange')}>Date Range</MenuItem>
+          </Menu>
+          {activeFilter === 'search' && (
+            <TextField
+              label="Search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          )}
+          {activeFilter === 'dateRange' && (
+       <>
+          <TextField
+          label="Start Date"
+          type="date"
+          InputLabelProps={{
+            shrink: true,
+          }}
+          value={selectedDateRange[0] || ''}
+          onChange={(e) => handleDateRangeChange(new Date(e.target.value), true)}
+        />
+        <TextField
+          label="End Date"
+          type="date"
+          InputLabelProps={{
+            shrink: true,
+          }}
+          value={selectedDateRange[1] || ''}
+          onChange={(e) => handleDateRangeChange(new Date(e.target.value), false)}
+        />
+
+          </>
+        )}
+
         </div>
       </div>
           <DataGrid
