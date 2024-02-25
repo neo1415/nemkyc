@@ -1,22 +1,15 @@
-// useFilter.js
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 
-const useFilter = (initialData) => {
-  const [data, setData] = useState(initialData);
+const FilterComponent = ({ initialData, setFilteredData }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState([null, null]);
-  const [filteredData, setFilteredData] = useState(initialData);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [activeFilter, setActiveFilter] = useState(null);
 
-  // Function to parse formatted date into JavaScript Date object
-  const parseDate = (formattedDate) => {
-    const parts = formattedDate.split('/');
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // JavaScript months are 0-based
-    const year = parseInt(parts[2], 10);
-    return new Date(year, month, day);
-  };
-
-  // Function to handle the date range change
   const handleDateRangeChange = (date, isStartDate) => {
     const formattedDate = date ? date.toISOString().split('T')[0] : null;
     setSelectedDateRange((prevDates) => {
@@ -28,16 +21,47 @@ const useFilter = (initialData) => {
     });
   };
 
+  const handleClick = (event) => {
+    // If the filter is active, clicking the button will reset the filters
+    if (activeFilter) {
+      setActiveFilter(null);
+      setSelectedDateRange([null, null]);
+      setSearchTerm('');
+      setFilteredData(initialData);
+    } else {
+      setAnchorEl(event.currentTarget);
+    }
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const selectFilterOption = (filterOption) => {
+    setActiveFilter(filterOption);
+    handleClose();
+  };
+
+  // Function to parse formatted date into JavaScript Date object
+  const parseDate = (formattedDate) => {
+    const parts = formattedDate.split('/');
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // JavaScript months are 0-based
+    const year = parseInt(parts[2], 10);
+    return new Date(year, month, day);
+  };
+
+  // Effect for filtering data
   useEffect(() => {
-    let filtered = data;
+    let filtered = initialData;
 
     // Apply search filter if search is active
     if (searchTerm) {
-      filtered = filtered.filter((item) => {
-        return Object.values(item).some(val =>
+      filtered = filtered.filter((item) =>
+        Object.values(item).some((val) =>
           String(val).toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      });
+        )
+      );
     }
 
     // Apply date range filter if dates are selected
@@ -53,16 +77,50 @@ const useFilter = (initialData) => {
     }
 
     setFilteredData(filtered);
-  }, [selectedDateRange, data, searchTerm]);
+  }, [searchTerm, selectedDateRange, initialData, setFilteredData]);
 
-  return {
-    filteredData,
-    searchTerm,
-    setSearchTerm,
-    selectedDateRange,
-    handleDateRangeChange,
-    setData, // Expose setData so the component using the hook can update the data
-  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+      <Button onClick={handleClick}>
+        {activeFilter ? 'Close Filter' : 'Filter'}
+      </Button>
+      <Menu
+        id="simple-menu"
+        anchorEl={anchorEl}
+        keepMounted
+        open={Boolean(anchorEl)}
+        onClose={handleClose}
+      >
+        <MenuItem onClick={() => selectFilterOption('search')}>Search</MenuItem>
+        <MenuItem onClick={() => selectFilterOption('dateRange')}>Date Range</MenuItem>
+      </Menu>
+      {activeFilter === 'search' && (
+        <TextField
+          label="Search"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      )}
+      {activeFilter === 'dateRange' && (
+        <>
+          <TextField
+            label="Start Date"
+            type="date"
+            InputLabelProps={{ shrink: true }}
+            value={selectedDateRange[0] || ''}
+            onChange={(e) => handleDateRangeChange(new Date(e.target.value), true)}
+          />
+          <TextField
+            label="End Date"
+            type="date"
+            InputLabelProps={{ shrink: true }}
+            value={selectedDateRange[1] || ''}
+            onChange={(e) => handleDateRangeChange(new Date(e.target.value), false)}
+          />
+        </>
+      )}
+    </div>
+  );
 };
 
-export default useFilter;
+export default FilterComponent;

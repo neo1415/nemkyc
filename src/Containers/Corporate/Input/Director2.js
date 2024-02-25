@@ -109,7 +109,7 @@ const Director2 = ({register, errors, formValues, control}) => {
       <input type="date" {...register("expiryDate2", { required: false, minLength: 10, maxLength: 15 })} placeholder='Expiry Date' />
       {errors.expiryDate2 && <span className="error-message">This Field is Required</span>}
 
-      <label htmlFor="sourceOfIncome2">ID Type </label>
+      <label htmlFor="sourceOfIncome2">Source of Income </label>
 <Controller
   name="sourceOfIncome2"
   control={control}

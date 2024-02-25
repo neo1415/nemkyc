@@ -205,9 +205,6 @@ const Corporate = () => {
                 errors={errors}
                 watch={watch}
                 control={control}
-                setValue={setValue}
-                getValues={getValues}
-                touchFields={touchFields}
                />
            
             <div className='button-flex'>
@@ -263,7 +260,7 @@ const Corporate = () => {
         setFileNames={setFileNames}
         fileNames={fileNames}
         errors={errors}
-        forceUpdat={forceUpdate}
+        forceUpdate={forceUpdate}
          />
        
        <ToastContainer />

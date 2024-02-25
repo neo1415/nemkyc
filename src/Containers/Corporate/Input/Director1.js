@@ -111,26 +111,26 @@ const Director1 = ({register, errors, control}) => {
       <input type="date" {...register("expiryDate")} placeholder='Expiry Date' />
       {/* {errors.expiryDate && <span className="error-message">This Field is Required</span>} */}
 
-      <label htmlFor="sourceOfIncome">ID Type <span className='required'>*</span></label>
-<Controller
-  name="sourceOfIncome"
-  control={control}
-  rules={{ required: 'ID Type is required' }}
-  defaultValue=""
-  render={({ field }) => (
-    showOtherIncomeField ? (
-      <input
-        {...field}
-        type="text"
-        placeholder='Specify Your Income Source'
-      />
-    ) : (
-      <select {...field} onChange={(e) => field.onChange(handleIncomeSelectChange(e.target.value))}>
-        <option value="Choose Income Source">Choose Income Source</option>
-        <option value="salaryOrBusinessIncome">Salary Or Business Income</option>
-        <option value="investmentsOrDividends">Investments Or Dividends</option>
-        <option value="Other">Other(please specify)</option>
-      </select>
+      <label htmlFor="sourceOfIncome">Source of Income <span className='required'>*</span></label>
+        <Controller
+          name="sourceOfIncome"
+          control={control}
+          rules={{ required: 'Source of income is required' }}
+          defaultValue=""
+          render={({ field }) => (
+            showOtherIncomeField ? (
+              <input
+                {...field}
+                type="text"
+                placeholder='Specify Your Income Source'
+              />
+            ) : (
+              <select {...field} onChange={(e) => field.onChange(handleIncomeSelectChange(e.target.value))}>
+                <option value="Choose Income Source">Choose Income Source</option>
+                <option value="salaryOrBusinessIncome">Salary Or Business Income</option>
+                <option value="investmentsOrDividends">Investments Or Dividends</option>
+                <option value="Other">Other(please specify)</option>
+              </select>
     )
   )}
 />

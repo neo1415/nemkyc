@@ -59,9 +59,9 @@ const IndividualUser = () => {
       
         const companyTableColumn = ['Personal Information', ''];
         const companyTableRows = [
-            ['Insured', data.title],
-            ['Insured', data.firstName],
-            ['Insured', data.lastName],
+            ['Title', data.title],
+            ['First Name', data.firstName],
+            ['Last Name', data.lastName],
             ['Contact Address', data.contactAddress],
             ['Gender', data.gender],
             ['Nationality', data.nationality],
@@ -77,22 +77,17 @@ const IndividualUser = () => {
             ['Tax ID Number', data.taxIDNumber],
             ['BVN Number', data.BVNNumber],
             ['Identification Type', data.identificationType],
-            ['International Passport Number', data.intPassNo],
+            ['Identification Number', data.identificationNumber],
             ['Issuing Country', data.issuingCountry],
             ['Issued Date', data.issuedDate],
             ['Expiry Date', data.expiryDate],
-            // ['Passport Country', data.passCountry],
+
             ['Business Type', data.businessType],
             ['Employer\'s Name', data.employersName],
             ['Employer\'s Address', data.employersAddress],
             ['Employer\'s Telephone Number', data.employersTelephoneNumber],
             ['Employer\'s Email', data.employersEmail],
-            // ['Mother\'s Maiden Name', data.mothersMaidenName],
-            // ['City', data.city],
-            // ['State', data.state],
-            // ['Office Address', data.officeAddress],
             ['Annual Income Range', data.annualIncomeRange],
-            // ['Date', data.date],
           ];
       
         const companyTableProps = {
@@ -197,7 +192,7 @@ doc.save('KYC Form.pdf');
     <ul>
       <li className='form-list'>
         <p>Identification Number</p>
-        <p className='info'>{data.intPassNo}</p>
+        <p className='info'>{data.identificationNumber}</p>
       </li>
       <li className='form-list'>
         <p>BVN Number</p>
@@ -221,7 +216,7 @@ doc.save('KYC Form.pdf');
       </li>
       {/* <li className='form-list'>
         <p>International Passport Number</p>
-        <p className='info'>{data.intPassNo}</p>
+        <p className='info'>{data.identificationNumber}</p>
       </li>
       <li className='form-list'>
         <p>Passport Country</p>
