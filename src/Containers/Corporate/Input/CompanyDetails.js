@@ -35,7 +35,7 @@ const CompanyDetails = ({register, errors,control}) => {
 <Controller
   name="companyLegalForm"
   control={control}
-  rules={{ required: 'ID Type is required' }}
+  rules={{ required: 'Company Type is required' }}
   defaultValue=""
   render={({ field }) => (
     showOtherField ? (
