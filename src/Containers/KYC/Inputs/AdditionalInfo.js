@@ -42,7 +42,7 @@ const AdditionalInfo = ({register, errors,control}) => {
       />
       {errors.businessType && <span className="error-message">This field is required</span>}
 
-        <label htmlFor="employersEmail">Employers Email <span className='required'>*</span></label>
+        <label htmlFor="employersEmail">Employers Email </label>
         <input type="email" id="employersEmail" placeholder='Employers Email' {...register("employersEmail", { required: true })} />
         {errors.employersEmail && <span className="error-message">{errors.employersEmail.message}</span>}
 
