@@ -15,7 +15,7 @@ export const schema1 = yup.object().shape({
     residentialAddress: yup.string().required('Residential Address is required').transform(sanitizeString),
     nationality: yup.string().required('Nationality is required').transform(sanitizeString),
     occupation: yup.string().required('Occupation is required').transform(sanitizeString),
-    position: yup.string().required('Position is required').transform(sanitizeString),
+    position: yup.string().transform(sanitizeString),
 });
 
 export const schema2 = yup.object().shape({
