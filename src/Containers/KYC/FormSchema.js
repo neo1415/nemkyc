@@ -30,7 +30,7 @@ export const schema2 = yup.object().shape({
     identificationNumber: yup.string().required('Identification Number is required').transform(sanitizeString),
     issuingCountry: yup.string().required('Issuing Country is required').transform(sanitizeString),
     issuedDate: yup.date().required('Issued Date is required'),
-    expiryDate: yup.date(),
+    // expiryDate: yup.date(),
 });
 
 export const schema3 = yup.object().shape({
