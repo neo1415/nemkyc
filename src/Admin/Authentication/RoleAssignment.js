@@ -3,7 +3,6 @@ import axios from 'axios';
 import { endpoints } from './Points';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import UserRegistration from './SignUp';
 import {
   Table,
   TableBody,
@@ -16,9 +15,7 @@ import {
   Select,
   MenuItem,
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
   createTheme,
   ThemeProvider,
   CircularProgress,
@@ -27,6 +24,8 @@ import {
 import Sidebar from '../SideBar/SideBar';
 import { BsBadge4K } from 'react-icons/bs';
 import './roles.scss'
+import ConfirmationModal from '../../Containers/Modals/ConfirmationModal';
+import AddUserModal from './../../Containers/Modals/AddUserModal';
 
 const theme = createTheme({
   palette: {
@@ -42,31 +41,13 @@ const RoleAssignment = () => {
   const [selectedRole, setSelectedRole] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
   const [openModal, setOpenModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
 
 useEffect(() => {
-  // const fetchData = async () => {
-  //   // Fetching data from the server endpoint that uses the real-time listener
-  //   const response = await axios.get(endpoints.getUsers);
-
-  //   if (response.status === 200) {
-  //     setUsers(response.data.users);
-  //     // console.log('Initial users fetched successfully:', response.data.users);
-  //   } else {
-  //     console.error('Error fetching initial users:', response.statusText);
-  //   }
-  // };
-
-  // Function to handle real-time updates
-  // const handleRealTimeUpdates = (updatedUsers) => {
-  //   setUsers(updatedUsers);
-  //   console.log('Users updated in real-time:', updatedUsers);
-  // };
-
-  // fetchData();
-
   // Set up a real-time listener for changes in the Firestore data
   setIsLoading(true);
 const realTimeListener = () => {
@@ -114,6 +95,7 @@ const openSuccessModal = () => {
 
   const deleteUser = async (uid) => {
     setIsLoading(true);
+    setDeleteModalOpen(false);
     try {
       const endpoint = endpoints.deleteUser(uid); // Use the endpoint with the UID
       console.log('Delete User Endpoint:', endpoint); // Log the endpoint
@@ -121,7 +103,6 @@ const openSuccessModal = () => {
   
       if (response.status === 200) {
         openSuccessModal();
-        alert('User deleted successfully');
         // Remove the deleted user from the state
         setUsers((prevUsers) => prevUsers.filter((user) => user.uid !== uid));
       } else {
@@ -133,20 +114,6 @@ const openSuccessModal = () => {
       setIsLoading(false);
     }
   };
-
-  
-  
-// const handleSelectedUser = (uid) => {
-//   setSelectedUser((prevSelectedUser) => {
-//     // Toggle selected user
-//     const newValue = prevSelectedUser === uid ? '' : uid;
-
-//     // Close the role selection dropdown when a user is selected
-//     setRoleDropdownOpen(false);
-
-//     return newValue;
-//   });
-// };
 
 const checkUserRole = async (uid, role) => {
   try {
@@ -231,6 +198,22 @@ const handleCloseModal = () => {
   setOpenModal(false);
 };
 
+
+const handleOpenDeleteModal = (uid) => {
+  setUserToDelete(uid);
+  setDeleteModalOpen(true);
+};
+const handleDeleteUser = async () => {
+  if (userToDelete) {
+    await deleteUser(userToDelete);
+    setDeleteModalOpen(false);
+  }
+};
+
+const handleCancelDelete = () => {
+  setUserToDelete(null);
+  setDeleteModalOpen(false);
+};
 return (
   
   <div className='user-management'>
@@ -306,7 +289,7 @@ return (
 
     <Button
       variant="outlined"
-      onClick={() => deleteUser(user.uid)}
+      onClick={() => handleOpenDeleteModal(user.uid)}
       >
       Delete User
       </Button>
@@ -318,24 +301,23 @@ return (
 </TableContainer>
       {errorMessage && <p className="error">{errorMessage}</p>}
         {/* User Registration Modal */}
-        <Dialog open={openModal} onClose={handleCloseModal}>
-        <DialogTitle>Add User</DialogTitle>
-        <DialogContent>
-          {/* Render the UserRegistration component here */}
-          <UserRegistration onUserAdded={handleUserAdded} />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModal} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={handleCloseModal} color="primary">
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <AddUserModal
+        openModal={openModal}
+        handleCloseModal={handleCloseModal}
+        handleUserAdded={handleUserAdded}
+      />
+
+<ConfirmationModal
+        open={deleteModalOpen}
+        title="Delete User"
+        content="Are you sure you want to delete this user?"
+        onConfirm={handleDeleteUser}
+        onCancel={handleCancelDelete}
+      />
 
       <Dialog open={successModalOpen} onClose={() => setSuccessModalOpen(false)}>
   {/* <DialogTitle>Success</DialogTitle> */}
+
   <DialogContent>
     <div className="success-message">
       {isLoading ? (
@@ -344,7 +326,7 @@ return (
         <>
           {successMessage}
           <span role="img" aria-label="checkmark">
-            ✅
+            User Deleted Succesfully✅
           </span>
         </>
       )}
