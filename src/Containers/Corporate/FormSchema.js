@@ -7,7 +7,7 @@ export const schema1 = yup.object().shape({
   incorporationNumber: yup.string().required('Incorporation Number is required').min(7).max(15).transform(sanitizeString),
   incorporationState: yup.string().required('Incorporation State is required').min(2).max(50).transform(sanitizeString),
   companyLegalForm: yup.string().required('Company Legal Form is required'),
-  dateOfIncorporationRegistration: yup.date(),
+  dateOfIncorporationRegistration: yup.date().required('Date of Incorporation Registration is required'),
   emailAddress: yup.string().required('Email Address is required').email().transform(sanitizeEmail),
   website: yup.string().test('is-url', 'Website must be a valid URL', (value) => {
     if (value) {
@@ -44,26 +44,26 @@ export const schema2 = yup.object().shape({
 });
 
 export const schema3 = yup.object().shape({
-  // firstName2: yup.string().transform(sanitizeString),
-  // lastName2: yup.string().transform(sanitizeString),
+  firstName2: yup.string().transform(sanitizeString),
+  lastName2: yup.string().transform(sanitizeString),
   // dob2: yup.date(),
-  // placeOfBirth2: yup.string().transform(sanitizeString),
-  // nationality2: yup.string().transform(sanitizeString),
-  // country2: yup.string().transform(sanitizeString),
-  // occupation2: yup.string().transform(sanitizeString),
-  // BVNNumber2: yup.string().transform(sanitizeString),
-  // employersName2: yup.string().transform(sanitizeString),
+  placeOfBirth2: yup.string().transform(sanitizeString),
+  nationality2: yup.string().transform(sanitizeString),
+  country2: yup.string().transform(sanitizeString),
+  occupation2: yup.string().transform(sanitizeString),
+  BVNNumber2: yup.string().transform(sanitizeString),
+  employersName2: yup.string().transform(sanitizeString),
   // employersPhoneNumber2: yup.string().matches(/^[0-9]+$/, 'Employer\'s Phone Number must be numeric'),
   // phoneNumber2: yup.string().matches(/^[0-9]+$/, 'Phone Number must be numeric'),
-  // residentialAddress2: yup.string().transform(sanitizeString),
-  // email2: yup.string().email().transform(sanitizeEmail),
-  // taxIDNumber2: yup.string().transform(sanitizeString),
-  // idType2: yup.string(),
-  // idNumber2: yup.string().transform(sanitizeString),
-  // issuingBody2: yup.string().transform(sanitizeString),
+  residentialAddress2: yup.string().transform(sanitizeString),
+  email2: yup.string().email().transform(sanitizeEmail),
+  taxIDNumber2: yup.string().transform(sanitizeString),
+  idType2: yup.string(),
+  idNumber2: yup.string().transform(sanitizeString),
+  issuingBody2: yup.string().transform(sanitizeString),
   // issuedDate2: yup.date(),
   // expiryDate2: yup.date(),
-  // sourceOfIncome2: yup.string(),
+  sourceOfIncome2: yup.string(),
 });
 
   export const schema4 = yup.object().shape({

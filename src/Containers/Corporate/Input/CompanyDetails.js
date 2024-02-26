@@ -62,9 +62,9 @@ const CompanyDetails = ({register, errors,control}) => {
 
         <div className='flex-two'>
             
-      <label htmlFor="dateOfIncorporationRegistration">Date Of Incorporation Registration </label>
+      <label htmlFor="dateOfIncorporationRegistration">Date Of Incorporation Registration <span className='required'>*</span> </label>
       <input  type="date" {...register("dateOfIncorporationRegistration",{ required: true, minLength: 10, maxLength: 15 })} placeholder='Date Of Incorporation Registration' />
-      {/* {errors.dateOfIncorporationRegistration && <span className="error-message">This Field is Required</span>} */}
+      {errors.dateOfIncorporationRegistration && <span className="error-message">This Field is Required</span>}
 
         <label htmlFor="emailAddress">Email Address <span className='required'>*</span></label>
       <input   type="email"{...register("emailAddress",{ required: true, pattern: /^\S+@\S+$/i,  minLength: 5, maxLength: 50  })} placeholder='Email Address' />
