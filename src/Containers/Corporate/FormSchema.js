@@ -7,7 +7,7 @@ export const schema1 = yup.object().shape({
   incorporationNumber: yup.string().required('Incorporation Number is required').min(7).max(15).transform(sanitizeString),
   incorporationState: yup.string().required('Incorporation State is required').min(2).max(50).transform(sanitizeString),
   companyLegalForm: yup.string().required('Company Legal Form is required'),
-  dateOfIncorporationRegistration: yup.date().required('Date of Incorporation/Registration is required'),
+  dateOfIncorporationRegistration: yup.date(),
   emailAddress: yup.string().required('Email Address is required').email().transform(sanitizeEmail),
   website: yup.string().test('is-url', 'Website must be a valid URL', (value) => {
     if (value) {
@@ -39,7 +39,7 @@ export const schema2 = yup.object().shape({
   idNumber: yup.string().required('ID Number is required').transform(sanitizeString),
   issuingBody: yup.string().required('Issuing Body is required').transform(sanitizeString),
   issuedDate: yup.date().required('Issued Date is required'),
-  expiryDate: yup.date(),
+  // expiryDate: yup.date(),
   sourceOfIncome: yup.string().required('Source of Income is required'),
 });
 
