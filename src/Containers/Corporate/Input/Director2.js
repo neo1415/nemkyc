@@ -53,7 +53,7 @@ const Director2 = ({register, errors, formValues, control}) => {
       {errors.BVNNumber2 && <span className="error-message">This field is required</span>}
 
       <label htmlFor="phoneNumber2">Phone Number </label>
-      <input type='number' {...register("phoneNumber2", { required: false })} placeholder='Phone Number' />
+      <input type='number' {...register("phoneNumber2")} placeholder='Phone Number' />
       {errors.phoneNumber2 && <span className="error-message">This field is required</span>}
 
    </div>
@@ -65,7 +65,7 @@ const Director2 = ({register, errors, formValues, control}) => {
       {errors.employersName2 && <span className="error-message">This Field is Required</span>}
 
       <label htmlFor="employersPhoneNumber2">employers Phone Number </label>
-      <input  type="number"{...register("employersPhoneNumber2",{ required: false })} placeholder='employersPhoneNumber' />
+      <input  type="number"{...register("employersPhoneNumber2")} placeholder='employersPhoneNumber' />
 
       <label htmlFor="residentialAddress2">Residential Address </label>
       <input type='text' {...register("residentialAddress2", { required: false,})} placeholder='Residential Address' />
