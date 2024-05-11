@@ -8,8 +8,9 @@ import Typography from '@mui/material/Typography';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import { Link } from 'react-router-dom';
+import NaicomModal from './NaicomModal';
 
-const style = {
+const modalStyle = {
     position: 'absolute',
     top: '50%',
     left: '50%',
@@ -24,9 +25,12 @@ const style = {
 
 export default function TransitionModal() {
   const [open, setOpen] = useState(false);
+  const [naicomOpen, setNaicomOpen] = useState(false);
   const [agreed, setAgreed] = useState(false); // Add the agreed state
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
+  const handleNaicomOpen = () => setNaicomOpen(true);
+
 
   const handleAgreeChange = (event) => {
     setAgreed(event.target.checked);
@@ -47,17 +51,17 @@ export default function TransitionModal() {
             timeout: 500,
           },
         }}
-      >
+      > 
         <Fade in={open}>
-          <Box sx={style}>
-          <Typography id="transition-modal-title" variant="h6" component="h2">
+        <Box sx={modalStyle}>
+            <Typography id="transition-modal-title" variant="h6" component="h2">
               Privacy policy
             </Typography>
             <Typography id="transition-modal-description" sx={{ mt: 2 }}>
-            I/we hereby declare that all information provided are true and complete to the best of my
-            knowledge and hereby agree that this information shall form the basis of the business relationship 
-            between me/us and NEM Insurance Plc. If there is any addition or alteration in the information provided
-            after the submission of this proposal form, the same shall be communicated to the Company.
+              I/we hereby declare that all information provided are true and complete to the best of my
+              knowledge and hereby agree that this information shall form the basis of the business relationship
+              between me/us and NEM Insurance Plc. If there is any addition or alteration in the information provided
+              after the submission of this proposal form, the same shall be communicated to the Company.
             </Typography>
             <FormControlLabel
               control={
@@ -70,15 +74,16 @@ export default function TransitionModal() {
               label="I agree to the privacy policy"
             />
             <Button
-              component={Link}
-              to="/corporate"
+            onClick={handleNaicomOpen}
               disabled={!agreed}
             >
-             Continue
+              Continue
             </Button>
           </Box>
         </Fade>
       </Modal>
+      <NaicomModal open={naicomOpen} onClose={() => setNaicomOpen(false)} />
+
     </div>
   );
 }

@@ -31,11 +31,11 @@ export const userColumns = [
   //   width: 200,
   // },
 
-  // {
-  //   field: "companyCountry",
-  //   headerName: "Country",
-  //   width: 200,
-  // },
+  {
+    field: "natureOfBusiness",
+    headerName: "Nature of Business",
+    width: 200,
+  },
 
   {
     field: "registeredCompanyAddress",
@@ -102,6 +102,12 @@ export const userColumns = [
     width: 125,     
   },
 
+  {
+    field: "middleName2",
+    headerName: "Middle Name",
+    width: 125,     
+  },
+  
   {
     field: "lastName",
     headerName: "Last Name",
@@ -229,6 +235,12 @@ export const userColumns = [
   {
     field: "firstName2",
     headerName: "First Name",
+    width: 125,     
+  },
+
+  {
+    field: "middleName2",
+    headerName: "Middle Name",
     width: 125,     
   },
 

@@ -1,0 +1,287 @@
+// Define variables for commonly used colors
+$primary-color: #007bff;
+$secondary-color: #6c757d;
+$light-color: #f8f9fa;
+$dark-color: #343a40;
+
+// Style the entire multistep form container
+.forms-page{
+  margin-top: -5.5rem;
+  background-color: #ffffff;
+  opacity: 1;
+  background-image: radial-gradient(#800020 0.1px, #f7f7f8 0.9px);
+  background-size: 18px 18px;
+  align-items: center;
+  justify-content: flex-start;
+}
+.multisteps-form {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 85%;
+  border: none;
+  padding: 2rem;
+
+  @media screen and (max-width:1000px) {
+    padding: 0;
+    width: 100% !important;
+    justify-content: center;
+}
+@media screen and (max-width:1300px) {
+  width: 95%;
+}
+@media screen and (max-width:1100px) {
+  width: 99%;
+}
+
+  // Style each form step
+  .form-step {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    h2 {
+      margin-bottom: 1rem;
+      color: #800020;
+    }
+
+    label {
+      display: flex !important;
+      align-items: center !important;
+      margin-bottom: 0.5rem;
+      font-weight:600;
+      color: $dark-color;
+      justify-content: space-between !important;
+
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="date"],
+    input[type="number"]
+    {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 1.5rem;
+      height: 2.5rem;
+      border: none;
+      background-color: #6c757d1e;
+      border-radius: 0.25rem;
+      width: 18rem;
+      border-radius: 10px;
+      @media screen and (max-width:1000px) {
+        height: 2.5rem;
+        width: 18rem;
+    }
+    }
+
+    // input[type="file"] {
+    //   margin-bottom: 1rem;
+    // }
+
+    // input[type="text"] {
+    //   margin-bottom: 1.5rem;
+    //   width: 20rem;
+    //   border-radius: 10px;
+    // }
+
+    .radio-group,
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 1rem;
+
+      label{
+        display: flex !important;
+        align-items: center !important;
+        margin-bottom: 0.5rem;
+        color: $dark-color;
+        justify-content: space-between !important;
+      }
+    }
+
+    button {
+      margin-top: .5rem;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      color: $light-color;
+      background-color: #800020;
+      cursor: pointer;
+      width: 9rem;
+      margin-bottom: 3.5rem;
+      
+
+      &:hover {
+        background-color: rgb(103, 10, 10);
+        color:gold;
+        scale: 1.1;
+      }
+    }
+  }
+}
+
+.flex-form{
+  display:flex;
+  // align-items: center;
+  justify-content: center;
+  @media screen and (max-width:1000px) {
+    flex-direction: column;
+}
+}
+.button-flex{
+  display: flex;
+  column-gap: 4rem;
+  margin-bottom: 2rem;
+}
+
+// input[type="date"]::before {
+//   content: "Date";
+
+// }
+select{
+  height: 2.5rem !important;
+  padding: 0.5rem;
+  margin-bottom: 1.5rem;
+  border: none !important;
+  background-color: #6c757d1e;
+  border-radius: 0.25rem;
+  width: 18rem;
+  border-radius: 10px;
+}
+
+
+[type="file"]{
+display: none;
+}
+.upload{
+  background-color: #800020;
+  color: white;
+  font-size: 1.2rem;
+  width: 9rem;
+  padding: 1rem;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  svg{
+    font-size: 3rem;
+    color: white;
+  }
+}
+h4{
+  color: white;
+  font-size: .9rem;
+  text-align: center;
+}
+.upload-icon{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 1px dotted white;
+  border-radius: 50%;
+}
+.modal {
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  @media screen and (max-width:1000px) {
+  
+  }
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 10px;
+  text-align: center;
+  @media screen and (max-width:1000px) {
+    padding: 1rem;
+  }
+}
+
+.modal-content h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  @media screen and (max-width:1000px) {
+  font-size: 1.5rem;
+  }
+}
+
+.modal-content p {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  @media screen and (max-width:1000px) {
+  font-size: 1.2rem;
+  }
+}
+
+.modal-content button {
+  background-color:#800020;
+  color: #fff;
+  padding: 1rem 2rem;
+  font-size: 1.5rem;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  @media screen and (max-width:1000px) {
+  font-size: 1.2rem;
+  }
+}
+
+.modal-content button:hover {
+  background-color: rgb(122, 6, 6);
+}
+
+.close{
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  color: #800020;
+  cursor: pointer;
+  padding: 0;
+  height: 10px;
+}
+
+label[for="private"] {
+  display: flex !important;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  width: 43rem;
+  position: relative;
+  text-align: center;
+  font-size: 14px;
+  justify-content: center !important;
+  align-items: center !important;
+  font-weight: normal;
+  color: brown;
+  cursor: pointer;
+  @media screen and (max-width:720px) {
+    flex-direction: column-reverse;
+}
+  @media screen and (max-width:1000px) {
+    width: 22rem;
+}
+}
+
+.upload-form{
+  cursor:pointer;
+}
+.file-type{
+  color: #800020;
+  font-weight: 400;
+  font-size: 1rem;
+  margin-top: -0.7rem;
+}

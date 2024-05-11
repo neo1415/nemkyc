@@ -61,7 +61,7 @@ const SingleUser = () => {
                 // ['Commercial Name', data.commercialName],
                 // ['City', data.city],
                 // ['State', data.state],
-                // ['Company Country', data.companyCountry],
+                ['Nature of Business', data.natureOfBusiness],
                 ['Registered Company Address', data.registeredCompanyAddress],
                 ['Incorporation Number', data.incorporationNumber],
                 ['Incorporation State', data.incorporationState],
@@ -108,6 +108,7 @@ const SingleUser = () => {
         const directorsTableColumn = ['Director One', ''];
         const directorsTableRows = [
                 ['First Name', data.firstName],
+                ['Middle Name', data.middleName],
                 ['Last Name', data.lastName],
                 ['Date of Birth', data.dob],
                 // ['Position', data.position],
@@ -162,6 +163,7 @@ const SingleUser = () => {
 const secondDirectorsTableColumn = ['Director Two', ''];
 const secondDirectorsTableRows = [
         ['First Name', data.firstName2],
+        ['Middle Name', data.middleName2],
         ['Last Name', data.lastName2],
         ['Date of Birth', data.dob2],
         // ['Position', data.position2],
@@ -222,6 +224,7 @@ const beneficialOwnersTableRows = [
         ['Account Number', data.accountNumber],
         ['Bank Name', data.bankName],
         ['Bank Branch', data.bankBranch],
+        ['Account Opening Date', data.accountOpeningDate]
       ];
 
 const beneficialOwnersTableProps = {
@@ -256,6 +259,7 @@ const secondBeneficialOwnersTableRows = [
         ['Account Number', data.accountNumber2],
         ['Bank Name', data.bankName2],
         ['Bank Branch', data.bankBranch2],
+        ['Account Opening Date', data.accountOpeningDate2]
       ];
 
 const secondBeneficialOwnersTableProps = {
@@ -313,6 +317,10 @@ doc.save('KYC Form.pdf');
               <p className='info'>{data.companyName}</p>
             </li>
             <li className='form-list'>
+              <p>Nature of Business</p>
+              <p className='info'>{data.natureOfBusiness}</p>
+            </li>
+            <li className='form-list'>
               <p>Registered Company Address</p>
               <p className='info'>{data.registeredCompanyAddress}</p>
             </li>
@@ -366,6 +374,10 @@ doc.save('KYC Form.pdf');
             <li className='form-list'>
               <p>First Name</p>
               <p className='info'>{data.firstName}</p>
+            </li>
+            <li className='form-list'>
+              <p>Middle Name</p>
+              <p className='info'>{data.middleName}</p>
             </li>
             <li className='form-list'>
               <p>Last Name</p>
@@ -458,6 +470,10 @@ doc.save('KYC Form.pdf');
             <li className='form-list'>
               <p>First Name</p>
               <p className='info'>{data.firstName2}</p>
+            </li>
+            <li className='form-list'>
+              <p>Middle Name</p>
+              <p className='info'>{data.middleName2}</p>
             </li>
             <li className='form-list'>
               <p>Last Name</p>
@@ -569,10 +585,10 @@ doc.save('KYC Form.pdf');
               <p>Bank Branch</p>
               <p className='info'>{data.bankBranch}</p>
             </li>
-            {/* <li className='form-list'>
+            <li className='form-list'>
               <p>Account Opening Date</p>
               <p className='info'>{data.accountOpeningDate}</p>
-            </li> */}
+            </li>
           </ul>
           <ul>
             <h1>Account Details (Dollars)</h1>
@@ -588,10 +604,10 @@ doc.save('KYC Form.pdf');
               <p>Bank Branch</p>
               <p className='info'>{data.bankBranch2}</p>
             </li>
-            {/* <li className='form-list'>
+            <li className='form-list'>
               <p>Account Opening Date</p>
               <p className='info'>{data.accountOpeningDate2}</p>
-            </li> */}
+            </li>
           </ul>
         </div>
         <div className='documents'>

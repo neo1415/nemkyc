@@ -8,7 +8,7 @@ import Typography from '@mui/material/Typography';
 import { images } from '../../Constants';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
-import { Link } from 'react-router-dom';
+import NaicomModal from './NaicomModal';
 
 const modalStyle = {
     position: 'absolute',
@@ -25,6 +25,7 @@ const modalStyle = {
   
 
 const CorporateWrapper = () => {
+  const [naicomOpen, setNaicomOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const [agreed, setAgreed] = useState(false); // Add the agreed state
   const handleOpen = () => setOpen(true);
@@ -33,6 +34,8 @@ const CorporateWrapper = () => {
   const handleAgreeChange = (event) => {
     setAgreed(event.target.checked);
   };
+  const handleNaicomOpen = () => setNaicomOpen(true);
+
 
   return (
     <div>
@@ -78,8 +81,7 @@ const CorporateWrapper = () => {
               label="I agree to the privacy policy"
             />
             <Button
-              component={Link}
-              to="/corporate"
+            onClick={handleNaicomOpen}
               disabled={!agreed}
             >
               Continue
@@ -87,6 +89,8 @@ const CorporateWrapper = () => {
           </Box>
         </Fade>
       </Modal>
+      <NaicomModal open={naicomOpen} onClose={() => setNaicomOpen(false)} />
+
     </div>
   );
 };

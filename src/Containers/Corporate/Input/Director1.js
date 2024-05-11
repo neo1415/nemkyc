@@ -19,6 +19,9 @@ const Director1 = ({register, errors, control}) => {
       <input type='text' {...register("firstName", { required: true,  minLength: 3, maxLength: 30  })} placeholder='First Name' />
       {errors.firstName && <span className="error-message">This field is required</span>}
 
+      <label htmlFor="middleName">Middle Name </label>
+      <input type='text' {...register("middleName", { minLength: 3, maxLength: 30  })} placeholder='Middle Name' />
+
       <label htmlFor="lastName">Last Name<span className='required'>*</span></label>
       <input type='text' {...register("lastName", { required: true ,  minLength: 3, maxLength: 30 })} placeholder='Last Name' />
       {errors.lastName && <span className="error-message">This field is required</span>}
@@ -88,7 +91,7 @@ const Director1 = ({register, errors, control}) => {
               <option value="NIMC">NIMC</option>
               <option value="Drivers licence">Drivers licence</option>
               <option value="Voters Card">Voters Card</option>
-              <option value="NIN">NIN</option>
+             
               {/* <option value="Other">Other(please specify)</option> */}
             </select>
           )}
@@ -107,9 +110,9 @@ const Director1 = ({register, errors, control}) => {
       <input type="date" {...register("issuedDate", { required: true })} placeholder='Issued Date' />
       {errors.issuedDate && <span className="error-message">This Field is Required</span>}
 
-      <label htmlFor="expirydDate">Expiry Date </label>
+      <label htmlFor="expirydDate">Expiry Date <span className='required'>*</span> </label>
       <input type="date" {...register("expiryDate")} placeholder='Expiry Date' />
-      {/* {errors.expiryDate && <span className="error-message">This Field is Required</span>} */}
+      {errors.expiryDate && <span className="error-message">This Field is Required</span>}
 
       <label htmlFor="sourceOfIncome">Source of Income <span className='required'>*</span></label>
         <Controller

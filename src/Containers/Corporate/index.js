@@ -29,7 +29,7 @@ const Corporate = () => {
         ...schema5.fields,
     });
 
-    const { register, formState: { errors, touchFields }, reset,trigger, watch, forceUpdate, control,setValue, getValues } = useForm({
+    const { register, formState: { errors }, reset,trigger, watch, forceUpdate, control,setValue, getValues } = useForm({
      resolver: yupResolver(combinedSchema),
       mode: 'onChange' // This will ensure validation on change
     });
@@ -78,7 +78,7 @@ const Corporate = () => {
       if (result) {
         try {      
           const formData = {...formValues, ...fileUrls};
-          if (fileUrls.cac && fileUrls.identification && fileUrls.cacForm) {
+          if (fileUrls.cac && fileUrls.identification ) {
             setIsSubmitted(true);
             console.log('Form values:', formData);
             const response = await axios.post(endpoints.submitCorporateForm, formData);
