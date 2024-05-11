@@ -16,4 +16,6 @@ export const endpoints = {
   listenForUpdates: `${serverURL}/listenForUpdates`,
   submitCorporateForm: `${serverURL}/submit-corporate-form`,
   submitIndividualForm: `${serverURL}/submit-individual-form`,
+  submitPartnersForm: `${serverURL}/submit-partners-form`,
+  submitBrokersForm: `${serverURL}/submit-brokers-form`,
 };

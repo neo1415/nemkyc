@@ -15,6 +15,10 @@ import RoleAssignment from './Admin/Authentication/RoleAssignment';
 import { UserRoleProvider } from './Context/UserRole';
 import RequestPasswordReset from './Admin/Authentication/RequestPasswordReset';
 import ResetPassword from './Admin/Authentication/ResetPassword';
+import BrokersList from './Admin/Brokers';
+import BrokersPage from './Admin/SingleUser/BrokersPage';
+import PartnersList from './Admin/Partners';
+import PartnersPage from './Admin/SingleUser/PartnersPage';
 
 function App() {
 
@@ -89,6 +93,42 @@ function App() {
               element={
                 <ProtectedRoute>
                   <IndividualUser />
+                </ProtectedRoute>
+              }
+            />
+
+<Route
+              exact
+              path="brokers-list"
+              element={
+                <ProtectedRoute>
+                  <BrokersList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/brokers-list/:id"
+              element={
+                <ProtectedRoute>
+                  <BrokersPage />
+                </ProtectedRoute>
+              }
+            />
+
+<Route
+              exact
+              path="partners-list"
+              element={
+                <ProtectedRoute>
+                  <PartnersList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/partners-list/:id"
+              element={
+                <ProtectedRoute>
+                  <PartnersPage />
                 </ProtectedRoute>
               }
             />

@@ -202,45 +202,6 @@ const FileUpload = ({control, setFileUrls, errors,fileNames, setFileNames, trigg
     <div className='upload-flex'>
     <div className='upload-form'>
     <div className='uploader'>
-    <h6>For NAICOM Regulated Companies</h6>
-    <Controller
-        name="cacForm"
-        control={control}
-        rules={{
-          validate: {
-            required: value => value[0] || 'NAICOM Certificate is required',
-          },
-        }}
-        render={({ field, fieldState: { error } }) => (
-    <div className='uploader'>
-      <label htmlFor="cacForm" className='upload'>
-        <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-          <h4>NAICOM License Certificate</h4>
-          <div className='upload-icon'>
-          <HiCloudUpload />   
-          </div>
-        </div>
-      </label>
-      <input
-        {...field}
-        type="file"
-        id="cacForm"
-        onChange={(e) => {
-          const file = e.target.files[0];
-          if (file) {
-            handleFileUpload(file, field.name);
-          }
-        }}
-        style={{ display: 'none' }} // Hide the actual input but keep it functional
-      />
-      {error && !fileNames.cacForm && <span className="error-message">This field is required</span>}
-      {/* Display the file name and errors here */}
-      <div className='Output'>
-      {fileNames.cacForm && <div>{fileNames.cacForm}</div>}
-      </div>
-    </div>
-        )}
-        />
         </div>
     </div>
     </div>

@@ -61,6 +61,22 @@ const Sidebar = () => {
               </div>
             </li>
           </Link>
+          <Link to="/brokers-list">
+            <li className="sideList">
+              <p>Brokers</p>
+              <div className="icon">
+                <HiUsers />
+              </div>
+            </li>
+          </Link>
+          <Link to="/partners-list">
+            <li className="sideList">
+              <p>Partners</p>
+              <div className="icon">
+                <HiUsers />
+              </div>
+            </li>
+          </Link>
           <Link to="/individual-list">
             <li className="sideList">
               <p>Individual</p>
