@@ -31,7 +31,7 @@ const BrokersPage = () => {
     }
 
     useEffect(() => {
-      const docRef = doc(db, 'corporate-kyc', id);
+      const docRef = doc(db, 'brokers-kyc', id);
       const unsubscribe = onSnapshot(docRef, (snapshot) => {
           setData({...snapshot.data(), id: snapshot.id});
       });
@@ -44,9 +44,13 @@ const BrokersPage = () => {
         const doc = new jsPDF('p', 'pt', 'a4');
       
         // Add header
+        // doc.setFontSize(24);
+        // doc.setTextColor(128, 0, 32);
+        // doc.text('NEM Insurance PLC', 50, 70);
+      
         doc.setFontSize(24);
         doc.setTextColor(128, 0, 32);
-        doc.text('NEM Insurance Corporate KYC Form', 50, 70);
+        doc.text(' KYC Form for Brokers', 50, 70);
       
         // Add section 1 - Company Information
         doc.setFontSize(18);
@@ -123,7 +127,7 @@ const BrokersPage = () => {
                 ['Address', data.address],
                 ['Email', data.email], 
                 ['Tax ID Number', data.taxIDNumber],
-                ['International Passport Number', data.intPassNumber],
+                ['International Passport Number', data.intPassNo],
                 ['Passport Issued Country', data.passIssuedCountry],
                 ['ID Type', data.idType],
                 ['ID Number',data.idNumber],
@@ -179,7 +183,7 @@ const secondDirectorsTableRows = [
   ['Address', data.address2],
   ['Email', data.email2], 
   ['Tax ID Number', data.taxIDNumber2],
-  ['International Passport Number', data.intPassNumber2],
+  ['International Passport Number', data.intPassNo2],
   ['Passport Issued Country', data.passIssuedCountry2],
   ['ID Type', data.idType2],
   ['ID Number',data.idNumber2],
@@ -347,7 +351,11 @@ doc.save('KYC Form.pdf');
               <p>Incorporation State</p>
               <p className='info'>{data.incorporationState}</p>
             </li>
-            <li className='form-list'>
+           
+            </ul>
+
+        <ul>
+        <li className='form-list'>
               <p>Company Legal Form</p>
               <p className='info'>{data.companyLegalForm}</p>
             </li>
@@ -367,9 +375,6 @@ doc.save('KYC Form.pdf');
               <p>Nature of Business</p>
               <p className='info'>{data.natureOfBusiness}</p>
             </li>
-            </ul>
-
-        <ul>
             <li className='form-list'>
               <p>Tax Identification Number</p>
               <p className='info'>{data.taxIdentificationNumber}</p>
@@ -453,7 +458,7 @@ doc.save('KYC Form.pdf');
             </li>
             <li className='form-list'>
               <p>International Passport Number</p>
-              <p className='info'>{data.intPassNumber}</p>
+              <p className='info'>{data.intPassNo}</p>
             </li>
             <li className='form-list'>
               <p>Passport Issued Country</p>
@@ -553,7 +558,7 @@ doc.save('KYC Form.pdf');
             </li>
             <li className='form-list'>
               <p>International Passport Number</p>
-              <p className='info'>{data.intPassNumber2}</p>
+              <p className='info'>{data.intPassNo2}</p>
             </li>
             <li className='form-list'>
               <p>Passport Issued Country</p>
@@ -656,7 +661,7 @@ doc.save('KYC Form.pdf');
               </button>
             </a>
 
-            <a href={data.incorporation} target='_blank' rel='noreferrer'>
+            <a href={data.Incorporation} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 Download Certificate of Incorporation <HiDownload style={style} />{' '}

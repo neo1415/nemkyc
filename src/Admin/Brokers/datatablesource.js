@@ -193,7 +193,7 @@ export const userColumns = [
   },
 
   {
-    field: "intPassNumber",
+    field: "intPassNo",
     headerName: "International Passport No.",
     width: 125,     
   },
@@ -338,7 +338,7 @@ export const userColumns = [
   },
 
   {
-    field: "intPassNumber2",
+    field: "intPassNo2",
     headerName: "International Passport No.",
     width: 125,     
   },

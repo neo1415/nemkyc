@@ -26,6 +26,36 @@ switch(type){
     };
     break;
 
+    case 'broker':
+      data={
+        title:'Brokers',
+        query: 'brokers-kyc',
+        link:'see all Brokers',
+        icon: <HiUsers className='icon' />,
+        to:'/brokers-list'
+      };
+      break;
+
+      case 'partner':
+        data={
+          title:'Partners',
+          query: 'partners-kyc',
+          link:'see all Partners',
+          icon: <HiUsers className='icon' />,
+          to:'/partners-list'
+        };
+        break;
+
+        case 'agent':
+          data={
+            title:'Agents',
+            query: 'agents-kyc',
+            link:'see all Agents',
+            icon: <HiUsers className='icon' />,
+            to:'/partners-list'
+          };
+          break;
+
     case 'basic':
     data={
       title:'Individual-kyc',

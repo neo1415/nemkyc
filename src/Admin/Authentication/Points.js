@@ -5,6 +5,9 @@ export const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3
 export const endpoints = {
   getUsers: `${serverURL}/get-users`,
   getCorporateData: `${serverURL}/get-corporate-data`,
+  getBrokersData: `${serverURL}/get-brokers-data`,
+  getPartnersData: `${serverURL}/get-partners-data`,
+  getAgentsData: `${serverURL}/get-agents-data`,
   getIndividualData: `${serverURL}/get-individual-data`,
   assignAdminRole: (userId) => `${serverURL}/assign-admin-role/${userId}`,
   assignModeratorRole: (userId) => `${serverURL}/assign-moderator-role/${userId}`, // Add this line
@@ -17,5 +20,6 @@ export const endpoints = {
   submitCorporateForm: `${serverURL}/submit-corporate-form`,
   submitIndividualForm: `${serverURL}/submit-individual-form`,
   submitPartnersForm: `${serverURL}/submit-partners-form`,
+  submitAgentsForm: `${serverURL}/submit-agents-form`,
   submitBrokersForm: `${serverURL}/submit-brokers-form`,
 };

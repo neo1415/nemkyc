@@ -77,6 +77,14 @@ const Sidebar = () => {
               </div>
             </li>
           </Link>
+          <Link to="/agents-list">
+            <li className="sideList">
+              <p>Agents</p>
+              <div className="icon">
+                <HiUsers />
+              </div>
+            </li>
+          </Link>
           <Link to="/individual-list">
             <li className="sideList">
               <p>Individual</p>

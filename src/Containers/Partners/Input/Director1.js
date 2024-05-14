@@ -63,14 +63,14 @@ const Director1 = ({register, errors, control}) => {
       <input type='number' {...register("BVNNumber", { required: true,  minLength:11, maxLength: 11 })} placeholder='BVN' />
       {errors.BVNNumber && <span className="error-message">This field is required</span>}
 
-     
+      <label htmlFor="taxIDNumber">Tax ID Number </label>
+      <input type='text' {...register("taxIDNumber")} placeholder='Tax Identification Number' />
+      {/* {errors.taxIDNumber && <span className="error-message">THis field is required</span>} */}
+
         </div>
 
         <div className='flex-two'>
             
-        <label htmlFor="taxIDNumber">Tax ID Number </label>
-      <input type='text' {...register("taxIDNumber")} placeholder='Tax Identification Number' />
-      {/* {errors.taxIDNumber && <span className="error-message">THis field is required</span>} */}
 
       <label htmlFor="intPassNo">international Passport Number <span className='required'>*</span></label>
       <input type='text' {...register("intPassNo", { required: true, minLength: 3, maxLength: 30 })} placeholder='international Passport Number' />
