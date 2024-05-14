@@ -7,13 +7,12 @@ export const schema1 = yup.object().shape({
   city: yup.string().required('City is required').min(3).max(60).transform(sanitizeString),
   state: yup.string().required('State is required').min(3).max(60).transform(sanitizeString),
   country: yup.string().required('Country is required').min(3).max(60).transform(sanitizeString),
-  incorporationNumber: yup.string().required('Incorporation Number is required').min(7).max(15).transform(sanitizeString),
+  incorporationNumber: yup.string().required('Incorporation Number is required').min(4).max(15).transform(sanitizeString),
   incorporationState: yup.string().required('Incorporation State is required').min(2).max(50).transform(sanitizeString),
-  companyLegalForm: yup.string().required('Company Legal Form is required'),
   natureOfBusiness:yup.string().required('Nature of business is required').min(2).max(50).transform(sanitizeString),
   dateOfIncorporationRegistration: yup.date().required('Date of Incorporation Registration is required'),
   NAICOMLisenceIssuingDate: yup.date().required('NAICOM Issuing Date is required'),
-  NAICOMLisenceExpiryDate: yup.date().required('NAICOM Expiry is required'),
+  NAICOMLisenceExpiryDate: yup.date().required('NAICOM Expiry is required').min(new Date(), 'expired document'),
   BVNNo: yup.string().required('BVN Number is required').min(11).max(11).transform(sanitizeString),
   emailAddress: yup.string().required('Email Address is required').email().transform(sanitizeEmail),
   website: yup.string().test('is-url', 'Website must be a valid URL', (value) => {
@@ -43,7 +42,7 @@ export const schema2 = yup.object().shape({
   occupation: yup.string().required('Occupation is required').transform(sanitizeString),
   BVNNumber: yup.string().required('BVN Number is required').min(11).max(11).transform(sanitizeString),
   taxIDNumber: yup.string().transform(sanitizeString),
-  intPassNumber: yup.string().required('International Passport Number is required').transform(sanitizeString),
+  intPassNo: yup.string().required('International Passport Number is required').transform(sanitizeString),
   passIssuedCountry: yup.string().required('Passport Issued Country is required').transform(sanitizeString),
   sourceOfIncome: yup.string().required('Source of Income is required'),
   nationality: yup.string().required('Nationality is required').transform(sanitizeString),
@@ -52,29 +51,54 @@ export const schema2 = yup.object().shape({
   idType: yup.string().required('ID Type is required'),
   idNumber: yup.string().required('ID Number is required').transform(sanitizeString),
   issuedDate: yup.date().required('Issued Date is required'),
-  expiryDate: yup.date(),
+  expiryDate: yup.date().required('Expiry Date is required').min(new Date(), 'expired means of ID'),
   issuingBody: yup.string().required('Issuing Body is required').transform(sanitizeString),
 });
 
 export const schema3 = yup.object().shape({
-  // firstName2: yup.string().transform(sanitizeString),
-  // middleName2: yup.string().transform(sanitizeString),
-  // lastName2: yup.string().transform(sanitizeString),
-  // residentialAddress2: yup.string().transform(sanitizeString),
-  // position2: yup.string().required('Position is required'),
-  // dob2: yup.date(),
-  // placeOfBirth2: yup.string().transform(sanitizeString),
-  // occupation2: yup.string().transform(sanitizeString),
+  title2: yup.string().transform(sanitizeString),
+  gender2: yup.string().transform(sanitizeString),
+  firstName2: yup.string().transform(sanitizeString),
+  middleName2: yup.string().transform(sanitizeString),
+  lastName2: yup.string().transform(sanitizeString),
+  residentialAddress2: yup.string().transform(sanitizeString),
+  position2: yup.string(),
+  dob2: yup.date()
+  .transform((value, originalValue) => {
+    return originalValue === "" ? null : new Date(originalValue);
+  })
+  .nullable(true)
+  .notRequired()
+  .test('is-date', 'dob2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+  placeOfBirth2: yup.string().transform(sanitizeString),
+  occupation2: yup.string().transform(sanitizeString),
   // BVNNumber2: yup.string().min(11).max(11).transform(sanitizeString),
-  // taxIDNumber2: yup.string().transform(sanitizeString),
-  // sourceOfIncome2: yup.string(),
-  // nationality2: yup.string().transform(sanitizeString),
-  // phoneNumber2: yup.string().matches(/^[0-9]+$/, 'Phone Number must be numeric').min(5).max(11).transform(sanitizeString),
-  // email2: yup.string().email().transform(sanitizeEmail),
-  // idType2: yup.string(),
-  // idNumber2: yup.string().transform(sanitizeString),
-  // issuedDate2: yup.date(),
-  // expiryDate2: yup.date(),
+  taxIDNumber2: yup.string().transform(sanitizeString),
+  intPassNo2: yup.string().transform(sanitizeString),
+  passIssuedCountry2: yup.string().transform(sanitizeString),
+  sourceOfIncome2: yup.string(),
+  nationality2: yup.string().transform(sanitizeString),
+  // phoneNumber2: yup.string().min(5).max(11).transform(sanitizeString),
+  email2: yup.string().email().transform(sanitizeEmail),
+  idType2: yup.string(),
+  idNumber2: yup.string().transform(sanitizeString),
+  issuedDate2: yup.date()
+  .transform((value, originalValue) => {
+    return originalValue === "" ? null : new Date(originalValue);
+  })
+  .nullable(true)
+  .notRequired()
+  .test('is-date', 'dob2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+
+  expiryDate2: yup.date()
+  .transform((value, originalValue) => {
+    return originalValue === "" ? null : new Date(originalValue);
+  })
+  .nullable(true)
+  .notRequired()
+  .test('is-date', 'issuedDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+
+  issuingBody2: yup.string().transform(sanitizeString),
 });
 
   export const schema4 = yup.object().shape({
@@ -83,9 +107,16 @@ export const schema3 = yup.object().shape({
   accountOpeningDate: yup.date().required('Date of account creation is required'),
   bankBranch: yup.string().required('Bank Branch is required').transform(sanitizeString),
 
-  accountNumber2: yup.string().matches(/^[0-9]+$/, 'Account Number must be numeric').min(10).max(10).transform(sanitizeString),
+  // accountNumber2: yup.string().min(10).max(10).transform(sanitizeString),
   bankName2: yup.string().transform(sanitizeString),
-  accountOpeningDate2: yup.date(),
+  accountOpeningDate2: yup.date()
+  .transform((value, originalValue) => {
+    return originalValue === "" ? null : new Date(originalValue);
+  })
+  .nullable(true)
+  .notRequired()
+  .test('is-date', 'dob2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+
   bankBranch2: yup.string().transform(sanitizeString),
 
 });

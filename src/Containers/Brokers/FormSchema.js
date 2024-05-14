@@ -42,7 +42,7 @@ export const schema2 = yup.object().shape({
   address: yup.string().required('Address is required').transform(sanitizeString),
   email: yup.string().required('Email is required').email().transform(sanitizeEmail),
   taxIDNumber: yup.string().transform(sanitizeString),
-  intPassNumber: yup.string().required('International Passport Number is required').transform(sanitizeString),
+  intPassNo: yup.string().required('International Passport Number is required').transform(sanitizeString),
   passIssuedCountry: yup.string().required('Passport Issued Country is required').transform(sanitizeString),
   idType: yup.string().required('ID Type is required'),
   idNumber: yup.string().required('ID Number is required').transform(sanitizeString),
@@ -53,30 +53,50 @@ export const schema2 = yup.object().shape({
 });
 
 export const schema3 = yup.object().shape({
-  // title2: yup.string().transform(sanitizeString),
-  // gender2: yup.string().transform(sanitizeString),
-  // firstName2: yup.string().transform(sanitizeString),
-  // middleName2: yup.string().transform(sanitizeString),
-  // lastName2: yup.string().transform(sanitizeString),
-  // dob2: yup.date(),
-  // placeOfBirth2: yup.string().transform(sanitizeString),
-  // nationality2: yup.string().transform(sanitizeString),
-  // residenceCountry2: yup.string().transform(sanitizeString),
-  // occupation2: yup.string().transform(sanitizeString),
-  // BVNNumber2: yup.string().min(11).max(11).transform(sanitizeString),
-  // employersName2: yup.string().transform(sanitizeString),
-  // phoneNumber2: yup.string().matches(/^[0-9]+$/, 'Phone Number must be numeric').min(5).max(11).transform(sanitizeString),
-  // address2: yup.string().transform(sanitizeString),
-  // email2: yup.string().email().transform(sanitizeEmail),
-  // taxIDNumber2: yup.string().transform(sanitizeString),
-  // intPassNumber2: yup.string().transform(sanitizeString),
-  // passIssuedCountry2: yup.string().transform(sanitizeString),
-  // idType2: yup.string(),
-  // idNumber2: yup.string().transform(sanitizeString),
-  // issuedBy2: yup.string().transform(sanitizeString),
-  // issuedDate2: yup.date(),
-  // expiryDate2: yup.date(),
-  // sourceOfIncome2: yup.string(),
+  title: yup.string().transform(sanitizeString),
+  gender: yup.string().transform(sanitizeString),
+  firstName: yup.string().transform(sanitizeString),
+  middleName: yup.string().transform(sanitizeString),
+  lastName: yup.string().transform(sanitizeString),
+  dob: yup.date()
+  .transform((value, originalValue) => {
+    return originalValue === "" ? null : new Date(originalValue);
+  })
+  .nullable(true)
+  .notRequired()
+  .test('is-date', 'issuedDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+  placeOfBirth: yup.string().transform(sanitizeString),
+  nationality: yup.string().transform(sanitizeString),
+  residenceCountry: yup.string().transform(sanitizeString),
+  occupation: yup.string().transform(sanitizeString),
+  BVNNumber: yup.string().min(11).max(11).transform(sanitizeString),
+  employersName: yup.string().transform(sanitizeString),
+  phoneNumber: yup.string().min(5).max(11).transform(sanitizeString),
+  address: yup.string().transform(sanitizeString),
+  email: yup.string().email().transform(sanitizeEmail),
+  taxIDNumber: yup.string().transform(sanitizeString),
+  intPassNo: yup.string().transform(sanitizeString),
+  passIssuedCountry: yup.string().transform(sanitizeString),
+  idType: yup.string(),
+  idNumber: yup.string().transform(sanitizeString),
+  issuedBy: yup.string().transform(sanitizeString),
+  issuedDate: yup.date()
+  .transform((value, originalValue) => {
+    return originalValue === "" ? null : new Date(originalValue);
+  })
+  .nullable(true)
+  .notRequired()
+  .test('is-date', 'issuedDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+  expiryDate: yup.date()
+  .transform((value, originalValue) => {
+    return originalValue === "" ? null : new Date(originalValue);
+  })
+  .nullable(true)
+  .notRequired()
+  .min(new Date(), 'expired means of ID')
+  .test('is-date', 'expiryDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+  sourceOfIncome2: yup.string(),
+  sourceOfIncome: yup.string(),
 });
 
   export const schema4 = yup.object().shape({
@@ -91,7 +111,13 @@ export const schema3 = yup.object().shape({
   domAccountNumber: yup.string().matches(/^[0-9]+$/, 'Domicilliary Account Number must be numeric').min(10).max(10).transform(sanitizeString),
   bankBranchName2: yup.string().transform(sanitizeString),
   currency: yup.string().transform(sanitizeString),
-  accountOpeningDate2: yup.date(),
+  accountOpeningDate2: yup.date()
+  .transform((value, originalValue) => {
+    return originalValue === "" ? null : new Date(originalValue);
+  })
+  .nullable(true)
+  .notRequired()
+  .test('is-date', 'issuedDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
 });
 
 export const schema5 = yup.object().shape({

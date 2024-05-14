@@ -8,6 +8,9 @@ import bg2 from '../Assets/bg2.jpg'
 import logo from '../Assets/logo.png'
 import hero from '../Assets/hero.png'
 import hero1 from '../Assets/hero1.jpg'
+import partner from '../Assets/agents.jpg'
+import broker from '../Assets/brokers.jpg'
+import agent from  '../Assets/partners.jpg'
 
 export default {
     form0,
@@ -19,6 +22,9 @@ export default {
     bg2,
     logo,
     hero,
-    hero1
+    hero1,
+    partner,
+    broker,
+    agent
 
 }

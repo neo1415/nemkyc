@@ -7,6 +7,7 @@ import Corporate from '../Containers/Corporate';
 import NAICOM from '../Containers/Naicom';
 import Brokers from '../Containers/Brokers';
 import Partners from '../Containers/Partners';
+import Agents from '../Containers/Agents';
 
 const AnimateRouters = () => {
 
@@ -27,8 +28,10 @@ const AnimateRouters = () => {
             element={<NAICOM />} />  
             <Route exact path="/brokers"
             element={<Brokers />} />  
-            <Route exact path="/[artners"
+            <Route exact path="/partners"
             element={<Partners />} />  
+            <Route exact path="/agents"
+            element={<Agents />} />  
         </Routes>
     </AnimatePresence>
 

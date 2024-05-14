@@ -23,13 +23,6 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
 
   const methods = useForm();
 
-  const [showOtherIncomeField, setShowOtherIncomeField] = useState(false);
-
-  const handleIncomeSelectChange = (value) => {
-    setShowOtherIncomeField(value === 'Other');
-    return value === 'Other' ? '' : value;
-  };
-
   const showSuccessToast = () => {
     toast.success('Your file has been uploaded successfully!');
   };
@@ -70,7 +63,7 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
     
     
       // Construct the storage path
-      const storagePath = `individual-kyc-file-submissions/${fieldName}/${fileName}`;
+      const storagePath = `agents-kyc-file-submissions/${fieldName}/${fileName}`;
       const storageRef = ref(storage, storagePath);
       setOpen(true);
       const uploadTask = uploadBytesResumable(storageRef, file);
@@ -116,44 +109,47 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
   
 
   return (
-    <div style={{display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
+    <div >
+<div className='flexer'>
+<div className='flex-one'>
+    <h3>Local Account Details</h3>
 
-  <label htmlFor="annualIncomeRange">Annual Income Range <span className='required'>*</span></label>
-      <select id="annualIncomeRange" name="annualIncomeRange" {...register("annualIncomeRange", { required: true })}>
-        <option value="Choose Income Range">Annual Income Range</option>
-        <option value="lessThanIMillion">Less Than 1 Million</option>
-        <option value="1million-4million">1 Million - 4 Million</option>
-        <option value="4.1million-10million">4.1 Million - 10 Million</option>
-        <option value="morethan10million">More than 10 Million</option>
-      </select> 
-      {errors.annualIncomeRange && <span className="error-message">This field is required</span>}
-      
-    <label htmlFor="premiumPaymentSource">Premium Payment Source <span className='required'>*</span></label>
-      <Controller
-        name="premiumPaymentSource"
-        control={control}
-        rules={{ required: 'Source of income is required' }}
-        defaultValue=""
-        render={({ field }) => (
-        showOtherIncomeField ? (
-          <input
-            {...field}
-            type="text"
-              placeholder='Specify Your Source of Income'
-            />
-            ) : (
-            <select {...field} onChange={(e) => field.onChange(handleIncomeSelectChange(e.target.value))}>
-              <option value="Choose Income Source">Choose Income Source</option>
-              <option value="salaryOrBusinessIncome">Salary Or Business Income</option>
-              <option value="investmentsOrDividends">Investments Or Dividends</option>
-              <option value="Other">Other(please specify)</option>
-            </select>
-            )
-          )}
-        />
-        {errors.premiumPaymentSource && <span className="error-message">This field is required</span>}
+    <label htmlFor="accountNumber">Account Number <span className='required'>*</span></label>
+      <input type='number' {...register("accountNumber", { required: true,  minLength: 7, maxLength: 10  })} placeholder='Account Number' />
+      {errors.accountNumber && <span className="error-message">Please enter a valid account number</span>}
+
+    <label htmlFor="bankName">Bank Name <span className='required'>*</span></label>
+      <input type='text' {...register("bankName", { required: true, minLength: 3, maxLength: 50  })} placeholder='Bank Name' />
+      {errors.bankName && <span className="error-message">This field is required</span>}
+
+      <label htmlFor="bankBranch">Bank Branch <span className='required'>*</span></label>
+      <input type='text' {...register("bankBranch", { required: true,  minLength: 3, maxLength: 30  })} placeholder='Bank Branch' />
+      {errors.bankBranch && <span className="error-message">This field is required</span>}
+
+      <label htmlFor="accountOpeningDate">Account Opening Date <span className='required'>*</span></label>
+      <input type='date' {...register("accountOpeningDate", { required: true})} placeholder='Account Opening Date' />
+      {errors.accountOpeningDate && <span className="error-message">This field is required</span>}
+
+</div>
+<div className='flex-two'>
+        <h3> Foreign Account Details</h3>
+
+      <label htmlFor="accountNumber2">Account Number </label>
+      <input type='number' {...register("accountNumber2")} placeholder='Account Number' />
+    
+      <label htmlFor="bankName2">Bank Name </label>
+      <input type='text' {...register("bankName2")} placeholder='Bank Name' />
+    
+      <label htmlFor="bankBranch2">Bank Branch </label>
+      <input type='text' {...register("bankBranch2")} placeholder='Bank Branch' />
+
+      <label htmlFor="accountOpeningDate2">Account Opening Date </label>
+      <input type='date' {...register("accountOpeningDate2")} placeholder='Account Opening Date' />
+
+     </div>
+     </div>  
         <FormProvider {...methods}>
-  <div className='upload-section'>
+  <div className='upload-section' style={{display:'flex', justifyContent:'center'}}>
     <div className='upload-form'>
         <div className='uploader'>
         <Controller
@@ -190,50 +186,6 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
       {/* Display the file name and errors here */}
       <div className='Output'>
       {fileNames.signature && <div>{fileNames.signature}</div>}
-      </div>
-    </div>
-        )}
-        />
-    </div>
-  </div>
-
-  <div className='upload-form'>
-    <div className='uploader'>
-    <Controller
-        name="identification"
-        control={control}
-        rules={{
-    validate: {
-      required: value => value.length > 0 || 'Identification is required',
-    },
-  }}
-        render={({ field, fieldState: { error } }) => (
-    <div className='uploader'>
-      <label htmlFor="identification" className='upload'>
-        <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-          <h4>Upload Means of Identification</h4>
-          <div className='upload-icon'>
-          <HiCloudUpload />   
-          </div>
-        </div>
-      </label>
-      <input
-        {...field}
-        type="file"
-        id="identification"
-        onChange={(e) => {
-          const file = e.target.files[0];
-          if (file) {
-            handleFileUpload(file, field.name);
-          }
-        }}
-        style={{ display: 'none' }} // Hide the actual input but keep it functional
-      />
-  {error && !fileNames.identification && <span className="error-message">This field is required</span>}
-      {/* Display the file name and errors here */}
-      <div className='Output'>
-      {fileNames.identification && <div>{fileNames.identification}</div>}
-    
       </div>
     </div>
         )}

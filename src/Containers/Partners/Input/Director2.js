@@ -64,14 +64,14 @@ const Director2 = ({register, errors, formValues, control}) => {
       <input type='number' {...register("BVNNumber2", { required: false,  minLength:11, maxLength: 11 })} placeholder='BVN' />
       {errors.BVNNumber2 && <span className="error-message">This field is required</span>}
 
-     
+      <label htmlFor="taxIDNumber22">Tax ID Number </label>
+      <input type='text' {...register("taxIDNumber22")} placeholder='Tax Identification Number' />
+      {/* {errors.taxIDNumber22 && <span className="error-message">THis field is required</span>} */}
+
         </div>
 
         <div className='flex-two'>
             
-        <label htmlFor="taxIDNumber22">Tax ID Number </label>
-      <input type='text' {...register("taxIDNumber22")} placeholder='Tax Identification Number' />
-      {/* {errors.taxIDNumber22 && <span className="error-message">THis field is required</span>} */}
 
       <label htmlFor="intPassNo2">international Passport Number </label>
       <input type='text' {...register("intPassNo2", { required: false, minLength: 3, maxLength: 30 })} placeholder='international Passport Number' />
@@ -151,6 +151,9 @@ const Director2 = ({register, errors, formValues, control}) => {
       <input type="date" {...register("expiryDate")} placeholder='Expiry Date' />
       {/* {errors.expiryDate && <span className="error-message">This Field is Required</span>} */}
 
+      <label htmlFor="issuingBody2">Issuing Body </label>
+      <input type="text" {...register("issuingBody2", { required: false, minLength: 1, maxLength: 50 })} placeholder='Issuing Body' />
+      {/* {errors.issuingBody2 && <span className="error-message">This Field is Requiredr</span>} */}
 
         </div>
         </div>

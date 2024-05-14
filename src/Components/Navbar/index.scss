@@ -1,121 +1,161 @@
-nav {
-    position: absolute;
-    top: 10%;
-    right: 0;
-    justify-content: space-between;
-    left: 0;
-    width: 100%;
-    align-items: center;
-    display: flex;
-    margin: 0 auto;
-    z-index: 3;
-    transform: translateY(-50%);
-    @media screen and (max-width:1000px) {
-      
-    }
-  }
-  .nav-logo{
-    width: 4rem;
-    height: 5rem;
-  
-  }
-  
-  nav a {
-    position: relative;
-    width: 33.333%;
-    display: table-cell;
-    text-align: center;
-    color: #800020;
-    text-decoration: none;
-    font-family: Verdana, Geneva, Tahoma, sans-serif;
-    font-weight: bold;
-    padding: 10px 20px;
-    transition: 0.2s ease color;
-  }
-  
-  nav a:before,
-  nav a:after {
-    content: "";
-    position: absolute;
-    border-radius: 50%;
-    transform: scale(0);
-    transition: 0.2s ease transform;
-  }
-  
-  nav a:before {
+/* Navbar.css */
+
+.header {
+  position: relative;
+  width: 100%;
+  top: 0;
+  left: 0;
+  background-color: transparent;
+  z-index: var(--z-fixed);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  height: var(--header-height);
+  margin: 1rem;
+  margin-top: -3rem;
+}
+
+.nav__logo {
+  color: var(--first-color);
+  transition: color 0.4s;
+
+  font-family: var(--second-font);
+}
+
+.nem-logo {
+  height: 8rem;
+  width: 6rem;
+}
+
+.nav__toggle,
+.nav__close {
+  font-size: 3rem;
+  color:#800020;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.nav__cta {
+  background-color: var(--first-color);
+  color: #800020;
+  border: none;
+  font-weight: 700;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  padding: 0.75rem 1.5rem;
+}
+
+@media screen and (max-width: 1150px) {
+  .nav__menu {
+    position: fixed;
     top: 0;
-    left: 10px;
-    width: 6px;
-    height: 6px;
+    right: -100%;
+    background-color: hsla(0, 32%, 86%, 0.856);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    width: 80%;
+    height: 100%;
+    padding: 6rem 3rem 0;
+    transition: right 0.4s;
+    z-index: 3;
   }
-  
-  nav a:after {
-    top: 5px;
-    left: 18px;
-    width: 4px;
-    height: 4px;
-  }
-  
-  nav a:nth-child(1):before {
-    background-color: yellow;
-  }
-  
-  nav a:nth-child(1):after {
-    background-color: red;
-  }
-  
-  nav a:nth-child(2):before {
-    background-color: #00e2ff;
-  }
-  
-  nav a:nth-child(2):after {
-    background-color: #89ff00;
-  }
-  
-  nav a:nth-child(3):before {
-    background-color: purple;
-  }
-  
-  nav a:nth-child(3):after {
-    background-color: palevioletred;
-  }
-  
-  #indicator {
-    position: absolute;
-    left: 5%;
-    bottom: 0;
-    width: 30px;
-    height: 3px;
-    background-color: #fff;
-    border-radius: 5px;
-    transition: 0.2s ease left;
-  }
-  
-  nav a:hover {
-    scale: 1.1;
-  }
-  
-  nav a:hover:before,
-  nav a:hover:after {
-    transform: scale(1);
-  }
-  
-  nav a:nth-child(1):hover ~ #indicator {
-    background: linear-gradient(130deg, yellow, white);
-  }
-  
-  nav a:nth-child(2):hover ~ #indicator {
-    left: 34%;
-    background: linear-gradient(130deg, white, red);
-  }
-  
-  nav a:nth-child(3):hover ~ #indicator {
-    left: 70%;
-    background: linear-gradient(130deg, yellow, red);
-  }
-  
-  .hamburger{
-    display: flex;
+}
+
+
+@media screen and (max-width: 720px) {
+ .nem-logo{
+  height: 6rem;
+  width: 5rem;
+ }
+}
+@media screen and (max-width: 300px) {
+  .nav__menu {
+    padding: 4rem 1rem 2rem;
   }
 
- 
+  .nav__list {
+    row-gap: 1rem;
+  }
+
+  .nav__link,
+  .nav__cta {
+    font-size: var(--smaller-font-size);
+  }
+
+  .nav__cta {
+    padding: 8px 16px;
+    font-size: 12px;
+    margin-top: 1rem;
+    width: auto;
+    white-space: nowrap;
+  }
+}
+
+.nav__list {
+  display: flex;
+  flex-direction: column;
+  row-gap: 2.5rem;
+}
+
+.nav__link {
+  color: var(--title-color);
+  font-weight: var(--font-semi-bold);
+  transition: color 0.4s;
+}
+
+.nav__link:hover {
+  color: #2c010c;
+  background-color: rgba(255, 217, 0, 0.541);
+  border-radius: 10%;
+  padding: .3rem;
+  scale: 1.1;
+  transition: 0.4s;
+}
+
+.nav__close {
+  position: absolute;
+  top: 1rem;
+  right: 1.5rem;
+}
+
+.show-menu {
+  right: 0;
+}
+.nav__listt {
+  display: flex;
+  flex-direction: row;
+  column-gap: 2.5rem;
+}
+
+.nav__menu_mobile {
+  position: fixed;
+  top: 0;
+  right: -100%;
+  background-color: hsla(0, 0%, 6%, 0.842);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  width: 80%;
+  height: 100%;
+  padding: 6rem 3rem 0;
+  transition: right 0.4s;
+  z-index: 3;
+}
+@media screen and (min-width: 1150px) {
+  .nav {
+    height: calc(var(--header-height) + 1rem);
+  }
+  .nav__toggle,
+  .nav__close {
+    display: none;
+  }
+
+  .nav__list {
+    flex-direction: row;
+    column-gap: 2.5rem;
+  }
+}

@@ -31,7 +31,7 @@ const PartnersPage = () => {
     }
 
     useEffect(() => {
-      const docRef = doc(db, 'corporate-kyc', id);
+      const docRef = doc(db, 'partners-kyc', id);
       const unsubscribe = onSnapshot(docRef, (snapshot) => {
           setData({...snapshot.data(), id: snapshot.id});
       });
@@ -44,9 +44,13 @@ const PartnersPage = () => {
         const doc = new jsPDF('p', 'pt', 'a4');
       
         // Add header
+        // doc.setFontSize(24);
+        // doc.setTextColor(128, 0, 32);
+        // doc.text('NEM Insurance PLC', 50, 70);
+      
         doc.setFontSize(24);
         doc.setTextColor(128, 0, 32);
-        doc.text('NEM Insurance Corporate KYC Form', 50, 70);
+        doc.text('Partnership KYC/Due Dilligence Form', 50, 70);
       
         // Add section 1 - Company Information
         doc.setFontSize(18);
@@ -124,7 +128,7 @@ const PartnersPage = () => {
                 ['Occupation', data.occupation],
                 ['BVN Number', data.BVNNumber],
                 ['Tax ID Number', data.taxIDNumber],
-                ['International Passport Number', data.intPassNumber],
+                ['International Passport Number', data.intPassNo],
                 ['Passport Issued Country', data.passIssuedCountry],
                 ['Source of Income', data.sourceOfIncome],
                 ['Nationality', data.nationality],
@@ -178,7 +182,7 @@ const secondDirectorsTableRows = [
   ['Occupation', data.occupation2],
   ['BVN Number', data.BVNNumber2],
   ['Tax ID Number', data.taxIDNumber2],
-  ['International Passport Number', data.intPassNumber2],
+  ['International Passport Number', data.intPassNo2],
   ['Passport Issued Country', data.passIssuedCountry2],
   ['Source of Income', data.sourceOfIncome2],
   ['Nationality', data.nationality2],
@@ -257,7 +261,7 @@ doc.autoTable(beneficialOwnersTableColumn, beneficialOwnersTableRows, beneficial
 
 // Add sub-section - Beneficial Owner 2 Information
 
-const secondBeneficialOwnersTableColumn = ['Dollar Account', ''];
+const secondBeneficialOwnersTableColumn = ['Foreign Account', ''];
 const secondBeneficialOwnersTableRows = [
         ['Account Number', data.accountNumber2],
         ['Bank Name', data.bankName2],
@@ -340,9 +344,6 @@ doc.save('KYC Form.pdf');
               <p>Contact Telephone Number</p>
               <p className='info'>{data.telephoneNumber}</p>
             </li>
-
-            </ul>
-        <ul>
             <li className='form-list'>
               <p>Email Address</p>
               <p className='info'>{data.emailAddress}</p>
@@ -359,6 +360,9 @@ doc.save('KYC Form.pdf');
               <p>Contact Person Name</p>
               <p className='info'>{data.contactPerson}</p>
             </li>
+            </ul>
+        <ul>
+
             <li className='form-list'>
               <p>Tax Identification Number</p>
               <p className='info'>{data.taxIdentificationNumber}</p>
@@ -455,7 +459,7 @@ doc.save('KYC Form.pdf');
             </li>
             <li className='form-list'>
               <p>International Passport Number</p>
-              <p className='info'>{data.intPassNumber}</p>
+              <p className='info'>{data.intPassNo}</p>
             </li>
             <li className='form-list'>
               <p>Passport Issued Country</p>
@@ -551,7 +555,7 @@ doc.save('KYC Form.pdf');
             </li>
             <li className='form-list'>
               <p>International Passport Number</p>
-              <p className='info'>{data.intPassNumber2}</p>
+              <p className='info'>{data.intPassNo2}</p>
             </li>
             <li className='form-list'>
               <p>Passport Issued Country</p>
@@ -622,7 +626,7 @@ doc.save('KYC Form.pdf');
             </li>
           </ul>
           <ul>
-            <h1>Account Details (Dollars)</h1>
+            <h1>Account Details (Foreign)</h1>
             <li className='form-list'>
               <p>Account Number</p>
               <p className='info'>{data.accountNumber2}</p>
@@ -658,7 +662,7 @@ doc.save('KYC Form.pdf');
               </button>
             </a>
 
-            <a href={data.incorporation} target='_blank' rel='noreferrer'>
+            <a href={data.Incorporation} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 Download Certificate of Incorporation <HiDownload style={style} />{' '}

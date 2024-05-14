@@ -43,6 +43,10 @@ const AdminHome = () => {
     <div className='list-container ' style={{display:'flex'}}>   
       <Widget type='user' />
       <Widget type='basic' />
+      <Widget type='broker' />
+      <Widget type='partner' />
+      <Widget type='agent' />
+
     </div>   
     <div className='Middle' style={{display:'flex', marginTop:35}}>
 

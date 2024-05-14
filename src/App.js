@@ -19,6 +19,8 @@ import BrokersList from './Admin/Brokers';
 import BrokersPage from './Admin/SingleUser/BrokersPage';
 import PartnersList from './Admin/Partners';
 import PartnersPage from './Admin/SingleUser/PartnersPage';
+import AgentsList from './Admin/Agents';
+import AgentsPage from './Admin/SingleUser/AgentsPage';
 
 function App() {
 
@@ -115,7 +117,7 @@ function App() {
               }
             />
 
-<Route
+            <Route
               exact
               path="partners-list"
               element={
@@ -129,6 +131,24 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PartnersPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              exact
+              path="agents-list"
+              element={
+                <ProtectedRoute>
+                  <AgentsList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/agents-list/:id"
+              element={
+                <ProtectedRoute>
+                  <AgentsPage />
                 </ProtectedRoute>
               }
             />

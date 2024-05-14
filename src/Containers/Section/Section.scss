@@ -2,6 +2,7 @@ section {
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-wrap: wrap;
     @media screen and (max-width:1000px) {
       flex-direction: column;
     }
@@ -10,9 +11,9 @@ section {
   
   .card {
     position: relative;
-    margin: 50px;
-    width: 500px;
-    height: 400px;
+    margin: 37px;
+    width: 350px;
+    height: 250px;
     overflow: hidden;
     cursor: pointer;
     border-radius: 15px;
@@ -149,5 +150,5 @@ section {
   }
   
   h2{
-    font-size: 3rem;
+    font-size: 2rem;
   }

@@ -16,14 +16,14 @@ import axios from 'axios';
 import { endpoints } from '../../Admin/Authentication/Points';
 import { schema1, schema2, schema3 } from './FormSchema';
 
-function KYC() {
+function Agents() {
   const combinedSchema = yup.object().shape({
     ...schema1.fields,
     ...schema2.fields,
     ...schema3.fields,
 });
 
-const { register, formState: { errors, touchFields }, reset,trigger, watch, forceUpdate, control,setValue, getValues } = useForm({
+const { register, formState: { errors}, reset,trigger, watch, forceUpdate, control,setValue, getValues } = useForm({
  resolver: yupResolver(combinedSchema),
   mode: 'onChange' // This will ensure validation on change
 });
@@ -71,10 +71,10 @@ const [fileNames, setFileNames] = useState({});
     if (result) {
       try {      
         const formData = {...formValues, ...fileUrls};
-        if (fileUrls.signature && fileUrls.identification ) {
+        if (fileUrls.signature) {
           setIsSubmitted(true);
           console.log('Form values:', formData);
-          const response = await axios.post(endpoints.submitIndividualForm, formData);
+          const response = await axios.post(endpoints.submitAgentsForm, formData);
         if (response.status === 201) {
             console.log('Form submitted successfully');
             showSuccessToast('Form Submitted successfully.');
@@ -143,7 +143,10 @@ const [fileNames, setFileNames] = useState({});
                 register={register}
                 errors={errors}
                 watch={watch}
-                control={control} />
+                control={control}
+                setValue={setValue}
+                getValues={getValues}
+                />
      
             <div className='button-flex'>
               <Link to='/'>
@@ -162,7 +165,7 @@ const [fileNames, setFileNames] = useState({});
           exit={{ opacity: 0, x: 50 }}
           className="form-step">
 
-            <h3>Additional Details</h3>
+            <h3>Agents Profile</h3>
             <AdditionalInfo 
                 register={register}
                 errors={errors}
@@ -223,4 +226,4 @@ const [fileNames, setFileNames] = useState({});
 );
 }
 
-export default KYC;
+export default Agents;

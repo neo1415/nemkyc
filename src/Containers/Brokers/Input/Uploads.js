@@ -64,7 +64,7 @@ const FileUpload = ({control, setFileUrls, errors,fileNames, setFileNames, trigg
     
     
       // Construct the storage path
-      const storagePath = `corporate-kyc-file-submissions/${fieldName}/${fileName}`;
+      const storagePath = `brokers-kyc-file-submissions/${fieldName}/${fileName}`;
       const storageRef = ref(storage, storagePath);
       setOpen(true);
       const uploadTask = uploadBytesResumable(storageRef, file);
