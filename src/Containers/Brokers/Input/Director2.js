@@ -143,14 +143,14 @@ const Director2 = ({register, errors, formValues, control}) => {
           rules={{ required: 'Source of income is required' }}
           defaultValue=""
           render={({ field }) => (
-            showOtherIncomeField ? (
+            showOtherIncomeField2 ? (
               <input
                 {...field}
                 type="text"
                 placeholder='Specify Your Income Source'
               />
             ) : (
-              <select {...field} onChange={(e) => field.onChange(handleIncomeSelectChange(e.target.value))}>
+              <select {...field} onChange={(e) => field.onChange(handleIncomeSelectChange2(e.target.value))}>
                 <option value="Choose Income Source">Choose Income Source</option>
                 <option value="salaryOrBusinessIncome">Salary Or Business Income</option>
                 <option value="investmentsOrDividends">Investments Or Dividends</option>
