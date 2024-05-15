@@ -68,15 +68,16 @@ const Director1 = ({register, errors, control}) => {
             <input  type="text" {...register("employersName",{ required: true, minLength: 2, maxLength: 50 })} placeholder='Employers Name' />
             {errors.employersName && <span className="error-message">This Field is Required</span>}
 
-            <label htmlFor="phoneNumber">Phone Number  <span className='required'>*</span> </label>  
-      <input  type="number"{...register("phoneNumber",{ required: true, minLength: 5, maxLength: 11  })} placeholder='Phone Number' />
-      {errors.phoneNumber && <span className="error-message">Please enter a valid number</span>}
 
-     
     </div>
 
     <div className='flex-two'>
 
+    <label htmlFor="phoneNumber">Phone Number  <span className='required'>*</span> </label>  
+      <input  type="number"{...register("phoneNumber",{ required: true, minLength: 5, maxLength: 11  })} placeholder='Phone Number' />
+      {errors.phoneNumber && <span className="error-message">Please enter a valid number</span>}
+
+     
 
       <label htmlFor="address">Address <span className='required'>*</span></label>
       <input type='text' {...register("address", { required: true,})} placeholder='Address' />
@@ -130,7 +131,7 @@ const Director1 = ({register, errors, control}) => {
       <input type="date" {...register("issuedDate", { required: true })} placeholder='Issued Date' />
       {errors.issuedDate && <span className="error-message">This Field is Required</span>}
 
-      <label htmlFor="expiryDate">Expiry Date </label>
+      <label htmlFor="expiryDate">Expiry Date   <span className='required'>*</span></label>
       <input type="date" {...register("expiryDate" ,{ required: true })} placeholder='Expiry Date' />
       {errors.expiryDate && <span className="error-message">This Field is Required</span>}
 
