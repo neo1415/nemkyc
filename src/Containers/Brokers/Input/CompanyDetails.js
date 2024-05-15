@@ -43,15 +43,15 @@ const CompanyDetails = ({register, errors,control}) => {
       <input type='text' {...register("incorporationNumber", { required: true, minLength: 7, maxLength: 15  })} placeholder='Incorporation Number' />
       {errors.incorporationNumber && <span className="error-message">This field is required</span>}
 
+      <label htmlFor="registrationNumber"> Registration Number <span className='required'>*</span></label>
+      <input type='text' {...register("registrationNumber",  { required: true, minLength: 6, maxLength: 15  })} placeholder='Registration Number' />
+      {errors.registrationNumber && <span className="error-message">This field is required</span>}
 
      
         </div>
 
         <div className='flex-two'>
 
-        <label htmlFor="registrationNumber"> Registration Number <span className='required'>*</span></label>
-      <input type='text' {...register("registrationNumber",  { required: true, minLength: 6, maxLength: 15  })} placeholder='Registration Number' />
-      {errors.registrationNumber && <span className="error-message">This field is required</span>}
 
 
 
