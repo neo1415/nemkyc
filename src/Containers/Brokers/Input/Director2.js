@@ -85,7 +85,7 @@ const Director2 = ({register, errors, formValues, control}) => {
       {errors.address2 && <span className="error-message">This Field is required</span>}
 
       <label htmlFor="email2">Email2 <span className='required'>*</span></label>
-      <input type='email2' {...register("email2", { required: true, pattern: /^\S+@\S+$/i , minLength: 6, maxLength: 30 })} placeholder='email2' />
+      <input type='email' {...register("email2", { required: true, pattern: /^\S+@\S+$/i , minLength: 6, maxLength: 30 })} placeholder='email2' />
       {errors.email2 && <span className="error-message">This field is required</span>}
 
       <label htmlFor="taxIDNumber2">Tax ID Number <span className='required'>*</span> </label>
