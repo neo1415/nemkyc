@@ -449,18 +449,7 @@ doc.save('KYC Form.pdf');
                 <p className='info'>Signature not available</p>
               )}
             </li>
-            <li className='form-list'>
-              <p>Identification</p>
-              {data.identification ? (
-                <a href={data.identification} target='__blank'>
-                  <button className='form-button'>
-                    Download Identification <HiDownload style={style} />
-                  </button>
-                </a>
-              ) : (
-                <p className='info'>Identification not available</p>
-              )}
-            </li>
+          
           </ul>
         </div>
       </div>
