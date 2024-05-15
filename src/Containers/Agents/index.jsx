@@ -120,7 +120,7 @@ const [fileNames, setFileNames] = useState({});
     <div className='forms' style={{display:'flex',flexDirection:'column' }}>
       <div className='forms-page'>
         <div className='picture'>
-          <img src={images.form4} className='form-img' alt='fixed' />
+          <img src={images.agent} className='form-img' alt='fixed' />
         </div>
       <motion.div
         initial={{ opacity: 0, x: 0}}
