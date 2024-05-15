@@ -6,6 +6,12 @@ import { HiUser, HiUsers, HiDatabase } from 'react-icons/hi';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../APi/index';
 import { HiUserAdd } from 'react-icons/hi';
+import { FaHandshake } from 'react-icons/fa';
+import { FaUserTie } from 'react-icons/fa';
+import { FaBuilding } from 'react-icons/fa';
+import { FaExchangeAlt } from 'react-icons/fa';
+import { FaUser } from 'react-icons/fa';
+
 
 const Sidebar = () => {
   const { logout, user } = UserAuth();
@@ -57,7 +63,7 @@ const Sidebar = () => {
             <li className="sideList">
               <p>Corporate</p>
               <div className="icon">
-                <HiUsers />
+                <FaBuilding />
               </div>
             </li>
           </Link>
@@ -65,7 +71,7 @@ const Sidebar = () => {
             <li className="sideList">
               <p>Brokers</p>
               <div className="icon">
-                <HiUsers />
+                <FaExchangeAlt />
               </div>
             </li>
           </Link>
@@ -73,7 +79,7 @@ const Sidebar = () => {
             <li className="sideList">
               <p>Partners</p>
               <div className="icon">
-                <HiUsers />
+                <FaHandshake />
               </div>
             </li>
           </Link>
@@ -89,7 +95,7 @@ const Sidebar = () => {
             <li className="sideList">
               <p>Individual</p>
               <div className="icon">
-                <HiUser />
+                <FaUserTie />
               </div>
             </li>
           </Link>
