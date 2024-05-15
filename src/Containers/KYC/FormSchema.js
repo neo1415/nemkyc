@@ -25,12 +25,12 @@ export const schema2 = yup.object().shape({
     employersTelephoneNumber: yup.string().transform(sanitizeString),
     employersAddress: yup.string().transform(sanitizeString),
     taxIDNumber: yup.string().transform(sanitizeString),
-    BVNNumber: yup.string().required('BVN Number is required').transform(sanitizeString),
+    BVNNumber: yup.string().required('BVN Number is required').min(11).max(11).transform(sanitizeString),
     identificationType: yup.string().transform(sanitizeString).required('Identification Type is required'),
     identificationNumber: yup.string().required('Identification Number is required').transform(sanitizeString),
     issuingCountry: yup.string().required('Issuing Country is required').transform(sanitizeString),
     issuedDate: yup.date().required('Issued Date is required'),
-    // expiryDate: yup.date(),
+    expiryDate: yup.date().required('expiry Date is required').min(new Date(), 'expired means of ID'),
 });
 
 export const schema3 = yup.object().shape({
