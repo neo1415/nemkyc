@@ -47,14 +47,16 @@ const CompanyDetails = ({register, errors,control}) => {
       <input type='text' {...register("registrationNumber",  { required: true, minLength: 6, maxLength: 15  })} placeholder='Registration Number' />
       {errors.registrationNumber && <span className="error-message">This field is required</span>}
 
-      <label htmlFor="incorporationState">Incorporation State <span className='required'>*</span></label>
-      <input type='text' {...register("incorporationState", { required: true,  minLength: 3, maxLength: 50  })} placeholder='Incorporation State' />
-      {errors.incorporationState && <span className="error-message">This field is required</span>}
 
      
         </div>
 
         <div className='flex-two'>
+
+        <label htmlFor="incorporationState">Incorporation State <span className='required'>*</span></label>
+      <input type='text' {...register("incorporationState", { required: true,  minLength: 3, maxLength: 50  })} placeholder='Incorporation State' />
+      {errors.incorporationState && <span className="error-message">This field is required</span>}
+
         <label htmlFor="companyLegalForm">Company Type <span className='required'>*</span></label>
 <Controller
   name="companyLegalForm"

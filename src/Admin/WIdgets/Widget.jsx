@@ -52,7 +52,7 @@ switch(type){
             query: 'agents-kyc',
             link:'see all Agents',
             icon: <HiUsers className='icon' />,
-            to:'/partners-list'
+            to:'/agents-list'
           };
           break;
 

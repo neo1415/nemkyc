@@ -128,7 +128,7 @@ const Partners = () => {
   return (
     <div style={{display:'flex', justifyContent:'flex-start',marginTop:'-100px'}}>
       <div className='picture'>
-        <img src={images.form3} className='form-img' alt='cdd ' />
+        <img src={images.partner} className='form-img' alt='cdd ' />
         </div>
     <div className='form-page'>
 
