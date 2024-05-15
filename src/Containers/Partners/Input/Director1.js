@@ -146,7 +146,7 @@ const Director1 = ({register, errors, control}) => {
       <input type="date" {...register("issuedDate", { required: true })} placeholder='Issued Date' />
       {errors.issuedDate && <span className="error-message">This Field is Required</span>}
 
-      <label htmlFor="expirydDate">Expiry Date </label>
+      <label htmlFor="expirydDate">Expiry Date <span className='required'>*</span> </label>
       <input type="date" {...register("expiryDate" ,{ required: true })} placeholder='Expiry Date' />
       {errors.expiryDate && <span className="error-message">This Field is Required</span>}
 
