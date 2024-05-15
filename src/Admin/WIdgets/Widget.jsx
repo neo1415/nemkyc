@@ -5,6 +5,10 @@ import { query, where, collection, getDocs, } from 'firebase/firestore';
 import { db } from '../../APi/index'
 import { useState } from 'react';
 import { Link } from 'react-router-dom'
+import { FaHandshake } from 'react-icons/fa';
+import { FaUserTie } from 'react-icons/fa';
+import { FaBuilding } from 'react-icons/fa';
+import { FaExchangeAlt } from 'react-icons/fa';
 
 const Widget = ({type}) => {
 
@@ -21,7 +25,7 @@ switch(type){
       title:'Corporate-kyc',
       query: 'corporate-kyc',
       link:'see all Users',
-      icon: <HiUsers className='icon' />,
+      icon: <FaBuilding className='icon' />,
       to:'/list'
     };
     break;
@@ -31,7 +35,7 @@ switch(type){
         title:'Brokers',
         query: 'brokers-kyc',
         link:'see all Brokers',
-        icon: <HiUsers className='icon' />,
+        icon: <FaExchangeAlt className='icon' />,
         to:'/brokers-list'
       };
       break;
@@ -41,7 +45,7 @@ switch(type){
           title:'Partners',
           query: 'partners-kyc',
           link:'see all Partners',
-          icon: <HiUsers className='icon' />,
+          icon: <FaHandshake className='icon' />,
           to:'/partners-list'
         };
         break;
@@ -61,7 +65,7 @@ switch(type){
       title:'Individual-kyc',
       query: 'individual-kyc',
       link:'View all Customers',
-      icon: <HiUser className='icon' />,
+      icon: <FaUserTie className='icon' />,
       to:'/individual-list'
     };
     break;
