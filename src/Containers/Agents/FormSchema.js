@@ -52,7 +52,7 @@ export const schema3 = yup.object().shape({
     accountOpeningDate: yup.date().required('Date of account creation is required'),
     bankBranch: yup.string().required('Bank Branch is required').transform(sanitizeString),
   
-    accountNumber2: yup.string().matches(/^[0-9]+$/, 'Account Number must be numeric').min(10).max(10).transform(sanitizeString),
+    accountNumber2: yup.string().transform(sanitizeString),
     bankName2: yup.string().transform(sanitizeString),
     accountOpeningDate2: yup.date()
     .transform((value, originalValue) => {

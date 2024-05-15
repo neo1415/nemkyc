@@ -157,7 +157,7 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
         control={control}
         rules={{
           validate: {
-            required: value => value[0] || 'signature Certificate is required',
+            required: value => value[0] || 'signature is required',
           },
         }}
         render={({ field, fieldState: { error } }) => (
