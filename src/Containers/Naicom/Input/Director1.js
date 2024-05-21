@@ -62,13 +62,11 @@ const Director1 = ({register, errors, control}) => {
 
         <div className='flex-two'>
             
-      <label htmlFor="employersName">Employers Name  <span className='required'>*</span> </label>
-      <input  type="text" {...register("employersName",{ required: true, minLength: 2, maxLength: 50 })} placeholder='Employers Name' />
-      {errors.employersName && <span className="error-message">This Field is Required</span>}
+      <label htmlFor="employersName">Employers Name  </label>
+      <input  type="text" {...register("employersName",{ required: false, minLength: 2, maxLength: 50 })} placeholder='Employers Name' />
 
-      <label htmlFor="employersPhoneNumber">employers Phone Number  <span className='required'>*</span> </label>  
-      <input  type="number"{...register("employersPhoneNumber",{ required: true, minLength: 5, maxLength: 11  })} placeholder='Employers Phone Number' />
-      {errors.employersPhoneNumber && <span className="error-message">Please enter a valid number</span>}
+      <label htmlFor="employersPhoneNumber">employers Phone Number </label>  
+      <input  type="number"{...register("employersPhoneNumber",{ required: false, minLength: 5, maxLength: 11  })} placeholder='Employers Phone Number' />
 
       <label htmlFor="residentialAddress">Residential Address <span className='required'>*</span></label>
       <input type='text' {...register("residentialAddress", { required: true,})} placeholder='Residential Address' />
@@ -91,6 +89,7 @@ const Director1 = ({register, errors, control}) => {
               <option value="NIMC">NIMC</option>
               <option value="Drivers licence">Drivers licence</option>
               <option value="Voters Card">Voters Card</option>
+             
               {/* <option value="Other">Other(please specify)</option> */}
             </select>
           )}
@@ -109,9 +108,9 @@ const Director1 = ({register, errors, control}) => {
       <input type="date" {...register("issuedDate", { required: true })} placeholder='Issued Date' />
       {errors.issuedDate && <span className="error-message">This Field is Required</span>}
 
-      <label htmlFor="expirydDate">Expiry Date <span className='required'>*</span> </label>
+      <label htmlFor="expirydDate">Expiry Date  </label>
       <input type="date" {...register("expiryDate")} placeholder='Expiry Date' />
-      {errors.expiryDate && <span className="error-message">This Field is Required</span>}
+      {errors.expiryDate && <span className="error-message">{errors.expiryDate.message}</span>}
 
       <label htmlFor="sourceOfIncome">Source of Income <span className='required'>*</span></label>
         <Controller

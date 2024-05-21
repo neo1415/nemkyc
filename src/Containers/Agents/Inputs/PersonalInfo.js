@@ -39,9 +39,8 @@ const PersonalInfo = ({register, errors, control}) => {
       </select>
       {errors.gender && <span className="error-message">{errors.gender.message}</span>}
 
-      <label htmlFor="position">Position/Role <span className='required'>*</span></label>
+      <label htmlFor="position">Position/Role </label>
       <input type='text' {...register("position", { required: true, minLength: 3, maxLength: 30 })} placeholder='Position' />
-      {errors.position && <span className="error-message">This field is required</span>}
 
       <label htmlFor="dateOfBirth">Date Of Birth <span className='required'>*</span></label>
       <input type="date" id="dateOfBirth" placeholder='Date Of Birth' {...register("dateOfBirth", { required: true })} />
@@ -134,9 +133,9 @@ const PersonalInfo = ({register, errors, control}) => {
       {errors.issuedDate && <span className="error-message">This Field is Required</span>}
 
       <label htmlFor="expirydDate">Expiry Date </label>
-      <input type="date" {...register("expiryDate" ,{ required: true })} placeholder='Expiry Date' />
-      {errors.expiryDate && <span className="error-message">This Field is Required</span>}
-
+      <input type="date" {...register("expiryDate" ,{ required: false })} placeholder='Expiry Date' />
+      {errors.expiryDate && <span className="error-message">{errors.expiryDate.message}</span>}
+      
       <label htmlFor="issuingBody">Issuing Body <span className='required'>*</span></label>
       <input type="text" {...register("issuingBody", { required: true, minLength: 1, maxLength: 50 })} placeholder='Issuing Body' />
       {errors.issuingBody && <span className="error-message">This Field is Requiredr</span>}

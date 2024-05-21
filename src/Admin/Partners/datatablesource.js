@@ -14,7 +14,7 @@ export const userColumns = [
   },
 
   {
-    field: "registeredcompanyAddress",
+    field: "registeredCompanyAddress",
     headerName: "Registered Company Address",
     width: 180,
   },
@@ -158,7 +158,7 @@ export const userColumns = [
   },
 
   {
-    field: "position2",
+    field: "position",
     headerName: "Position",
     width: 125,     
   },
@@ -194,7 +194,7 @@ export const userColumns = [
   },
 
   {
-    field: "intPassNumber",
+    field: "intPassNo",
     headerName: "International Passport No.",
     width: 125,     
   },

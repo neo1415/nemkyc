@@ -93,6 +93,7 @@ const AdditionalInfo = ({register, errors,control}) => {
 
         <label htmlFor="expiryDate">Expiry Date:</label>
         <input type="date" id="expiryDate" {...register("expiryDate")} />
+        {errors.expiryDate && <span className="error-message">{errors.expiryDate.message}</span>}
       </div>
           </div>
     </div>

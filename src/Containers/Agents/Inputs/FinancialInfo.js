@@ -109,9 +109,9 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
   
 
   return (
-    <div >
+
 <div className='flexer'>
-<div className='flex-one'>
+  <div className='agent-flex'><div className='flex-one'>
     <h3>Local Account Details</h3>
 
     <label htmlFor="accountNumber">Account Number <span className='required'>*</span></label>
@@ -147,53 +147,20 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
       <input type='date' {...register("accountOpeningDate2")} placeholder='Account Opening Date' />
 
      </div>
-     </div>  
+     </div>
+
         <FormProvider {...methods}>
-  <div className='upload-section' style={{display:'flex', justifyContent:'center'}}>
-    <div className='upload-form'>
-        <div className='uploader'>
-        <Controller
-        name="signature"
-        control={control}
-        rules={{
-          validate: {
-            required: value => value[0] || 'signature is required',
-          },
-        }}
-        render={({ field, fieldState: { error } }) => (
-    <div className='uploader'>
-      <label htmlFor="signature" className='upload'>
-        <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-          <h4>Upload Your signature</h4>
-          <div className='upload-icon'>
-          <HiCloudUpload />   
-          </div>
-        </div>
-      </label>
-      <input
-        {...field}
-        type="file"
-        id="signature"
-        onChange={(e) => {
-          const file = e.target.files[0];
-          if (file) {
-            handleFileUpload(file, field.name);
-          }
-        }}
-        style={{ display: 'none' }} // Hide the actual input but keep it functional
-      />
-     {error && !fileNames.signature && <span className="error-message">This field is required</span>}
-      {/* Display the file name and errors here */}
-      <div className='Output'>
-      {fileNames.signature && <div>{fileNames.signature}</div>}
-      </div>
-    </div>
-        )}
-        />
-    </div>
-  </div>
+
+
+<div className='signature'>
+<label htmlFor="signature"><span className='required'>*</span></label>
+     I <input type='text' {...register("signature", { required: true,  minLength: 3, maxLength: 30  })} className='signature-input' placeholder='Your Full Name' />
+      {errors.signature && <span className="error-message">This field is required</span>}
+      you acknowledge and 
+                agree to the purpose set-out in this clause 
+                and our data privacy policy. Thank you
 </div>
-    <Controller
+ <Controller
           name="checkbox"
           control={control}
           rules={{
@@ -248,7 +215,7 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
       </Fade>
     </Modal>
     </FormProvider>
-    </div>
+    </div>  
   )
 }
 

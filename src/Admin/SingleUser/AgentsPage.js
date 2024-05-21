@@ -8,10 +8,67 @@ import "jspdf-autotable";
 import './single.scss'
 import { UserAuth } from '../../Context/AuthContext';
 import useAutoLogout from '../../Components/Timeout';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import useFetchUserRole from '../../Components/checkUserRole';
+import { useDispatch, useSelector } from 'react-redux';
 
 const AgentsPage = () => {
 
-    const [data, setData] = useState([]);
+  const dispatch = useDispatch();
+      const { user } = UserAuth();
+      const userRole = useFetchUserRole(user);
+    const data = useSelector(state => state.data);
+    const editData = useSelector(state => state.editData);
+    const editingKey = useSelector(state => state.editingKey);
+
+    const handleInputChange = (event) => {
+      dispatch({ type: 'SET_EDIT_DATA', data: { ...editData, [event.target.name]: event.target.value } });
+    };
+  
+    const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+  
+    const handleFormSubmit = async (event, key) => {
+      event.preventDefault();
+  
+      // Update the UI immediately
+      dispatch({ type: 'SET_DATA', data: editData });
+      dispatch({ type: 'SET_EDITING_KEY', key: null });
+  
+      try {
+        const response = await fetch(`${serverURL}/edit-agents-form/${data.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ [key]: editData[key] }),
+        });
+  
+        const result = await response.json();
+  
+        if (!response.ok) {
+          console.error(result.error);
+          // If the server returns an error, revert the changes in the UI
+          dispatch({ type: 'SET_EDIT_DATA', data });
+          toast.error('Update failed. Please try again.');
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        // If the request fails, revert the changes in the UI
+        dispatch({ type: 'SET_EDIT_DATA', data });
+        toast.error('Update failed. Please try again.');
+      }
+    };
+  
+    const handleEditClick = (key) => {
+      dispatch({ type: 'SET_EDITING_KEY', key });
+    };
+  
+    const handleCancelClick = () => {
+      dispatch({ type: 'SET_EDITING_KEY', key: null });
+      dispatch({ type: 'SET_EDIT_DATA', data });
+    };
+  
 
     const { logout } = UserAuth(); // Replace UserAuth with your authentication context
 
@@ -34,12 +91,12 @@ const AgentsPage = () => {
     useEffect(() => {
       const docRef = doc(db, 'agents-kyc', id);
       const unsubscribe = onSnapshot(docRef, (snapshot) => {
-          setData({...snapshot.data(), id: snapshot.id});
+          dispatch({ type: 'SET_DATA', data: { ...snapshot.data(), id: snapshot.id } });
       });
   
       // Return a cleanup function to unsubscribe the listener when the component unmounts
       return () => unsubscribe();
-  }, [id]);
+    }, [id, dispatch]);
 
       
     const downloadPDF = () => {
@@ -240,198 +297,235 @@ doc.save('KYC Form.pdf');
   <div className='flex-content'>
     <ul>
       <h1 className='content-h1'>Personal Information</h1>
-
-      <li className='form-list'>
-        <p>First Name</p>
-        <p className='info'>{data.firstName}</p>
-      </li>
-      <li className='form-list'>
-       <p>Middle Name</p>
-       <p className='info'>{data.middleName}</p>
-      </li>
-      <li className='form-list'>
-        <p>Last Name</p>
-        <p className='info'>{data.lastName}</p>
-      </li>
-      <li className='form-list'>
-        <p>Residential Address</p>
-        <p className='info'>{data.residentialAddress}</p>
-      </li>
-      <li className='form-list'>
-        <p>Gender</p>
-        <p className='info'>{data.gender}</p>
-      </li>
-      <li className='form-list'>
-        <p>Position</p>
-        <p className='info'>{data.position}</p>
-      </li>
-      <li className='form-list'>
-        <p>Date of Birth</p>
-        <p className='info'>{data.dateOfBirth}</p>
-      </li>
-      <li className='form-list'>
-        <p>Place of Birth</p>
-        <p className='info'>{data.placeOfBirth}</p>
-      </li>
-      <li className='form-list'>
-       <p>Source Of Income</p>
-        <p className='info'>{data.sourceOfIncome}</p>
-    </li>
-     <li className='form-list'>
-         <p>Nationality</p>
-         <p className='info'>{data.nationality}</p>
-      </li>
-
+      {[
+        { label: 'First Name', key: 'firstName' },
+        { label: 'Middle Name', key: 'middleName' },
+        { label: 'Last Name', key: 'lastName' },
+        { label: 'Residential Address', key: 'residentialAddress' },
+        { label: 'Gender', key: 'gender' },
+        { label: 'Position', key: 'position' },
+        { label: 'Date of Birth', key: 'dateOfBirth' },
+        { label: 'Place of Birth', key: 'placeOfBirth' },
+        { label: 'Source Of Income', key: 'sourceOfIncome' },
+        { label: 'Nationality', key: 'nationality' },
+      ].map(({ label, key }) => (
+        <li className='form-list' key={key}>
+          <p>{label}</p>
+          {editingKey === key ? (
+            <form onSubmit={(event) => handleFormSubmit(event, key)}>
+              <input
+                type='text'
+                name={key}
+                value={editData[key]}
+                onChange={handleInputChange}
+                className='edit-input'
+              />
+              <button type='submit' className='edit-submit'>Save</button>
+              <button type='button' onClick={handleCancelClick} className='edit-cancel'>
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <>
+              <p className='info'>{data[key]}</p>
+              {userRole === 'admin' && (
+                <button onClick={() => handleEditClick(key)} className='edit-button'>Edit</button>
+              )}
+            </>
+          )}
+        </li>
+      ))}
     </ul>
     <ul>
-    <li className='form-list'>
-        <p>Mobile Number</p>
-        <p className='info'>{data.GSMno}</p>
-      </li>
-      <li className='form-list'>
-        <p>BVN Number</p>
-        <p className='info'>{data.BVNNumber}</p>
-      </li>
-      <li className='form-list'>
-        <p>Tax ID Number</p>
-        <p className='info'>{data.taxIDNumber}</p>
-       </li>
-      <li className='form-list'>
-        <p>Occupation</p>
-        <p className='info'>{data.occupation}</p>
-      </li>
-      <li className='form-list'>
-        <p>Email Address</p>
-        <p className='info'>{data.emailAddress}</p>
-      </li>
-      <li className='form-list'>
-        <p>ID Type</p>
-        <p className='info'>{data.idType}</p>
-       </li>
-       <li className='form-list'>
-        <p>ID Number</p>
-        <p className='info'>{data.idNumber}</p>
-      </li>
-      <li className='form-list'>
-        <p>Issuing Body</p>
-        <p className='info'>{data.issuingBody}</p>
-      </li>
-      <li className='form-list'>
-        <p>Issued Date</p>
-        <p className='info'>{data.issuedDate}</p>
-      </li>
-       <li className='form-list'>
-         <p>Expiry Date</p>
-          <p className='info'>{data.expiryDate}</p>
-       </li>
-
+      {[
+        { label: 'Mobile Number', key: 'GSMno' },
+        { label: 'BVN Number', key: 'BVNNumber' },
+        { label: 'Tax ID Number', key: 'taxIDNumber' },
+        { label: 'Occupation', key: 'occupation' },
+        { label: 'Email Address', key: 'emailAddress' },
+        { label: 'ID Type', key: 'idType' },
+        { label: 'ID Number', key: 'idNumber' },
+        { label: 'Issuing Body', key: 'issuingBody'},
+        { label: 'Issued Date', key: 'issuedDate' },
+        { label: 'Expiry Date', key: 'expiryDate' },
+      ].map(({ label, key }) => (
+        <li className='form-list' key={key}>
+          <p>{label}</p>
+          {editingKey === key ? (
+            <form onSubmit={(event) => handleFormSubmit(event, key)}>
+              <input
+                type='text'
+                name={key}
+                value={editData[key]}
+                onChange={handleInputChange}
+                className='edit-input'
+              />
+              <button type='submit' className='edit-submit'>Save</button>
+              <button type='button' onClick={handleCancelClick} className='edit-cancel'>
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <>
+              <p className='info'>{data[key]}</p>
+              {userRole === 'admin' && (
+                <button onClick={() => handleEditClick(key)} className='edit-button'>Edit</button>
+              )}
+            </>
+          )}
+        </li>
+      ))}
     </ul>
   </div>
-  {/* Agents Profile */}
-
-
-        <div className='flex-content'>
+  <div className='flex-content'>
     <ul>
-    <h1 className='content-h1'>Agents Profile</h1>
-    <li className='form-list'>
-        <p>Agents Name</p>
-        <p className='info'>{data.agentsName}</p>
-      </li>
-
-      <li className='form-list'>
-        <p>Agents Address</p>
-        <p className='info'>{data.agentsAddress}</p>
-      </li>
-      <li className='form-list'>
-        <p>NAICOM Lisence Number</p>
-        <p className='info'>{data.naicomNo}</p>
-      </li>
-      <li className='form-list'>
-        <p>BVN Number</p>
-        <p className='info'>{data.BVNNumber}</p>
-      </li>
-
-      <li className='form-list'>
-        <p>Lisence Issued Date</p>
-        <p className='info'>{data.lisenceIssuedDate}</p>
-      </li>
-      <li className='form-list'>
-        <p>Lisence Expiry Date</p>
-        <p className='info'>{data.lisenceExpiryDate}</p>
-      </li>
-          </ul>
-          <ul>
-          <li className='form-list'>
-        <p>Email Address</p>
-        <p className='info'>{data.agentsEmail}</p>
-      </li>
-      <li className='form-list'>
-        <p>Website</p>
-        <p className='info'>{data.website}</p>
-      </li>
-      <li className='form-list'>
-        <p>Mobile Number</p>
-        <p className='info'>{data.mobileNo}</p>
-      </li>
-      <li className='form-list'>
-        <p>Tax Identification Number</p>
-        <p className='info'>{data.taxIDNo}</p>
-      </li>
-      <li className='form-list'>
-        <p>ARIAN Membership Number</p>
-        <p className='info'>{data.arian}</p>
-      </li>
-      <li className='form-list'>
-        <p>List of Agents Approved Principals (Insurer)</p>
-        <p className='info'>{data.listOfAgents}</p>
-      </li>
-
-          </ul>
-        </div>
-
-    {/* Account Details */}
-        <div className='flex-content'>
-          <ul>
-            <h1>Account Details</h1>
-            <li className='form-list'>
-              <p>Account Number</p>
-              <p className='info'>{data.accountNumber}</p>
-            </li>
-            <li className='form-list'>
-              <p>Bank Name</p>
-              <p className='info'>{data.bankName}</p>
-            </li>
-            <li className='form-list'>
-              <p>Bank Branch</p>
-              <p className='info'>{data.bankBranch}</p>
-            </li>
-            <li className='form-list'>
-              <p>Account Opening Date</p>
-              <p className='info'>{data.accountOpeningDate}</p>
-            </li>
-          </ul>
-          <ul>
-            <h1>Account Details (Foreign)</h1>
-            <li className='form-list'>
-              <p>Account Number</p>
-              <p className='info'>{data.accountNumber2}</p>
-            </li>
-            <li className='form-list'>
-              <p>Bank Name</p>
-              <p className='info'>{data.bankName2}</p>
-            </li>
-            <li className='form-list'>
-              <p>Bank Branch</p>
-              <p className='info'>{data.bankBranch2}</p>
-            </li>
-            <li className='form-list'>
-              <p>Account Opening Date</p>
-              <p className='info'>{data.accountOpeningDate2}</p>
-            </li>
-          </ul>
-        </div>
-  
+      <h1 className='content-h1'>Agents Profile</h1>
+      {[
+        { label: 'Agents Name', key: 'agentsName' },
+        { label: 'Agents Address', key: 'agentsAddress' },
+        { label: 'NAICOM Lisence Number', key: 'naicomNo' },
+        { label: 'BVN Number', key: 'BVNNumber' },
+        { label: 'Lisence Issued Date', key: 'lisenceIssuedDate' },
+        { label: 'Lisence Expiry Date', key: 'lisenceExpiryDate' },
+      ].map(({ label, key }) => (
+        <li className='form-list' key={key}>
+          <p>{label}</p>
+          {editingKey === key ? (
+            <form onSubmit={(event) => handleFormSubmit(event, key)}>
+              <input
+                type='text'
+                name={key}
+                value={editData[key]}
+                onChange={handleInputChange}
+                className='edit-input'
+              />
+              <button type='submit' className='edit-submit'>Save</button>
+              <button type='button' onClick={handleCancelClick} className='edit-cancel'>
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <>
+              <p className='info'>{data[key]}</p>
+              {userRole === 'admin' && (
+                <button onClick={() => handleEditClick(key)} className='edit-button'>Edit</button>
+              )}
+            </>
+          )}
+        </li>
+      ))}
+    </ul>
+    <ul>
+      {[
+        { label: 'Email Address', key: 'agentsEmail' },
+        { label: 'Website', key: 'website' },
+        { label: 'Mobile Number', key: 'mobileNo' },
+        { label: 'Tax Identification Number', key: 'taxIDNo' },
+        { label: 'ARIAN Membership Number', key: 'arian' },
+        { label: 'List of Agents Approved Principals (Insurer)', key: 'listOfAgents' },
+      ].map(({ label, key }) => (
+        <li className='form-list' key={key}>
+          <p>{label}</p>
+          {editingKey === key ? (
+            <form onSubmit={(event) => handleFormSubmit(event, key)}>
+              <input
+                type='text'
+                name={key}
+                value={editData[key]}
+                onChange={handleInputChange}
+                className='edit-input'
+              />
+              <button type='submit' className='edit-submit'>Save</button>
+              <button type='button' onClick={handleCancelClick} className='edit-cancel'>
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <>
+              <p className='info'>{data[key]}</p>
+              {userRole === 'admin' && (
+                <button onClick={() => handleEditClick(key)} className='edit-button'>Edit</button>
+              )}
+            </>
+          )}
+        </li>
+      ))}
+    </ul>
+  </div>
+  <div className='flex-content'>
+    <ul>
+      <h1>Account Details</h1>
+      {[
+        { label: 'Account Number', key: 'accountNumber' },
+        { label: 'Bank Name', key: 'bankName' },
+        { label: 'Bank Branch', key: 'bankBranch' },
+        { label: 'Account Opening Date', key: 'accountOpeningDate' },
+      ].map(({ label, key }) => (
+        <li className='form-list' key={key}>
+          <p>{label}</p>
+          {editingKey === key ? (
+            <form onSubmit={(event) => handleFormSubmit(event, key)}>
+              <input
+                type='text'
+                name={key}
+                value={editData[key]}
+                onChange={handleInputChange}
+                className='edit-input'
+              />
+              <button type='submit' className='edit-submit'>Save</button>
+              <button type='button' onClick={handleCancelClick} className='edit-cancel'>
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <>
+              <p className='info'>{data[key]}</p>
+              {userRole === 'admin' && (
+                <button onClick={() => handleEditClick(key)} className='edit-button'>Edit</button>
+              )}
+            </>
+          )}
+        </li>
+      ))}
+    </ul>
+    <ul>
+      <h1>Account Details (Foreign)</h1>
+      {[
+        { label: 'Account Number', key: 'accountNumber2' },
+        { label: 'Bank Name', key: 'bankName2' },
+        { label: 'Bank Branch', key: 'bankBranch2' },
+        { label: 'Account Opening Date', key: 'accountOpeningDate2' },
+      ].map(({ label, key }) => (
+        <li className='form-list' key={key}>
+          <p>{label}</p>
+          {editingKey === key ? (
+            <form onSubmit={(event) => handleFormSubmit(event, key)}>
+              <input
+                type='text'
+                name={key}
+                value={editData[key]}
+                onChange={handleInputChange}
+                className='edit-input'
+              />
+              <button type='submit' className='edit-submit'>Save</button>
+              <button type='button' onClick={handleCancelClick} className='edit-cancel'>
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <>
+              <p className='info'>{data[key]}</p>
+              {userRole === 'admin' && (
+                <button onClick={() => handleEditClick(key)} className='edit-button'>Edit</button>
+              )}
+            </>
+          )}
+        </li>
+      ))}
+    </ul>
+  </div>
 </div>
+
 
       <div className='form-contents'>
         <div className='flex-content'>

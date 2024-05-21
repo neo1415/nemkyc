@@ -31,8 +31,8 @@ export const schema2 = yup.object().shape({
   country: yup.string().required('Country is required').transform(sanitizeString),
   occupation: yup.string().required('Occupation is required').transform(sanitizeString),
   BVNNumber: yup.string().required('BVN Number is required').min(11).max(11).transform(sanitizeString),
-  employersName: yup.string().required('Employer\'s Name is required').transform(sanitizeString),
-  employersPhoneNumber: yup.string().required('Employer\'s Phone Number is required').matches(/^[0-9]+$/, 'Employer\'s Phone Number must be numeric').min(5).max(11).transform(sanitizeString),
+  employersName: yup.string().transform(sanitizeString),
+  employersPhoneNumber: yup.string().transform(sanitizeString),
   phoneNumber: yup.string().required('Phone Number is required').matches(/^[0-9]+$/, 'Phone Number must be numeric').min(5).max(11).transform(sanitizeString),
   residentialAddress: yup.string().required('Residential Address is required').transform(sanitizeString),
   email: yup.string().required('Email is required').email().transform(sanitizeEmail),
@@ -41,7 +41,14 @@ export const schema2 = yup.object().shape({
   idNumber: yup.string().required('ID Number is required').transform(sanitizeString),
   issuingBody: yup.string().required('Issuing Body is required').transform(sanitizeString),
   issuedDate: yup.date().required('Issued Date is required'),
-  expiryDate: yup.date().required('expiry Date is required').min(new Date(), 'expired means of ID'),
+  expiryDate:  yup.date()
+  .transform((value, originalValue) => {
+    return originalValue === "" ? null : new Date(originalValue);
+  })
+  .nullable(true)
+  .notRequired()
+  .min(new Date(), 'expired means of ID')
+  .test('is-date', 'expiryDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
   sourceOfIncome: yup.string().required('Source of Income is required'),
 });
 

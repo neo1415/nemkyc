@@ -72,13 +72,11 @@ const Director1 = ({register, errors, control}) => {
         <div className='flex-two'>
             
 
-      <label htmlFor="intPassNo">international Passport Number <span className='required'>*</span></label>
+      <label htmlFor="intPassNo">international Passport Number </label>
       <input type='text' {...register("intPassNo", { required: true, minLength: 3, maxLength: 30 })} placeholder='international Passport Number' />
-      {errors.intPassNo && <span className="error-message">This field is required</span>}
 
-      <label htmlFor="passIssuedCountry">passport Issued Country <span className='required'>*</span></label>
+      <label htmlFor="passIssuedCountry">passport Issued Country </label>
       <input type='text' {...register("passIssuedCountry", { required: true, minLength: 3, maxLength: 30 })} placeholder='passport Issued Country' />
-      {errors.passIssuedCountry && <span className="error-message">This field is required</span>}
 
 
       <label htmlFor="sourceOfIncome">Source of Income <span className='required'>*</span></label>
@@ -146,9 +144,9 @@ const Director1 = ({register, errors, control}) => {
       <input type="date" {...register("issuedDate", { required: true })} placeholder='Issued Date' />
       {errors.issuedDate && <span className="error-message">This Field is Required</span>}
 
-      <label htmlFor="expirydDate">Expiry Date <span className='required'>*</span> </label>
+      <label htmlFor="expirydDate">Expiry Date  </label>
       <input type="date" {...register("expiryDate" ,{ required: true })} placeholder='Expiry Date' />
-      {errors.expiryDate && <span className="error-message">This Field is Required</span>}
+      {errors.expiryDate && <span className="error-message">{errors.expiryDate.message}</span>}
 
       <label htmlFor="issuingBody">Issuing Body <span className='required'>*</span></label>
       <input type="text" {...register("issuingBody", { required: true, minLength: 1, maxLength: 50 })} placeholder='Issuing Body' />

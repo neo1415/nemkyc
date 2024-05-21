@@ -25,7 +25,7 @@ const AdditionalInfo = ({register, errors}) => {
         <input type="date" id="lisenceIssuedDate" {...register("lisenceIssuedDate", { required: true })} />
         {errors.lisenceIssuedDate && <span className="error-message">Issuing Date is required</span>}
 
-        <label htmlFor="lisenceExpiryDate">Lisence Expiry Datel <span className='required'>*</span></label>
+        <label htmlFor="lisenceExpiryDate">Lisence Expiry Date <span className='required'>*</span></label>
         <input type="date" id="lisenceExpiryDate" {...register("lisenceExpiryDate")} />
         {errors.lisenceExpiryDate && <span className="error-message">Expiry Date is required</span>}
 

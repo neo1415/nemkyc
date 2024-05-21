@@ -32,9 +32,8 @@ const Director1 = ({register, errors, control}) => {
       <input type='text' {...register("firstName", { required: true,  minLength: 3, maxLength: 30  })} placeholder='First Name' />
       {errors.firstName && <span className="error-message">This field is required</span>}
 
-      <label htmlFor="middleName">Middle Nam <span className='required'>*</span> </label>
+      <label htmlFor="middleName">Middle Name </label>
       <input type='text' {...register("middleName", { minLength: 3, maxLength: 30  })} placeholder='Middle Name' />
-      {errors.lastName && <span className="error-message">This field is required</span>}
 
       <label htmlFor="lastName">Last Name<span className='required'>*</span></label>
       <input type='text' {...register("lastName", { required: true ,  minLength: 3, maxLength: 30 })} placeholder='Last Name' />
@@ -60,14 +59,12 @@ const Director1 = ({register, errors, control}) => {
       <input type='text' {...register("occupation", { required: true, minLength: 3, maxLength: 30 })} placeholder='Occupation' />
       {errors.occupation && <span className="error-message">This field is required</span>}
 
-      <label htmlFor="BVNNumber">BVN  <span className='required'>*</span> </label>
+      <label htmlFor="BVNNumber">BVN <span className='required'>*</span> </label>
       <input type='number' {...register("BVNNumber", { required: true,  minLength:11, maxLength: 11 })} placeholder='BVN' />
       {errors.BVNNumber && <span className="error-message">This field is required</span>}
 
-      <label htmlFor="employersName">Employers Name  <span className='required'>*</span> </label>
-            <input  type="text" {...register("employersName",{ required: true, minLength: 2, maxLength: 50 })} placeholder='Employers Name' />
-            {errors.employersName && <span className="error-message">This Field is Required</span>}
-
+      <label htmlFor="employersName">Employers Name  </label>
+      <input  type="text" {...register("employersName",{ required: true, minLength: 2, maxLength: 50 })} placeholder='Employers Name' />
 
     </div>
 
@@ -77,8 +74,6 @@ const Director1 = ({register, errors, control}) => {
       <input  type="number"{...register("phoneNumber",{ required: true, minLength: 5, maxLength: 11  })} placeholder='Phone Number' />
       {errors.phoneNumber && <span className="error-message">Please enter a valid number</span>}
 
-     
-
       <label htmlFor="address">Address <span className='required'>*</span></label>
       <input type='text' {...register("address", { required: true,})} placeholder='Address' />
       {errors.address && <span className="error-message">This Field is required</span>}
@@ -87,18 +82,14 @@ const Director1 = ({register, errors, control}) => {
       <input type='email' {...register("email", { required: true, pattern: /^\S+@\S+$/i , minLength: 6, maxLength: 30 })} placeholder='email' />
       {errors.email && <span className="error-message">This field is required</span>}
 
-      <label htmlFor="taxIDNumber">Tax ID Number <span className='required'>*</span> </label>
+      <label htmlFor="taxIDNumber">Tax ID Number </label>
       <input type='text' {...register("taxIDNumber")} placeholder='Tax Identification Number' />
-      {errors.taxIDNumber && <span className="error-message">THis field is required</span>}
 
-      <label htmlFor="intPassNo">international Passport Number <span className='required'>*</span></label>
-      <input type='text' {...register("intPassNo", { required: true, minLength: 3, maxLength: 30 })} placeholder='international Passport Number' />
-      {errors.intPassNo && <span className="error-message">This field is required</span>}
+      <label htmlFor="intPassNo">international Passport Number </label>
+      <input type='text' {...register("intPassNo", { required: false, minLength: 3, maxLength: 30 })} placeholder='international Passport Number' />
 
-      <label htmlFor="passIssuedCountry">passport Issued Country <span className='required'>*</span></label>
-      <input type='text' {...register("passIssuedCountry", { required: true, minLength: 3, maxLength: 30 })} placeholder='passport Issued Country' />
-      {errors.passIssuedCountry && <span className="error-message">This field is required</span>}
-
+      <label htmlFor="passIssuedCountry">passport Issued Country </label>
+      <input type='text' {...register("passIssuedCountry", { required: false, minLength: 3, maxLength: 30 })} placeholder='passport Issued Country' />
 
       <label htmlFor="idType">ID Type <span className='required'>*</span></label>
         <Controller
@@ -131,9 +122,9 @@ const Director1 = ({register, errors, control}) => {
       <input type="date" {...register("issuedDate", { required: true })} placeholder='Issued Date' />
       {errors.issuedDate && <span className="error-message">This Field is Required</span>}
 
-      <label htmlFor="expiryDate">Expiry Date   <span className='required'>*</span></label>
-      <input type="date" {...register("expiryDate" ,{ required: true })} placeholder='Expiry Date' />
-      {errors.expiryDate && <span className="error-message">This Field is Required</span>}
+      <label htmlFor="expiryDate">Expiry Date </label>
+      <input type="date" {...register("expiryDate" ,{ required: false })} placeholder='Expiry Date' />
+      {errors.expiryDate && <span className="error-message">{errors.expiryDate.message}</span>}
 
       <label htmlFor="sourceOfIncome">Source of Income <span className='required'>*</span></label>
         <Controller
