@@ -285,3 +285,28 @@ label[for="private"] {
   font-size: 1rem;
   margin-top: -0.7rem;
 }
+.flexer{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.agent-flex{
+  display: flex;
+  flex-direction: row;
+}
+.signature{
+  line-height: 0.1rem;
+    width: 43rem;
+    display: flow;
+    text-align: justify;
+    flex-direction: column;
+    margin-bottom: 2rem;
+}
+.signature-input{
+  border-bottom: 2px solid brown !important;
+  border: none;
+  background-color: #80002000 !important;
+  height: 1.5rem !important;
+}

@@ -1,5 +1,6 @@
 import * as yup from 'yup';
 import { sanitizeEmail, sanitizeString } from '../../Components/SanitizationUtils';
+import { GridSignature } from '@mui/x-data-grid';
 
 export const schema1 = yup.object().shape({
     firstName: yup.string().required('First Name is required').transform(sanitizeString),
@@ -20,15 +21,23 @@ export const schema1 = yup.object().shape({
     idType: yup.string().required('ID Type is required'),
   idNumber: yup.string().required('ID Number is required').transform(sanitizeString),
   issuedDate: yup.date().required('Issued Date is required'),
-  expiryDate: yup.date().required('Expiry Date is required').min(new Date(), 'expired means of ID'),
+  expiryDate: yup.date()
+  .transform((value, originalValue) => {
+    return originalValue === "" ? null : new Date(originalValue);
+  })
+  .nullable(true)
+  .notRequired()
+  .min(new Date(), 'expired means of ID')
+  .test('is-date', 'expiryDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+  sourceOfIncome: yup.string().required('Source of Income is required'),
   issuingBody: yup.string().required('Issuing Body is required').transform(sanitizeString),
    
 });
 
 export const schema2 = yup.object().shape({
     agentsName:(yup.string().transform(sanitizeString)).required('Agents Name is required'),
-    agentsAddress: yup.string().transform(sanitizeString),
-    naicomNo: yup.string().transform(sanitizeString),
+    agentsAddress: yup.string().required('Agents Address is required').transform(sanitizeString),
+    naicomNo: yup.string().required('NAICOM Lisence Number is required').transform(sanitizeString),
     lisenceIssuedDate: yup.date().required('Issued Date is required'),
     lisenceExpiryDate: yup.date().required('Expiry Date is required').min(new Date(), 'expired Lisence'),
     agentsEmail: yup.string().required('Email is required').email().transform(sanitizeEmail),
@@ -63,6 +72,8 @@ export const schema3 = yup.object().shape({
     .test('is-date', 'dob2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
   
     bankBranch2: yup.string().transform(sanitizeString),
+
+    signature: yup.string().required('Full Name Name is required').transform(sanitizeString),
 checkbox: yup.boolean()
 .required('You must accept the terms and conditions')
 .oneOf([true], 'You must accept the terms and conditions'),

@@ -8,10 +8,66 @@ import "jspdf-autotable";
 import './single.scss'
 import { UserAuth } from '../../Context/AuthContext';
 import useAutoLogout from '../../Components/Timeout';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import useFetchUserRole from '../../Components/checkUserRole';
+import { useDispatch, useSelector } from 'react-redux';
 
 const IndividualUser = () => {
 
-    const [data, setData] = useState([]);
+  const dispatch = useDispatch();
+  const { user } = UserAuth();
+  const userRole = useFetchUserRole(user);
+const data = useSelector(state => state.data);
+const editData = useSelector(state => state.editData);
+const editingKey = useSelector(state => state.editingKey);
+
+const handleInputChange = (event) => {
+  dispatch({ type: 'SET_EDIT_DATA', data: { ...editData, [event.target.name]: event.target.value } });
+};
+
+const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+
+const handleFormSubmit = async (event, key) => {
+  event.preventDefault();
+
+  // Update the UI immediately
+  dispatch({ type: 'SET_DATA', data: editData });
+  dispatch({ type: 'SET_EDITING_KEY', key: null });
+
+  try {
+    const response = await fetch(`${serverURL}/edit-individual-form/${data.id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ [key]: editData[key] }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error(result.error);
+      // If the server returns an error, revert the changes in the UI
+      dispatch({ type: 'SET_EDIT_DATA', data });
+      toast.error('Update failed. Please try again.');
+    }
+  } catch (err) {
+    console.error('Error:', err);
+    // If the request fails, revert the changes in the UI
+    dispatch({ type: 'SET_EDIT_DATA', data });
+    toast.error('Update failed. Please try again.');
+  }
+};
+
+const handleEditClick = (key) => {
+  dispatch({ type: 'SET_EDITING_KEY', key });
+};
+
+const handleCancelClick = () => {
+  dispatch({ type: 'SET_EDITING_KEY', key: null });
+  dispatch({ type: 'SET_EDIT_DATA', data });
+};
 
     const { logout } = UserAuth(); // Replace UserAuth with your authentication context
 
@@ -34,12 +90,12 @@ const IndividualUser = () => {
     useEffect(() => {
       const docRef = doc(db, 'individual-kyc', id);
       const unsubscribe = onSnapshot(docRef, (snapshot) => {
-          setData({...snapshot.data(), id: snapshot.id});
+          dispatch({ type: 'SET_DATA', data: { ...snapshot.data(), id: snapshot.id } });
       });
   
       // Return a cleanup function to unsubscribe the listener when the component unmounts
       return () => unsubscribe();
-  }, [id]);
+    }, [id, dispatch]);
 
       
     const downloadPDF = () => {
@@ -125,133 +181,96 @@ doc.save('KYC Form.pdf');
   <div className='singles'>
     <div className='form-content'>
     <div className='form-contents'>
-  <div className='flex-content'>
-    <ul>
-      <h1 className='content-h1'>Personal Information</h1>
-      <li className='form-list'>
-        <p>Title</p>
-        <p className='info'>{data.title}</p>
+    <div className='flex-content'>
+  <ul>
+    <h1 className='content-h1'>Personal Information</h1>
+    {[
+      { label: 'Title', key: 'title' },
+      { label: 'First Name', key: 'firstName' },
+      { label: 'Last Name', key: 'lastName' },
+      { label: 'Contact Address', key: 'contactAddress' },
+      { label: 'Gender', key: 'gender' },
+      { label: 'Nationality', key: 'nationality' },
+      { label: 'Country', key: 'country' },
+      { label: 'Date of Birth', key: 'dateOfBirth' },
+      { label: 'Place of Birth', key: 'placeOfBirth' },
+      { label: 'Occupation', key: 'occupation' },
+      { label: 'Position', key: 'position' },
+      { label: 'Premium Payment Source', key: 'premiumPaymentSource' },
+      { label: 'Mobile Number', key: 'GSMno' },
+      { label: 'Residential Address', key: 'residentialAddress' },
+      { label: 'Email Address', key: 'emailAddress' },
+    ].map(({ label, key }) => (
+      <li className='form-list' key={key}>
+        <p>{label}</p>
+        {editingKey === key ? (
+          <form onSubmit={(event) => handleFormSubmit(event, key)}>
+            <input
+              type='text'
+              name={key}
+              value={editData[key]}
+              onChange={handleInputChange}
+              className='edit-input'
+            />
+            <button type='submit' className='edit-submit'>Save</button>
+            <button type='button' onClick={handleCancelClick} className='edit-cancel'>
+              Cancel
+            </button>
+          </form>
+        ) : (
+          <>
+            <p className='info'>{data[key]}</p>
+            {userRole === 'admin' && (
+              <button onClick={() => handleEditClick(key)} className='edit-button'>Edit</button>
+            )}
+          </>
+        )}
       </li>
-      <li className='form-list'>
-        <p>First Name</p>
-        <p className='info'>{data.firstName}</p>
+    ))}
+  </ul>
+  <ul>
+    {[
+      { label: 'Identification Number', key: 'identificationNumber' },
+      { label: 'BVN Number', key: 'BVNNumber' },
+      { label: 'Identification Type', key: 'identificationType' },
+      { label: 'Issuing Country', key: 'issuingCountry' },
+      { label: 'Issued Date', key: 'issuedDate' },
+      { label: 'Expiry Date', key: 'expiryDate' },
+      { label: 'Employer\'s Name', key: 'employersName' },
+      { label: 'Employer\'s Address', key: 'employersAddress' },
+      { label: 'Employer\'s Telephone Number', key: 'employersTelephoneNumber' },
+      { label: 'Employer\'s Email', key: 'employersEmail' },
+      { label: 'Business Type', key: 'businessType' },
+      { label: 'Annual Income Range', key: 'annualIncomeRange' },
+    ].map(({ label, key }) => (
+      <li className='form-list' key={key}>
+        <p>{label}</p>
+        {editingKey === key ? (
+          <form onSubmit={(event) => handleFormSubmit(event, key)}>
+            <input
+              type='text'
+              name={key}
+              value={editData[key]}
+              onChange={handleInputChange}
+              className='edit-input'
+            />
+            <button type='submit' className='edit-submit'>Save</button>
+            <button type='button' onClick={handleCancelClick} className='edit-cancel'>
+              Cancel
+            </button>
+          </form>
+        ) : (
+          <>
+            <p className='info'>{data[key]}</p>
+            {userRole === 'admin' && (
+              <button onClick={() => handleEditClick(key)} className='edit-button'>Edit</button>
+            )}
+          </>
+        )}
       </li>
-      <li className='form-list'>
-        <p>Last Name</p>
-        <p className='info'>{data.lastName}</p>
-      </li>
-      <li className='form-list'>
-        <p>Contact Address</p>
-        <p className='info'>{data.contactAddress}</p>
-      </li>
-      <li className='form-list'>
-        <p>Gender</p>
-        <p className='info'>{data.gender}</p>
-      </li>
-      <li className='form-list'>
-        <p>Nationality</p>
-        <p className='info'>{data.nationality}</p>
-      </li>
-      <li className='form-list'>
-        <p>Country</p>
-        <p className='info'>{data.country}</p>
-      </li>
-      <li className='form-list'>
-        <p>Date of Birth</p>
-        <p className='info'>{data.dateOfBirth}</p>
-      </li>
-      <li className='form-list'>
-        <p>Place of Birth</p>
-        <p className='info'>{data.placeOfBirth}</p>
-      </li>
-      <li className='form-list'>
-        <p>Occupation</p>
-        <p className='info'>{data.occupation}</p>
-      </li>
-      <li className='form-list'>
-        <p>Position</p>
-        <p className='info'>{data.position}</p>
-      </li>
-      <li className='form-list'>
-        <p>Premium Payment Source</p>
-        <p className='info'>{data.premiumPaymentSource}</p>
-      </li>
-      <li className='form-list'>
-        <p>Mobile Number</p>
-        <p className='info'>{data.GSMno}</p>
-      </li>
-      <li className='form-list'>
-        <p>Residential Address</p>
-        <p className='info'>{data.residentialAddress}</p>
-      </li>
-      <li className='form-list'>
-        <p>Email Address</p>
-        <p className='info'>{data.emailAddress}</p>
-      </li>
-    </ul>
-    <ul>
-      <li className='form-list'>
-        <p>Identification Number</p>
-        <p className='info'>{data.identificationNumber}</p>
-      </li>
-      <li className='form-list'>
-        <p>BVN Number</p>
-        <p className='info'>{data.BVNNumber}</p>
-      </li>
-      <li className='form-list'>
-        <p>Identification Type</p>
-        <p className='info'>{data.identificationType}</p>
-      </li>
-      <li className='form-list'>
-        <p>Issuing Country</p>
-        <p className='info'>{data.issuingCountry}</p>
-      </li>
-      <li className='form-list'>
-        <p>Issued Date</p>
-        <p className='info'>{data.issuedDate}</p>
-      </li>
-      <li className='form-list'>
-        <p>Expiry Date</p>
-        <p className='info'>{data.expiryDate}</p>
-      </li>
-      {/* <li className='form-list'>
-        <p>International Passport Number</p>
-        <p className='info'>{data.identificationNumber}</p>
-      </li>
-      <li className='form-list'>
-        <p>Passport Country</p>
-        <p className='info'>{data.passCountry}</p>
-      </li> */}
-      <li className='form-list'>
-        <p>Employer's Name</p>
-        <p className='info'>{data.employersName}</p>
-      </li>
-      <li className='form-list'>
-        <p>Employer's Address</p>
-        <p className='info'>{data.employersAddress}</p>
-      </li>
-      <li className='form-list'>
-        <p>Employer's Telephone Number</p>
-        <p className='info'>{data.employersTelephoneNumber}</p>
-      </li>
-      <li className='form-list'>
-        <p>Employer's Email</p>
-        <p className='info'>{data.employersEmail}</p>
-      </li>
-      <li className='form-list'>
-        <p>Business Type</p>
-        <p className='info'>{data.businessType}</p>
-      </li>
-      <li className='form-list'>
-        <p>Annual Income Range</p>
-        <p className='info'>{data.annualIncomeRange}</p>
-      </li>
-      {/* <li className='form-list'>
-        <p>Date</p>
-        <p className='info'>{data.date}</p>
-      </li> */}
-    </ul>
-  </div>
+    ))}
+  </ul>
+</div>
 </div>
 
       <div className='form-contents'>

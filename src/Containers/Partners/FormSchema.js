@@ -25,7 +25,7 @@ export const schema1 = yup.object().shape({
   contactPerson: yup.string().required('Contact Person is required').min(3).max(60).transform(sanitizeString),
   contactPersonNo: yup.string().required('Contact Person Number is required').matches(/^[0-9]+$/, 'Telephone Number must be numeric').min(5).max(11).transform(sanitizeString),
   taxIdentificationNumber: yup.string().required('Tax Identification Number is required').transform(sanitizeString),
-  VATRegistrationNumber: yup.string().required('VAT Registration Number is required').transform(sanitizeString),
+  VATRegistrationNumber: yup.string().transform(sanitizeString),
   telephoneNumber: yup.string().required('Telephone Number is required').matches(/^[0-9]+$/, 'Telephone Number must be numeric').min(5).max(11).transform(sanitizeString),
 });
 
@@ -42,8 +42,8 @@ export const schema2 = yup.object().shape({
   occupation: yup.string().required('Occupation is required').transform(sanitizeString),
   BVNNumber: yup.string().required('BVN Number is required').min(11).max(11).transform(sanitizeString),
   taxIDNumber: yup.string().transform(sanitizeString),
-  intPassNo: yup.string().required('International Passport Number is required').transform(sanitizeString),
-  passIssuedCountry: yup.string().required('Passport Issued Country is required').transform(sanitizeString),
+  intPassNo: yup.string().transform(sanitizeString),
+  passIssuedCountry: yup.string().transform(sanitizeString),
   sourceOfIncome: yup.string().required('Source of Income is required'),
   nationality: yup.string().required('Nationality is required').transform(sanitizeString),
   phoneNumber: yup.string().required('Phone Number is required').matches(/^[0-9]+$/, 'Phone Number must be numeric').min(5).max(11).transform(sanitizeString),
@@ -51,7 +51,14 @@ export const schema2 = yup.object().shape({
   idType: yup.string().required('ID Type is required'),
   idNumber: yup.string().required('ID Number is required').transform(sanitizeString),
   issuedDate: yup.date().required('Issued Date is required'),
-  expiryDate: yup.date().required('Expiry Date is required').min(new Date(), 'expired means of ID'),
+  expiryDate:  yup.date()
+  .transform((value, originalValue) => {
+    return originalValue === "" ? null : new Date(originalValue);
+  })
+  .nullable(true)
+  .notRequired()
+  .min(new Date(), 'expired means of ID')
+  .test('is-date', 'expiryDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
   issuingBody: yup.string().required('Issuing Body is required').transform(sanitizeString),
 });
 
@@ -88,7 +95,7 @@ export const schema3 = yup.object().shape({
   })
   .nullable(true)
   .notRequired()
-  .test('is-date', 'dob2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+  .test('is-date', 'issued Date must be a valid date', value => !value || !isNaN(Date.parse(value))),
 
   expiryDate2: yup.date()
   .transform((value, originalValue) => {
@@ -96,7 +103,9 @@ export const schema3 = yup.object().shape({
   })
   .nullable(true)
   .notRequired()
-  .test('is-date', 'issuedDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+  .min(new Date(), 'expired means of ID')
+  .test('is-date', 'expiryDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+  sourceOfIncome: yup.string().required('Source of Income is required'),
 
   issuingBody2: yup.string().transform(sanitizeString),
 });

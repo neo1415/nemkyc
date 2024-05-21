@@ -23,7 +23,7 @@ const Director2 = ({register, errors, formValues, control}) => {
 
       <label htmlFor="gender2">Gender </label>
       <select id="gender2" {...register("gender2", { required: true })}>
-        <option value="">Select Gender2</option>
+        <option value="">Select Gender</option>
         <option value="male">Male</option>
         <option value="female">Female</option>
       </select>
@@ -33,7 +33,7 @@ const Director2 = ({register, errors, formValues, control}) => {
       <input type='text' {...register("firstName2", { required: true,  minLength: 3, maxLength: 30  })} placeholder='First Name' />
       {errors.firstName2 && <span className="error-message">This field is required</span>}
 
-      <label htmlFor="middleName2">Middle Nam  </label>
+      <label htmlFor="middleName2">Middle Name  </label>
       <input type='text' {...register("middleName2", { minLength: 3, maxLength: 30  })} placeholder='Middle Name' />
       {errors.lastName2 && <span className="error-message">This field is required</span>}
 
@@ -84,7 +84,7 @@ const Director2 = ({register, errors, formValues, control}) => {
       <input type='text' {...register("address2", { required: true,})} placeholder='Address' />
       {errors.address2 && <span className="error-message">This Field is required</span>}
 
-      <label htmlFor="email2">Email2 </label>
+      <label htmlFor="email2">Email </label>
       <input type='email' {...register("email2", { required: true, pattern: /^\S+@\S+$/i , minLength: 6, maxLength: 30 })} placeholder='email2' />
       {errors.email2 && <span className="error-message">This field is required</span>}
 

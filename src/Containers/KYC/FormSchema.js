@@ -30,7 +30,16 @@ export const schema2 = yup.object().shape({
     identificationNumber: yup.string().required('Identification Number is required').transform(sanitizeString),
     issuingCountry: yup.string().required('Issuing Country is required').transform(sanitizeString),
     issuedDate: yup.date().required('Issued Date is required'),
-    expiryDate: yup.date().required('expiry Date is required').min(new Date(), 'expired means of ID'),
+    expiryDate: yup.date()
+    .transform((value, originalValue) => {
+      return originalValue === "" ? null : new Date(originalValue);
+    })
+    .nullable(true)
+    .notRequired()
+    .min(new Date(), 'expired means of ID')
+    .test('is-date', 'expiryDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+    sourceOfIncome2: yup.string(),
+  
 });
 
 export const schema3 = yup.object().shape({

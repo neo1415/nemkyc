@@ -8,7 +8,7 @@ export const schema1 = yup.object().shape({
   state: yup.string().required('State is required').min(3).max(60).transform(sanitizeString),
   country: yup.string().required('Country is required').min(3).max(60).transform(sanitizeString),
   incorporationNumber: yup.string().required('Incorporation Number is required').min(7).max(15).transform(sanitizeString),
-  registrationNumber: yup.string().required('Registration Number is required').min(7).max(15).transform(sanitizeString),
+  registrationNumber: yup.string().transform(sanitizeString),
   incorporationState: yup.string().required('Incorporation State is required').min(2).max(50).transform(sanitizeString),
   companyLegalForm: yup.string().required('Company Legal Form is required'),
   dateOfIncorporationRegistration: yup.date().required('Date of Incorporation Registration is required'),
@@ -37,18 +37,25 @@ export const schema2 = yup.object().shape({
   residenceCountry: yup.string().required('Residence Country is required').transform(sanitizeString),
   occupation: yup.string().required('Occupation is required').transform(sanitizeString),
   BVNNumber: yup.string().required('BVN Number is required').min(11).max(11).transform(sanitizeString),
-  employersName: yup.string().required('Employers Name is required').transform(sanitizeString),
+  employersName: yup.string().transform(sanitizeString),
   phoneNumber: yup.string().required('Phone Number is required').matches(/^[0-9]+$/, 'Phone Number must be numeric').min(5).max(11).transform(sanitizeString),
   address: yup.string().required('Address is required').transform(sanitizeString),
   email: yup.string().required('Email is required').email().transform(sanitizeEmail),
   taxIDNumber: yup.string().transform(sanitizeString),
-  intPassNo: yup.string().required('International Passport Number is required').transform(sanitizeString),
-  passIssuedCountry: yup.string().required('Passport Issued Country is required').transform(sanitizeString),
+  intPassNo: yup.string().transform(sanitizeString),
+  passIssuedCountry: yup.string().transform(sanitizeString),
   idType: yup.string().required('ID Type is required'),
   idNumber: yup.string().required('ID Number is required').transform(sanitizeString),
   issuedBy: yup.string().required('Issued By(issuing Country) is required').transform(sanitizeString),
   issuedDate: yup.date().required('Issued Date is required'),
-  expiryDate: yup.date(),
+  expiryDate: yup.date()
+  .transform((value, originalValue) => {
+    return originalValue === "" ? null : new Date(originalValue);
+  })
+  .nullable(true)
+  .notRequired()
+  .min(new Date(), 'expired means of ID')
+  .test('is-date', 'expiryDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
   sourceOfIncome: yup.string().required('Source of Income is required'),
 });
 
