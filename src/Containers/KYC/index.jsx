@@ -71,7 +71,7 @@ const [fileNames, setFileNames] = useState({});
     if (result) {
       try {      
         const formData = {...formValues, ...fileUrls};
-        if (fileUrls.signature && fileUrls.identification ) {
+        if (fileUrls.identification ) {
           setIsSubmitted(true);
           console.log('Form values:', formData);
           const response = await axios.post(endpoints.submitIndividualForm, formData);

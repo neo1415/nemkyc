@@ -155,46 +155,7 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
         <FormProvider {...methods}>
   <div className='upload-section'>
     <div className='upload-form'>
-        <div className='uploader'>
-        <Controller
-        name="signature"
-        control={control}
-        rules={{
-          validate: {
-            required: value => value[0] || 'signature Certificate is required',
-          },
-        }}
-        render={({ field, fieldState: { error } }) => (
-    <div className='uploader'>
-      <label htmlFor="signature" className='upload'>
-        <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-          <h4>Upload Your signature</h4>
-          <div className='upload-icon'>
-          <HiCloudUpload />   
-          </div>
-        </div>
-      </label>
-      <input
-        {...field}
-        type="file"
-        id="signature"
-        onChange={(e) => {
-          const file = e.target.files[0];
-          if (file) {
-            handleFileUpload(file, field.name);
-          }
-        }}
-        style={{ display: 'none' }} // Hide the actual input but keep it functional
-      />
-     {error && !fileNames.signature && <span className="error-message">This field is required</span>}
-      {/* Display the file name and errors here */}
-      <div className='Output'>
-      {fileNames.signature && <div>{fileNames.signature}</div>}
-      </div>
-    </div>
-        )}
-        />
-    </div>
+ 
   </div>
 
   <div className='upload-form'>
@@ -241,7 +202,17 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
     </div>
   </div>
 </div>
-    <Controller
+<div className='signature'>
+<label htmlFor="signature"></label>
+     I <input type='text' {...register("signature", { required: true,  minLength: 3, maxLength: 30  })} className='signature-input' placeholder='Your Full Name' />
+      {errors.signature && <span className="error-message">This field is required</span>}
+      you acknowledge and 
+      agree to the purpose set-out in this clause 
+      and our data privacy policy. Thank you
+</div>
+{errors.signature && <span className="error-message">This field is required</span>}
+
+    {/* <Controller
           name="checkbox"
           control={control}
           rules={{
@@ -259,7 +230,7 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
             />
           )}
         />
-       {errors.checkbox && <Typography className='checkerror' color="error">{errors.checkbox.message}</Typography>}
+       {errors.checkbox && <Typography className='checkerror' color="error">{errors.checkbox.message}</Typography>} */}
               <Modal
                 open={open}
                 onClose={() => setOpen(false)}

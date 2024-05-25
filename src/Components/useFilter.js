@@ -4,7 +4,7 @@ import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 
-const FilterComponent = ({ initialData, setFilteredData }) => {
+const FilterComponent = ({ initialData, setFilteredData, userRole }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState([null, null]);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -22,7 +22,6 @@ const FilterComponent = ({ initialData, setFilteredData }) => {
   };
 
   const handleClick = (event) => {
-    // If the filter is active, clicking the button will reset the filters
     if (activeFilter) {
       setActiveFilter(null);
       setSelectedDateRange([null, null]);
@@ -42,20 +41,21 @@ const FilterComponent = ({ initialData, setFilteredData }) => {
     handleClose();
   };
 
-  // Function to parse formatted date into JavaScript Date object
   const parseDate = (formattedDate) => {
     const parts = formattedDate.split('/');
     const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // JavaScript months are 0-based
+    const month = parseInt(parts[1], 10) - 1;
     const year = parseInt(parts[2], 10);
     return new Date(year, month, day);
   };
 
-  // Effect for filtering data
   useEffect(() => {
     let filtered = initialData;
 
-    // Apply search filter if search is active
+    if (userRole === 'moderator') {
+      filtered = filtered.filter(item => item.status === 'completed');
+    }
+
     if (searchTerm) {
       filtered = filtered.filter((item) =>
         Object.values(item).some((val) =>
@@ -64,7 +64,6 @@ const FilterComponent = ({ initialData, setFilteredData }) => {
       );
     }
 
-    // Apply date range filter if dates are selected
     const [startDate, endDate] = selectedDateRange;
     if (startDate && endDate) {
       const adjustedEndDate = new Date(endDate);
@@ -77,7 +76,7 @@ const FilterComponent = ({ initialData, setFilteredData }) => {
     }
 
     setFilteredData(filtered);
-  }, [searchTerm, selectedDateRange, initialData, setFilteredData]);
+  }, [searchTerm, selectedDateRange, initialData, setFilteredData, userRole]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>

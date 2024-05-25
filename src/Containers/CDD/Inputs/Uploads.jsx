@@ -1,7 +1,7 @@
 import React from 'react'
 import { HiCloudUpload } from 'react-icons/hi';
 
-const Uploads = ({changeHandler,cac, identification, cacForm, formErrors, handleChange}) => {
+const Uploads = ({changeHandler,cac, identification, cacForm, formErrors,register, handleChange}) => {
   return (
     <div>
        <div className='upload-flex'>
@@ -70,7 +70,18 @@ const Uploads = ({changeHandler,cac, identification, cacForm, formErrors, handle
     
               </div>
         </div>
-        <label htmlFor="privacy">
+
+        <div className='signature'>
+<label htmlFor="signature"></label>
+     I <input type='text' {...register("signature", { required: true,  minLength: 3, maxLength: 30  })} className='signature-input' placeholder='Your Full Name' />
+      {errors.signature && <span className="error-message">This field is required</span>}
+      you acknowledge and 
+      agree to the purpose set-out in this clause 
+      and our data privacy policy. Thank you
+</div>
+{errors.signature && <span className="error-message">This field is required</span>}
+
+        {/* <label htmlFor="privacy">
                 <input type="checkbox" id="privacy" name="privacy" onChange={handleChange} style={{border:'3rem solid black'}} />
                 Please note that your data will be treated 
                 with the utmost respect and privacy as required by law.
@@ -78,7 +89,7 @@ const Uploads = ({changeHandler,cac, identification, cacForm, formErrors, handle
                 agree to the purpose set-out in this clause 
                 and our data privacy policy. Thank you.<span className="-star">*</span>
               </label>
-              {formErrors.privacyPolicy && <span className="error-message">{formErrors.privacyPolicy}</span>}
+              {formErrors.privacyPolicy && <span className="error-message">{formErrors.privacyPolicy}</span>} */}
       </div>  
     </div>
   )

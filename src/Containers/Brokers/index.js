@@ -255,6 +255,7 @@ const Brokers = () => {
         control={control}
         setValue={setValue}
         trigger={trigger}
+        register={register}
         fileUrls={fileUrls}
         setFileUrls={setFileUrls}
         setFileNames={setFileNames}

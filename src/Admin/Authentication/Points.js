@@ -8,6 +8,8 @@ export const endpoints = {
   getBrokersData: `${serverURL}/get-brokers-data`,
   getPartnersData: `${serverURL}/get-partners-data`,
   getAgentsData: `${serverURL}/get-agents-data`,
+  getCorporateKYCData: `${serverURL}/get-corporate-kyc-data`,
+  getIndividualKYCData: `${serverURL}/get-individual-kyc-data`,
   getIndividualData: `${serverURL}/get-individual-data`,
   assignAdminRole: (userId) => `${serverURL}/assign-admin-role/${userId}`,
   assignModeratorRole: (userId) => `${serverURL}/assign-moderator-role/${userId}`, // Add this line
@@ -22,4 +24,6 @@ export const endpoints = {
   submitPartnersForm: `${serverURL}/submit-partners-form`,
   submitAgentsForm: `${serverURL}/submit-agents-form`,
   submitBrokersForm: `${serverURL}/submit-brokers-form`,
+  submitCorporateKYCForm: `${serverURL}/submit-corporate-kyc-form`,
+  submitIndividualKYCForm: `${serverURL}/submit-individual-kyc-form`,
 };

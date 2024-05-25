@@ -1,12 +1,12 @@
 import { DataGrid } from '@mui/x-data-grid';
-import { userColumns} from "../Table/datatablesource";
-import { useState, useEffect} from "react";
-import './Table.scss'
-import {GridToolbarContainer} from '@mui/x-data-grid';
+import { userColumns } from "../Table/datatablesource";
+import { useState, useEffect } from "react";
+import './Table.scss';
+import { GridToolbarContainer } from '@mui/x-data-grid';
 import { GridToolbarExport } from "@mui/x-data-grid";
 import { UserAuth } from '../../Context/AuthContext';
 import { useNavigate } from "react-router-dom";
-import { deleteDoc,doc } from "firebase/firestore";
+import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "../../APi/index";
 import { CircularProgress } from '@mui/material';
 import SideBar from "../SideBar/SideBar";
@@ -16,6 +16,7 @@ import { endpoints } from '../Authentication/Points';
 import ConfirmationModal from './../../Containers/Modals/ConfirmationModal';
 import FilterComponent from '../../Components/useFilter';
 import useFetchUserRole from './../../Components/checkUserRole';
+import { StatusButton } from '../../Components/StatusButton';
 
 function CustomLoadingOverlay() {
   return (
@@ -46,50 +47,57 @@ const List = () => {
   const userRole = useFetchUserRole(user);
   const { logout } = UserAuth(); 
 
-  // Use the custom hook to implement automatic logout
+  // Log userRole to see if it is being fetched correctly
+  useEffect(() => {
+    console.log("User role:", userRole);
+  }, [userRole]);
+
   useAutoLogout({
-    timeoutDuration: 10 * 60 * 1000, // (adjust as needed)
-    logout, // Use the logout function from your context
-    redirectPath: '/signin', // Specify the redirect path
+    timeoutDuration: 10 * 60 * 1000, // 10 minutes
+    logout,
+    redirectPath: '/signin',
   });
 
-  
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true); // Set loading to true before fetching the data
+      setIsLoading(true);
       const response = await axios.get(endpoints.getCorporateData);
-      
+
       if (response.status === 200) {
-        setData(response.data);
-        // console.log(response.data)
+        const data = response.data;
+        // Filter out items with status 'processing' if user role is not 'admin'
+        const filtered = userRole === 'admin' ? data : data.filter(item => item.status !== 'processing');
+        setData(filtered);
+        setFilteredData(filtered);
       } else {
-        // console.error('Error fetching users:', response.statusText);
+        console.error('Error fetching users:', response.statusText);
       }
       setIsLoading(false);
     };
-  
+
     fetchData();
-  }, []);
-  
-    const handleDelete = async () => {
-      setModalOpen(false);
-      if (idToDelete) {
-        try {
-          await deleteDoc(doc(db, "corporate-kyc", idToDelete));
-          setData(data.filter((item) => item.id !== idToDelete));
-        } catch (err) {
-          console.log(err);
-        }
+  }, [userRole]);
+
+  const handleDelete = async () => {
+    setModalOpen(false);
+    if (idToDelete) {
+      try {
+        await deleteDoc(doc(db, "corporate-kyc", idToDelete));
+        setData(data.filter((item) => item.id !== idToDelete));
+        setFilteredData(filteredData.filter((item) => item.id !== idToDelete));
+      } catch (err) {
+        console.log(err);
       }
-    };
-    
-    const handleDeleteClick = (id) => {
-      setIdToDelete(id);
-      setModalOpen(true);
-    };
-    
+    }
+  };
+
+  const handleDeleteClick = (id) => {
+    setIdToDelete(id);
+    setModalOpen(true);
+  };
+
   const handleView = async (id) => {
-    navigate('/list/' + id)
+    navigate('/list/' + id);
   };
 
   function CustomToolbar() {
@@ -99,28 +107,27 @@ const List = () => {
       </GridToolbarContainer>
     );
   }
-  
 
   const actionColumn = [
     {
       field: "action",
       headerName: "Action",
       width: 200,
-      renderCell: (params, id) => {
+      renderCell: (params) => {
+        const { id } = params.row;
         return (
           <div className="cellAction">
-            {userRole ==='admin' && (
-              <div
-              className="deleteButton"
-              onClick={() => handleDeleteClick(params.row.id)}
-            >
-              Delete
-            </div>
+            {userRole === 'admin' && (
+              <>
+                <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
+                  Delete
+                </div>
+                <div className="statusButton">
+                  <StatusButton id={id} collection="corporate-kyc" setData={setData} />
+                </div>
+              </>
             )}
-            <div
-              className="viewButton"
-              onClick={() => handleView(params.row.id)}
-            >
+            <div className="viewButton" onClick={() => handleView(id)}>
               View
             </div>
           </div>
@@ -131,38 +138,38 @@ const List = () => {
 
   return (
     <div className="list">
-        <SideBar />
+      <SideBar />
       <div className="datatable">
-      <div className="datatableTitle">
-        Corporate KYC
-        <FilterComponent initialData={data} setFilteredData={setFilteredData} />
+        <div className="datatableTitle">
+          Corporate KYC
+          <FilterComponent initialData={data} setFilteredData={setFilteredData} />
+        </div>
+        <DataGrid
+          components={{
+            Toolbar: CustomToolbar,
+            LoadingOverlay: CustomLoadingOverlay,
+          }}
+          className="datagrid"
+          columns={actionColumn.concat(userColumns)}
+          rows={filteredData}
+          pageSize={8}
+          rowsPerPageOptions={[9]}
+          checkboxSelection
+          loading={isLoading}
+          getRowClassName={(params) =>
+            `row-${params.row.status}`
+          }
+        />
       </div>
-          <DataGrid
-            components={{
-              Toolbar: CustomToolbar,
-              LoadingOverlay: CustomLoadingOverlay,// Custom loading overlay
-            }}
-            className="datagrid"
-            columns={actionColumn.concat(userColumns)}
-            rows={filteredData}
-            pageSize={8}
-            rowsPerPageOptions={[9]}
-            checkboxSelection
-            loading={isLoading} // Use the loading prop
-          />
+      <ConfirmationModal
+        open={modalOpen}
+        title="Delete Entry"
+        content="Are you sure you want to delete this entry?"
+        onConfirm={handleDelete}
+        onCancel={() => setModalOpen(false)}
+      />
     </div>
-    <ConfirmationModal
-      open={modalOpen}
-      title="Delete Entry"
-      content="Are you sure you want to delete this entry?"
-      onConfirm={handleDelete}
-      onCancel={() => setModalOpen(false)}
-    />
-    </div>
-    
   );
-
 };
 
 export default List;
-

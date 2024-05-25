@@ -86,3 +86,40 @@
         }
       }
     }
+
+    .statusButton {
+      padding: 2px 5px;
+      border-radius: 5px;
+      color: crimson;
+      border: 1px dotted rgba(220, 20, 60, 0.6);
+      cursor: pointer;
+    }
+    
+    .statusMenu {
+      display: none;
+      position: absolute;
+      background-color: white;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      z-index: 1;
+    }
+    
+    .statusButton:hover .statusMenu {
+      display: block;
+    }
+    
+    .statusMenu div {
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    
+    .statusMenu div:hover {
+      background-color: #ddd;
+    }
+
+    .row-processing {
+      background-color: lightyellow;
+    }
+    
+    .row-completed {
+      background-color: lightgreen;
+    }

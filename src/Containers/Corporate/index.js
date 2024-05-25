@@ -260,6 +260,7 @@ const Corporate = () => {
         setFileNames={setFileNames}
         fileNames={fileNames}
         errors={errors}
+        register={register}
         forceUpdate={forceUpdate}
          />
        

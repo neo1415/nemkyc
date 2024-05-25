@@ -8,6 +8,10 @@ import NAICOM from '../Containers/Naicom';
 import Brokers from '../Containers/Brokers';
 import Partners from '../Containers/Partners';
 import Agents from '../Containers/Agents';
+import MainHome from '../Pages/MainHome';
+import KYCHome from '../Pages/KYCHome';
+import IndividualKYC from '../Containers/Individual-KYC';
+import CorporateKYC from '../Containers/Corporate-KYC';
 
 const AnimateRouters = () => {
 
@@ -19,6 +23,10 @@ const AnimateRouters = () => {
     <AnimatePresence>
         <Routes location={location} key={location.pathname} >
             <Route exact path="/"
+            element = {<MainHome />} />
+            <Route exact path="/know-your-customer"
+            element = {<KYCHome/>} />
+            <Route exact path="/customer-due-dilligence"
             element = {<Home />} />
             <Route exact path="/corporate"
             element = {<Corporate />} />
@@ -32,6 +40,10 @@ const AnimateRouters = () => {
             element={<Partners />} />  
             <Route exact path="/agents"
             element={<Agents />} />  
+            <Route exact path="/individual"
+            element={<IndividualKYC />} />  
+            <Route exact path="/corporate-kyc"
+            element={<CorporateKYC />} />  
         </Routes>
     </AnimatePresence>
 
