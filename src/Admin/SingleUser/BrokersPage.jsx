@@ -350,6 +350,36 @@ textColor: [0, 0, 0],
 
 doc.autoTable(secondBeneficialOwnersTableColumn, secondBeneficialOwnersTableRows, secondBeneficialOwnersTableProps);
 
+  // Add privacy declarations
+  doc.setFontSize(14);
+  // doc.setFontStyle('bold' , doc.internal.pageSize.getWidth() / 2, 150, { align: 'center' })
+  doc.text('Declaration:', 50, doc.autoTable.previous.finalY + 40);
+
+  let yPosition = doc.autoTable.previous.finalY + 80; // Increase space after the header
+
+  const declarations = [
+      {
+          text: `I/We ${data.signature} declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.`,
+          signature: data.signature
+      },
+     
+  ];
+
+  declarations.forEach((declaration, index) => {
+    const lines = doc.splitTextToSize(declaration.text, 500); // Adjust the width as needed
+    doc.text(lines, 50, yPosition);
+    const textWidth = doc.getTextWidth(declaration.signature);
+    // doc.line(80, yPosition + 5, 50 + textWidth, yPosition + 5); // Underline the signature
+    yPosition += 24 * lines.length; // Adjust this value as needed to space out the declarations
+});
+
+// Add date under the declarations
+const dateText = `Date: ${new Date().toLocaleDateString()}`;
+doc.text(dateText, 50, yPosition + 20);
+const dateWidth = doc.getTextWidth(dateText);
+// doc.line(90, yPosition + 30, 50 + dateWidth, yPosition + 30); // Underline the date
+
+
 // Add section 3 - Declaration and Signature
 // doc.setFontSize(18);
 // doc.setTextColor(0, 0, 0);

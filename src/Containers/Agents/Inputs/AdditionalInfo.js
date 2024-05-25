@@ -46,9 +46,9 @@ const AdditionalInfo = ({register, errors}) => {
         <input type="number" id="mobileNo" placeholder="Employer's Telephone Number" {...register("mobileNo")} />
         {errors.mobileNo && <span className="error-message">{errors.mobileNo.message}</span>}
 
-        <label htmlFor="taxIDNo">Tax Identification Number <span className='required'>*</span></label>
+        <label htmlFor="taxIDNo">Tax Identification Number </label>
         <input type="text" id="taxIDNo" placeholder="Tax Identification Number" {...register("taxIDNo")} />
-        {errors.taxIDNo && <span className="error-message">{errors.taxIDNo.message}</span>}
+        {/* {errors.taxIDNo && <span className="error-message">{errors.taxIDNo.message}</span>} */}
 
         <label htmlFor="arian">ARIAN Membership Number <span className='required'>*</span></label>
       <input type="text" {...register("arian", { required: true, minLength: 1, maxLength: 20 })} placeholder='ARIAN Membership Number' />

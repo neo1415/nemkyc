@@ -127,10 +127,10 @@ export const schema3 = yup.object().shape({
 });
 
 export const schema5 = yup.object().shape({
- 
-  checkbox: yup.boolean()
-  .required('You must accept the terms and conditions')
-  .oneOf([true], 'You must accept the terms and conditions'),
+  signature: yup.string().required('Full Name(s) is required').transform(sanitizeString),
+  // checkbox: yup.boolean()
+  // .required('You must accept the terms and conditions')
+  // .oneOf([true], 'You must accept the terms and conditions'),
 
 })
 

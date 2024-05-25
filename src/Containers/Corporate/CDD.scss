@@ -229,6 +229,7 @@ select{
 .upload-form{
   display:flex;
   flex-wrap:wrap;
+  justify-content: center !important;
   column-gap: 3rem;
   @media screen and (max-width:1000px) {
     flex-direction: column;

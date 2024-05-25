@@ -74,7 +74,7 @@ export const schema3 = yup.object().shape({
     bankBranch2: yup.string().transform(sanitizeString),
 
     signature: yup.string().required('Full Name Name is required').transform(sanitizeString),
-checkbox: yup.boolean()
-.required('You must accept the terms and conditions')
-.oneOf([true], 'You must accept the terms and conditions'),
+// checkbox: yup.boolean()
+// .required('You must accept the terms and conditions')
+// .oneOf([true], 'You must accept the terms and conditions'),
 })

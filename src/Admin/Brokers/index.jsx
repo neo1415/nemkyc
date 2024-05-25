@@ -16,6 +16,7 @@ import { endpoints } from '../Authentication/Points';
 import ConfirmationModal from './../../Containers/Modals/ConfirmationModal';
 import FilterComponent from '../../Components/useFilter';
 import useFetchUserRole from './../../Components/checkUserRole';
+import { StatusButton } from '../../Components/StatusButton';
 
 function CustomLoadingOverlay() {
   return (
@@ -60,16 +61,19 @@ const BrokersList = () => {
       const response = await axios.get(endpoints.getBrokersData);
       
       if (response.status === 200) {
-        setData(response.data);
-        // console.log(response.data)
+        const data = response.data;
+        // Filter out items with status 'processing' if user role is not 'admin'
+        const filtered = userRole === 'admin' ? data : data.filter(item => item.status !== 'processing');
+        setData(filtered);
+        setFilteredData(filtered);
       } else {
-        // console.error('Error fetching users:', response.statusText);
+        console.error('Error fetching users:', response.statusText);
       }
       setIsLoading(false);
     };
-  
+
     fetchData();
-  }, []);
+  }, [userRole]);
   
     const handleDelete = async () => {
       setModalOpen(false);
@@ -106,21 +110,21 @@ const BrokersList = () => {
       field: "action",
       headerName: "Action",
       width: 200,
-      renderCell: (params, id) => {
+      renderCell: (params) => {
+        const { id } = params.row;
         return (
           <div className="cellAction">
-            {userRole ==='admin' && (
-              <div
-              className="deleteButton"
-              onClick={() => handleDeleteClick(params.row.id)}
-            >
-              Delete
-            </div>
+            {userRole === 'admin' && (
+              <>
+                <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
+                  Delete
+                </div>
+                <div className="statusButton">
+                  <StatusButton id={id} collection="brokers-kyc" setData={setData} />
+                </div>
+              </>
             )}
-            <div
-              className="viewButton"
-              onClick={() => handleView(params.row.id)}
-            >
+            <div className="viewButton" onClick={() => handleView(id)}>
               View
             </div>
           </div>
@@ -128,6 +132,7 @@ const BrokersList = () => {
       },
     },
   ];
+
 
   return (
     <div className="list">
@@ -137,19 +142,22 @@ const BrokersList = () => {
         Brokers KYC
         <FilterComponent initialData={data} setFilteredData={setFilteredData} />
       </div>
-          <DataGrid
-            components={{
-              Toolbar: CustomToolbar,
-              LoadingOverlay: CustomLoadingOverlay,// Custom loading overlay
-            }}
-            className="datagrid"
-            columns={actionColumn.concat(userColumns)}
-            rows={filteredData}
-            pageSize={8}
-            rowsPerPageOptions={[9]}
-            checkboxSelection
-            loading={isLoading} // Use the loading prop
-          />
+      <DataGrid
+          components={{
+            Toolbar: CustomToolbar,
+            LoadingOverlay: CustomLoadingOverlay,
+          }}
+          className="datagrid"
+          columns={actionColumn.concat(userColumns)}
+          rows={filteredData}
+          pageSize={8}
+          rowsPerPageOptions={[9]}
+          checkboxSelection
+          loading={isLoading}
+          getRowClassName={(params) =>
+            `row-${params.row.status}`
+          }
+        />
     </div>
     <ConfirmationModal
       open={modalOpen}

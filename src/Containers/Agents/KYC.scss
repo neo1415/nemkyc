@@ -303,10 +303,47 @@ label[for="private"] {
     text-align: justify;
     flex-direction: column;
     margin-bottom: 2rem;
+    @media screen and (max-width:720px) {
+      width: 25rem;
+      line-height: 1.1;
+      margin-left: 2rem;
+    }
+}
+
+.signature-partner{
+  line-height: 0.1rem;
+    width: 38rem;
+    margin-left: 6rem;
+    display: flow;
+    text-align: justify;
+    flex-direction: column;
+    margin-bottom: 2rem;
+    @media screen and (max-width:1024px) {
+      width: 34rem;
+      line-height: 1.1;
+      margin-left: 0rem;
+    }
+    @media screen and (max-width:720px) {
+      width: 18rem !important;
+      line-height: 1.1;
+      margin-left: 2rem ;
+    }
 }
 .signature-input{
   border-bottom: 2px solid brown !important;
   border: none;
   background-color: #80002000 !important;
   height: 1.5rem !important;
+  @media screen and (max-width:720px) {
+    width: 10rem !important;
+
+  }
+}
+.flow{
+  display: flex;
+  flex-direction: column;
+}
+.error-message{
+  margin-left: 1rem;
+  margin-right: 1rem;
 }

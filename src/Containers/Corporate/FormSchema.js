@@ -90,7 +90,6 @@ export const schema3 = yup.object().shape({
   })
   .nullable(true)
   .notRequired()
-  .min(new Date(), 'expired means of ID')
   .test('is-date', 'expiryDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
   sourceOfIncome2: yup.string(),
 });
@@ -108,17 +107,16 @@ export const schema3 = yup.object().shape({
   })
   .nullable(true)
   .notRequired()
-  .min(new Date(), 'expired means of ID')
   .test('is-date', 'expiryDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
   bankBranch2: yup.string().transform(sanitizeString),
 
 });
 
 export const schema5 = yup.object().shape({
- 
-  checkbox: yup.boolean()
-  .required('You must accept the terms and conditions')
-  .oneOf([true], 'You must accept the terms and conditions'),
+  signature: yup.string().required('Full Name(s) is required').transform(sanitizeString),
+  // checkbox: yup.boolean()
+  // .required('You must accept the terms and conditions')
+  // .oneOf([true], 'You must accept the terms and conditions'),
 
 })
 

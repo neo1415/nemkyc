@@ -21,6 +21,10 @@ import PartnersList from './Admin/Partners';
 import PartnersPage from './Admin/SingleUser/PartnersPage';
 import AgentsList from './Admin/Agents';
 import AgentsPage from './Admin/SingleUser/AgentsPage';
+import CorporateKYCTable from './Admin/corporate-kyc-table';
+import CorporateSinglePage from './Admin/SingleUser/CorporateSinglePage';
+import IndividualKYCTable from './Admin/individual-kyc-table';
+import IndividualSinglePage from './Admin/SingleUser/IndividualSinglePage';
 
 function App() {
 
@@ -152,6 +156,45 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+<Route
+              exact
+              path="corporatekyc-list"
+              element={
+                <ProtectedRoute>
+                  <CorporateKYCTable />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/corporatekyc-list/:id"
+              element={
+                <ProtectedRoute>
+                  <CorporateSinglePage />
+                </ProtectedRoute>
+              }
+            />
+
+<Route
+              exact
+              path="individualkyc-list"
+              element={
+                <ProtectedRoute>
+                  <IndividualKYCTable />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/individualkyc-list/:id"
+              element={
+                <ProtectedRoute>
+                  <IndividualSinglePage />
+                </ProtectedRoute>
+              }
+            />
+            
           </Routes>
       
       </AuthContextProvider>

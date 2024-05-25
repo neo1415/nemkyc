@@ -71,7 +71,6 @@ const [fileNames, setFileNames] = useState({});
     if (result) {
       try {      
         const formData = {...formValues, ...fileUrls};
-        if (fileUrls.signature) {
           setIsSubmitted(true);
           console.log('Form values:', formData);
           const response = await axios.post(endpoints.submitAgentsForm, formData);
@@ -83,9 +82,7 @@ const [fileNames, setFileNames] = useState({});
         } else {
             console.error('Error during form submission:', response.statusText);
           }
-          } else {
-            showErrorToast('Please ensure all files are uploaded before submitting.');
-          }
+          
         } catch (err) {
           console.error('Network error during form submission:', err);
           showErrorToast('An error occurred during submission. Please try again.');

@@ -45,7 +45,8 @@ export const schema2 = yup.object().shape({
 export const schema3 = yup.object().shape({
 annualIncomeRange: yup.string().transform(sanitizeString).required('Annual Income Range is required'),
 premiumPaymentSource: yup.string().transform(sanitizeString).required('Premium Payment Source is required'),
-checkbox: yup.boolean()
-.required('You must accept the terms and conditions')
-.oneOf([true], 'You must accept the terms and conditions'),
+signature: yup.string().required('Full Name(s) is required').transform(sanitizeString),
+// checkbox: yup.boolean()
+// .required('You must accept the terms and conditions')
+// .oneOf([true], 'You must accept the terms and conditions'),
 })

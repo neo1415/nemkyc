@@ -56,10 +56,9 @@ const CompanyDetails = ({register, errors}) => {
       <input type='text' {...register("taxIdentificationNumber",  { required: true, minLength: 6, maxLength: 15  })} placeholder='Tax Identification Number' />
       {errors.taxIdentificationNumber && <span className="error-message">THis field is required</span>}
 
-      <label htmlFor="VATRegistrationNumber">VAT Registration Number <span className='required'>*</span></label>
+      <label htmlFor="VATRegistrationNumber">VAT Registration Number </label>
       <input type='text' {...register("VATRegistrationNumber",  { required: true, minLength: 6, maxLength: 15  })} placeholder='VAT Registration Number' />
-      {errors.VATRegistrationNumber && <span className="error-message">This field is required</span>}
-
+     
       <label htmlFor="incorporationNumber">Incorporation/RC Number <span className='required'>*</span></label>
       <input type='text' {...register("incorporationNumber", { required: true, minLength: 7, maxLength: 15  })} placeholder='Incorporation Number' />
       {errors.incorporationNumber && <span className="error-message">This field is required</span>}

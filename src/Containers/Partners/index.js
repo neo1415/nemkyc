@@ -259,6 +259,7 @@ const Partners = () => {
         setFileUrls={setFileUrls}
         setFileNames={setFileNames}
         fileNames={fileNames}
+        register={register}
         errors={errors}
         forceUpdate={forceUpdate}
          />

@@ -1,0 +1,176 @@
+.hero-flex {
+  display: flex;
+  margin-top: 2rem;
+  margin-bottom: 3rem;
+  animation: fade-in 0.6s ease-out both;
+}
+
+@media screen and (max-width: 1000px) {
+  .hero-flex {
+    flex-direction: column;
+    width: 100%;
+  }
+}
+
+.content {
+  width: 50%;
+  margin-right: 9rem;
+  margin-left: 5rem;
+  margin-top: 4rem;
+  text-align: left;
+  animation: slide-in-left 0.5s ease-out both 0.1s;
+}
+
+@media screen and (max-width: 1000px) {
+  .content {
+    width: 100%;
+    margin-left: 0rem;
+    margin: auto;
+    text-align: center;
+    font-size: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 3rem;
+  }
+}
+
+.main__button {
+  background: #800020;
+  color: #ffee30;
+  font-size: 1.3rem;
+  font-weight: 500;
+  width: 16.5rem;
+  border-radius: 10px;
+  outline: none;
+  border: none;
+  height: 3.5rem;
+  cursor: pointer;
+  line-height: 1.4;
+  box-shadow: 0 23px 40px rgba(0, 0, 0, 0.18);
+  transition: all 0.3s ease-in-out;
+  /* add a transition property to animate changes */
+  animation: fade-in 0.6s ease-out both 0.2s;
+}
+
+.main__button:hover {
+  background: #ffee30;
+  color: #800020;
+  transform: scale(1.1);
+  /* use transform instead of scale to animate the scaling */
+}
+
+.smooth-scroll {
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+
+.image {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #800020;
+  z-index: 20;
+  animation: slide-in-top 0.5s ease-out both 0.4s;
+}
+
+.hero-image {
+  width: 20rem;
+  position: relative;
+  z-index: 1;
+  height: 30rem;
+  object-fit: cover;
+  transition: transform 0.3s;
+  animation: slide-in-bottom 0.5s ease-out both 0.5s;
+}
+
+@media screen and (max-width: 1000px) {
+  .hero-image {
+    width: 17rem;
+    height: 30rem;
+  }
+}
+
+.circle {
+  z-index: 0;
+  height: 30rem;
+  width: 30rem;
+  background-color: #800020;
+  border-radius: 50%;
+  position: absolute;
+  animation: slide-in-right 0.5s ease-out both 0.3s;
+}
+
+@media screen and (max-width: 1000px) {
+  .circle {
+    height: 23rem;
+    width: 23rem;
+  }
+}
+
+.heading {
+  color: #800020;
+}
+
+@media screen and (max-width: 1000px) {
+  .heading {
+    width: 100%;
+    font-size: 2.4rem;
+  }
+}
+
+/* Keyframe animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-top {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-bottom {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

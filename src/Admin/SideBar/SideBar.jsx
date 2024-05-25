@@ -6,7 +6,7 @@ import { HiUser, HiUsers, HiDatabase } from 'react-icons/hi';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../APi/index';
 import { HiUserAdd } from 'react-icons/hi';
-import { FaHandshake } from 'react-icons/fa';
+import { FaHandshake, FaRegBuilding, FaUserAlt } from 'react-icons/fa';
 import { FaUserTie } from 'react-icons/fa';
 import { FaBuilding } from 'react-icons/fa';
 import { FaExchangeAlt } from 'react-icons/fa';
@@ -61,9 +61,17 @@ const Sidebar = () => {
           </Link>
           <Link to="/list">
             <li className="sideList">
-              <p>Corporate</p>
+              <p>Corporate CDD</p>
               <div className="icon">
                 <FaBuilding />
+              </div>
+            </li>
+          </Link>
+          <Link to="/corporatekyc-list">
+            <li className="sideList">
+              <p>Corporate KYC</p>
+              <div className="icon">
+                <FaRegBuilding />
               </div>
             </li>
           </Link>
@@ -99,6 +107,16 @@ const Sidebar = () => {
               </div>
             </li>
           </Link>
+
+          <Link to="/individualkyc-list">
+            <li className="sideList">
+              <p>Individual KYC</p>
+              <div className="icon">
+                <FaUserAlt />
+              </div>
+            </li>
+          </Link>
+
           {userRole === 'admin' && (
             <Link to="/role-assignment">
               <li className="sideList">

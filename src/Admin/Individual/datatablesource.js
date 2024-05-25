@@ -8,6 +8,26 @@ export const UserColumns = [
   },
 
   {
+    field: "status",
+    headerName: "Status",
+    width: 150,
+    renderCell: (params) => {
+      const status = params.row.status;
+      let color;
+      if (status === 'processing') {
+        color = 'lightyellow';
+      } else if (status === 'completed') {
+        color = 'lightgreen';
+      }
+      return (
+        <div style={{ backgroundColor: color, padding: '5px', borderRadius: '5px' }}>
+          {status}
+        </div>
+      );
+    }
+  },
+
+  {
     field: "title",
     headerName: "Title",
     width: 180,

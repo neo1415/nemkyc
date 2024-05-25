@@ -15,7 +15,7 @@ import Fade from '@mui/material/Fade';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
-const FileUpload = ({control, setFileUrls, errors,fileNames, setFileNames, trigger}) => {
+const FileUpload = ({control, register, setFileUrls, errors,fileNames, setFileNames, trigger}) => {
   
   const [perc, setPerc] = useState(null)
 
@@ -244,7 +244,17 @@ const FileUpload = ({control, setFileUrls, errors,fileNames, setFileNames, trigg
         </div>
     </div>
     </div>
-    <Controller
+    <div className='signature'>
+<label htmlFor="signature"></label>
+     I <input type='text' {...register("signature", { required: true,  minLength: 3, maxLength: 30  })} className='signature-input' placeholder='Your Full Name' />
+      {errors.signature && <span className="error-message">This field is required</span>}
+      you acknowledge and 
+      agree to the purpose set-out in this clause 
+      and our data privacy policy. Thank you
+</div>
+{errors.signature && <span className="error-message">This field is required</span>}
+
+    {/* <Controller
           name="checkbox"
           control={control}
           rules={{
@@ -262,7 +272,7 @@ const FileUpload = ({control, setFileUrls, errors,fileNames, setFileNames, trigg
             />
           )}
         />
-       {errors.checkbox && <Typography className='checkerror' color="error">{errors.checkbox.message}</Typography>}
+       {errors.checkbox && <Typography className='checkerror' color="error">{errors.checkbox.message}</Typography>} */}
     <Modal
       open={open}
       onClose={() => setOpen(false)}

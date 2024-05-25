@@ -22,6 +22,7 @@ import Backdrop from '@mui/material/Backdrop';
 import DOMPurify from 'dompurify';
 import axios from 'axios';
 import { endpoints } from '../../Admin/Authentication/Points';
+import { register } from 'react-scroll/modules/mixins/scroller';
 
 function CDD() {
   const [step, setStep] = useState(1);
@@ -544,7 +545,10 @@ function CDD() {
         identification={identification}
          tax={tax} 
          cac={cac}
-         cacForm={cacForm} />
+         cacForm={cacForm} 
+         register={register}
+         />
+        
        
        <ToastContainer />
        <div className='button-flex'>
