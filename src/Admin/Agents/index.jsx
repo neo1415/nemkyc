@@ -56,6 +56,8 @@ const AgentsList = () => {
     redirectPath: '/signin', // Specify the redirect path
   });
 
+  const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+
   useEffect(() => {
     if (data.length === 0) {
       dispatch(fetchData({ endpoint: endpoints.getAgentsData, role: userRole }));
@@ -67,7 +69,7 @@ const AgentsList = () => {
   const handleDelete = async () => {
     setModalOpen(false);
     if (idToDelete) {
-      dispatch(deleteData({ endpoint: 'http://localhost:3001/delete/agents-kyc', id: idToDelete }));
+      dispatch(deleteData({ endpoint: `http://localhost:3001/delete/agents-kyc`, id: idToDelete }));
     }
   };
   

@@ -75,12 +75,14 @@ const BrokersList = () => {
 
     fetchData();
   }, [userRole]);
+
+  const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
   
   const handleDelete = async () => {
     setModalOpen(false);
     if (idToDelete) {
       try {
-        await csrfProtectedDelete(`http://localhost:3001/delete/brokers-kyc/${idToDelete}`); // Adjust the URL as needed
+        await csrfProtectedDelete(`${serverURL}/delete/brokers-kyc/${idToDelete}`); // Adjust the URL as needed
         setData(data.filter((item) => item.id !== idToDelete));
       } catch (err) {
         console.log(err);
