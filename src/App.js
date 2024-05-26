@@ -25,6 +25,8 @@ import CorporateKYCTable from './Admin/corporate-kyc-table';
 import CorporateSinglePage from './Admin/SingleUser/CorporateSinglePage';
 import IndividualKYCTable from './Admin/individual-kyc-table';
 import IndividualSinglePage from './Admin/SingleUser/IndividualSinglePage';
+import LogsTable from './Admin/Logs/Logs';
+import LogDetails from './Admin/Logs/LogDetails';
 
 function App() {
 
@@ -195,6 +197,8 @@ function App() {
               }
             />
             
+            <Route path="/logs" element={<LogsTable userRole="admin" />} /> {/* Adjust the userRole prop as needed */}
+        <Route path="/logs/:id" element={<LogDetails />} />
           </Routes>
       
       </AuthContextProvider>

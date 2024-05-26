@@ -16,6 +16,7 @@ import ConfirmationModal from './../../Containers/Modals/ConfirmationModal';
 import FilterComponent from '../../Components/useFilter';
 import useFetchUserRole from './../../Components/checkUserRole';
 import { StatusButton } from '../../Components/StatusButton';
+import { csrfProtectedDelete, csrfProtectedGet } from "../../Components/CsrfUtils";
 
 function CustomLoadingOverlay() {
   return (
@@ -56,7 +57,7 @@ const Individual = () => {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true); // Set loading to true before fetching the data
-      const response = await axios.get(endpoints.getIndividualData);
+      const response = await csrfProtectedGet(endpoints.getIndividualData);
       
       if (response.status === 200) {
         const data = response.data;
@@ -78,7 +79,7 @@ const Individual = () => {
     setModalOpen(false);
     if (idToDelete) {
       try {
-        await deleteDoc(doc(db, "individual-kyc", idToDelete));
+        await csrfProtectedDelete(`http://localhost:3001/delete/individual-kyc/${idToDelete}`); 
         setData(data.filter((item) => item.id !== idToDelete));
       } catch (err) {
         console.log(err);

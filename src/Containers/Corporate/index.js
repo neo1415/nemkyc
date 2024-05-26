@@ -17,6 +17,7 @@ import AccountDetails from './Input/AccountDetails';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { schema1, schema2, schema3, schema4, schema5 } from './FormSchema';
 import SubmitModal from '../Modals/SubmitModal';
+import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 
 const Corporate = () => {
@@ -81,7 +82,7 @@ const Corporate = () => {
           if (fileUrls.cac && fileUrls.identification ) {
             setIsSubmitted(true);
             console.log('Form values:', formData);
-            const response = await axios.post(endpoints.submitCorporateForm, formData);
+            const response = await csrfProtectedPost(endpoints.submitCorporateForm, formData);
           if (response.status === 201) {
               console.log('Form submitted successfully');
               showSuccessToast('Form Submitted successfully.');
