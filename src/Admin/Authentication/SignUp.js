@@ -13,6 +13,7 @@ import {
   DialogContent,
   CircularProgress,
 } from '@mui/material';
+import { csrfProtectedPost } from '../../Components/CsrfUtils';
 const theme = createTheme({
   palette: {
     primary: {
@@ -40,11 +41,12 @@ const UserRegistration = ({ onUserAdded }) => {
   
     try {
       setIsLoading(true);
-      const response = await axios.post(registrationEndpoint, {
+      const response = await csrfProtectedPost(registrationEndpoint, {
         email,
         password,
         name,
       });
+  
   
       if (response.status === 201) {
         openSuccessModal();
@@ -162,3 +164,6 @@ const UserRegistration = ({ onUserAdded }) => {
 };
 
 export default UserRegistration;
+
+
+

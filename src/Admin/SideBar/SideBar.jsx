@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Sidebar.scss';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserAuth } from '../../Context/AuthContext';
-import { HiUser, HiUsers, HiDatabase } from 'react-icons/hi';
+import { HiUser, HiUsers, HiDatabase, HiNewspaper, HiOutlineNewspaper } from 'react-icons/hi';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../APi/index';
 import { HiUserAdd } from 'react-icons/hi';
@@ -123,6 +123,18 @@ const Sidebar = () => {
                 <p>User Management</p>
                 <div className="icon">
                   <HiUserAdd />
+                </div>
+              </li>
+            </Link>
+          )}
+
+          
+{userRole === 'admin' && (
+            <Link to="/logs">
+              <li className="sideList">
+                <p>Logs</p>
+                <div className="icon">
+                  <HiOutlineNewspaper />
                 </div>
               </li>
             </Link>

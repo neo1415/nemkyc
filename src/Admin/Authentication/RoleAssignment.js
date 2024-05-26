@@ -26,6 +26,7 @@ import { BsBadge4K } from 'react-icons/bs';
 import './roles.scss'
 import ConfirmationModal from '../../Containers/Modals/ConfirmationModal';
 import AddUserModal from './../../Containers/Modals/AddUserModal';
+import { csrfProtectedDelete, csrfProtectedPost } from '../../Components/CsrfUtils';
 
 const theme = createTheme({
   palette: {
@@ -93,46 +94,45 @@ const openSuccessModal = () => {
 };
 
 
-  const deleteUser = async (uid) => {
-    setIsLoading(true);
-    setDeleteModalOpen(false);
-    try {
-      const endpoint = endpoints.deleteUser(uid); // Use the endpoint with the UID
-      console.log('Delete User Endpoint:', endpoint); // Log the endpoint
-      const response = await axios.delete(endpoint);
-  
-      if (response.status === 200) {
-        openSuccessModal();
-        // Remove the deleted user from the state
-        setUsers((prevUsers) => prevUsers.filter((user) => user.uid !== uid));
-      } else {
-        console.error('Error deleting user:', response.statusText);
-      }
-    } catch (error) {
-      console.error('Error deleting user:', error);
-    }finally{
-      setIsLoading(false);
-    }
-  };
-
-const checkUserRole = async (uid, role) => {
+const deleteUser = async (uid) => {
+  setIsLoading(true);
+  setDeleteModalOpen(false);
   try {
-    const endpoint = endpoints.checkUserRole(uid); // Use the endpoint with the UID
-    // console.log('Check User Role Endpoint:', endpoint); // Log the endpoint
-    const response = await axios.post(endpoint, { role });
-    console.log(role)
-    return response.data.hasRole;
-    
+    const endpoint = endpoints.deleteUser(uid); // Use the endpoint with the UID
+    console.log('Delete User Endpoint:', endpoint); // Log the endpoint
+    const response = await csrfProtectedDelete(endpoint);
+
+    if (response.status === 200) {
+      openSuccessModal();
+      // Remove the deleted user from the state
+      setUsers((prevUsers) => prevUsers.filter((user) => user.uid !== uid));
+    } else {
+      console.error('Error deleting user:', response.statusText);
+    }
   } catch (error) {
-    console.error(`Error checking ${role} claim:`, error);
-    return false; // Default to false if there's an error
+    console.error('Error deleting user:', error);
+  } finally {
+    setIsLoading(false);
   }
 };
+
+  const checkUserRole = async (uid, role) => {
+    try {
+      const endpoint = endpoints.checkUserRole(uid); // Use the endpoint with the UID
+      const response = await csrfProtectedPost(endpoint, { role });
+      console.log(role);
+      return response.data.hasRole;
+    } catch (error) {
+      console.error(`Error checking ${role} claim:`, error);
+      return false; // Default to false if there's an error
+    }
+  };
 
 const handleUserAdded = (newUser) => {
   // Update the users state with the new user
   setUsers((prevUsers) => [...prevUsers, newUser]);
 };
+
 
 const assignRole = async () => {
   setIsLoading(true);
@@ -145,7 +145,7 @@ const assignRole = async () => {
 
     // Check if the selected user already has the selected role
     const hasRole = await checkUserRole(selectedUser, selectedRole);
-    
+
     if (hasRole) {
       setErrorMessage(`This user already has the ${selectedRole} role.`);
       return;
@@ -169,27 +169,25 @@ const assignRole = async () => {
     }
 
     // Make the API request to assign the role and update custom claims
-    const response = await axios.post(endpoint, {});
+    const response = await csrfProtectedPost(endpoint, {});
 
     // Update the Firestore collection with the new role
     const firestoreEndpoint = endpoints.updateUserRole(selectedUser);
-    await axios.post(firestoreEndpoint, { role: selectedRole });
+    await csrfProtectedPost(firestoreEndpoint, { role: selectedRole });
 
     setSuccessMessage(response.data.message);
     setErrorMessage('');
-      // Close the role selection dropdown after successful role assignment
-  setSelectedUser('');
-// Redirect to the admin dashboard or another page after role assignment
+    // Close the role selection dropdown after successful role assignment
+    setSelectedUser('');
+    // Redirect to the admin dashboard or another page after role assignment
   } catch (error) {
     console.error('Error assigning role:', error);
     setErrorMessage('Error assigning role. Please try again.');
     setSuccessMessage('');
-  }finally{
+  } finally {
     setIsLoading(false);
   }
-
 };
-
 const handleAddUserClick = () => {
   setOpenModal(true);
 };

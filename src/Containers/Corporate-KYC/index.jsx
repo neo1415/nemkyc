@@ -15,6 +15,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import axios from 'axios';
 import { endpoints } from '../../Admin/Authentication/Points';
 import { schema1, schema2, schema3 } from './FormSchema';
+import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 function CorporateKYC() {
   const combinedSchema = yup.object().shape({
@@ -93,7 +94,7 @@ const [fileNames, setFileNames] = useState({});
         if (fileUrls.verificationDoc ) {
           setIsSubmitted(true);
           console.log('Form values:', formData);
-          const response = await axios.post(endpoints.submitCorporateKYCForm, formData);
+          const response = await csrfProtectedPost(endpoints.submitCorporateKYCForm, formData);
         if (response.status === 201) {
             console.log('Form submitted successfully');
             showSuccessToast('Form Submitted successfully.');
@@ -126,7 +127,7 @@ const [fileNames, setFileNames] = useState({});
       console.log('Validation result:', result);
       console.log('Form errors:', errors);
   // Check if the current step is 2 and if the file has been uploaded
-  if (step === 2 && !fileUrls.verificationDoc || !formValues.companyNameVerificationDoc) {
+  if (step === 2 && !fileUrls.verificationDoc && formValues.companyNameVerificationDoc) {
     showErrorToast('Please ensure the verification details are filled and uploaded before proceeding.');
     return;
   }

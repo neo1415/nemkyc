@@ -41,7 +41,7 @@ export const schema2 = yup.object().shape({
 });
 
 export const schema3 = yup.object().shape({
-    signature: yup.string().required('Full Name(s) is required').transform(sanitizeString),
+    // signature: yup.string().required('Full Name(s) is required').transform(sanitizeString),
   // signature1: yup.string().required('Full Name is required'),
 // checkbox: yup.boolean()
 // .required('You must accept the terms and conditions')
