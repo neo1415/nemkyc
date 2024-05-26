@@ -26,8 +26,13 @@ const SignIn = () => {
       // Get the ID token
       const idToken = await userCredential.user.getIdToken(true);
 
+      const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+  
+      // Define the registration endpoint
+      const login = `${serverURL}/login`;
+
       // Send the ID token to the backend
-      const response = await csrfProtectedPost('http://localhost:3001/login', { idToken });
+      const response = await csrfProtectedPost(login, { idToken });
 
       const data = response.data;
       setLoading(false); // Hide loading spinner
