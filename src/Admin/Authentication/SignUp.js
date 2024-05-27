@@ -41,7 +41,7 @@ const UserRegistration = ({ onUserAdded }) => {
   
     try {
       setIsLoading(true);
-      const response = await csrfProtectedPost(registrationEndpoint, {
+      const response = await axios.post(registrationEndpoint, {
         email,
         password,
         name,

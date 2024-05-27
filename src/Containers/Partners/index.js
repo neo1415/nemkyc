@@ -82,7 +82,7 @@ const Partners = () => {
           if (fileUrls.Incorporation && fileUrls.identification && fileUrls.VAT && fileUrls.tax && fileUrls.formCO7 && fileUrls.identification2 && fileUrls.NAICOMForm) {
             setIsSubmitted(true);
             console.log('Form values:', formData);
-            const response = await csrfProtectedPost(endpoints.submitPartnersForm, formData);
+            const response = await axios.post(endpoints.submitPartnersForm, formData);
           if (response.status === 201) {
               console.log('Form submitted successfully');
               showSuccessToast('Form Submitted successfully.');

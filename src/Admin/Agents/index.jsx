@@ -16,8 +16,6 @@ import ConfirmationModal from '../../Containers/Modals/ConfirmationModal';
 import FilterComponent from '../../Components/useFilter';
 import useFetchUserRole from '../../Components/checkUserRole';
 import { StatusButton } from "../../Components/StatusButton";
-import { fetchData, deleteData } from '../../Context/DataSlice';
-import { useDispatch, useSelector } from 'react-redux';
 
 function CustomLoadingOverlay() {
   return (
@@ -37,16 +35,15 @@ function CustomLoadingOverlay() {
 }
 
 const AgentsList = () => {
-  const dispatch = useDispatch();
-  const data = useSelector((state) => state.data.data);
-  const isLoading = useSelector((state) => state.data.isLoading);
-  const userRole = useFetchUserRole(UserAuth().user);
+  const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [idToDelete, setIdToDelete] = useState(null);
 
   const navigate = useNavigate(); 
-
+  const { user } = UserAuth();
+  const userRole = useFetchUserRole(user);
   const { logout } = UserAuth();
 
   // Use the custom hook to implement automatic logout
@@ -56,20 +53,36 @@ const AgentsList = () => {
     redirectPath: '/signin', // Specify the redirect path
   });
 
-  const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
-
   useEffect(() => {
-    if (data.length === 0) {
-      dispatch(fetchData({ endpoint: endpoints.getAgentsData, role: userRole }));
-    } else {
-      setFilteredData(data);
-    }
-  }, [data, dispatch, userRole]);
+    const fetchData = async () => {
+      setIsLoading(true); // Set loading to true before fetching the data
+      const response = await axios.get(endpoints.getAgentsData);
+      
+      if (response.status === 200) {
+        const data = response.data;
+        // Filter out items with status 'processing' if user role is not 'admin'
+        const filtered = userRole === 'admin' ? data : data.filter(item => item.status !== 'processing');
+        setData(filtered);
+        setFilteredData(filtered);
+      } else {
+        console.error('Error fetching users:', response.statusText);
+      }
+      setIsLoading(false);
+    };
+
+    fetchData();
+  }, [userRole]);
+  
 
   const handleDelete = async () => {
     setModalOpen(false);
     if (idToDelete) {
-      dispatch(deleteData({ endpoint: `${serverURL}/delete/agents-kyc`, id: idToDelete }));
+      try {
+        await deleteDoc(doc(db, "agents-kyc", idToDelete));
+        setData(data.filter((item) => item.id !== idToDelete));
+      } catch (err) {
+        console.log(err);
+      }
     }
   };
   
@@ -106,7 +119,7 @@ const AgentsList = () => {
                   Delete
                 </div>
                 <div className="statusButton">
-                  <StatusButton id={id} collection="agents-kyc" setData={setFilteredData} />
+                  <StatusButton id={id} collection="agents-kyc" setData={setData} />
                 </div>
               </>
             )}

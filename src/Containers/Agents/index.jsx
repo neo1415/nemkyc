@@ -74,7 +74,7 @@ const [fileNames, setFileNames] = useState({});
         const formData = {...formValues, ...fileUrls};
           setIsSubmitted(true);
           console.log('Form values:', formData);
-          const response = await csrfProtectedPost(endpoints.submitAgentsForm, formData);
+          const response = await axios.post(endpoints.submitAgentsForm, formData);
         if (response.status === 201) {
             console.log('Form submitted successfully');
             showSuccessToast('Form Submitted successfully.');

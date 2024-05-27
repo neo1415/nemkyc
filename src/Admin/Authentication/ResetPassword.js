@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserAuth } from '../../Context/AuthContext';
 import { csrfProtectedPost } from '../../Components/CsrfUtils';
+import axios from 'axios';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -37,7 +38,7 @@ const ResetPassword = () => {
     }
 
     try {
-      await csrfProtectedPost('/reset-password', { oobCode, password });
+      await axios.post('/reset-password', { oobCode, password });
       alert("Password has been reset successfully!");
       navigate('/signin');
     } catch (e) {

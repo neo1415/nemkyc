@@ -82,7 +82,7 @@ const Corporate = () => {
           if (fileUrls.cac && fileUrls.identification ) {
             setIsSubmitted(true);
             console.log('Form values:', formData);
-            const response = await csrfProtectedPost(endpoints.submitCorporateForm, formData);
+            const response = await axios.post(endpoints.submitCorporateForm, formData);
           if (response.status === 201) {
               console.log('Form submitted successfully');
               showSuccessToast('Form Submitted successfully.');

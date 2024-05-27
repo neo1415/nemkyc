@@ -17,7 +17,6 @@ import ConfirmationModal from './../../Containers/Modals/ConfirmationModal';
 import FilterComponent from '../../Components/useFilter';
 import useFetchUserRole from './../../Components/checkUserRole';
 import { StatusButton } from '../../Components/StatusButton';
-import { csrfProtectedDelete, csrfProtectedGet } from '../../Components/CsrfUtils';
 
 function CustomLoadingOverlay() {
   return (
@@ -62,7 +61,7 @@ const List = () => {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
-      const response = await csrfProtectedGet(endpoints.getCorporateData);
+      const response = await axios.get(endpoints.getCorporateData);
 
       if (response.status === 200) {
         const data = response.data;
@@ -79,13 +78,11 @@ const List = () => {
     fetchData();
   }, [userRole]);
 
-  const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
-
   const handleDelete = async () => {
     setModalOpen(false);
     if (idToDelete) {
       try {
-        await csrfProtectedDelete(`${serverURL}/delete/corporate-kyc/${idToDelete}`); 
+        await deleteDoc(doc(db, "corporate-kyc", idToDelete));
         setData(data.filter((item) => item.id !== idToDelete));
         setFilteredData(filteredData.filter((item) => item.id !== idToDelete));
       } catch (err) {

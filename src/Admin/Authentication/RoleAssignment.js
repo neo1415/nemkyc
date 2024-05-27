@@ -3,6 +3,7 @@ import axios from 'axios';
 import { endpoints } from './Points';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import UserRegistration from './SignUp';
 import {
   Table,
   TableBody,
@@ -15,7 +16,9 @@ import {
   Select,
   MenuItem,
   Dialog,
+  DialogTitle,
   DialogContent,
+  DialogActions,
   createTheme,
   ThemeProvider,
   CircularProgress,
@@ -24,9 +27,6 @@ import {
 import Sidebar from '../SideBar/SideBar';
 import { BsBadge4K } from 'react-icons/bs';
 import './roles.scss'
-import ConfirmationModal from '../../Containers/Modals/ConfirmationModal';
-import AddUserModal from './../../Containers/Modals/AddUserModal';
-import { csrfProtectedDelete, csrfProtectedPost } from '../../Components/CsrfUtils';
 
 const theme = createTheme({
   palette: {
@@ -42,13 +42,31 @@ const RoleAssignment = () => {
   const [selectedRole, setSelectedRole] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState(null);
   const [openModal, setOpenModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
 
 useEffect(() => {
+  // const fetchData = async () => {
+  //   // Fetching data from the server endpoint that uses the real-time listener
+  //   const response = await axios.get(endpoints.getUsers);
+
+  //   if (response.status === 200) {
+  //     setUsers(response.data.users);
+  //     // console.log('Initial users fetched successfully:', response.data.users);
+  //   } else {
+  //     console.error('Error fetching initial users:', response.statusText);
+  //   }
+  // };
+
+  // Function to handle real-time updates
+  // const handleRealTimeUpdates = (updatedUsers) => {
+  //   setUsers(updatedUsers);
+  //   console.log('Users updated in real-time:', updatedUsers);
+  // };
+
+  // fetchData();
+
   // Set up a real-time listener for changes in the Firestore data
   setIsLoading(true);
 const realTimeListener = () => {
@@ -94,45 +112,60 @@ const openSuccessModal = () => {
 };
 
 
-const deleteUser = async (uid) => {
-  setIsLoading(true);
-  setDeleteModalOpen(false);
-  try {
-    const endpoint = endpoints.deleteUser(uid); // Use the endpoint with the UID
-    console.log('Delete User Endpoint:', endpoint); // Log the endpoint
-    const response = await csrfProtectedDelete(endpoint);
-
-    if (response.status === 200) {
-      openSuccessModal();
-      // Remove the deleted user from the state
-      setUsers((prevUsers) => prevUsers.filter((user) => user.uid !== uid));
-    } else {
-      console.error('Error deleting user:', response.statusText);
-    }
-  } catch (error) {
-    console.error('Error deleting user:', error);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-  const checkUserRole = async (uid, role) => {
+  const deleteUser = async (uid) => {
+    setIsLoading(true);
     try {
-      const endpoint = endpoints.checkUserRole(uid); // Use the endpoint with the UID
-      const response = await csrfProtectedPost(endpoint, { role });
-      console.log(role);
-      return response.data.hasRole;
+      const endpoint = endpoints.deleteUser(uid); // Use the endpoint with the UID
+      console.log('Delete User Endpoint:', endpoint); // Log the endpoint
+      const response = await axios.delete(endpoint);
+  
+      if (response.status === 200) {
+        openSuccessModal();
+        alert('User deleted successfully');
+        // Remove the deleted user from the state
+        setUsers((prevUsers) => prevUsers.filter((user) => user.uid !== uid));
+      } else {
+        console.error('Error deleting user:', response.statusText);
+      }
     } catch (error) {
-      console.error(`Error checking ${role} claim:`, error);
-      return false; // Default to false if there's an error
+      console.error('Error deleting user:', error);
+    }finally{
+      setIsLoading(false);
     }
   };
+
+  
+  
+// const handleSelectedUser = (uid) => {
+//   setSelectedUser((prevSelectedUser) => {
+//     // Toggle selected user
+//     const newValue = prevSelectedUser === uid ? '' : uid;
+
+//     // Close the role selection dropdown when a user is selected
+//     setRoleDropdownOpen(false);
+
+//     return newValue;
+//   });
+// };
+
+const checkUserRole = async (uid, role) => {
+  try {
+    const endpoint = endpoints.checkUserRole(uid); // Use the endpoint with the UID
+    // console.log('Check User Role Endpoint:', endpoint); // Log the endpoint
+    const response = await axios.post(endpoint, { role });
+    console.log(role)
+    return response.data.hasRole;
+    
+  } catch (error) {
+    console.error(`Error checking ${role} claim:`, error);
+    return false; // Default to false if there's an error
+  }
+};
 
 const handleUserAdded = (newUser) => {
   // Update the users state with the new user
   setUsers((prevUsers) => [...prevUsers, newUser]);
 };
-
 
 const assignRole = async () => {
   setIsLoading(true);
@@ -145,7 +178,7 @@ const assignRole = async () => {
 
     // Check if the selected user already has the selected role
     const hasRole = await checkUserRole(selectedUser, selectedRole);
-
+    
     if (hasRole) {
       setErrorMessage(`This user already has the ${selectedRole} role.`);
       return;
@@ -169,25 +202,27 @@ const assignRole = async () => {
     }
 
     // Make the API request to assign the role and update custom claims
-    const response = await csrfProtectedPost(endpoint, {});
+    const response = await axios.post(endpoint, {});
 
     // Update the Firestore collection with the new role
     const firestoreEndpoint = endpoints.updateUserRole(selectedUser);
-    await csrfProtectedPost(firestoreEndpoint, { role: selectedRole });
+    await axios.post(firestoreEndpoint, { role: selectedRole });
 
     setSuccessMessage(response.data.message);
     setErrorMessage('');
-    // Close the role selection dropdown after successful role assignment
-    setSelectedUser('');
-    // Redirect to the admin dashboard or another page after role assignment
+      // Close the role selection dropdown after successful role assignment
+  setSelectedUser('');
+// Redirect to the admin dashboard or another page after role assignment
   } catch (error) {
     console.error('Error assigning role:', error);
     setErrorMessage('Error assigning role. Please try again.');
     setSuccessMessage('');
-  } finally {
+  }finally{
     setIsLoading(false);
   }
+
 };
+
 const handleAddUserClick = () => {
   setOpenModal(true);
 };
@@ -196,22 +231,6 @@ const handleCloseModal = () => {
   setOpenModal(false);
 };
 
-
-const handleOpenDeleteModal = (uid) => {
-  setUserToDelete(uid);
-  setDeleteModalOpen(true);
-};
-const handleDeleteUser = async () => {
-  if (userToDelete) {
-    await deleteUser(userToDelete);
-    setDeleteModalOpen(false);
-  }
-};
-
-const handleCancelDelete = () => {
-  setUserToDelete(null);
-  setDeleteModalOpen(false);
-};
 return (
   
   <div className='user-management'>
@@ -287,7 +306,7 @@ return (
 
     <Button
       variant="outlined"
-      onClick={() => handleOpenDeleteModal(user.uid)}
+      onClick={() => deleteUser(user.uid)}
       >
       Delete User
       </Button>
@@ -299,23 +318,24 @@ return (
 </TableContainer>
       {errorMessage && <p className="error">{errorMessage}</p>}
         {/* User Registration Modal */}
-      <AddUserModal
-        openModal={openModal}
-        handleCloseModal={handleCloseModal}
-        handleUserAdded={handleUserAdded}
-      />
-
-<ConfirmationModal
-        open={deleteModalOpen}
-        title="Delete User"
-        content="Are you sure you want to delete this user?"
-        onConfirm={handleDeleteUser}
-        onCancel={handleCancelDelete}
-      />
+        <Dialog open={openModal} onClose={handleCloseModal}>
+        <DialogTitle>Add User</DialogTitle>
+        <DialogContent>
+          {/* Render the UserRegistration component here */}
+          <UserRegistration onUserAdded={handleUserAdded} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseModal} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleCloseModal} color="primary">
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={successModalOpen} onClose={() => setSuccessModalOpen(false)}>
   {/* <DialogTitle>Success</DialogTitle> */}
-
   <DialogContent>
     <div className="success-message">
       {isLoading ? (
@@ -324,7 +344,7 @@ return (
         <>
           {successMessage}
           <span role="img" aria-label="checkmark">
-            User Deleted Succesfully✅
+            ✅
           </span>
         </>
       )}
