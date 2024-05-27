@@ -14,7 +14,7 @@ const LogsTable = ({ userRole }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [idToDelete, setIdToDelete] = useState(null);
   const navigate = useNavigate();
-  const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+
   useEffect(() => {
     const fetchLogs = async () => {
       setIsLoading(true);
@@ -23,7 +23,7 @@ const LogsTable = ({ userRole }) => {
       const logsEndpoint = `${serverURL}/logs`;
 
       try {
-        const response = await axios.fetch(logsEndpoint);
+        const response = await axios.get(logsEndpoint);
         if (response.status === 200) {
           const logs = response.data.logs.map((log, index) => ({
             id: index,
@@ -47,7 +47,7 @@ const LogsTable = ({ userRole }) => {
     setModalOpen(false);
     if (idToDelete !== null) {
       try {
-        await axios.delete(`${serverURL}/logs/${idToDelete}`);
+        await axios.delete(`/logs/${idToDelete}`);
         setData(data.filter((item) => item.id !== idToDelete));
         setFilteredData(filteredData.filter((item) => item.id !== idToDelete));
       } catch (err) {
