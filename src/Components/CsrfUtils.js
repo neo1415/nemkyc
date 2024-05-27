@@ -12,40 +12,24 @@ const getCsrfToken = async () => {
     return response.data.csrfToken;
 };
 
-// Utility function to make CSRF-protected POST requests
-const csrfProtectedPost = async (url, data) => {
+// Utility function to make CSRF-protected requests
+const csrfProtectedRequest = async (method, url, data = null) => {
     const csrfToken = await getCsrfToken();
-    const response = await axios.post(url, data, {
-      headers: {
-        'Content-Type': 'application/json',
-        'CSRF-Token': csrfToken
-      },
-      withCredentials: true // Include cookies in the request
-    });
+    const config = {
+        method,
+        url,
+        headers: {
+            'Content-Type': 'application/json',
+            'CSRF-Token': csrfToken
+        },
+        withCredentials: true,
+        data
+    };
+    const response = await axios(config);
     return response; // Return the full response object
 };
 
-// Utility function to make CSRF-protected GET requests
-const csrfProtectedGet = async (url) => {
-  const csrfToken = await getCsrfToken();
-  return axios.get(url, {
-    headers: {
-      'CSRF-Token': csrfToken
-    },
-    withCredentials: true // Include cookies in the request
-  });
-};
-
-// Utility function to make CSRF-protected DELETE requests
-const csrfProtectedDelete = async (url) => {
-    const csrfToken = await getCsrfToken();
-    const response = await axios.delete(url, {
-      headers: {
-        'CSRF-Token': csrfToken
-      },
-      withCredentials: true // Include cookies in the request
-    });
-    return response; // Return the full response object
-};
-
-export { getCsrfToken, csrfProtectedPost, csrfProtectedGet, csrfProtectedDelete };
+// Export utility functions
+export const csrfProtectedPost = (url, data) => csrfProtectedRequest('post', url, data);
+export const csrfProtectedGet = (url) => csrfProtectedRequest('get', url);
+export const csrfProtectedDelete = (url) => csrfProtectedRequest('delete', url);
