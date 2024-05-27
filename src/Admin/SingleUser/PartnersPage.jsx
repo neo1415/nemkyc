@@ -351,6 +351,34 @@ textColor: [0, 0, 0],
 
 doc.autoTable(secondBeneficialOwnersTableColumn, secondBeneficialOwnersTableRows, secondBeneficialOwnersTableProps);
 
+doc.setFontSize(14);
+// doc.setFontStyle('bold' , doc.internal.pageSize.getWidth() / 2, 150, { align: 'center' })
+doc.text('Declaration:', 50, doc.autoTable.previous.finalY + 40);
+
+let yPosition = doc.autoTable.previous.finalY + 80; // Increase space after the header
+
+const declarations = [
+    {
+        text: `I/We ${data.signature} hereby affirm that all the information provided in this Form/Document is true , accurate and complete to the best of my knowledge.`,
+        signature: data.signature
+    },
+   
+];
+
+declarations.forEach((declaration, index) => {
+  const lines = doc.splitTextToSize(declaration.text, 500); // Adjust the width as needed
+  doc.text(lines, 50, yPosition);
+  const textWidth = doc.getTextWidth(declaration.signature);
+  // doc.line(80, yPosition + 5, 50 + textWidth, yPosition + 5); // Underline the signature
+  yPosition += 24 * lines.length; // Adjust this value as needed to space out the declarations
+});
+
+// Add date under the declarations
+const dateText = `Date: ${new Date().toLocaleDateString()}`;
+doc.text(dateText, 50, yPosition + 20);
+const dateWidth = doc.getTextWidth(dateText);
+// doc.line(90, yPosition + 30, 50 + dateWidth, yPosition + 30); // Underline the date
+
 // Add section 3 - Declaration and Signature
 // doc.setFontSize(18);
 // doc.setTextColor(0, 0, 0);
@@ -375,7 +403,7 @@ doc.save('KYC Form.pdf');
       <div className='form-contents'>
       <div className='flex-content'>
   <ul>
-    <h1 className='content-h1'>Company (test) Details</h1>
+    <h1 className='content-h1'>Company Details</h1>
     {[
       { label: 'Company Name', key: 'companyName' },
       { label: 'Registered Company Address', key: 'registeredCompanyAddress' },

@@ -156,9 +156,7 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
 <label htmlFor="signature"></label>
      I <input type='text' {...register("signature", { required: true,  minLength: 3, maxLength: 30  })} className='signature-input' placeholder='Your Full Name' />
       {errors.signature && <span className="error-message">This field is required</span>}
-      you acknowledge and 
-      agree to the purpose set-out in this clause 
-      and our data privacy policy. Thank you
+      hereby affirm that all the information provided in this Form/Document is true , accurate and complete to the best of my knowledge.
 </div>
 {errors.signature && <span className="error-message">This field is required</span>}
 

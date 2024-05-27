@@ -3,9 +3,9 @@ section {
     justify-content: center;
     align-items: center;
     flex-wrap: wrap;
-    @media screen and (max-width:1000px) {
-      flex-direction: column;
-    }
+    // @media screen and (max-width:1000px) {
+    //   flex-direction: column;
+    // }
     
   }
   .section-header{
