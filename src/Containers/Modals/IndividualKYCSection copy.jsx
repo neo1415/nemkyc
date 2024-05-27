@@ -36,8 +36,8 @@ const IndividualKYCWrapper = () => {
 
   return (
     <div>
-  <div class="card " onClick={handleOpen}>
-    <img src={images.bg1} alt="2" />
+  <div class="kyc-card " onClick={handleOpen}>
+    <img src={images.individualKYC} alt="2" />
     <div className="overlay">
       <h2>INDIVIDUAL <br /> KYC FORM</h2>
     </div>

@@ -8,9 +8,10 @@ const CSRF_TOKEN_ENDPOINT = `${BASE_URL}/csrf-token`;
 
 // Utility function to fetch CSRF token
 const getCsrfToken = async () => {
-    const response = await axios.get('http://localhost:3001/csrf-token', { withCredentials: true });
+    const response = await axios.get(CSRF_TOKEN_ENDPOINT, { withCredentials: true });
     return response.data.csrfToken;
-  };
+};
+
 // Utility function to make CSRF-protected POST requests
 const csrfProtectedPost = async (url, data) => {
     const csrfToken = await getCsrfToken();
@@ -22,9 +23,7 @@ const csrfProtectedPost = async (url, data) => {
       withCredentials: true // Include cookies in the request
     });
     return response; // Return the full response object
-  };
-  
- 
+};
 
 // Utility function to make CSRF-protected GET requests
 const csrfProtectedGet = async (url) => {
@@ -37,8 +36,8 @@ const csrfProtectedGet = async (url) => {
   });
 };
 
- // Utility function to make CSRF-protected DELETE requests
- const csrfProtectedDelete = async (url) => {
+// Utility function to make CSRF-protected DELETE requests
+const csrfProtectedDelete = async (url) => {
     const csrfToken = await getCsrfToken();
     const response = await axios.delete(url, {
       headers: {
@@ -47,6 +46,6 @@ const csrfProtectedGet = async (url) => {
       withCredentials: true // Include cookies in the request
     });
     return response; // Return the full response object
-  };
+};
 
 export { getCsrfToken, csrfProtectedPost, csrfProtectedGet, csrfProtectedDelete };

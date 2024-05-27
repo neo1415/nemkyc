@@ -80,12 +80,13 @@ const CorporateKYCTable = () => {
     fetchData();
   }, [userRole]);
   
+  const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
 
   const handleDelete = async () => {
     setModalOpen(false);
     if (idToDelete) {
       try {
-      await csrfProtectedDelete(`http://localhost:3001/delete/corporate-kyc-form/${idToDelete}`); 
+      await csrfProtectedDelete(`${serverURL}/delete/corporate-kyc-form/${idToDelete}`); 
         setData(data.filter((item) => item.id !== idToDelete));
       } catch (err) {
         console.log(err);
