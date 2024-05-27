@@ -69,7 +69,7 @@ const AgentsList = () => {
   const handleDelete = async () => {
     setModalOpen(false);
     if (idToDelete) {
-      dispatch(deleteData({ endpoint: `http://localhost:3001/delete/agents-kyc`, id: idToDelete }));
+      dispatch(deleteData({ endpoint: `${serverURL}/delete/agents-kyc`, id: idToDelete }));
     }
   };
   

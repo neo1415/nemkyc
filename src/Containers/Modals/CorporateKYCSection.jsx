@@ -36,8 +36,8 @@ const CorporateKYCWrapper = () => {
 
   return (
     <div>
-  <div class="card " onClick={handleOpen}>
-    <img src={images.bg1} alt="2" />
+  <div class="kyc-card " onClick={handleOpen}>
+    <img src={images.corporateKYc} alt="2" />
     <div className="overlay">
       <h2>Corporate <br /> KYC FORM</h2>
     </div>

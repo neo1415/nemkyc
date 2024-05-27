@@ -74,12 +74,13 @@ const IndividualKYCTable = () => {
     fetchData();
   }, [userRole]);
   
+  const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
 
   const handleDelete = async () => {
     setModalOpen(false);
     if (idToDelete) {
       try {
-        await csrfProtectedDelete(`http://localhost:3001/delete/individual-kyc-form/${idToDelete}`); 
+        await csrfProtectedDelete(`${serverURL}/delete/individual-kyc-form/${idToDelete}`); 
         setData(data.filter((item) => item.id !== idToDelete));
       } catch (err) {
         console.log(err);

@@ -11,6 +11,11 @@ import hero1 from '../Assets/hero1.jpg'
 import partner from '../Assets/agents.jpg'
 import broker from '../Assets/brokers.jpg'
 import agent from  '../Assets/partners.jpg'
+import kycBG from '../Assets/kycBG.jpg'
+import cddBG from '../Assets/cddbg.jpg'
+import corporateKYc from '../Assets/corporate.jpg'
+import individualKYC from '../Assets/individualkyc.jpg'
+import heroMain from '../Assets/heroMain.jpg'
 
 export default {
     form0,
@@ -25,6 +30,10 @@ export default {
     hero1,
     partner,
     broker,
-    agent
-
+    agent,
+    kycBG,
+    cddBG,
+    corporateKYc,
+    individualKYC,
+    heroMain
 }
