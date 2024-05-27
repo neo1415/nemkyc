@@ -6,14 +6,14 @@ const Hero = () => {
   return (
     <div className="hero-flex">
 <div className="content">
-<h2 className="heading">NEM INSURANCE Customer Due Dilligence Information Collection Center</h2>
-  <p className="sub">Streamlined KYC and CDD Solutions for Secure Online Transactions.</p>
+<h2 className="heading">NEM Insurance PLC: Due Diligence You Can Trust</h2>
+  <p className="sub"> The Standard in Comprehensive Customer Due Diligence..</p>
 <a className="smooth-scroll" href='#section'>
   <button className="main__button">Get started</button>
   </a>
 </div>
-<div className="image">
-<img src={images.hero} className="hero-image" alt="hero" />
+<div className="cdd-image">
+<img src={images.CDDHero} className="cdd-hero-image" alt="hero" />
 <div className="circle"></div>
 </div>
 

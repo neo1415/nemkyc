@@ -12,8 +12,8 @@ const MainHero = () => {
   <button className="main__button">Get started</button>
   </a>
 </div>
-<div className="image">
-<img src={images.heroMain} className="hero-image" alt="hero" />
+<div className="main-image">
+<img src={images.hero} className="main-hero-image" alt="hero" />
 <div className="circle"></div>
 </div>
 

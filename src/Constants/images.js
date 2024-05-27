@@ -15,7 +15,9 @@ import kycBG from '../Assets/kycBG.jpg'
 import cddBG from '../Assets/cddbg.jpg'
 import corporateKYc from '../Assets/corporate.jpg'
 import individualKYC from '../Assets/individualkyc.jpg'
-import heroMain from '../Assets/heroMain.jpg'
+import heroMain from '../Assets/heroMain.png'
+import KYCHero from '../Assets/KyCHero.png'
+import CDDHero from '../Assets/CDDHero.png'
 
 export default {
     form0,
@@ -35,5 +37,7 @@ export default {
     cddBG,
     corporateKYc,
     individualKYC,
-    heroMain
+    heroMain,
+    KYCHero,
+    CDDHero
 }

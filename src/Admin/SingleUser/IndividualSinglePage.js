@@ -194,7 +194,7 @@ const handleCancelClick = () => {
   
       const declarations = [
           {
-              text: `I/We ${data.signature1} declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.`,
+              text: `I/We ${data.signature1} hereby affirm that all the information provided in this Form/Document is true , accurate and complete to the best of my knowledge.`,
               signature: data.signature1
           },
          
