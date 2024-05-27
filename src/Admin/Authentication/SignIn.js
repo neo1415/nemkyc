@@ -28,11 +28,11 @@ const SignIn = () => {
 
       const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
   
-      // Define the registration endpoint
-      const login = `${serverURL}/login`;
+      // Define the login endpoint
+      const loginUrl = `${serverURL}/login`;
 
       // Send the ID token to the backend
-      const response = await csrfProtectedPost(login, { idToken });
+      const response = await csrfProtectedPost(loginUrl, { idToken });
 
       const data = response.data;
       setLoading(false); // Hide loading spinner
@@ -47,6 +47,7 @@ const SignIn = () => {
       setError(e.message || 'Invalid email or password or check your internet connection');
     }
   };
+
 
   return (
     <Box className='login' display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="100vh">
