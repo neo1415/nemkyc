@@ -12,7 +12,6 @@ import useAutoLogout from '../../Components/Timeout';
 import { UserAuth } from '../../Context/AuthContext';
 import useFetchUserRole from '../../Components/checkUserRole';
 import { useDispatch, useSelector } from 'react-redux';
-import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 const BrokersPage = () => {
 
@@ -37,13 +36,18 @@ const BrokersPage = () => {
       dispatch({ type: 'SET_EDITING_KEY', key: null });
   
       try {
-        const response = await csrfProtectedPost(`${serverURL}/edit-brokers-form/${data.id}`, {
-          [key]: editData[key] ,
+        const response = await fetch(`${serverURL}/edit-brokers-form/${data.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ [key]: editData[key] }),
         });
   
+        const result = await response.json();
   
         if (!response.ok) {
-          console.error(response.error);
+          console.error(result.error);
           // If the server returns an error, revert the changes in the UI
           dispatch({ type: 'SET_EDIT_DATA', data });
           toast.error('Update failed. Please try again.');

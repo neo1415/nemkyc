@@ -82,7 +82,7 @@ const Brokers = () => {
           if (fileUrls.Incorporation && fileUrls.identification && fileUrls.identification2 && fileUrls.NAICOMForm) {
             setIsSubmitted(true);
             console.log('Form values:', formData);
-            const response = await csrfProtectedPost(endpoints.submitBrokersForm, formData);
+            const response = await axios.post(endpoints.submitBrokersForm, formData);
           if (response.status === 201) {
               console.log('Form submitted successfully');
               showSuccessToast('Form Submitted successfully.');

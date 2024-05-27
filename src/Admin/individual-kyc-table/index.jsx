@@ -16,7 +16,6 @@ import ConfirmationModal from './../../Containers/Modals/ConfirmationModal';
 import FilterComponent from '../../Components/useFilter';
 import useFetchUserRole from './../../Components/checkUserRole';
 import { StatusButton } from '../../Components/StatusButton';
-import { csrfProtectedDelete, csrfProtectedGet } from "../../Components/CsrfUtils";
 
 function CustomLoadingOverlay() {
   return (
@@ -57,7 +56,7 @@ const IndividualKYCTable = () => {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true); // Set loading to true before fetching the data
-      const response = await csrfProtectedGet(endpoints.getIndividualKYCData);
+      const response = await axios.get(endpoints.getIndividualKYCData);
       
       if (response.status === 200) {
         const data = response.data;
@@ -74,13 +73,12 @@ const IndividualKYCTable = () => {
     fetchData();
   }, [userRole]);
   
-  const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
 
   const handleDelete = async () => {
     setModalOpen(false);
     if (idToDelete) {
       try {
-        await csrfProtectedDelete(`${serverURL}/delete/individual-kyc-form/${idToDelete}`); 
+        await deleteDoc(doc(db, "Individual-kyc-form", idToDelete));
         setData(data.filter((item) => item.id !== idToDelete));
       } catch (err) {
         console.log(err);

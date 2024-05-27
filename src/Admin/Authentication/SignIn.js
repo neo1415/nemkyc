@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import './form.scss';
 import { auth } from '../../APi';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { csrfProtectedPost } from '../../Components/CsrfUtils'; // Ensure the path is correct
 import { CircularProgress, Box, Typography, Button, TextField } from '@mui/material';
 
 const SignIn = () => {
@@ -17,37 +16,20 @@ const SignIn = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true); // Show loading spinner
+    setLoading(true);
 
     try {
       // Sign in with Firebase Authentication
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-      // Get the ID token
-      const idToken = await userCredential.user.getIdToken(true);
-
-      const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
-  
-      // Define the login endpoint
-      const loginUrl = `${serverURL}/login`;
-
-      // Send the ID token to the backend
-      const response = await csrfProtectedPost(loginUrl, { idToken });
-
-      const data = response.data;
-      setLoading(false); // Hide loading spinner
-
-      if (data.redirectTo) {
-        navigate(data.redirectTo, { state: { uid: data.uid } });
-      } else {
-        navigate('/adminHome');
-      }
+      // Handle successful login
+      setLoading(false);
+      navigate('/adminHome');
     } catch (e) {
-      setLoading(false); // Hide loading spinner
+      setLoading(false);
       setError(e.message || 'Invalid email or password or check your internet connection');
     }
   };
-
 
   return (
     <Box className='login' display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="100vh">

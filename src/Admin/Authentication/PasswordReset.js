@@ -16,7 +16,7 @@ const PasswordReset = () => {
         e.preventDefault();
         setError('');
         try {
-          const response = await csrfProtectedPost('/resetpassword', { uid, newPassword });
+          const response = await axios.post('/resetpassword', { uid, newPassword });
     
           if (response.ok) {
             setSuccess('Password reset successful. Please login with your new password.');

@@ -23,7 +23,7 @@ const LogsTable = ({ userRole }) => {
       const logsEndpoint = `${serverURL}/logs`;
 
       try {
-        const response = await csrfProtectedGet(logsEndpoint);
+        const response = await axios.fetch(logsEndpoint);
         if (response.status === 200) {
           const logs = response.data.logs.map((log, index) => ({
             id: index,
@@ -47,7 +47,7 @@ const LogsTable = ({ userRole }) => {
     setModalOpen(false);
     if (idToDelete !== null) {
       try {
-        await csrfProtectedDelete(`${serverURL}/logs/${idToDelete}`);
+        await axios.delete(`${serverURL}/logs/${idToDelete}`);
         setData(data.filter((item) => item.id !== idToDelete));
         setFilteredData(filteredData.filter((item) => item.id !== idToDelete));
       } catch (err) {

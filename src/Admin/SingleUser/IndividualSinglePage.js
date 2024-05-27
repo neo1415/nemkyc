@@ -13,7 +13,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import useFetchUserRole from '../../Components/checkUserRole';
 import { useDispatch, useSelector } from 'react-redux';
 import images from '../../Constants/images'
-import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 const IndividualSinglePage = () => {
 
@@ -38,17 +37,22 @@ const handleFormSubmit = async (event, key) => {
   dispatch({ type: 'SET_EDITING_KEY', key: null });
 
   try {
-    const response = await csrfProtectedPost(`${serverURL}/edit-individual-kyc-form/${data.id}`, {
-      [key]: editData[key] ,
-        });
-  
-  
-        if (!response.ok) {
-          console.error(response.error);
-          // If the server returns an error, revert the changes in the UI
-          dispatch({ type: 'SET_EDIT_DATA', data });
-          toast.error('Update failed. Please try again.');
-        }
+    const response = await fetch(`${serverURL}/edit-individual-kyc-form/${data.id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ [key]: editData[key] }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error(result.error);
+      // If the server returns an error, revert the changes in the UI
+      dispatch({ type: 'SET_EDIT_DATA', data });
+      toast.error('Update failed. Please try again.');
+    }
   } catch (err) {
     console.error('Error:', err);
     // If the request fails, revert the changes in the UI

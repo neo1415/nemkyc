@@ -95,7 +95,7 @@ const [fileNames, setFileNames] = useState({});
         if (fileUrls.identification ) {
           setIsSubmitted(true);
           console.log('Form values:', formData);
-          const response = await csrfProtectedPost(endpoints.submitIndividualKYCForm, formData);
+          const response = await axios.post(endpoints.submitIndividualKYCForm, formData);
         if (response.status === 201) {
             console.log('Form submitted successfully');
             showSuccessToast('Form Submitted successfully.');
