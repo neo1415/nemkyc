@@ -4,6 +4,7 @@ import Navbar from './../Components/Navbar/index';
 import Hero from '../Containers/Hero';
 import Section from '../Containers/Section/section';
 import Footer from '../Containers/Footer';
+import CDDNav from '../Components/CDDNav';
 
 const Home = () => {
   return (
@@ -13,7 +14,7 @@ const Home = () => {
     exit={{x:window.innerWidth, transition:{duration:0.1}}}
 
      id='homepage'>
-      <Navbar />
+      <CDDNav />
       <Hero />
       <Section />
       <Footer />

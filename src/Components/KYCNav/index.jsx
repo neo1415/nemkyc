@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import './index.scss'
-import { Link } from 'react-router-dom';
 
 import { IoClose, IoMenu } from "react-icons/io5";
 import "./index.scss";
 import images from '../../Constants/images'
+import CorporateKYCNav from '../../Containers/Modals/CorporateKYCNav';
+import IndividualKYCNav from '../../Containers/Modals/individualKYCNav';
 
-const Navbar = () => {
+const KYCNav = () => {
   const [showMenu, setShowMenu] = useState(false);
 
   const toggleMenu = () => {
@@ -31,12 +32,9 @@ const Navbar = () => {
         >
           <ul className="nav__list">
             <li className="nav__item">
-              <div
-               
-                className="nav__link"
-                onClick={closeMenuOnMobile}
-              >
-   <Link to="/know-your-customer">KYC Form</Link>
+              <div  className="nav__link" onClick={closeMenuOnMobile}>
+                <CorporateKYCNav/>
+
               </div>
             </li>
             <li className="nav__item">
@@ -45,11 +43,10 @@ const Navbar = () => {
                 className="nav__link"
                 onClick={closeMenuOnMobile}
               >
-
-  <Link to="/customer-due-dilligence">CDD Form</Link>
+               <IndividualKYCNav />
               </div>
             </li>
-          
+           
           </ul>
           <div className="nav__close" id="nav-close" onClick={toggleMenu}>
             <IoClose />
@@ -63,4 +60,5 @@ const Navbar = () => {
     </header>
   );
 };
-export default Navbar
+
+export default KYCNav
