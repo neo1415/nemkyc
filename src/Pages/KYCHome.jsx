@@ -6,6 +6,7 @@ import Section from '../Containers/Section/section';
 import Footer from '../Containers/Footer';
 import KYCHero from '../Containers/KYCHero';
 import KYCSection from '../Containers/KYCSection/KYCSection';
+import KYCNav from '../Components/KYCNav';
 
 const KYCHome = () => {
   return (
@@ -15,7 +16,7 @@ const KYCHome = () => {
     exit={{x:window.innerWidth, transition:{duration:0.1}}}
 
      id='homepage'>
-      <Navbar />
+     <KYCNav />
       <KYCHero />
       <KYCSection />
       <Footer />

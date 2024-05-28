@@ -1,12 +1,14 @@
 import React, { useState } from "react";
-import './index.scss'
-import { Link } from 'react-router-dom';
-
 import { IoClose, IoMenu } from "react-icons/io5";
 import "./index.scss";
+import TransitionModal from '../../Containers/Modals/Modal'
+import PartnersNav from '../../Containers/Modals/PartnersNav'
+import BrokersNav from '../../Containers/Modals/BrokersNav'
+import AgentsNav from '../../Containers/Modals/AgentsNav'
+import IndiModal from '../../Containers/Modals/IndiModal'
 import images from '../../Constants/images'
 
-const Navbar = () => {
+const CDDNav = () => {
   const [showMenu, setShowMenu] = useState(false);
 
   const toggleMenu = () => {
@@ -31,12 +33,9 @@ const Navbar = () => {
         >
           <ul className="nav__list">
             <li className="nav__item">
-              <div
-               
-                className="nav__link"
-                onClick={closeMenuOnMobile}
-              >
-   <Link to="/know-your-customer">KYC Form</Link>
+              <div  className="nav__link" onClick={closeMenuOnMobile}>
+                <TransitionModal />
+
               </div>
             </li>
             <li className="nav__item">
@@ -45,11 +44,36 @@ const Navbar = () => {
                 className="nav__link"
                 onClick={closeMenuOnMobile}
               >
-
-  <Link to="/customer-due-dilligence">CDD Form</Link>
+               <PartnersNav />
               </div>
             </li>
-          
+            <li className="nav__item">
+              <div
+               
+                className="nav__link"
+                onClick={closeMenuOnMobile}
+              >
+                 <BrokersNav />
+              </div>
+            </li>
+            <li className="nav__item">
+              <div
+              
+                className="nav__link"
+                onClick={closeMenuOnMobile}
+              >
+                <AgentsNav />
+              </div>
+            </li>
+            <li className="nav__item">
+              <div
+         
+                className="nav__link"
+                onClick={closeMenuOnMobile}
+              >
+               <IndiModal />
+              </div>
+            </li>
           </ul>
           <div className="nav__close" id="nav-close" onClick={toggleMenu}>
             <IoClose />
@@ -63,4 +87,5 @@ const Navbar = () => {
     </header>
   );
 };
-export default Navbar
+
+export default CDDNav;
