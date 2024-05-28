@@ -79,7 +79,7 @@ const Brokers = () => {
       if (result) {
         try {      
           const formData = {...formValues, ...fileUrls};
-          if (fileUrls.Incorporation && fileUrls.identification && fileUrls.identification2 && fileUrls.NAICOMForm) {
+          if (fileUrls.Incorporation && fileUrls.identification && fileUrls.NAICOMForm) {
             setIsSubmitted(true);
             console.log('Form values:', formData);
             const response = await axios.post(endpoints.submitBrokersForm, formData);

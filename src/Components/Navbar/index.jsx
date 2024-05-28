@@ -1,91 +1,28 @@
-import React, { useState } from "react";
-import { IoClose, IoMenu } from "react-icons/io5";
-import "./index.scss";
-import TransitionModal from '../../Containers/Modals/Modal'
-import PartnersNav from '../../Containers/Modals/PartnersNav'
-import BrokersNav from '../../Containers/Modals/BrokersNav'
-import AgentsNav from '../../Containers/Modals/AgentsNav'
-import IndiModal from '../../Containers/Modals/IndiModal'
-import images from '../../Constants/images'
+import React from 'react'
+import './index.scss'
+import { Link } from 'react-router-dom';
+import logo from './logo-white.png'
 
 const Navbar = () => {
-  const [showMenu, setShowMenu] = useState(false);
-
-  const toggleMenu = () => {
-    setShowMenu(!showMenu);
-  };
-
-  const closeMenuOnMobile = () => {
-    if (window.innerWidth <= 1150) {
-      setShowMenu(false);
-    }
-  };
   return (
-    <header className="header">
-      <nav className="nav container">
-        <div to="/" className="nav__logo">
-          <img src={images.logo} alt='logo' className="nem-logo" />
-        </div>
+    <div>
+        <nav>
+  <div class="logo">
 
-        <div
-          className={`nav__menu ${showMenu ? "show-menu" : ""}`}
-          id="nav-menu"
-        >
-          <ul className="nav__list">
-            <li className="nav__item">
-              <div  className="nav__link" onClick={closeMenuOnMobile}>
-                <TransitionModal />
+  <Link to="/">
+  
+    <img src={logo} className='nav-logo' alt="logo" />
+  </Link>
+  </div>
 
-              </div>
-            </li>
-            <li className="nav__item">
-              <div
-               
-                className="nav__link"
-                onClick={closeMenuOnMobile}
-              >
-               <PartnersNav />
-              </div>
-            </li>
-            <li className="nav__item">
-              <div
-               
-                className="nav__link"
-                onClick={closeMenuOnMobile}
-              >
-                 <BrokersNav />
-              </div>
-            </li>
-            <li className="nav__item">
-              <div
-              
-                className="nav__link"
-                onClick={closeMenuOnMobile}
-              >
-                <AgentsNav />
-              </div>
-            </li>
-            <li className="nav__item">
-              <div
-         
-                className="nav__link"
-                onClick={closeMenuOnMobile}
-              >
-               <IndiModal />
-              </div>
-            </li>
-          </ul>
-          <div className="nav__close" id="nav-close" onClick={toggleMenu}>
-            <IoClose />
-          </div>
-        </div>
+  <div class="hamburger">
+  <Link to="/know-your-customer">KYC Form</Link>
+  <Link to="/customer-due-dilligence">CDD Form</Link>
+  <div id="indicator"></div>
+  </div>
+</nav>
+    </div>
+  )
+}
 
-        <div className="nav__toggle" id="nav-toggle" onClick={toggleMenu}>
-          <IoMenu />
-        </div>
-      </nav>
-    </header>
-  );
-};
-
-export default Navbar;
+export default Navbar

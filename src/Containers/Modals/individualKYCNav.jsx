@@ -34,7 +34,7 @@ export default function IndividualKYCNav() {
 
   return (
     <div>
-      <Link onClick={handleOpen}>Individual</Link>
+      <Link onClick={handleOpen}>Individual KYC</Link>
       <Modal
         aria-labelledby="transition-modal-title"
         aria-describedby="transition-modal-description"

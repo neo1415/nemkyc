@@ -705,7 +705,7 @@ doc.save('KYC Form.pdf');
             <a href={data.formCO7} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
-                Download Form CO7 <HiDownload style={style} />{' '}
+                Download CAC Status Report <HiDownload style={style} />{' '}
               </button>
             </a>
             
