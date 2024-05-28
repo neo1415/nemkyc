@@ -122,8 +122,8 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
       <select id="companyNameVerificationDoc" name="companyNameVerificationDoc" {...register("companyNameVerificationDoc", { required: true })}>
         <option value="VerificationDocument">Verification Document</option>
         <option value="lCertificateofIncorporationorBusinessRegistration">Certificate of Incorporation or Business Registration</option>
-        <option value="CorporateRegNumber">Corporate Reg Number</option>
-        <option value="FormC07orCO2">Form C07 or CO2</option>
+        {/* <option value="CACStatusReport">Corporate Reg Number</option> */}
+        <option value="FormC07orCO2">CAC Status report</option>
         <option value="BoardResolution">Board Resolution</option>
         <option value="PowerofAttorney">Power of Attorney</option>
 

@@ -110,7 +110,7 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
 
   return (
 
-<div className='flexer'>
+<div className='agents-flexer'>
   <div className='agent-flex'><div className='flex-one'>
     <h3>Local Account Details</h3>
 

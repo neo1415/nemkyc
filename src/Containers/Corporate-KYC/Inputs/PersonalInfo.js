@@ -23,7 +23,7 @@ const PersonalInfo = ({register, errors, control}) => {
     <div className='flex-one'>
           
       <label htmlFor="insured">Insured <span className='required'>*</span></label>
-      <input type="text" id="insured" placeholder='Last Name' {...register("insured", { required: true })} />
+      <input type="text" id="insured" placeholder='Insured' {...register("insured", { required: true })} />
       {errors.insured && <span className="error-message">{errors.insured.message}</span>}
 
       <label htmlFor="officeAddress">Office Address <span className='required'>*</span></label>

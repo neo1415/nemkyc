@@ -79,7 +79,7 @@ const Partners = () => {
       if (result) {
         try {      
           const formData = {...formValues, ...fileUrls};
-          if (fileUrls.Incorporation && fileUrls.identification && fileUrls.VAT && fileUrls.tax && fileUrls.formCO7 && fileUrls.identification2 && fileUrls.NAICOMForm) {
+          if (fileUrls.Incorporation && fileUrls.identification && fileUrls.VAT && fileUrls.tax && fileUrls.formCO7 && fileUrls.NAICOMForm) {
             setIsSubmitted(true);
             console.log('Form values:', formData);
             const response = await axios.post(endpoints.submitPartnersForm, formData);
