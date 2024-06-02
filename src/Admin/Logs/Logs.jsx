@@ -4,7 +4,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ConfirmationModal from '../../Containers/Modals/ConfirmationModal';
-import { csrfProtectedGet, csrfProtectedDelete } from '../../Components/CsrfUtils';
 import Sidebar from '../SideBar/SideBar';
 
 const LogsTable = ({ userRole }) => {
@@ -25,10 +24,12 @@ const LogsTable = ({ userRole }) => {
       try {
         const response = await axios.get(logsEndpoint);
         if (response.status === 200) {
-          const logs = response.data.logs.map((log, index) => ({
-            id: index,
-            ...log,
-          }));
+          const logs = response.data.logs
+            .map((log, index) => ({
+              id: log.id || index, // Assuming each log has a unique `id`, otherwise fallback to index
+              ...log,
+            }))
+            .sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort logs from latest to oldest
           setData(logs);
           setFilteredData(logs);
         } else {
@@ -75,27 +76,27 @@ const LogsTable = ({ userRole }) => {
 
   const columns = [
     {
-        field: 'action',
-        headerName: 'Action',
-        width: 200,
-        renderCell: (params) => {
-          const { id } = params.row;
-          return (
-            <div className="cellAction">
-              {userRole === 'admin' && (
-                <>
-                  <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
-                    Delete
-                  </div>
-                  <div className="viewButton" onClick={() => handleView(id)}>
-                    View
-                  </div>
-                </>
-              )}
-            </div>
-          );
-        },
+      field: 'action',
+      headerName: 'Action',
+      width: 200,
+      renderCell: (params) => {
+        const { id } = params.row;
+        return (
+          <div className="cellAction">
+            {userRole === 'admin' && (
+              <>
+                <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
+                  Delete
+                </div>
+                <div className="viewButton" onClick={() => handleView(id)}>
+                  View
+                </div>
+              </>
+            )}
+          </div>
+        );
       },
+    },
     { field: 'date', headerName: 'Date', width: 200 },
     { field: 'ip', headerName: 'IP Address', width: 150 },
     { field: 'request', headerName: 'Request', width: 300 },
@@ -103,7 +104,6 @@ const LogsTable = ({ userRole }) => {
     { field: 'responseSize', headerName: 'Response Size', width: 150 },
     { field: 'referer', headerName: 'Referer', width: 250 },
     { field: 'userAgent', headerName: 'User Agent', width: 500 },
-   
   ];
 
   return (
@@ -135,7 +135,7 @@ const LogsTable = ({ userRole }) => {
           columns={columns}
           rows={filteredData}
           pageSize={8}
-          rowsPerPageOptions={[9]}
+          rowsPerPageOptions={[8]}
           checkboxSelection
           loading={isLoading}
         />
