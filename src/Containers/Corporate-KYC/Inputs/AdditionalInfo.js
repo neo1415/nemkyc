@@ -16,7 +16,7 @@ const AdditionalInfo = ({register, errors}) => {
 <hr></hr>
                 <li className='data-privacy'>
                 Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria 
-                Data Protection Regulations 2019.
+                Data Protection ACt 2023.
                 </li>  
 <hr></hr>
                 <li className='data-privacy'>

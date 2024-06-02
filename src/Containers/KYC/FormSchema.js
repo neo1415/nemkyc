@@ -3,7 +3,7 @@ import { sanitizeEmail, sanitizeString } from '../../Components/SanitizationUtil
 
 const today = new Date();
 const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
-
+today.setHours(0, 0, 0, 0);
 
 export const schema1 = yup.object().shape({
     title: yup.string().required('Title is required').transform(sanitizeString),
@@ -35,7 +35,11 @@ export const schema2 = yup.object().shape({
     identificationType: yup.string().transform(sanitizeString).required('Identification Type is required'),
     identificationNumber: yup.string().required('Identification Number is required').transform(sanitizeString),
     issuingCountry: yup.string().required('Issuing Country is required').transform(sanitizeString),
-    issuedDate: yup.date().required('Issued Date is required'),
+    issuedDate: yup.date()
+    .max(today, 'The date cannot be in the future')
+    .required('Date is required')
+    .test('is-date', 'Date must be a valid date', value => !isNaN(Date.parse(value))),
+  
     expiryDate: yup.date()
     .transform((value, originalValue) => {
       return originalValue === "" ? null : new Date(originalValue);
