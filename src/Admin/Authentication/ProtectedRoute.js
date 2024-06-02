@@ -13,7 +13,7 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
 
   useEffect(() => {
     const fetchUserRole = async () => {
-      if (user) {
+      if (user && user.uid) {
         console.log('User found:', user);
         try {
           const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
@@ -27,7 +27,7 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
           setIsLoading(false);
         }
       } else {
-        console.log('No user found');
+        console.log('No user found or invalid user UID');
         setIsLoading(false);
       }
     };
@@ -47,7 +47,7 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
     return <Navigate to="/signin" />;
   }
 
-  if ( !user || userRole === 'default') {
+  if (userRole === 'default' || !userRole) {
     console.log('Unauthorized, userRole:', userRole);
     return <Unauthourized />;
   }
