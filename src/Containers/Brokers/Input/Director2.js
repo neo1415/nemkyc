@@ -18,7 +18,7 @@ const Director2 = ({register, errors, formValues, control}) => {
       <div className='flex-one'>
 
       <label htmlFor="title2">Title </label>
-      <input type="text" id="title2" placeholder='Title2' {...register("title", { required: true })} />
+      <input type="text" id="title2" placeholder='Title' {...register("title", { required: true })} />
       {errors.title2 && <span className="error-message">{errors.title2.message}</span>}
 
       <label htmlFor="gender2">Gender </label>
@@ -54,11 +54,11 @@ const Director2 = ({register, errors, formValues, control}) => {
       {errors.nationality2 && <span className="error-message">This field is required</span>}
 
       <label htmlFor="residenceCountry2">Residence Country </label>
-      <input type='text' {...register("residenceCountry2", { required: true,})} placeholder='Residential Address2' />
+      <input type='text' {...register("residenceCountry2", { required: true,})} placeholder='Residential Address' />
       {errors.residenceCountry2 && <span className="error-message">This Field is required</span>}
 
       <label htmlFor="occupation2">Occupation </label>
-      <input type='text' {...register("occupation2", { required: true, minLength: 3, maxLength: 30 })} placeholder='Occupation2' />
+      <input type='text' {...register("occupation2", { required: true, minLength: 3, maxLength: 30 })} placeholder='Occupation' />
       {errors.occupation2 && <span className="error-message">This field is required</span>}
 
       <label htmlFor="BVNNumber2">BVN   </label>
@@ -85,19 +85,19 @@ const Director2 = ({register, errors, formValues, control}) => {
       {errors.address2 && <span className="error-message">This Field is required</span>}
 
       <label htmlFor="email2">Email </label>
-      <input type='email' {...register("email2", { required: true, pattern: /^\S+@\S+$/i , minLength: 6, maxLength: 30 })} placeholder='email2' />
+      <input type='email' {...register("email2", { required: true, pattern: /^\S+@\S+$/i , minLength: 6, maxLength: 30 })} placeholder='email' />
       {errors.email2 && <span className="error-message">This field is required</span>}
 
       <label htmlFor="taxIDNumber2">Tax ID Number  </label>
       <input type='text' {...register("taxIDNumber2")} placeholder='Tax Identification Number' />
       {errors.taxIDNumber2 && <span className="error-message">THis field is required</span>}
 
-      <label htmlFor="intPassNo2">international Passport Number </label>
-      <input type='text' {...register("intPassNo2", { required: true, minLength: 3, maxLength: 30 })} placeholder='international Passport Number' />
+      <label htmlFor="intPassNo2">International Passport Number </label>
+      <input type='text' {...register("intPassNo2", { required: true, minLength: 3, maxLength: 30 })} placeholder='International Passport Number' />
       {errors.intPassNo2 && <span className="error-message">This field is required</span>}
 
-      <label htmlFor="passIssuedCountry2">passport Issued Country </label>
-      <input type='text' {...register("passIssuedCountry2", { required: true, minLength: 3, maxLength: 30 })} placeholder='passport Issued Country' />
+      <label htmlFor="passIssuedCountry2">Passport Issued Country </label>
+      <input type='text' {...register("passIssuedCountry2", { required: true, minLength: 3, maxLength: 30 })} placeholder='Passport Issued Country' />
       {errors.passIssuedCountry2 && <span className="error-message">This field is required</span>}
 
 
@@ -125,7 +125,7 @@ const Director2 = ({register, errors, formValues, control}) => {
       {errors.idNumber2 && <span className="error-message">This Field is Required</span>}
 
       <label htmlFor="issuedBy2">issued By (Issuing Country) </label>
-      <input type='text' {...register("issuedBy2", { required: true, minLength: 3, maxLength: 30 })} placeholder='issuedBy2' />
+      <input type='text' {...register("issuedBy2", { required: true, minLength: 3, maxLength: 30 })} placeholder='Issued By' />
       {errors.issuedBy2 && <span className="error-message">This field is required</span>}
 
       <label htmlFor="issuedDate2">Issued Date </label>

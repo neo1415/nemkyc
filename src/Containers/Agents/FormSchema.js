@@ -51,7 +51,7 @@ export const schema2 = yup.object().shape({
     mobileNo: yup.string().transform(sanitizeString),
     taxIDNo: yup.string().transform(sanitizeString),
     arian: yup.string().required('ARIAN Membership Number is required').transform(sanitizeString),
-    listOfAgents: yup.string().required('List of Agents Approved Principals is required').transform(sanitizeString),
+    listOfAgents: yup.string().transform(sanitizeString),
 
 });
 

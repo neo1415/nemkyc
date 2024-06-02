@@ -12,6 +12,7 @@ import MainHome from '../Pages/MainHome';
 import KYCHome from '../Pages/KYCHome';
 import IndividualKYC from '../Containers/Individual-KYC';
 import CorporateKYC from '../Containers/Corporate-KYC';
+import PartnersNaicom from '../Containers/Partners-Naicom';
 
 const AnimateRouters = () => {
 
@@ -36,6 +37,8 @@ const AnimateRouters = () => {
             element={<NAICOM />} />  
             <Route exact path="/brokers"
             element={<Brokers />} />  
+            <Route exact path="/partners-naicom"
+            element={<PartnersNaicom />} />  
             <Route exact path="/partners"
             element={<Partners />} />  
             <Route exact path="/agents"

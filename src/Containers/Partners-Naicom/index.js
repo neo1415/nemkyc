@@ -20,7 +20,7 @@ import SubmitModal from '../Modals/SubmitModal';
 import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 
-const Partners = () => {
+const PartnersNaicom = () => {
     
     const combinedSchema = yup.object().shape({
         ...schema1.fields,
@@ -79,7 +79,7 @@ const Partners = () => {
       if (result) {
         try {      
           const formData = {...formValues, ...fileUrls};
-          if (fileUrls.Incorporation && fileUrls.identification ) {
+          if (fileUrls.Incorporation && fileUrls.identification && fileUrls.NAICOMForm) {
             setIsSubmitted(true);
             console.log('Form values:', formData);
             const response = await axios.post(endpoints.submitPartnersForm, formData);
@@ -284,4 +284,4 @@ isSubmitted={isSubmitted} />
   </div>
 )
 }
-export default Partners
+export default PartnersNaicom

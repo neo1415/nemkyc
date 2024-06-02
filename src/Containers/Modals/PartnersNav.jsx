@@ -8,6 +8,7 @@ import Typography from '@mui/material/Typography';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import { Link } from 'react-router-dom';
+import NaicomModalPartner from './NaicomModalPartner';
 
 const style = {
     position: 'absolute',
@@ -27,6 +28,8 @@ export default function PartnersNav() {
   const [agreed, setAgreed] = useState(false); // Add the agreed state
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
+  const handleNaicomOpen = () => setNaicomOpen(true);
+  const [naicomOpen, setNaicomOpen] = useState(false);
 
   const handleAgreeChange = (event) => {
     setAgreed(event.target.checked);
@@ -70,15 +73,15 @@ export default function PartnersNav() {
               label="I agree to the privacy policy"
             />
             <Button
-              component={Link}
-              to="/partners"
-              disabled={!agreed}
+            onClick={handleNaicomOpen}
+            disabled={!agreed}
             >
              Continue
             </Button>
           </Box>
         </Fade>
       </Modal>
+      <NaicomModalPartner open={naicomOpen} onClose={() => setNaicomOpen(false)} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import './App.css';
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import List from './Admin/Table';
 import ProtectedRoute from './Admin/Authentication/ProtectedRoute';
 import { AuthContextProvider } from './Context/AuthContext';
@@ -27,33 +27,27 @@ import IndividualKYCTable from './Admin/individual-kyc-table';
 import IndividualSinglePage from './Admin/SingleUser/IndividualSinglePage';
 import LogsTable from './Admin/Logs/Logs';
 import LogDetails from './Admin/Logs/LogDetails';
+import Unauthourized from './Components/Unauthourized';
 
 function App() {
-
   return (
     <div className="App">
-    <UserRoleProvider>
-      <AuthContextProvider>
-        <AnimateRouters />
- 
+      <UserRoleProvider>
+        <AuthContextProvider>
+          <AnimateRouters />
           <Routes>
-            <Route exact path="/signin" element={<SignIn />} />
-
-            <Route exact path="/requestpasswordreset"
-            element = {<RequestPasswordReset />} />
-            <Route exact path="/resetpassword"
-            element = {<ResetPassword />} />
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/requestpasswordreset" element={<RequestPasswordReset />} />
+            <Route path="/resetpassword" element={<ResetPassword />} />
             <Route
-              exact
               path="/role-assignment"
               element={
-    <ProtectedRoute  adminOnly={true}>
-      <RoleAssignment />
-    </ProtectedRoute>
-  }
-/>
+                <ProtectedRoute adminOnly={true}>
+                  <RoleAssignment />
+                </ProtectedRoute>
+              }
+            />
             <Route
-              exact
               path="/user-registration"
               element={
                 <ProtectedRoute adminOnly={true}>
@@ -62,7 +56,6 @@ function App() {
               }
             />
             <Route
-              exact
               path="/adminHome"
               element={
                 <ProtectedRoute >
@@ -71,10 +64,9 @@ function App() {
               }
             />
             <Route
-              exact
               path="/list"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute >
                   <List />
                 </ProtectedRoute>
               }
@@ -82,16 +74,15 @@ function App() {
             <Route
               path="/list/:id"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute >
                   <SingleUser />
                 </ProtectedRoute>
               }
             />
             <Route
-              exact
               path="/individual-list"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute >
                   <Individual />
                 </ProtectedRoute>
               }
@@ -99,17 +90,15 @@ function App() {
             <Route
               path="/individual-list/:id"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute >
                   <IndividualUser />
                 </ProtectedRoute>
               }
             />
-
-<Route
-              exact
-              path="brokers-list"
+            <Route
+              path="/brokers-list"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute >
                   <BrokersList />
                 </ProtectedRoute>
               }
@@ -117,15 +106,13 @@ function App() {
             <Route
               path="/brokers-list/:id"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute >
                   <BrokersPage />
                 </ProtectedRoute>
               }
             />
-
             <Route
-              exact
-              path="partners-list"
+              path="/partners-list"
               element={
                 <ProtectedRoute>
                   <PartnersList />
@@ -140,10 +127,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             <Route
-              exact
-              path="agents-list"
+              path="/agents-list"
               element={
                 <ProtectedRoute>
                   <AgentsList />
@@ -158,17 +143,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
-<Route
-              exact
-              path="corporatekyc-list"
+            <Route
+              path="/corporatekyc-list"
               element={
                 <ProtectedRoute>
                   <CorporateKYCTable />
                 </ProtectedRoute>
               }
             />
-
             <Route
               path="/corporatekyc-list/:id"
               element={
@@ -177,17 +159,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
-<Route
-              exact
-              path="individualkyc-list"
+            <Route
+              path="/individualkyc-list"
               element={
                 <ProtectedRoute>
                   <IndividualKYCTable />
                 </ProtectedRoute>
               }
             />
-
             <Route
               path="/individualkyc-list/:id"
               element={
@@ -196,12 +175,26 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            
-            <Route path="/logs" element={<LogsTable userRole="admin" />} /> {/* Adjust the userRole prop as needed */}
-        <Route path="/logs/:id" element={<LogDetails />} />
+            <Route
+              path="/logs"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <LogsTable />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/logs/:id"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <LogDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/unauthourized" element={<Unauthourized />} />
+            {/* <Route path="*" element={<Navigate to="/unauthourized" />} /> */}
           </Routes>
-      
-      </AuthContextProvider>
+        </AuthContextProvider>
       </UserRoleProvider>
     </div>
   );

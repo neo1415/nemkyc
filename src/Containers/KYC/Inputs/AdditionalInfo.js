@@ -42,19 +42,19 @@ const AdditionalInfo = ({register, errors,control}) => {
       />
       {errors.businessType && <span className="error-message">This field is required</span>}
 
-        <label htmlFor="employersEmail">Employers Email </label>
+        <label htmlFor="employersEmail">Employer's Email </label>
         <input type="email" id="employersEmail" placeholder='Employers Email' {...register("employersEmail", { required: true })} />
         {errors.employersEmail && <span className="error-message">{errors.employersEmail.message}</span>}
 
-        <label htmlFor="employersName">Employers Name </label>
+        <label htmlFor="employersName">Employer's Name </label>
         <input type="text" id="employersName" placeholder="Employer's Name" {...register("employersName")} />
         {errors.employersName && <span className="error-message">{errors.employersName.message}</span>}
 
-        <label htmlFor="employersTelephoneNumber">Employers Telephone Number</label>
+        <label htmlFor="employersTelephoneNumber">Employer's Telephone Number</label>
         <input type="number" id="employersTelephoneNumber" placeholder="Employer's Telephone Number" {...register("employersTelephoneNumber")} />
         {errors.employersTelephoneNumber && <span className="error-message">{errors.employersTelephoneNumber.message}</span>}
 
-        <label htmlFor="employersAddress">Employers Address </label>
+        <label htmlFor="employersAddress">Employer's Address </label>
         <input type="text" id="employersAddress" placeholder='Employers Address' {...register("employersAddress")} />
         {errors.employersAddress && <span className="error-message">{errors.employersAddress.message}</span>}
 

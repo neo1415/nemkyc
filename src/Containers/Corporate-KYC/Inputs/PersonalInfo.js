@@ -21,6 +21,10 @@ const PersonalInfo = ({register, errors, control}) => {
 
 
     <div className='flex-one'>
+
+    <label htmlFor="branchOffice">NEM Branch Office <span className='required'>*</span></label>
+      <input type="text" id="branchOffice" placeholder='Branch Office' {...register("branchOffice", { required: true })} />
+      {errors.branchOffice && <span className="error-message">{errors.branchOffice.message}</span>}
           
       <label htmlFor="insured">Insured <span className='required'>*</span></label>
       <input type="text" id="insured" placeholder='Insured' {...register("insured", { required: true })} />
@@ -43,13 +47,14 @@ const PersonalInfo = ({register, errors, control}) => {
       <input type="text" id="contactPerson" placeholder='contactPerson' {...register("contactPerson", { required: true })} />
       {errors.contactPerson && <span className="error-message">{errors.contactPerson.message}</span>}
 
-      <label htmlFor="contactPersonNo">Contact Person Mobile Number <span className='required'>*</span></label>
-      <input type="number" id="contactPersonNo" placeholder='Date Of Birth' {...register("contactPersonNo", { required: true })} />
-      {errors.contactPersonNo && <span className="error-message">Phone Number is required</span>}
 
     </div>
 
     <div className='flex-two'>
+
+    <label htmlFor="contactPersonNo">Contact Person Mobile Number <span className='required'>*</span></label>
+      <input type="number" id="contactPersonNo" placeholder='Date Of Birth' {...register("contactPersonNo", { required: true })} />
+      {errors.contactPersonNo && <span className="error-message">Phone Number is required</span>}
     
     <label htmlFor="emailAddress">Email Address <span className='required'>*</span></label>
       <input type="email" id="emailAddress" placeholder='Place Of Birth' {...register("emailAddress", { required: true })} />

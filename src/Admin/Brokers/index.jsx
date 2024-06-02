@@ -1,22 +1,30 @@
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../../APi/index';
 import { DataGrid } from '@mui/x-data-grid';
-import { userColumns} from "../Brokers/datatablesource";
-import { useState, useEffect} from "react";
-import './Table.scss'
-import {GridToolbarContainer} from '@mui/x-data-grid';
-import { GridToolbarExport } from "@mui/x-data-grid";
-import { UserAuth } from '../../Context/AuthContext';
-import { useNavigate } from "react-router-dom";
-import { deleteDoc,doc } from "firebase/firestore";
-import { db } from "../../APi/index";
-import { CircularProgress } from '@mui/material';
-import SideBar from "../SideBar/SideBar";
-import useAutoLogout from '../../Components/Timeout';
-import axios from "axios";
-import { endpoints } from '../Authentication/Points';
-import ConfirmationModal from './../../Containers/Modals/ConfirmationModal';
+import { GridToolbarContainer, GridToolbarExport } from '@mui/x-data-grid';
+import CircularProgress from '@mui/material/CircularProgress';
+import SideBar from '../SideBar/SideBar';
+import ConfirmationModal from '../../Containers/Modals/ConfirmationModal';
 import FilterComponent from '../../Components/useFilter';
-import useFetchUserRole from './../../Components/checkUserRole';
+import { UserAuth } from '../../Context/AuthContext';
+import useAutoLogout from '../../Components/Timeout';
+import useFetchUserRole from '../../Components/checkUserRole';
 import { StatusButton } from '../../Components/StatusButton';
+import { userColumns } from '../Brokers/datatablesource';
+import axios from 'axios';
+import { endpoints } from '../Authentication/Points';
+import { 
+  setData,
+  setFilteredData,
+  setIsLoading,
+  setModalOpen,
+  setIdToDelete
+} from '../../Context/actions'; // Adjust the path to your actions file
+
+import './Table.scss';
 
 function CustomLoadingOverlay() {
   return (
@@ -36,16 +44,11 @@ function CustomLoadingOverlay() {
 }
 
 const BrokersList = () => {
-  const [data, setData] = useState([]);
-  const [filteredData, setFilteredData] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [idToDelete, setIdToDelete] = useState(null);
-
-  const navigate = useNavigate(); 
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user } = UserAuth();
   const userRole = useFetchUserRole(user);
-  const { logout } = UserAuth(); 
+  const { logout } = UserAuth();
 
   // Use the custom hook to implement automatic logout
   useAutoLogout({
@@ -54,46 +57,56 @@ const BrokersList = () => {
     redirectPath: '/signin', // Specify the redirect path
   });
 
-  
+  // Access state from the Redux store
+  const data = useSelector(state => state.data);
+  const filteredData = useSelector(state => state.filteredData);
+  const isLoading = useSelector(state => state.isLoading);
+  const modalOpen = useSelector(state => state.modalOpen);
+  const idToDelete = useSelector(state => state.idToDelete);
+
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true); // Set loading to true before fetching the data
-      const response = await axios.get(endpoints.getBrokersData);
-      
-      if (response.status === 200) {
-        const data = response.data;
-        // Filter out items with status 'processing' if user role is not 'admin'
-        const filtered = userRole === 'admin' ? data : data.filter(item => item.status !== 'processing');
-        setData(filtered);
-        setFilteredData(filtered);
-      } else {
-        console.error('Error fetching users:', response.statusText);
+      dispatch(setIsLoading(true)); // Set loading to true before fetching the data
+      try {
+        const response = await axios.get(endpoints.getBrokersData);
+        if (response.status === 200) {
+          const data = response.data;
+          // Filter out items with status 'processing' if user role is not 'admin'
+          const filtered = userRole === 'admin' ? data : data.filter(item => item.status !== 'processing');
+          dispatch(setData(filtered));
+          dispatch(setFilteredData(filtered));
+        } else {
+          console.error('Error fetching brokers:', response.statusText);
+        }
+      } catch (err) {
+        console.error('Error fetching brokers:', err);
+      } finally {
+        dispatch(setIsLoading(false));
       }
-      setIsLoading(false);
     };
 
     fetchData();
-  }, [userRole]);
-  
-    const handleDelete = async () => {
-      setModalOpen(false);
-      if (idToDelete) {
-        try {
-          await deleteDoc(doc(db, "brokers-kyc", idToDelete));
-          setData(data.filter((item) => item.id !== idToDelete));
-        } catch (err) {
-          console.log(err);
-        }
+  }, [userRole, dispatch]);
+
+  const handleDelete = async () => {
+    dispatch(setModalOpen(false));
+    if (idToDelete) {
+      try {
+        await deleteDoc(doc(db, 'brokers-kyc', idToDelete));
+        dispatch(setData(data.filter((item) => item.id !== idToDelete)));
+      } catch (err) {
+        console.log(err);
       }
-    };
-    
-    const handleDeleteClick = (id) => {
-      setIdToDelete(id);
-      setModalOpen(true);
-    };
-    
-  const handleView = async (id) => {
-    navigate('/brokers-list/' + id)
+    }
+  };
+
+  const handleDeleteClick = (id) => {
+    dispatch(setIdToDelete(id));
+    dispatch(setModalOpen(true));
+  };
+
+  const handleView = (id) => {
+    navigate('/brokers-list/' + id);
   };
 
   function CustomToolbar() {
@@ -103,12 +116,11 @@ const BrokersList = () => {
       </GridToolbarContainer>
     );
   }
-  
 
   const actionColumn = [
     {
-      field: "action",
-      headerName: "Action",
+      field: 'action',
+      headerName: 'Action',
       width: 200,
       renderCell: (params) => {
         const { id } = params.row;
@@ -120,7 +132,7 @@ const BrokersList = () => {
                   Delete
                 </div>
                 <div className="statusButton">
-                  <StatusButton id={id} collection="brokers-kyc" setData={setData} />
+                  <StatusButton id={id} collection="brokers-kyc" setData={(updatedData) => dispatch(setData(updatedData))} />
                 </div>
               </>
             )}
@@ -133,16 +145,15 @@ const BrokersList = () => {
     },
   ];
 
-
   return (
     <div className="list">
-        <SideBar />
+      <SideBar />
       <div className="datatable">
-      <div className="datatableTitle">
-        Brokers KYC
-        <FilterComponent initialData={data} setFilteredData={setFilteredData} />
-      </div>
-      <DataGrid
+        <div className="datatableTitle">
+          Brokers KYC
+          <FilterComponent initialData={data} setFilteredData={(filtered) => dispatch(setFilteredData(filtered))} />
+        </div>
+        <DataGrid
           components={{
             Toolbar: CustomToolbar,
             LoadingOverlay: CustomLoadingOverlay,
@@ -158,19 +169,16 @@ const BrokersList = () => {
             `row-${params.row.status}`
           }
         />
+      </div>
+      <ConfirmationModal
+        open={modalOpen}
+        title="Delete Entry"
+        content="Are you sure you want to delete this entry?"
+        onConfirm={handleDelete}
+        onCancel={() => dispatch(setModalOpen(false))}
+      />
     </div>
-    <ConfirmationModal
-      open={modalOpen}
-      title="Delete Entry"
-      content="Are you sure you want to delete this entry?"
-      onConfirm={handleDelete}
-      onCancel={() => setModalOpen(false)}
-    />
-    </div>
-    
   );
-
 };
 
 export default BrokersList;
-

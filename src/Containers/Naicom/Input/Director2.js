@@ -63,12 +63,12 @@ const Director2 = ({register, errors, formValues, control}) => {
 
         <div className='flex-two'>
             
-      <label htmlFor="employersName2">Employers Name </label>
+      <label htmlFor="employersName2">Employer's Name </label>
       <input  type="text" {...register("employersName2",{ required: false, minLength: 10, maxLength: 15 })} placeholder='Employers Name' />
       {errors.employersName2 && <span className="error-message">This Field is Required</span>}
 
-      <label htmlFor="employersPhoneNumber2">employers Phone Number </label>
-      <input  type="number"{...register("employersPhoneNumber2")} placeholder='employersPhoneNumber' />
+      <label htmlFor="employersPhoneNumber2">Employer's Phone Number </label>
+      <input  type="number"{...register("employersPhoneNumber2")} placeholder='Employers Phone Number' />
 
       <label htmlFor="residentialAddress2">Residential Address </label>
       <input type='text' {...register("residentialAddress2", { required: false,})} placeholder='Residential Address' />

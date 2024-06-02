@@ -54,9 +54,9 @@ const AdditionalInfo = ({register, errors}) => {
       <input type="text" {...register("arian", { required: true, minLength: 1, maxLength: 20 })} placeholder='ARIAN Membership Number' />
       {errors.arian && <span className="error-message">This Field is Required</span>}
 
-        <label htmlFor="listOfAgents">List of Agents Approved Principals (Insurers) <span className='required'>*</span></label>
+        <label htmlFor="listOfAgents">List of Agents Approved Principals (Insurers) </label>
         <input type="text" id="listOfAgents" placeholder='List of Agents Approved Principals (Insurers)' {...register("listOfAgents", { required: true })} />
-        {errors.listOfAgents && <span className="error-message">{errors.listOfAgents.message}</span>}
+        {/* {errors.listOfAgents && <span className="error-message">{errors.listOfAgents.message}</span>} */}
 
             </div>
           </div>

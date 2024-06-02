@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserAuth } from '../../Context/AuthContext';
+import { useUserRole } from '../../Context/UserRole';
 import { Navigate } from 'react-router-dom';
 import axios from 'axios';
 import Unauthourized from '../../Components/Unauthourized';
@@ -7,65 +8,61 @@ import PageLoad from '../../Components/PageLoad';
 
 const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
   const { user } = UserAuth();
-  
-  const [isLoading, setIsLoading] = useState(true); // Display loading until the user role is fetched
-  const [userRole, setUserRole] = useState(null); // Initialize userRole as null
+  const { userRole, setUserRole } = useUserRole();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserRole = async () => {
       if (user) {
+        console.log('User found:', user);
         try {
-          const cachedRole = localStorage.getItem('userRole');
-
-          if (cachedRole) {
-            setUserRole(cachedRole);
-            setIsLoading(false); // Set isLoading to false if userRole is cached
-          }
-
           const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
-          const response = await axios.post(`${serverURL}/check-user-role/${user.uid}`);
+          const response = await axios.post(`${serverURL}/check-user-role`, { uid: user.uid });
           const role = response.data.role;
-
-          // Update the user role and cache it
+          console.log('Fetched role from server:', role);
           setUserRole(role);
-          localStorage.setItem('userRole', role);
         } catch (error) {
           console.error('Error checking user role:', error);
         } finally {
           setIsLoading(false);
         }
+      } else {
+        console.log('No user found');
+        setIsLoading(false);
       }
     };
 
     fetchUserRole();
-  }, [user]);
-
-  console.log('User Role:', userRole);
+  }, [user, setUserRole]);
 
   if (isLoading) {
-    return (
-      <PageLoad />
-    );
+    console.log('Loading...');
+    return <PageLoad />;
   }
 
+  console.log('User role:', userRole);
+
   if (!user) {
+    console.log('No user, redirecting to signin');
     return <Navigate to="/signin" />;
   }
 
-  if (userRole !== null) {
-    if (adminOnly && userRole !== 'admin') {
-      return <Unauthourized />;
-    }
-
-    if (moderatorOnly && userRole !== 'moderator') {
-      return <Unauthourized />;
-    }
-  }
-
-  if (userRole === 'default') {
+  if ( !user || userRole === 'default') {
+    console.log('Unauthorized, userRole:', userRole);
     return <Unauthourized />;
   }
 
+  if (adminOnly && userRole !== 'admin') {
+    console.log('Admin only, userRole:', userRole);
+    return <Unauthourized />;
+  }
+
+  if (moderatorOnly && userRole !== 'admin' && userRole !== 'moderator') {
+    console.log('Moderator only, userRole:', userRole);
+    return <Unauthourized />;
+  }
+
+  console.log('Access granted');
   return children;
 };
 

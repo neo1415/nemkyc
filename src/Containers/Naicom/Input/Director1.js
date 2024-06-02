@@ -62,10 +62,10 @@ const Director1 = ({register, errors, control}) => {
 
         <div className='flex-two'>
             
-      <label htmlFor="employersName">Employers Name  </label>
+      <label htmlFor="employersName">Employer's Name  </label>
       <input  type="text" {...register("employersName",{ required: false, minLength: 2, maxLength: 50 })} placeholder='Employers Name' />
 
-      <label htmlFor="employersPhoneNumber">employers Phone Number </label>  
+      <label htmlFor="employersPhoneNumber">Employer's Phone Number </label>  
       <input  type="number"{...register("employersPhoneNumber",{ required: false, minLength: 5, maxLength: 11  })} placeholder='Employers Phone Number' />
 
       <label htmlFor="residentialAddress">Residential Address <span className='required'>*</span></label>

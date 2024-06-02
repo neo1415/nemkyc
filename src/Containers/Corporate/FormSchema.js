@@ -4,7 +4,7 @@ import { sanitizeEmail, sanitizeString } from '../../Components/SanitizationUtil
 export const schema1 = yup.object().shape({
   companyName: yup.string().required('Company Name is required').min(3).max(50).transform(sanitizeString),
   registeredCompanyAddress: yup.string().required('Registered Company Address is required').min(3).max(60).transform(sanitizeString),
-  incorporationNumber: yup.string().required('Incorporation Number is required').min(7).max(15).transform(sanitizeString),
+  incorporationNumber: yup.string().required('Incorporation Number is required').min(1).max(50).transform(sanitizeString),
   incorporationState: yup.string().required('Incorporation State is required').min(2).max(50).transform(sanitizeString),
   companyLegalForm: yup.string().required('Company Legal Form is required'),
   natureOfBusiness:yup.string().required('Nature of business is required').min(2).max(50).transform(sanitizeString),

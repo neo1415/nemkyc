@@ -162,10 +162,7 @@ const [fileNames, setFileNames] = useState({});
             exit={{ opacity: 0, x: 50 }}
             className="form-step">
 
-            <h3>Personal Information</h3>
-            <label htmlFor="branchOffice">NEM Branch Office <span className='required'>*</span></label>
-      <input type="text" id="branchOffice" placeholder='branchOffice' {...register("branchOffice", { required: true })} className='stretch' />
-      {errors.branchOffice && <span className="error-message">{errors.branchOffice.message}</span>}
+            <h3>Company Information</h3>
 
       <div className='stretch'>
       Date <span className='date'>{currentDate}</span>
