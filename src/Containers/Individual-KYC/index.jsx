@@ -159,12 +159,7 @@ const [fileNames, setFileNames] = useState({});
             exit={{ opacity: 0, x: 50 }}
             className="form-step">
 
-            <h3>Personal Information</h3>
-
-            <label htmlFor="officeLocation">Office Location <span className='required'>*</span></label>
-      <input type="text" id="oficeLocation" placeholder='oficeLocation' {...register("officeLocation", { required: true })} className='stretch' />
-      {errors.officeLocation && <span className="error-message">{errors.officeLocation.message}</span>}
-
+            <h3>Individuals Details</h3>
       <div className='stretch'>
       Date <span className='date'>{currentDate}</span>
     </div>
@@ -224,7 +219,7 @@ const [fileNames, setFileNames] = useState({});
       exit={{ opacity: 0, x: 50 }}
       className="form-step">
 
-        <h3>Financial Details</h3>
+        <h3>Declaration</h3>
 
       </motion.div>
       

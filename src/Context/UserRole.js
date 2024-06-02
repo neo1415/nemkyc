@@ -10,14 +10,14 @@ export const useUserRole = () => {
 export const UserRoleProvider = ({ children }) => {
   const [userRole, setUserRole] = useState(null);
 
-  // Function to set the user's role
   const setUserRoleValue = (role) => {
+    console.log('Setting user role:', role);
     setUserRole(role);
   };
 
   const value = {
     userRole,
-    setUserRole: setUserRoleValue, // Make the function available in the context
+    setUserRole: setUserRoleValue,
   };
 
   return (

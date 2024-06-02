@@ -7,7 +7,7 @@ export const schema1 = yup.object().shape({
   city: yup.string().required('City is required').min(3).max(60).transform(sanitizeString),
   state: yup.string().required('State is required').min(3).max(60).transform(sanitizeString),
   country: yup.string().required('Country is required').min(3).max(60).transform(sanitizeString),
-  incorporationNumber: yup.string().required('Incorporation Number is required').min(7).max(15).transform(sanitizeString),
+  incorporationNumber: yup.string().required('Incorporation Number is required').min(2).max(50).transform(sanitizeString),
   registrationNumber: yup.string().transform(sanitizeString),
   incorporationState: yup.string().required('Incorporation State is required').min(2).max(50).transform(sanitizeString),
   companyLegalForm: yup.string().required('Company Legal Form is required'),

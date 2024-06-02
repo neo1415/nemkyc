@@ -15,7 +15,7 @@ import Fade from '@mui/material/Fade';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
-const FileUpload = ({control, setFileUrls,register, errors,fileNames, setFileNames, trigger}) => {
+const FileUpload = ({control,register, setFileUrls, errors,fileNames, setFileNames, trigger}) => {
   
   const [perc, setPerc] = useState(null)
 
@@ -64,7 +64,7 @@ const FileUpload = ({control, setFileUrls,register, errors,fileNames, setFileNam
     
     
       // Construct the storage path
-      const storagePath = `brokers-kyc-file-submissions/${fieldName}/${fileName}`;
+      const storagePath = `corporate-kyc-file-submissions/${fieldName}/${fileName}`;
       const storageRef = ref(storage, storagePath);
       setOpen(true);
       const uploadTask = uploadBytesResumable(storageRef, file);
@@ -237,6 +237,131 @@ const FileUpload = ({control, setFileUrls,register, errors,fileNames, setFileNam
         />
           </div>
 
+          <div className='upload-form'>
+          <Controller
+        name="formCO7"
+        control={control}
+        rules={{
+    validate: {
+      required: value => value.length > 0 || 'Form CO7 is required',
+    },
+  }}
+        render={({ field, fieldState: { error } }) => (
+    <div className='uploader'>
+      <label htmlFor="formCO7" className='upload'>
+        <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
+          <h4>CAC Status Report</h4>
+          <div className='upload-icon'>
+          <HiCloudUpload />   
+          </div>
+        </div>
+      </label>
+      <input
+        {...field}
+        type="file"
+        id="formCO7"
+        onChange={(e) => {
+          const file = e.target.files[0];
+          if (file) {
+            handleFileUpload(file, field.name);
+          }
+        }}
+        style={{ display: 'none' }} // Hide the actual input but keep it functional
+      />
+  {error && !fileNames.formCO7 && <span className="error-message">This field is required</span>}
+      {/* Display the file name and errors here */}
+      <div className='Output'>
+      {fileNames.formCO7 && <div>{fileNames.formCO7}</div>}
+    
+      </div>
+    </div>
+        )}
+        />
+          </div>
+
+          <div className='upload-form'>
+          <Controller
+        name="VAT"
+        control={control}
+        rules={{
+    validate: {
+      required: value => value.length > 0 || 'VAT Registration Lisence is required',
+    },
+  }}
+        render={({ field, fieldState: { error } }) => (
+    <div className='uploader'>
+      <label htmlFor="VAT" className='upload'>
+        <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
+          <h4>VAT Registration Lisence </h4>
+          <div className='upload-icon'>
+          <HiCloudUpload />   
+          </div>
+        </div>
+      </label>
+      <input
+        {...field}
+        type="file"
+        id="VAT"
+        onChange={(e) => {
+          const file = e.target.files[0];
+          if (file) {
+            handleFileUpload(file, field.name);
+          }
+        }}
+        style={{ display: 'none' }} // Hide the actual input but keep it functional
+      />
+  {error && !fileNames.VAT && <span className="error-message">This field is required</span>}
+      {/* Display the file name and errors here */}
+      <div className='Output'>
+      {fileNames.VAT && <div>{fileNames.VAT}</div>}
+    
+      </div>
+    </div>
+        )}
+        />
+          </div>
+
+          <div className='upload-form'>
+          <Controller
+        name="tax"
+        control={control}
+        rules={{
+    validate: {
+      required: value => value.length > 0 || 'Tax Clearance Certificate is required',
+    },
+  }}
+        render={({ field, fieldState: { error } }) => (
+    <div className='uploader'>
+      <label htmlFor="tax" className='upload'>
+        <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
+          <h4>Tax Clearance Certificate Within Last 3 years</h4>
+          <div className='upload-icon'>
+          <HiCloudUpload />   
+          </div>
+        </div>
+      </label>
+      <input
+        {...field}
+        type="file"
+        id="tax"
+        onChange={(e) => {
+          const file = e.target.files[0];
+          if (file) {
+            handleFileUpload(file, field.name);
+          }
+        }}
+        style={{ display: 'none' }} // Hide the actual input but keep it functional
+      />
+  {error && !fileNames.tax && <span className="error-message">This field is required</span>}
+      {/* Display the file name and errors here */}
+      <div className='Output'>
+      {fileNames.tax && <div>{fileNames.tax}</div>}
+    
+      </div>
+    </div>
+        )}
+        />
+          </div>
         </div>
       
     </div>
@@ -281,10 +406,9 @@ const FileUpload = ({control, setFileUrls,register, errors,fileNames, setFileNam
         </div>
     </div>
     </div>
-
-    <div className='signature'>
+    <div className='signature-partner'>
 <label htmlFor="signature"></label>
-     I <input type='text' {...register("signature", { required: true,  minLength: 3, maxLength: 30  })} className='signature-input' placeholder='Your Full Name' />
+     I/We <input type='text' {...register("signature", { required: true,  minLength: 3, maxLength: 30  })} className='signature-input' placeholder='Your Full Name' />
       {errors.signature && <span className="error-message">This field is required</span>}
       hereby affirm that all the information provided in this Form/Document is true , accurate and complete to the best of my knowledge.
 </div>

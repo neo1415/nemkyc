@@ -31,7 +31,7 @@ const CompanyDetails = ({register, errors,control}) => {
       <input type='text' {...register("incorporationState", { required: true,  minLength: 3, maxLength: 50  })} placeholder='Incorporation State' />
       {errors.incorporationState && <span className="error-message">This field is required</span>}
 
-      <label htmlFor="dateOfIncorporationRegistration">Date Of Incorporation Registration <span className='required'>*</span> </label>
+      <label htmlFor="dateOfIncorporationRegistration">Date Of Incorporation/Registration <span className='required'>*</span> </label>
       <input  type="date" {...register("dateOfIncorporationRegistration",{ required: true, minLength: 10, maxLength: 15 })} placeholder='Date Of Incorporation Registration' />
       {errors.dateOfIncorporationRegistration && <span className="error-message">This Field is Required</span>}
 
@@ -59,7 +59,8 @@ const CompanyDetails = ({register, errors,control}) => {
       <select {...field} onChange={(e) => field.onChange(handleSelectChange(e.target.value))}>
         <option value="Choose Company Type">Company Type</option>
         <option value="Sole-Proprietor">Sole Proprietor</option>
-        <option value="Unimited-Liability-Company">Unlimited Liability Company</option>
+        <option value="Unlimited-Liability-Company">Unlimited Liability Company</option>
+        <option value="Limited-Liability-Company">Limited Liability Company</option>
         <option value="Public-Limited-Company">Public Limited Company</option>
         <option value="Joint-Venture">Joint Venture</option>
         <option value="Other">Other(please specify)</option>

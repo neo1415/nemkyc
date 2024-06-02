@@ -167,7 +167,7 @@ const FileUpload = ({control,register, setFileUrls, errors,fileNames, setFileNam
     <div className='uploader'>
       <label htmlFor="identification" className='upload'>
         <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-          <h4>Idemtification Means for Director 1</h4>
+          <h4>Identification Means for Director 1</h4>
           <div className='upload-icon'>
           <HiCloudUpload />   
           </div>
@@ -366,46 +366,6 @@ const FileUpload = ({control,register, setFileUrls, errors,fileNames, setFileNam
       
     </div>
 
-    <div className='upload-flex'>
-    <div className='upload-form'>
-    <div className='uploader'>
-    <h6>For NAICOM Regulated Companies</h6>
-    <Controller
-        name="NAICOMForm"
-        control={control}
-        render={({ field, fieldState: { error } }) => (
-    <div className='uploader'>
-      <label htmlFor="NAICOMForm" className='upload'>
-        <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-          <h4>NAICOM License Certificate</h4>
-          <div className='upload-icon'>
-          <HiCloudUpload />   
-          </div>
-        </div>
-      </label>
-      <input
-        {...field}
-        type="file"
-        id="NAICOMForm"
-        onChange={(e) => {
-          const file = e.target.files[0];
-          if (file) {
-            handleFileUpload(file, field.name);
-          }
-        }}
-        style={{ display: 'none' }} // Hide the actual input but keep it functional
-      />
-      {error && !fileNames.NAICOMForm && <span className="error-message">This field is required</span>}
-      {/* Display the file name and errors here */}
-      <div className='Output'>
-      {fileNames.NAICOMForm && <div>{fileNames.NAICOMForm}</div>}
-      </div>
-    </div>
-        )}
-        />
-        </div>
-    </div>
-    </div>
     <div className='signature-partner'>
 <label htmlFor="signature"></label>
      I/We <input type='text' {...register("signature", { required: true,  minLength: 3, maxLength: 30  })} className='signature-input' placeholder='Your Full Name' />

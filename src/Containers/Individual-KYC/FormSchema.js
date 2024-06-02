@@ -8,7 +8,7 @@ export const schema1 = yup.object().shape({
     occupation: yup.string().required('Occupation is required').transform(sanitizeString),
     gender: yup.string().required('Gender is required').transform(sanitizeString), 
     dateOfBirth: yup.date().required('Date of Birth is required'),
-    mothersMaidenName: yup.string().required('Mothers Maident Name is required').transform(sanitizeString),
+    mothersMaidenName: yup.string().transform(sanitizeString),
     employersName: yup.string().transform(sanitizeString),
     employersTelephoneNumber: yup.string().transform(sanitizeString),
     employersAddress: yup.string().transform(sanitizeString),

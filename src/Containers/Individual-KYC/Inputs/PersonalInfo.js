@@ -22,6 +22,11 @@ const PersonalInfo = ({register, errors,control}) => {
 <div>
   <div className='flex-form'>
     <div className='flex-one'>
+
+    <label htmlFor="officeLocation">Office Location <span className='required'>*</span></label>
+      <input type="text" id="Office Location" placeholder='oficeLocation' {...register("officeLocation", { required: true })}  />
+      {errors.officeLocation && <span className="error-message">{errors.officeLocation.message}</span>}
+
       <label htmlFor="insured">Insured <span className='required'>*</span></label>
       <input type="text" id="insured" placeholder='insured' {...register("insured", { required: true })} />
       {errors.insured && <span className="error-message">{errors.insured.message}</span>}
@@ -46,19 +51,19 @@ const PersonalInfo = ({register, errors,control}) => {
       <input type="date" id="dateOfBirth" placeholder='Date Of Birth' {...register("dateOfBirth", { required: true })} />
       {errors.dateOfBirth && <span className="error-message">Date of Birth is required</span>}
 
-      <label htmlFor="mothersMaidenName">Mothers maiden Name <span className='required'>*</span></label>
+      <label htmlFor="mothersMaidenName">Mothers maiden Name </label>
       <input type="text" id="mothersMaidenName" placeholder='First Name' {...register("mothersMaidenName", { required: true })} />
-      {errors.mothersMaidenName && <span className="error-message">{errors.mothersMaidenName.message}</span>}
+      {/* {errors.mothersMaidenName && <span className="error-message">{errors.mothersMaidenName.message}</span>} */}
 
-      <label htmlFor="employersName">Employers Name </label>
+      <label htmlFor="employersName">Employer's Name </label>
         <input type="text" id="employersName" placeholder="Employer's Name" {...register("employersName")} />
         {errors.employersName && <span className="error-message">{errors.employersName.message}</span>}
 
-        <label htmlFor="employersTelephoneNumber">Employers Telephone Number</label>
+        <label htmlFor="employersTelephoneNumber">Employer's Telephone Number</label>
         <input type="number" id="employersTelephoneNumber" placeholder="Employer's Telephone Number" {...register("employersTelephoneNumber")} />
         {errors.employersTelephoneNumber && <span className="error-message">{errors.employersTelephoneNumber.message}</span>}
 
-        <label htmlFor="employersAddress">Employers Address </label>
+        <label htmlFor="employersAddress">Employer's Address </label>
         <input type="text" id="employersAddress" placeholder='Employers Address' {...register("employersAddress")} />
         {errors.employersAddress && <span className="error-message">{errors.employersAddress.message}</span>}
 

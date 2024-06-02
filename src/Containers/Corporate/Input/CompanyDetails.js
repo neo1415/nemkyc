@@ -60,6 +60,7 @@ const CompanyDetails = ({register, errors,control}) => {
         <option value="Choose Company Type">Company Type</option>
         <option value="Sole-Proprietor">Sole Proprietor</option>
         <option value="Unimited-Liability-Company">Unlimited Liability Company</option>
+        <option value="Unlimited-Liability-Company">Limited Liability Company</option>
         <option value="Public-Limited-Company">Public Limited Company</option>
         <option value="Joint-Venture">Joint Venture</option>
         <option value="Other">Other(please specify)</option>

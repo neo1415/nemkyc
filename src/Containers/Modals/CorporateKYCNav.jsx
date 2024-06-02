@@ -71,7 +71,7 @@ export default function CorporateKYCNav() {
             />
             <Button
               component={Link}
-              to="/corporate"
+              to="/corporate-kyc"
               disabled={!agreed}
             >
              Continue

@@ -9,6 +9,7 @@ import { images } from '../../Constants';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import { Link } from 'react-router-dom';
+import NaicomModalPartner from './NaicomModalPartner';
 
 const modalStyle = {
     position: 'absolute',
@@ -25,6 +26,7 @@ const modalStyle = {
   
 
 const PartnersWrapper = () => {
+  const [naicomOpen, setNaicomOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const [agreed, setAgreed] = useState(false); // Add the agreed state
   const handleOpen = () => setOpen(true);
@@ -33,6 +35,8 @@ const PartnersWrapper = () => {
   const handleAgreeChange = (event) => {
     setAgreed(event.target.checked);
   };
+
+  const handleNaicomOpen = () => setNaicomOpen(true);
 
   return (
     <div>
@@ -78,16 +82,15 @@ const PartnersWrapper = () => {
               label="I agree to the privacy policy"
             />
             <Button
-              component={Link}
-              to="/partners"
-              disabled={!agreed}
+            onClick={handleNaicomOpen}
+            disabled={!agreed}
             >
               Continue
             </Button>
           </Box>
         </Fade>
       </Modal>
-     
+     <NaicomModalPartner  open={naicomOpen} onClose={() => setNaicomOpen(false)} />
 
     </div>
   );
