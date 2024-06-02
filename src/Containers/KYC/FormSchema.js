@@ -13,9 +13,13 @@ export const schema1 = yup.object().shape({
     gender: yup.string().required('Gender is required').transform(sanitizeString),
     country: yup.string().required('Country is required').transform(sanitizeString),
     dateOfBirth: yup.date().required('Date of Birth is required'),
-    placeOfBirth:  yup.date()
-    .max(eighteenYearsAgo, 'You must be at least 18 years old')
-    .required('Date of Birth is required'),
+    placeOfBirth:  yup.mixed()
+    .test('not-empty', 'Date of Birth is required', value => value !== '')
+    .test('is-valid-date', 'Date of Birth must be a valid date', value => value === null || !isNaN(Date.parse(value)))
+    .test('is-18', 'You must be at least 18 years old', value => {
+      if (value === null || value === '') return true;
+      return new Date(value) <= eighteenYearsAgo;
+    }),
     emailAddress: yup.string().email().required('Email Address is required').transform(sanitizeEmail),
     GSMno: yup.string().required('GSM Number is required').transform(sanitizeString),
     residentialAddress: yup.string().required('Residential Address is required').transform(sanitizeString),
@@ -35,11 +39,14 @@ export const schema2 = yup.object().shape({
     identificationType: yup.string().transform(sanitizeString).required('Identification Type is required'),
     identificationNumber: yup.string().required('Identification Number is required').transform(sanitizeString),
     issuingCountry: yup.string().required('Issuing Country is required').transform(sanitizeString),
-    issuedDate: yup.date()
-    .max(today, 'The date cannot be in the future')
-    .required('Date is required')
-    .test('is-date', 'Date must be a valid date', value => !isNaN(Date.parse(value))),
-  
+    issuedDate: yup.mixed()
+    .test('not-empty', 'Date is required', value => value !== '')
+    .test('is-valid-date', 'Date must be a valid date', value => value === null || !isNaN(Date.parse(value)))
+    .test('not-in-future', 'The date cannot be in the future', value => {
+      if (value === null || value === '') return true;
+      return new Date(value) <= today;
+    })
+    .required('Date is required'),
     expiryDate: yup.date()
     .transform((value, originalValue) => {
       return originalValue === "" ? null : new Date(originalValue);

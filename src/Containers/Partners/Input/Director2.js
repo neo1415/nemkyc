@@ -50,7 +50,7 @@ const Director2 = ({register, errors, formValues, control}) => {
 
       <label htmlFor="dob2">Date of Birth </label>
       <input type='date' {...register("dob2", { required: false })} placeholder='Date of Birth' />
-      {errors.dob2 && <span className="error-message">This field is required</span>}
+      {errors.dob2 && <span className="error-message">{errors.dob2.message}</span>}
 
       <label htmlFor="placeOfBirth2">Place Of Birth </label>
       <input type='text' {...register("placeOfBirth2", { required: false, minLength: 3, maxLength: 30   })} placeholder='Place Of Birth' />
@@ -62,7 +62,7 @@ const Director2 = ({register, errors, formValues, control}) => {
 
       <label htmlFor="BVNNumber2">BVN   </label>
       <input type='number' {...register("BVNNumber2", { required: false,  minLength:11, maxLength: 11 })} placeholder='BVN' />
-      {errors.BVNNumber2 && <span className="error-message">This field is required</span>}
+      {errors.BVNNumber2 && <span className="error-message">{errors.BVNNumber2.message}</span>}
 
       <label htmlFor="taxIDNumber22">Tax ID Number </label>
       <input type='text' {...register("taxIDNumber22")} placeholder='Tax Identification Number' />
@@ -145,11 +145,11 @@ const Director2 = ({register, errors, formValues, control}) => {
 
       <label htmlFor="issuedDate2">Issued Date </label>
       <input type="date" {...register("issuedDate2", { required: false })} placeholder='Issued Date' />
-      {errors.issuedDate2 && <span className="error-message">This Field is Required</span>}
+      {errors.issuedDate2 && <span className="error-message">{errors.issuedDate2.message}</span>}
 
       <label htmlFor="expirydDate2">Expiry Date </label>
-      <input type="date" {...register("expiryDate")} placeholder='Expiry Date' />
-      {/* {errors.expiryDate && <span className="error-message">This Field is Required</span>} */}
+      <input type="date" {...register("expiryDate2")} placeholder='Expiry Date' />
+      {errors.expiryDate2 && <span className="error-message">{errors.expiryDate2.message}</span>}
 
       <label htmlFor="issuingBody2">Issuing Body </label>
       <input type="text" {...register("issuingBody2", { required: false, minLength: 1, maxLength: 50 })} placeholder='Issuing Body' />

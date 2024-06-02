@@ -44,7 +44,7 @@ const PersonalInfo = ({register, errors, control}) => {
 
       <label htmlFor="dateOfBirth">Date Of Birth <span className='required'>*</span></label>
       <input type="date" id="dateOfBirth" placeholder='Date Of Birth' {...register("dateOfBirth", { required: true })} />
-      {errors.dateOfBirth && <span className="error-message">Date of Birth is required</span>}
+      {errors.dateOfBirth && <span className="error-message">{errors.dateOfBirth.message}</span>}
 
       <label htmlFor="placeOfBirth">Place of Birth <span className='required'>*</span></label>
       <input type="text" id="placeOfBirth" placeholder='Place Of Birth' {...register("placeOfBirth", { required: true })} />
@@ -91,7 +91,7 @@ const PersonalInfo = ({register, errors, control}) => {
 
     <label htmlFor="BVNNumber">BVN  <span className='required'>*</span> </label>
       <input type='number' {...register("BVNNumber", { required: true,  minLength:11, maxLength: 11 })} placeholder='BVN' />
-      {errors.BVNNumber && <span className="error-message">This field is required</span>}
+      {errors.BVNNumber && <span className="error-message">{errors.BVNNumber.message}</span>}
 
       <label htmlFor="taxIDNumber">Tax ID Number </label>
       <input type='text' {...register("taxIDNumber")} placeholder='Tax Identification Number' />
@@ -130,7 +130,7 @@ const PersonalInfo = ({register, errors, control}) => {
 
       <label htmlFor="issuedDate">Issued Date <span className='required'>*</span></label>
       <input type="date" {...register("issuedDate", { required: true })} placeholder='Issued Date' />
-      {errors.issuedDate && <span className="error-message">This Field is Required</span>}
+      {errors.issuedDate && <span className="error-message">{errors.issuedDate.message}</span>}
 
       <label htmlFor="expirydDate">Expiry Date </label>
       <input type="date" {...register("expiryDate" ,{ required: false })} placeholder='Expiry Date' />

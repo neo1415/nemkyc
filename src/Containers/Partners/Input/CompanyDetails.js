@@ -39,16 +39,16 @@ const CompanyDetails = ({register, errors}) => {
       <input type='text' {...register("website", { required: true,})} placeholder='website' />
       {/* {errors.website && <span className="error-message">Please enter a valid website</span>} */}
    
+      <label htmlFor="contactPerson">Contact Person (Name) <span className='required'>*</span></label>
+      <input type='text' {...register("contactPerson",  { required: true, minLength: 6, maxLength: 15  })} placeholder='Contact Person' />
+      {errors.contactPerson && <span className="error-message">THis field is required</span>}
+
 
       
         </div>
 
         <div className='flex-two'>
-        <label htmlFor="contactPerson">Contact Person (Name) <span className='required'>*</span></label>
-      <input type='text' {...register("contactPerson",  { required: true, minLength: 6, maxLength: 15  })} placeholder='Contact Person' />
-      {errors.contactPerson && <span className="error-message">THis field is required</span>}
-
-      <label htmlFor="contactPersonNo">Contact Person Number <span className='required'>*</span></label>
+        <label htmlFor="contactPersonNo">Contact Person Number <span className='required'>*</span></label>
       <input type='text' {...register("contactPersonNo",  { required: true, minLength: 6, maxLength: 15  })} placeholder='Contact Person Number' />
       {errors.contactPersonNo && <span className="error-message">THis field is required</span>}
 
@@ -66,7 +66,7 @@ const CompanyDetails = ({register, errors}) => {
 
       <label htmlFor="dateOfIncorporationRegistration">Date Of Incorporation/Registration <span className='required'>*</span> </label>
       <input  type="date" {...register("dateOfIncorporationRegistration",{ required: true, minLength: 10, maxLength: 15 })} placeholder='Date of Incorporation / Registration' />
-      {errors.dateOfIncorporationRegistration && <span className="error-message">This Field is Required</span>}
+      {errors.dateOfIncorporationRegistration && <span className="error-message">This Field is required</span>}
 
       <label htmlFor="incorporationState">Incorporation State <span className='required'>*</span></label>
       <input type='text' {...register("incorporationState", { required: true,  minLength: 3, maxLength: 50  })} placeholder='Incorporation State' />
@@ -78,7 +78,7 @@ const CompanyDetails = ({register, errors}) => {
 
       <label htmlFor="BVNNo">BVN  <span className='required'>*</span> </label>
       <input type='number' {...register("BVNNo", { required: true,  minLength:11, maxLength: 11 })} placeholder='BVN' />
-      {errors.BVNNo && <span className="error-message">This field is required</span>}
+      {errors.BVNNo && <span className="error-message">{errors.BVNNo.message}</span>}
 
       {/* <label htmlFor="NAICOMLisenceIssuingDate">NAICOM Lisence Issuing Date <span className='required'>*</span> </label>
       <input  type="date" {...register("NAICOMLisenceIssuingDate",{ required: true, minLength: 10, maxLength: 15 })} placeholder='NAICOM Issuing Date' />

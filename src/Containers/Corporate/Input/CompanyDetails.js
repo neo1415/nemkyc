@@ -31,9 +31,9 @@ const CompanyDetails = ({register, errors,control}) => {
       <input type='text' {...register("incorporationState", { required: true,  minLength: 3, maxLength: 50  })} placeholder='Incorporation State' />
       {errors.incorporationState && <span className="error-message">This field is required</span>}
 
-      <label htmlFor="dateOfIncorporationRegistration">Date Of Incorporation Registration <span className='required'>*</span> </label>
-      <input  type="date" {...register("dateOfIncorporationRegistration",{ required: true, minLength: 10, maxLength: 15 })} placeholder='Date Of Incorporation Registration' />
-      {errors.dateOfIncorporationRegistration && <span className="error-message">This Field is Required</span>}
+      <label htmlFor="dateOfIncorporationRegistration">Date Of Incorporation/Registration <span className='required'>*</span> </label>
+      <input  type="date" {...register("dateOfIncorporationRegistration",{ required: true, minLength: 10, maxLength: 15 })} placeholder='Date Of Incorporation/Registration' />
+      {errors.dateOfIncorporationRegistration && <span className="error-message">{errors.dateOfIncorporationRegistration.message}</span>}
 
       <label htmlFor="natureOfBusiness">Nature of Business<span className='required'>*</span></label>
       <input type='text' {...register("natureOfBusiness", { required: true, minLength: 3, maxLength: 60  })} placeholder='Nature of Company business' />

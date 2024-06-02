@@ -29,7 +29,7 @@ const Director2 = ({register, errors, formValues, control}) => {
 
       <label htmlFor="dob2">Date of Birth </label>
       <input type='date' {...register("dob2", { required: false })} placeholder='Date of Birth' />
-      {errors.dob2 && <span className="error-message">This field is required</span>}
+      {errors.dob2 && <span className="error-message">{errors.dob2.message}</span>}
 
       <label htmlFor="placeOfBirth2">Place Of Birth </label>
       <input type='text' {...register("placeOfBirth2", { required: false })} placeholder='Place Of Birth' />
@@ -53,7 +53,7 @@ const Director2 = ({register, errors, formValues, control}) => {
 
       <label htmlFor="BVNNumber2">BVN </label>
       <input type='number' {...register("BVNNumber2", { required: false })} placeholder='BVN' />
-      {errors.BVNNumber2 && <span className="error-message">This field is required</span>}
+      {errors.BVNNumber2 && <span className="error-message">{errors.BVNNumber2.message}</span>}
 
       <label htmlFor="phoneNumber2">Phone Number </label>
       <input type='number' {...register("phoneNumber2")} placeholder='Phone Number' />
@@ -72,7 +72,7 @@ const Director2 = ({register, errors, formValues, control}) => {
 
       <label htmlFor="residentialAddress2">Residential Address </label>
       <input type='text' {...register("residentialAddress2", { required: false,})} placeholder='Residential Address' />
-      {errors.residentialAddress2 && <span className="error-message">Please enter a valid website</span>}
+      {errors.residentialAddress2 && <span className="error-message">{errors.residentialAddress2.message}</span>}
 
       <label htmlFor="taxIDNumber2">Tax ID Number </label>
       <input type='text' {...register("taxIDNumber2",  { required: false })} placeholder='Tax Identification Number' />
@@ -98,15 +98,15 @@ const Director2 = ({register, errors, formValues, control}) => {
 
       <label htmlFor="idNumber2">Identification Number </label>
       <input type="text" {...register("idNumber2", { required: false, minLength: 5, maxLength: 15 })} placeholder='Identification Number' />
-      {errors.idNumber2 && <span className="error-message">Please enter a valid phone number</span>}
+      {errors.idNumber2 && <span className="error-message">{errors.idNumber2.message}</span>}
 
       <label htmlFor="issuingBody2">Issuing Body </label>
       <input type="text" {...register("issuingBody2", { required: false, minLength: 1, maxLength: 15 })} placeholder='Issuing Body' />
-      {errors.issuingBody2 && <span className="error-message">Please enter a valid phone number</span>}
+      {errors.issuingBody2 && <span className="error-message">{errors.issuingBody2.message}</span>}
 
       <label htmlFor="issuedDate2">Issued Date </label>
       <input type="date" {...register("issuedDate2", { required: false, minLength: 10, maxLength: 15 })} placeholder='Issued Date' />
-      {errors.issuedDate2 && <span className="error-message">Please enter a valid phone number</span>}
+      {errors.issuedDate2 && <span className="error-message">{errors.issuedDate2.message}</span>}
 
       <label htmlFor="expirydDate2">Expiry Date </label>
       <input type="date" {...register("expiryDate2", { required: false, minLength: 10, maxLength: 15 })} placeholder='Expiry Date' />

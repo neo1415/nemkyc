@@ -41,7 +41,7 @@ const Director1 = ({register, errors, control}) => {
 
       <label htmlFor="dob">Date of Birth <span className='required'>*</span></label>
       <input type='date' {...register("dob", { required: true })} placeholder='Date of Birth' />
-      {errors.dob && <span className="error-message">This field is required</span>}
+      {errors.dob && <span className="error-message">{errors.dob.message}</span>}
 
       <label htmlFor="placeOfBirth">Place Of Birth <span className='required'>*</span></label>
       <input type='text' {...register("placeOfBirth", { required: true, minLength: 3, maxLength: 30   })} placeholder='Place Of Birth' />
@@ -61,7 +61,7 @@ const Director1 = ({register, errors, control}) => {
 
       <label htmlFor="BVNNumber">BVN <span className='required'>*</span> </label>
       <input type='number' {...register("BVNNumber", { required: true,  minLength:11, maxLength: 11 })} placeholder='BVN' />
-      {errors.BVNNumber && <span className="error-message">This field is required</span>}
+      {errors.BVNNumber && <span className="error-message">{errors.BVNNumber.message}</span>}
 
       <label htmlFor="employersName">Employer's Name  </label>
       <input  type="text" {...register("employersName",{ required: true, minLength: 2, maxLength: 50 })} placeholder='Employers Name' />
@@ -120,7 +120,7 @@ const Director1 = ({register, errors, control}) => {
 
       <label htmlFor="issuedDate">Issued Date <span className='required'>*</span></label>
       <input type="date" {...register("issuedDate", { required: true })} placeholder='Issued Date' />
-      {errors.issuedDate && <span className="error-message">This Field is Required</span>}
+      {errors.issuedDate && <span className="error-message">{errors.issuedDate.message}</span>}
 
       <label htmlFor="expiryDate">Expiry Date </label>
       <input type="date" {...register("expiryDate" ,{ required: false })} placeholder='Expiry Date' />
