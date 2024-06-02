@@ -23,11 +23,11 @@ const AdditionalInfo = ({register, errors}) => {
 
         <label htmlFor="lisenceIssuedDate">Lisence Issued Date <span className='required'>*</span></label>
         <input type="date" id="lisenceIssuedDate" {...register("lisenceIssuedDate", { required: true })} />
-        {errors.lisenceIssuedDate && <span className="error-message">Issuing Date is required</span>}
+        {errors.lisenceIssuedDate && <span className="error-message">{errors.lisenceIssuedDate.message}</span>}
 
         <label htmlFor="lisenceExpiryDate">Lisence Expiry Date <span className='required'>*</span></label>
         <input type="date" id="lisenceExpiryDate" {...register("lisenceExpiryDate")} />
-        {errors.lisenceExpiryDate && <span className="error-message">Expiry Date is required</span>}
+        {errors.lisenceExpiryDate && <span className="error-message">{errors.lisenceExpiryDate.message}</span>}
 
         <label htmlFor="agentsEmail"> Email Address <span className='required'>*</span> </label>
         <input type="email" id="agentsEmail" placeholder='Email Address' {...register("agentsEmail", { required: true })} />

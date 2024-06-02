@@ -49,7 +49,7 @@ const PersonalInfo = ({register, errors,control}) => {
 
       <label htmlFor="dateOfBirth">Date Of Birth <span className='required'>*</span></label>
       <input type="date" id="dateOfBirth" placeholder='Date Of Birth' {...register("dateOfBirth", { required: true })} />
-      {errors.dateOfBirth && <span className="error-message">Date of Birth is required</span>}
+      {errors.dateOfBirth && <span className="error-message">{errors.dateOfBirth.message}</span>}
 
       <label htmlFor="mothersMaidenName">Mothers maiden Name </label>
       <input type="text" id="mothersMaidenName" placeholder='First Name' {...register("mothersMaidenName", { required: true })} />
@@ -123,7 +123,7 @@ const PersonalInfo = ({register, errors,control}) => {
 
   <label htmlFor="issuedDate">Issued Date <span className='required'>*</span></label>
       <input type="date" {...register("issuedDate", { required: true })} placeholder='Issued Date' />
-      {errors.issuedDate && <span className="error-message">This Field is Required</span>}
+      {errors.issuedDate && <span className="error-message">{errors.issuedDate.message}</span>}
 
       <label htmlFor="expirydDate">Expiry Date  </label>
       <input type="date" {...register("expiryDate")} placeholder='Expiry Date' />

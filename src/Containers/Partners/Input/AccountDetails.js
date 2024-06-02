@@ -22,7 +22,7 @@ const AccountDetails = ({register, errors, formValues}) => {
 
       <label htmlFor="accountOpeningDate">Account Opening Date <span className='required'>*</span></label>
       <input type='date' {...register("accountOpeningDate", { required: true})} placeholder='Account Opening Date' />
-      {errors.accountOpeningDate && <span className="error-message">This field is required</span>}
+      {errors.accountOpeningDate && <span className="error-message">{errors.accountOpeningDate.message}</span>}
 
 </div>
 <div className='flex-two'>
@@ -39,7 +39,7 @@ const AccountDetails = ({register, errors, formValues}) => {
 
       <label htmlFor="accountOpeningDate2">Account Opening Date </label>
       <input type='date' {...register("accountOpeningDate2")} placeholder='Account Opening Date' />
-
+      {errors.accountOpeningDate2 && <span className="error-message">{errors.accountOpeningDate2.message}</span>}
      </div>
 
     </div>

@@ -208,7 +208,7 @@ const FileUpload = ({control,register, setFileUrls, errors,fileNames, setFileNam
     <div className='uploader'>
       <label htmlFor="identification2" className='upload'>
         <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-          <h4>Identification means for Director 2</h4>
+          <h4>Identification means for Director 2 (optional)</h4>
           <div className='upload-icon'>
           <HiCloudUpload />   
           </div>
@@ -250,7 +250,7 @@ const FileUpload = ({control,register, setFileUrls, errors,fileNames, setFileNam
     <div className='uploader'>
       <label htmlFor="formCO7" className='upload'>
         <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-          <h4>CAC Status Report</h4>
+          <h4>CAC Status Report (optional)</h4>
           <div className='upload-icon'>
           <HiCloudUpload />   
           </div>
@@ -292,7 +292,7 @@ const FileUpload = ({control,register, setFileUrls, errors,fileNames, setFileNam
     <div className='uploader'>
       <label htmlFor="VAT" className='upload'>
         <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-          <h4>VAT Registration Lisence </h4>
+          <h4>VAT Registration Lisence (optional) </h4>
           <div className='upload-icon'>
           <HiCloudUpload />   
           </div>
@@ -334,7 +334,7 @@ const FileUpload = ({control,register, setFileUrls, errors,fileNames, setFileNam
     <div className='uploader'>
       <label htmlFor="tax" className='upload'>
         <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-          <h4>Tax Clearance Certificate Within Last 3 years</h4>
+          <h4>Tax Clearance Certificate Within Last 3 years (optional)</h4>
           <div className='upload-icon'>
           <HiCloudUpload />   
           </div>

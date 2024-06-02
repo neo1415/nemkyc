@@ -43,7 +43,7 @@ const Director2 = ({register, errors, formValues, control}) => {
 
       <label htmlFor="dob2">Date of Birth </label>
       <input type='date' {...register("dob2", { required: true })} placeholder='Date of Birth' />
-      {errors.dob2 && <span className="error-message">This field is required</span>}
+      {errors.dob2 && <span className="error-message">{errors.dob2.message}</span>}
 
       <label htmlFor="placeOfBirth2">Place Of Birth </label>
       <input type='text' {...register("placeOfBirth2", { required: true, minLength: 3, maxLength: 30   })} placeholder='Place Of Birth' />
@@ -130,11 +130,11 @@ const Director2 = ({register, errors, formValues, control}) => {
 
       <label htmlFor="issuedDate2">Issued Date </label>
       <input type="date" {...register("issuedDate2", { required: true })} placeholder='Issued Date' />
-      {errors.issuedDate2 && <span className="error-message">This Field is Required</span>}
+      {errors.issuedDate2 && <span className="error-message">{errors.issuedDate2.message}</span>}
 
       <label htmlFor="expiryDate2">Expiry Date   </label>
       <input type="date" {...register("expiryDate2" ,{ required: true })} placeholder='Expiry Date' />
-      {errors.expiryDate2 && <span className="error-message">This Field is Required</span>}
+      {errors.expiryDate2 && <span className="error-message">{errors.expiryDate2.message}</span>}
 
       <label htmlFor="sourceOfIncome2">Source of Income </label>
         <Controller
