@@ -1,6 +1,9 @@
 import * as yup from 'yup';
 import { sanitizeEmail, sanitizeString } from '../../Components/SanitizationUtils';
 
+const today = new Date();
+const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+
 export const schema1 = yup.object().shape({
   companyName: yup.string().required('Company Name is required').min(3).max(50).transform(sanitizeString),
   companyAddress: yup.string().required('Registered Company Address is required').min(3).max(60).transform(sanitizeString),
@@ -31,7 +34,9 @@ export const schema2 = yup.object().shape({
   firstName: yup.string().required('First Name is required').transform(sanitizeString),
   middleName: yup.string().transform(sanitizeString),
   lastName: yup.string().required('Last Name is required').transform(sanitizeString),
-  dob: yup.date().required('Date of Birth is required'),
+  dob:  yup.date()
+  .max(eighteenYearsAgo, 'You must be at least 18 years old')
+  .required('Date of Birth is required'),
   placeOfBirth: yup.string().required('Place of Birth is required').transform(sanitizeString),
   nationality: yup.string().required('Nationality is required').transform(sanitizeString),
   residenceCountry: yup.string().required('Residence Country is required').transform(sanitizeString),
@@ -69,9 +74,11 @@ export const schema3 = yup.object().shape({
   .transform((value, originalValue) => {
     return originalValue === "" ? null : new Date(originalValue);
   })
-  .nullable(true)
+  .nullable()
   .notRequired()
-  .test('is-date', 'issuedDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+  .test('is-date', 'Date of Birth must be a valid date', value => !value || !isNaN(Date.parse(value)))
+  .test('is-18', 'You must be at least 18 years old', value => !value || value <= eighteenYearsAgo),
+
   placeOfBirth2: yup.string().transform(sanitizeString),
   nationality2: yup.string().transform(sanitizeString),
   residenceCountry2: yup.string().transform(sanitizeString),

@@ -1,6 +1,10 @@
 import * as yup from 'yup';
 import { sanitizeEmail, sanitizeString } from '../../Components/SanitizationUtils';
 
+const today = new Date();
+const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+today.setHours(0, 0, 0, 0);
+
 export const schema1 = yup.object().shape({
   companyName: yup.string().required('Company Name is required').min(3).max(50).transform(sanitizeString),
   registeredCompanyAddress: yup.string().required('Registered Company Address is required').min(3).max(60).transform(sanitizeString),
@@ -25,7 +29,9 @@ export const schema2 = yup.object().shape({
   firstName: yup.string().required('First Name is required').transform(sanitizeString),
   middleName: yup.string().transform(sanitizeString),
   lastName: yup.string().required('Last Name is required').transform(sanitizeString),
-  dob: yup.date().required('Date of Birth is required'),
+  dob:yup.date()
+  .max(eighteenYearsAgo, 'You must be at least 18 years old')
+  .required('Date of Birth is required'),
   placeOfBirth: yup.string().required('Place of Birth is required').transform(sanitizeString),
   nationality: yup.string().required('Nationality is required').transform(sanitizeString),
   country: yup.string().required('Country is required').transform(sanitizeString),
@@ -40,7 +46,11 @@ export const schema2 = yup.object().shape({
   idType: yup.string().required('ID Type is required'),
   idNumber: yup.string().required('ID Number is required').transform(sanitizeString),
   issuingBody: yup.string().required('Issuing Body is required').transform(sanitizeString),
-  issuedDate: yup.date().required('Issued Date is required'),
+  issuedDate:  yup.date()
+  .max(today, 'The date cannot be in the future')
+  .required('Date is required')
+  .test('is-date', 'Date must be a valid date', value => !isNaN(Date.parse(value))),
+
   expiryDate:  yup.date()
   .transform((value, originalValue) => {
     return originalValue === "" ? null : new Date(originalValue);
@@ -56,13 +66,14 @@ export const schema3 = yup.object().shape({
   firstName2: yup.string().transform(sanitizeString),
   middleName2: yup.string().transform(sanitizeString),
   lastName2: yup.string().transform(sanitizeString),
-  dob2: yup.date()
+  dob2:  yup.date()
   .transform((value, originalValue) => {
     return originalValue === "" ? null : new Date(originalValue);
   })
-  .nullable(true)
+  .nullable()
   .notRequired()
-  .test('is-date', 'dob2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+  .test('is-date', 'Date of Birth must be a valid date', value => !value || !isNaN(Date.parse(value)))
+  .test('is-18', 'You must be at least 18 years old', value => !value || value <= eighteenYearsAgo),
   placeOfBirth2: yup.string().transform(sanitizeString),
   nationality2: yup.string().transform(sanitizeString),
   country2: yup.string().transform(sanitizeString),
@@ -76,13 +87,14 @@ export const schema3 = yup.object().shape({
   taxIDNumber2: yup.string().transform(sanitizeString),
   idType2: yup.string(),
   idNumber2: yup.string().transform(sanitizeString),
-  issuedDate2: yup.date()
+  issuedDate2:yup.date()
   .transform((value, originalValue) => {
     return originalValue === "" ? null : new Date(originalValue);
   })
-  .nullable(true)
+  .nullable()
   .notRequired()
-  .test('is-date', 'issuedDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+  .test('is-date', 'Date must be a valid date', value => !value || !isNaN(Date.parse(value)))
+  .test('is-not-future', 'The date cannot be in the future', value => !value || value <= today),
 
   expiryDate2: yup.date()
   .transform((value, originalValue) => {
@@ -98,17 +110,22 @@ export const schema3 = yup.object().shape({
   export const schema4 = yup.object().shape({
   accountNumber: yup.string().required('Account Number is required').matches(/^[0-9]+$/, 'Account Number must be numeric').min(10).max(10).transform(sanitizeString),
   bankName: yup.string().required('Bank Name is required').transform(sanitizeString),
-  accountOpeningDate: yup.date().required('Date of account creation is required'),
+  accountOpeningDate: yup.date()
+  .max(today, 'The date cannot be in the future')
+  .required('Date is required')
+  .test('is-date', 'Date must be a valid date', value => !isNaN(Date.parse(value))),
+
   bankBranch: yup.string().required('Bank Branch is required').transform(sanitizeString),
 
   accountNumber2: yup.string().notRequired().max(10).transform(sanitizeString),
-  accountOpeningDate2: yup.date()
+  accountOpeningDate2:yup.date()
   .transform((value, originalValue) => {
     return originalValue === "" ? null : new Date(originalValue);
   })
-  .nullable(true)
+  .nullable()
   .notRequired()
-  .test('is-date', 'expiryDate2 must be a valid date', value => !value || !isNaN(Date.parse(value))),
+  .test('is-date', 'Date must be a valid date', value => !value || !isNaN(Date.parse(value)))
+  .test('is-not-future', 'The date cannot be in the future', value => !value || value <= today),
   bankBranch2: yup.string().transform(sanitizeString),
 
 });

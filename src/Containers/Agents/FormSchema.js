@@ -2,6 +2,9 @@ import * as yup from 'yup';
 import { sanitizeEmail, sanitizeString } from '../../Components/SanitizationUtils';
 import { GridSignature } from '@mui/x-data-grid';
 
+const today = new Date();
+const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+
 export const schema1 = yup.object().shape({
     firstName: yup.string().required('First Name is required').transform(sanitizeString),
     middleName: yup.string().transform(sanitizeString),
@@ -9,7 +12,9 @@ export const schema1 = yup.object().shape({
     residentialAddress: yup.string().required('Residential Address is required').transform(sanitizeString),
     gender: yup.string().required('Gender is required').transform(sanitizeString),
     position: yup.string().transform(sanitizeString),
-    dateOfBirth: yup.date().required('Date of Birth is required'),
+    dateOfBirth:  yup.date()
+    .max(eighteenYearsAgo, 'You must be at least 18 years old')
+    .required('Date of Birth is required'),
     placeOfBirth: yup.string().required('Place of Birth is required').transform(sanitizeString),
     sourceOfIncome: yup.string().required('Source of Income is required'),
     nationality: yup.string().required('Nationality is required').transform(sanitizeString),

@@ -1,13 +1,18 @@
 import * as yup from 'yup';
 import { sanitizeEmail, sanitizeString } from '../../Components/SanitizationUtils';
 
+const today = new Date();
+const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+
 export const schema1 = yup.object().shape({
   officeLocation:(yup.string().transform(sanitizeString)).required('Office Locatioon is required'),
     insured: yup.string().required('insured is required').transform(sanitizeString),
     contactAddress: yup.string().required('Contact Address is required').transform(sanitizeString),
     occupation: yup.string().required('Occupation is required').transform(sanitizeString),
     gender: yup.string().required('Gender is required').transform(sanitizeString), 
-    dateOfBirth: yup.date().required('Date of Birth is required'),
+    dateOfBirth:  yup.date()
+    .max(eighteenYearsAgo, 'You must be at least 18 years old')
+    .required('Date of Birth is required'),
     mothersMaidenName: yup.string().transform(sanitizeString),
     employersName: yup.string().transform(sanitizeString),
     employersTelephoneNumber: yup.string().transform(sanitizeString),

@@ -1,6 +1,10 @@
 import * as yup from 'yup';
 import { sanitizeEmail, sanitizeString } from '../../Components/SanitizationUtils';
 
+const today = new Date();
+const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+
+
 export const schema1 = yup.object().shape({
     title: yup.string().required('Title is required').transform(sanitizeString),
     firstName: yup.string().required('First Name is required').transform(sanitizeString),
@@ -9,7 +13,9 @@ export const schema1 = yup.object().shape({
     gender: yup.string().required('Gender is required').transform(sanitizeString),
     country: yup.string().required('Country is required').transform(sanitizeString),
     dateOfBirth: yup.date().required('Date of Birth is required'),
-    placeOfBirth: yup.string().required('Place of Birth is required').transform(sanitizeString),
+    placeOfBirth:  yup.date()
+    .max(eighteenYearsAgo, 'You must be at least 18 years old')
+    .required('Date of Birth is required'),
     emailAddress: yup.string().email().required('Email Address is required').transform(sanitizeEmail),
     GSMno: yup.string().required('GSM Number is required').transform(sanitizeString),
     residentialAddress: yup.string().required('Residential Address is required').transform(sanitizeString),
