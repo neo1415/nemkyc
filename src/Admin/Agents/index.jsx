@@ -71,13 +71,13 @@ const AgentsList = () => {
           const data = response.data;
           // Filter out items with status 'processing' if user role is not 'admin'
           const filtered = userRole === 'admin' ? data : data.filter(item => item.status !== 'processing');
-          dispatch(setData(data));
+          dispatch(setData(filtered));
           dispatch(setFilteredData(filtered));
         } else {
-          console.error('Error fetching users:', response.statusText);
+          console.error('Error fetching agents:', response.statusText);
         }
       } catch (err) {
-        console.error('Error fetching users:', err);
+        console.error('Error fetching agents:', err);
       } finally {
         dispatch(setIsLoading(false));
       }

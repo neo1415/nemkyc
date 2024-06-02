@@ -1,14 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { UserAuth } from '../../Context/AuthContext';
-import { csrfProtectedPost } from '../../Components/CsrfUtils';
 import axios from 'axios';
+import {
+  Container,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  IconButton,
+  CircularProgress,
+  InputAdornment
+} from '@mui/material';
+import { AiOutlineSwitcher } from 'react-icons/ai';
+import { AiFillSwitcher } from 'react-icons/ai';
+import { UserAuth } from '../../Context/AuthContext';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [oobCode, setOobCode] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { confirmPasswordReset } = UserAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,50 +50,100 @@ const ResetPassword = () => {
       return;
     }
 
+    setLoading(true);
     try {
-      await axios.post('/reset-password', { oobCode, password });
-      alert("Password has been reset successfully!");
-      navigate('/signin');
+      const response = await axios.post('/reset-password', { oobCode, password });
+      if (response.status === 200) {
+        alert("Password has been reset successfully!");
+        navigate('/signin');
+      } else {
+        setError('Failed to reset password. Please try again.');
+      }
     } catch (e) {
       setError(e.message);
+    } finally {
+      setLoading(false);
     }
   };
-
 
   const validatePassword = (password) => {
     const strongPasswordRegex = new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$');
     return strongPasswordRegex.test(password);
   };
 
+  const handleClickShowPassword = () => setShowPassword(!showPassword);
+
   return (
-    <div className='login'>
-      <div className='loginTitle'>
-        <h2>Reset Your Password .</h2>
-      </div>
+    <Container maxWidth="sm">
+      <Box sx={{ mt: 4, mb: 2 }}>
+        <Typography variant="h4" gutterBottom sx={{ color: 'burgundy' }}>
+          Reset Your Password
+        </Typography>
+      </Box>
       <form onSubmit={handlePasswordReset}>
-        <div className='Inputs'>
-          <label>New Password</label>
-          <input
-            type='password'
+        <Box mb={2}>
+          <TextField
+            label="New Password"
+            type={showPassword ? 'text' : 'password'}
+            fullWidth
+            variant="outlined"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={handleClickShowPassword} edge="end">
+                    {showPassword ? <AiFillSwitcher /> : <AiOutlineSwitcher />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
-
-          <label>Confirm New Password</label>
-          <input
-            type='password'
+        </Box>
+        <Box mb={2}>
+          <TextField
+            label="Confirm New Password"
+            type={showPassword ? 'text' : 'password'}
+            fullWidth
+            variant="outlined"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={handleClickShowPassword} edge="end">
+                    {showPassword ? <AiFillSwitcher /> : <AiOutlineSwitcher />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
-        </div>
-        <button type="submit">Reset Password</button>
-        {error && <p className="error-message" style={{marginTop:'2rem'}}>{error}</p>}
+        </Box>
+        {error && (
+          <Box mb={2}>
+            <Typography variant="body2" color="error">
+              {error}
+            </Typography>
+          </Box>
+        )}
+        <Box textAlign="center">
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            disabled={loading}
+            sx={{ bgcolor: 'burgundy', color: 'white' }}
+          >
+            {loading ? <CircularProgress size={24} /> : 'Reset Password'}
+          </Button>
+        </Box>
       </form>
-    </div>
+    </Container>
   );
 };
 
 export default ResetPassword;
+
 
 
 
@@ -139,7 +202,7 @@ export default ResetPassword;
 //     return strongPasswordRegex.test(password);
 //   };
 
-//   const togglePasswordVisibility = () => {
+//   const togglePasswordAiOutLineSwitcher = () => {
 //     setShowPassword((prev) => !prev);
 //   };
 
@@ -162,11 +225,11 @@ export default ResetPassword;
 //               endAdornment: (
 //                 <InputAdornment position="end">
 //                   <IconButton
-//                     aria-label="toggle password visibility"
-//                     onClick={togglePasswordVisibility}
+//                     aria-label="toggle password AiOutLineSwitcher"
+//                     onClick={togglePasswordAiOutLineSwitcher}
 //                     edge="end"
 //                   >
-//                     {showPassword ? <VisibilityOff /> : <Visibility />}
+//                     {showPassword ? <AiOutLineSwitcherOff /> : <AiOutLineSwitcher />}
 //                   </IconButton>
 //                 </InputAdornment>
 //               )
@@ -185,11 +248,11 @@ export default ResetPassword;
 //               endAdornment: (
 //                 <InputAdornment position="end">
 //                   <IconButton
-//                     aria-label="toggle password visibility"
-//                     onClick={togglePasswordVisibility}
+//                     aria-label="toggle password AiOutLineSwitcher"
+//                     onClick={togglePasswordAiOutLineSwitcher}
 //                     edge="end"
 //                   >
-//                     {showPassword ? <VisibilityOff /> : <Visibility />}
+//                     {showPassword ? <AiOutLineSwitcherOff /> : <AiOutLineSwitcher />}
 //                   </IconButton>
 //                 </InputAdornment>
 //               )
