@@ -39,7 +39,12 @@ const CompanyDetails = ({register, errors}) => {
       <input type='text' {...register("website", { required: true,})} placeholder='website' />
       {/* {errors.website && <span className="error-message">Please enter a valid website</span>} */}
    
-      <label htmlFor="contactPerson">Contact Person (Name) <span className='required'>*</span></label>
+
+      
+        </div>
+
+        <div className='flex-two'>
+        <label htmlFor="contactPerson">Contact Person (Name) <span className='required'>*</span></label>
       <input type='text' {...register("contactPerson",  { required: true, minLength: 6, maxLength: 15  })} placeholder='Contact Person' />
       {errors.contactPerson && <span className="error-message">THis field is required</span>}
 
@@ -47,10 +52,6 @@ const CompanyDetails = ({register, errors}) => {
       <input type='text' {...register("contactPersonNo",  { required: true, minLength: 6, maxLength: 15  })} placeholder='Contact Person Number' />
       {errors.contactPersonNo && <span className="error-message">THis field is required</span>}
 
-      
-        </div>
-
-        <div className='flex-two'>
 
         <label htmlFor="taxIdentificationNumber">Tax Identification Number <span className='required'>*</span></label>
       <input type='text' {...register("taxIdentificationNumber",  { required: true, minLength: 6, maxLength: 15  })} placeholder='Tax Identification Number' />
@@ -79,14 +80,14 @@ const CompanyDetails = ({register, errors}) => {
       <input type='number' {...register("BVNNo", { required: true,  minLength:11, maxLength: 11 })} placeholder='BVN' />
       {errors.BVNNo && <span className="error-message">This field is required</span>}
 
-      <label htmlFor="NAICOMLisenceIssuingDate">NAICOM Lisence Issuing Date <span className='required'>*</span> </label>
+      {/* <label htmlFor="NAICOMLisenceIssuingDate">NAICOM Lisence Issuing Date <span className='required'>*</span> </label>
       <input  type="date" {...register("NAICOMLisenceIssuingDate",{ required: true, minLength: 10, maxLength: 15 })} placeholder='NAICOM Issuing Date' />
       {errors.NAICOMLisenceIssuingDate && <span className="error-message">This Field is Required</span>}
 
       <label htmlFor="NAICOMLisenceExpiryDate">NAICOM Lisence Expiry Date <span className='required'>*</span> </label>
       <input  type="date" {...register("NAICOMLisenceExpiryDate",{ required: true, minLength: 10, maxLength: 15 })} placeholder='NAICOM Expiry Date' />
       {errors.NAICOMLisenceExpiryDate && <span className="error-message">This Field is Required</span>}
-    
+     */}
         </div>
         </div>
     </div>
