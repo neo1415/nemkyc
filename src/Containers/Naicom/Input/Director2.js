@@ -31,8 +31,8 @@ const Director2 = ({register, errors, formValues, control}) => {
       <input type='date' {...register("dob2", { required: false })} placeholder='Date of Birth' />
       {errors.dob2 && <span className="error-message">{errors.dob2.message}</span>}
 
-      <label htmlFor="placeOfBirth2">Place Of Birth </label>
-      <input type='text' {...register("placeOfBirth2", { required: false })} placeholder='Place Of Birth' />
+      <label htmlFor="placeOfBirth2">Place of Birth </label>
+      <input type='text' {...register("placeOfBirth2", { required: false })} placeholder='Place of Birth' />
       {errors.placeOfBirth2 && <span className="error-message">This field is required</span>}
 
       <label htmlFor="nationality2">Nationality </label>
@@ -67,7 +67,7 @@ const Director2 = ({register, errors, formValues, control}) => {
       <input  type="text" {...register("employersName2",{ required: false, minLength: 10, maxLength: 15 })} placeholder='Employers Name' />
       {errors.employersName2 && <span className="error-message">This Field is Required</span>}
 
-      <label htmlFor="employersPhoneNumber2">employers Phone Number </label>
+      <label htmlFor="employersPhoneNumber2">Employers Phone Number </label>
       <input  type="number"{...register("employersPhoneNumber2")} placeholder='employersPhoneNumber' />
 
       <label htmlFor="residentialAddress2">Residential Address </label>
@@ -108,7 +108,7 @@ const Director2 = ({register, errors, formValues, control}) => {
       <input type="date" {...register("issuedDate2", { required: false, minLength: 10, maxLength: 15 })} placeholder='Issued Date' />
       {errors.issuedDate2 && <span className="error-message">{errors.issuedDate2.message}</span>}
 
-      <label htmlFor="expirydDate2">Expiry Date </label>
+      <label htmlFor="expiryDate2">Expiry Date </label>
       <input type="date" {...register("expiryDate2", { required: false, minLength: 10, maxLength: 15 })} placeholder='Expiry Date' />
       {errors.expiryDate2 && <span className="error-message">This Field is Required</span>}
 
@@ -128,8 +128,8 @@ const Director2 = ({register, errors, formValues, control}) => {
     ) : (
       <select {...field} onChange={(e) => field.onChange(handleIncomeSelectChange2(e.target.value))}>
         <option value="Choose Income Source">Choose Income Source</option>
-        <option value="salaryOrBusinessIncome">Salary Or Business Income</option>
-        <option value="investmentsOrDividends">Investments Or Dividends</option>
+        <option value="salaryOrBusinessIncome">Salary or Business Income</option>
+        <option value="investmentsOrDividends">Investments or Dividends</option>
         <option value="Other">Other(please specify)</option>
       </select>
     )

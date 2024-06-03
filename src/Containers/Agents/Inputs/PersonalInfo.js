@@ -42,7 +42,7 @@ const PersonalInfo = ({register, errors, control}) => {
       <label htmlFor="position">Position/Role </label>
       <input type='text' {...register("position", { required: true, minLength: 3, maxLength: 30 })} placeholder='Position' />
 
-      <label htmlFor="dateOfBirth">Date Of Birth <span className='required'>*</span></label>
+      <label htmlFor="dateOfBirth">Date of Birth <span className='required'>*</span></label>
       <input type="date" id="dateOfBirth" placeholder='Date Of Birth' {...register("dateOfBirth", { required: true })} />
       {errors.dateOfBirth && <span className="error-message">{errors.dateOfBirth.message}</span>}
 

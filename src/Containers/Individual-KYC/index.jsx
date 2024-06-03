@@ -161,7 +161,7 @@ const [fileNames, setFileNames] = useState({});
 
             <h3>Individuals Details</h3>
       <div className='stretch'>
-      Date <span className='date'>{currentDate}</span>
+      Date <span className='date'>: {currentDate}</span>
     </div>
               <PersonalInfo
                 register={register}

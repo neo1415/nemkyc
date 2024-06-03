@@ -31,7 +31,7 @@ const CompanyDetails = ({register, errors,control}) => {
       <input type='text' {...register("incorporationState", { required: true,  minLength: 3, maxLength: 50  })} placeholder='Incorporation State' />
       {errors.incorporationState && <span className="error-message">This field is required</span>}
 
-      <label htmlFor="dateOfIncorporationRegistration">Date Of Incorporation/Registration <span className='required'>*</span> </label>
+      <label htmlFor="dateOfIncorporationRegistration">Date of Incorporation/Registration <span className='required'>*</span> </label>
       <input  type="date" {...register("dateOfIncorporationRegistration",{ required: true, minLength: 10, maxLength: 15 })} placeholder='Date Of Incorporation/Registration' />
       {errors.dateOfIncorporationRegistration && <span className="error-message">{errors.dateOfIncorporationRegistration.message}</span>}
 
@@ -81,10 +81,10 @@ const CompanyDetails = ({register, errors,control}) => {
 
       <label htmlFor="taxIdentificationNumber">Tax Identification Number <span className='required'>*</span></label>
       <input type='text' {...register("taxIdentificationNumber",  { required: true, minLength: 6, maxLength: 15  })} placeholder='Tax Identification Number' />
-      {errors.taxIdentificationNumber && <span className="error-message">THis field is required</span>}
+      {errors.taxIdentificationNumber && <span className="error-message">This field is required</span>}
 
       <label htmlFor="telephoneNumber">Telephone Number <span className='required'>*</span></label>
-      <input type="number" {...register("telephoneNumber", { required: true, minLength: 5, maxLength: 11 })} placeholder='telephone Number' />
+      <input type="number" {...register("telephoneNumber", { required: true, minLength: 5, maxLength: 11 })} placeholder='Telephone Number' />
       {errors.telephoneNumber && <span className="error-message">Please enter a valid phone number</span>}
 
         </div>

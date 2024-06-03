@@ -30,8 +30,8 @@ const Director1 = ({register, errors, control}) => {
       <input type='date' {...register("dob", { required: true })} placeholder='Date of Birth' />
       {errors.dob && <span className="error-message">{errors.dob.message}</span>}
 
-      <label htmlFor="placeOfBirth">Place Of Birth <span className='required'>*</span></label>
-      <input type='text' {...register("placeOfBirth", { required: true, minLength: 3, maxLength: 30   })} placeholder='Place Of Birth' />
+      <label htmlFor="placeOfBirth">Place of Birth <span className='required'>*</span></label>
+      <input type='text' {...register("placeOfBirth", { required: true, minLength: 3, maxLength: 30   })} placeholder='Place of Birth' />
       {errors.placeOfBirth && <span className="error-message">This field is required</span>}
 
       <label htmlFor="nationality">Nationality <span className='required'>*</span></label>
@@ -65,7 +65,7 @@ const Director1 = ({register, errors, control}) => {
       <label htmlFor="employersName">Employers Name  </label>
       <input  type="text" {...register("employersName",{ required: false, minLength: 2, maxLength: 50 })} placeholder='Employers Name' />
 
-      <label htmlFor="employersPhoneNumber">employers Phone Number </label>  
+      <label htmlFor="employersPhoneNumber">Employers Phone Number </label>  
       <input  type="number"{...register("employersPhoneNumber",{ required: false, minLength: 5, maxLength: 11  })} placeholder='Employers Phone Number' />
 
       <label htmlFor="residentialAddress">Residential Address <span className='required'>*</span></label>
@@ -108,7 +108,7 @@ const Director1 = ({register, errors, control}) => {
       <input type="date" {...register("issuedDate", { required: true })} placeholder='Issued Date' />
       {errors.issuedDate && <span className="error-message">{errors.issuedDate.message}</span>}
 
-      <label htmlFor="expirydDate">Expiry Date  </label>
+      <label htmlFor="expiryDate">Expiry Date  </label>
       <input type="date" {...register("expiryDate")} placeholder='Expiry Date' />
       {errors.expiryDate && <span className="error-message">{errors.expiryDate.message}</span>}
 
@@ -128,8 +128,8 @@ const Director1 = ({register, errors, control}) => {
             ) : (
               <select {...field} onChange={(e) => field.onChange(handleIncomeSelectChange(e.target.value))}>
                 <option value="Choose Income Source">Choose Income Source</option>
-                <option value="salaryOrBusinessIncome">Salary Or Business Income</option>
-                <option value="investmentsOrDividends">Investments Or Dividends</option>
+                <option value="salaryOrBusinessIncome">Salary or Business Income</option>
+                <option value="investmentsOrDividends">Investments or Dividends</option>
                 <option value="Other">Other(please specify)</option>
               </select>
     )

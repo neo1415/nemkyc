@@ -145,8 +145,8 @@ const PersonalInfo = ({register, errors,control}) => {
             ) : (
               <select {...field} onChange={(e) => field.onChange(handleIncomeSourceChange(e.target.value))}>
                 <option value="Choose Income Source">Choose Income Source</option>
-                <option value="salaryOrBusinessIncome">Salary Or Business Income</option>
-                <option value="investmentsOrDividends">Investments Or Dividends</option>
+                <option value="salaryOrBusinessIncome">Salary or Business Income</option>
+                <option value="investmentsOrDividends">Investments or Dividends</option>
                 <option value="Other">Other(please specify)</option>
               </select>
         )
@@ -180,9 +180,9 @@ const PersonalInfo = ({register, errors,control}) => {
             ) : (
             <select {...field} onChange={(e) => field.onChange(handleIncomeSelectChange(e.target.value))}>
               <option value="Choose Income Source">Choose Income Source</option>
-              <option value="salaryOrBusinessIncome">Salary Or Business Income</option>
-              <option value="investmentsOrDividends">Investments Or Dividends</option>
-              <option value="Other">Other(please specify)</option>
+              <option value="salaryOrBusinessIncome">Salary or Business Income</option>
+              <option value="investmentsOrDividends">Investments or Dividends</option>
+              <option value="Other">Others(please specify)</option>
             </select>
             )
           )}

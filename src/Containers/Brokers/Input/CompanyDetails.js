@@ -28,7 +28,7 @@ const CompanyDetails = ({register, errors,control}) => {
       {errors.companyAddress && <span className="error-message">This field is required</span>}
 
       <label htmlFor="city">City <span className='required'>*</span></label>
-      <input type='text' {...register("city", { required: true,  minLength: 3, maxLength: 50  })} placeholder='city' />
+      <input type='text' {...register("city", { required: true,  minLength: 3, maxLength: 50  })} placeholder='City' />
       {errors.city && <span className="error-message">{errors.city.message}</span>}
 
       <label htmlFor="state">State <span className='required'>*</span></label>
@@ -105,7 +105,7 @@ const CompanyDetails = ({register, errors,control}) => {
       {errors.taxIdentificationNumber && <span className="error-message">THis field is required</span>}
 
       <label htmlFor="telephoneNumber">Telephone Number <span className='required'>*</span></label>
-      <input type="number" {...register("telephoneNumber", { required: true, minLength: 5, maxLength: 11 })} placeholder='telephone Number' />
+      <input type="number" {...register("telephoneNumber", { required: true, minLength: 5, maxLength: 11 })} placeholder='Telephone Number' />
       {errors.telephoneNumber && <span className="error-message">Please enter a valid phone number</span>}
 
         </div>
