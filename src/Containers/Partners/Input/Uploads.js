@@ -208,7 +208,7 @@ const FileUpload = ({control,register, setFileUrls, errors,fileNames, setFileNam
     <div className='uploader'>
       <label htmlFor="identification2" className='upload'>
         <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-          <h4>Identification means for Director 2 (optional)</h4>
+          <h4>Identification Means for Director 2 (optional)</h4>
           <div className='upload-icon'>
           <HiCloudUpload />   
           </div>

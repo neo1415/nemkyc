@@ -84,7 +84,7 @@ const CompanyDetails = ({register, errors,control}) => {
       {errors.taxIdentificationNumber && <span className="error-message">THis field is required</span>}
 
       <label htmlFor="telephoneNumber">Telephone Number <span className='required'>*</span></label>
-      <input type="number" {...register("telephoneNumber", { required: true, minLength: 5, maxLength: 11 })} placeholder='telephone Number' />
+      <input type="number" {...register("telephoneNumber", { required: true, minLength: 5, maxLength: 11 })} placeholder='Telephone Number' />
       {errors.telephoneNumber && <span className="error-message">Please enter a valid phone number</span>}
 
         </div>

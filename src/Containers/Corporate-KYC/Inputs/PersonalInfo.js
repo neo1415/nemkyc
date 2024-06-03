@@ -31,10 +31,10 @@ const PersonalInfo = ({register, errors, control}) => {
       {errors.insured && <span className="error-message">{errors.insured.message}</span>}
 
       <label htmlFor="officeAddress">Office Address <span className='required'>*</span></label>
-      <input type="text" id="officeAddress" placeholder="Contact's Address" {...register("officeAddress", { required: true })} />
+      <input type="text" id="officeAddress" placeholder="Office Address" {...register("officeAddress", { required: true })} />
       {errors.officeAddress && <span className="error-message">{errors.officeAddress.message}</span>}
 
-      <label htmlFor="ownershipOfCompany">Ownership Of Company <span className='required'>*</span></label>
+      <label htmlFor="ownershipOfCompany">Ownership of Company <span className='required'>*</span></label>
       <select id="ownershipOfCompany" {...register("ownershipOfCompany", { required: true })}>
         <option value="">Select Ownership Of Company</option>
         <option value="Nigerian">Nigerian</option>
@@ -44,7 +44,7 @@ const PersonalInfo = ({register, errors, control}) => {
       {errors.ownershipOfCompany && <span className="error-message">{errors.ownershipOfCompany.message}</span>}
 
       <label htmlFor="contactPerson">Contact Person <span className='required'>*</span></label>
-      <input type="text" id="contactPerson" placeholder='contactPerson' {...register("contactPerson", { required: true })} />
+      <input type="text" id="contactPerson" placeholder='Contact Person' {...register("contactPerson", { required: true })} />
       {errors.contactPerson && <span className="error-message">{errors.contactPerson.message}</span>}
 
 
@@ -53,15 +53,15 @@ const PersonalInfo = ({register, errors, control}) => {
     <div className='flex-two'>
 
     <label htmlFor="contactPersonNo">Contact Person Mobile Number <span className='required'>*</span></label>
-      <input type="number" id="contactPersonNo" placeholder='Date Of Birth' {...register("contactPersonNo", { required: true })} />
+      <input type="number" id="contactPersonNo" placeholder='Contact Phone Number' {...register("contactPersonNo", { required: true })} />
       {errors.contactPersonNo && <span className="error-message">Phone Number is required</span>}
     
     <label htmlFor="emailAddress">Email Address <span className='required'>*</span></label>
-      <input type="email" id="emailAddress" placeholder='Place Of Birth' {...register("emailAddress", { required: true })} />
+      <input type="email" id="emailAddress" placeholder='Email Address' {...register("emailAddress", { required: true })} />
       {errors.emailAddress && <span className="error-message">{errors.emailAddress.message}</span>}
 
       <label htmlFor="natureOfBusiness">Business Type/Occupation<span className='required'>*</span></label>
-      <input type='text' {...register("natureOfBusiness", { required: true, minLength: 3, maxLength: 60  })} placeholder='Business Type' />
+      <input type='text' {...register("natureOfBusiness", { required: true, minLength: 3, maxLength: 60  })} placeholder='Nature of Business' />
       {errors.natureOfBusiness && <span className="error-message">This field is required</span>}
 
       <label htmlFor="estimatedTurnover">Estimated Turnover <span className='required'>*</span></label>
@@ -90,8 +90,8 @@ const PersonalInfo = ({register, errors, control}) => {
             ) : (
             <select {...field} onChange={(e) => field.onChange(handleIncomeSelectChange(e.target.value))}>
               <option value="Choose Income Source">Choose Income Source</option>
-              <option value="salaryOrBusinessIncome">Salary Or Business Income</option>
-              <option value="investmentsOrDividends">Investments Or Dividends</option>
+              <option value="salaryOrBusinessIncome">Salary or Business Income</option>
+              <option value="investmentsOrDividends">Investments or Dividends</option>
               <option value="Other">Other(please specify)</option>
             </select>
             )

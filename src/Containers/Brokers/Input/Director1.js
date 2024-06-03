@@ -43,7 +43,7 @@ const Director1 = ({register, errors, control}) => {
       <input type='date' {...register("dob", { required: true })} placeholder='Date of Birth' />
       {errors.dob && <span className="error-message">{errors.dob.message}</span>}
 
-      <label htmlFor="placeOfBirth">Place Of Birth <span className='required'>*</span></label>
+      <label htmlFor="placeOfBirth">Place of Birth <span className='required'>*</span></label>
       <input type='text' {...register("placeOfBirth", { required: true, minLength: 3, maxLength: 30   })} placeholder='Place Of Birth' />
       {errors.placeOfBirth && <span className="error-message">This field is required</span>}
 

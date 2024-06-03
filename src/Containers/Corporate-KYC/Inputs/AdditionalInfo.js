@@ -16,7 +16,7 @@ const AdditionalInfo = ({register, errors}) => {
 <hr></hr>
                 <li className='data-privacy'>
                 Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria 
-                Data Protection ACt 2023.
+                Data Protection Act 2023.
                 </li>  
 <hr></hr>
                 <li className='data-privacy'>
@@ -55,8 +55,8 @@ const AdditionalInfo = ({register, errors}) => {
       { required: true,  minLength: 3, maxLength: 30  })} 
       className='signature-input' placeholder='Your Full Name' /> 
       agree to submit all required and 
-      requested for documents and <b>NEM Insurance</b> 
-      shall not be held sponsible for any delay in
+      requested for documents and <b>NEM Insurance</b> shall 
+       not be held sponsible for any delay in
       settlement of claim due to non-fulfillment of 
        requirements. 
       </li>

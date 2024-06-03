@@ -45,8 +45,8 @@ const Director2 = ({register, errors, formValues, control}) => {
       <input type='date' {...register("dob2", { required: true })} placeholder='Date of Birth' />
       {errors.dob2 && <span className="error-message">{errors.dob2.message}</span>}
 
-      <label htmlFor="placeOfBirth2">Place Of Birth </label>
-      <input type='text' {...register("placeOfBirth2", { required: true, minLength: 3, maxLength: 30   })} placeholder='Place Of Birth' />
+      <label htmlFor="placeOfBirth2">Place of Birth </label>
+      <input type='text' {...register("placeOfBirth2", { required: true, minLength: 3, maxLength: 30   })} placeholder='Place of Birth' />
       {errors.placeOfBirth2 && <span className="error-message">This field is required</span>}
 
       <label htmlFor="nationality2">Nationality </label>
@@ -85,7 +85,7 @@ const Director2 = ({register, errors, formValues, control}) => {
       {errors.address2 && <span className="error-message">This Field is required</span>}
 
       <label htmlFor="email2">Email </label>
-      <input type='email' {...register("email2", { required: true, pattern: /^\S+@\S+$/i , minLength: 6, maxLength: 30 })} placeholder='email' />
+      <input type='email' {...register("email2", { required: true, pattern: /^\S+@\S+$/i , minLength: 6, maxLength: 30 })} placeholder='Email' />
       {errors.email2 && <span className="error-message">This field is required</span>}
 
       <label htmlFor="taxIDNumber2">Tax ID Number  </label>
@@ -152,8 +152,8 @@ const Director2 = ({register, errors, formValues, control}) => {
             ) : (
               <select {...field} onChange={(e) => field.onChange(handleIncomeSelectChange2(e.target.value))}>
                 <option value="Choose Income Source">Choose Income Source</option>
-                <option value="salaryOrBusinessIncome">Salary Or Business Income</option>
-                <option value="investmentsOrDividends">Investments Or Dividends</option>
+                <option value="salaryOrBusinessIncome">Salary or Business Income</option>
+                <option value="investmentsOrDividends">Investments or Dividends</option>
                 <option value="Other">Other(please specify)</option>
               </select>
         )

@@ -6,7 +6,7 @@ const KYCHero = () => {
   return (
     <div className="hero-flex">
 <div className="content">
-<h2 className="heading">NEM Insurance: Know Your Customer, Know Your Safety Now</h2>
+<h2 className="heading">NEM Insurance PLC: Know Your Customer, Know Your Safety Now</h2>
   <p className="sub">Trustworthy Solutions for Complete and Accurate Customer Verification..</p>
 <a className="smooth-scroll" href='#section'>
   <button className="main__button">Get started</button>
