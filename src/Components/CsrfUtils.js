@@ -7,13 +7,13 @@
 // const getCsrfToken = async () => {
 //   const response = await axios.get(CSRF_TOKEN_ENDPOINT, { withCredentials: true });
 //   const csrfToken = response.data.csrfToken;
-//   console.log('Fetched CSRF Token:', csrfToken); // Log the fetched CSRF token
+//   console.log('Fetched CSRF Token:', csrfToken);
 //   return csrfToken;
 // };
 
 // const csrfProtectedRequest = async (method, url, data = null) => {
 //   const csrfToken = await getCsrfToken();
-//   console.log('Sending CSRF Token:', csrfToken); // Log the CSRF token being sent
+//   console.log('Sending CSRF Token:', csrfToken);
 //   const config = {
 //     method,
 //     url,

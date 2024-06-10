@@ -8,7 +8,7 @@ import "jspdf-autotable";
 import './single.scss'
 import { UserAuth } from '../../Context/AuthContext';
 import useAutoLogout from '../../Components/Timeout';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import useFetchUserRole from '../../Components/checkUserRole';
 import { useDispatch, useSelector } from 'react-redux';
