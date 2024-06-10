@@ -47,7 +47,7 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
     return <Navigate to="/signin" />;
   }
 
-  if (userRole === 'default' || !userRole) {
+  if (userRole === 'default') {
     console.log('Unauthorized, userRole:', userRole);
     return <Unauthourized />;
   }
