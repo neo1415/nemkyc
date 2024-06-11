@@ -42,6 +42,15 @@
     }
     .center{
         padding-left: 1px;
+        .sidebar-divider{
+
+            color: white;
+            font-size: .8rem;
+            font-weight: 600;
+            @media screen and (max-width:600px) {
+                display: none;
+            }
+        }
         ul{
             list-style: none;
             margin: 0;
@@ -50,7 +59,7 @@
                 display: flex;
                 align-items: center;
                 padding: 5px;
-                height: 50px;
+                height: 35px;
                 justify-content: space-between;
                 cursor: pointer;
                 color: gold ;
@@ -125,7 +134,7 @@ h5{
     justify-content: center;
     align-items: center;
     margin-left: 1rem;
-    font-size: 1.3rem;
+    font-size: 1rem;
     @media screen and (max-width:768px) {
         margin-left: 0;
         font-size: 1.5rem;

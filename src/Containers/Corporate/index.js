@@ -182,6 +182,7 @@ const Corporate = () => {
                 errors={errors}
                 watch={watch}
                 control={control}
+                setValue={setValue}
                />
            
             <div className='button-flex'>
@@ -206,6 +207,7 @@ const Corporate = () => {
                 errors={errors}
                 watch={watch}
                 control={control}
+                setValue={setValue}
                />
            
             <div className='button-flex'>
