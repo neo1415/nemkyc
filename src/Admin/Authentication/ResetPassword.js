@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserAuth } from '../../Context/AuthContext';
-import { Container, Typography, TextField, Button, IconButton, InputAdornment } from '@mui/material';
+import { Container, Typography, TextField, Button, IconButton, InputAdornment, Box } from '@mui/material';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const ResetPassword = () => {
@@ -63,56 +63,51 @@ const ResetPassword = () => {
 
   return (
     <Container maxWidth="sm">
-      <div className='login'>
-        <div className='loginTitle'>
-          <Typography variant="h4" component="h2" gutterBottom>
-            Reset Your Password
-          </Typography>
-        </div>
+      <Box display="flex" flexDirection="column" alignItems="center">
+        <Typography variant="h4" component="h2" gutterBottom>
+          Reset Your Password
+        </Typography>
         <form onSubmit={handlePasswordReset}>
-          <div className='Inputs'>
-            <TextField
-              label="New Password"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              fullWidth
-              margin="normal"
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton onClick={togglePasswordVisibility}>
-                      {showPassword ? <FaEyeSlash /> : <FaEye />}
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-            />
-
-            <TextField
-              label="Confirm New Password"
-              type={showConfirmPassword ? 'text' : 'password'}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              fullWidth
-              margin="normal"
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton onClick={toggleConfirmPasswordVisibility}>
-                      {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-            />
-          </div>
-          <Button type="submit" variant="contained" color="primary" fullWidth>
+          <TextField
+            label="New Password"
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            fullWidth
+            margin="normal"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={togglePasswordVisibility} edge="end">
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+          />
+          <TextField
+            label="Confirm New Password"
+            type={showConfirmPassword ? 'text' : 'password'}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            fullWidth
+            margin="normal"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={toggleConfirmPasswordVisibility} edge="end">
+                    {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+          />
+          <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2, width: '120%' }}>
             Reset Password
           </Button>
-          {error && <Typography color="error" style={{ marginTop: '2rem' }}>{error}</Typography>}
+          {error && <Typography color="error" sx={{ mt: 2 }}>{error}</Typography>}
         </form>
-      </div>
+      </Box>
     </Container>
   );
 };
