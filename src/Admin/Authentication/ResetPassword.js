@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserAuth } from '../../Context/AuthContext';
-import { Container, Typography, TextField, Button, IconButton, InputAdornment, Box } from '@mui/material';
+import { Box, Typography, TextField, Button, IconButton, InputAdornment } from '@mui/material';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const ResetPassword = () => {
@@ -62,18 +62,19 @@ const ResetPassword = () => {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box display="flex" flexDirection="column" alignItems="center">
-        <Typography variant="h4" component="h2" gutterBottom>
-          Reset Your Password
-        </Typography>
-        <form onSubmit={handlePasswordReset}>
+    <Box className='login' display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="100vh">
+      <Box className='loginTitle' mb={2}>
+        <Typography variant="h4" className='sign-in'>Reset Your Password</Typography>
+      </Box>
+      <form onSubmit={handlePasswordReset} style={{ width: '100%', maxWidth: '400px' }}>
+        <Box className='Inputs' mb={2}>
           <TextField
+            fullWidth
             label="New Password"
+            variant="outlined"
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            fullWidth
             margin="normal"
             InputProps={{
               endAdornment: (
@@ -86,11 +87,12 @@ const ResetPassword = () => {
             }}
           />
           <TextField
+            fullWidth
             label="Confirm New Password"
+            variant="outlined"
             type={showConfirmPassword ? 'text' : 'password'}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            fullWidth
             margin="normal"
             InputProps={{
               endAdornment: (
@@ -102,13 +104,15 @@ const ResetPassword = () => {
               )
             }}
           />
-          <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2, width: '120%' }}>
+        </Box>
+        {error && <Typography color="error" mb={2}>{error}</Typography>}
+        <Box display="flex" justifyContent="center" mb={2}>
+          <Button variant="contained" color="primary" type="submit" fullWidth sx={{ width: '120%' }}>
             Reset Password
           </Button>
-          {error && <Typography color="error" sx={{ mt: 2 }}>{error}</Typography>}
-        </form>
-      </Box>
-    </Container>
+        </Box>
+      </form>
+    </Box>
   );
 };
 
