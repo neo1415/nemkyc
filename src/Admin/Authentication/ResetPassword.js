@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserAuth } from '../../Context/AuthContext';
+import { Container, Typography, TextField, Button, IconButton, InputAdornment } from '@mui/material';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [oobCode, setOobCode] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { confirmPasswordReset } = UserAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,31 +53,67 @@ const ResetPassword = () => {
     return strongPasswordRegex.test(password);
   };
 
-  return (
-    <div className='login'>
-      <div className='loginTitle'>
-        <h2>Reset Your Password .</h2>
-      </div>
-      <form onSubmit={handlePasswordReset}>
-        <div className='Inputs'>
-          <label>New Password</label>
-          <input
-            type='password'
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
 
-          <label>Confirm New Password</label>
-          <input
-            type='password'
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  return (
+    <Container maxWidth="sm">
+      <div className='login'>
+        <div className='loginTitle'>
+          <Typography variant="h4" component="h2" gutterBottom>
+            Reset Your Password
+          </Typography>
         </div>
-        <button type="submit">Reset Password</button>
-        {error && <p className="error-message" style={{marginTop:'2rem'}}>{error}</p>}
-      </form>
-    </div>
+        <form onSubmit={handlePasswordReset}>
+          <div className='Inputs'>
+            <TextField
+              label="New Password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              fullWidth
+              margin="normal"
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={togglePasswordVisibility}>
+                      {showPassword ? <FaEyeSlash /> : <FaEye />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
+            />
+
+            <TextField
+              label="Confirm New Password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              fullWidth
+              margin="normal"
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={toggleConfirmPasswordVisibility}>
+                      {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
+            />
+          </div>
+          <Button type="submit" variant="contained" color="primary" fullWidth>
+            Reset Password
+          </Button>
+          {error && <Typography color="error" style={{ marginTop: '2rem' }}>{error}</Typography>}
+        </form>
+      </div>
+    </Container>
   );
 };
 
