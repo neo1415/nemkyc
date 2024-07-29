@@ -169,7 +169,7 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
 I/We <input type='text' {...register("signature1",
        { required: true,  minLength: 3, maxLength: 30  })} 
        className='signature-input' placeholder='Your Full Name' />
-      hereby affirm that all the information provided in this Form/Document is true , accurate and complete to the best of my knowledge.
+      hereby affirm that all the information provided in this Form/Document is true, accurate and complete to the best of my knowledge.
       </div>
       {errors.signature1 && <span className="error-message">{errors.signature1.message}</span>}
               <Modal

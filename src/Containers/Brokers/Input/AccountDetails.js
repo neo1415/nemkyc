@@ -20,9 +20,9 @@ const AccountDetails = ({register, errors, formValues}) => {
       <input type='number' {...register("currentAccountNumber", { required: true,  minLength: 7, maxLength: 10  })} placeholder='Current Account Number' />
       {errors.currentAccountNumber && <span className="error-message">Please enter a valid account number</span>}
 
-      <label htmlFor="bankBranchName">Bank Branch Name <span className='required'>*</span></label>
+      {/* <label htmlFor="bankBranchName">Bank Branch Name <span className='required'>*</span></label>
       <input type='text' {...register("bankBranchName", { required: true,  minLength: 3, maxLength: 30  })} placeholder='Bank Branch Name' />
-      {errors.bankBranchName && <span className="error-message">This field is required</span>}
+      {errors.bankBranchName && <span className="error-message">This field is required</span>} */}
 
       <label htmlFor="accountOpeningDate">Account Opening Date <span className='required'>*</span></label>
       <input type='date' {...register("accountOpeningDate", { required: true})} placeholder='Account Opening Date' />

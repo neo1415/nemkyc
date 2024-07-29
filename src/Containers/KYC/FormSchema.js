@@ -12,14 +12,14 @@ export const schema1 = yup.object().shape({
     contactAddress: yup.string().required('Contact Address is required').transform(sanitizeString),
     gender: yup.string().required('Gender is required').transform(sanitizeString),
     country: yup.string().required('Country is required').transform(sanitizeString),
-    dateOfBirth: yup.date().required('Date of Birth is required'),
-    placeOfBirth:  yup.mixed()
+    dateOfBirth:  yup.mixed()
     .test('not-empty', 'Date of Birth is required', value => value !== '')
     .test('is-valid-date', 'Date of Birth must be a valid date', value => value === null || !isNaN(Date.parse(value)))
     .test('is-18', 'You must be at least 18 years old', value => {
       if (value === null || value === '') return true;
       return new Date(value) <= eighteenYearsAgo;
     }),
+    placeOfBirth: yup.string().required('Place of Birth is required'),    
     emailAddress: yup.string().email().required('Email Address is required').transform(sanitizeEmail),
     GSMno: yup.string().required('GSM Number is required').transform(sanitizeString),
     residentialAddress: yup.string().required('Residential Address is required').transform(sanitizeString),

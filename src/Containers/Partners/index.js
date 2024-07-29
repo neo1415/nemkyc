@@ -200,7 +200,7 @@ const Partners = () => {
           exit={{ opacity: 0, x: 50 }}
           className="form-step">
 
-            <h3>Director's Information</h3>
+            <h3>Director's Information 2</h3>
               <Director2
                 register={register}
                 errors={errors}
