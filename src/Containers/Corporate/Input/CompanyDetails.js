@@ -79,9 +79,9 @@ const CompanyDetails = ({register, errors,control}) => {
       <input type='text' {...register("website", { required: true,})} placeholder='website' />
       {/* {errors.website && <span className="error-message">Please enter a valid website</span>} */}
 
-      <label htmlFor="taxIdentificationNumber">Tax Identification Number <span className='required'>*</span></label>
-      <input type='text' {...register("taxIdentificationNumber",  { required: true, minLength: 6, maxLength: 15  })} placeholder='Tax Identification Number' />
-      {errors.taxIdentificationNumber && <span className="error-message">This field is required</span>}
+      <label htmlFor="taxIdentificationNumber">Tax Identification Number </label>
+      <input type='text' {...register("taxIdentificationNumber",  { required: false, minLength: 6, maxLength: 15  })} placeholder='Tax Identification Number' />
+      {/* {errors.taxIdentificationNumber && <span className="error-message">This field is required</span>} */}
 
       <label htmlFor="telephoneNumber">Telephone Number <span className='required'>*</span></label>
       <input type="number" {...register("telephoneNumber", { required: true, minLength: 5, maxLength: 11 })} placeholder='Telephone Number' />

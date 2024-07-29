@@ -42,7 +42,7 @@ export const schema1 = yup.object().shape({
   }),
   contactPerson: yup.string().required('Contact Person is required').min(3).max(60).transform(sanitizeString),
   contactPersonNo: yup.string().required('Contact Person Number is required').matches(/^[0-9]+$/, 'Telephone Number must be numeric').min(5).max(11).transform(sanitizeString),
-  taxIdentificationNumber: yup.string().required('Tax Identification Number is required').transform(sanitizeString),
+  taxIdentificationNumber: yup.string().transform(sanitizeString),
   VATRegistrationNumber: yup.string().transform(sanitizeString),
   // telephoneNumber: yup.string().required('Telephone Number is required').matches(/^[0-9]+$/, 'Telephone Number must be numeric').min(5).max(11).transform(sanitizeString),
 });

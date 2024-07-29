@@ -21,7 +21,7 @@ export const schema1 = yup.object().shape({
     }
     return true; // Allow empty value
   }),
-  taxIdentificationNumber: yup.string().required('Tax Identification Number is required').transform(sanitizeString),
+  taxIdentificationNumber: yup.string().transform(sanitizeString),
   telephoneNumber: yup.string().required('Telephone Number is required').matches(/^[0-9]+$/, 'Telephone Number must be numeric').min(5).max(11).transform(sanitizeString),
 });
 

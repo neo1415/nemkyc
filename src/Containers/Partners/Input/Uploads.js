@@ -167,7 +167,7 @@ const FileUpload = ({control,register, setFileUrls, errors,fileNames, setFileNam
     <div className='uploader'>
       <label htmlFor="identification" className='upload'>
         <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-          <h4>Identification Means for Director 1</h4>
+          <h4>Means of Identification for Director 1</h4>
           <div className='upload-icon'>
           <HiCloudUpload />   
           </div>
@@ -208,7 +208,7 @@ const FileUpload = ({control,register, setFileUrls, errors,fileNames, setFileNam
     <div className='uploader'>
       <label htmlFor="identification2" className='upload'>
         <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-          <h4>Identification Means for Director 2 (optional)</h4>
+          <h4>Means of Identification for Director 2 (optional)</h4>
           <div className='upload-icon'>
           <HiCloudUpload />   
           </div>
@@ -334,7 +334,7 @@ const FileUpload = ({control,register, setFileUrls, errors,fileNames, setFileNam
     <div className='uploader'>
       <label htmlFor="tax" className='upload'>
         <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
-          <h4>Tax Clearance Certificate Within Last 3 years (optional)</h4>
+          <h4>Tax Clearance Certificate Within the Last 3 years (optional)</h4>
           <div className='upload-icon'>
           <HiCloudUpload />   
           </div>
@@ -370,7 +370,7 @@ const FileUpload = ({control,register, setFileUrls, errors,fileNames, setFileNam
 <label htmlFor="signature"></label>
      I/We <input type='text' {...register("signature", { required: true,  minLength: 3, maxLength: 30  })} className='signature-input' placeholder='Your Full Name' />
       {errors.signature && <span className="error-message">This field is required</span>}
-      hereby affirm that all the information provided in this Form/Document is true , accurate and complete to the best of my knowledge.
+      hereby affirm that all the information provided in this Form/Document is true, accurate and complete to the best of my knowledge.
 </div>
 {errors.signature && <span className="error-message">This field is required</span>}
 

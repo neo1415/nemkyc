@@ -22,7 +22,7 @@ const AdditionalInfo = ({register, errors}) => {
                 <li className='data-privacy'>
                 Your personal data shall not be shared with or sold 
                 to any third-party without your consent unless we are compelled 
-                by law or regulator. 
+                by law or regulatory bodies. 
                 </li>  
             </ul>     
           </div>
@@ -47,7 +47,7 @@ const AdditionalInfo = ({register, errors}) => {
       { required: true,  minLength: 3, maxLength: 30  })} 
       className='signature-input' placeholder='Your Full Name' />
        agree to provide additional 
-      information to <b>NEM Insurance</b> , if required.       </li>
+      information to <b>NEM Insurance Plc</b> , if required.       </li>
       {errors.signature2 && <span className="error-message">{errors.signature2.message}</span>}
 
       <li className='data-privacy'>
@@ -55,8 +55,8 @@ const AdditionalInfo = ({register, errors}) => {
       { required: true,  minLength: 3, maxLength: 30  })} 
       className='signature-input' placeholder='Your Full Name' /> 
       agree to submit all required and 
-      requested for documents and <b>NEM Insurance</b> shall 
-       not be held sponsible for any delay in
+      requested for documents and <b>NEM Insurance Plc</b> shall 
+       not be held responsible for any delay in
       settlement of claim due to non-fulfillment of 
        requirements. 
       </li>
