@@ -302,7 +302,7 @@ const handleCancelClick = () => {
               {data.verificationDoc ? (
                 <a href={data.verificationDoc} target='__blank'>
                   <button className='form-button'>
-                    Download Signature <HiDownload style={style} />
+                    Download Document <HiDownload style={style} />
                   </button>
                 </a>
               ) : (
