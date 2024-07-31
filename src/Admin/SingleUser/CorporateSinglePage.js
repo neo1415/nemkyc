@@ -298,18 +298,18 @@ const handleCancelClick = () => {
           <ul>
             <h1>Documents</h1>
             <li className='form-list'>
-              <p>Signature</p>
-              {data.signature ? (
-                <a href={data.signature} target='__blank'>
+              <p>Verification Document</p>
+              {data.verificationDoc ? (
+                <a href={data.verificationDoc} target='__blank'>
                   <button className='form-button'>
                     Download Signature <HiDownload style={style} />
                   </button>
                 </a>
               ) : (
-                <p className='info'>Signature not available</p>
+                <p className='info'>Verification Document not available</p>
               )}
             </li>
-            <li className='form-list'>
+            {/* <li className='form-list'>
               <p>Identification</p>
               {data.identification ? (
                 <a href={data.identification} target='__blank'>
@@ -320,7 +320,7 @@ const handleCancelClick = () => {
               ) : (
                 <p className='info'>Identification not available</p>
               )}
-            </li>
+            </li> */}
           </ul>
         </div>
       </div>
