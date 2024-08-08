@@ -138,7 +138,7 @@ export const schema3 = yup.object().shape({
   localBankName: yup.string().required('Local Bank Name is required').transform(sanitizeString),
   bankBranch: yup.string().required('Bank Branch is required').transform(sanitizeString),
   currentAccountNumber: yup.string().required('Current Account Number is required').matches(/^[0-9]+$/, 'Account Number must be numeric').min(10).max(10).transform(sanitizeString),
-  bankBranchName: yup.string().required('Bank Branch Name is required').transform(sanitizeString),
+  bankBranch: yup.string().required('Bank Branch Name is required').transform(sanitizeString),
   accountOpeningDate: yup.mixed()
   .test('not-empty', 'Date is required', value => value !== '')
   .test('is-valid-date', 'Date must be a valid date', value => value === null || !isNaN(Date.parse(value)))
