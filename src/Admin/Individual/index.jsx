@@ -150,7 +150,7 @@ const Individual = () => {
       <SideBar />
       <div className="datatable">
         <div className="datatableTitle">
-          Individual KYC
+          Individual Customer Due Dilligence
           <FilterComponent initialData={data} setFilteredData={(filtered) => dispatch(setFilteredData(filtered))} />
         </div>
         <DataGrid

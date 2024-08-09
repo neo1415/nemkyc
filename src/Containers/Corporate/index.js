@@ -17,7 +17,7 @@ import AccountDetails from './Input/AccountDetails';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { schema1, schema2, schema3, schema4, schema5 } from './FormSchema';
 import SubmitModal from '../Modals/SubmitModal';
-import { csrfProtectedPost } from '../../Components/CsrfUtils';
+import { CircularProgress } from '@mui/material';
 
 
 const Corporate = () => {
@@ -40,6 +40,7 @@ const Corporate = () => {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [fileUrls, setFileUrls] = useState({});
     const [fileNames, setFileNames] = useState({});
+    const [isLoading, setIsLoading] = useState(false);
 
 
     const showSuccessToast = () => {
@@ -78,9 +79,12 @@ const Corporate = () => {
       
       if (result) {
         try {      
+          setIsLoading(true); // Show loading spinner
+          setIsSubmitted(false); // Ensure modal is closed during submission
+
           const formData = {...formValues, ...fileUrls};
           if (fileUrls.cac && fileUrls.identification ) {
-            setIsSubmitted(true);
+        
             console.log('Form values:', formData);
             const response = await axios.post(endpoints.submitCorporateForm, formData);
           if (response.status === 201) {
@@ -88,6 +92,7 @@ const Corporate = () => {
               showSuccessToast('Form Submitted successfully.');
               setFileUrls({}); 
               setFileNames({});
+              setIsSubmitted(true); // Open modal after successful submission
           } else {
               console.error('Error during form submission:', response.statusText);
             }
@@ -97,6 +102,8 @@ const Corporate = () => {
           } catch (err) {
             console.error('Network error during form submission:', err);
             showErrorToast('An error occurred during submission. Please try again.');
+          } finally {
+            setIsLoading(false); // Hide loading spinner
           }
         }
       };
@@ -270,7 +277,9 @@ const Corporate = () => {
        <ToastContainer />
        <div className='button-flex'>
           <button type="button" onClick={prevStep}>Previous</button>
-          <button type="submit"  onClick={handleSubmit}>Submit</button>
+          <button type="submit" disabled={isLoading} style={{ position: 'relative' }}>
+                {isLoading ? <CircularProgress size={24} style={{ color: 'white', position: 'absolute' }} /> : 'Submit'}
+              </button>
         </div>
 
       </motion.div>

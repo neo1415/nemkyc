@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Sidebar.scss';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserAuth } from '../../Context/AuthContext';
-import { HiUser, HiUsers, HiDatabase, HiNewspaper, HiOutlineNewspaper } from 'react-icons/hi';
+import { HiUsers, HiDatabase, HiOutlineNewspaper } from 'react-icons/hi';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../APi/index';
 import { HiUserAdd } from 'react-icons/hi';
@@ -10,7 +10,6 @@ import { FaHandshake, FaRegBuilding, FaUserAlt } from 'react-icons/fa';
 import { FaUserTie } from 'react-icons/fa';
 import { FaBuilding } from 'react-icons/fa';
 import { FaExchangeAlt } from 'react-icons/fa';
-import { FaUser } from 'react-icons/fa';
 
 
 const Sidebar = () => {
@@ -101,7 +100,7 @@ const Sidebar = () => {
           </Link>
           <Link to="/individual-list">
             <li className="sideList">
-              <p>Individual</p>
+              <p>Individual CDD</p>
               <div className="icon">
                 <FaUserTie />
               </div>

@@ -141,7 +141,7 @@ const List = () => {
       <SideBar />
       <div className="datatable">
         <div className="datatableTitle">
-          Corporate KYC
+          Corporate Customer Due Dilligence
           <FilterComponent initialData={data} setFilteredData={setFilteredData} />
         </div>
         <DataGrid
