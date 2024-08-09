@@ -131,9 +131,9 @@ const BrokersList = () => {
                 <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
                   Delete
                 </div>
-                <div className="statusButton">
-                  <StatusButton id={id} collection="brokers-kyc" setData={(updatedData) => dispatch(setData(updatedData))} />
-                </div>
+                {/* <div className="statusButton">
+                  <StatusButton id={id} collection="brokers-kyc" setData={setData} />
+                </div> */}
               </>
             )}
             <div className="viewButton" onClick={() => handleView(id)}>

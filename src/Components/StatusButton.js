@@ -18,9 +18,12 @@ export const StatusButton = ({ id, collection, setData }) => {
   const handleChangeStatus = async (id, newStatus) => {
     try {
       await updateStatusInFirestore(id, collection, newStatus);
-      setData(prevData => prevData.map(item => 
-        item.id === id ? { ...item, status: newStatus } : item
-      ));
+      setData(prevData => {
+        const updatedData = prevData.map(item => 
+          item.id === id ? { ...item, status: newStatus } : item
+        );
+        return updatedData; // Return the updated data array
+      });
     } catch (error) {
       console.error('Error updating status:', error);
     }

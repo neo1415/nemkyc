@@ -131,9 +131,9 @@ const CorporateKYCTable = () => {
                 <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
                   Delete
                 </div>
-                <div className="statusButton">
+                {/* <div className="statusButton">
                   <StatusButton id={id} collection="corporate-kyc-form" setData={(updatedData) => dispatch(setData(updatedData))} />
-                </div>
+                </div> */}
               </>
             )}
             <div className="viewButton" onClick={() => handleView(id)}>

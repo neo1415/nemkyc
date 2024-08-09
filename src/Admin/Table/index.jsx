@@ -122,9 +122,9 @@ const List = () => {
                 <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
                   Delete
                 </div>
-                <div className="statusButton">
+                {/* <div className="statusButton">
                   <StatusButton id={id} collection="corporate-kyc" setData={setData} />
-                </div>
+                </div> */}
               </>
             )}
             <div className="viewButton" onClick={() => handleView(id)}>
