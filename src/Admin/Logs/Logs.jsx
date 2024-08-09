@@ -4,7 +4,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ConfirmationModal from '../../Containers/Modals/ConfirmationModal';
-import { csrfProtectedGet, csrfProtectedDelete } from '../../Components/CsrfUtils';
+// import { csrfProtectedGet, csrfProtectedDelete } from '../../Components/CsrfUtils';
 import Sidebar from '../SideBar/SideBar';
 
 const LogsTable = ({ userRole }) => {
@@ -82,7 +82,6 @@ const LogsTable = ({ userRole }) => {
           const { id } = params.row;
           return (
             <div className="cellAction">
-              {userRole === 'admin' && (
                 <>
                   <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
                     Delete
@@ -91,7 +90,6 @@ const LogsTable = ({ userRole }) => {
                     View
                   </div>
                 </>
-              )}
             </div>
           );
         },

@@ -13,9 +13,10 @@ import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import axios from 'axios';
+import { CircularProgress } from '@mui/material';
 import { endpoints } from '../../Admin/Authentication/Points';
 import { schema1, schema2, schema3 } from './FormSchema';
-import { csrfProtectedPost } from '../../Components/CsrfUtils';
+// import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 function Agents() {
   const combinedSchema = yup.object().shape({
@@ -24,7 +25,7 @@ function Agents() {
     ...schema3.fields,
 });
 
-const { register, formState: { errors}, reset,trigger, watch, forceUpdate, control,setValue, getValues } = useForm({
+const { register, formState: { errors},trigger, watch, forceUpdate, control,setValue, getValues } = useForm({
  resolver: yupResolver(combinedSchema),
   mode: 'onChange' // This will ensure validation on change
 });
@@ -34,6 +35,7 @@ const [step, setStep] = useState(1);
 const [isSubmitted, setIsSubmitted] = useState(false);
 const [fileUrls, setFileUrls] = useState({});
 const [fileNames, setFileNames] = useState({});
+const [isLoading, setIsLoading] = useState(false);
 
   const showSuccessToast = () => {
     toast.success('Your file has been uploaded successfully!');
@@ -71,8 +73,11 @@ const [fileNames, setFileNames] = useState({});
     
     if (result) {
       try {      
+        setIsLoading(true); // Show loading spinner
+        setIsSubmitted(false); // Ensure modal is closed during submission
+
         const formData = {...formValues, ...fileUrls};
-          setIsSubmitted(true);
+        
           console.log('Form values:', formData);
           const response = await axios.post(endpoints.submitAgentsForm, formData);
         if (response.status === 201) {
@@ -80,6 +85,7 @@ const [fileNames, setFileNames] = useState({});
             showSuccessToast('Form Submitted successfully.');
             setFileUrls({}); 
             setFileNames({});
+            setIsSubmitted(true);
         } else {
             console.error('Error during form submission:', response.statusText);
           }
@@ -87,6 +93,8 @@ const [fileNames, setFileNames] = useState({});
         } catch (err) {
           console.error('Network error during form submission:', err);
           showErrorToast('An error occurred during submission. Please try again.');
+        }finally {
+          setIsLoading(false); // Hide loading spinner
         }
       }
     };
@@ -206,7 +214,9 @@ const [fileNames, setFileNames] = useState({});
 
       <div className='button-flex'>
         <button type="button" onClick={prevStep}>Previous</button>
-        <button type="submit"  onClick={handleSubmit}>Submit</button>
+        <button type="submit" disabled={isLoading} style={{ position: 'relative' }}>
+                {isLoading ? <CircularProgress size={24} style={{ color: 'white', position: 'absolute' }} /> : 'Submit'}
+              </button>
       </div>
       </motion.div>
       
