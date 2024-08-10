@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useEffect, useState } from 'react';
+// import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../APi/index';
@@ -16,13 +16,13 @@ import { StatusButton } from '../../Components/StatusButton';
 import { userColumns } from '../Brokers/datatablesource';
 import axios from 'axios';
 import { endpoints } from '../Authentication/Points';
-import { 
-  setData,
-  setFilteredData,
-  setIsLoading,
-  setModalOpen,
-  setIdToDelete
-} from '../../Context/actions'; // Adjust the path to your actions file
+// import { 
+//   setData,
+//   setFilteredData,
+//   setIsLoading,
+//   setModalOpen,
+//   setIdToDelete
+// } from '../../Context/actions'; // Adjust the path to your actions file
 
 import './Table.scss';
 
@@ -44,11 +44,16 @@ function CustomLoadingOverlay() {
 }
 
 const BrokersList = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
+  const [data, setData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [idToDelete, setIdToDelete] = useState(null);
+
+  const navigate = useNavigate(); 
   const { user } = UserAuth();
   const userRole = useFetchUserRole(user);
-  const { logout } = UserAuth();
+  const { logout } = UserAuth(); 
 
   // Use the custom hook to implement automatic logout
   useAutoLogout({
@@ -58,42 +63,42 @@ const BrokersList = () => {
   });
 
   // Access state from the Redux store
-  const data = useSelector(state => state.data);
-  const filteredData = useSelector(state => state.filteredData);
-  const isLoading = useSelector(state => state.isLoading);
-  const modalOpen = useSelector(state => state.modalOpen);
-  const idToDelete = useSelector(state => state.idToDelete);
+  // const data = useSelector(state => state.data);
+  // const filteredData = useSelector(state => state.filteredData);
+  // const isLoading = useSelector(state => state.isLoading);
+  // const modalOpen = useSelector(state => state.modalOpen);
+  // const idToDelete = useSelector(state => state.idToDelete);
 
   useEffect(() => {
     const fetchData = async () => {
-      dispatch(setIsLoading(true)); // Set loading to true before fetching the data
+      setIsLoading(true); // Set loading to true before fetching the data
       try {
         const response = await axios.get(endpoints.getBrokersData);
         if (response.status === 200) {
           const data = response.data;
           // Filter out items with status 'processing' if user role is not 'admin'
           const filtered = userRole === 'admin' ? data : data.filter(item => item.status !== 'processing');
-          dispatch(setData(filtered));
-          dispatch(setFilteredData(filtered));
+          setData(filtered);
+          setFilteredData(filtered);
         } else {
           console.error('Error fetching brokers:', response.statusText);
         }
       } catch (err) {
         console.error('Error fetching brokers:', err);
       } finally {
-        dispatch(setIsLoading(false));
+        setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [userRole, dispatch]);
+  }, [userRole]);
 
   const handleDelete = async () => {
-    dispatch(setModalOpen(false));
+    setModalOpen(false);
     if (idToDelete) {
       try {
         await deleteDoc(doc(db, 'brokers-kyc', idToDelete));
-        dispatch(setData(data.filter((item) => item.id !== idToDelete)));
+        setData(data.filter((item) => item.id !== idToDelete));
       } catch (err) {
         console.log(err);
       }
@@ -101,8 +106,8 @@ const BrokersList = () => {
   };
 
   const handleDeleteClick = (id) => {
-    dispatch(setIdToDelete(id));
-    dispatch(setModalOpen(true));
+    setIdToDelete(id);
+    setModalOpen(true);
   };
 
   const handleView = (id) => {
@@ -131,9 +136,9 @@ const BrokersList = () => {
                 <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
                   Delete
                 </div>
-                {/* <div className="statusButton">
+                <div className="statusButton">
                   <StatusButton id={id} collection="brokers-kyc" setData={setData} />
-                </div> */}
+                </div>
               </>
             )}
             <div className="viewButton" onClick={() => handleView(id)}>
@@ -151,7 +156,7 @@ const BrokersList = () => {
       <div className="datatable">
         <div className="datatableTitle">
           Brokers KYC
-          <FilterComponent initialData={data} setFilteredData={(filtered) => dispatch(setFilteredData(filtered))} />
+          <FilterComponent initialData={data} setFilteredData={(filtered) => setFilteredData(filtered)} />
         </div>
         <DataGrid
           components={{
@@ -175,7 +180,7 @@ const BrokersList = () => {
         title="Delete Entry"
         content="Are you sure you want to delete this entry?"
         onConfirm={handleDelete}
-        onCancel={() => dispatch(setModalOpen(false))}
+        onCancel={() => setModalOpen(false)}
       />
     </div>
   );
