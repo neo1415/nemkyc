@@ -47,14 +47,14 @@ const ResetPassword = () => {
 
         const user = auth.currentUser;
 
-        const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+        // const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
 
-        const passwordresetEndpoint = `${serverURL}/clear-force-reset`;
+        // const passwordresetEndpoint = `${serverURL}/clear-force-reset`;
 
         if (user) {
-            const response = await axios.post(passwordresetEndpoint, { uid: user.uid });
-            console.log(`Response from clear-force-reset:`, response.data);
-            console.log(`forcePasswordReset claim set to false for user ${user.email}`);
+            // const response = await axios.post(passwordresetEndpoint, { uid: user.uid });
+            // console.log(`Response from clear-force-reset:`, response.data);
+            // console.log(`forcePasswordReset claim set to false for user ${user.email}`);
             alert("Password has been reset successfully!");
             navigate('/signin');
         }
