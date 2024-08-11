@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { UserAuth } from '../../Context/AuthContext';
+import axios from 'axios';
 import { Box, Typography, TextField, Button, IconButton, InputAdornment } from '@mui/material';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { auth } from '../../APi';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -11,9 +12,10 @@ const ResetPassword = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { confirmPasswordReset } = UserAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -30,23 +32,37 @@ const ResetPassword = () => {
     setError('');
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
+        setError("Passwords do not match.");
+        return;
     }
 
     if (!validatePassword(password)) {
-      setError('Password must include at least 8 characters, includes uppercase, lowercase, number, special char.');
-      return;
+        setError('Password must include at least 8 characters, including uppercase, lowercase, number, special char.');
+        return;
     }
 
     try {
-      await confirmPasswordReset(oobCode, password);
-      alert("Password has been reset successfully!");
-      navigate('/signin');
+        await auth.confirmPasswordReset(oobCode, password);
+
+        const user = auth.currentUser;
+
+        const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+
+        const passwordresetEndpoint = `${serverURL}/clear-force-reset`;
+
+        if (user) {
+            const response = await axios.post(passwordresetEndpoint, { uid: user.uid });
+            console.log(`Response from clear-force-reset:`, response.data);
+            console.log(`forcePasswordReset claim set to false for user ${user.email}`);
+            alert("Password has been reset successfully!");
+            navigate('/signin');
+        }
     } catch (e) {
-      setError(e.message);
+        console.error('Password reset error:', e.message);
+        setError(e.message);
     }
-  };
+};
+
 
   const validatePassword = (password) => {
     const strongPasswordRegex = new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$');
@@ -79,7 +95,7 @@ const ResetPassword = () => {
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton onClick={togglePasswordVisibility} edge="end">
+                  <IconButton onClick={togglePasswordVisibility} edge="end" className='reset-button'>
                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </IconButton>
                 </InputAdornment>
@@ -97,7 +113,7 @@ const ResetPassword = () => {
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton onClick={toggleConfirmPasswordVisibility} edge="end">
+                  <IconButton onClick={toggleConfirmPasswordVisibility} edge="end" className='reset-button'>
                     {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                   </IconButton>
                 </InputAdornment>
