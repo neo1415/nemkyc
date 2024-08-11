@@ -31,39 +31,48 @@ const ResetPassword = () => {
   const handlePasswordReset = async (e) => {
     e.preventDefault();
     setError('');
-
+  
     if (password !== confirmPassword) {
-        setError("Passwords do not match.");
-        return;
+      setError("Passwords do not match.");
+      return;
     }
-
+  
     if (!validatePassword(password)) {
-        setError('Password must include at least 8 characters, including uppercase, lowercase, number, special char.');
-        return;
+      setError('Password must include at least 8 characters, includes uppercase, lowercase, number, special char.');
+      return;
     }
-
+  
     try {
-        await confirmPasswordReset(oobCode, password);
-
-        const user = auth.currentUser;
-
-        // const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
-
-        // const passwordresetEndpoint = `${serverURL}/clear-force-reset`;
-
-        if (user) {
-            // const response = await axios.post(passwordresetEndpoint, { uid: user.uid });
-            // console.log(`Response from clear-force-reset:`, response.data);
-            // console.log(`forcePasswordReset claim set to false for user ${user.email}`);
-            alert("Password has been reset successfully!");
-            navigate('/signin');
+      await confirmPasswordReset(oobCode, password);
+  
+      // Get the current user
+      const user = auth.currentUser;
+  
+      if (user) {
+        // Clear the forcePasswordReset claim
+        const response = await fetch('/clear-force-reset', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ uid: user.uid }),
+        });
+  
+        if (response.ok) {
+          console.log('forcePasswordReset claim cleared successfully for user:', user.uid);
+        } else {
+          console.error('Failed to clear forcePasswordReset claim:', response.statusText);
         }
+  
+        alert("Password has been reset successfully!");
+        navigate('/signin');
+      }
     } catch (e) {
-        console.error('Password reset error:', e.message);
-        setError(e.message);
+      setError(e.message);
+      console.error('Error during password reset:', e);
     }
-};
-
+  };
+  
 
   const validatePassword = (password) => {
     const strongPasswordRegex = new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$');
