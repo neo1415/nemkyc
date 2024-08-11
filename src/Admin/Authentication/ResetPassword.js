@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Box, Typography, TextField, Button, IconButton, InputAdornment } from '@mui/material';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { auth } from '../../APi';
+import { confirmPasswordReset } from 'firebase/auth';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -42,7 +43,7 @@ const ResetPassword = () => {
     }
 
     try {
-        await auth.confirmPasswordReset(oobCode, password);
+        await confirmPasswordReset(oobCode, password);
 
         const user = auth.currentUser;
 
