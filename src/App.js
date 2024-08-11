@@ -1,6 +1,6 @@
 import './App.css';
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import List from './Admin/Table';
 import ProtectedRoute from './Admin/Authentication/ProtectedRoute';
 import { AuthContextProvider } from './Context/AuthContext';
@@ -28,6 +28,7 @@ import IndividualSinglePage from './Admin/SingleUser/IndividualSinglePage';
 import LogsTable from './Admin/Logs/Logs';
 import LogDetails from './Admin/Logs/LogDetails';
 import Unauthourized from './Components/Unauthourized';
+import SuccessEmail from './Components/email success';
 
 function App() {
   return (
@@ -192,6 +193,7 @@ function App() {
               }
             />
             <Route path="/unauthourized" element={<Unauthourized />} />
+            <Route path="/email-succesful" element={<SuccessEmail />} />
             {/* <Route path="*" element={<Navigate to="/unauthourized" />} /> */}
           </Routes>
         </AuthContextProvider>
