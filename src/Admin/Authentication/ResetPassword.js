@@ -6,6 +6,7 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 // import { auth } from '../../APi';
 import { UserAuth } from '../../Context/AuthContext';
 import { auth } from '../../APi';
+import './ResetPassword.css'
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
