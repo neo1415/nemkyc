@@ -29,6 +29,38 @@ const ResetPassword = () => {
     }
   }, [location]);
   
+  // const handlePasswordReset = async (uid,e) => {
+  //   e.preventDefault();
+  //   setError('');
+  
+  //   if (password !== confirmPassword) {
+  //     setError("Passwords do not match.");
+  //     return;
+  //   }
+  
+  //   if (!validatePassword(password)) {
+  //     setError('Password must include at least 8 characters, includes uppercase, lowercase, number, special char.');
+  //     return;
+  //   }
+  
+  //   try {
+  //     await confirmPasswordReset(oobCode, password);
+  //     alert("Password has been reset successfully!");
+  //         // Define the server URL
+  //         const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+  
+  //         // Define the registration endpoint
+  //         const clearPasswordClaim = `${serverURL}/clear-password-reset-claims`;
+        
+  //     // Optionally clear the custom claim without requiring user authentication:
+  //     await axios.post(clearPasswordClaim, { uid });
+  
+  //     navigate('/signin');
+  //   } catch (e) {
+  //     setError(e.message);
+  //   }
+  // };
+
   const handlePasswordReset = async (e) => {
     e.preventDefault();
     setError('');
@@ -47,14 +79,34 @@ const ResetPassword = () => {
       await confirmPasswordReset(oobCode, password);
       alert("Password has been reset successfully!");
   
-      // Optionally clear the custom claim without requiring user authentication:
-      // await axios.post(clearPasswordClaim, { uid });
+      // Call the function to clear custom claims
+      clearCustomClaims();
   
       navigate('/signin');
     } catch (e) {
       setError(e.message);
     }
   };
+
+  const clearCustomClaims = async (uid) => {
+    try {
+      // Define the server URL
+      const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+  
+      // Define the registration endpoint
+      const clearPasswordClaim = `${serverURL}/clear-password-reset-claims`;
+  
+      if (uid) {
+        const claimResponse = await axios.post(clearPasswordClaim, { uid });
+        console.log('Claim clearing response:', claimResponse.data);
+      } else {
+        console.warn('No UID found; skipping claim clearing.');
+      }
+    } catch (error) {
+      console.error('Error clearing custom claims:', error);
+    }
+  };
+  
   
   const validatePassword = (password) => {
     const strongPasswordRegex = new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$');
