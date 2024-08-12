@@ -13,7 +13,7 @@ import {
   DialogContent,
   CircularProgress,
 } from '@mui/material';
-import { csrfProtectedPost } from '../../Components/CsrfUtils';
+// import { csrfProtectedPost } from '../../Components/CsrfUtils';
 const theme = createTheme({
   palette: {
     primary: {

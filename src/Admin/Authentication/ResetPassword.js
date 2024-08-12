@@ -28,9 +28,17 @@ const ResetPassword = () => {
     }
   }, [location]);
 
-  const handlePasswordReset = async (e) => {
+
+  const handlePasswordReset = async (uid, e) => {
     e.preventDefault();
     setError('');
+
+        // Define the server URL
+        const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+  
+        // Define the registration endpoint
+        const clearPasswordClaim = `${serverURL}/clear-password-reset-claims`;
+      
   
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -44,35 +52,16 @@ const ResetPassword = () => {
   
     try {
       await confirmPasswordReset(oobCode, password);
+      alert("Password has been reset successfully!");
   
-      // Get the current user
-      const user = auth.currentUser;
+      // Call the update-claims endpoint to remove forcePasswordReset claim
+      await axios.post(clearPasswordClaim, { uid });
   
-      if (user) {
-        // Clear the forcePasswordReset claim
-        const response = await fetch('/clear-force-reset', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ uid: user.uid }),
-        });
-  
-        if (response.ok) {
-          console.log('forcePasswordReset claim cleared successfully for user:', user.uid);
-        } else {
-          console.error('Failed to clear forcePasswordReset claim:', response.statusText);
-        }
-  
-        alert("Password has been reset successfully!");
-        navigate('/signin');
-      }
+      navigate('/signin');
     } catch (e) {
       setError(e.message);
-      console.error('Error during password reset:', e);
     }
   };
-  
 
   const validatePassword = (password) => {
     const strongPasswordRegex = new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$');
