@@ -3,8 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Box, Typography, TextField, Button, IconButton, InputAdornment } from '@mui/material';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import { auth } from '../../APi';
-import { confirmPasswordReset } from 'firebase/auth';
+// import { auth } from '../../APi';
+import { UserAuth } from '../../Context/AuthContext';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -13,6 +13,7 @@ const ResetPassword = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { confirmPasswordReset } = UserAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
