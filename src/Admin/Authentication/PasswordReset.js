@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './form.scss';
 import { useLocation } from 'react-router-dom';
-import { csrfProtectedPost } from '../../Components/CsrfUtils';
+import axios from 'axios';
+// import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 const PasswordReset = () => {
     const location = useLocation();
