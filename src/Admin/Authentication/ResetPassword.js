@@ -28,18 +28,10 @@ const ResetPassword = () => {
       setError('Error retrieving password reset code from the URL.');
     }
   }, [location]);
-
-
-  const handlePasswordReset = async (uid, e) => {
+  
+  const handlePasswordReset = async (e) => {
     e.preventDefault();
     setError('');
-
-        // Define the server URL
-        const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
-  
-        // Define the registration endpoint
-        const clearPasswordClaim = `${serverURL}/clear-password-reset-claims`;
-      
   
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -55,15 +47,15 @@ const ResetPassword = () => {
       await confirmPasswordReset(oobCode, password);
       alert("Password has been reset successfully!");
   
-      // Call the update-claims endpoint to remove forcePasswordReset claim
-      await axios.post(clearPasswordClaim, { uid });
+      // Optionally clear the custom claim without requiring user authentication:
+      // await axios.post(clearPasswordClaim, { uid });
   
       navigate('/signin');
     } catch (e) {
       setError(e.message);
     }
   };
-
+  
   const validatePassword = (password) => {
     const strongPasswordRegex = new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$');
     return strongPasswordRegex.test(password);
