@@ -5,6 +5,7 @@ import { Box, Typography, TextField, Button, IconButton, InputAdornment } from '
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 // import { auth } from '../../APi';
 import { UserAuth } from '../../Context/AuthContext';
+import { auth } from '../../APi';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -79,29 +80,35 @@ const ResetPassword = () => {
       await confirmPasswordReset(oobCode, password);
       alert("Password has been reset successfully!");
   
-      // Call the function to clear custom claims
-      clearCustomClaims();
+      console.log('Password reset successful. Attempting to clear custom claims.');
+  
+      // Ensure the UID is correctly retrieved here
+      const uid = auth.currentUser?.uid; // You might need to ensure the user is logged in here
+      console.log('Retrieved UID:', uid);
+  
+      await clearCustomClaims(uid);
   
       navigate('/signin');
     } catch (e) {
       setError(e.message);
+      console.error('Error during password reset:', e);
     }
   };
-
+  
   const clearCustomClaims = async (uid) => {
     try {
-      // Define the server URL
-      const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+      if (!uid) {
+        console.warn('No UID provided, skipping claim clearing.');
+        return;
+      }
   
-      // Define the registration endpoint
+      const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
       const clearPasswordClaim = `${serverURL}/clear-password-reset-claims`;
   
-      if (uid) {
-        const claimResponse = await axios.post(clearPasswordClaim, { uid });
-        console.log('Claim clearing response:', claimResponse.data);
-      } else {
-        console.warn('No UID found; skipping claim clearing.');
-      }
+      console.log('Sending request to clear claims for UID:', uid);
+  
+      const claimResponse = await axios.post(clearPasswordClaim, { uid });
+      console.log('Claim clearing response:', claimResponse.data);
     } catch (error) {
       console.error('Error clearing custom claims:', error);
     }

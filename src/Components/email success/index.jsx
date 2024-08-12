@@ -7,8 +7,8 @@ const SuccessEmail = () => {
       <div className="checkmark-container">
         <i className="checkmark">✓</i>
       </div>
-      <h1>Email Sent</h1>
-      <p>You have been sent a password reset email;<br /> Please update your password to continue!</p>
+      <h1 className='success-h1'>Email Sent</h1>
+      <p className='success-p'>You have been sent a password reset email;<br /> Please update your password to continue!</p>
     </div>
   );
 };
