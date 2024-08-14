@@ -11,21 +11,36 @@ const LogDetails = () => {
     const fetchLog = async () => {
       const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
       const logsEndpoint = `${serverURL}/logs/${id}`;
-
+      console.log('Fetching log from:', logsEndpoint); // Debugging log
+  
       try {
         const response = await axios.get(logsEndpoint);
         if (response.status === 200) {
+          console.log('Log fetched successfully:', response.data.log); // Debugging log
           setLog(response.data.log);
         } else {
-          console.error('Error fetching log:', response.statusText);
+          console.error('Error fetching log:', response.status, response.statusText);
         }
       } catch (error) {
-        console.error('Error fetching log:', error);
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          // console.error('Response error:', error.response.data);
+          // console.error('Response status:', error.response.status);
+          // console.error('Response headers:', error.response.headers);
+        } else if (error.request) {
+          // The request was made but no response was received
+          console.error('No response received:', error.request);
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          console.error('Error', error.message);
+        }
       }
     };
-
+  
     fetchLog();
   }, [id]);
+  
 
   if (!log) {
     return <div>Loading...</div>;
