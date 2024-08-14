@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Box, Typography, TextField, Button, IconButton, InputAdornment } from '@mui/material';
+import { Box, Typography, TextField, Button, IconButton, InputAdornment, Backdrop, CircularProgress } from '@mui/material';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-// import { auth } from '../../APi';
 import { UserAuth } from '../../Context/AuthContext';
 import { auth } from '../../APi';
-import './ResetPassword.css'
+import './ResetPassword.css';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -15,11 +14,10 @@ const ResetPassword = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { confirmPasswordReset } = UserAuth();
   const navigate = useNavigate();
   const location = useLocation();
-
-
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -30,92 +28,62 @@ const ResetPassword = () => {
       setError('Error retrieving password reset code from the URL.');
     }
   }, [location]);
-  
-  // const handlePasswordReset = async (uid,e) => {
-  //   e.preventDefault();
-  //   setError('');
-  
-  //   if (password !== confirmPassword) {
-  //     setError("Passwords do not match.");
-  //     return;
-  //   }
-  
-  //   if (!validatePassword(password)) {
-  //     setError('Password must include at least 8 characters, includes uppercase, lowercase, number, special char.');
-  //     return;
-  //   }
-  
-  //   try {
-  //     await confirmPasswordReset(oobCode, password);
-  //     alert("Password has been reset successfully!");
-  //         // Define the server URL
-  //         const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
-  
-  //         // Define the registration endpoint
-  //         const clearPasswordClaim = `${serverURL}/clear-password-reset-claims`;
-        
-  //     // Optionally clear the custom claim without requiring user authentication:
-  //     await axios.post(clearPasswordClaim, { uid });
-  
-  //     navigate('/signin');
-  //   } catch (e) {
-  //     setError(e.message);
-  //   }
-  // };
 
   const handlePasswordReset = async (e) => {
     e.preventDefault();
     setError('');
-  
+
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
-  
+
     if (!validatePassword(password)) {
       setError('Password must include at least 8 characters, includes uppercase, lowercase, number, special char.');
       return;
     }
-  
+
     try {
       await confirmPasswordReset(oobCode, password);
       alert("Password has been reset successfully!");
-  
+
       console.log('Password reset successful. Attempting to clear custom claims.');
-  
-      // Ensure the UID is correctly retrieved here
-      const uid = auth.currentUser?.uid; // You might need to ensure the user is logged in here
+
+      const uid = auth.currentUser?.uid;
       console.log('Retrieved UID:', uid);
-  
+
       await clearCustomClaims(uid);
-  
-      navigate('/signin');
+
+      setLoading(true); // Show the loading modal
+
+      setTimeout(() => {
+        navigate('/signin');
+      }, 2000); // Redirect after 2 seconds
     } catch (e) {
       setError(e.message);
       console.error('Error during password reset:', e);
     }
   };
-  
+
   const clearCustomClaims = async (uid) => {
     try {
       if (!uid) {
         console.warn('No UID provided, skipping claim clearing.');
         return;
       }
-  
+
       const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
       const clearPasswordClaim = `${serverURL}/clear-password-reset-claims`;
-  
+
       console.log('Sending request to clear claims for UID:', uid);
-  
+
       const claimResponse = await axios.post(clearPasswordClaim, { uid });
       console.log('Claim clearing response:', claimResponse.data);
     } catch (error) {
       console.error('Error clearing custom claims:', error);
     }
   };
-  
-  
+
   const validatePassword = (password) => {
     const strongPasswordRegex = new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$');
     return strongPasswordRegex.test(password);
@@ -180,6 +148,14 @@ const ResetPassword = () => {
           </Button>
         </Box>
       </form>
+
+      {/* Loading Modal */}
+      <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={loading}>
+        <Box display="flex" flexDirection="column" alignItems="center">
+          <CircularProgress color="inherit" />
+          <Typography mt={2}>Please wait while you are redirected to the login page...</Typography>
+        </Box>
+      </Backdrop>
     </Box>
   );
 };
