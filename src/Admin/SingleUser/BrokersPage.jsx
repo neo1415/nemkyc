@@ -1,4 +1,4 @@
-import React,{useEffect, useState} from 'react'
+import React,{useEffect} from 'react'
 import './single.scss'
 import {doc, onSnapshot } from "firebase/firestore";
 import { db } from '../../APi/index';
@@ -6,7 +6,7 @@ import { useParams } from 'react-router-dom';
 import { HiDownload } from 'react-icons/hi';
 import jsPDF from "jspdf";
 import "jspdf-autotable";
-import { toast, ToastContainer } from 'react-toastify';
+import { toast} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import useAutoLogout from '../../Components/Timeout';
 import { UserAuth } from '../../Context/AuthContext';
@@ -683,19 +683,27 @@ doc.save('KYC Form.pdf');
         <div className='documents'>
           <h1>Documents</h1>
           <div className='documents-content'>
+          {data.identification ? (
             <a href={data.identification} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 Download Identification <HiDownload style={style} />{' '}
               </button>
             </a>
+             ) : (
+              <p className='info'>Identification not available</p>
+             )}
 
+{data.identification2 ? (
             <a href={data.identification2} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 Download Director 2's Identification <HiDownload style={style} />{' '}
               </button>
             </a>
+                   ) : (
+                    <p className='info'>Identification 2 not available</p>
+                   )}
 
             <a href={data.Incorporation} target='_blank' rel='noreferrer'>
               {' '}
@@ -724,13 +732,16 @@ doc.save('KYC Form.pdf');
                 Download Tax Clearance Certificate <HiDownload style={style} />{' '}
               </button>
             </a> */}
-
+        {data.NAICOMForm ? (
             <a href={data.NAICOMForm} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 NAICOM Lisence Certificate <HiDownload style={style} />{' '}
               </button>
             </a>
+          ) : (
+              <p className='info'>NAICOM Lisence not available</p>
+             )}
           </div>
         </div>
       </div>

@@ -46,15 +46,13 @@ const ResetPassword = () => {
     try {
       await confirmPasswordReset(oobCode, password);
       alert("Password has been reset successfully!");
-
+      setLoading(true); // Show the loading modal
       console.log('Password reset successful. Attempting to clear custom claims.');
 
       const uid = auth.currentUser?.uid;
       console.log('Retrieved UID:', uid);
 
       await clearCustomClaims(uid);
-
-      setLoading(true); // Show the loading modal
 
       setTimeout(() => {
         navigate('/signin');

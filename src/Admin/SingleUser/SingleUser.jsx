@@ -1,4 +1,4 @@
-import React,{useEffect, useState} from 'react'
+import React,{useEffect} from 'react'
 import './single.scss'
 import {doc, onSnapshot } from "firebase/firestore";
 import { db } from '../../APi/index';
@@ -7,7 +7,7 @@ import { HiDownload } from 'react-icons/hi';
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import useAutoLogout from '../../Components/Timeout';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { UserAuth } from '../../Context/AuthContext';
 import useFetchUserRole from '../../Components/checkUserRole';

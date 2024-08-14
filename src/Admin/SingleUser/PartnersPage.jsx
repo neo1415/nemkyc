@@ -1,4 +1,4 @@
-import React,{useEffect, useState} from 'react'
+import React,{useEffect} from 'react'
 import './single.scss'
 import {doc, onSnapshot } from "firebase/firestore";
 import { db } from '../../APi/index';
@@ -8,7 +8,7 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import useAutoLogout from '../../Components/Timeout';
 import { UserAuth } from '../../Context/AuthContext';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import useFetchUserRole from '../../Components/checkUserRole';
 import { useDispatch, useSelector } from 'react-redux';
@@ -681,54 +681,82 @@ doc.save('KYC Form.pdf');
         <div className='documents'>
           <h1>Documents</h1>
           <div className='documents-content'>
+
+           {data.identification ? (
             <a href={data.identification} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 Download Identification <HiDownload style={style} />{' '}
               </button>
             </a>
-
+          ) : (
+                <p className='info'>Identification not available</p>
+              )}
+ {data.identification2 ? (
             <a href={data.identification2} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 Download Director 2's Identification <HiDownload style={style} />{' '}
               </button>
             </a>
+ ) : (
+                <p className='info'>Identification 2 not available</p>
+              )}
 
+ {data.incorporation ? (
             <a href={data.Incorporation} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 Download Certificate of Incorporation <HiDownload style={style} />{' '}
               </button>
             </a>
+   ) : (
+                <p className='info'>Incorporation certificate not available</p>
+              )}
 
+               {data.formCO7 ? (
             <a href={data.formCO7} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 Download CAC Status Report <HiDownload style={style} />{' '}
               </button>
             </a>
+               ) : (
+                <p className='info'> CAC Status report not available</p>
+              )}
             
+            {data.VAT ? (
             <a href={data.VAT} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 Download VAT Registration Lisence <HiDownload style={style} />{' '}
               </button>
             </a>
+       ) : (
+                <p className='info'> VAT not available</p>
+              )}
 
+            {data.tax ? (
             <a href={data.tax} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 Download Tax Clearance Certificate <HiDownload style={style} />{' '}
               </button>
             </a>
+                   ) : (
+                <p className='info'> Tax Clearance Certificate not available</p>
+              )}
 
+  {data.NAICOMForm ? (
             <a href={data.NAICOMForm} target='_blank' rel='noreferrer'>
               {' '}
               <button className='form-button'>
                 NAICOM Lisence Certificate <HiDownload style={style} />{' '}
               </button>
             </a>
+                ) : (
+                <p className='info'> NAICOM Lisence Certificate Certificate not available</p>
+              )}
           </div>
         </div>
       </div>

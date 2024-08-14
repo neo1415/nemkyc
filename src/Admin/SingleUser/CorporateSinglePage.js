@@ -1,6 +1,6 @@
-import React,{useEffect, useState} from 'react'
+import React,{useEffect} from 'react'
 import { doc, onSnapshot } from "firebase/firestore";
-import { db } from '../../APi/index';
+import { db, storage } from '../../APi/index';
 import { useParams } from 'react-router-dom';
 import { HiDownload } from 'react-icons/hi';
 import jsPDF from "jspdf";
@@ -8,11 +8,12 @@ import "jspdf-autotable";
 import './single.scss'
 import { UserAuth } from '../../Context/AuthContext';
 import useAutoLogout from '../../Components/Timeout';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast, } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import useFetchUserRole from '../../Components/checkUserRole';
 import { useDispatch, useSelector } from 'react-redux';
 import images from '../../Constants/images'
+import { ref,getDownloadURL } from "firebase/storage";
 
 const CorporateSinglePage = () => {
 
@@ -22,6 +23,32 @@ const CorporateSinglePage = () => {
 const data = useSelector(state => state.data);
 const editData = useSelector(state => state.editData);
 const editingKey = useSelector(state => state.editingKey);
+
+const handleDownload = async (url, fileName) => {
+  try {
+   
+    const fileRef = ref(storage, url);
+    const downloadUrl = await getDownloadURL(fileRef);
+
+    const response = await fetch(downloadUrl);
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = fileName || 'downloaded-file';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    // Optionally, revoke the blob URL after the download
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (error) {
+    console.error('Error downloading file:', error);
+    toast.error('Failed to download document.');
+  }
+};
+
 
 const handleInputChange = (event) => {
   dispatch({ type: 'SET_EDIT_DATA', data: { ...editData, [event.target.name]: event.target.value } });
@@ -301,7 +328,10 @@ const handleCancelClick = () => {
               <p>Verification Document</p>
               {data.verificationDoc ? (
                 <a href={data.verificationDoc} target='__blank'>
-                  <button className='form-button'>
+                 <button
+                  className='form-button'
+                  onClick={() => handleDownload(data.verificationDoc, 'Verification_Document.pdf')}
+                >
                     Download Document <HiDownload style={style} />
                   </button>
                 </a>
