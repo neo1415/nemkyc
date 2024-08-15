@@ -34,25 +34,21 @@ const UserRegistration = ({ onUserAdded }) => {
     setError('');
     const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
     const registrationEndpoint = `${serverURL}/register`;
-
+  
     try {
       setIsLoading(true);
-      const response = await axios.post(registrationEndpoint, {
-        email,
-        name,
-      });
-
+  
+      const response = await axios.post(registrationEndpoint, { email, name });
+      
       if (response.status === 201) {
-        openSuccessModal();
-        if (onUserAdded) {
-          onUserAdded({ email, name, role: 'Default' });
-        }
+        openSuccessModal(); // You can still open the success modal for feedback
+        // No need to update the users state manually here
       } else {
         setError('An unexpected error occurred. Please try again.');
       }
     } catch (error) {
       console.error('Error during registration:', error);
-      if (error.response && error.response.data && error.response.data.message) {
+      if (error.response?.data?.message) {
         setError(error.response.data.message);
       } else if (error.message.includes('Network Error')) {
         setError('Unable to connect to the server. Please check your internet connection.');
@@ -63,7 +59,7 @@ const UserRegistration = ({ onUserAdded }) => {
       setIsLoading(false);
     }
   };
-
+  
   const openSuccessModal = () => {
     setSuccessModalOpen(true);
     setTimeout(() => {
