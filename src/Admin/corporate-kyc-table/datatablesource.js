@@ -87,6 +87,42 @@ export const UserColumns = [
     width: 85,     
   },
 
+  {
+    field: "accountNumber",
+    headerName: "Account Number",
+    width: 125,     
+  },
+
+  {
+    field: "bankName",
+    headerName: "Bank Name",
+    width: 125,     
+  },
+
+  {
+    field: "bankBranch",
+    headerName: "Bank Branch",
+    width: 125,     
+  },
+
+  {
+    field: "accountNumber2",
+    headerName: "Dollar Account Number",
+    width: 125,     
+  },
+
+  {
+    field: "bankName2",
+    headerName: "Dollar Bank Name",
+    width: 125,     
+  },
+
+  {
+    field: "bankBranch2",
+    headerName: "Dollar Bank Branch",
+    width: 125,     
+  },
+
 
   // {
   //   field: "signature",

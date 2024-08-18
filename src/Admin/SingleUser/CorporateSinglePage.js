@@ -169,6 +169,11 @@ const handleCancelClick = () => {
           ['Nature Of Business', data.natureOfBusiness],
           ['Estimated Turnover', data.estimatedTurnover],
           ['Premium Payment Source', data.premiumPaymentSource],
+          ['Account Number', data.accountNumber],
+          ['Bank Name', data.bankName],
+          ['Bank Branch', data.bankBranch],
+          ['Account Opening Date', data.accountOpeningDate],
+
       ];
   
       const companyTableProps = {
@@ -199,6 +204,79 @@ const handleCancelClick = () => {
   
       doc.autoTable(companyTableColumn, companyTableRows, companyTableProps);
   
+      // Add section 2 - Beneficial Owners Information
+doc.setFontSize(18);
+doc.setTextColor(0, 0, 0);
+doc.text('Account Details', 40, doc.lastAutoTable.finalY + 60);
+
+const beneficialOwnersTableColumn = ['Naira Account', ''];
+const beneficialOwnersTableRows = [
+        ['Account Number', data.accountNumber],
+        ['Bank Name', data.bankName],
+        ['Bank Branch', data.bankBranch],
+        ['Account Opening Date', data.accountOpeningDate]
+      ];
+
+const beneficialOwnersTableProps = {
+startY: doc.lastAutoTable.finalY + 80,
+styles: {
+halign: 'middle',
+valign: 'middle',
+fontSize: 12,
+cellPadding: 8,
+overflow: 'linebreak',
+lineWidth: 0.1,
+},
+columnStyles: {
+0: {
+fillColor: [255, 255, 255],
+textColor: [0, 0, 0],
+fontStyle: 'bold',
+},
+1: {
+fillColor: [255, 255, 255],
+textColor: [0, 0, 0],
+},
+},
+};
+
+doc.autoTable(beneficialOwnersTableColumn, beneficialOwnersTableRows, beneficialOwnersTableProps);
+
+// Add sub-section - Beneficial Owner 2 Information
+
+const secondBeneficialOwnersTableColumn = ['Dollar Account', ''];
+const secondBeneficialOwnersTableRows = [
+        ['Account Number', data.accountNumber2],
+        ['Bank Name', data.bankName2],
+        ['Bank Branch', data.bankBranch2],
+        ['Account Opening Date', data.accountOpeningDate2]
+      ];
+
+const secondBeneficialOwnersTableProps = {
+startY: doc.lastAutoTable.finalY + 60,
+styles: {
+halign: 'middle',
+valign: 'middle',
+fontSize: 12,
+cellPadding: 8,
+overflow: 'linebreak',
+lineWidth: 0.1,
+},
+columnStyles: {
+0: {
+fillColor: [255, 255, 255],
+textColor: [0, 0, 0],
+fontStyle: 'bold',
+},
+1: {
+fillColor: [255, 255, 255],
+textColor: [0, 0, 0],
+},
+},
+};
+
+doc.autoTable(secondBeneficialOwnersTableColumn, secondBeneficialOwnersTableRows, secondBeneficialOwnersTableProps);
+
       // Add privacy declarations
       doc.setFontSize(14);
       // doc.setFontStyle('bold' , doc.internal.pageSize.getWidth() / 2, 150, { align: 'center' })
@@ -224,7 +302,7 @@ const handleCancelClick = () => {
       declarations.forEach((declaration, index) => {
         const lines = doc.splitTextToSize(declaration.text, 500); // Adjust the width as needed
         doc.text(lines, 50, yPosition);
-        const textWidth = doc.getTextWidth(declaration.signature);
+        // const textWidth = doc.getTextWidth(declaration.signature);
         // doc.line(80, yPosition + 5, 50 + textWidth, yPosition + 5); // Underline the signature
         yPosition += 24 * lines.length; // Adjust this value as needed to space out the declarations
     });
@@ -232,7 +310,7 @@ const handleCancelClick = () => {
     // Add date under the declarations
     const dateText = `Date: ${new Date().toLocaleDateString()}`;
     doc.text(dateText, 50, yPosition + 20);
-    const dateWidth = doc.getTextWidth(dateText);
+    // const dateWidth = doc.getTextWidth(dateText);
     // doc.line(90, yPosition + 30, 50 + dateWidth, yPosition + 30); // Underline the date
       
       // Save the PDF
@@ -322,6 +400,77 @@ const handleCancelClick = () => {
 
       <div className='form-contents'>
         <div className='flex-content'>
+
+        <ul>
+            <h1>Account Details</h1>
+        {[
+  { label: 'Account Number', key: 'accountNumber' },
+  { label: 'Bank Name', key: 'bankName' },
+  { label: 'Bank Branch', key: 'bankBranch' },
+  { label: 'Account Opening Date', key: 'accountOpeningDate' },
+].map(({ label, key }) => (
+  <li className='form-list' key={key}>
+    <p>{label}</p>
+    {editingKey === key ? (
+      <form onSubmit={(event) => handleFormSubmit(event, key)}>
+        <input
+          type='text'
+          name={key}
+          value={editData[key]}
+          onChange={handleInputChange}
+          className='edit-input'
+        />
+        <button type='submit' className='edit-submit'>Save</button>
+        <button type='button' onClick={handleCancelClick} className='edit-cancel'>
+          Cancel
+        </button>
+      </form>
+    ) : (
+      <>
+        <p className='info'>{data[key]}</p>
+        {userRole === 'admin' && (
+          <button onClick={() => handleEditClick(key)} className='edit-button'>Edit</button>
+        )}
+      </>
+    )}
+  </li>
+))}
+          </ul>
+          <ul>
+            <h1>Account Details (Dollars)</h1>
+         {[
+  { label: 'Account Number', key: 'accountNumber2' },
+  { label: 'Bank Name', key: 'bankName2' },
+  { label: 'Bank Branch', key: 'bankBranch2' },
+  { label: 'Account Opening Date', key: 'accountOpeningDate2' },
+].map(({ label, key }) => (
+  <li className='form-list' key={key}>
+    <p>{label}</p>
+    {editingKey === key ? (
+      <form onSubmit={(event) => handleFormSubmit(event, key)}>
+        <input
+          type='text'
+          name={key}
+          value={editData[key]}
+          onChange={handleInputChange}
+          className='edit-input'
+        />
+        <button type='submit' className='edit-submit'>Save</button>
+        <button type='button' onClick={handleCancelClick} className='edit-cancel'>
+          Cancel
+        </button>
+      </form>
+    ) : (
+      <>
+        <p className='info'>{data[key]}</p>
+        {userRole === 'admin' && (
+          <button onClick={() => handleEditClick(key)} className='edit-button'>Edit</button>
+        )}
+      </>
+    )}
+  </li>
+))}
+          </ul>
           <ul>
             <h1>Documents</h1>
             <li className='form-list'>

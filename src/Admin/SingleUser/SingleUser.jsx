@@ -362,7 +362,7 @@ doc.autoTable(secondBeneficialOwnersTableColumn, secondBeneficialOwnersTableRows
   declarations.forEach((declaration, index) => {
     const lines = doc.splitTextToSize(declaration.text, 500); // Adjust the width as needed
     doc.text(lines, 50, yPosition);
-    const textWidth = doc.getTextWidth(declaration.signature);
+    // const textWidth = doc.getTextWidth(declaration.signature);
     // doc.line(80, yPosition + 5, 50 + textWidth, yPosition + 5); // Underline the signature
     yPosition += 24 * lines.length; // Adjust this value as needed to space out the declarations
 });
@@ -370,7 +370,7 @@ doc.autoTable(secondBeneficialOwnersTableColumn, secondBeneficialOwnersTableRows
 // Add date under the declarations
 const dateText = `Date: ${new Date().toLocaleDateString()}`;
 doc.text(dateText, 50, yPosition + 20);
-const dateWidth = doc.getTextWidth(dateText);
+// const dateWidth = doc.getTextWidth(dateText);
 // doc.line(90, yPosition + 30, 50 + dateWidth, yPosition + 30); // Underline the date
 
 // Add section 3 - Declaration and Signature

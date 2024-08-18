@@ -1,6 +1,10 @@
 import * as yup from 'yup';
 import { sanitizeEmail, sanitizeString } from '../../Components/SanitizationUtils';
 
+
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
 export const schema1 = yup.object().shape({
     branchOffice: yup.string().transform(sanitizeString).required('Branch Office is required'),
     insured: yup.string().required('insured is required').transform(sanitizeString),
@@ -19,6 +23,29 @@ export const schema2 = yup.object().shape({
 });
 
 export const schema3 = yup.object().shape({
+        accountNumber: yup.string().required('Account Number is required').matches(/^[0-9]+$/, 'Account Number must be numeric').min(10).max(10).transform(sanitizeString),
+        bankName: yup.string().required('Bank Name is required').transform(sanitizeString),
+        accountOpeningDate:  yup.mixed()
+        .test('not-empty', 'Date is required', value => value !== '')
+        .test('is-valid-date', 'Date must be a valid date', value => value === null || !isNaN(Date.parse(value)))
+        .test('not-in-future', 'The date cannot be in the future', value => {
+          if (value === null || value === '') return true;
+          return new Date(value) <= today;
+        })
+        .required('Date is required'),
+        bankBranch: yup.string().required('Bank Branch is required').transform(sanitizeString),
+      
+        accountNumber2: yup.string().notRequired().max(10).transform(sanitizeString),
+        accountOpeningDate2: yup.date()
+        .transform((value, originalValue) => {
+          return originalValue === "" ? null : new Date(originalValue);
+        })
+        .nullable()
+        .notRequired()
+        .test('is-date', 'Date must be a valid date', value => !value || !isNaN(Date.parse(value)))
+        .test('is-not-future', 'The date cannot be in the future', value => !value || value <= today),  bankBranch2: yup.string().transform(sanitizeString),
+      
+      
 // checkbox: yup.boolean()
 // .required('You must accept the terms and conditions')
 // .oneOf([true], 'You must accept the terms and conditions'),

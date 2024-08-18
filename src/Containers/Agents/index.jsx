@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './KYC.scss'
 import { motion } from "framer-motion";
 import { images } from '../../Constants';
@@ -54,6 +54,25 @@ const [isLoading, setIsLoading] = useState(false);
   };
   
 
+  useEffect(() => {
+    // Fetch saved data for the current step if it exists
+    async function fetchSavedData() {
+      try {
+        const response = await axios.get(`${endpoints.getAgentsData}?step=${step}`);
+        if (response.data) {
+          const savedData = response.data;
+          Object.keys(savedData).forEach(key => {
+            setValue(key, savedData[key]);
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load saved form data:', error);
+      }
+    }
+    fetchSavedData();
+  }, [step, setValue]);
+
+
   const resetForm = () => {
     window.location.reload(false);
   };
@@ -62,6 +81,13 @@ const [isLoading, setIsLoading] = useState(false);
     setIsSubmitted(false);
   };
 
+  const saveDataForStep = async (stepData) => {
+    try {
+      await axios.post(`${endpoints.saveAgentsStepData}`, { step, data: stepData });
+    } catch (error) {
+      console.error('Failed to save form data:', error);
+    }
+  };
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -113,9 +139,10 @@ const [isLoading, setIsLoading] = useState(false);
       console.log('Validation result:', result);
       console.log('Form errors:', errors);
   
-      if (result) {
-        setStep(step + 1);
-      }
+    if (result) {
+      await saveDataForStep(formValues); // Save current step data before moving to the next step
+      setStep(step + 1);
+    }
     };
   
   const prevStep = () => {

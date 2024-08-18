@@ -16,6 +16,7 @@ import axios from 'axios';
 import { CircularProgress } from '@mui/material';
 import { endpoints } from '../../Admin/Authentication/Points';
 import { schema1, schema2, schema3 } from './FormSchema';
+import AccountDetails from './Inputs/AccountDetails';
 // import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 function IndividualKYC() {
@@ -185,7 +186,32 @@ const [isLoading, setIsLoading] = useState(false);
           </motion.div>
         )}
 
-      {step === 2 && (
+
+{step === 2 && (
+          <motion.div
+          initial={{ opacity: 0, x: 0}}
+          animate={{ opacity: 1, x: 0 }}
+          transition= {{ duration:.5, ease:'easeOut' }}
+          exit={{ opacity: 0, x: 50 }}
+          className="form-step">
+
+            <h3>Account Details</h3>
+              <AccountDetails
+                register={register}
+                errors={errors}
+                watch={watch}
+                control={control}
+               />
+           
+            <div className='button-flex'>
+            <button type="button" onClick={prevStep}>Previous</button>
+            <button type="button"  onClick={nextStep} >Next</button>
+            </div>
+          </motion.div>
+
+        )}
+
+{step === 3 && (
         <motion.div
           initial={{ opacity: 0, x: 50}}
           animate={{ opacity: 1, x:0 }}
@@ -220,7 +246,8 @@ const [isLoading, setIsLoading] = useState(false);
       </motion.div>
     )}
 
- {step === 3 && (
+
+ {step === 4 && (
   <motion.div
       initial={{ opacity: 0, x: 50}}
       animate={{ opacity: 1, x: 0 }}

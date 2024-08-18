@@ -16,6 +16,8 @@ import axios from 'axios';
 import { endpoints } from '../../Admin/Authentication/Points';
 import { schema1, schema2, schema3 } from './FormSchema';
 import { CircularProgress } from '@mui/material';
+
+
 function CorporateKYC() {
   const combinedSchema = yup.object().shape({
     ...schema1.fields,
@@ -142,13 +144,13 @@ const [isLoading, setIsLoading] = useState(false);
       }
     };
   
-  const prevStep = () => {
+    const prevStep = () => {
     setStep(step - 1);
-  };
+    };
 
   return (
     <div className='forms' style={{display:'flex',flexDirection:'column' }}>
-      <div className='forms-page'>
+      <div className='forms-page-c'>
         <div className='picture'>
           <img src={images.form4} className='form-img' alt='fixed' />
         </div>
@@ -157,7 +159,7 @@ const [isLoading, setIsLoading] = useState(false);
         animate={{ opacity: 1, x: 0 }}
         transition= {{ duration:.5, ease:'easeOut' }}
         exit={{ opacity: 0, x: 0 }}
-        className="multisteps-form">
+        className="multisteps-form-c">
 
       <form onSubmit={handleSubmit}>
         {step === 1 && (
@@ -230,8 +232,6 @@ const [isLoading, setIsLoading] = useState(false);
       exit={{ opacity: 0, x: 50 }}
       className="form-step">
 
-<h3>Privacy Statement</h3>
-
 <AdditionalInfo 
     register={register}
     errors={errors}
@@ -241,7 +241,7 @@ const [isLoading, setIsLoading] = useState(false);
     trigger={trigger}
 />
       
-      <div className='button-flex'>
+      <div className='button-flex-c'>
       <button onClick={prevStep}>Previous</button>
       <button type="submit" disabled={isLoading} style={{ position: 'relative' }}>
                 {isLoading ? <CircularProgress size={24} style={{ color: 'white', position: 'absolute' }} /> : 'Submit'}

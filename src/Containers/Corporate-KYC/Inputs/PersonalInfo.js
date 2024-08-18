@@ -1,10 +1,10 @@
 import React, {useState} from 'react'
-import { useForm,FormProvider } from 'react-hook-form';
+// import { useForm,FormProvider } from 'react-hook-form';
 import {Controller} from 'react-hook-form';
 
 const PersonalInfo = ({register, errors, control}) => {
 
-  const methods = useForm();
+  // const methods = useForm();
 
   const [showOtherIncomeField, setShowOtherIncomeField] = useState(false);
 

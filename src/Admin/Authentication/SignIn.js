@@ -14,42 +14,45 @@ const SignIn = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-  
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const idTokenResult = await userCredential.user.getIdTokenResult();
-  
-      if (idTokenResult.claims.forcePasswordReset) {
-        // Send password reset email
-        await sendPasswordResetEmail(auth, email);
-        console.log('Password reset email sent successfully to:', email);
-  
-        // Redirect user to a page that instructs them to check their email
-        navigate('/email-succesful');  // A page with instructions to check email
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
+  setLoading(true);
+
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // if (!user.emailVerified) {
+    //   setError('Please verify your email before logging in.');
+    //   setLoading(false);
+    //   return;
+    // }
+
+    const idTokenResult = await user.getIdTokenResult();
+
+    if (idTokenResult.claims.forcePasswordReset) {
+      await sendPasswordResetEmail(auth, email);
+      console.log('Password reset email sent successfully to:', email);
+      navigate('/email-succesful');
+    } else {
+      if (idTokenResult.claims.role === 'admin') {
+        navigate('/adminHome');
+      } else if (idTokenResult.claims.role === 'moderator') {
+        navigate('/adminHome');
       } else {
-        // Check the user's role and redirect accordingly
-        if (idTokenResult.claims.role === 'admin') {
-          navigate('/adminHome');
-        } else if (idTokenResult.claims.role === 'moderator') {
-          navigate('/adminHome');
-        } else {
-          navigate('/adminHome');  // Default user home
-        }
+        navigate('/adminHome');
       }
-  
-      setLoading(false);
-    } catch (e) {
-      setLoading(false);
-      setError(e.message || 'Invalid email or password or check your internet connection');
-      console.error('Error during sign-in:', e);
     }
-  };
-  
-  
+
+    setLoading(false);
+  } catch (e) {
+    setLoading(false);
+    setError(e.message || 'Invalid email or password or check your internet connection');
+    console.error('Error during sign-in:', e);
+  }
+};
+
 
   return (
     <Box className='login' display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="100vh">

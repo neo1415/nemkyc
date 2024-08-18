@@ -1,4 +1,4 @@
-import React,{useEffect, useState} from 'react'
+import React,{useEffect} from 'react'
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from '../../APi/index';
 import { useParams } from 'react-router-dom';
@@ -8,7 +8,7 @@ import "jspdf-autotable";
 import './single.scss'
 import { UserAuth } from '../../Context/AuthContext';
 import useAutoLogout from '../../Components/Timeout';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import useFetchUserRole from '../../Components/checkUserRole';
 import { useDispatch, useSelector } from 'react-redux';
@@ -189,7 +189,7 @@ const handleCancelClick = () => {
       declarations.forEach((declaration, index) => {
         const lines = doc.splitTextToSize(declaration.text, 500); // Adjust the width as needed
         doc.text(lines, 50, yPosition);
-        const textWidth = doc.getTextWidth(declaration.signature);
+        // const textWidth = doc.getTextWidth(declaration.signature);
         // doc.line(80, yPosition + 5, 50 + textWidth, yPosition + 5); // Underline the signature
         yPosition += 24 * lines.length; // Adjust this value as needed to space out the declarations
     });
@@ -197,7 +197,7 @@ const handleCancelClick = () => {
     // Add date under the declarations
     const dateText = `Date: ${new Date().toLocaleDateString()}`;
     doc.text(dateText, 50, yPosition + 20);
-    const dateWidth = doc.getTextWidth(dateText);
+    // const dateWidth = doc.getTextWidth(dateText);
     // doc.line(90, yPosition + 30, 50 + dateWidth, yPosition + 30); // Underline the date
 
        
