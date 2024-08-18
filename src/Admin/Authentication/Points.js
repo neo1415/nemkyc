@@ -8,6 +8,7 @@ export const endpoints = {
   getBrokersData: `${serverURL}/get-brokers-data`,
   getPartnersData: `${serverURL}/get-partners-data`,
   getAgentsData: `${serverURL}/get-agents-data`,
+  saveAgentsStepData: `${serverURL}/save-agents-step-data`,
   getCorporateKYCData: `${serverURL}/get-corporate-kyc-data`,
   getIndividualKYCData: `${serverURL}/get-individual-kyc-data`,
   getIndividualData: `${serverURL}/get-individual-data`,

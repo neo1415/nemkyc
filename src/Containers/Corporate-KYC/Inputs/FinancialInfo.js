@@ -12,8 +12,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import Backdrop from '@mui/material/Backdrop';
 import Fade from '@mui/material/Fade';
-import Checkbox from '@mui/material/Checkbox';
-import FormControlLabel from '@mui/material/FormControlLabel';
 
 const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFileNames, trigger}) => {
 
@@ -22,13 +20,6 @@ const FinancialInfo = ({register, errors, control, setFileUrls,fileNames, setFil
   const [open, setOpen] = useState(false);
 
   const methods = useForm();
-
-  const [showOtherIncomeField, setShowOtherIncomeField] = useState(false);
-
-  const handleIncomeSelectChange = (value) => {
-    setShowOtherIncomeField(value === 'Other');
-    return value === 'Other' ? '' : value;
-  };
 
   const showSuccessToast = () => {
     toast.success('Your file has been uploaded successfully!');

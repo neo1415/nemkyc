@@ -5,10 +5,11 @@ $light-color: #f8f9fa;
 $dark-color: #343a40;
 
 // Style the entire multistep form container
-.forms-page{
+.forms-page-c{
   margin-top: -5.5rem;
   background-color: #ffffff;
   opacity: 1;
+  overflow-x: hidden;
   background-image: radial-gradient(#800020 0.1px, #f7f7f8 0.9px);
   background-size: 18px 18px;
   align-items: center;
@@ -56,18 +57,24 @@ hr{
 .declaration{
   display: flex;
   flex-direction: column !important;
-  width: 70% !important;
-  @media screen and (max-width:920px) {
-    width: 95% !important;
+  width: 65% ;
+  align-items: center;
+  @media screen and (max-width:1100px) {
+    width: 75% ;
+  }
+  @media screen and (max-width:540px) {
+    width: 106% !important;
   }
   
 }
-.individual{
+.individual-c{
   display: flex;
   justify-content: flex-end;
-  align-items: center;
-  @media screen and (max-width:720px) {
+  align-items: flex-end;
+  flex-direction: column;
+  @media screen and (max-width:920px) {
   justify-content: center;
+  align-items: center;
   }
 }
 .declaration-head{
@@ -90,11 +97,12 @@ list-style: circle;
     border-radius: 0% !important;
     }
 }
-.multisteps-form {
+.multisteps-form-c {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   width: 85%;
+  overflow-x: hidden;
   border: none;
   padding: 2rem;
 
@@ -106,8 +114,8 @@ list-style: circle;
 @media screen and (max-width:1300px) {
   width: 95%;
 }
-@media screen and (max-width:1100px) {
-  width: 99%;
+@media screen and (max-width:915px) {
+  width: 115%;
 }
 
   // Style each form step
@@ -181,12 +189,16 @@ list-style: circle;
       margin-top: .5rem;
       padding: 0.5rem 1rem;
       border: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       border-radius: 8px;
       font-size: 1rem;
       color: $light-color;
       background-color: #800020;
       cursor: pointer;
       width: 9rem;
+      height: 3rem;
       margin-bottom: 3.5rem;
       
 
@@ -203,14 +215,25 @@ list-style: circle;
   display:flex;
   // align-items: center;
   justify-content: center;
-  @media screen and (max-width:1000px) {
+  @media screen and (max-width:720px) {
     flex-direction: column;
 }
 }
-.button-flex{
+.button-flex-c{
   display: flex;
   column-gap: 4rem;
   margin-bottom: 2rem;
+  align-items: center;
+  width: 70%;
+  justify-content: flex-end;
+
+  @media screen and (max-width:915px) {
+    width:40%;
+}
+
+@media screen and (max-width:540px) {
+  width: 75% ;
+}
 }
 
 // input[type="date"]::before {
