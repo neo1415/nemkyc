@@ -7,7 +7,10 @@ today.setHours(0, 0, 0, 0);
 
 export const schema1 = yup.object().shape({
   officeLocation:(yup.string().transform(sanitizeString)).required('Office Locatioon is required'),
-    insured: yup.string().required('insured is required').transform(sanitizeString),
+  title: yup.string().required('Title is required').transform(sanitizeString),
+  firstName: yup.string().required('First Name is required').transform(sanitizeString),
+  middleName: yup.string().required('Middle Name is required').transform(sanitizeString),
+  lastName: yup.string().required('Last Name is required').transform(sanitizeString),
     contactAddress: yup.string().required('Contact Address is required').transform(sanitizeString),
     occupation: yup.string().required('Occupation is required').transform(sanitizeString),
     gender: yup.string().required('Gender is required').transform(sanitizeString), 
@@ -29,6 +32,7 @@ export const schema1 = yup.object().shape({
     residentialAddress: yup.string().required('Residential Address is required').transform(sanitizeString),
     GSMno: yup.string().required('GSM Number is required').transform(sanitizeString),
     emailAddress: yup.string().email().required('Email Address is required').transform(sanitizeEmail),
+    taxIDNo: yup.string().required('Tax ID Number is required').transform(sanitizeString),
     identificationType: yup.string().required('Identification Type is required').transform(sanitizeString),
     idNumber: yup.string().required('Identification Number is required').transform(sanitizeString),
     issuedDate:  yup.mixed()

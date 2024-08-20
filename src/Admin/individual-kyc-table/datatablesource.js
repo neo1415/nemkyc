@@ -34,11 +34,28 @@ export const UserColumns = [
   },
 
   {
-    field: "insured",
-    headerName: "Insured",
+    field: "title",
+    headerName: "Title",
     width: 180,
   },
 
+  {
+    field: "firstName",
+    headerName: "First Name",
+    width: 180,
+  },
+
+  {
+    field: "middleName",
+    headerName: "Middle Name",
+    width: 180,
+  },
+
+  {
+    field: "lastName",
+    headerName: "Last Name",
+    width: 180,
+  },
   {
     field: "contactAddress",
     headerName: "Contact Address",
@@ -127,6 +144,12 @@ export const UserColumns = [
     field: "emailAddress",
     headerName: "Email Address",
     width: 230,
+  },
+
+  {
+    field: "taxIDNo",
+    headerName: "tax ID Number",
+    width: 125,     
   },
 
   {
