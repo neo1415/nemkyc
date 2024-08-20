@@ -167,6 +167,12 @@ const handleCancelClick = () => {
           ['contact Person Number', data.contactPersonNo],
           ['Email Address', data.emailAddress],
           ['Nature Of Business', data.natureOfBusiness],
+          ['Incorporation Number', data.incorporationNumber],
+          ['Incorporation State', data.incorporationState],
+['Date of Incorporation / Registration', data.dateOfIncorporationRegistration],
+['Website', data.website],
+['BVN Number', data.BVNNumber],
+['Tax ID Number', data.taxIDNo],
           ['Estimated Turnover', data.estimatedTurnover],
           ['Premium Payment Source', data.premiumPaymentSource],
           ['Account Number', data.accountNumber],
@@ -331,6 +337,9 @@ doc.autoTable(secondBeneficialOwnersTableColumn, secondBeneficialOwnersTableRows
       { label: 'Office Address', key: 'officeAddress' },
       { label: 'Ownership Of Company', key: 'ownershipOfCompany' },
       { label: 'contactPerson', key: 'contactPerson' },
+      { label: 'Website', key: 'website' },
+      { label: 'Incorporation Number', key: 'incorporationNumber' },
+      { label: 'Incorporation State', key: 'incorporationState' },
          ].map(({ label, key }) => (
       <li className='form-list' key={key}>
         <p>{label}</p>
@@ -361,6 +370,9 @@ doc.autoTable(secondBeneficialOwnersTableColumn, secondBeneficialOwnersTableRows
   </ul>
   <ul>
     {[
+        { label: 'Date of Incorporation Registration', key: 'dateOfIncorporationRegistration' },
+        { label: 'BVN Number', key: 'BVNNumber' },
+        { label: 'Tax Identification Number', key: 'taxIDNo' },
       { label: 'Contact Person Number', key: 'contactPersonNo' },
       { label: 'emailAddress', key: 'emailAddress' },
       { label: 'Nature Of Business', key: 'natureOfBusiness' },
@@ -471,10 +483,12 @@ doc.autoTable(secondBeneficialOwnersTableColumn, secondBeneficialOwnersTableRows
   </li>
 ))}
           </ul>
-          <ul>
+
+        </div>
+        <ul className='doc-ul'>
             <h1>Documents</h1>
             <li className='form-list'>
-              <p>Verification Document</p>
+              <p className='doc-p'>Verification Document</p>
               {data.verificationDoc ? (
                 <a href={data.verificationDoc} target='__blank'>
                  <button
@@ -501,7 +515,6 @@ doc.autoTable(secondBeneficialOwnersTableColumn, secondBeneficialOwnersTableRows
               )}
             </li> */}
           </ul>
-        </div>
       </div>
     </div>
     <div className='file-download'>

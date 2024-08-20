@@ -122,3 +122,13 @@ flex-wrap: wrap;
     border-bottom: brown;
     background-color: rgba(224, 220, 220, 0.384);
 }
+
+.doc-ul{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+.doc-p{
+    text-align: center;
+}

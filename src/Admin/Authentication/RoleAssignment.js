@@ -45,6 +45,8 @@ const RoleAssignment = () => {
   const [openModal, setOpenModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
 
 useEffect(() => {
   // const fetchData = async () => {
@@ -112,27 +114,28 @@ const openSuccessModal = () => {
 };
 
 
-  const deleteUser = async (uid) => {
-    setIsLoading(true);
-    try {
-      const endpoint = endpoints.deleteUser(uid); // Use the endpoint with the UID
-      console.log('Delete User Endpoint:', endpoint); // Log the endpoint
-      const response = await axios.delete(endpoint);
-  
-      if (response.status === 200) {
-        openSuccessModal();
-        alert('User deleted successfully');
-        // Remove the deleted user from the state
-        setUsers((prevUsers) => prevUsers.filter((user) => user.uid !== uid));
-      } else {
-        console.error('Error deleting user:', response.statusText);
-      }
-    } catch (error) {
-      console.error('Error deleting user:', error);
-    }finally{
-      setIsLoading(false);
+const deleteUser = async () => {
+  if (!userToDelete) return;
+
+  setIsLoading(true);
+  try {
+    const endpoint = endpoints.deleteUser(userToDelete);
+    const response = await axios.delete(endpoint);
+    if (response.status === 200) {
+      openSuccessModal();
+      alert('User deleted successfully');
+      setUsers((prevUsers) => prevUsers.filter((user) => user.uid !== userToDelete));
+      setConfirmDeleteOpen(false);
+    } else {
+      console.error('Error deleting user:', response.statusText);
     }
-  };
+  } catch (error) {
+    console.error('Error deleting user:', error);
+  } finally {
+    setIsLoading(false);
+    setUserToDelete(null); // Reset the user to delete
+  }
+};
 
   
   
@@ -304,12 +307,16 @@ return (
 )}
 
 
-    <Button
-      variant="outlined"
-      onClick={() => deleteUser(user.uid)}
-      >
-      Delete User
-      </Button>
+      <Button
+        variant="outlined"
+        color="primary"
+         onClick={() => {
+         setUserToDelete(user.uid);
+         setConfirmDeleteOpen(true);
+         }}
+         >
+             Delete User
+           </Button>
       </TableCell>
       </TableRow>
     ))}
@@ -351,6 +358,29 @@ return (
     </div>
   </DialogContent>
 </Dialog>
+
+       {/* Delete Confirmation Modal */}
+       <Dialog
+            open={confirmDeleteOpen}
+            onClose={() => setConfirmDeleteOpen(false)}
+          >
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogContent>
+              Are you sure you want to delete this user?
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setConfirmDeleteOpen(false)} color="primary">
+                Cancel
+              </Button>
+              <Button
+                onClick={deleteUser}
+                color="primary"
+                variant="contained"
+              >
+                Delete
+              </Button>
+            </DialogActions>
+          </Dialog>
       <ToastContainer />
       </div>
       </ThemeProvider>

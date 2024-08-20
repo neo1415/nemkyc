@@ -1,6 +1,6 @@
 .sidebar{
     background-color: #800020;
-    width: 180px ;
+    // width: 180px ;
     min-height: 200vh;
     border-right: .5px solid lightgray;
     position: fixed;
@@ -87,6 +87,7 @@
     padding-left: 1px;
     // background-color: var(--primary-color) !important; 
     display: flex;
+    padding: -1rem;
     align-items: flex-start;
     cursor: pointer;
     @media screen and (max-width:768px) {
@@ -99,6 +100,7 @@
         align-items: center;
         padding: 5px;
         height: 50px;
+        margin-top: -1rem;
         cursor: pointer;
         color: white;
         @media screen and (max-width:768px) {

@@ -58,6 +58,34 @@ export const UserColumns = [
   },
 
   {
+    field: "incorporationNumber",
+    headerName: "Incorporation Number",
+    width: 180,
+  },
+
+  {
+    field: "incorporationState",
+    headerName: "Incorporation State",
+    width: 125,     
+  },
+{
+    field: "dateOfIncorporationRegistration",
+    headerName: "Date Of Incorporation Registration",
+    width: 125,     
+  },
+ {
+    field: "website",
+    headerName: "Website",
+    width: 80,
+  },
+  {
+
+    field: "BVNNumber",
+    headerName: "BVN Number",
+    width: 125,     
+  },
+
+  {
     field: "contactPersonNo",
     headerName: "Contact Person Number",
     width: 230,
@@ -73,6 +101,11 @@ export const UserColumns = [
     field: "natureOfBusiness",
     headerName: "Nature of Business",
     width: 100,
+  },
+  {
+    field: "taxIDNo",
+    headerName: "tax ID Number",
+    width: 125,     
   },
 
   {

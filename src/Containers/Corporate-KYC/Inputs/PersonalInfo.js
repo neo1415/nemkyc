@@ -47,15 +47,39 @@ const PersonalInfo = ({register, errors, control}) => {
       <input type="text" id="contactPerson" placeholder='Contact Person' {...register("contactPerson", { required: true })} />
       {errors.contactPerson && <span className="error-message">{errors.contactPerson.message}</span>}
 
+      <label htmlFor="website">Website </label>
+      <input type='text' {...register("website", { required: true,})} placeholder='website' />
+      {/* {errors.website && <span className="error-message">Please enter a valid website</span>} */}
+
+      <label htmlFor="incorporationNumber">Incorporation Number <span className='required'>*</span></label>
+      <input type='text' {...register("incorporationNumber", { required: true, minLength: 7, maxLength: 15  })} placeholder='Incorporation Number' />
+      {errors.incorporationNumber && <span className="error-message">This field is required</span>}
+
+      <label htmlFor="incorporationState">Incorporation State <span className='required'>*</span></label>
+      <input type='text' {...register("incorporationState", { required: true,  minLength: 3, maxLength: 50  })} placeholder='Incorporation State' />
+      {errors.incorporationState && <span className="error-message">This field is required</span>}
+
 
     </div>
 
     <div className='flex-two'>
 
+    <label htmlFor="dateOfIncorporationRegistration">Date of Incorporation/Registration <span className='required'>*</span> </label>
+      <input  type="date" {...register("dateOfIncorporationRegistration",{ required: true, minLength: 10, maxLength: 15 })} placeholder='Date Of Incorporation/Registration' />
+      {errors.dateOfIncorporationRegistration && <span className="error-message">{errors.dateOfIncorporationRegistration.message}</span>}
+
+      <label htmlFor="BVNNumber">BVN  <span className='required'>*</span> </label>
+      <input type='number' {...register("BVNNumber", { required: true,  minLength:11, maxLength: 11 })} placeholder='BVN' />
+      {errors.BVNNumber && <span className="error-message">{errors.BVNNumber.message}</span>}
+
     <label htmlFor="contactPersonNo">Contact Person Mobile Number <span className='required'>*</span></label>
       <input type="number" id="contactPersonNo" placeholder='Contact Phone Number' {...register("contactPersonNo", { required: true })} />
       {errors.contactPersonNo && <span className="error-message">Phone Number is required</span>}
     
+      <label htmlFor="taxIDNo">Tax Identification Number </label>
+      <input type='text' {...register("taxIDNo",  { required: false, minLength: 6, maxLength: 15  })} placeholder='Tax Identification Number' />
+      {errors.taxIDNo && <span className="error-message">This field is required</span>}
+
     <label htmlFor="emailAddress">Email Address <span className='required'>*</span></label>
       <input type="email" id="emailAddress" placeholder='Email Address' {...register("emailAddress", { required: true })} />
       {errors.emailAddress && <span className="error-message">{errors.emailAddress.message}</span>}

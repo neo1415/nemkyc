@@ -16,6 +16,18 @@ export const schema1 = yup.object().shape({
     natureOfBusiness: yup.string().required('nature Of Business is required').transform(sanitizeString), 
     estimatedTurnover: yup.string().required('Estimated Turnover is required').transform(sanitizeString),
     premiumPaymentSource: yup.string().required('Premium Payment Source is required').transform(sanitizeString),
+    taxIDNo: yup.string().required('Tax ID Number is required').transform(sanitizeString),
+    incorporationNumber: yup.string().required('Incorporation Number is required').min(1).max(50).transform(sanitizeString),
+    incorporationState: yup.string().required('Incorporation State is required').min(2).max(50).transform(sanitizeString),
+    dateOfIncorporationRegistration: yup.date().required('Date of Incorporation Registration is required'),
+   website: yup.string().test('is-url', 'Website must be a valid URL', (value) => {
+      if (value) {
+        const urlPattern = /^(https?:\/\/)?(www\.)?([a-zA-Z0-9-]+)\.([a-zA-Z]{2,})(\/\S*)?$/;
+        return urlPattern.test(value);
+      }
+      return true; // Allow empty value
+    }),
+   BVNNumber: yup.string().required('BVN Number is required').min(11).max(11).transform(sanitizeString),
 });
 
 export const schema2 = yup.object().shape({

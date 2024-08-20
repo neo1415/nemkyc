@@ -27,9 +27,21 @@ const PersonalInfo = ({register, errors,control}) => {
       <input type="text" id="Office Location" placeholder='office Location' {...register("officeLocation", { required: true })}  />
       {errors.officeLocation && <span className="error-message">{errors.officeLocation.message}</span>}
 
-      <label htmlFor="insured">Insured <span className='required'>*</span></label>
-      <input type="text" id="insured" placeholder='insured' {...register("insured", { required: true })} />
-      {errors.insured && <span className="error-message">{errors.insured.message}</span>}
+      <label htmlFor="title">Title <span className='required'>*</span></label>
+      <input type="text" id="title" placeholder='Title' {...register("title", { required: true })} />
+      {errors.title && <span className="error-message">{errors.title.message}</span>}
+
+      <label htmlFor="firstName">First Name <span className='required'>*</span></label>
+      <input type="text" id="firstName" placeholder='First Name' {...register("firstName", { required: true })} />
+      {errors.firstName && <span className="error-message">{errors.firstName.message}</span>}
+
+      <label htmlFor="middleName">Middle Name <span className='required'>*</span></label>
+      <input type="text" id="middleName" placeholder='Middle Name' {...register("middleName", { required: true })} />
+      {errors.middleName && <span className="error-message">{errors.middleName.message}</span>}
+
+      <label htmlFor="lastName">Last Name <span className='required'>*</span></label>
+      <input type="text" id="lastName" placeholder='Last Name' {...register("lastName", { required: true })} />
+      {errors.lastName && <span className="error-message">{errors.lastName.message}</span>}
 
       <label htmlFor="contactAddress">Contact Address <span className='required'>*</span></label>
       <input type="text" id="contactAddress" placeholder="Contact's Address" {...register("contactAddress", { required: true })} />
@@ -71,14 +83,15 @@ const PersonalInfo = ({register, errors,control}) => {
       <input type='text' {...register("city", { required: true,  minLength: 3, maxLength: 50  })} placeholder='city' />
       {errors.city && <span className="error-message">{errors.city.message}</span>}
 
-      <label htmlFor="state">State <span className='required'>*</span></label>
-      <input type='text' {...register("state", { required: true,  minLength: 3, maxLength: 50  })} placeholder='State' />
-      {errors.state && <span className="error-message">{errors.state.message}</span>}
-
+    
 
     </div>
 
     <div className='flex-two'>
+
+    <label htmlFor="state">State <span className='required'>*</span></label>
+      <input type='text' {...register("state", { required: true,  minLength: 3, maxLength: 50  })} placeholder='State' />
+      {errors.state && <span className="error-message">{errors.state.message}</span>}
 
       <label htmlFor="country">Country <span className='required'>*</span></label>
       <input type='text' {...register("country", { required: true,  minLength: 3, maxLength: 50  })} placeholder='Country' />
@@ -105,6 +118,10 @@ const PersonalInfo = ({register, errors,control}) => {
       <label htmlFor="email">Email <span className='required'>*</span></label>
       <input type="email" id="emailAddress" placeholder='Email Address' {...register("emailAddress", { required: true })} />
       {errors.emailAddress && <span className="error-message">{errors.emailAddress.message}</span>}
+
+      <label htmlFor="taxIDNo">Tax Identification Number </label>
+      <input type='text' {...register("taxIDNo",  { required: false, minLength: 6, maxLength: 15  })} placeholder='Tax Identification Number' />
+      {errors.taxIDNo && <span className="error-message">This field is required</span>}
 
       <label htmlFor="identificationType">ID Type <span className='required'>*</span></label>
         <select id="identificationType" {...register("identificationType", { required: true })}>

@@ -133,7 +133,10 @@ const handleCancelClick = () => {
       const companyTableColumn = ['', ''];
       const companyTableRows = [
         // ['Office Location', data.officeLocation],
-        ['insured', data.insured],
+        ['Title', data.title],
+        ['First Name', data.firstName],
+        ['Middle Name', data.middleName],
+        ['Last Name', data.lastName],
         ['COntact Address', data.contactAddress],
         ['Occupation', data.occupation],
         ['Gender', data.gender],
@@ -142,6 +145,7 @@ const handleCancelClick = () => {
         ['Employers Name', data.employersName],
         ['EMployers Telephone Number', data.employersTelephoneNumber],
         ['EMployers Address', data.employersAddress],
+        ['Tax ID Number', data.taxIDNo],
         ['City', data.city],
         ['State', data.state],
         ['Country', data.country],
@@ -302,17 +306,20 @@ const handleCancelClick = () => {
     <h1 className='content-h1'>Corporate KYC</h1>
     {[
     { label: 'Office Location', key: 'officeLocation' },
-    { label: 'Insured', key: 'insured' },
+    { label: 'Title', key: 'title' },
+    { label: 'First Name', key: 'firstName' },
+    { label: 'Middle Name', key: 'middleName' },
+    { label: 'Last Name', key: 'lastName' },
     { label: 'Contact Address', key: 'contactAddress' },
     { label: 'Occupation', key: 'occupation' },
     { label: 'Gender', key: 'gender' },
     { label: 'Date Of Birth', key: 'dateOfBirth' },
+    { label: 'Tax Identification Number', key: 'taxIDNo' },
     { label: 'Mother\'s Maiden Name', key: 'mothersMaidenName' },
     { label: 'Employer\'s Name', key: 'employersName' },
     { label: 'Employer\'s Telephone Number', key: 'employersTelephoneNumber' },
     { label: 'Employer\'s Address', key: 'employersAddress' },
-    { label: 'City', key: 'city' },
-    { label: 'State', key: 'state' },
+
          ].map(({ label, key }) => (
       <li className='form-list' key={key}>
         <p>{label}</p>
@@ -343,6 +350,8 @@ const handleCancelClick = () => {
   </ul>
   <ul>
     {[
+          { label: 'City', key: 'city' },
+          { label: 'State', key: 'state' },
     { label: 'Country', key: 'country' },
     { label: 'Nationality', key: 'nationality' },
     { label: 'Residential Address', key: 'residentialAddress' },
@@ -459,10 +468,11 @@ const handleCancelClick = () => {
   </li>
 ))}
           </ul>
-          <ul>
+        </div>
+        <ul className='doc-ul'>
             <h1>Documents</h1>
             <li className='form-list'>
-              <p>Identification</p>
+              <p className='doc-p'>Identification</p>
               {data.identification ? (
                 <a href={data.identification} target='__blank'>
                   <button className='form-button'>
@@ -474,7 +484,6 @@ const handleCancelClick = () => {
               )}
             </li>
           </ul>
-        </div>
       </div>
     </div>
     <div className='file-download'>
