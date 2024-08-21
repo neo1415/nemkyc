@@ -12,11 +12,11 @@
     @media screen and (max-width:600px) {
        width: 50px !important;
     }
-    @media screen and (max-width:768px) {
-        width: 100px;
+    @media screen and (max-width:780px) {
+        width: 100px ;
      }
      @media screen and (max-width:1050px) {
-        width: 125px;
+        width: 150px;
      }
 
     .Top{
@@ -56,10 +56,16 @@
                 color: gold ;
                 font-weight: 600;
                 text-decoration: none;
+                @media screen and (max-width:1050px) {
+                    height: 40px;
+                  }
                 p{
                     @media screen and (max-width:600px) {
                         display: none;
                     }
+                    @media screen and (max-width:1050px) {
+                       font-size: .9rem;
+                     }
                 }
                 &:hover{
                     background-color: white;
