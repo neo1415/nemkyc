@@ -6,9 +6,15 @@
     width: 88%;
   }
   .datatable {
-      height: 600px;
-      padding: 20px;
+      height: auto ;
+      padding: 35px;
       width: 100%;
+      @media screen and (max-width:780px) {
+        width: 67px ;
+     }
+     @media screen and (max-width:520px) {
+      width: 15px !important;
+   }
       
       .datatableTitle{
         width: 100%;
