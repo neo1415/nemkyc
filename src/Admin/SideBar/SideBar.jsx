@@ -126,18 +126,7 @@ const Sidebar = () => {
               </li>
             </Link>
           )}
-
           
-{userRole === 'admin' && (
-            <Link to="/logs">
-              <li className="sideList">
-                <p>Logs</p>
-                <div className="icon">
-                  <HiOutlineNewspaper />
-                </div>
-              </li>
-            </Link>
-          )}
         </ul>
       </div>
       <hr />
