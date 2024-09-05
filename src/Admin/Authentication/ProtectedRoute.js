@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { UserAuth } from '../../Context/AuthContext';
 import { useUserRole } from '../../Context/UserRole';
 import { Navigate } from 'react-router-dom';
-import axios from 'axios';
 import Unauthourized from '../../Components/Unauthourized';
 import PageLoad from '../../Components/PageLoad';
+import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
   const { user } = UserAuth();
@@ -17,7 +17,7 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
         console.log('User found:', user);
         try {
           const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
-          const response = await axios.post(`${serverURL}/check-user-role`, { uid: user.uid });
+          const response = await csrfProtectedPost(`${serverURL}/check-user-role`, { uid: user.uid });
           const role = response.data.role;
           console.log('Fetched role from server:', role);
           setUserRole(role);

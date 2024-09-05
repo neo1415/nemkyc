@@ -27,4 +27,5 @@ export const endpoints = {
   submitBrokersForm: `${serverURL}/submit-brokers-form`,
   submitCorporateKYCForm: `${serverURL}/submit-corporate-kyc-form`,
   submitIndividualKYCForm: `${serverURL}/submit-individual-kyc-form`,
+  // editAgentsForm: `${serverURL}edit-agents-form/${data.id}`,
 };

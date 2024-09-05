@@ -12,10 +12,10 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
-import axios from 'axios';
 import { endpoints } from '../../Admin/Authentication/Points';
 import { schema1, schema2, schema3 } from './FormSchema';
 import { CircularProgress } from '@mui/material';
+import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 
 function CorporateKYC() {
@@ -99,7 +99,7 @@ const [isLoading, setIsLoading] = useState(false);
         if (fileUrls.verificationDoc ) {
 
           console.log('Form values:', formData);
-          const response = await axios.post(endpoints.submitCorporateKYCForm, formData);
+          const response = await csrfProtectedPost(endpoints.submitCorporateKYCForm, formData);
         if (response.status === 201) {
             console.log('Form submitted successfully');
             showSuccessToast('Form Submitted successfully.');

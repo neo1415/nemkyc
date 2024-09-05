@@ -6,7 +6,6 @@ import CompanyDetails from './Input/CompanyDetails';
 import { images } from '../../Constants';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import axios from 'axios';
 import { endpoints } from '../../Admin/Authentication/Points';
 import FileUpload from './Input/Uploads';
 import { useForm } from 'react-hook-form';
@@ -18,7 +17,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { schema1, schema2, schema3, schema4, schema5 } from './FormSchema';
 import SubmitModal from '../Modals/SubmitModal';
 import { CircularProgress } from '@mui/material';
-// import { csrfProtectedPost } from '../../Components/CsrfUtils';
+import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 
 const Brokers = () => {
@@ -87,7 +86,7 @@ const Brokers = () => {
           if (fileUrls.Incorporation && fileUrls.identification && fileUrls.NAICOMForm) {
 
             console.log('Form values:', formData);
-            const response = await axios.post(endpoints.submitBrokersForm, formData);
+            const response = await csrfProtectedPost(endpoints.submitBrokersForm, formData);
           if (response.status === 201) {
               console.log('Form submitted successfully');
               showSuccessToast('Form Submitted successfully.');
