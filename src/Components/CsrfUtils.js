@@ -17,25 +17,23 @@ const getCsrfToken = async () => {
 };
 
 const csrfProtectedRequest = async (method, url, data = null) => {
-  const csrfToken = await getCsrfToken();
-  console.log('Sending CSRF Token:', csrfToken);
   const timestamp = Date.now().toString(); // Add current timestamp
 
   const config = {
     method,
     url,
     headers: {
-      'CSRF-Token': csrfToken,
       'x-timestamp': timestamp,
       ...(method !== 'DELETE' && { 'Content-Type': 'application/json' }) // Add 'Content-Type' only if method is not DELETE
     },
-    withCredentials: true,
-    ...(data && { data }), // Only include `data` if it's provided
+    withCredentials: true,  // This ensures that cookies (including the CSRF token) are sent
+    ...(data && { data }),   // Only include `data` if it's provided
   };
 
   const response = await axios(config);
   return response;
 };
+
 
 export const csrfProtectedPost = (url, data) => csrfProtectedRequest('post', url, data);
 export const csrfProtectedGet = (url) => csrfProtectedRequest('get', url);
