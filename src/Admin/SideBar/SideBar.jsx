@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Sidebar.scss';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserAuth } from '../../Context/AuthContext';
-import { HiUsers, HiDatabase, HiOutlineNewspaper } from 'react-icons/hi';
+import { HiUsers, HiDatabase} from 'react-icons/hi';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../APi/index';
 import { HiUserAdd } from 'react-icons/hi';

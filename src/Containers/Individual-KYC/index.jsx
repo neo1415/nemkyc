@@ -12,11 +12,11 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
-import axios from 'axios';
 import { CircularProgress } from '@mui/material';
 import { endpoints } from '../../Admin/Authentication/Points';
 import { schema1, schema2, schema3 } from './FormSchema';
 import AccountDetails from './Inputs/AccountDetails';
+import { csrfProtectedPost } from '../../Components/CsrfUtils';
 // import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 function IndividualKYC() {
@@ -99,7 +99,7 @@ const [isLoading, setIsLoading] = useState(false);
 
         const formData = { ...formValues, ...fileUrls };
         if (fileUrls.identification) {
-          const response = await axios.post(endpoints.submitIndividualKYCForm, formData);
+          const response = await csrfProtectedPost(endpoints.submitIndividualKYCForm, formData);
           if (response.status === 201) {
             console.log('Form submitted successfully');
             showSuccessToast('Form Submitted successfully.');

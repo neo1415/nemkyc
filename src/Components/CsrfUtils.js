@@ -1,33 +1,42 @@
-// // csrf-utils.js
-// import axios from 'axios';
+// csrf-utils.js
+import axios from 'axios';
 
-// const BASE_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
-// const CSRF_TOKEN_ENDPOINT = `${BASE_URL}/csrf-token`;
+const BASE_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+const CSRF_TOKEN_ENDPOINT = `${BASE_URL}/csrf-token`;
 
-// const getCsrfToken = async () => {
-//   const response = await axios.get(CSRF_TOKEN_ENDPOINT, { withCredentials: true });
-//   const csrfToken = response.data.csrfToken;
-//   console.log('Fetched CSRF Token:', csrfToken);
-//   return csrfToken;
-// };
+const getCsrfToken = async () => {
+  try {
+    const response = await axios.get(CSRF_TOKEN_ENDPOINT, { withCredentials: true });
+    const csrfToken = response.data.csrfToken;
+    console.log('Fetched CSRF Token:', csrfToken);
+    return csrfToken;
+  } catch (error) {
+    console.error('Error fetching CSRF Token:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
 
-// const csrfProtectedRequest = async (method, url, data = null) => {
-//   const csrfToken = await getCsrfToken();
-//   console.log('Sending CSRF Token:', csrfToken);
-//   const config = {
-//     method,
-//     url,
-//     headers: {
-//       'Content-Type': 'application/json',
-//       'CSRF-Token': csrfToken
-//     },
-//     withCredentials: true,
-//     data
-//   };
-//   const response = await axios(config);
-//   return response;
-// };
+const csrfProtectedRequest = async (method, url, data = null) => {
+  const csrfToken = await getCsrfToken();
+  console.log('Sending CSRF Token:', csrfToken);
+  const timestamp = Date.now().toString(); // Add current timestamp
 
-// export const csrfProtectedPost = (url, data) => csrfProtectedRequest('post', url, data);
-// export const csrfProtectedGet = (url) => csrfProtectedRequest('get', url);
-// export const csrfProtectedDelete = (url) => csrfProtectedRequest('delete', url);
+  const config = {
+    method,
+    url,
+    headers: {
+      'CSRF-Token': csrfToken,
+      'x-timestamp': timestamp,
+      ...(method !== 'DELETE' && { 'Content-Type': 'application/json' }) // Add 'Content-Type' only if method is not DELETE
+    },
+    withCredentials: true,
+    ...(data && { data }), // Only include `data` if it's provided
+  };
+
+  const response = await axios(config);
+  return response;
+};
+
+export const csrfProtectedPost = (url, data) => csrfProtectedRequest('post', url, data);
+export const csrfProtectedGet = (url) => csrfProtectedRequest('get', url);
+export const csrfProtectedDelete = (url) => csrfProtectedRequest('delete', url); // No data needed here

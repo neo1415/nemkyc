@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { endpoints } from './Points';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -27,6 +26,7 @@ import {
 import Sidebar from '../SideBar/SideBar';
 import { BsBadge4K } from 'react-icons/bs';
 import './roles.scss'
+import { csrfProtectedDelete, csrfProtectedPost } from '../../Components/CsrfUtils';
 
 const theme = createTheme({
   palette: {
@@ -120,7 +120,7 @@ const deleteUser = async () => {
   setIsLoading(true);
   try {
     const endpoint = endpoints.deleteUser(userToDelete);
-    const response = await axios.delete(endpoint);
+    const response = await csrfProtectedDelete(endpoint);
     if (response.status === 200) {
       openSuccessModal();
       alert('User deleted successfully');
@@ -155,7 +155,7 @@ const checkUserRole = async (uid, role) => {
   try {
     const endpoint = endpoints.checkUserRole(uid); // Use the endpoint with the UID
     // console.log('Check User Role Endpoint:', endpoint); // Log the endpoint
-    const response = await axios.post(endpoint, { role });
+    const response = await csrfProtectedPost(endpoint, { role });
     console.log(role)
     return response.data.hasRole;
     
@@ -205,11 +205,11 @@ const assignRole = async () => {
     }
 
     // Make the API request to assign the role and update custom claims
-    const response = await axios.post(endpoint, {});
+    const response = await csrfProtectedPost(endpoint, {});
 
     // Update the Firestore collection with the new role
     const firestoreEndpoint = endpoints.updateUserRole(selectedUser);
-    await axios.post(firestoreEndpoint, { role: selectedRole });
+    await csrfProtectedPost(firestoreEndpoint, { role: selectedRole });
 
     setSuccessMessage(response.data.message);
     setErrorMessage('');
