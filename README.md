@@ -1,70 +1,51 @@
-# Getting Started with Create React App
+# NEM Customer Data Collection Application Documentation
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The NEM Customer Data Collection Application is critical in customer data management. It is designed to collect and securely store customer data, offering a reliable and efficient solution for businesses seeking to enhance their data collection processes. The core objectives of the application are as follows
 
-## Available Scripts
+## Data Collection:
+At its core, the application is built to streamline and optimize the collection of customer data. It provides an intuitive and user-friendly platform for gathering vital customer information. 
+## Data Security:
+The application prioritizes the security of customer data. All collected information is stored in a secure database, ensuring the confidentiality and privacy of sensitive customer details. 
+## Administrative Control:
+To facilitate effective data management, the application empowers administrators with the tools they need to access, oversee, and manipulate collected user data.
 
-In the project directory, you can run:
+## Use Cases:
+1. Small and Large Businesses: businesses can utilize this application to collect and organize customer information efficiently, improving customer relationship management.
+2. Customer Support Teams: Customer support teams can benefit from the streamlined data collection process and easy access to customer data for issue resolution.
 
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Technology Stack
+The application relies on the following technologies to deliver its functionality:
+1. React: React, a popular JavaScript library for building user interfaces, forms the foundation of the application's front end.
+2. Firebase Firestore: Firebase Firestore serves as the database solution, ensuring data integrity and accessibility.
+3. Node JS: This is a back-end JavaScript runtime for handling how the client side interacts with the server side
+4. Express JS: Express.js is a web application framework for Node.js that simplifies the process of building web applications and APIs. It provides a set of methods for routing HTTP requests, configuring middleware, rendering HTML views, and modifying
+application settings.
 
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-### `npm run eject`
+### Dashboard
+The admin dashboard in the NEM Customer Data Collection Application is a powerful tool designed to provide administrators with comprehensive control over collected data. Below, you'll find an in-depth explanation of how to access the dashboard, its extensive features, and the access control mechanisms in place:
+## Accessing the Admin Dashboard:
+1. Access Permissions:
+To access the admin dashboard, users must have multi-level access, which is typically granted through user roles and permissions by the administrator configured during the user registration.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+2. Authentication:
+Users are required to authenticate themselves by signing in with their credentials before gaining access to the dashboard. Firebase Authentication ensures secure user verification.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+3. Automatic Logout on Inactivity:
+To enhance security, the admin dashboard includes an automatic logout feature. If a user remains inactive for a specified period (in this case., 10 minutes), the application will automatically log them out to prevent unauthorized access. This feature
+safeguards sensitive data when a user forgets to log out manually
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+4. Robust Data Filtering and Sorting Options:
+Moderators can filter entries based on specific date ranges or on any column title on the table example being company name or address. This feature enables targeted data analysis and reporting by narrowing down entries to a particular time frame or metric.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+5. Collection Views:
+The dashboard offers separate views for Form submissions. Users can effortlessly switch between these views to focus on a specific form type.
 
-## Learn More
+6. PDF Download:
+In the detailed entry view, moderators can download the entire user submission as a PDF.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+7. User Management:
+Administrators have the added menu option and interface to manage users(moderators)
+by creating user accounts, assigning them roles according to their permissions as well as
+deleting said users when they no longer require access to the dashboard
