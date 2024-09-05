@@ -19,14 +19,14 @@ const getCsrfToken = async () => {
 const csrfProtectedRequest = async (method, url, data = null) => {
   const csrfToken = await getCsrfToken();
   console.log('Sending CSRF Token:', csrfToken);
-  // const timestamp = Date.now().toString(); // Add current timestamp
+  const timestamp = Date.now().toString(); // Add current timestamp
 
   const config = {
     method,
     url,
     headers: {
       'CSRF-Token': csrfToken,
-      // 'x-timestamp': timestamp,
+      'x-timestamp': timestamp,
       ...(method !== 'DELETE' && { 'Content-Type': 'application/json' }) // Add 'Content-Type' only if method is not DELETE
     },
     withCredentials: true,
