@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import './KYC.scss'
 import { motion } from "framer-motion";
 import { images } from '../../Constants';
@@ -12,39 +12,20 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
+import axios from 'axios';
+import { CircularProgress } from '@mui/material';
 import { endpoints } from '../../Admin/Authentication/Points';
 import { schema1, schema2, schema3 } from './FormSchema';
-import { CircularProgress } from '@mui/material';
-import { csrfProtectedPost } from '../../Components/CsrfUtils';
+// import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
-
-function CorporateKYC() {
+function Agents() {
   const combinedSchema = yup.object().shape({
     ...schema1.fields,
     ...schema2.fields,
     ...schema3.fields,
 });
 
-const [currentDate, setCurrentDate] = useState('');
-
-useEffect(() => {
-  const formatDate = (date) => {
-    let day = date.getDate();
-    let month = date.getMonth() + 1; // Months are zero-indexed
-    let year = date.getFullYear();
-
-    // Add leading zero if day or month is less than 10
-    day = day < 10 ? '0' + day : day;
-    month = month < 10 ? '0' + month : month;
-
-    return `${day}/${month}/${year}`;
-  };
-
-  const today = new Date();
-  setCurrentDate(formatDate(today));
-}, []);
-
-const { register, formState: { errors },trigger, watch, forceUpdate, control,setValue } = useForm({
+const { register, formState: { errors},trigger, watch, forceUpdate, control,setValue, getValues } = useForm({
  resolver: yupResolver(combinedSchema),
   mode: 'onChange' // This will ensure validation on change
 });
@@ -73,6 +54,25 @@ const [isLoading, setIsLoading] = useState(false);
   };
   
 
+  useEffect(() => {
+    // Fetch saved data for the current step if it exists
+    async function fetchSavedData() {
+      try {
+        const response = await axios.get(`${endpoints.getAgentsData}?step=${step}`);
+        if (response.data) {
+          const savedData = response.data;
+          Object.keys(savedData).forEach(key => {
+            setValue(key, savedData[key]);
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load saved form data:', error);
+      }
+    }
+    fetchSavedData();
+  }, [step, setValue]);
+
+
   const resetForm = () => {
     window.location.reload(false);
   };
@@ -81,6 +81,13 @@ const [isLoading, setIsLoading] = useState(false);
     setIsSubmitted(false);
   };
 
+  const saveDataForStep = async (stepData) => {
+    try {
+      await axios.post(`${endpoints.saveAgentsStepData}`, { step, data: stepData });
+    } catch (error) {
+      console.error('Failed to save form data:', error);
+    }
+  };
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -96,26 +103,23 @@ const [isLoading, setIsLoading] = useState(false);
         setIsSubmitted(false); // Ensure modal is closed during submission
 
         const formData = {...formValues, ...fileUrls};
-        if (fileUrls.verificationDoc ) {
-
+        
           console.log('Form values:', formData);
-          const response = await csrfProtectedPost(endpoints.submitCorporateKYCForm, formData);
+          const response = await axios.post(endpoints.submitAgentsForm, formData);
         if (response.status === 201) {
             console.log('Form submitted successfully');
             showSuccessToast('Form Submitted successfully.');
             setFileUrls({}); 
             setFileNames({});
-            setIsSubmitted(true); // Open modal after successful submission
+            setIsSubmitted(true);
         } else {
             console.error('Error during form submission:', response.statusText);
           }
-          } else {
-            showErrorToast('Please ensure all files are uploaded before submitting.');
-          }
+          
         } catch (err) {
           console.error('Network error during form submission:', err);
           showErrorToast('An error occurred during submission. Please try again.');
-        } finally {
+        }finally {
           setIsLoading(false); // Hide loading spinner
         }
       }
@@ -134,32 +138,29 @@ const [isLoading, setIsLoading] = useState(false);
   
       console.log('Validation result:', result);
       console.log('Form errors:', errors);
-  // Check if the current step is 2 and if the file has been uploaded
-  if (step === 2 && !fileUrls.verificationDoc && formValues.companyNameVerificationDoc) {
-    showErrorToast('Please ensure the verification details are filled and uploaded before proceeding.');
-    return;
-  }
-      if (result) {
-        setStep(step + 1);
-      }
+  
+    if (result) {
+      await saveDataForStep(formValues); // Save current step data before moving to the next step
+      setStep(step + 1);
+    }
     };
   
-    const prevStep = () => {
+  const prevStep = () => {
     setStep(step - 1);
-    };
+  };
 
   return (
     <div className='forms' style={{display:'flex',flexDirection:'column' }}>
-      <div className='forms-page-c'>
+      <div className='forms-page'>
         <div className='picture'>
-          <img src={images.form4} className='form-img' alt='fixed' />
+          <img src={images.agent} className='form-img' alt='fixed' />
         </div>
       <motion.div
         initial={{ opacity: 0, x: 0}}
         animate={{ opacity: 1, x: 0 }}
         transition= {{ duration:.5, ease:'easeOut' }}
         exit={{ opacity: 0, x: 0 }}
-        className="multisteps-form-c">
+        className="multisteps-form">
 
       <form onSubmit={handleSubmit}>
         {step === 1 && (
@@ -170,17 +171,15 @@ const [isLoading, setIsLoading] = useState(false);
             exit={{ opacity: 0, x: 50 }}
             className="form-step">
 
-            <h3>Company Information</h3>
-
-      <div className='stretch'>
-      Date<span className='date'>: {currentDate}</span>
-    </div>
-
+            <h3>Personal Information</h3>
               <PersonalInfo
                 register={register}
                 errors={errors}
                 watch={watch}
-                control={control} />
+                control={control}
+                setValue={setValue}
+                getValues={getValues}
+                />
      
             <div className='button-flex'>
               <Link to='/'>
@@ -198,7 +197,31 @@ const [isLoading, setIsLoading] = useState(false);
           transition= {{ duration:.5, ease:'easeOut' }}
           exit={{ opacity: 0, x: 50 }}
           className="form-step">
-        <h3>Identification Details</h3>
+
+            <h3>Agents Profile</h3>
+            <AdditionalInfo 
+                register={register}
+                errors={errors}
+                watch={watch}
+                control={control}
+            />
+
+          <div className='button-flex'>
+            <button  onClick={prevStep}>Previous</button>
+            <button type="button" onClick={nextStep}>Next</button>
+          </div>
+      </motion.div>
+    )}
+
+ {step === 3 && (
+  <motion.div
+      initial={{ opacity: 0, x: 50}}
+      animate={{ opacity: 1, x: 0 }}
+      transition= {{ duration:.5, ease:'easeOut' }}
+      exit={{ opacity: 0, x: 50 }}
+      className="form-step">
+
+        <h3>Financial Details</h3>
         <p className='file-type'>Uploads should not be more than 2mb</p>
         <p className='file-type'>Only pdf, jpg and png files are allowed</p>
           <FinancialInfo 
@@ -216,37 +239,11 @@ const [isLoading, setIsLoading] = useState(false);
                  />
                 <ToastContainer />
 
-
-          <div className='button-flex'>
-            <button  onClick={prevStep}>Previous</button>
-            <button type="button" onClick={nextStep}>Next</button>
-          </div>
-      </motion.div>
-    )}
-
- {step === 3 && (
-  <motion.div
-      initial={{ opacity: 0, x: 50}}
-      animate={{ opacity: 1, x: 0 }}
-      transition= {{ duration:.5, ease:'easeOut' }}
-      exit={{ opacity: 0, x: 50 }}
-      className="form-step">
-
-<AdditionalInfo 
-    register={register}
-    errors={errors}
-    watch={watch}
-    control={control}
-    setValue={setValue}
-    trigger={trigger}
-/>
-      
-      <div className='button-flex-c'>
-      <button onClick={prevStep}>Previous</button>
-      <button type="submit" disabled={isLoading} style={{ position: 'relative' }}>
+      <div className='button-flex'>
+        <button type="button" onClick={prevStep}>Previous</button>
+        <button type="submit" disabled={isLoading} style={{ position: 'relative' }}>
                 {isLoading ? <CircularProgress size={24} style={{ color: 'white', position: 'absolute' }} /> : 'Submit'}
               </button>
-        
       </div>
       </motion.div>
       
@@ -264,4 +261,4 @@ const [isLoading, setIsLoading] = useState(false);
 );
 }
 
-export default CorporateKYC;
+export default Agents;

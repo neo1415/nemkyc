@@ -6,6 +6,7 @@ import CompanyDetails from './Input/CompanyDetails';
 import { images } from '../../Constants';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import axios from 'axios';
 import { endpoints } from '../../Admin/Authentication/Points';
 import FileUpload from './Input/Uploads';
 import { useForm } from 'react-hook-form';
@@ -17,9 +18,10 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { schema1, schema2, schema3, schema4, schema5 } from './FormSchema';
 import SubmitModal from '../Modals/SubmitModal';
 import { CircularProgress } from '@mui/material';
-import { csrfProtectedPost } from '../../Components/CsrfUtils';
+// import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
-const NAICOM = () => {
+
+const Brokers = () => {
     
     const combinedSchema = yup.object().shape({
         ...schema1.fields,
@@ -29,7 +31,7 @@ const NAICOM = () => {
         ...schema5.fields,
     });
 
-    const { register, formState: { errors }, reset,trigger, watch, forceUpdate, control,setValue, getValues } = useForm({
+    const { register, formState: { errors}, reset,trigger, watch, forceUpdate, control,setValue, getValues } = useForm({
      resolver: yupResolver(combinedSchema),
       mode: 'onChange' // This will ensure validation on change
     });
@@ -78,11 +80,14 @@ const NAICOM = () => {
       
       if (result) {
         try {      
+          setIsLoading(true); // Show loading spinner
+          setIsSubmitted(false); // Ensure modal is closed during submission
+
           const formData = {...formValues, ...fileUrls};
-          if (fileUrls.cac && fileUrls.identification && fileUrls.cacForm) {
-           
+          if (fileUrls.Incorporation && fileUrls.identification && fileUrls.NAICOMForm) {
+
             console.log('Form values:', formData);
-            const response = await csrfProtectedPost(endpoints.submitCorporateForm, formData);
+            const response = await axios.post(endpoints.submitBrokersForm, formData);
           if (response.status === 201) {
               console.log('Form submitted successfully');
               showSuccessToast('Form Submitted successfully.');
@@ -132,7 +137,7 @@ const NAICOM = () => {
   return (
     <div style={{display:'flex', justifyContent:'flex-start',marginTop:'-100px'}}>
       <div className='picture'>
-        <img src={images.form3} className='form-img' alt='cdd ' />
+        <img src={images.broker} className='form-img' alt='cdd ' />
         </div>
     <div className='form-page'>
 
@@ -259,12 +264,12 @@ const NAICOM = () => {
         control={control}
         setValue={setValue}
         trigger={trigger}
+        register={register}
         fileUrls={fileUrls}
         setFileUrls={setFileUrls}
         setFileNames={setFileNames}
         fileNames={fileNames}
         errors={errors}
-        register={register}
         forceUpdate={forceUpdate}
          />
        
@@ -289,4 +294,4 @@ isSubmitted={isSubmitted} />
   </div>
 )
 }
-export default NAICOM
+export default Brokers

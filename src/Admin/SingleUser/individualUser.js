@@ -12,7 +12,6 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import useFetchUserRole from '../../Components/checkUserRole';
 import { useDispatch, useSelector } from 'react-redux';
-import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 const IndividualUser = () => {
 
@@ -37,20 +36,21 @@ const handleFormSubmit = async (event, key) => {
   dispatch({ type: 'SET_EDITING_KEY', key: null });
 
   try {
-    // Directly pass the data to the csrfProtectedPost function
-    const response = await csrfProtectedPost(`${serverURL}/edit-individual-form/${data.id}`, {
-      [key]: editData[key]
+    const response = await fetch(`${serverURL}/edit-individual-form/${data.id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ [key]: editData[key] }),
     });
 
-    const result = response.data;
+    const result = await response.json();
 
-    if (response.status !== 200) {
+    if (!response.ok) {
       console.error(result.error);
       // If the server returns an error, revert the changes in the UI
       dispatch({ type: 'SET_EDIT_DATA', data });
       toast.error('Update failed. Please try again.');
-    } else {
-      toast.success('Form updated successfully.');
     }
   } catch (err) {
     console.error('Error:', err);
@@ -59,7 +59,6 @@ const handleFormSubmit = async (event, key) => {
     toast.error('Update failed. Please try again.');
   }
 };
-
 
 const handleEditClick = (key) => {
   dispatch({ type: 'SET_EDITING_KEY', key });

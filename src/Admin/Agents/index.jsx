@@ -14,8 +14,8 @@ import useAutoLogout from '../../Components/Timeout';
 import useFetchUserRole from '../../Components/checkUserRole';
 import { StatusButton } from '../../Components/StatusButton';
 import { UserColumns } from './datatablesource';
+import axios from 'axios';
 import { endpoints } from '../Authentication/Points';
-import { csrfProtectedGet } from '../../Components/CsrfUtils';
 // import {
 //   setData,
 //   setFilteredData,
@@ -69,17 +69,22 @@ const AgentsList = () => {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true); // Set loading to true before fetching the data
-      const response = await csrfProtectedGet(endpoints.getAgentsData);
-      if (response.status === 200) {
-        const data = response.data;
-        // Filter out items with status 'processing' if user role is not 'admin'
-        const filtered = userRole === 'admin' ? data : data.filter(item => item.status !== 'processing');
-        setData(filtered);
-        setFilteredData(filtered);
-      } else {
-        console.error('Error fetching users:', response.statusText);
+      try {
+        const response = await axios.get(endpoints.getAgentsData);
+        if (response.status === 200) {
+          const data = response.data;
+          // Filter out items with status 'processing' if user role is not 'admin'
+          const filtered = userRole === 'admin' ? data : data.filter(item => item.status !== 'processing');
+          setData(filtered);
+          setFilteredData(filtered);
+        } else {
+          console.error('Error fetching agents:', response.statusText);
+        }
+      } catch (err) {
+        console.error('Error fetching agents:', err);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     fetchData();

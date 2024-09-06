@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './form.scss';
 import { useLocation } from 'react-router-dom';
-import { csrfProtectedPost } from '../../Components/CsrfUtils';
+import axios from 'axios';
 // import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 const PasswordReset = () => {
@@ -17,7 +17,7 @@ const PasswordReset = () => {
         e.preventDefault();
         setError('');
         try {
-          const response = await csrfProtectedPost('/resetpassword', { uid, newPassword });
+          const response = await axios.post('/resetpassword', { uid, newPassword });
     
           if (response.ok) {
             setSuccess('Password reset successful. Please login with your new password.');

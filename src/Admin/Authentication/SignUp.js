@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import {
   TextField,
   Button,
@@ -13,7 +14,6 @@ import {
   CircularProgress,
   Box,
 } from '@mui/material';
-import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 const theme = createTheme({
   palette: {
@@ -38,7 +38,7 @@ const UserRegistration = ({ onUserAdded }) => {
     try {
       setIsLoading(true);
   
-      const response = await csrfProtectedPost(registrationEndpoint, { email, name });
+      const response = await axios.post(registrationEndpoint, { email, name });
       
       if (response.status === 201) {
         openSuccessModal(); // You can still open the success modal for feedback
