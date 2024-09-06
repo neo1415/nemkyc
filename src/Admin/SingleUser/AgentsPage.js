@@ -1,4 +1,4 @@
-import React,{useEffect} from 'react'
+import React,{useEffect, useState} from 'react'
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from '../../APi/index';
 import { useParams } from 'react-router-dom';
@@ -12,7 +12,6 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import useFetchUserRole from '../../Components/checkUserRole';
 import { useDispatch, useSelector } from 'react-redux';
-import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 const AgentsPage = () => {
 
@@ -37,19 +36,21 @@ const AgentsPage = () => {
       dispatch({ type: 'SET_EDITING_KEY', key: null });
   
       try {
-        const response = await csrfProtectedPost(`${serverURL}edit-agents-form/${data.id}`, {
-          [key]: editData[key]
+        const response = await fetch(`${serverURL}/edit-agents-form/${data.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ [key]: editData[key] }),
         });
-    
-        const result = response.data;
-    
-        if (response.status !== 200) {
+  
+        const result = await response.json();
+  
+        if (!response.ok) {
           console.error(result.error);
           // If the server returns an error, revert the changes in the UI
           dispatch({ type: 'SET_EDIT_DATA', data });
           toast.error('Update failed. Please try again.');
-        } else {
-          toast.success('Form updated successfully.');
         }
       } catch (err) {
         console.error('Error:', err);

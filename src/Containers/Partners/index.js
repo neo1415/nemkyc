@@ -6,6 +6,7 @@ import CompanyDetails from './Input/CompanyDetails';
 import { images } from '../../Constants';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import axios from 'axios';
 import { endpoints } from '../../Admin/Authentication/Points';
 import FileUpload from './Input/Uploads';
 import { useForm } from 'react-hook-form';
@@ -17,10 +18,10 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { schema1, schema2, schema3, schema4, schema5 } from './FormSchema';
 import SubmitModal from '../Modals/SubmitModal';
 import { CircularProgress } from '@mui/material';
-import { csrfProtectedPost } from '../../Components/CsrfUtils';
+// import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 
-const Partners = () => {
+const Brokers = () => {
     
     const combinedSchema = yup.object().shape({
         ...schema1.fields,
@@ -70,7 +71,6 @@ const Partners = () => {
       };
       
     const handleSubmit = async (e) => {
-
       e.preventDefault();
       const stepFields = {
         1: Object.keys(schema5.fields),
@@ -84,10 +84,10 @@ const Partners = () => {
           setIsSubmitted(false); // Ensure modal is closed during submission
 
           const formData = {...formValues, ...fileUrls};
-          if (fileUrls.Incorporation && fileUrls.identification ) {
-         
+          if (fileUrls.Incorporation && fileUrls.identification && fileUrls.NAICOMForm) {
+
             console.log('Form values:', formData);
-            const response = await csrfProtectedPost(endpoints.submitPartnersForm, formData);
+            const response = await axios.post(endpoints.submitBrokersForm, formData);
           if (response.status === 201) {
               console.log('Form submitted successfully');
               showSuccessToast('Form Submitted successfully.');
@@ -103,7 +103,7 @@ const Partners = () => {
           } catch (err) {
             console.error('Network error during form submission:', err);
             showErrorToast('An error occurred during submission. Please try again.');
-          }  finally {
+          } finally {
             setIsLoading(false); // Hide loading spinner
           }
         }
@@ -137,7 +137,7 @@ const Partners = () => {
   return (
     <div style={{display:'flex', justifyContent:'flex-start',marginTop:'-100px'}}>
       <div className='picture'>
-        <img src={images.partner} className='form-img' alt='cdd ' />
+        <img src={images.broker} className='form-img' alt='cdd ' />
         </div>
     <div className='form-page'>
 
@@ -208,7 +208,7 @@ const Partners = () => {
           exit={{ opacity: 0, x: 50 }}
           className="form-step">
 
-            <h3>Director's Information 2</h3>
+            <h3>Director's Information</h3>
               <Director2
                 register={register}
                 errors={errors}
@@ -264,11 +264,11 @@ const Partners = () => {
         control={control}
         setValue={setValue}
         trigger={trigger}
+        register={register}
         fileUrls={fileUrls}
         setFileUrls={setFileUrls}
         setFileNames={setFileNames}
         fileNames={fileNames}
-        register={register}
         errors={errors}
         forceUpdate={forceUpdate}
          />
@@ -277,8 +277,8 @@ const Partners = () => {
        <div className='button-flex'>
           <button type="button" onClick={prevStep}>Previous</button>
           <button type="submit" disabled={isLoading} style={{ position: 'relative' }}>
-            {isLoading ? <CircularProgress size={24} style={{ color: 'white', position: 'absolute' }} /> : 'Submit'}
-          </button>
+                {isLoading ? <CircularProgress size={24} style={{ color: 'white', position: 'absolute' }} /> : 'Submit'}
+              </button>
         </div>
 
       </motion.div>
@@ -294,4 +294,4 @@ isSubmitted={isSubmitted} />
   </div>
 )
 }
-export default Partners
+export default Brokers

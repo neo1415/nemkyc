@@ -11,12 +11,12 @@ import { db } from "../../APi/index";
 import { CircularProgress } from '@mui/material';
 import SideBar from "../SideBar/SideBar";
 import useAutoLogout from '../../Components/Timeout';
+import axios from "axios";
 import { endpoints } from '../Authentication/Points';
 import ConfirmationModal from './../../Containers/Modals/ConfirmationModal';
 import FilterComponent from '../../Components/useFilter';
 import useFetchUserRole from './../../Components/checkUserRole';
 import { StatusButton } from '../../Components/StatusButton';
-import { csrfProtectedGet } from '../../Components/CsrfUtils';
 
 function CustomLoadingOverlay() {
   return (
@@ -61,7 +61,7 @@ const List = () => {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
-      const response = await csrfProtectedGet(endpoints.getCorporateData);
+      const response = await axios.get(endpoints.getCorporateData);
 
       if (response.status === 200) {
         const data = response.data;
