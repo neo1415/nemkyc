@@ -1,184 +1,236 @@
-import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../../APi/index';
-import { DataGrid } from '@mui/x-data-grid';
-import { GridToolbarContainer, GridToolbarExport } from '@mui/x-data-grid';
-import CircularProgress from '@mui/material/CircularProgress';
-import SideBar from '../SideBar/SideBar';
-import ConfirmationModal from '../../Containers/Modals/ConfirmationModal';
-import FilterComponent from '../../Components/useFilter';
-import { UserAuth } from '../../Context/AuthContext';
-import useAutoLogout from '../../Components/Timeout';
-import useFetchUserRole from '../../Components/checkUserRole';
-import { StatusButton } from '../../Components/StatusButton';
-import { UserColumns } from './datatablesource';
+import React, { useState } from 'react';
+import './KYC.scss'
+import { motion } from "framer-motion";
+import { images } from '../../Constants';
+import { Link } from 'react-router-dom';
+import PersonalInfo from './Inputs/PersonalInfo';
+import AdditionalInfo from './Inputs/AdditionalInfo';
+import FinancialInfo from './Inputs/FinancialInfo';
+import SubmitModal from '../Modals/SubmitModal';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { useForm } from 'react-hook-form';
+import * as yup from 'yup';
+import { yupResolver } from '@hookform/resolvers/yup';
 import axios from 'axios';
-import { endpoints } from '../Authentication/Points';
-import { 
-  setData,
-  setFilteredData,
-  setIsLoading,
-  setModalOpen,
-  setIdToDelete
-} from '../../Context/actions'; // Adjust the path to your actions file
+import { endpoints } from '../../Admin/Authentication/Points';
+import { schema1, schema2, schema3 } from './FormSchema';
+import { CircularProgress } from '@mui/material';
 
-import './Table.scss';
+function KYC() {
+  const combinedSchema = yup.object().shape({
+    ...schema1.fields,
+    ...schema2.fields,
+    ...schema3.fields,
+});
+// a buffer for niw
+const { register, formState: { errors }, trigger, watch, forceUpdate, control,setValue } = useForm({
+ resolver: yupResolver(combinedSchema),
+  mode: 'onChange' // This will ensure validation on change
+});
 
-function CustomLoadingOverlay() {
-  return (
-    <div style={{
-      position: 'absolute',
-      top: 0,
-      bottom: 0,
-      left: 0,
-      right: 0,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}>
-      <CircularProgress />
-    </div>
-  );
-}
+const formValues = watch(); // Get all form values
+const [step, setStep] = useState(1);
+const [isSubmitted, setIsSubmitted] = useState(false);
+const [fileUrls, setFileUrls] = useState({});
+const [fileNames, setFileNames] = useState({});
+const [isLoading, setIsLoading] = useState(false);
 
-const Individual = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { user } = UserAuth();
-  const userRole = useFetchUserRole(user);
-  const { logout } = UserAuth();
+  const showSuccessToast = () => {
+    toast.success('Your file has been uploaded successfully!');
+  };
 
-  // Use the custom hook to implement automatic logout
-  useAutoLogout({
-    timeoutDuration: 10 * 60 * 1000, // Adjust as needed
-    logout, // Use the logout function from context
-    redirectPath: '/signin', // Specify the redirect path
-  });
+  const showErrorToast = (message) => {
+    toast.error(message, {
+      position: toast.POSITION.TOP_RIGHT,
+      autoClose: 3000, // Adjust the duration as needed
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: false,
+      draggable: true,
+      progress: undefined,
+    });
+  };
+  
 
-  // Access state from the Redux store
-  const data = useSelector(state => state.data);
-  const filteredData = useSelector(state => state.filteredData);
-  const isLoading = useSelector(state => state.isLoading);
-  const modalOpen = useSelector(state => state.modalOpen);
-  const idToDelete = useSelector(state => state.idToDelete);
+  const resetForm = () => {
+    window.location.reload(false);
+  };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      dispatch(setIsLoading(true)); // Set loading to true before fetching the data
-      try {
-        const response = await axios.get(endpoints.getIndividualData);
-        if (response.status === 200) {
-          const data = response.data;
-          // Filter out items with status 'processing' if user role is not 'admin'
-          const filtered = userRole === 'admin' ? data : data.filter(item => item.status !== 'processing');
-          dispatch(setData(filtered));
-          dispatch(setFilteredData(filtered));
-        } else {
-          console.error('Error fetching individual KYC data:', response.statusText);
-        }
-      } catch (err) {
-        console.error('Error fetching individual KYC data:', err);
-      } finally {
-        dispatch(setIsLoading(false));
-      }
+  const closeModal = () => {
+    setIsSubmitted(false);
+  };
+
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const stepFields = {
+      1: Object.keys(schema3.fields),
     };
 
-    fetchData();
-  }, [userRole, dispatch]);
+    const result = await trigger(stepFields[step]);
+    
+    if (result) {
+      try {      
+        setIsLoading(true); // Show loading spinner
+        setIsSubmitted(false); // Ensure modal is closed during submission
 
-  const handleDelete = async () => {
-    dispatch(setModalOpen(false));
-    if (idToDelete) {
-      try {
-        await deleteDoc(doc(db, 'individual-kyc', idToDelete));
-        dispatch(setData(data.filter((item) => item.id !== idToDelete)));
-      } catch (err) {
-        console.log(err);
+        const formData = {...formValues, ...fileUrls};
+        if (fileUrls.identification ) {
+     
+          console.log('Form values:', formData);
+          const response = await axios.post(endpoints.submitIndividualForm, formData);
+        if (response.status === 201) {
+            console.log('Form submitted successfully');
+            showSuccessToast('Form Submitted successfully.');
+            setFileUrls({}); 
+            setFileNames({});
+            setIsSubmitted(true);
+        } else {
+            console.error('Error during form submission:', response.statusText);
+          }
+          } else {
+            showErrorToast('Please ensure all files are uploaded before submitting.');
+          }
+        } catch (err) {
+          console.error('Network error during form submission:', err);
+          showErrorToast('An error occurred during submission. Please try again.');
+        } finally {
+          setIsLoading(false); // Hide loading spinner
+        }
       }
-    }
+    };
+  
+    const nextStep = async () => {
+      // Define the fields for each step
+      const stepFields = {
+        1: Object.keys(schema1.fields),
+        2: Object.keys(schema2.fields),
+        3: Object.keys(schema3.fields),
+      };
+  
+      // Trigger validation only for the fields of the current step
+      const result = await trigger(stepFields[step]);
+  
+      console.log('Validation result:', result);
+      console.log('Form errors:', errors);
+  
+      if (result) {
+        setStep(step + 1);
+      }
+    };
+  
+  const prevStep = () => {
+    setStep(step - 1);
   };
-
-  const handleDeleteClick = (id) => {
-    dispatch(setIdToDelete(id));
-    dispatch(setModalOpen(true));
-  };
-
-  const handleView = (id) => {
-    navigate('/individual-list/' + id);
-  };
-
-  function CustomToolbar() {
-    return (
-      <GridToolbarContainer>
-        <GridToolbarExport />
-      </GridToolbarContainer>
-    );
-  }
-
-  const actionColumn = [
-    {
-      field: 'action',
-      headerName: 'Action',
-      width: 200,
-      renderCell: (params) => {
-        const { id } = params.row;
-        return (
-          <div className="cellAction">
-            {userRole === 'admin' && (
-              <>
-                <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
-                  Delete
-                </div>
-                <div className="statusButton">
-                  <StatusButton id={id} collection="individual-kyc" setData={(updatedData) => dispatch(setData(updatedData))} />
-                </div>
-              </>
-            )}
-            <div className="viewButton" onClick={() => handleView(id)}>
-              View
-            </div>
-          </div>
-        );
-      },
-    },
-  ];
 
   return (
-    <div className="list">
-      <SideBar />
-      <div className="datatable">
-        <div className="datatableTitle">
-          Individual Customer Due Dilligence
-          <FilterComponent initialData={data} setFilteredData={(filtered) => dispatch(setFilteredData(filtered))} />
+    <div className='forms' style={{display:'flex',flexDirection:'column' }}>
+      <div className='forms-page'>
+        <div className='picture'>
+          <img src={images.form4} className='form-img' alt='fixed' />
         </div>
-        <DataGrid
-          components={{
-            Toolbar: CustomToolbar,
-            LoadingOverlay: CustomLoadingOverlay,
-          }}
-          className="datagrid"
-          columns={actionColumn.concat(UserColumns)}
-          rows={filteredData}
-          pageSize={8}
-          rowsPerPageOptions={[9]}
-          checkboxSelection
-          loading={isLoading}
-          getRowClassName={(params) =>
-            `row-${params.row.status}`
-          }
-        />
-      </div>
-      <ConfirmationModal
-        open={modalOpen}
-        title="Delete Entry"
-        content="Are you sure you want to delete this entry?"
-        onConfirm={handleDelete}
-        onCancel={() => dispatch(setModalOpen(false))}
-      />
-    </div>
-  );
-};
+      <motion.div
+        initial={{ opacity: 0, x: 0}}
+        animate={{ opacity: 1, x: 0 }}
+        transition= {{ duration:.5, ease:'easeOut' }}
+        exit={{ opacity: 0, x: 0 }}
+        className="multisteps-form">
 
-export default Individual;
+      <form onSubmit={handleSubmit}>
+        {step === 1 && (
+          <motion.div
+            initial={{ opacity: 0, x: 0}}
+            animate={{ opacity: 1, x: 0 }}
+            transition= {{ duration:.5, ease:'easeOut' }}
+            exit={{ opacity: 0, x: 50 }}
+            className="form-step">
+
+            <h3>Personal Information</h3>
+              <PersonalInfo
+                register={register}
+                errors={errors}
+                watch={watch}
+                control={control} />
+     
+            <div className='button-flex'>
+              <Link to='/'>
+              <button type='button'>Home page</button>
+              </Link>
+              <button type="button" onClick={nextStep}>Next</button>
+            </div>
+          </motion.div>
+        )}
+
+      {step === 2 && (
+        <motion.div
+          initial={{ opacity: 0, x: 50}}
+          animate={{ opacity: 1, x:0 }}
+          transition= {{ duration:.5, ease:'easeOut' }}
+          exit={{ opacity: 0, x: 50 }}
+          className="form-step">
+
+            <h3>Additional Details</h3>
+            <AdditionalInfo 
+                register={register}
+                errors={errors}
+                watch={watch}
+                control={control}
+            />
+
+          <div className='button-flex'>
+            <button  onClick={prevStep}>Previous</button>
+            <button type="button" onClick={nextStep}>Next</button>
+          </div>
+      </motion.div>
+    )}
+
+ {step === 3 && (
+  <motion.div
+      initial={{ opacity: 0, x: 50}}
+      animate={{ opacity: 1, x: 0 }}
+      transition= {{ duration:.5, ease:'easeOut' }}
+      exit={{ opacity: 0, x: 50 }}
+      className="form-step">
+
+        <h3>Financial Details</h3>
+        <p className='file-type'>Uploads should not be more than 2mb</p>
+        <p className='file-type'>Only pdf, jpg and png files are allowed</p>
+          <FinancialInfo 
+                register={register}
+                errors={errors}
+                watch={watch}
+                control={control}
+                setValue={setValue}
+                trigger={trigger}
+                fileUrls={fileUrls}
+                setFileUrls={setFileUrls}
+                setFileNames={setFileNames}
+                fileNames={fileNames}
+                forceUpdate={forceUpdate}
+                 />
+                <ToastContainer />
+
+      <div className='button-flex'>
+        <button type="button" onClick={prevStep}>Previous</button>
+        <button type="submit" disabled={isLoading} style={{ position: 'relative' }}>
+                {isLoading ? <CircularProgress size={24} style={{ color: 'white', position: 'absolute' }} /> : 'Submit'}
+              </button>
+      </div>
+      </motion.div>
+      
+    )} 
+      
+  </form>
+
+    </motion.div>
+    <SubmitModal 
+      closeModal={closeModal} 
+      resetForm={resetForm} 
+      isSubmitted={isSubmitted} />
+    </div>
+    </div>
+);
+}
+
+export default KYC;
