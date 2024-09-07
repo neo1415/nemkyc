@@ -98,10 +98,10 @@ const [isLoading, setIsLoading] = useState(false);
         const formData = {...formValues, ...fileUrls};
         if (fileUrls.verificationDoc ) {
 
-          console.log('Form values:', formData);
+          // console.log('Form values:', formData);
           const response = await csrfProtectedPost(endpoints.submitCorporateKYCForm, formData);
         if (response.status === 201) {
-            console.log('Form submitted successfully');
+            // console.log('Form submitted successfully');
             showSuccessToast('Form Submitted successfully.');
             setFileUrls({}); 
             setFileNames({});

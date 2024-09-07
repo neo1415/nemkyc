@@ -86,10 +86,10 @@ const Corporate = () => {
           const formData = {...formValues, ...fileUrls};
           if (fileUrls.cac && fileUrls.identification ) {
         
-            console.log('Form values:', formData);
+            // console.log('Form values:', formData);
             const response = await csrfProtectedPost(endpoints.submitCorporateForm, formData);
           if (response.status === 201) {
-              console.log('Form submitted successfully');
+              // console.log('Form submitted successfully');
               showSuccessToast('Form Submitted successfully.');
               setFileUrls({}); 
               setFileNames({});

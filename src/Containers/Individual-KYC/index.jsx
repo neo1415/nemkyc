@@ -100,7 +100,7 @@ const [isLoading, setIsLoading] = useState(false);
         if (fileUrls.identification) {
           const response = await csrfProtectedPost(endpoints.submitIndividualKYCForm, formData);
           if (response.status === 201) {
-            console.log('Form submitted successfully');
+            // console.log('Form submitted successfully');
             showSuccessToast('Form Submitted successfully.');
             setFileUrls({});
             setFileNames({});

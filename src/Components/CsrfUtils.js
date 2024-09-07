@@ -8,7 +8,7 @@ const getCsrfToken = async () => {
   try {
     const response = await axios.get(CSRF_TOKEN_ENDPOINT, { withCredentials: true }); // Include credentials
     const csrfToken = response.data.csrfToken;
-    console.log('Fetched CSRF Token:', csrfToken);
+    // console.log('Fetched CSRF Token:', csrfToken);
     return csrfToken;
   } catch (error) {
     console.error('Error fetching CSRF Token:', error.response ? error.response.data : error.message);
