@@ -14,6 +14,7 @@ import useFetchUserRole from '../../Components/checkUserRole';
 import { useDispatch, useSelector } from 'react-redux';
 import images from '../../Constants/images'
 import { ref,getDownloadURL } from "firebase/storage";
+import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 const CorporateSinglePage = () => {
 
@@ -64,21 +65,19 @@ const handleFormSubmit = async (event, key) => {
   dispatch({ type: 'SET_EDITING_KEY', key: null });
 
   try {
-    const response = await fetch(`${serverURL}/edit-corporate-kyc-form/${data.id}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ [key]: editData[key] }),
+    const response = await csrfProtectedPost(`${serverURL}/edit-corporate-kyc-form/${data.id}`, {
+      [key]: editData[key]
     });
 
-    const result = await response.json();
+    const result = response.data;
 
-    if (!response.ok) {
+    if (response.status !== 200) {
       console.error(result.error);
       // If the server returns an error, revert the changes in the UI
       dispatch({ type: 'SET_EDIT_DATA', data });
       toast.error('Update failed. Please try again.');
+    } else {
+      toast.success('Form updated successfully.');
     }
   } catch (err) {
     console.error('Error:', err);

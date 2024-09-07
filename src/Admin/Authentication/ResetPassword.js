@@ -47,10 +47,10 @@ const ResetPassword = () => {
       await confirmPasswordReset(oobCode, password);
       alert("Password has been reset successfully!");
       setLoading(true); // Show the loading modal
-      console.log('Password reset successful. Attempting to clear custom claims.');
+      // console.log('Password reset successful. Attempting to clear custom claims.');
 
       const uid = auth.currentUser?.uid;
-      console.log('Retrieved UID:', uid);
+      // console.log('Retrieved UID:', uid);
 
       await clearCustomClaims(uid);
 
@@ -73,7 +73,7 @@ const ResetPassword = () => {
       const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
       const clearPasswordClaim = `${serverURL}/clear-password-reset-claims`;
 
-      console.log('Sending request to clear claims for UID:', uid);
+      // console.log('Sending request to clear claims for UID:', uid);
 
       const claimResponse = await csrfProtectedPost(clearPasswordClaim, { uid });
       console.log('Claim clearing response:', claimResponse.data);

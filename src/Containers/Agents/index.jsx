@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import './KYC.scss'
 import { motion } from "framer-motion";
 import { images } from '../../Constants';
@@ -15,7 +15,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { CircularProgress } from '@mui/material';
 import { endpoints } from '../../Admin/Authentication/Points';
 import { schema1, schema2, schema3 } from './FormSchema';
-import { csrfProtectedGet, csrfProtectedPost } from '../../Components/CsrfUtils';
+import { csrfProtectedPost } from '../../Components/CsrfUtils';
 // import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 function Agents() {
@@ -54,23 +54,23 @@ const [isLoading, setIsLoading] = useState(false);
   };
   
 
-  useEffect(() => {
-    // Fetch saved data for the current step if it exists
-    async function fetchSavedData() {
-      try {
-        const response = await csrfProtectedGet(`${endpoints.getAgentsData}?step=${step}`);
-        if (response.data) {
-          const savedData = response.data;
-          Object.keys(savedData).forEach(key => {
-            setValue(key, savedData[key]);
-          });
-        }
-      } catch (error) {
-        console.error('Failed to load saved form data:', error);
-      }
-    }
-    fetchSavedData();
-  }, [step, setValue]);
+  // useEffect(() => {
+  //   // Fetch saved data for the current step if it exists
+  //   async function fetchSavedData() {
+  //     try {
+  //       const response = await csrfProtectedGet(`${endpoints.getAgentsData}?step=${step}`);
+  //       if (response.data) {
+  //         const savedData = response.data;
+  //         Object.keys(savedData).forEach(key => {
+  //           setValue(key, savedData[key]);
+  //         });
+  //       }
+  //     } catch (error) {
+  //       console.error('Failed to load saved form data:', error);
+  //     }
+  //   }
+  //   fetchSavedData();
+  // }, [step, setValue]);
 
 
   const resetForm = () => {
@@ -104,10 +104,10 @@ const [isLoading, setIsLoading] = useState(false);
 
         const formData = {...formValues, ...fileUrls};
         
-          console.log('Form values:', formData);
+          // console.log('Form values:', formData);
           const response = await csrfProtectedPost(endpoints.submitAgentsForm, formData);
         if (response.status === 201) {
-            console.log('Form submitted successfully');
+            // console.log('Form submitted successfully');
             showSuccessToast('Form Submitted successfully.');
             setFileUrls({}); 
             setFileNames({});

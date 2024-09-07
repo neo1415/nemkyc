@@ -14,12 +14,12 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
   useEffect(() => {
     const fetchUserRole = async () => {
       if (user && user.uid) {
-        console.log('User found:', user);
+        // console.log('User found:', user);
         try {
           const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
           const response = await csrfProtectedPost(`${serverURL}/check-user-role`, { uid: user.uid });
           const role = response.data.role;
-          console.log('Fetched role from server:', role);
+          // console.log('Fetched role from server:', role);
           setUserRole(role);
         } catch (error) {
           console.error('Error checking user role:', error);

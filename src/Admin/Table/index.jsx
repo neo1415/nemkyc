@@ -47,11 +47,6 @@ const List = () => {
   const userRole = useFetchUserRole(user);
   const { logout } = UserAuth(); 
 
-  // Log userRole to see if it is being fetched correctly
-  useEffect(() => {
-    console.log("User role:", userRole);
-  }, [userRole]);
-
   useAutoLogout({
     timeoutDuration: 10 * 60 * 1000, // 10 minutes
     logout,
