@@ -12,10 +12,10 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
-import axios from 'axios';
 import { endpoints } from '../../Admin/Authentication/Points';
 import { schema1, schema2, schema3 } from './FormSchema';
 import { CircularProgress } from '@mui/material';
+import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 function KYC() {
   const combinedSchema = yup.object().shape({
@@ -79,7 +79,7 @@ const [isLoading, setIsLoading] = useState(false);
         if (fileUrls.identification ) {
      
           console.log('Form values:', formData);
-          const response = await axios.post(endpoints.submitIndividualForm, formData);
+          const response = await csrfProtectedPost(endpoints.submitIndividualForm, formData);
         if (response.status === 201) {
             console.log('Form submitted successfully');
             showSuccessToast('Form Submitted successfully.');
