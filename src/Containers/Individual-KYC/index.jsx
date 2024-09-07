@@ -81,13 +81,13 @@ const [isLoading, setIsLoading] = useState(false);
     setIsSubmitted(false);
   };
 
-  const saveDataForStep = async (stepData) => {
-    try {
-      await csrfProtectedPost(`${endpoints.saveAgentsStepData}`, { step, data: stepData });
-    } catch (error) {
-      console.error('Failed to save form data:', error);
-    }
-  };
+  // const saveDataForStep = async (stepData) => {
+  //   try {
+  //     await csrfProtectedPost(`${endpoints.saveAgentsStepData}`, { step, data: stepData });
+  //   } catch (error) {
+  //     console.error('Failed to save form data:', error);
+  //   }
+  // };
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -140,7 +140,7 @@ const [isLoading, setIsLoading] = useState(false);
       console.log('Form errors:', errors);
   
     if (result) {
-      await saveDataForStep(formValues); // Save current step data before moving to the next step
+      // await saveDataForStep(formValues); // Save current step data before moving to the next step
       setStep(step + 1);
     }
     };
