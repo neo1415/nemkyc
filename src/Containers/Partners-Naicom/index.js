@@ -18,10 +18,9 @@ import { schema1, schema2, schema3, schema4, schema5 } from './FormSchema';
 import SubmitModal from '../Modals/SubmitModal';
 import { CircularProgress } from '@mui/material';
 import { csrfProtectedPost } from '../../Components/CsrfUtils';
-// import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 
-const Brokers = () => {
+const PartnersNaicom = () => {
     
     const combinedSchema = yup.object().shape({
         ...schema1.fields,
@@ -85,9 +84,9 @@ const Brokers = () => {
 
           const formData = {...formValues, ...fileUrls};
           if (fileUrls.Incorporation && fileUrls.identification && fileUrls.NAICOMForm) {
-
+     
             console.log('Form values:', formData);
-            const response = await csrfProtectedPost(endpoints.submitBrokersForm, formData);
+            const response = await csrfProtectedPost(endpoints.submitPartnersForm, formData);
           if (response.status === 201) {
               console.log('Form submitted successfully');
               showSuccessToast('Form Submitted successfully.');
@@ -137,7 +136,7 @@ const Brokers = () => {
   return (
     <div style={{display:'flex', justifyContent:'flex-start',marginTop:'-100px'}}>
       <div className='picture'>
-        <img src={images.broker} className='form-img' alt='cdd ' />
+        <img src={images.partner} className='form-img' alt='cdd ' />
         </div>
     <div className='form-page'>
 
@@ -264,11 +263,11 @@ const Brokers = () => {
         control={control}
         setValue={setValue}
         trigger={trigger}
-        register={register}
         fileUrls={fileUrls}
         setFileUrls={setFileUrls}
         setFileNames={setFileNames}
         fileNames={fileNames}
+        register={register}
         errors={errors}
         forceUpdate={forceUpdate}
          />
@@ -294,4 +293,4 @@ isSubmitted={isSubmitted} />
   </div>
 )
 }
-export default Brokers
+export default PartnersNaicom
