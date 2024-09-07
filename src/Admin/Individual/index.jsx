@@ -14,7 +14,6 @@ import useAutoLogout from '../../Components/Timeout';
 import useFetchUserRole from '../../Components/checkUserRole';
 import { StatusButton } from '../../Components/StatusButton';
 import { UserColumns } from './datatablesource';
-import axios from 'axios';
 import { endpoints } from '../Authentication/Points';
 // import { 
 //   setData,
@@ -23,8 +22,8 @@ import { endpoints } from '../Authentication/Points';
 //   setModalOpen,
 //   setIdToDelete
 // } from '../../Context/actions'; // Adjust the path to your actions file
-
 import './Table.scss';
+import { csrfProtectedGet } from '../../Components/CsrfUtils';
 
 function CustomLoadingOverlay() {
   return (
@@ -73,7 +72,7 @@ const Individual = () => {
     const fetchData = async () => {
       setIsLoading(true); // Set loading to true before fetching the data
       try {
-        const response = await axios.get(endpoints.getIndividualData);
+        const response = await csrfProtectedGet(endpoints.getIndividualData);
         if (response.status === 200) {
           const data = response.data;
           // Filter out items with status 'processing' if user role is not 'admin'

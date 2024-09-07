@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
 import { Box, Typography, TextField, Button, IconButton, InputAdornment, Backdrop, CircularProgress } from '@mui/material';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { UserAuth } from '../../Context/AuthContext';
 import { auth } from '../../APi';
 import './ResetPassword.css';
+import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -75,7 +75,7 @@ const ResetPassword = () => {
 
       console.log('Sending request to clear claims for UID:', uid);
 
-      const claimResponse = await axios.post(clearPasswordClaim, { uid });
+      const claimResponse = await csrfProtectedPost(clearPasswordClaim, { uid });
       console.log('Claim clearing response:', claimResponse.data);
     } catch (error) {
       console.error('Error clearing custom claims:', error);

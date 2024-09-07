@@ -14,7 +14,6 @@ import useAutoLogout from '../../Components/Timeout';
 import useFetchUserRole from '../../Components/checkUserRole';
 import { StatusButton } from '../../Components/StatusButton';
 import { UserColumns } from './datatablesource';
-import axios from 'axios';
 import { endpoints } from '../Authentication/Points';
 // import { 
 //   setData,
@@ -25,6 +24,7 @@ import { endpoints } from '../Authentication/Points';
 // } from '../../Context/actions'; // Adjust the path to your actions file
 
 import './Table.scss';
+import { csrfProtectedGet } from '../../Components/CsrfUtils';
 
 function CustomLoadingOverlay() {
   return (
@@ -78,7 +78,7 @@ const CorporateKYCTable = () => {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true); // Set loading to true before fetching the data
-      const response = await axios.get(endpoints.getCorporateKYCData);
+      const response = await csrfProtectedGet(endpoints.getCorporateKYCData);
       
       if (response.status === 200) {
         const data = response.data;

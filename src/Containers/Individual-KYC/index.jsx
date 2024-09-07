@@ -12,10 +12,10 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
-import axios from 'axios';
 import { CircularProgress } from '@mui/material';
 import { endpoints } from '../../Admin/Authentication/Points';
 import { schema1, schema2, schema3 } from './FormSchema';
+import { csrfProtectedGet, csrfProtectedPost } from '../../Components/CsrfUtils';
 // import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 function Agents() {
@@ -58,7 +58,7 @@ const [isLoading, setIsLoading] = useState(false);
     // Fetch saved data for the current step if it exists
     async function fetchSavedData() {
       try {
-        const response = await axios.get(`${endpoints.getAgentsData}?step=${step}`);
+        const response = await csrfProtectedGet(`${endpoints.getAgentsData}?step=${step}`);
         if (response.data) {
           const savedData = response.data;
           Object.keys(savedData).forEach(key => {
@@ -83,7 +83,7 @@ const [isLoading, setIsLoading] = useState(false);
 
   const saveDataForStep = async (stepData) => {
     try {
-      await axios.post(`${endpoints.saveAgentsStepData}`, { step, data: stepData });
+      await csrfProtectedPost(`${endpoints.saveAgentsStepData}`, { step, data: stepData });
     } catch (error) {
       console.error('Failed to save form data:', error);
     }
@@ -105,7 +105,7 @@ const [isLoading, setIsLoading] = useState(false);
         const formData = {...formValues, ...fileUrls};
         
           console.log('Form values:', formData);
-          const response = await axios.post(endpoints.submitAgentsForm, formData);
+          const response = await csrfProtectedPost(endpoints.submitAgentsForm, formData);
         if (response.status === 201) {
             console.log('Form submitted successfully');
             showSuccessToast('Form Submitted successfully.');
