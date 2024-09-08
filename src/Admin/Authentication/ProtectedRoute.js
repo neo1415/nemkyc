@@ -27,7 +27,7 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
           setIsLoading(false);
         }
       } else {
-        console.log('No user found or invalid user UID');
+        // console.log('No user found or invalid user UID');
         setIsLoading(false);
       }
     };
@@ -40,7 +40,7 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
     return <PageLoad />;
   }
 
-  console.log('User role:', userRole);
+  // console.log('User role:', userRole);
 
   if (!user) {
     console.log('No user, redirecting to signin');
@@ -48,17 +48,17 @@ const ProtectedRoute = ({ children, adminOnly, moderatorOnly }) => {
   }
 
   if (userRole === 'default') {
-    console.log('Unauthorized, userRole:', userRole);
+    // console.log('Unauthorized, userRole:', userRole);
     return <Unauthourized />;
   }
 
   if (adminOnly && userRole !== 'admin') {
-    console.log('Admin only, userRole:', userRole);
+    // console.log('Admin only, userRole:', userRole);
     return <Unauthourized />;
   }
 
   if (moderatorOnly && userRole !== 'admin' && userRole !== 'moderator') {
-    console.log('Moderator only, userRole:', userRole);
+    // console.log('Moderator only, userRole:', userRole);
     return <Unauthourized />;
   }
 

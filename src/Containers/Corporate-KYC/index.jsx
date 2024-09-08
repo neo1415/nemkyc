@@ -132,8 +132,8 @@ const [isLoading, setIsLoading] = useState(false);
       // Trigger validation only for the fields of the current step
       const result = await trigger(stepFields[step]);
   
-      console.log('Validation result:', result);
-      console.log('Form errors:', errors);
+      // console.log('Validation result:', result);
+      // console.log('Form errors:', errors);
   // Check if the current step is 2 and if the file has been uploaded
   if (step === 2 && !fileUrls.verificationDoc && formValues.companyNameVerificationDoc) {
     showErrorToast('Please ensure the verification details are filled and uploaded before proceeding.');

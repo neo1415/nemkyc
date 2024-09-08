@@ -88,7 +88,7 @@ const FileUpload = ({control,register, setFileUrls, errors,fileNames, setFileNam
               // Update the fileUrls state and then trigger validation
               setFileUrls(prevState => {
                 const updatedState = {...prevState, [fieldName]: downloadURL};
-                console.log(`File uploaded: ${fieldName} URL: ${downloadURL}`);
+                // console.log(`File uploaded: ${fieldName} URL: ${downloadURL}`);
                 
                 // Trigger validation after state update
                 trigger(fieldName);

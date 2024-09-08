@@ -80,10 +80,10 @@ const Corporate = () => {
           const formData = {...formValues, ...fileUrls};
           if (fileUrls.cac && fileUrls.identification && fileUrls.cacForm) {
             setIsSubmitted(true);
-            console.log('Form values:', formData);
+            // console.log('Form values:', formData);
             const response = await axios.post(endpoints.submitCorporateForm, formData);
           if (response.status === 201) {
-              console.log('Form submitted successfully');
+              // console.log('Form submitted successfully');
               showSuccessToast('Form Submitted successfully.');
               setFileUrls({}); 
               setFileNames({});
@@ -113,8 +113,8 @@ const Corporate = () => {
       // Trigger validation only for the fields of the current step
       const result = await trigger(stepFields[step]);
   
-      console.log('Validation result:', result);
-      console.log('Form errors:', errors);
+      // console.log('Validation result:', result);
+      // console.log('Form errors:', errors);
   
       if (result) {
         setStep(step + 1);

@@ -1,7 +1,7 @@
 import React from 'react'
 
 const AccountDetails = ({register, errors, formValues}) => {
-    console.log('Form values:', formValues); 
+    // console.log('Form values:', formValues); 
   return (
   <div>
     <div className='flexer'>
