@@ -112,8 +112,8 @@ const [isLoading, setIsLoading] = useState(false);
       // Trigger validation only for the fields of the current step
       const result = await trigger(stepFields[step]);
   
-      console.log('Validation result:', result);
-      console.log('Form errors:', errors);
+      // console.log('Validation result:', result);
+      // console.log('Form errors:', errors);
   
       if (result) {
         setStep(step + 1);

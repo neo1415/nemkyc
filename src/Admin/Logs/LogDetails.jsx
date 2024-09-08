@@ -11,12 +11,12 @@ const LogDetails = () => {
     const fetchLog = async () => {
       const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
       const logsEndpoint = `${serverURL}/logs/${id}`;
-      console.log('Fetching log from:', logsEndpoint); // Debugging log
+      // console.log('Fetching log from:', logsEndpoint); // Debugging log
   
       try {
         const response = await axios.get(logsEndpoint);
         if (response.status === 200) {
-          console.log('Log fetched successfully:', response.data.log); // Debugging log
+          // console.log('Log fetched successfully:', response.data.log); // Debugging log
           setLog(response.data.log);
         } else {
           console.error('Error fetching log:', response.status, response.statusText);

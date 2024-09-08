@@ -11,7 +11,7 @@ const Director2 = ({register, errors, formValues, control}) => {
     return value === 'Other' ? '' : value;
   };
 
-  console.log('Form values:', formValues); 
+  // console.log('Form values:', formValues); 
   return (
     <div>   
       <div className='flex-form'>

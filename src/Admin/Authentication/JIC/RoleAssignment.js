@@ -74,7 +74,7 @@ const RoleAssignment = () => {
   const deleteUser = async (uid) => {
     try {
       const endpoint = endpoints.deleteUser(uid); // Use the endpoint with the UID
-      console.log('Delete User Endpoint:', endpoint); // Log the endpoint
+      // console.log('Delete User Endpoint:', endpoint); // Log the endpoint
       const response = await axios.delete(endpoint);
   
       if (response.status === 200) {
@@ -119,9 +119,9 @@ const RoleAssignment = () => {
 const checkUserRole = async (uid, role) => {
   try {
     const endpoint = endpoints.checkUserRole(uid); // Use the endpoint with the UID
-    console.log('Check User Role Endpoint:', endpoint); // Log the endpoint
+    // console.log('Check User Role Endpoint:', endpoint); // Log the endpoint
     const response = await axios.post(endpoint, { role });
-    console.log(role)
+    // console.log(role)
     return response.data.hasRole;
     
   } catch (error) {
