@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-// import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import './form.scss';
 import { auth } from '../../APi';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -87,7 +87,7 @@ const handleSubmit = async (e) => {
           </Button>
         </Box>
         <Box display="flex" justifyContent="center">
-          {/* <Link to='/requestpasswordreset' className='sign-im'>Reset Password</Link> */}
+          <Link to='/requestpasswordreset' className='sign-im'>Reset Password</Link>
         </Box>
       </form>
     </Box>
