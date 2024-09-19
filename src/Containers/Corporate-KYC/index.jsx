@@ -13,9 +13,10 @@ import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { endpoints } from '../../Admin/Authentication/Points';
-import { schema1, schema2, schema3 } from './FormSchema';
+import { schema1, schema2, schema3, schema4 } from './FormSchema';
 import { CircularProgress } from '@mui/material';
 import { csrfProtectedPost } from '../../Components/CsrfUtils';
+import Director1 from './Inputs/Director1';
 
 
 function CorporateKYC() {
@@ -23,6 +24,7 @@ function CorporateKYC() {
     ...schema1.fields,
     ...schema2.fields,
     ...schema3.fields,
+    ...schema4.fields,
 });
 
 const [currentDate, setCurrentDate] = useState('');
@@ -85,7 +87,7 @@ const [isLoading, setIsLoading] = useState(false);
   const handleSubmit = async (e) => {
     e.preventDefault();
     const stepFields = {
-      1: Object.keys(schema3.fields),
+      1: Object.keys(schema4.fields),
     };
 
     const result = await trigger(stepFields[step]);
@@ -127,6 +129,7 @@ const [isLoading, setIsLoading] = useState(false);
         1: Object.keys(schema1.fields),
         2: Object.keys(schema2.fields),
         3: Object.keys(schema3.fields),
+        4: Object.keys(schema4.fields),
       };
   
       // Trigger validation only for the fields of the current step
@@ -135,7 +138,7 @@ const [isLoading, setIsLoading] = useState(false);
       // console.log('Validation result:', result);
       // console.log('Form errors:', errors);
   // Check if the current step is 2 and if the file has been uploaded
-  if (step === 2 && !fileUrls.verificationDoc && formValues.companyNameVerificationDoc) {
+  if (step === 3 && !fileUrls.verificationDoc && formValues.companyNameVerificationDoc) {
     showErrorToast('Please ensure the verification details are filled and uploaded before proceeding.');
     return;
   }
@@ -191,7 +194,37 @@ const [isLoading, setIsLoading] = useState(false);
           </motion.div>
         )}
 
-      {step === 2 && (
+
+{step === 2 && (
+          <motion.div
+            initial={{ opacity: 0, x: 0}}
+            animate={{ opacity: 1, x: 0 }}
+            transition= {{ duration:.5, ease:'easeOut' }}
+            exit={{ opacity: 0, x: 50 }}
+            className="form-step">
+
+            <h3>Director's Information</h3>
+
+      <div className='stretch'>
+      Date<span className='date'>: {currentDate}</span>
+    </div>
+
+              <Director1
+                register={register}
+                errors={errors}
+                watch={watch}
+                control={control} />
+     
+            <div className='button-flex'>
+              <Link to='/'>
+              <button  onClick={prevStep}>Previous</button>
+              </Link>
+              <button type="button" onClick={nextStep}>Next</button>
+            </div>
+          </motion.div>
+        )}
+
+      {step === 3 && (
         <motion.div
           initial={{ opacity: 0, x: 50}}
           animate={{ opacity: 1, x:0 }}
@@ -224,7 +257,7 @@ const [isLoading, setIsLoading] = useState(false);
       </motion.div>
     )}
 
- {step === 3 && (
+ {step === 4 && (
   <motion.div
       initial={{ opacity: 0, x: 50}}
       animate={{ opacity: 1, x: 0 }}
@@ -244,8 +277,8 @@ const [isLoading, setIsLoading] = useState(false);
       <div className='button-flex-c'>
       <button onClick={prevStep}>Previous</button>
       <button type="submit" disabled={isLoading} style={{ position: 'relative' }}>
-                {isLoading ? <CircularProgress size={24} style={{ color: 'white', position: 'absolute' }} /> : 'Submit'}
-              </button>
+          {isLoading ? <CircularProgress size={24} style={{ color: 'white', position: 'absolute' }} /> : 'Submit'}
+      </button>
         
       </div>
       </motion.div>

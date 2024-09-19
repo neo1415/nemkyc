@@ -208,6 +208,65 @@ const handleCancelClick = () => {
       };
   
       doc.autoTable(companyTableColumn, companyTableRows, companyTableProps);
+
+              // Add sub-section - Directors Information
+              doc.setFontSize(18);
+              doc.setTextColor(0, 0, 0);
+              doc.text('Directors Information', 40, doc.lastAutoTable.finalY + 60);
+      
+            
+              const directorsTableColumn = ['Director One', ''];
+              const directorsTableRows = [
+                      ['First Name', data.firstName],
+                      ['Middle Name', data.middleName],
+                      ['Last Name', data.lastName],
+                      ['Date of Birth', data.dob],
+                      // ['Position', data.position],
+                      ['Place of Birth', data.placeOfBirth],
+                      ['Nationality', data.nationality],
+                      ['Country', data.country],
+                      ['Occupation', data.occupation],
+                      ['Email', data.email],
+                      ['Phone Number', data.phoneNumber],
+                      ['BVN Number', data.BVNNumber],
+                      ['Employer\'s Name', data.employersName],
+                      ['Enployers Phone Number', data.employersPhoneNumber],
+                      ['Residential Address', data.residentialAddress],
+                      ['Tax ID Number', data.taxIDNumber],
+                      // ['International Passport Number', data.intPassNo],
+                      // ['Passport Country', data.passCountry],
+                      ['ID Type', data.idType],
+                      ['ID Number', data.idNumber],
+                      ['Issuing Body', data.issuingBody],
+                      ['Issued Date', data.issuedDate],
+                      ['Expiry Date', data.expiryDate],
+                      ['Source of Income', data.sourceOfIncome],
+                    ];
+            
+              const directorsTableProps = {
+                startY: doc.lastAutoTable.finalY + 80,
+                styles: {
+                  halign: 'middle',
+                  valign: 'middle',
+                  fontSize: 12,
+                  cellPadding: 8,
+                  overflow: 'linebreak',
+                  lineWidth: 0.1,
+                },
+                columnStyles: {
+                  0: {
+                    fillColor: [255, 255, 255],
+                    textColor: [0, 0, 0],
+                    fontStyle: 'bold',
+                  },
+                  1: {
+                    fillColor: [255, 255, 255],
+                    textColor: [0, 0, 0],
+                  },
+                },
+              };
+            
+              doc.autoTable(directorsTableColumn, directorsTableRows, directorsTableProps);
   
       // Add section 2 - Beneficial Owners Information
 doc.setFontSize(18);
@@ -408,6 +467,96 @@ doc.autoTable(secondBeneficialOwnersTableColumn, secondBeneficialOwnersTableRows
   </ul>
 </div>
 </div>
+
+      {/* Director/Owner Information */}
+      <div className='form-contents'>
+        <div className='flex-content'>
+          <ul>
+            <h1>Directors Profile</h1>
+           {[
+  { label: 'First Name', key: 'firstName' },
+  { label: 'Middle Name', key: 'middleName' },
+  { label: 'Last Name', key: 'lastName' },
+  { label: 'Date of Birth', key: 'dob' },
+  { label: 'Place of Birth', key: 'placeOfBirth' },
+  { label: 'Nationality', key: 'nationality' },
+  { label: 'Country', key: 'country' },
+  { label: 'Occupation', key: 'occupation' },
+  { label: 'Email', key: 'email' },
+  { label: 'Phone Number', key: 'phoneNumber' },
+  { label: 'BVN Number', key: 'BVNNumber' },
+
+].map(({ label, key }) => (
+  <li className='form-list' key={key}>
+    <p>{label}</p>
+    {editingKey === key ? (
+      <form onSubmit={(event) => handleFormSubmit(event, key)}>
+        <input
+          type='text'
+          name={key}
+          value={editData[key]}
+          onChange={handleInputChange}
+          className='edit-input'
+        />
+        <button type='submit' className='edit-submit'>Save</button>
+        <button type='button' onClick={handleCancelClick} className='edit-cancel'>
+          Cancel
+        </button>
+      </form>
+    ) : (
+      <>
+        <p className='info'>{data[key]}</p>
+        {userRole === 'admin' && (
+          <button onClick={() => handleEditClick(key)} className='edit-button'>Edit</button>
+        )}
+      </>
+    )}
+  </li>
+))}
+ </ul>
+  <ul>
+  <h1>Directors Profile 2</h1>
+{[
+  { label: 'Employer\'s Name', key: 'employersName' },
+  { label: 'Employer\'s Phone Number', key: 'employersPhoneNumber' },
+  { label: 'Residential Address', key: 'residentialAddress' },
+  { label: 'Tax ID Number', key: 'taxIDNumber' },
+  { label: 'ID Type', key: 'idType' },
+  { label: 'ID Number', key: 'idNumber' },
+  { label: 'Issuing Body', key: 'issuingBody' },
+  { label: 'Issued Date', key: 'issuedDate' },
+  { label: 'Expiry Date', key: 'expiryDate' },
+  { label: 'Source Of Income', key: 'sourceOfIncome' },
+].map(({ label, key }) => (
+  <li className='form-list' key={key}>
+    <p>{label}</p>
+    {editingKey === key ? (
+      <form onSubmit={(event) => handleFormSubmit(event, key)}>
+        <input
+          type='text'
+          name={key}
+          value={editData[key]}
+          onChange={handleInputChange}
+          className='edit-input'
+        />
+        <button type='submit' className='edit-submit'>Save</button>
+        <button type='button' onClick={handleCancelClick} className='edit-cancel'>
+          Cancel
+        </button>
+      </form>
+    ) : (
+      <>
+        <p className='info'>{data[key]}</p>
+        {userRole === 'admin' && (
+          <button onClick={() => handleEditClick(key)} className='edit-button'>Edit</button>
+        )}
+      </>
+    )}
+  </li>
+))}
+          </ul>
+        </div>
+      </div>
 
       <div className='form-contents'>
         <div className='flex-content'>

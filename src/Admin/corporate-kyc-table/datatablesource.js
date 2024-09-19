@@ -121,6 +121,143 @@ export const UserColumns = [
   },
 
   {
+    field: "firstName",
+    headerName: "First Name",
+    width: 125,     
+  },
+
+  {
+    field: "middleName2",
+    headerName: "Middle Name",
+    width: 125,     
+  },
+  
+  {
+    field: "lastName",
+    headerName: "Last Name",
+    width: 125,     
+  },
+
+  {
+    field: "dob",
+    headerName: "Date Of Birth",
+    width: 125,     
+  },
+
+  {
+    field: "placeOfBirth",
+    headerName: "Place of Birth",
+    width: 125,     
+  },
+
+  {
+    field: "nationality",
+    headerName: "Nationality",
+    width: 180,
+  },
+  {
+    field: "country",
+    headerName: "Country",
+    width: 180,
+  },
+
+  {
+    field: "occupation",
+    headerName: "Occupation",
+    width: 125,     
+  },
+
+  {
+    field: "email",
+    headerName: "Email",
+    width: 125,     
+  },
+
+  {
+    field: "phoneNumber",
+    headerName: "Phone Number",
+    width: 125,     
+  },
+
+  {
+    field: "BVNNumber",
+    headerName: "BVN Number",
+    width: 125,     
+  },
+  {
+    field: "employersName",
+    headerName: "Employers Name",
+    width: 125,     
+  },
+
+  {
+    field: " employersPhoneNumber",
+    headerName: "Employers Phone Number",
+    width: 125,     
+  },
+
+  {
+    field: "residentialAddress",
+    headerName: "Residential Address",
+    width: 125,     
+  },
+
+  {
+    field: "taxIDNumber",
+    headerName: "tax ID Number",
+    width: 125,     
+  },
+
+  // {
+  //   field: "intPassNo",
+  //   headerName: "International Passport Number",
+  //   width: 125,     
+  // },
+
+  // {
+  //   field: "passCountry",
+  //   headerName: "Passport Country",
+  //   width: 125,     
+  // },
+
+  {
+    field: "idType",
+    headerName: "ID Type",
+    width: 125,     
+  },
+
+  {
+    field: "idNumber",
+    headerName: "ID Number",
+    width: 125,     
+  },
+
+  {
+    field: "issuingBody",
+    headerName: "Issuing Body",
+    width: 125,     
+  },
+
+  {
+    field: "issuedDate",
+    headerName: "Issued Date",
+    width: 125,     
+  },
+
+  {
+    field: "expiryDate",
+    headerName: "Expiry Date",
+    width: 125,     
+  },
+
+  {
+    field: "sourceOfIncome",
+    headerName: "Source Of Income",
+    width: 125,     
+  },
+
+
+  {
     field: "accountNumber",
     headerName: "Account Number",
     width: 125,     

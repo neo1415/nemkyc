@@ -4,8 +4,9 @@ import { Link } from 'react-router-dom';
 import './form.scss';
 import { auth } from '../../APi';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithCustomToken } from 'firebase/auth';
 import { CircularProgress, Box, Typography, Button, TextField } from '@mui/material';
+import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
 const SignIn = () => {
   const [error, setError] = useState('');
@@ -14,44 +15,47 @@ const SignIn = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError('');
-  setLoading(true);
-
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-
-    // if (!user.emailVerified) {
-    //   setError('Please verify your email before logging in.');
-    //   setLoading(false);
-    //   return;
-    // }
-
-    const idTokenResult = await user.getIdTokenResult();
-
-    if (idTokenResult.claims.forcePasswordReset) {
-      await sendPasswordResetEmail(auth, email);
-      // console.log('Password reset email sent successfully to:', email);
-      navigate('/email-succesful');
-    } else {
-      if (idTokenResult.claims.role === 'admin') {
-        navigate('/adminHome');
-      } else if (idTokenResult.claims.role === 'moderator') {
-        navigate('/adminHome');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+  
+    try {
+      // Use Firebase Client SDK to authenticate with email and password
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Get the user's ID token from Firebase
+      const idToken = await userCredential.user.getIdToken();
+  
+      // Send the ID token to the backend for verification
+      const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+      const loginEndpoint = `${serverURL}/verify-token`;
+  
+      const response = await csrfProtectedPost(loginEndpoint, { idToken });
+  
+      if (response.status === 200) {
+        const { customToken, role } = response.data;
+  
+        // Sign in with the custom token
+        await signInWithCustomToken(auth, customToken);
+  
+        // Redirect based on role
+        if (role === 'admin') {
+          navigate('/adminHome');
+        } else {
+          navigate('/adminHome');
+        }
       } else {
-        navigate('/adminHome');
+        setError('Login failed.');
       }
+  
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('An error occurred during login.');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-  } catch (e) {
-    setLoading(false);
-    setError(e.message || 'Invalid email or password or check your internet connection');
-    console.error('Error during sign-in:', e);
-  }
-};
+  };
 
 
   return (
