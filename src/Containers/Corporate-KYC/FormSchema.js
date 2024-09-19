@@ -53,7 +53,7 @@ export const schema2 = yup.object().shape({
   phoneNumber: yup.string().required('Phone Number is required').matches(/^[0-9]+$/, 'Phone Number must be numeric').min(5).max(11).transform(sanitizeString),
   residentialAddress: yup.string().required('Residential Address is required').transform(sanitizeString),
   email: yup.string().required('Email is required').email().transform(sanitizeEmail),
-  taxIDNumber: yup.string().transform(sanitizeString),
+  // taxIDNumber: yup.string().transform(sanitizeString),
   idType: yup.string().required('ID Type is required'),
   idNumber: yup.string().required('ID Number is required').transform(sanitizeString),
   issuingBody: yup.string().required('Issuing Body is required').transform(sanitizeString),
