@@ -5,6 +5,7 @@ export const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3
 export const endpoints = {
   getUsers: `${serverURL}/get-users`,
   getCorporateData: `${serverURL}/get-corporate-data`,
+  logIn: `${serverURL}/login`,
   getBrokersData: `${serverURL}/get-brokers-data`,
   getPartnersData: `${serverURL}/get-partners-data`,
   getAgentsData: `${serverURL}/get-agents-data`,
