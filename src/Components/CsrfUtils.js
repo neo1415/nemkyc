@@ -1,4 +1,3 @@
-// csrf-utils.js
 import axios from 'axios';
 
 const BASE_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';

@@ -17,7 +17,7 @@ export const schema1 = yup.object().shape({
     natureOfBusiness: yup.string().required('nature Of Business is required').transform(sanitizeString), 
     estimatedTurnover: yup.string().required('Estimated Turnover is required').transform(sanitizeString),
     premiumPaymentSource: yup.string().required('Premium Payment Source is required').transform(sanitizeString),
-    taxIDNo: yup.string().required('Tax ID Number is required').transform(sanitizeString),
+    taxIDNo: yup.string().transform(sanitizeString),
     incorporationNumber: yup.string().required('Incorporation Number is required').min(1).max(50).transform(sanitizeString),
     incorporationState: yup.string().required('Incorporation State is required').min(2).max(50).transform(sanitizeString),
     dateOfIncorporationRegistration: yup.date().required('Date of Incorporation Registration is required'),
