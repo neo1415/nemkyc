@@ -78,7 +78,7 @@ const PersonalInfo = ({register, errors, control}) => {
     
       <label htmlFor="taxIDNo">Tax Identification Number  </label>
       <input type='text' {...register("taxIDNo",  { required: false, minLength: 6, maxLength: 15  })} placeholder='Tax Identification Number' />
-      {errors.taxIDNo && <span className="error-message">This field is required</span>}
+      {/* {errors.taxIDNo && <span className="error-message">This field is required</span>} */}
 
     <label htmlFor="emailAddress">Email Address <span className='required'>*</span></label>
       <input type="email" id="emailAddress" placeholder='Email Address' {...register("emailAddress", { required: true })} />
