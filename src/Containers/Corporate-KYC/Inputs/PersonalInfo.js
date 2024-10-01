@@ -43,9 +43,9 @@ const PersonalInfo = ({register, errors, control}) => {
       </select>
       {errors.ownershipOfCompany && <span className="error-message">{errors.ownershipOfCompany.message}</span>}
 
-      <label htmlFor="contactPerson">Contact Person <span className='required'>*</span></label>
+      <label htmlFor="contactPerson">Contact Person </label>
       <input type="text" id="contactPerson" placeholder='Contact Person' {...register("contactPerson", { required: true })} />
-      {errors.contactPerson && <span className="error-message">{errors.contactPerson.message}</span>}
+      {/* {errors.contactPerson && <span className="error-message">{errors.contactPerson.message}</span>} */}
 
       <label htmlFor="website">Website </label>
       <input type='text' {...register("website", { required: true,})} placeholder='website' />
@@ -72,9 +72,9 @@ const PersonalInfo = ({register, errors, control}) => {
       <input type='number' {...register("BVNNumber", { required: true,  minLength:11, maxLength: 11 })} placeholder='BVN' />
       {errors.BVNNumber && <span className="error-message">{errors.BVNNumber.message}</span>}
 
-    <label htmlFor="contactPersonNo">Contact Person Mobile Number <span className='required'>*</span></label>
+    <label htmlFor="contactPersonNo">Contact Person Mobile Number </label>
       <input type="number" id="contactPersonNo" placeholder='Contact Phone Number' {...register("contactPersonNo", { required: true })} />
-      {errors.contactPersonNo && <span className="error-message">Phone Number is required</span>}
+      {/* {errors.contactPersonNo && <span className="error-message">Phone Number is required</span>} */}
     
       <label htmlFor="taxIDNo">Tax Identification Number  </label>
       <input type='text' {...register("taxIDNo",  { required: false, minLength: 6, maxLength: 15  })} placeholder='Tax Identification Number' />
