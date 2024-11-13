@@ -13,6 +13,7 @@ export const endpoints = {
   getCorporateKYCData: `${serverURL}/get-corporate-kyc-data`,
   getIndividualKYCData: `${serverURL}/get-individual-kyc-data`,
   getIndividualData: `${serverURL}/get-individual-data`,
+  assignSuperAdminRole: (userId) => `${serverURL}/assign-super-admin-role/${userId}`,
   assignAdminRole: (userId) => `${serverURL}/assign-admin-role/${userId}`,
   assignModeratorRole: (userId) => `${serverURL}/assign-moderator-role/${userId}`, // Add this line
   assignDefaultRole: (userId) => `${serverURL}/assign-default-role/${userId}`, // Add this line
