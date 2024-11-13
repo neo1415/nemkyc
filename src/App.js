@@ -43,7 +43,7 @@ function App() {
             <Route
               path="/role-assignment"
               element={
-                <ProtectedRoute adminOnly={true}>
+                <ProtectedRoute superAdminOnly={true}>
                   <RoleAssignment />
                 </ProtectedRoute>
               }
@@ -51,7 +51,7 @@ function App() {
             <Route
               path="/user-registration"
               element={
-                <ProtectedRoute adminOnly={true}>
+                <ProtectedRoute superAdminOnly={true}>
                   <UserRegistration />
                 </ProtectedRoute>
               }
@@ -179,7 +179,7 @@ function App() {
             <Route
               path="/logs"
               element={
-                <ProtectedRoute adminOnly={true}>
+                <ProtectedRoute superAdminOnly={true}>
                   <LogsTable />
                 </ProtectedRoute>
               }
@@ -187,7 +187,7 @@ function App() {
             <Route
               path="/logs/:id"
               element={
-                <ProtectedRoute adminOnly={true}>
+                <ProtectedRoute superAdminOnly={true}>
                   <LogDetails />
                 </ProtectedRoute>
               }

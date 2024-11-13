@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import './form.scss';
 import { auth } from '../../APi';
-import { sendPasswordResetEmail } from 'firebase/auth';
+// import { sendPasswordResetEmail } from 'firebase/auth';
 import { signInWithEmailAndPassword, signInWithCustomToken } from 'firebase/auth';
 import { CircularProgress, Box, Typography, Button, TextField } from '@mui/material';
 import { csrfProtectedPost } from '../../Components/CsrfUtils';

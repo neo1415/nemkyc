@@ -190,6 +190,9 @@ const assignRole = async () => {
     // Proceed with role assignment based on the selected role
     let endpoint;
     switch (selectedRole) {
+      case 'super-admin':
+        endpoint = endpoints.assignSuperAdminRole(selectedUser);
+        break;
       case 'admin':
         endpoint = endpoints.assignAdminRole(selectedUser);
         break;
@@ -292,6 +295,7 @@ return (
       onChange={(e) => setSelectedRole(e.target.value)}
     >
       <MenuItem value="">Select Role</MenuItem>
+      <MenuItem value="superAdmin">Super Admin</MenuItem>
       <MenuItem value="admin">Admin</MenuItem>
       <MenuItem value="moderator">Moderator</MenuItem>
       <MenuItem value="default">Default</MenuItem>
