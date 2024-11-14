@@ -190,7 +190,7 @@ const assignRole = async () => {
     // Proceed with role assignment based on the selected role
     let endpoint;
     switch (selectedRole) {
-      case 'super-admin':
+      case 'superAdmin':
         endpoint = endpoints.assignSuperAdminRole(selectedUser);
         break;
       case 'admin':
