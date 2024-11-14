@@ -21,22 +21,15 @@ const SignIn = () => {
     setLoading(true);
   
     try {
-      // Use Firebase Client SDK to authenticate with email and password
+      // Disable the button to prevent double-clicks
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      // Get the user's ID token from Firebase
       const idToken = await userCredential.user.getIdToken();
-  
-      // Send the ID token to the backend for verification
       const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
       const loginEndpoint = `${serverURL}/verify-token`;
-  
       const response = await csrfProtectedPost(loginEndpoint, { idToken });
   
       if (response.status === 200) {
         const { customToken, role } = response.data;
-  
-        // Sign in with the custom token
         await signInWithCustomToken(auth, customToken);
   
         // Redirect based on role
@@ -48,14 +41,14 @@ const SignIn = () => {
       } else {
         setError('Login failed.');
       }
-  
     } catch (error) {
       console.error('Login error:', error);
       setError('An error occurred during login.');
     } finally {
-      setLoading(false);
+      setLoading(false); // Re-enable button once done
     }
   };
+  
 
 
   return (

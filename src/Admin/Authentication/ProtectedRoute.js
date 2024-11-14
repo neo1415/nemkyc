@@ -52,7 +52,7 @@ const ProtectedRoute = ({ children, superAdminOnly,adminOnly, moderatorOnly }) =
     return <Unauthourized />;
   }
 
-  if (superAdminOnly && userRole !== 'super-admin') {
+  if (superAdminOnly && userRole !== 'superAdmin') {
     // console.log('Admin only, userRole:', userRole);
     return <Unauthourized />;
   }
@@ -62,7 +62,7 @@ const ProtectedRoute = ({ children, superAdminOnly,adminOnly, moderatorOnly }) =
     return <Unauthourized />;
   }
 
-  if (moderatorOnly && userRole !== 'admin' && userRole !== 'moderator') {
+  if (moderatorOnly && userRole !== 'admin' && userRole !== 'superAdmin' && userRole !== 'moderator') {
     // console.log('Moderator only, userRole:', userRole);
     return <Unauthourized />;
   }

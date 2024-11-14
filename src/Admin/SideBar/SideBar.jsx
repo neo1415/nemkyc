@@ -116,7 +116,7 @@ const Sidebar = () => {
             </li>
           </Link>
 
-          {userRole === 'admin' && (
+          {userRole === 'superAdmin' && (
             <Link to="/role-assignment">
               <li className="sideList">
                 <p>User Management</p>
