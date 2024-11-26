@@ -63,7 +63,8 @@ const PartnersList = () => {
       if (response.status === 200) {
         const data = response.data;
         // Filter out items with status 'processing' if user role is not 'admin'
-        const filtered = userRole === 'admin' ? data : data.filter(item => item.status !== 'processing');
+        const filtered = userRole === 'admin' || userRole === 'moderator'|| userRole === 'superAdmin'? data : data.filter(item => item.status !== 'processing');
+        setData(filtered);
         setData(filtered);
         setFilteredData(filtered);
       } else {
