@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-// import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../APi/index';
@@ -12,39 +11,21 @@ import FilterComponent from '../../Components/useFilter';
 import { UserAuth } from '../../Context/AuthContext';
 import useAutoLogout from '../../Components/Timeout';
 import useFetchUserRole from '../../Components/checkUserRole';
-import { StatusButton } from '../../Components/StatusButton';
 import { UserColumns } from './datatablesource';
 import { endpoints } from '../Authentication/Points';
-// import { 
-//   setData,
-//   setFilteredData,
-//   setIsLoading,
-//   setModalOpen,
-//   setIdToDelete
-// } from '../../Context/actions'; // Adjust the path to your actions file
-
 import './Table.scss';
 import { csrfProtectedGet } from '../../Components/CsrfUtils';
 
 function CustomLoadingOverlay() {
   return (
-    <div style={{
-      position: 'absolute',
-      top: 0,
-      bottom: 0,
-      left: 0,
-      right: 0,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}>
+    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <CircularProgress />
     </div>
   );
 }
 
 const IndividualKYCTable = () => {
-   const [data, setData] = useState([]);
+  const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -55,31 +36,20 @@ const IndividualKYCTable = () => {
   const userRole = useFetchUserRole(user);
   const { logout } = UserAuth(); 
 
-  // Use the custom hook to implement automatic logout
   useAutoLogout({
-    timeoutDuration: 10 * 60 * 1000, // Adjust as needed
-    logout, // Use the logout function from context
-    redirectPath: '/signin', // Specify the redirect path
+    timeoutDuration: 10 * 60 * 1000,
+    logout,
+    redirectPath: '/signin',
   });
-
-  // Access state from the Redux store
-  // const data = useSelector(state => state.data);
-  // const filteredData = useSelector(state => state.filteredData);
-  // const isLoading = useSelector(state => state.isLoading);
-  // const modalOpen = useSelector(state => state.modalOpen);
-  // const idToDelete = useSelector(state => state.idToDelete);
 
   useEffect(() => {
     const fetchData = async () => {
-    setIsLoading(true); // Set loading to true before fetching the data
+      setIsLoading(true);
       try {
         const response = await csrfProtectedGet(endpoints.getIndividualKYCData);
         if (response.status === 200) {
-          const data = response.data;
-          // Filter out items with status 'processing' if user role is not 'admin'
-          const filtered = userRole === 'admin' || userRole === 'moderator'|| userRole === 'superAdmin'? data : data.filter(item => item.status !== 'processing');
-          setData(filtered);
-          setFilteredData(filtered);
+          setData(response.data);
+          setFilteredData(response.data);
         } else {
           console.error('Error fetching individual KYC data:', response.statusText);
         }
@@ -89,9 +59,8 @@ const IndividualKYCTable = () => {
         setIsLoading(false);
       }
     };
-
     fetchData();
-  }, [userRole]);
+  }, []);
 
   const handleDelete = async () => {
     setModalOpen(false);
@@ -122,33 +91,32 @@ const IndividualKYCTable = () => {
     );
   }
 
-  const actionColumn = [
-    {
-      field: 'action',
-      headerName: 'Action',
-      width: 200,
-      renderCell: (params) => {
-        const { id } = params.row;
-        return (
-          <div className="cellAction">
-            {userRole === 'admin' && (
-              <>
-                <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
-                  Delete
-                </div>
-                <div className="statusButton">
-                  <StatusButton id={id} collection="Individual-kyc-form" setData={(updatedData) => setData(updatedData)} />
-                </div>
-              </>
-            )}
-            <div className="viewButton" onClick={() => handleView(id)}>
-              View
+    const actionColumn = [
+      {
+        field: 'action',
+        headerName: 'Action',
+        width: 200,
+        renderCell: (params) => {
+          const { id } = params.row;
+          return (
+            <div className="cellAction">
+              {userRole === 'admin' && (
+                <>
+                  <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
+                    Delete
+                  </div>
+                
+                </>
+              )}
+              <div className="viewButton" onClick={() => handleView(id)}>
+                View
+              </div>
             </div>
-          </div>
-        );
+          );
+        },
       },
-    },
-  ];
+    ];
+  
 
   return (
     <div className="list">
@@ -156,23 +124,17 @@ const IndividualKYCTable = () => {
       <div className="datatable">
         <div className="datatableTitle">
           INDIVIDUAL KYC FORM
-          <FilterComponent initialData={data} setFilteredData={(filtered) => setFilteredData(filtered)} />
+          <FilterComponent initialData={data} setFilteredData={setFilteredData} />
         </div>
         <DataGrid
-          components={{
-            Toolbar: CustomToolbar,
-            LoadingOverlay: CustomLoadingOverlay,
-          }}
+          components={{ Toolbar: CustomToolbar, LoadingOverlay: CustomLoadingOverlay }}
           className="datagrid"
-          columns={actionColumn.concat(UserColumns)}
+        columns={actionColumn.concat(UserColumns)}
           rows={filteredData}
           pageSize={8}
           rowsPerPageOptions={[9]}
           checkboxSelection
           loading={isLoading}
-          getRowClassName={(params) =>
-            `row-${params.row.status}`
-          }
         />
       </div>
       <ConfirmationModal
