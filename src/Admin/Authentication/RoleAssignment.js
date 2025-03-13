@@ -138,19 +138,6 @@ const deleteUser = async () => {
 };
 
   
-  
-// const handleSelectedUser = (uid) => {
-//   setSelectedUser((prevSelectedUser) => {
-//     // Toggle selected user
-//     const newValue = prevSelectedUser === uid ? '' : uid;
-
-//     // Close the role selection dropdown when a user is selected
-//     setRoleDropdownOpen(false);
-
-//     return newValue;
-//   });
-// };
-
 const checkUserRole = async (uid, role) => {
   try {
     const endpoint = endpoints.checkUserRole(uid); // Use the endpoint with the UID
@@ -196,8 +183,8 @@ const assignRole = async () => {
       case 'admin':
         endpoint = endpoints.assignAdminRole(selectedUser);
         break;
-      case 'moderator':
-        endpoint = endpoints.assignModeratorRole(selectedUser);
+      case 'compliance':
+        endpoint = endpoints.assignComplianceRole(selectedUser);
         break;
       case 'default':
         endpoint = endpoints.assignDefaultRole(selectedUser);
@@ -297,7 +284,7 @@ return (
       <MenuItem value="">Select Role</MenuItem>
       <MenuItem value="superAdmin">Super Admin</MenuItem>
       <MenuItem value="admin">Admin</MenuItem>
-      <MenuItem value="moderator">Moderator</MenuItem>
+      <MenuItem value="compliance">Compliance</MenuItem>
       <MenuItem value="default">Default</MenuItem>
     </Select>
     <Button

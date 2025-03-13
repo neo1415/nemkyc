@@ -157,8 +157,8 @@ const assignRole = async () => {
       case 'admin':
         endpoint = endpoints.assignAdminRole(selectedUser);
         break;
-      case 'moderator':
-        endpoint = endpoints.assignModeratorRole(selectedUser);
+      case 'compliance':
+        endpoint = endpoints.assignComplianceRole(selectedUser);
         break;
       case 'default':
         endpoint = endpoints.assignDefaultRole(selectedUser);
