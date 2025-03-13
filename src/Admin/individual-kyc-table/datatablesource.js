@@ -153,6 +153,12 @@ export const UserColumns = [
   },
 
   {
+    field: "BVN",
+    headerName: "BVN",
+    width: 125,     
+  },
+
+  {
     field: "identificationType",
     headerName: "Identification Type",
     width: 100,

@@ -61,12 +61,6 @@ const Individual = () => {
     redirectPath: '/signin', // Specify the redirect path
   });
 
-  // Access state from the Redux store
-  // const data = useSelector(state => state.data);
-  // const filteredData = useSelector(state => state.filteredData);
-  // const isLoading = useSelector(state => state.isLoading);
-  // const modalOpen = useSelector(state => state.modalOpen);
-  // const idToDelete = useSelector(state => state.idToDelete);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -75,10 +69,9 @@ const Individual = () => {
         const response = await csrfProtectedGet(endpoints.getIndividualData);
         if (response.status === 200) {
           const data = response.data;
-          // Filter out items with status 'processing' if user role is not 'admin'
-          const filtered = userRole === 'admin' || userRole === 'compliance'|| userRole === 'superAdmin'? data : data.filter(item => item.status !== 'processing');
-          setData(filtered);
-          setFilteredData(filtered);
+
+          setData(data);
+          setFilteredData(data);
         } else {
           console.error('Error fetching individual KYC data:', response.statusText);
         }
@@ -135,9 +128,7 @@ const Individual = () => {
                 <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
                   Delete
                 </div>
-                <div className="statusButton">
-                  <StatusButton id={id} collection="individual-kyc" setData={(updatedData) => setData(updatedData)} />
-                </div>
+              
               </>
             )}
             <div className="viewButton" onClick={() => handleView(id)}>
@@ -155,7 +146,7 @@ const Individual = () => {
       <div className="datatable">
         <div className="datatableTitle">
           Individual Customer Due Dilligence
-          <FilterComponent initialData={data} setFilteredData={(filtered) => setFilteredData(filtered)} />
+                  <FilterComponent initialData={data} setFilteredData={setFilteredData} />
         </div>
         <DataGrid
           components={{
