@@ -6,7 +6,7 @@ import Unauthourized from '../../Components/Unauthourized';
 import PageLoad from '../../Components/PageLoad';
 import { csrfProtectedPost } from '../../Components/CsrfUtils';
 
-const ProtectedRoute = ({ children, superAdminOnly,adminOnly, moderatorOnly }) => {
+const ProtectedRoute = ({ children, superAdminOnly,adminOnly, complianceOnly }) => {
   const { user } = UserAuth();
   const { userRole, setUserRole } = useUserRole();
   const [isLoading, setIsLoading] = useState(true);
@@ -62,7 +62,7 @@ const ProtectedRoute = ({ children, superAdminOnly,adminOnly, moderatorOnly }) =
     return <Unauthourized />;
   }
 
-  if (moderatorOnly && userRole !== 'admin' && userRole !== 'superAdmin' && userRole !== 'moderator') {
+  if (complianceOnly && userRole !== 'admin' && userRole !== 'superAdmin' && userRole !== 'compliance') {
     // console.log('Moderator only, userRole:', userRole);
     return <Unauthourized />;
   }

@@ -52,7 +52,7 @@ const FilterComponent = ({ initialData, setFilteredData, userRole }) => {
   useEffect(() => {
     let filtered = initialData;
 
-    if (userRole === 'moderator') {
+    if (userRole === 'compliance') {
       filtered = filtered.filter(item => item.status === 'completed');
     }
 
