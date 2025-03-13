@@ -33,6 +33,7 @@ export const schema1 = yup.object().shape({
     GSMno: yup.string().required('GSM Number is required').transform(sanitizeString),
     emailAddress: yup.string().email().required('Email Address is required').transform(sanitizeEmail),
     taxIDNo: yup.string().transform(sanitizeString),
+    BVN: yup.string().required('BVN is required').transform(sanitizeString),
     identificationType: yup.string().required('Identification Type is required').transform(sanitizeString),
     idNumber: yup.string().required('Identification Number is required').transform(sanitizeString),
     issuedDate:  yup.mixed()

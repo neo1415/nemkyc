@@ -62,11 +62,10 @@ const PartnersList = () => {
       
       if (response.status === 200) {
         const data = response.data;
-        // Filter out items with status 'processing' if user role is not 'admin'
-        const filtered = userRole === 'admin' || userRole === 'compliancer'|| userRole === 'superAdmin'? data : data.filter(item => item.status !== 'processing');
-        setData(filtered);
-        setData(filtered);
-        setFilteredData(filtered);
+     
+        setData(data);
+     
+        setFilteredData(data);
       } else {
         console.error('Error fetching users:', response.statusText);
       }
@@ -120,9 +119,7 @@ const PartnersList = () => {
                 <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
                   Delete
                 </div>
-                <div className="statusButton">
-                  <StatusButton id={id} collection="partners-kyc" setData={setData} />
-                </div>
+              
               </>
             )}
             <div className="viewButton" onClick={() => handleView(id)}>

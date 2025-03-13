@@ -68,12 +68,6 @@ const CorporateKYCTable = () => {
     redirectPath: '/signin', // Specify the redirect path
   });
 
-  // Access state from the Redux store
-  // const data = useSelector(state => state.data);
-  // const filteredData = useSelector(state => state.filteredData);
-  // const isLoading = useSelector(state => state.isLoading);
-  // const modalOpen = useSelector(state => state.modalOpen);
-  // const idToDelete = useSelector(state => state.idToDelete);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -82,10 +76,9 @@ const CorporateKYCTable = () => {
       
       if (response.status === 200) {
         const data = response.data;
-        // Filter out items with status 'processing' if user role is not 'admin'
-        const filtered = userRole === 'admin' || userRole === 'moderator'|| userRole === 'superAdmin'? data : data.filter(item => item.status !== 'processing');
-        setData(filtered);
-        setFilteredData(filtered);
+     
+        setData(data);
+        setFilteredData(data);
       } else {
         console.error('Error fetching users:', response.statusText);
       }
@@ -138,9 +131,7 @@ const CorporateKYCTable = () => {
                 <div className="deleteButton" onClick={() => handleDeleteClick(id)}>
                   Delete
                 </div>
-                <div className="statusButton">
-                  <StatusButton id={id} collection="corporate-kyc-form" setData={setData} />
-                </div>
+            
               </>
             )}
             <div className="viewButton" onClick={() => handleView(id)}>
