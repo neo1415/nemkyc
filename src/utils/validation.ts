@@ -11,14 +11,12 @@ export const emailSchema = Yup.string()
   .email('Please enter a valid email address')
   .required('Email is required');
 
-// Date validation
-export const dateSchema = Yup.date()
-  .required('Date is required')
-  .max(new Date(), 'Date cannot be in the future');
+// Date validation for string dates (HTML date inputs)
+export const dateStringSchema = Yup.string()
+  .required('Date is required');
 
 // File validation
 export const fileSchema = Yup.mixed()
-  .required('File is required')
   .test('fileSize', 'File size must be less than 10MB', (value: any) => {
     return !value || (value && value.size <= 10 * 1024 * 1024);
   })
@@ -44,7 +42,7 @@ export const individualKYCSchema = Yup.object({
   firstName: requiredString('First name'),
   lastName: requiredString('Last name'),
   middleName: optionalString(),
-  dateOfBirth: dateSchema,
+  dateOfBirth: dateStringSchema,
   gender: Yup.string().oneOf(['male', 'female', 'other']).required('Gender is required'),
   nationality: requiredString('Nationality'),
   countryOfResidence: requiredString('Country of residence'),
@@ -59,8 +57,8 @@ export const individualKYCSchema = Yup.object({
   // Identification
   identificationType: Yup.string().oneOf(['passport', 'nationalId', 'driversLicense']).required('Identification type is required'),
   identificationNumber: requiredString('Identification number'),
-  issueDate: dateSchema,
-  expiryDate: Yup.date().required('Expiry date is required').min(new Date(), 'Document must not be expired'),
+  issueDate: dateStringSchema,
+  expiryDate: Yup.string().required('Expiry date is required'),
   
   // Employment
   employmentStatus: Yup.string().oneOf(['employed', 'selfEmployed', 'unemployed', 'retired', 'student']).required('Employment status is required'),
@@ -78,7 +76,7 @@ export const corporateKYCSchema = Yup.object({
   // Company Information
   companyName: requiredString('Company name'),
   registrationNumber: requiredString('Registration number'),
-  incorporationDate: dateSchema,
+  incorporationDate: dateStringSchema,
   countryOfIncorporation: requiredString('Country of incorporation'),
   businessType: requiredString('Business type'),
   industry: requiredString('Industry'),
@@ -127,11 +125,11 @@ export const motorClaimSchema = Yup.object({
   
   // Policy Information
   policyNumber: requiredString('Policy number'),
-  policyStartDate: dateSchema,
-  policyEndDate: dateSchema,
+  policyStartDate: dateStringSchema,
+  policyEndDate: dateStringSchema,
   
   // Incident Information
-  incidentDate: dateSchema,
+  incidentDate: dateStringSchema,
   incidentTime: requiredString('Incident time'),
   incidentLocation: requiredString('Incident location'),
   incidentDescription: requiredString('Incident description'),

@@ -13,7 +13,7 @@ interface Step {
 
 interface MultiStepFormProps {
   steps: Step[];
-  onSubmit: (event?: React.BaseSyntheticEvent) => Promise<void>;
+  onSubmit: () => void;
   isSubmitting?: boolean;
   submitButtonText?: string;
 }
