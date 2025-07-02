@@ -41,7 +41,7 @@ export const individualKYCSchema = Yup.object({
   // Personal Information
   firstName: requiredString('First name'),
   lastName: requiredString('Last name'),
-  middleName: optionalString(),
+  middleName: optionalString(), // This should be optional
   dateOfBirth: dateStringSchema,
   gender: Yup.string().oneOf(['male', 'female', 'other']).required('Gender is required'),
   nationality: requiredString('Nationality'),
@@ -50,9 +50,9 @@ export const individualKYCSchema = Yup.object({
   // Contact Information
   email: emailSchema,
   phoneNumber: phoneSchema,
-  alternatePhone: optionalString(),
+  alternatePhone: optionalString(), // This should be optional
   residentialAddress: requiredString('Residential address'),
-  mailingAddress: optionalString(),
+  mailingAddress: optionalString(), // This should be optional
   
   // Identification
   identificationType: Yup.string().oneOf(['passport', 'nationalId', 'driversLicense']).required('Identification type is required'),
@@ -63,7 +63,7 @@ export const individualKYCSchema = Yup.object({
   // Employment
   employmentStatus: Yup.string().oneOf(['employed', 'selfEmployed', 'unemployed', 'retired', 'student']).required('Employment status is required'),
   occupation: requiredString('Occupation'),
-  employer: optionalString(),
+  employer: optionalString(), // This should be optional
   annualIncome: requiredNumber('Annual income'),
   
   // Documents - all optional
@@ -86,7 +86,7 @@ export const corporateKYCSchema = Yup.object({
   businessAddress: requiredString('Business address'),
   phoneNumber: phoneSchema,
   email: emailSchema,
-  website: optionalString(),
+  website: optionalString(), // This should be optional
   
   // Financial Information
   annualRevenue: requiredNumber('Annual revenue'),
@@ -97,7 +97,7 @@ export const corporateKYCSchema = Yup.object({
     name: requiredString('Director name'),
     position: requiredString('Position'),
     nationality: requiredString('Nationality'),
-    shareholding: optionalNumber(),
+    shareholding: optionalNumber(), // This should be optional
   })).min(1, 'At least one director is required'),
   
   // Documents - all optional
