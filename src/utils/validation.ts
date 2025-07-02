@@ -60,7 +60,7 @@ export const individualKYCSchema = Yup.object({
   identificationType: Yup.string().oneOf(['passport', 'nationalId', 'driversLicense']).required('Identification type is required'),
   identificationNumber: requiredString('Identification number'),
   issueDate: dateSchema,
-  expiryDate: Yup date().required('Expiry date is required').min(new Date(), 'Document must not be expired'),
+  expiryDate: Yup.date().required('Expiry date is required').min(new Date(), 'Document must not be expired'),
   
   // Employment
   employmentStatus: Yup.string().oneOf(['employed', 'selfEmployed', 'unemployed', 'retired', 'student']).required('Employment status is required'),
