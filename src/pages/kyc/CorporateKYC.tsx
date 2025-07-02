@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -28,7 +27,7 @@ interface Director {
 interface CorporateKYCData {
   companyName: string;
   registrationNumber: string;
-  incorporationDate: Date;
+  incorporationDate: string;
   countryOfIncorporation: string;
   businessType: string;
   industry: string;
@@ -266,7 +265,6 @@ const CorporateKYC: React.FC = () => {
       <div className="space-y-6">
         <FileUpload
           label="Certificate of Incorporation"
-          required
           onFileSelect={(file) => setValue('certificateOfIncorporation', file)}
           currentFile={watchedValues.certificateOfIncorporation}
           error={errors.certificateOfIncorporation?.message}
@@ -274,7 +272,6 @@ const CorporateKYC: React.FC = () => {
         
         <FileUpload
           label="Memorandum of Association"
-          required
           onFileSelect={(file) => setValue('memorandumOfAssociation', file)}
           currentFile={watchedValues.memorandumOfAssociation}
           error={errors.memorandumOfAssociation?.message}
@@ -282,7 +279,6 @@ const CorporateKYC: React.FC = () => {
         
         <FileUpload
           label="Audited Financial Statements"
-          required
           onFileSelect={(file) => setValue('auditedFinancialStatements', file)}
           currentFile={watchedValues.auditedFinancialStatements}
           error={errors.auditedFinancialStatements?.message}
@@ -290,7 +286,6 @@ const CorporateKYC: React.FC = () => {
         
         <FileUpload
           label="Board Resolution"
-          required
           onFileSelect={(file) => setValue('boardResolution', file)}
           currentFile={watchedValues.boardResolution}
           error={errors.boardResolution?.message}
@@ -337,7 +332,7 @@ const CorporateKYC: React.FC = () => {
         <form onSubmit={handleSubmit(onSubmit)}>
           <MultiStepForm
             steps={steps}
-            onSubmit={onSubmit}
+            onSubmit={handleSubmit(onSubmit)}
             isSubmitting={isSubmitting}
             submitButtonText="Submit Corporate KYC"
           />

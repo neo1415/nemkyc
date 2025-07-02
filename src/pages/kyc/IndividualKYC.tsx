@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -25,7 +24,7 @@ interface IndividualKYCData {
   firstName: string;
   lastName: string;
   middleName?: string;
-  dateOfBirth: Date;
+  dateOfBirth: string;
   gender: 'male' | 'female' | 'other';
   nationality: string;
   countryOfResidence: string;
@@ -36,8 +35,8 @@ interface IndividualKYCData {
   mailingAddress?: string;
   identificationType: 'passport' | 'nationalId' | 'driversLicense';
   identificationNumber: string;
-  issueDate: Date;
-  expiryDate: Date;
+  issueDate: string;
+  expiryDate: string;
   employmentStatus: 'employed' | 'selfEmployed' | 'unemployed' | 'retired' | 'student';
   occupation: string;
   employer?: string;
@@ -251,7 +250,6 @@ const IndividualKYC: React.FC = () => {
       <div className="space-y-6">
         <FileUpload
           label="Identification Document"
-          required
           onFileSelect={(file) => setValue('identificationDocument', file)}
           currentFile={watchedValues.identificationDocument}
           error={errors.identificationDocument?.message}
@@ -259,7 +257,6 @@ const IndividualKYC: React.FC = () => {
         
         <FileUpload
           label="Proof of Address"
-          required
           onFileSelect={(file) => setValue('proofOfAddress', file)}
           currentFile={watchedValues.proofOfAddress}
           error={errors.proofOfAddress?.message}
@@ -313,7 +310,7 @@ const IndividualKYC: React.FC = () => {
         <form onSubmit={handleSubmit(onSubmit)}>
           <MultiStepForm
             steps={steps}
-            onSubmit={onSubmit}
+            onSubmit={handleSubmit(onSubmit)}
             isSubmitting={isSubmitting}
             submitButtonText="Submit KYC Application"
           />
