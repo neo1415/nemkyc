@@ -13,7 +13,7 @@ interface Step {
 
 interface MultiStepFormProps {
   steps: Step[];
-  onSubmit: () => void;
+  onSubmit: (event?: React.BaseSyntheticEvent) => Promise<void>;
   isSubmitting?: boolean;
   submitButtonText?: string;
 }
@@ -79,7 +79,7 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
 
         {isLastStep ? (
           <Button
-            type="button"
+            type="submit"
             onClick={onSubmit}
             disabled={!canProceed || isSubmitting}
             className="flex items-center space-x-2"

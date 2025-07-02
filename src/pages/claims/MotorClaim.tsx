@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -70,9 +69,9 @@ interface MotorClaimData {
   chassisNumber: string;
   engineNumber: string;
   policyNumber: string;
-  policyStartDate: Date;
-  policyEndDate: Date;
-  incidentDate: Date;
+  policyStartDate: string;
+  policyEndDate: string;
+  incidentDate: string;
   incidentTime: string;
   incidentLocation: string;
   incidentDescription: string;
@@ -296,7 +295,6 @@ const MotorClaim: React.FC = () => {
       <div className="space-y-6">
         <FileUpload
           label="Vehicle Photos (Damage)"
-          required
           onFileSelect={(file) => setValue('vehiclePhotos', file)}
           currentFile={watchedValues.vehiclePhotos}
           error={errors.vehiclePhotos?.message}
@@ -305,7 +303,6 @@ const MotorClaim: React.FC = () => {
         
         <FileUpload
           label="Driver's License"
-          required
           onFileSelect={(file) => setValue('driverLicense', file)}
           currentFile={watchedValues.driverLicense}
           error={errors.driverLicense?.message}
@@ -313,7 +310,6 @@ const MotorClaim: React.FC = () => {
         
         <FileUpload
           label="Vehicle Registration Document"
-          required
           onFileSelect={(file) => setValue('vehicleRegistrationDoc', file)}
           currentFile={watchedValues.vehicleRegistrationDoc}
           error={errors.vehicleRegistrationDoc?.message}
@@ -369,7 +365,7 @@ const MotorClaim: React.FC = () => {
         <form onSubmit={handleSubmit(onSubmit)}>
           <MultiStepForm
             steps={steps}
-            onSubmit={onSubmit}
+            onSubmit={handleSubmit(onSubmit)}
             isSubmitting={isSubmitting}
             submitButtonText="Submit Motor Claim"
           />
