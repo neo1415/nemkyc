@@ -119,7 +119,7 @@ const App = () => (
                 <ProtectedRoute requireAdmin>
                   <div className="p-6">
                     <h1 className="text-2xl font-bold">Claims Management</h1>
-                    <p className="text-gray-600">Claims management coming since...</p>
+                    <p className="text-gray-600">Claims management coming soon...</p>
                   </div>
                 </ProtectedRoute>
               } />
