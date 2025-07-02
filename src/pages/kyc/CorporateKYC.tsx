@@ -329,14 +329,12 @@ const CorporateKYC: React.FC = () => {
           <p className="text-gray-600 mt-2">Please provide complete company information for verification</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <MultiStepForm
-            steps={steps}
-            onSubmit={handleSubmit(onSubmit)}
-            isSubmitting={isSubmitting}
-            submitButtonText="Submit Corporate KYC"
-          />
-        </form>
+        <MultiStepForm
+          steps={steps}
+          onSubmit={onSubmit}
+          isSubmitting={isSubmitting}
+          submitButtonText="Submit Corporate KYC"
+        />
       </div>
     </div>
   );

@@ -323,14 +323,12 @@ const MotorClaim: React.FC = () => {
           <p className="text-gray-600 mt-2">Submit your motor vehicle insurance claim with all required details</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <MultiStepForm
-            steps={steps}
-            onSubmit={handleSubmit(onSubmit)}
-            isSubmitting={isSubmitting}
-            submitButtonText="Submit Motor Claim"
-          />
-        </form>
+        <MultiStepForm
+          steps={steps}
+          onSubmit={onSubmit}
+          isSubmitting={isSubmitting}
+          submitButtonText="Submit Motor Claim"
+        />
       </div>
     </div>
   );

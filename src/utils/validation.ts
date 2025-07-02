@@ -66,7 +66,7 @@ export const individualKYCSchema = Yup.object({
   employer: optionalString(),
   annualIncome: requiredNumber('Annual income'),
   
-  // Documents
+  // Documents - all optional
   identificationDocument: fileSchema.optional(),
   proofOfAddress: fileSchema.optional(),
   passport: fileSchema.optional(),
@@ -100,7 +100,7 @@ export const corporateKYCSchema = Yup.object({
     shareholding: optionalNumber(),
   })).min(1, 'At least one director is required'),
   
-  // Documents
+  // Documents - all optional
   certificateOfIncorporation: fileSchema.optional(),
   memorandumOfAssociation: fileSchema.optional(),
   auditedFinancialStatements: fileSchema.optional(),
@@ -140,7 +140,7 @@ export const motorClaimSchema = Yup.object({
   thirdPartyInvolved: Yup.string().oneOf(['yes', 'no']).required('Please specify if third party was involved'),
   policeReportFiled: Yup.string().oneOf(['yes', 'no']).required('Please specify if police report was filed'),
   
-  // Documents
+  // Documents - all optional
   vehiclePhotos: fileSchema.optional(),
   policeReport: fileSchema.optional(),
   driverLicense: fileSchema.optional(),
