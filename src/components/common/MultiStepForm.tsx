@@ -13,7 +13,7 @@ interface Step {
 
 interface MultiStepFormProps {
   steps: Step[];
-  onSubmit: () => void;
+  onSubmit: (data: any) => void;
   isSubmitting?: boolean;
   submitButtonText?: string;
 }
