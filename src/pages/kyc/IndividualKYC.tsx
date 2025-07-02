@@ -307,14 +307,12 @@ const IndividualKYC: React.FC = () => {
           <p className="text-gray-600 mt-2">Please provide accurate information for identity verification</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <MultiStepForm
-            steps={steps}
-            onSubmit={handleSubmit(onSubmit)}
-            isSubmitting={isSubmitting}
-            submitButtonText="Submit KYC Application"
-          />
-        </form>
+        <MultiStepForm
+          steps={steps}
+          onSubmit={onSubmit}
+          isSubmitting={isSubmitting}
+          submitButtonText="Submit KYC Application"
+        />
       </div>
     </div>
   );
