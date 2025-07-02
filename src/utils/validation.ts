@@ -30,12 +30,12 @@ export const fileSchema = Yup.mixed()
 export const requiredString = (fieldName: string) => 
   Yup.string().required(`${fieldName} is required`);
 
-export const optionalString = () => Yup.string().nullable().notRequired();
+export const optionalString = () => Yup.string().optional();
 
 export const requiredNumber = (fieldName: string) => 
   Yup.number().required(`${fieldName} is required`).positive(`${fieldName} must be positive`);
 
-export const optionalNumber = () => Yup.number().nullable().notRequired().positive('Must be positive');
+export const optionalNumber = () => Yup.number().optional().positive('Must be positive');
 
 // KYC validation schemas
 export const individualKYCSchema = Yup.object({
@@ -68,9 +68,9 @@ export const individualKYCSchema = Yup.object({
   annualIncome: requiredNumber('Annual income'),
   
   // Documents - all optional
-  identificationDocument: fileSchema.nullable().notRequired(),
-  proofOfAddress: fileSchema.nullable().notRequired(),
-  passport: fileSchema.nullable().notRequired(),
+  identificationDocument: fileSchema.optional(),
+  proofOfAddress: fileSchema.optional(),
+  passport: fileSchema.optional(),
 });
 
 export const corporateKYCSchema = Yup.object({
@@ -102,10 +102,10 @@ export const corporateKYCSchema = Yup.object({
   })).min(1, 'At least one director is required'),
   
   // Documents - all optional
-  certificateOfIncorporation: fileSchema.nullable().notRequired(),
-  memorandumOfAssociation: fileSchema.nullable().notRequired(),
-  auditedFinancialStatements: fileSchema.nullable().notRequired(),
-  boardResolution: fileSchema.nullable().notRequired(),
+  certificateOfIncorporation: fileSchema.optional(),
+  memorandumOfAssociation: fileSchema.optional(),
+  auditedFinancialStatements: fileSchema.optional(),
+  boardResolution: fileSchema.optional(),
 });
 
 // Motor claim schema
@@ -142,9 +142,9 @@ export const motorClaimSchema = Yup.object({
   policeReportFiled: Yup.string().oneOf(['yes', 'no']).required('Please specify if police report was filed'),
   
   // Documents - all optional
-  vehiclePhotos: fileSchema.nullable().notRequired(),
-  policeReport: fileSchema.nullable().notRequired(),
-  driverLicense: fileSchema.nullable().notRequired(),
-  vehicleRegistrationDoc: fileSchema.nullable().notRequired(),
+  vehiclePhotos: fileSchema.optional(),
+  policeReport: fileSchema.optional(),
+  driverLicense: fileSchema.optional(),
+  vehicleRegistrationDoc: fileSchema.optional(),
 });
 
