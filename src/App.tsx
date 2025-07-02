@@ -14,6 +14,12 @@ import UserDashboard from "./pages/dashboard/UserDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
+import KYCForms from "./pages/kyc/KYCForms";
+import IndividualKYC from "./pages/kyc/IndividualKYC";
+import CorporateKYC from "./pages/kyc/CorporateKYC";
+import CDDForms from "./pages/cdd/CDDForms";
+import ClaimsForms from "./pages/claims/ClaimsForms";
+import MotorClaim from "./pages/claims/MotorClaim";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +41,42 @@ const App = () => (
               <Route path="dashboard" element={
                 <ProtectedRoute>
                   <UserDashboard />
+                </ProtectedRoute>
+              } />
+              
+              {/* KYC Routes */}
+              <Route path="kyc" element={
+                <ProtectedRoute>
+                  <KYCForms />
+                </ProtectedRoute>
+              } />
+              <Route path="kyc/individual" element={
+                <ProtectedRoute>
+                  <IndividualKYC />
+                </ProtectedRoute>
+              } />
+              <Route path="kyc/corporate" element={
+                <ProtectedRoute>
+                  <CorporateKYC />
+                </ProtectedRoute>
+              } />
+              
+              {/* CDD Routes */}
+              <Route path="cdd" element={
+                <ProtectedRoute>
+                  <CDDForms />
+                </ProtectedRoute>
+              } />
+              
+              {/* Claims Routes */}
+              <Route path="claims" element={
+                <ProtectedRoute>
+                  <ClaimsForms />
+                </ProtectedRoute>
+              } />
+              <Route path="claims/motor" element={
+                <ProtectedRoute>
+                  <MotorClaim />
                 </ProtectedRoute>
               } />
               
@@ -77,7 +119,7 @@ const App = () => (
                 <ProtectedRoute requireAdmin>
                   <div className="p-6">
                     <h1 className="text-2xl font-bold">Claims Management</h1>
-                    <p className="text-gray-600">Claims management coming soon...</p>
+                    <p className="text-gray-600">Claims management coming since...</p>
                   </div>
                 </ProtectedRoute>
               } />

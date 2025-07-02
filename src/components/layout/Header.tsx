@@ -2,7 +2,7 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
-import { Menu, User, LogOut } from 'lucide-react';
+import { Menu, User, LogOut, FileText, Building2, Car } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface HeaderProps {
@@ -31,6 +31,24 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             <span className="text-xl font-bold text-gray-900">NEM Insurance</span>
           </Link>
         </div>
+
+        {/* Navigation for logged in users */}
+        {user && !isAdmin() && (
+          <nav className="hidden md:flex items-center space-x-6">
+            <Link to="/kyc" className="flex items-center space-x-1 text-gray-700 hover:text-red-900">
+              <FileText className="h-4 w-4" />
+              <span>KYC</span>
+            </Link>
+            <Link to="/cdd" className="flex items-center space-x-1 text-gray-700 hover:text-red-900">
+              <Building2 className="h-4 w-4" />
+              <span>CDD</span>
+            </Link>
+            <Link to="/claims" className="flex items-center space-x-1 text-gray-700 hover:text-red-900">
+              <Car className="h-4 w-4" />
+              <span>Claims</span>
+            </Link>
+          </nav>
+        )}
 
         <div className="flex items-center space-x-4">
           {user ? (
