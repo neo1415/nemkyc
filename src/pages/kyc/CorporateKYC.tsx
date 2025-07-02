@@ -337,7 +337,7 @@ const CorporateKYC: React.FC = () => {
         <form onSubmit={handleSubmit(onSubmit)}>
           <MultiStepForm
             steps={steps}
-            onSubmit={handleSubmit(onSubmit)}
+            onSubmit={onSubmit}
             isSubmitting={isSubmitting}
             submitButtonText="Submit Corporate KYC"
           />

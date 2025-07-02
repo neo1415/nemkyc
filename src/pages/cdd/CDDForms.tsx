@@ -6,11 +6,21 @@ import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Building2, Users, UserCheck, Briefcase, User } from 'lucide-react';
 
+interface CDDType {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  path: string;
+  naicomPath?: string;
+  hasNaicom: boolean;
+}
+
 const CDDForms: React.FC = () => {
-  const [selectedCDD, setSelectedCDD] = useState<string | null>(null);
+  const [selectedCDD, setSelectedCDD] = useState<CDDType | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const cddTypes = [
+  const cddTypes: CDDType[] = [
     {
       id: 'corporate',
       title: 'Corporate CDD',
@@ -55,7 +65,7 @@ const CDDForms: React.FC = () => {
     }
   ];
 
-  const handleCDDClick = (cdd: any) => {
+  const handleCDDClick = (cdd: CDDType) => {
     if (cdd.hasNaicom) {
       setSelectedCDD(cdd);
       setIsModalOpen(true);
@@ -68,7 +78,7 @@ const CDDForms: React.FC = () => {
     if (selectedCDD) {
       const cdd = cddTypes.find(c => c.id === selectedCDD.id);
       if (cdd) {
-        window.location.href = isNaicomApproved ? cdd.naicomPath : cdd.path;
+        window.location.href = isNaicomApproved ? (cdd.naicomPath || cdd.path) : cdd.path;
       }
     }
     setIsModalOpen(false);

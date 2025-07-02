@@ -60,7 +60,7 @@ export const individualKYCSchema = Yup.object({
   identificationType: Yup.string().oneOf(['passport', 'nationalId', 'driversLicense']).required('Identification type is required'),
   identificationNumber: requiredString('Identification number'),
   issueDate: dateSchema,
-  expiryDate: Yup.date().required('Expiry date is required').min(new Date(), 'Document must not be expired'),
+  expiryDate: Yup date().required('Expiry date is required').min(new Date(), 'Document must not be expired'),
   
   // Employment
   employmentStatus: Yup.string().oneOf(['employed', 'selfEmployed', 'unemployed', 'retired', 'student']).required('Employment status is required'),
@@ -69,8 +69,8 @@ export const individualKYCSchema = Yup.object({
   annualIncome: requiredNumber('Annual income'),
   
   // Documents
-  identificationDocument: fileSchema,
-  proofOfAddress: fileSchema,
+  identificationDocument: fileSchema.optional(),
+  proofOfAddress: fileSchema.optional(),
   passport: fileSchema.optional(),
 });
 
@@ -103,8 +103,48 @@ export const corporateKYCSchema = Yup.object({
   })).min(1, 'At least one director is required'),
   
   // Documents
-  certificateOfIncorporation: fileSchema,
-  memorandumOfAssociation: fileSchema,
-  auditedFinancialStatements: fileSchema,
-  boardResolution: fileSchema,
+  certificateOfIncorporation: fileSchema.optional(),
+  memorandumOfAssociation: fileSchema.optional(),
+  auditedFinancialStatements: fileSchema.optional(),
+  boardResolution: fileSchema.optional(),
+});
+
+// Motor claim schema
+export const motorClaimSchema = Yup.object({
+  // Claimant Information
+  claimantName: requiredString('Claimant name'),
+  claimantPhone: phoneSchema,
+  claimantEmail: emailSchema,
+  claimantAddress: requiredString('Address'),
+  
+  // Vehicle Information
+  vehicleMake: requiredString('Vehicle make'),
+  vehicleModel: requiredString('Vehicle model'),
+  vehicleYear: Yup.number().required('Vehicle year is required').min(1900).max(new Date().getFullYear() + 1),
+  vehicleRegistration: requiredString('Vehicle registration'),
+  chassisNumber: requiredString('Chassis number'),
+  engineNumber: requiredString('Engine number'),
+  
+  // Policy Information
+  policyNumber: requiredString('Policy number'),
+  policyStartDate: dateSchema,
+  policyEndDate: dateSchema,
+  
+  // Incident Information
+  incidentDate: dateSchema,
+  incidentTime: requiredString('Incident time'),
+  incidentLocation: requiredString('Incident location'),
+  incidentDescription: requiredString('Incident description'),
+  damageDescription: requiredString('Damage description'),
+  
+  // Claim Information
+  claimAmount: requiredNumber('Claim amount'),
+  thirdPartyInvolved: Yup.string().oneOf(['yes', 'no']).required('Please specify if third party was involved'),
+  policeReportFiled: Yup.string().oneOf(['yes', 'no']).required('Please specify if police report was filed'),
+  
+  // Documents
+  vehiclePhotos: fileSchema.optional(),
+  policeReport: fileSchema.optional(),
+  driverLicense: fileSchema.optional(),
+  vehicleRegistrationDoc: fileSchema.optional(),
 });
