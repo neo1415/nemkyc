@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import * as Yup from 'yup';
 import { useAuth } from '../../contexts/AuthContext';
+import { motorClaimSchema } from '../../utils/validation';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -17,45 +17,6 @@ import { Car, FileText, Upload, DollarSign } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { notifySubmission } from '../../services/notificationService';
-
-const motorClaimSchema = Yup.object({
-  // Claimant Information
-  claimantName: Yup.string().required('Claimant name is required'),
-  claimantPhone: Yup.string().required('Phone number is required'),
-  claimantEmail: Yup.string().email('Invalid email').required('Email is required'),
-  claimantAddress: Yup.string().required('Address is required'),
-  
-  // Vehicle Information
-  vehicleMake: Yup.string().required('Vehicle make is required'),
-  vehicleModel: Yup.string().required('Vehicle model is required'),
-  vehicleYear: Yup.number().required('Vehicle year is required').min(1900).max(new Date().getFullYear() + 1),
-  vehicleRegistration: Yup.string().required('Vehicle registration is required'),
-  chassisNumber: Yup.string().required('Chassis number is required'),
-  engineNumber: Yup.string().required('Engine number is required'),
-  
-  // Policy Information
-  policyNumber: Yup.string().required('Policy number is required'),
-  policyStartDate: Yup.date().required('Policy start date is required'),
-  policyEndDate: Yup.date().required('Policy end date is required'),
-  
-  // Incident Information
-  incidentDate: Yup.date().required('Incident date is required').max(new Date(), 'Incident date cannot be in the future'),
-  incidentTime: Yup.string().required('Incident time is required'),
-  incidentLocation: Yup.string().required('Incident location is required'),
-  incidentDescription: Yup.string().required('Incident description is required'),
-  damageDescription: Yup.string().required('Damage description is required'),
-  
-  // Claim Information
-  claimAmount: Yup.number().required('Claim amount is required').positive('Claim amount must be positive'),
-  thirdPartyInvolved: Yup.string().oneOf(['yes', 'no']).required('Please specify if third party was involved'),
-  policeReportFiled: Yup.string().oneOf(['yes', 'no']).required('Please specify if police report was filed'),
-  
-  // Documents
-  vehiclePhotos: Yup.mixed().required('Vehicle photos are required'),
-  policeReport: Yup.mixed().optional(),
-  driverLicense: Yup.mixed().required('Driver license is required'),
-  vehicleRegistrationDoc: Yup.mixed().required('Vehicle registration document is required'),
-});
 
 interface MotorClaimData {
   claimantName: string;
