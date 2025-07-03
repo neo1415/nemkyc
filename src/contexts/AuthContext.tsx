@@ -111,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: user.email,
         role: 'default',
         notificationPreference,
-        phone,
+        phone: phone || null,
         createdAt: new Date(),
         updatedAt: new Date()
       });
