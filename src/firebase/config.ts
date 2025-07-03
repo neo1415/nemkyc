@@ -1,11 +1,11 @@
 
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 const firebaseConfig = {
- apiKey: "AIzaSyB4g7kYRDUxS_fQ_ilwWOq4P-F4D0YAMuY",
+  apiKey: "AIzaSyB4g7kYRDUxS_fQ_ilwWOq4P-F4D0YAMuY",
   authDomain: "nem-forms-dev-demo.firebaseapp.com",
   projectId: "nem-forms-dev-demo",
   storageBucket: "nem-forms-dev-demo.firebasestorage.app",
@@ -15,7 +15,28 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+
+// Initialize Firebase services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// Only connect to emulators in development if not already connected
+if (process.env.NODE_ENV === 'development') {
+  try {
+    // These will only connect if not already connected
+    if (!auth.emulatorConfig) {
+      // connectAuthEmulator(auth, 'http://localhost:9099');
+    }
+    if (!db._delegate._databaseId.projectId.includes('localhost')) {
+      // connectFirestoreEmulator(db, 'localhost', 8080);
+    }
+    if (!storage._delegate._host.includes('localhost')) {
+      // connectStorageEmulator(storage, 'localhost', 9199);
+    }
+  } catch (error) {
+    console.log('Emulators not available or already connected');
+  }
+}
+
 export default app;
