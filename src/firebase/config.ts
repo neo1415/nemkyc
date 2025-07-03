@@ -5,12 +5,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDTyrzbQ4xYV0IAvngwgCUBf6EPnflacSw",
-  authDomain: "nem-customer-feedback-8d3fb.firebaseapp.com",
-  projectId:  "nem-customer-feedback-8d3fb",
-  storageBucket: "nem-customer-feedback-8d3fb.appspot.com",
-  messagingSenderId: "524975485983",
-  appId: "1:524975485983:web:3a859424a3314d53ab112a"
+ apiKey: "AIzaSyB4g7kYRDUxS_fQ_ilwWOq4P-F4D0YAMuY",
+  authDomain: "nem-forms-dev-demo.firebaseapp.com",
+  projectId: "nem-forms-dev-demo",
+  storageBucket: "nem-forms-dev-demo.firebasestorage.app",
+  messagingSenderId: "635637955444",
+  appId: "1:635637955444:web:25328e1cdd745d28ac0a21",
+  measurementId: "G-0JMZ0NMD0H"
 };
 
 const app = initializeApp(firebaseConfig);
