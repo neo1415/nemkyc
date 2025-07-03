@@ -44,41 +44,13 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              {/* KYC Routes */}
-              <Route path="kyc" element={
-                <ProtectedRoute>
-                  <KYCForms />
-                </ProtectedRoute>
-              } />
-              <Route path="kyc/individual" element={
-                <ProtectedRoute>
-                  <IndividualKYC />
-                </ProtectedRoute>
-              } />
-              <Route path="kyc/corporate" element={
-                <ProtectedRoute>
-                  <CorporateKYC />
-                </ProtectedRoute>
-              } />
-              
-              {/* CDD Routes */}
-              <Route path="cdd" element={
-                <ProtectedRoute>
-                  <CDDForms />
-                </ProtectedRoute>
-              } />
-              
-              {/* Claims Routes */}
-              <Route path="claims" element={
-                <ProtectedRoute>
-                  <ClaimsForms />
-                </ProtectedRoute>
-              } />
-              <Route path="claims/motor" element={
-                <ProtectedRoute>
-                  <MotorClaim />
-                </ProtectedRoute>
-              } />
+              {/* Public Form Routes - No authentication required */}
+              <Route path="kyc" element={<KYCForms />} />
+              <Route path="kyc/individual" element={<IndividualKYC />} />
+              <Route path="kyc/corporate" element={<CorporateKYC />} />
+              <Route path="cdd" element={<CDDForms />} />
+              <Route path="claims" element={<ClaimsForms />} />
+              <Route path="claims/motor" element={<MotorClaim />} />
               
               {/* Protected Admin Routes */}
               <Route path="admin/dashboard" element={
