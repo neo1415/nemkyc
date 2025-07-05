@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -17,6 +18,8 @@ import IndividualKYC from './pages/kyc/IndividualKYC';
 import CorporateKYC from './pages/kyc/CorporateKYC';
 import CDDForms from './pages/cdd/CDDForms';
 import CorporateCDD from './pages/cdd/CorporateCDD';
+import NaicomCorporateCDD from './pages/cdd/NaicomCorporateCDD';
+import PartnersCDD from './pages/cdd/PartnersCDD';
 import NotFound from './pages/NotFound';
 import Unauthorized from './pages/Unauthorized';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -46,6 +49,8 @@ function App() {
               {/* CDD Routes */}
               <Route path="cdd" element={<CDDForms />} />
               <Route path="cdd/corporate" element={<CorporateCDD />} />
+              <Route path="cdd/naicom-corporate" element={<NaicomCorporateCDD />} />
+              <Route path="cdd/partners" element={<PartnersCDD />} />
               
               {/* Protected Routes */}
               <Route path="dashboard" element={
