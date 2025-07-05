@@ -3,50 +3,213 @@ export interface User {
   uid: string;
   email: string;
   name: string;
-  role: 'default' | 'admin' | 'compliance' | 'superAdmin';
+  role: string;
   notificationPreference: 'email' | 'sms';
   phone?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-export interface Submission {
-  id: string;
-  userId: string;
-  formType: string;
-  data: Record<string, any>;
-  status: 'processing' | 'pending' | 'approved' | 'rejected';
-  createdAt: Date;
-  updatedAt: Date;
-  attachments?: FileAttachment[];
+// CDD Form Types
+export interface Director {
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  dateOfBirth: string;
+  placeOfBirth: string;
+  nationality: string;
+  country: string;
+  occupation: string;
+  email: string;
+  phoneNumber: string;
+  bvn: string;
+  employerName?: string;
+  employerPhone?: string;
+  residentialAddress: string;
+  taxIdNumber?: string;
+  idType: string;
+  identificationNumber: string;
+  issuingBody: string;
+  issuedDate: string;
+  expiryDate?: string;
+  incomeSource: string;
+  incomeSourceOther?: string;
 }
 
-export interface FileAttachment {
-  id: string;
-  name: string;
-  url: string;
-  type: string;
-  size: number;
+export interface CorporateCDDData {
+  companyName: string;
+  registeredAddress: string;
+  incorporationNumber: string;
+  incorporationState: string;
+  incorporationDate: string;
+  businessNature: string;
+  companyType: string;
+  companyTypeOther?: string;
+  email: string;
+  website: string;
+  taxId?: string;
+  telephone: string;
+  directors: Director[];
+  localBankName: string;
+  localAccountNumber: string;
+  localBankBranch: string;
+  localAccountOpeningDate: string;
+  foreignBankName?: string;
+  foreignAccountNumber?: string;
+  foreignBankBranch?: string;
+  foreignAccountOpeningDate?: string;
+  cacCertificate?: FileList;
+  identificationDocument?: FileList;
+  agreeToDataPrivacy: boolean;
+  signature: string;
 }
 
-export interface ClaimSubmission extends Submission {
-  claimType: 'motor' | 'money' | 'burglary' | 'travel' | 'public-liability' | 
-            'combined-gpa' | 'personal-accident' | 'fire' | 'marine' | 
-            'professional-indemnity' | 'houseowners' | 'householders' | 
-            'goods-in-transit' | 'group-life';
-  claimAmount?: number;
-  incidentDate?: Date;
+export interface NaicomCorporateCDDData extends CorporateCDDData {
+  naicomLicense?: FileList;
 }
 
-export interface KYCSubmission extends Submission {
-  kycType: 'individual-kyc' | 'corporate-kyc';
+export interface PartnersCDDData {
+  companyName: string;
+  registeredAddress: string;
+  city: string;
+  state: string;
+  country: string;
+  email: string;
+  website: string;
+  contactPersonName: string;
+  contactPersonNumber: string;
+  taxId?: string;
+  vatRegistrationNumber: string;
+  incorporationNumber: string;
+  incorporationDate: string;
+  incorporationState: string;
+  businessNature: string;
+  bvn: string;
+  directors: Director[];
+  localAccountNumber: string;
+  localBankName: string;
+  localBankBranch: string;
+  localAccountOpeningDate: string;
+  foreignAccountNumber?: string;
+  foreignBankName?: string;
+  foreignBankBranch?: string;
+  foreignAccountOpeningDate?: string;
+  certificateOfIncorporation?: FileList;
+  directorId1?: FileList;
+  directorId2?: FileList;
+  cacStatusReport?: FileList;
+  vatRegistrationLicense?: FileList;
+  taxClearanceCertificate?: FileList;
+  agreeToDataPrivacy: boolean;
+  signature: string;
 }
 
-export interface CDDSubmission extends Submission {
-  cddType: 'corporate' | 'naicom-corporate' | 'partners' | 'naicom-partners' | 
-           'agents' | 'brokers' | 'individual';
-  isNaicomApproved?: boolean;
+// Claims Form Types
+export interface MotorClaimData {
+  claimantName: string;
+  claimantPhone: string;
+  claimantEmail: string;
+  claimantAddress: string;
+  vehicleMake: string;
+  vehicleModel: string;
+  vehicleYear: number;
+  vehicleRegistration: string;
+  incidentDate: string;
+  incidentTime: string;
+  incidentLocation: string;
+  incidentDescription: string;
+  policeReported: boolean;
+  policeStation?: string;
+  policeReportNumber?: string;
+  estimatedDamage: number;
+  driverName: string;
+  driverLicense: string;
+  witnessName?: string;
+  witnessPhone?: string;
+  vehiclePhotos?: FileList;
+  policeReport?: FileList;
+  vehicleRegistrationDoc?: FileList;
+  signature: string;
+  agreeToTerms: boolean;
 }
 
-export type FormType = 'kyc' | 'cdd' | 'claims';
-export type UserRole = 'default' | 'admin' | 'compliance' | 'superAdmin';
+export interface ProfessionalIndemnityClaimData {
+  policyNumber: string;
+  coverageFromDate: string;
+  coverageToDate: string;
+  insuredName: string;
+  companyName?: string;
+  title: string;
+  dateOfBirth: string;
+  gender: string;
+  address: string;
+  phone: string;
+  email: string;
+  claimantName: string;
+  claimantAddress: string;
+  contractDetails: string;
+  contractWritten: boolean;
+  contractDocument?: FileList;
+  contractTerms?: string;
+  workPerformedFrom: string;
+  workPerformedTo: string;
+  workPerformedBy: string;
+  claimNature: string;
+  claimAwarenessDate: string;
+  claimIntimationDate: string;
+  intimationType: string;
+  intimationDocument?: FileList;
+  intimationDetails?: string;
+  amountClaimed: number;
+  responseComments: string;
+  quantumComments: string;
+  estimatedLiability: number;
+  additionalInfo: boolean;
+  additionalDetails?: string;
+  additionalDocument?: FileList;
+  solicitorInstructed: boolean;
+  solicitorName?: string;
+  solicitorAddress?: string;
+  solicitorCompany?: string;
+  solicitorRates?: string;
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}
+
+export interface PublicLiabilityClaimData {
+  policyNumber: string;
+  coverageFromDate: string;
+  coverageToDate: string;
+  companyName?: string;
+  address: string;
+  phone: string;
+  email: string;
+  accidentDate: string;
+  accidentTime: string;
+  accidentPlace: string;
+  accidentDescription: string;
+  witnesses?: Array<{
+    name: string;
+    address: string;
+    isEmployee: boolean;
+  }>;
+  employeeActivity: string;
+  causedByName: string;
+  causedByAddress: string;
+  causedByEmployer?: string;
+  policeInvolved: boolean;
+  policeStation?: string;
+  policeOfficerNumber?: string;
+  otherInsurance: boolean;
+  otherInsuranceDetails?: string;
+  claimantName: string;
+  claimantAddress: string;
+  injuryDescription: string;
+  claimReceived: boolean;
+  claimReceivedFrom?: string;
+  claimReceivedWhen?: string;
+  claimReceivedForm?: string;
+  claimDocument?: FileList;
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}

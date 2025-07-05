@@ -35,18 +35,22 @@ function App() {
               <Route path="signin" element={<SignIn />} />
               <Route path="signup" element={<SignUp />} />
               
-              {/* Claims Routes */}
+              {/* Auth routes with /auth prefix */}
+              <Route path="auth/signin" element={<SignIn />} />
+              <Route path="auth/signup" element={<SignUp />} />
+              
+              {/* Claims Routes - accessible without authentication */}
               <Route path="claims" element={<ClaimsForms />} />
               <Route path="claims/motor" element={<MotorClaim />} />
               <Route path="claims/professional-indemnity" element={<ProfessionalIndemnityClaimForm />} />
               <Route path="claims/public-liability" element={<PublicLiabilityClaimForm />} />
               
-              {/* KYC Routes */}
+              {/* KYC Routes - accessible without authentication */}
               <Route path="kyc" element={<KYCForms />} />
               <Route path="kyc/individual" element={<IndividualKYC />} />
               <Route path="kyc/corporate" element={<CorporateKYC />} />
               
-              {/* CDD Routes */}
+              {/* CDD Routes - accessible without authentication */}
               <Route path="cdd" element={<CDDForms />} />
               <Route path="cdd/corporate" element={<CorporateCDD />} />
               <Route path="cdd/naicom-corporate" element={<NaicomCorporateCDD />} />
