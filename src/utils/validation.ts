@@ -1,4 +1,3 @@
-
 import * as Yup from 'yup';
 
 // Phone number validation
@@ -41,7 +40,7 @@ export const individualKYCSchema = Yup.object({
   // Personal Information
   firstName: requiredString('First name'),
   lastName: requiredString('Last name'),
-  middleName: optionalString(), // This should be optional
+  middleName: optionalString(),
   dateOfBirth: dateStringSchema,
   gender: Yup.string().oneOf(['male', 'female', 'other']).required('Gender is required'),
   nationality: requiredString('Nationality'),
@@ -50,9 +49,9 @@ export const individualKYCSchema = Yup.object({
   // Contact Information
   email: emailSchema,
   phoneNumber: phoneSchema,
-  alternatePhone: optionalString(), // This should be optional
+  alternatePhone: optionalString(),
   residentialAddress: requiredString('Residential address'),
-  mailingAddress: optionalString(), // This should be optional
+  mailingAddress: optionalString(),
   
   // Identification
   identificationType: Yup.string().oneOf(['passport', 'nationalId', 'driversLicense']).required('Identification type is required'),
@@ -63,7 +62,7 @@ export const individualKYCSchema = Yup.object({
   // Employment
   employmentStatus: Yup.string().oneOf(['employed', 'selfEmployed', 'unemployed', 'retired', 'student']).required('Employment status is required'),
   occupation: requiredString('Occupation'),
-  employer: optionalString(), // This should be optional
+  employer: optionalString(),
   annualIncome: requiredNumber('Annual income'),
   
   // Documents - all optional
@@ -86,7 +85,7 @@ export const corporateKYCSchema = Yup.object({
   businessAddress: requiredString('Business address'),
   phoneNumber: phoneSchema,
   email: emailSchema,
-  website: optionalString(), // This should be optional
+  website: optionalString(),
   
   // Financial Information
   annualRevenue: requiredNumber('Annual revenue'),
@@ -97,7 +96,7 @@ export const corporateKYCSchema = Yup.object({
     name: requiredString('Director name'),
     position: requiredString('Position'),
     nationality: requiredString('Nationality'),
-    shareholding: optionalNumber(), // This should be optional
+    shareholding: optionalNumber(),
   })).min(1, 'At least one director is required'),
   
   // Documents - all optional
@@ -145,4 +144,214 @@ export const motorClaimSchema = Yup.object({
   policeReport: fileSchema.notRequired(),
   driverLicense: fileSchema.notRequired(),
   vehicleRegistrationDoc: fileSchema.notRequired(),
+});
+
+// Professional Indemnity claim schema
+export const professionalIndemnityClaimSchema = Yup.object({
+  // Policy Details
+  policyNumber: requiredString('Policy number'),
+  coverageFromDate: dateStringSchema,
+  coverageToDate: dateStringSchema,
+  
+  // Insured Details
+  insuredName: requiredString('Insured name'),
+  companyName: optionalString(),
+  title: requiredString('Title'),
+  dateOfBirth: dateStringSchema,
+  gender: requiredString('Gender'),
+  address: requiredString('Address'),
+  phone: phoneSchema,
+  email: emailSchema,
+  
+  // Claimant Details
+  claimantName: requiredString('Claimant name'),
+  claimantAddress: requiredString('Claimant address'),
+  
+  // Contract Details
+  contractDescription: requiredString('Contract description'),
+  contractEvidenced: Yup.string().oneOf(['yes', 'no']).required('Contract evidence required'),
+  contractDetails: optionalString(),
+  workPerformed: requiredString('Work performed'),
+  workPerformer: requiredString('Work performer'),
+  
+  // Claim Details
+  claimNature: requiredString('Claim nature'),
+  dateAware: dateStringSchema,
+  dateClaimMade: dateStringSchema,
+  intimationMethod: Yup.string().oneOf(['oral', 'written']).required('Intimation method required'),
+  amountClaimed: requiredNumber('Amount claimed'),
+  
+  // Response
+  responseComments: requiredString('Response comments'),
+  quantumComments: requiredString('Quantum comments'),
+  estimatedLiability: requiredNumber('Estimated liability'),
+  additionalInfo: optionalString(),
+  solicitorInstructed: Yup.string().oneOf(['yes', 'no']).required('Solicitor instruction required'),
+  
+  // Declaration
+  signature: requiredString('Signature'),
+  
+  // Documents - all optional
+  contractDocument: fileSchema.notRequired(),
+  writtenIntimation: fileSchema.notRequired(),
+  additionalDocuments: fileSchema.notRequired(),
+});
+
+// Public Liability claim schema
+export const publicLiabilityClaimSchema = Yup.object({
+  // Policy Details
+  policyNumber: requiredString('Policy number'),
+  coverageFromDate: dateStringSchema,
+  coverageToDate: dateStringSchema,
+  
+  // Insured Details
+  companyName: optionalString(),
+  address: requiredString('Address'),
+  phone: phoneSchema,
+  email: emailSchema,
+  
+  // Loss Details
+  accidentDate: dateStringSchema,
+  accidentTime: requiredString('Accident time'),
+  accidentPlace: requiredString('Accident place'),
+  accidentDetails: requiredString('Accident details'),
+  witnesses: Yup.array().of(Yup.object({
+    name: requiredString('Witness name'),
+    address: requiredString('Witness address'),
+    isEmployee: Yup.string().oneOf(['yes', 'no']).required('Employee status required'),
+  })).min(0),
+  employeeActivity: requiredString('Employee activity'),
+  accidentCauser: requiredString('Accident causer'),
+  
+  // Police and Insurance
+  policeInvolved: Yup.string().oneOf(['yes', 'no']).required('Police involvement required'),
+  otherPolicies: Yup.string().oneOf(['yes', 'no']).required('Other policies required'),
+  
+  // Claimant
+  claimantName: requiredString('Claimant name'),
+  claimantAddress: requiredString('Claimant address'),
+  injuryNature: requiredString('Injury nature'),
+  claimNoticeReceived: Yup.string().oneOf(['yes', 'no']).required('Claim notice required'),
+  
+  // Declaration
+  signature: requiredString('Signature'),
+  
+  // Documents - all optional
+  claimNoticeDocument: fileSchema.notRequired(),
+});
+
+// CDD validation schemas
+export const corporateCDDSchema = Yup.object({
+  // Company Info
+  companyName: Yup.string().min(3).max(50).required('Company name is required'),
+  registeredAddress: Yup.string().min(3).max(60).required('Registered address is required'),
+  incorporationNumber: Yup.string().min(7).max(15).required('Incorporation number is required'),
+  incorporationState: Yup.string().min(3).max(50).required('Incorporation state is required'),
+  incorporationDate: dateStringSchema,
+  businessNature: Yup.string().min(3).max(60).required('Business nature is required'),
+  companyType: Yup.string().required('Company type is required'),
+  companyTypeOther: optionalString(),
+  email: Yup.string().email().min(5).max(50).required('Email is required'),
+  website: Yup.string().required('Website is required'),
+  taxId: Yup.string().min(6).max(15).notRequired(),
+  telephone: Yup.string().min(5).max(11).required('Telephone is required'),
+  
+  // Directors
+  directors: Yup.array().of(Yup.object({
+    firstName: Yup.string().min(3).max(30).required('First name is required'),
+    middleName: Yup.string().min(3).max(30).notRequired(),
+    lastName: Yup.string().min(3).max(30).required('Last name is required'),
+    dateOfBirth: dateStringSchema,
+    placeOfBirth: Yup.string().min(3).max(30).required('Place of birth is required'),
+    nationality: requiredString('Nationality'),
+    country: requiredString('Country'),
+    occupation: Yup.string().min(3).max(30).required('Occupation is required'),
+    email: Yup.string().email().min(6).max(30).required('Email is required'),
+    phoneNumber: Yup.string().min(5).max(11).required('Phone number is required'),
+    bvn: Yup.string().length(11).required('BVN is required'),
+    employerName: Yup.string().min(2).max(50).notRequired(),
+    employerPhone: Yup.string().min(5).max(11).notRequired(),
+    residentialAddress: requiredString('Residential address'),
+    taxIdNumber: optionalString(),
+    idType: Yup.string().required('ID type is required'),
+    identificationNumber: Yup.string().min(1).max(20).required('Identification number is required'),
+    issuingBody: Yup.string().min(1).max(50).required('Issuing body is required'),
+    issuedDate: dateStringSchema,
+    expiryDate: Yup.string().notRequired(),
+    incomeSource: Yup.string().required('Income source is required'),
+    incomeSourceOther: optionalString(),
+  })).min(1, 'At least one director is required'),
+  
+  // Account Details
+  localBankName: Yup.string().min(3).max(50).required('Bank name is required'),
+  localAccountNumber: Yup.string().min(7).max(10).required('Account number is required'),
+  localBankBranch: Yup.string().min(3).max(30).required('Bank branch is required'),
+  localAccountOpeningDate: dateStringSchema,
+  
+  foreignBankName: optionalString(),
+  foreignAccountNumber: optionalString(),
+  foreignBankBranch: optionalString(),
+  foreignAccountOpeningDate: Yup.string().notRequired(),
+  
+  // Documents
+  cacCertificate: fileSchema.required('CAC Certificate is required'),
+  identificationMeans: fileSchema.required('Identification document is required'),
+});
+
+export const naicomCorporateCDDSchema = Yup.object({
+  // Company Info
+  companyName: Yup.string().min(3).max(50).required('Company name is required'),
+  registeredAddress: Yup.string().min(3).max(60).required('Registered address is required'),
+  incorporationNumber: Yup.string().min(7).max(15).required('Incorporation number is required'),
+  incorporationState: Yup.string().min(3).max(50).required('Incorporation state is required'),
+  incorporationDate: dateStringSchema,
+  businessNature: Yup.string().min(3).max(60).required('Business nature is required'),
+  companyType: Yup.string().required('Company type is required'),
+  companyTypeOther: optionalString(),
+  email: Yup.string().email().min(5).max(50).required('Email is required'),
+  website: Yup.string().required('Website is required'),
+  taxId: Yup.string().min(6).max(15).required('Tax ID is required'),
+  telephone: Yup.string().min(5).max(11).required('Telephone is required'),
+  
+  // Directors (same structure as corporate CDD)
+  directors: Yup.array().of(Yup.object({
+    firstName: Yup.string().min(3).max(30).required('First name is required'),
+    middleName: Yup.string().min(3).max(30).notRequired(),
+    lastName: Yup.string().min(3).max(30).required('Last name is required'),
+    dateOfBirth: dateStringSchema,
+    placeOfBirth: Yup.string().min(3).max(30).required('Place of birth is required'),
+    nationality: requiredString('Nationality'),
+    country: requiredString('Country'),
+    occupation: Yup.string().min(3).max(30).required('Occupation is required'),
+    email: Yup.string().email().min(6).max(30).required('Email is required'),
+    phoneNumber: Yup.string().min(5).max(11).required('Phone number is required'),
+    bvn: Yup.string().length(11).required('BVN is required'),
+    employerName: Yup.string().min(2).max(50).notRequired(),
+    employerPhone: Yup.string().min(5).max(11).notRequired(),
+    residentialAddress: requiredString('Residential address'),
+    taxIdNumber: optionalString(),
+    idType: Yup.string().required('ID type is required'),
+    identificationNumber: Yup.string().min(1).max(20).required('Identification number is required'),
+    issuingBody: Yup.string().min(1).max(50).required('Issuing body is required'),
+    issuedDate: dateStringSchema,
+    expiryDate: Yup.string().notRequired(),
+    incomeSource: Yup.string().required('Income source is required'),
+    incomeSourceOther: optionalString(),
+  })).min(1, 'At least one director is required'),
+  
+  // Account Details
+  localBankName: Yup.string().min(3).max(50).required('Bank name is required'),
+  localAccountNumber: Yup.string().min(7).max(10).required('Account number is required'),
+  localBankBranch: Yup.string().min(3).max(30).required('Bank branch is required'),
+  localAccountOpeningDate: dateStringSchema,
+  
+  foreignBankName: optionalString(),
+  foreignAccountNumber: optionalString(),
+  foreignBankBranch: optionalString(),
+  foreignAccountOpeningDate: Yup.string().notRequired(),
+  
+  // Documents
+  cacCertificate: fileSchema.required('CAC Certificate is required'),
+  identificationMeans: fileSchema.required('Identification document is required'),
+  naicomLicense: fileSchema.required('NAICOM License is required'),
 });
