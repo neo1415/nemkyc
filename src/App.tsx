@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -13,6 +12,7 @@ import ClaimsForms from './pages/claims/ClaimsForms';
 import MotorClaim from './pages/claims/MotorClaim';
 import ProfessionalIndemnityClaimForm from './pages/claims/ProfessionalIndemnityClaimForm';
 import PublicLiabilityClaimForm from './pages/claims/PublicLiabilityClaimForm';
+import EmployersLiabilityClaim from './pages/claims/EmployersLiabilityClaim';
 import KYCForms from './pages/kyc/KYCForms';
 import IndividualKYC from './pages/kyc/IndividualKYC';
 import CorporateKYC from './pages/kyc/CorporateKYC';
@@ -44,6 +44,7 @@ function App() {
               <Route path="claims/motor" element={<MotorClaim />} />
               <Route path="claims/professional-indemnity" element={<ProfessionalIndemnityClaimForm />} />
               <Route path="claims/public-liability" element={<PublicLiabilityClaimForm />} />
+              <Route path="claims/employers-liability" element={<EmployersLiabilityClaim />} />
               
               {/* KYC Routes - accessible without authentication */}
               <Route path="kyc" element={<KYCForms />} />
