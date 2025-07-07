@@ -59,7 +59,7 @@ export const corporateCDDSchema = Yup.object({
     is: 'Other',
     then: (schema) => schema.required('Please specify other company type'),
     otherwise: (schema) => schema.optional()
-  }),
+  }).optional(),
   email: emailValidation.max(50),
   website: Yup.string().url('Please enter a valid website URL').required('Website is required'),
   taxId: Yup.string().min(6).max(15).optional(),
@@ -73,6 +73,8 @@ export const corporateCDDSchema = Yup.object({
   foreignAccountNumber: Yup.string().optional(),
   foreignBankBranch: Yup.string().optional(),
   foreignAccountOpeningDate: dateValidation.optional(),
+  identificationDocument: Yup.mixed().optional(),
+  naicomLicense: Yup.mixed().optional(),
   agreeToDataPrivacy: Yup.boolean().oneOf([true], 'You must agree to the data privacy policy'),
   signature: Yup.string().required('Signature is required')
 });
@@ -109,6 +111,12 @@ export const partnersCDDSchema = Yup.object({
   foreignBankName: Yup.string().optional(),
   foreignBankBranch: Yup.string().optional(),
   foreignAccountOpeningDate: dateValidation.optional(),
+  certificateOfIncorporation: Yup.mixed().optional(),
+  directorId1: Yup.mixed().optional(),
+  directorId2: Yup.mixed().optional(),
+  cacStatusReport: Yup.mixed().optional(),
+  vatRegistrationLicense: Yup.mixed().optional(),
+  taxClearanceCertificate: Yup.mixed().optional(),
   agreeToDataPrivacy: Yup.boolean().oneOf([true], 'You must agree to the data privacy policy'),
   signature: Yup.string().required('Signature is required')
 });

@@ -27,7 +27,7 @@ const PartnersCDD: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<PartnersCDDData>({
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm({
     resolver: yupResolver(partnersCDDSchema),
     defaultValues: {
       email: user?.email || '',
@@ -490,7 +490,7 @@ const PartnersCDD: React.FC = () => {
           label="Certificate of Incorporation"
           required
           onFileSelect={(file) => setValue('certificateOfIncorporation', file)}
-          currentFile={watchedValues.certificateOfIncorporation}
+          currentFile={watchedValues.certificateOfIncorporation as File}
           error={errors.certificateOfIncorporation?.message}
         />
         
@@ -498,7 +498,7 @@ const PartnersCDD: React.FC = () => {
           label="Director ID 1"
           required
           onFileSelect={(file) => setValue('directorId1', file)}
-          currentFile={watchedValues.directorId1}
+          currentFile={watchedValues.directorId1 as File}
           error={errors.directorId1?.message}
         />
         
@@ -506,7 +506,7 @@ const PartnersCDD: React.FC = () => {
           label="Director ID 2"
           required
           onFileSelect={(file) => setValue('directorId2', file)}
-          currentFile={watchedValues.directorId2}
+          currentFile={watchedValues.directorId2 as File}
           error={errors.directorId2?.message}
         />
         
@@ -514,7 +514,7 @@ const PartnersCDD: React.FC = () => {
           label="CAC Status Report"
           required
           onFileSelect={(file) => setValue('cacStatusReport', file)}
-          currentFile={watchedValues.cacStatusReport}
+          currentFile={watchedValues.cacStatusReport as File}
           error={errors.cacStatusReport?.message}
         />
         
@@ -522,7 +522,7 @@ const PartnersCDD: React.FC = () => {
           label="VAT Registration License"
           required
           onFileSelect={(file) => setValue('vatRegistrationLicense', file)}
-          currentFile={watchedValues.vatRegistrationLicense}
+          currentFile={watchedValues.vatRegistrationLicense as File}
           error={errors.vatRegistrationLicense?.message}
         />
         
@@ -530,7 +530,7 @@ const PartnersCDD: React.FC = () => {
           label="Tax Clearance Certificate"
           required
           onFileSelect={(file) => setValue('taxClearanceCertificate', file)}
-          currentFile={watchedValues.taxClearanceCertificate}
+          currentFile={watchedValues.taxClearanceCertificate as File}
           error={errors.taxClearanceCertificate?.message}
         />
       </div>
@@ -611,7 +611,7 @@ const PartnersCDD: React.FC = () => {
       id: 'privacy-declaration',
       title: 'Data Privacy & Declaration',
       component: <DataPrivacyStep />,
-      isValid: watchedValues.agreeToDataPrivacy && watchedValues.signature
+      isValid: !!watchedValues.agreeToDataPrivacy && !!watchedValues.signature
     }
   ];
 
