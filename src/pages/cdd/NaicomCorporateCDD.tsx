@@ -27,7 +27,7 @@ const NaicomCorporateCDD: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<NaicomCorporateCDDData>({
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm({
     resolver: yupResolver(naicomCorporateCDDSchema),
     defaultValues: {
       email: user?.email || '',
@@ -483,7 +483,7 @@ const NaicomCorporateCDD: React.FC = () => {
           label="Upload Your CAC Certificate"
           required
           onFileSelect={(file) => setValue('identificationDocument', file)}
-          currentFile={watchedValues.identificationDocument}
+          currentFile={watchedValues.identificationDocument as File}
           error={errors.identificationDocument?.message}
         />
         
@@ -491,7 +491,7 @@ const NaicomCorporateCDD: React.FC = () => {
           label="Upload NAICOM License"
           required
           onFileSelect={(file) => setValue('naicomLicense', file)}
-          currentFile={watchedValues.naicomLicense}
+          currentFile={watchedValues.naicomLicense as File}
           error={errors.naicomLicense?.message}
         />
       </div>
