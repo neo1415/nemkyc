@@ -482,14 +482,6 @@ const NaicomCorporateCDD: React.FC = () => {
         <FileUpload
           label="Upload Your CAC Certificate"
           required
-          onFileSelect={(file) => setValue('cacCertificate', file)}
-          currentFile={watchedValues.cacCertificate}
-          error={errors.cacCertificate?.message}
-        />
-        
-        <FileUpload
-          label="Upload Means of Identification"
-          required
           onFileSelect={(file) => setValue('identificationDocument', file)}
           currentFile={watchedValues.identificationDocument}
           error={errors.identificationDocument?.message}
@@ -574,13 +566,13 @@ const NaicomCorporateCDD: React.FC = () => {
       id: 'documents',
       title: 'Document Upload',
       component: <DocumentsStep />,
-      isValid: !errors.cacCertificate && !errors.identificationDocument && !errors.naicomLicense
+      isValid: !errors.identificationDocument && !errors.naicomLicense
     },
     {
       id: 'privacy-declaration',
       title: 'Data Privacy & Declaration',
       component: <DataPrivacyStep />,
-      isValid: watchedValues.agreeToDataPrivacy && watchedValues.signature
+      isValid: !!watchedValues.agreeToDataPrivacy && !!watchedValues.signature
     }
   ];
 
