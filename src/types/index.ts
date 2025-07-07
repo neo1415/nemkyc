@@ -1,4 +1,3 @@
-
 export interface User {
   uid: string;
   email: string;
@@ -58,14 +57,13 @@ export interface CorporateCDDData {
   foreignAccountNumber?: string;
   foreignBankBranch?: string;
   foreignAccountOpeningDate?: string;
-  cacCertificate?: FileList;
-  identificationDocument?: FileList;
+  identificationDocument?: File;
   agreeToDataPrivacy: boolean;
   signature: string;
 }
 
 export interface NaicomCorporateCDDData extends CorporateCDDData {
-  naicomLicense?: FileList;
+  naicomLicense?: File;
 }
 
 export interface PartnersCDDData {
@@ -94,12 +92,12 @@ export interface PartnersCDDData {
   foreignBankName?: string;
   foreignBankBranch?: string;
   foreignAccountOpeningDate?: string;
-  certificateOfIncorporation?: FileList;
-  directorId1?: FileList;
-  directorId2?: FileList;
-  cacStatusReport?: FileList;
-  vatRegistrationLicense?: FileList;
-  taxClearanceCertificate?: FileList;
+  certificateOfIncorporation?: File;
+  directorId1?: File;
+  directorId2?: File;
+  cacStatusReport?: File;
+  vatRegistrationLicense?: File;
+  taxClearanceCertificate?: File;
   agreeToDataPrivacy: boolean;
   signature: string;
 }
@@ -188,9 +186,9 @@ export interface MotorClaimData {
   driverLicense: string;
   witnessName?: string;
   witnessPhone?: string;
-  vehiclePhotos?: FileList;
-  policeReport?: FileList;
-  vehicleRegistrationDoc?: FileList;
+  vehiclePhotos?: File[];
+  policeReport?: File;
+  vehicleRegistrationDoc?: File;
   signature: string;
   agreeToTerms: boolean;
 }
@@ -211,7 +209,7 @@ export interface ProfessionalIndemnityClaimData {
   claimantAddress: string;
   contractDetails: string;
   contractWritten: boolean;
-  contractDocument?: FileList;
+  contractDocument?: File;
   contractTerms?: string;
   workPerformedFrom: string;
   workPerformedTo: string;
@@ -220,7 +218,7 @@ export interface ProfessionalIndemnityClaimData {
   claimAwarenessDate: string;
   claimIntimationDate: string;
   intimationType: string;
-  intimationDocument?: FileList;
+  intimationDocument?: File;
   intimationDetails?: string;
   amountClaimed: number;
   responseComments: string;
@@ -228,7 +226,7 @@ export interface ProfessionalIndemnityClaimData {
   estimatedLiability: number;
   additionalInfo: boolean;
   additionalDetails?: string;
-  additionalDocument?: FileList;
+  additionalDocument?: File;
   solicitorInstructed: boolean;
   solicitorName?: string;
   solicitorAddress?: string;
@@ -271,7 +269,93 @@ export interface PublicLiabilityClaimData {
   claimReceivedFrom?: string;
   claimReceivedWhen?: string;
   claimReceivedForm?: string;
-  claimDocument?: FileList;
+  claimDocument?: File;
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}
+
+// Employers Liability Claim Types
+export interface Witness {
+  name: string;
+  address: string;
+  phone?: string;
+}
+
+export interface EarningsMonth {
+  monthEnding: string;
+  wagesAndBonus: number;
+  monthlyAllowances: number;
+}
+
+export interface EmployersLiabilityClaimData {
+  // Policy Details
+  policyNumber: string;
+  periodOfCoverFrom: string;
+  periodOfCoverTo: string;
+  
+  // Insured Details
+  insuredName: string;
+  insuredAddress: string;
+  insuredPhone: string;
+  insuredEmail: string;
+  
+  // Injured Party Details
+  injuredPartyName: string;
+  injuredPartyAge: number;
+  injuredPartyAddress: string;
+  averageMonthlyEarnings: number;
+  occupation: string;
+  dateOfEmployment: string;
+  maritalStatus: string;
+  numberOfChildren: number;
+  agesOfChildren?: string;
+  previousAccidents: boolean;
+  previousAccidentsDetails?: string;
+  
+  // Injury Details
+  natureOfInjuries: string;
+  machineryInvolved?: string;
+  supervisorName: string;
+  supervisorPosition: string;
+  
+  // Accident Details
+  accidentDate: string;
+  accidentTime: string;
+  accidentPlace: string;
+  dateReported: string;
+  reportedBy: string;
+  dateStoppedWork: string;
+  descriptionOfWork: string;
+  howAccidentOccurred: string;
+  soberOrIntoxicated: boolean;
+  
+  // Medical
+  receivingTreatment: boolean;
+  hospitalName?: string;
+  hospitalAddress?: string;
+  doctorName: string;
+  doctorAddress: string;
+  
+  // Disablement
+  totallyDisabled: boolean;
+  dateStoppedWorking: string;
+  estimatedDurationOfDisablement: string;
+  ableToDoAnyDuties: boolean;
+  dutiesDetails?: string;
+  claimMadeOnYou: boolean;
+  
+  // Witnesses
+  witnesses?: Witness[];
+  
+  // Other Insurers
+  otherInsurerName?: string;
+  otherInsurerAddress?: string;
+  otherInsurerPolicyNumber?: string;
+  
+  // Statement of Earnings
+  earnings: EarningsMonth[];
+  
+  // Declaration
   agreeToDataPrivacy: boolean;
   signature: string;
 }
