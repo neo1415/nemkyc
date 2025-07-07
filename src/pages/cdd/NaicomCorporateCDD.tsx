@@ -1,1015 +1,613 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { useAuth } from '../../contexts/AuthContext';
 import { naicomCorporateCDDSchema } from '../../utils/validation';
+import { NaicomCorporateCDDData } from '../../types';
+import { useFormDraft } from '../../hooks/useFormDraft';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Trash2, Plus, Building, User, CreditCard, Upload, FileText } from 'lucide-react';
+import { Checkbox } from '../../components/ui/checkbox';
 import { toast } from '../../components/ui/use-toast';
+import FormSection from '../../components/common/FormSection';
 import FileUpload from '../../components/common/FileUpload';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
-import { ScrollArea } from '../../components/ui/scroll-area';
-import { collection, addDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../firebase/config';
-import { sendSubmissionConfirmation } from '../../services/emailService';
-import { useAuth } from '../../contexts/AuthContext';
-
-interface NaicomCorporateCDDData {
-  companyName: string;
-  registeredAddress: string;
-  incorporationNumber: string;
-  incorporationState: string;
-  incorporationDate: string;
-  businessNature: string;
-  companyType: string;
-  companyTypeOther?: string;
-  email: string;
-  website: string;
-  taxId: string;
-  telephone: string;
-  directors: Array<{
-    firstName: string;
-    middleName?: string;
-    lastName: string;
-    dateOfBirth: string;
-    placeOfBirth: string;
-    nationality: string;
-    country: string;
-    occupation: string;
-    email: string;
-    phoneNumber: string;
-    bvn: string;
-    employerName?: string;
-    employerPhone?: string;
-    residentialAddress: string;
-    taxIdNumber?: string;
-    idType: string;
-    identificationNumber: string;
-    issuingBody: string;
-    issuedDate: string;
-    expiryDate?: string;
-    incomeSource: string;
-    incomeSourceOther?: string;
-  }>;
-  localBankName: string;
-  localAccountNumber: string;
-  localBankBranch: string;
-  localAccountOpeningDate: string;
-  foreignBankName?: string;
-  foreignAccountNumber?: string;
-  foreignBankBranch?: string;
-  foreignAccountOpeningDate?: string;
-  cacCertificate?: File;
-  identificationMeans?: File;
-  naicomLicense?: File;
-  signature: string;
-}
+import PhoneInput from '../../components/common/PhoneInput';
+import MultiStepForm from '../../components/common/MultiStepForm';
+import AuthRequiredSubmit from '../../components/common/AuthRequiredSubmit';
+import { Building2, Users, CreditCard, Upload, Plus, Trash2 } from 'lucide-react';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { notifySubmission } from '../../services/notificationService';
 
 const NaicomCorporateCDD: React.FC = () => {
   const { user } = useAuth();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [showSummary, setShowSummary] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const form = useForm<NaicomCorporateCDDData>({
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<NaicomCorporateCDDData>({
     resolver: yupResolver(naicomCorporateCDDSchema),
     defaultValues: {
-      directors: [{
-        firstName: '',
-        lastName: '',
-        dateOfBirth: '',
-        placeOfBirth: '',
-        nationality: '',
-        country: '',
-        occupation: '',
-        email: '',
-        phoneNumber: '',
-        bvn: '',
-        residentialAddress: '',
-        idType: '',
-        identificationNumber: '',
-        issuingBody: '',
-        issuedDate: '',
-        incomeSource: ''
-      }],
-      signature: ''
-    },
-    mode: 'onChange'
+      email: user?.email || '',
+      agreeToDataPrivacy: false,
+      signature: '',
+      directors: [{ 
+        firstName: '', middleName: '', lastName: '', dateOfBirth: '', placeOfBirth: '',
+        nationality: '', country: '', occupation: '', email: '', phoneNumber: '', bvn: '',
+        employerName: '', employerPhone: '', residentialAddress: '', taxIdNumber: '',
+        idType: '', identificationNumber: '', issuingBody: '', issuedDate: '', expiryDate: '',
+        incomeSource: '', incomeSourceOther: ''
+      }]
+    }
   });
 
   const { fields, append, remove } = useFieldArray({
-    control: form.control,
+    control,
     name: 'directors'
   });
 
-  const steps = [
-    { title: 'Company Details', icon: Building },
-    { title: 'Director Info', icon: User },
-    { title: 'Account Details', icon: CreditCard },
-    { title: 'Uploads', icon: Upload },
-    { title: 'Data Privacy & Declaration', icon: FileText }
-  ];
+  const watchedValues = watch();
+  const { saveDraft } = useFormDraft('naicom-corporate-cdd', { setValue, watch });
 
-  const watchedValues = form.watch();
-
-  useEffect(() => {
-    const subscription = form.watch((data) => {
-      localStorage.setItem('naicom-corporate-cdd-draft', JSON.stringify({
-        ...data,
-        timestamp: Date.now()
-      }));
+  // Auto-save draft
+  React.useEffect(() => {
+    const subscription = watch((data) => {
+      saveDraft(data);
     });
     return () => subscription.unsubscribe();
-  }, [form]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('naicom-corporate-cdd-draft');
-    if (saved) {
-      const { timestamp, ...data } = JSON.parse(saved);
-      if (Date.now() - timestamp < 7 * 24 * 60 * 60 * 1000) {
-        Object.keys(data).forEach(key => {
-          if (data[key] !== undefined) {
-            form.setValue(key as any, data[key]);
-          }
-        });
-      }
-    }
-  }, [form]);
-
-  const nextStep = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
+  }, [watch, saveDraft]);
 
   const onSubmit = async (data: NaicomCorporateCDDData) => {
-    if (currentStep < steps.length - 1) {
-      nextStep();
+    if (!user) {
+      setShowAuthModal(true);
       return;
     }
-
-    setShowSummary(true);
-  };
-
-  const handleFinalSubmit = async () => {
-    if (!user) return;
     
     setIsSubmitting(true);
     try {
-      const formData = form.getValues();
-      const fileUrls: Record<string, string> = {};
-
-      // Upload files
-      for (const fileField of ['cacCertificate', 'identificationMeans', 'naicomLicense']) {
-        const file = formData[fileField as keyof NaicomCorporateCDDData] as File;
-        if (file) {
-          const storageRef = ref(storage, `naicom-corporate-cdd/${user.uid}/${fileField}-${Date.now()}`);
-          const snapshot = await uploadBytes(storageRef, file);
-          fileUrls[fileField] = await getDownloadURL(snapshot.ref);
-        }
-      }
-
-      const submissionData = {
-        ...formData,
-        fileUrls,
+      const submissionId = `cdd_naicom_corporate_${Date.now()}`;
+      
+      await setDoc(doc(db, 'submissions', submissionId), {
+        id: submissionId,
         userId: user.uid,
-        userEmail: user.email,
-        submittedAt: new Date(),
-        status: 'pending'
-      };
-
-      await addDoc(collection(db, 'naicom-corporate-cdd-submissions'), submissionData);
-
-      if (user.email) {
-        await sendSubmissionConfirmation(user.email, 'NAICOM Corporate CDD');
-      }
-
-      localStorage.removeItem('naicom-corporate-cdd-draft');
-      setShowSummary(false);
-      setShowSuccess(true);
-
-      toast({
-        title: "Form submitted successfully!",
-        description: "Your NAICOM Corporate CDD form has been submitted.",
+        formType: 'naicom-corporate-cdd',
+        data: data,
+        status: 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
-    } catch (error) {
-      console.error('Submission error:', error);
+      
+      await notifySubmission(user, 'NAICOM Corporate CDD');
+      
       toast({
-        title: "Submission failed",
-        description: "Please try again later.",
-        variant: "destructive"
+        title: "CDD Form Submitted",
+        description: "Your NAICOM Corporate CDD form has been submitted successfully.",
+      });
+      
+      window.location.href = '/dashboard';
+    } catch (error) {
+      console.error('Error submitting CDD:', error);
+      toast({
+        title: "Submission Error",
+        description: "Failed to submit CDD form. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const renderStep = () => {
-    switch (currentStep) {
-      case 0:
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
-                Company Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="companyName">Company Name *</Label>
-                  <Input
-                    id="companyName"
-                    {...form.register('companyName')}
-                    placeholder="Enter company name"
-                  />
-                  {form.formState.errors.companyName && (
-                    <p className="text-red-500 text-sm">{form.formState.errors.companyName.message}</p>
-                  )}
-                </div>
+  const CompanyInfoStep = () => (
+    <FormSection title="Company Information" icon={<Building2 className="h-5 w-5" />}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="companyName">Company Name *</Label>
+          <Input {...register('companyName')} />
+          {errors.companyName && <p className="text-sm text-red-600">{errors.companyName.message}</p>}
+        </div>
+        
+        <div>
+          <Label htmlFor="incorporationNumber">Incorporation Number *</Label>
+          <Input {...register('incorporationNumber')} />
+          {errors.incorporationNumber && <p className="text-sm text-red-600">{errors.incorporationNumber.message}</p>}
+        </div>
+        
+        <div className="md:col-span-2">
+          <Label htmlFor="registeredAddress">Registered Company Address *</Label>
+          <Textarea {...register('registeredAddress')} />
+          {errors.registeredAddress && <p className="text-sm text-red-600">{errors.registeredAddress.message}</p>}
+        </div>
+        
+        <div>
+          <Label htmlFor="incorporationState">Incorporation State *</Label>
+          <Input {...register('incorporationState')} />
+          {errors.incorporationState && <p className="text-sm text-red-600">{errors.incorporationState.message}</p>}
+        </div>
+        
+        <div>
+          <Label htmlFor="incorporationDate">Date of Incorporation *</Label>
+          <Input type="date" {...register('incorporationDate')} />
+          {errors.incorporationDate && <p className="text-sm text-red-600">{errors.incorporationDate.message}</p>}
+        </div>
+        
+        <div className="md:col-span-2">
+          <Label htmlFor="businessNature">Nature of Business *</Label>
+          <Textarea {...register('businessNature')} />
+          {errors.businessNature && <p className="text-sm text-red-600">{errors.businessNature.message}</p>}
+        </div>
+        
+        <div>
+          <Label>Company Type *</Label>
+          <Select
+            value={watchedValues.companyType}
+            onValueChange={(value) => setValue('companyType', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose Company Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sole-proprietor">Sole Proprietor</SelectItem>
+              <SelectItem value="unlimited-liability">Unlimited Liability Company</SelectItem>
+              <SelectItem value="limited-liability">Limited Liability Company</SelectItem>
+              <SelectItem value="public-limited">Public Limited Company</SelectItem>
+              <SelectItem value="joint-venture">Joint Venture</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+          {errors.companyType && <p className="text-sm text-red-600">{errors.companyType.message}</p>}
+        </div>
+        
+        {watchedValues.companyType === 'other' && (
+          <div>
+            <Label htmlFor="companyTypeOther">Please specify *</Label>
+            <Input {...register('companyTypeOther')} />
+            {errors.companyTypeOther && <p className="text-sm text-red-600">{errors.companyTypeOther.message}</p>}
+          </div>
+        )}
+        
+        <div>
+          <Label htmlFor="email">Email Address *</Label>
+          <Input type="email" {...register('email')} />
+          {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
+        </div>
+        
+        <div>
+          <Label htmlFor="website">Website *</Label>
+          <Input {...register('website')} />
+          {errors.website && <p className="text-sm text-red-600">{errors.website.message}</p>}
+        </div>
+        
+        <div>
+          <Label htmlFor="taxId">Tax Identification Number *</Label>
+          <Input {...register('taxId')} />
+          {errors.taxId && <p className="text-sm text-red-600">{errors.taxId.message}</p>}
+        </div>
+        
+        <div>
+          <PhoneInput
+            label="Telephone Number"
+            required
+            value={watchedValues.telephone || ''}
+            onChange={(value) => setValue('telephone', value)}
+            error={errors.telephone?.message}
+          />
+        </div>
+      </div>
+    </FormSection>
+  );
 
-                <div>
-                  <Label htmlFor="incorporationNumber">Incorporation Number *</Label>
-                  <Input
-                    id="incorporationNumber"
-                    {...form.register('incorporationNumber')}
-                    placeholder="Enter incorporation number"
-                  />
-                  {form.formState.errors.incorporationNumber && (
-                    <p className="text-red-500 text-sm">{form.formState.errors.incorporationNumber.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="incorporationState">Incorporation State *</Label>
-                  <Input
-                    id="incorporationState"
-                    {...form.register('incorporationState')}
-                    placeholder="Enter incorporation state"
-                  />
-                  {form.formState.errors.incorporationState && (
-                    <p className="text-red-500 text-sm">{form.formState.errors.incorporationState.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="incorporationDate">Date of Incorporation *</Label>
-                  <Input
-                    id="incorporationDate"
-                    type="date"
-                    {...form.register('incorporationDate')}
-                  />
-                  {form.formState.errors.incorporationDate && (
-                    <p className="text-red-500 text-sm">{form.formState.errors.incorporationDate.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="companyType">Company Type *</Label>
-                  <Select onValueChange={(value) => form.setValue('companyType', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose Company Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sole-proprietor">Sole Proprietor</SelectItem>
-                      <SelectItem value="unlimited-liability">Unlimited Liability Company</SelectItem>
-                      <SelectItem value="limited-liability">Limited Liability Company</SelectItem>
-                      <SelectItem value="public-limited">Public Limited Company</SelectItem>
-                      <SelectItem value="joint-venture">Joint Venture</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.companyType && (
-                    <p className="text-red-500 text-sm">{form.formState.errors.companyType.message}</p>
-                  )}
-                </div>
-
-                {watchedValues.companyType === 'other' && (
-                  <div>
-                    <Label htmlFor="companyTypeOther">Please specify *</Label>
-                    <Input
-                      id="companyTypeOther"
-                      {...form.register('companyTypeOther')}
-                      placeholder="Specify company type"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <Label htmlFor="email">Email Address *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    {...form.register('email')}
-                    placeholder="Enter email address"
-                  />
-                  {form.formState.errors.email && (
-                    <p className="text-red-500 text-sm">{form.formState.errors.email.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="website">Website *</Label>
-                  <Input
-                    id="website"
-                    {...form.register('website')}
-                    placeholder="Enter website URL"
-                  />
-                  {form.formState.errors.website && (
-                    <p className="text-red-500 text-sm">{form.formState.errors.website.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="taxId">Tax Identification Number *</Label>
-                  <Input
-                    id="taxId"
-                    {...form.register('taxId')}
-                    placeholder="Enter tax ID"
-                  />
-                  {form.formState.errors.taxId && (
-                    <p className="text-red-500 text-sm">{form.formState.errors.taxId.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="telephone">Telephone Number *</Label>
-                  <Input
-                    id="telephone"
-                    type="tel"
-                    {...form.register('telephone')}
-                    placeholder="Enter telephone number"
-                  />
-                  {form.formState.errors.telephone && (
-                    <p className="text-red-500 text-sm">{form.formState.errors.telephone.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="registeredAddress">Registered Company Address *</Label>
-                <Textarea
-                  id="registeredAddress"
-                  {...form.register('registeredAddress')}
-                  placeholder="Enter registered address"
-                  rows={3}
-                />
-                {form.formState.errors.registeredAddress && (
-                  <p className="text-red-500 text-sm">{form.formState.errors.registeredAddress.message}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="businessNature">Nature of Business *</Label>
-                <Textarea
-                  id="businessNature"
-                  {...form.register('businessNature')}
-                  placeholder="Describe nature of business"
-                  rows={3}
-                />
-                {form.formState.errors.businessNature && (
-                  <p className="text-red-500 text-sm">{form.formState.errors.businessNature.message}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        );
-
-      case 1:
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 justify-between">
-                <div className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Director Information
-                </div>
+  const DirectorsStep = () => (
+    <FormSection title="Directors Information" icon={<Users className="h-5 w-5" />}>
+      <div className="space-y-6">
+        {fields.map((field, index) => (
+          <div key={field.id} className="p-4 border rounded-lg space-y-4">
+            <div className="flex justify-between items-center">
+              <h4 className="font-medium">Director {index + 1}</h4>
+              {fields.length > 1 && (
                 <Button
                   type="button"
-                  onClick={() => append({
-                    firstName: '',
-                    lastName: '',
-                    dateOfBirth: '',
-                    placeOfBirth: '',
-                    nationality: '',
-                    country: '',
-                    occupation: '',
-                    email: '',
-                    phoneNumber: '',
-                    bvn: '',
-                    residentialAddress: '',
-                    idType: '',
-                    identificationNumber: '',
-                    issuingBody: '',
-                    issuedDate: '',
-                    incomeSource: ''
-                  })}
-                  className="flex items-center gap-1"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => remove(index)}
+                  className="text-red-600 hover:text-red-700"
                 >
-                  <Plus className="h-4 w-4" />
-                  Add Director
+                  <Trash2 className="h-4 w-4" />
                 </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {fields.map((field, index) => (
-                <div key={field.id} className="border p-4 rounded-lg">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="font-semibold">Director {index + 1}</h4>
-                    {fields.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => remove(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor={`directors.${index}.firstName`}>First Name *</Label>
-                      <Input
-                        {...form.register(`directors.${index}.firstName`)}
-                        placeholder="Enter first name"
-                      />
-                      {form.formState.errors.directors?.[index]?.firstName && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.firstName?.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.middleName`}>Middle Name</Label>
-                      <Input
-                        {...form.register(`directors.${index}.middleName`)}
-                        placeholder="Enter middle name"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.lastName`}>Last Name *</Label>
-                      <Input
-                        {...form.register(`directors.${index}.lastName`)}
-                        placeholder="Enter last name"
-                      />
-                      {form.formState.errors.directors?.[index]?.lastName && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.lastName?.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.dateOfBirth`}>Date of Birth *</Label>
-                      <Input
-                        type="date"
-                        {...form.register(`directors.${index}.dateOfBirth`)}
-                      />
-                      {form.formState.errors.directors?.[index]?.dateOfBirth && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.dateOfBirth?.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.placeOfBirth`}>Place of Birth *</Label>
-                      <Input
-                        {...form.register(`directors.${index}.placeOfBirth`)}
-                        placeholder="Enter place of birth"
-                      />
-                      {form.formState.errors.directors?.[index]?.placeOfBirth && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.placeOfBirth?.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.nationality`}>Nationality *</Label>
-                      <Input
-                        {...form.register(`directors.${index}.nationality`)}
-                        placeholder="Enter nationality"
-                      />
-                      {form.formState.errors.directors?.[index]?.nationality && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.nationality?.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.country`}>Country *</Label>
-                      <Input
-                        {...form.register(`directors.${index}.country`)}
-                        placeholder="Enter country"
-                      />
-                      {form.formState.errors.directors?.[index]?.country && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.country?.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.occupation`}>Occupation *</Label>
-                      <Input
-                        {...form.register(`directors.${index}.occupation`)}
-                        placeholder="Enter occupation"
-                      />
-                      {form.formState.errors.directors?.[index]?.occupation && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.occupation?.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.email`}>Email *</Label>
-                      <Input
-                        type="email"
-                        {...form.register(`directors.${index}.email`)}
-                        placeholder="Enter email"
-                      />
-                      {form.formState.errors.directors?.[index]?.email && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.email?.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.phoneNumber`}>Phone Number *</Label>
-                      <Input
-                        type="tel"
-                        {...form.register(`directors.${index}.phoneNumber`)}
-                        placeholder="Enter phone number"
-                      />
-                      {form.formState.errors.directors?.[index]?.phoneNumber && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.phoneNumber?.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.bvn`}>BVN *</Label>
-                      <Input
-                        {...form.register(`directors.${index}.bvn`)}
-                        placeholder="Enter 11-digit BVN"
-                        maxLength={11}
-                      />
-                      {form.formState.errors.directors?.[index]?.bvn && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.bvn?.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.employerName`}>Employer's Name</Label>
-                      <Input
-                        {...form.register(`directors.${index}.employerName`)}
-                        placeholder="Enter employer's name"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.employerPhone`}>Employer's Phone</Label>
-                      <Input
-                        type="tel"
-                        {...form.register(`directors.${index}.employerPhone`)}
-                        placeholder="Enter employer's phone"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.taxIdNumber`}>Tax ID Number</Label>
-                      <Input
-                        {...form.register(`directors.${index}.taxIdNumber`)}
-                        placeholder="Enter tax ID"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.idType`}>ID Type *</Label>
-                      <Select onValueChange={(value) => form.setValue(`directors.${index}.idType`, value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose Identification Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="international-passport">International Passport</SelectItem>
-                          <SelectItem value="nimc">NIMC</SelectItem>
-                          <SelectItem value="drivers-licence">Driver's Licence</SelectItem>
-                          <SelectItem value="voters-card">Voters Card</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {form.formState.errors.directors?.[index]?.idType && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.idType?.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.identificationNumber`}>Identification Number *</Label>
-                      <Input
-                        {...form.register(`directors.${index}.identificationNumber`)}
-                        placeholder="Enter identification number"
-                      />
-                      {form.formState.errors.directors?.[index]?.identificationNumber && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.identificationNumber?.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.issuingBody`}>Issuing Body *</Label>
-                      <Input
-                        {...form.register(`directors.${index}.issuingBody`)}
-                        placeholder="Enter issuing body"
-                      />
-                      {form.formState.errors.directors?.[index]?.issuingBody && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.issuingBody?.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.issuedDate`}>Issued Date *</Label>
-                      <Input
-                        type="date"
-                        {...form.register(`directors.${index}.issuedDate`)}
-                      />
-                      {form.formState.errors.directors?.[index]?.issuedDate && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.issuedDate?.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.expiryDate`}>Expiry Date</Label>
-                      <Input
-                        type="date"
-                        {...form.register(`directors.${index}.expiryDate`)}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`directors.${index}.incomeSource`}>Source of Income *</Label>
-                      <Select onValueChange={(value) => form.setValue(`directors.${index}.incomeSource`, value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose Income Source" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="salary-business">Salary or Business Income</SelectItem>
-                          <SelectItem value="investments">Investments or Dividends</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {form.formState.errors.directors?.[index]?.incomeSource && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.incomeSource?.message}</p>
-                      )}
-                    </div>
-
-                    {watchedValues.directors?.[index]?.incomeSource === 'other' && (
-                      <div>
-                        <Label htmlFor={`directors.${index}.incomeSourceOther`}>Please specify *</Label>
-                        <Input
-                          {...form.register(`directors.${index}.incomeSourceOther`)}
-                          placeholder="Specify income source"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-4">
-                    <Label htmlFor={`directors.${index}.residentialAddress`}>Residential Address *</Label>
-                    <Textarea
-                      {...form.register(`directors.${index}.residentialAddress`)}
-                      placeholder="Enter residential address"
-                      rows={3}
-                    />
-                    {form.formState.errors.directors?.[index]?.residentialAddress && (
-                      <p className="text-red-500 text-sm">{form.formState.errors.directors[index]?.residentialAddress?.message}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        );
-
-      case 2:
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Account Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <h4 className="font-semibold mb-4">Local Account Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="localBankName">Bank Name *</Label>
-                    <Input
-                      id="localBankName"
-                      {...form.register('localBankName')}
-                      placeholder="Enter bank name"
-                    />
-                    {form.formState.errors.localBankName && (
-                      <p className="text-red-500 text-sm">{form.formState.errors.localBankName.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="localAccountNumber">Account Number *</Label>
-                    <Input
-                      id="localAccountNumber"
-                      {...form.register('localAccountNumber')}
-                      placeholder="Enter account number"
-                    />
-                    {form.formState.errors.localAccountNumber && (
-                      <p className="text-red-500 text-sm">{form.formState.errors.localAccountNumber.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="localBankBranch">Bank Branch *</Label>
-                    <Input
-                      id="localBankBranch"
-                      {...form.register('localBankBranch')}
-                      placeholder="Enter bank branch"
-                    />
-                    {form.formState.errors.localBankBranch && (
-                      <p className="text-red-500 text-sm">{form.formState.errors.localBankBranch.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="localAccountOpeningDate">Account Opening Date *</Label>
-                    <Input
-                      id="localAccountOpeningDate"
-                      type="date"
-                      {...form.register('localAccountOpeningDate')}
-                    />
-                    {form.formState.errors.localAccountOpeningDate && (
-                      <p className="text-red-500 text-sm">{form.formState.errors.localAccountOpeningDate.message}</p>
-                    )}
-                  </div>
-                </div>
+                <Label>First Name *</Label>
+                <Input {...register(`directors.${index}.firstName`)} />
+                {errors.directors?.[index]?.firstName && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.firstName?.message}</p>
+                )}
               </div>
-
+              
               <div>
-                <h4 className="font-semibold mb-4">Foreign Account Details (Optional)</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="foreignBankName">Bank Name</Label>
-                    <Input
-                      id="foreignBankName"
-                      {...form.register('foreignBankName')}
-                      placeholder="Enter foreign bank name"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="foreignAccountNumber">Account Number</Label>
-                    <Input
-                      id="foreignAccountNumber"
-                      {...form.register('foreignAccountNumber')}
-                      placeholder="Enter foreign account number"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="foreignBankBranch">Bank Branch</Label>
-                    <Input
-                      id="foreignBankBranch"
-                      {...form.register('foreignBankBranch')}
-                      placeholder="Enter foreign bank branch"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="foreignAccountOpeningDate">Account Opening Date</Label>
-                    <Input
-                      id="foreignAccountOpeningDate"
-                      type="date"
-                      {...form.register('foreignAccountOpeningDate')}
-                    />
-                  </div>
-                </div>
+                <Label>Middle Name</Label>
+                <Input {...register(`directors.${index}.middleName`)} />
               </div>
-            </CardContent>
-          </Card>
-        );
-
-      case 3:
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                Upload Documents
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
+              
               <div>
-                <FileUpload
-                  label="Upload Your CAC Certificate"
-                  required
-                  onFileSelect={(file) => form.setValue('cacCertificate', file)}
-                  currentFile={watchedValues.cacCertificate}
-                  error={form.formState.errors.cacCertificate?.message}
-                />
+                <Label>Last Name *</Label>
+                <Input {...register(`directors.${index}.lastName`)} />
+                {errors.directors?.[index]?.lastName && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.lastName?.message}</p>
+                )}
               </div>
-
+              
               <div>
-                <FileUpload
-                  label="Upload Means of Identification"
-                  required
-                  onFileSelect={(file) => form.setValue('identificationMeans', file)}
-                  currentFile={watchedValues.identificationMeans}
-                  error={form.formState.errors.identificationMeans?.message}
-                />
+                <Label>Date of Birth *</Label>
+                <Input type="date" {...register(`directors.${index}.dateOfBirth`)} />
+                {errors.directors?.[index]?.dateOfBirth && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.dateOfBirth?.message}</p>
+                )}
               </div>
-
+              
               <div>
-                <FileUpload
-                  label="Upload NAICOM License Certificate"
-                  required
-                  onFileSelect={(file) => form.setValue('naicomLicense', file)}
-                  currentFile={watchedValues.naicomLicense}
-                  error={form.formState.errors.naicomLicense?.message}
-                />
+                <Label>Place of Birth *</Label>
+                <Input {...register(`directors.${index}.placeOfBirth`)} />
+                {errors.directors?.[index]?.placeOfBirth && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.placeOfBirth?.message}</p>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        );
-
-      case 4:
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Data Privacy & Declaration
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="prose max-w-none">
-                <h4 className="font-semibold">Data Privacy</h4>
-                <p className="text-sm">
-                  i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.<br/>
-                  ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.<br/>
-                  iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.
-                </p>
-
-                <h4 className="font-semibold mt-4">Declaration</h4>
-                <p className="text-sm">
-                  1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.<br/>
-                  2. I/We agree to provide additional information to NEM Insurance, if required.<br/>
-                  3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.
-                </p>
+              
+              <div>
+                <Label>Nationality *</Label>
+                <Input {...register(`directors.${index}.nationality`)} />
+                {errors.directors?.[index]?.nationality && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.nationality?.message}</p>
+                )}
               </div>
-
-              <div className="space-y-4">
+              
+              <div>
+                <Label>Country *</Label>
+                <Input {...register(`directors.${index}.country`)} />
+                {errors.directors?.[index]?.country && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.country?.message}</p>
+                )}
+              </div>
+              
+              <div>
+                <Label>Occupation *</Label>
+                <Input {...register(`directors.${index}.occupation`)} />
+                {errors.directors?.[index]?.occupation && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.occupation?.message}</p>
+                )}
+              </div>
+              
+              <div>
+                <Label>Email *</Label>
+                <Input type="email" {...register(`directors.${index}.email`)} />
+                {errors.directors?.[index]?.email && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.email?.message}</p>
+                )}
+              </div>
+              
+              <div>
+                <Label>Phone Number *</Label>
+                <Input {...register(`directors.${index}.phoneNumber`)} />
+                {errors.directors?.[index]?.phoneNumber && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.phoneNumber?.message}</p>
+                )}
+              </div>
+              
+              <div>
+                <Label>BVN *</Label>
+                <Input {...register(`directors.${index}.bvn`)} maxLength={11} />
+                {errors.directors?.[index]?.bvn && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.bvn?.message}</p>
+                )}
+              </div>
+              
+              <div>
+                <Label>Employer's Name</Label>
+                <Input {...register(`directors.${index}.employerName`)} />
+              </div>
+              
+              <div className="md:col-span-3">
+                <Label>Residential Address *</Label>
+                <Textarea {...register(`directors.${index}.residentialAddress`)} />
+                {errors.directors?.[index]?.residentialAddress && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.residentialAddress?.message}</p>
+                )}
+              </div>
+              
+              <div>
+                <Label>ID Type *</Label>
+                <Select
+                  value={watchedValues.directors?.[index]?.idType}
+                  onValueChange={(value) => setValue(`directors.${index}.idType`, value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose Identification Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="international-passport">International Passport</SelectItem>
+                    <SelectItem value="nimc">NIMC</SelectItem>
+                    <SelectItem value="drivers-licence">Driver's Licence</SelectItem>
+                    <SelectItem value="voters-card">Voters Card</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.directors?.[index]?.idType && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.idType?.message}</p>
+                )}
+              </div>
+              
+              <div>
+                <Label>Identification Number *</Label>
+                <Input {...register(`directors.${index}.identificationNumber`)} />
+                {errors.directors?.[index]?.identificationNumber && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.identificationNumber?.message}</p>
+                )}
+              </div>
+              
+              <div>
+                <Label>Issuing Body *</Label>
+                <Input {...register(`directors.${index}.issuingBody`)} />
+                {errors.directors?.[index]?.issuingBody && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.issuingBody?.message}</p>
+                )}
+              </div>
+              
+              <div>
+                <Label>Issued Date *</Label>
+                <Input type="date" {...register(`directors.${index}.issuedDate`)} />
+                {errors.directors?.[index]?.issuedDate && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.issuedDate?.message}</p>
+                )}
+              </div>
+              
+              <div>
+                <Label>Expiry Date</Label>
+                <Input type="date" {...register(`directors.${index}.expiryDate`)} />
+              </div>
+              
+              <div>
+                <Label>Source of Income *</Label>
+                <Select
+                  value={watchedValues.directors?.[index]?.incomeSource}
+                  onValueChange={(value) => setValue(`directors.${index}.incomeSource`, value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose Income Source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="salary-business">Salary or Business Income</SelectItem>
+                    <SelectItem value="investments">Investments or Dividends</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.directors?.[index]?.incomeSource && (
+                  <p className="text-sm text-red-600">{errors.directors[index]?.incomeSource?.message}</p>
+                )}
+              </div>
+              
+              {watchedValues.directors?.[index]?.incomeSource === 'other' && (
                 <div>
-                  <Label htmlFor="signature">Digital Signature *</Label>
-                  <Input
-                    id="signature"
-                    {...form.register('signature')}
-                    placeholder="Type your full name as signature"
-                  />
-                  {form.formState.errors.signature && (
-                    <p className="text-red-500 text-sm">{form.formState.errors.signature.message}</p>
-                  )}
+                  <Label>Please specify *</Label>
+                  <Input {...register(`directors.${index}.incomeSourceOther`)} />
                 </div>
+              )}
+            </div>
+          </div>
+        ))}
+        
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => append({ 
+            firstName: '', middleName: '', lastName: '', dateOfBirth: '', placeOfBirth: '',
+            nationality: '', country: '', occupation: '', email: '', phoneNumber: '', bvn: '',
+            employerName: '', employerPhone: '', residentialAddress: '', taxIdNumber: '',
+            idType: '', identificationNumber: '', issuingBody: '', issuedDate: '', expiryDate: '',
+            incomeSource: '', incomeSourceOther: ''
+          })}
+          className="w-full"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Director
+        </Button>
+      </div>
+    </FormSection>
+  );
 
-                <div>
-                  <Label htmlFor="date">Date</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={new Date().toISOString().split('T')[0]}
-                    readOnly
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
+  const AccountDetailsStep = () => (
+    <FormSection title="Account Details" icon={<CreditCard className="h-5 w-5" />}>
+      <div className="space-y-6">
+        <div>
+          <h4 className="font-medium mb-4">Local Account Details</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="localBankName">Bank Name *</Label>
+              <Input {...register('localBankName')} />
+              {errors.localBankName && <p className="text-sm text-red-600">{errors.localBankName.message}</p>}
+            </div>
+            
+            <div>
+              <Label htmlFor="localAccountNumber">Account Number *</Label>
+              <Input {...register('localAccountNumber')} />
+              {errors.localAccountNumber && <p className="text-sm text-red-600">{errors.localAccountNumber.message}</p>}
+            </div>
+            
+            <div>
+              <Label htmlFor="localBankBranch">Bank Branch *</Label>
+              <Input {...register('localBankBranch')} />
+              {errors.localBankBranch && <p className="text-sm text-red-600">{errors.localBankBranch.message}</p>}
+            </div>
+            
+            <div>
+              <Label htmlFor="localAccountOpeningDate">Account Opening Date *</Label>
+              <Input type="date" {...register('localAccountOpeningDate')} />
+              {errors.localAccountOpeningDate && <p className="text-sm text-red-600">{errors.localAccountOpeningDate.message}</p>}
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <h4 className="font-medium mb-4">Foreign Account Details (Optional)</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="foreignBankName">Bank Name</Label>
+              <Input {...register('foreignBankName')} />
+            </div>
+            
+            <div>
+              <Label htmlFor="foreignAccountNumber">Account Number</Label>
+              <Input {...register('foreignAccountNumber')} />
+            </div>
+            
+            <div>
+              <Label htmlFor="foreignBankBranch">Bank Branch</Label>
+              <Input {...register('foreignBankBranch')} />
+            </div>
+            
+            <div>
+              <Label htmlFor="foreignAccountOpeningDate">Account Opening Date</Label>
+              <Input type="date" {...register('foreignAccountOpeningDate')} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </FormSection>
+  );
 
-      default:
-        return null;
+  const DocumentsStep = () => (
+    <FormSection title="Document Upload" icon={<Upload className="h-5 w-5" />}>
+      <div className="space-y-6">
+        <FileUpload
+          label="Upload Your CAC Certificate"
+          required
+          onFileSelect={(file) => setValue('cacCertificate', file)}
+          currentFile={watchedValues.cacCertificate}
+          error={errors.cacCertificate?.message}
+        />
+        
+        <FileUpload
+          label="Upload Means of Identification"
+          required
+          onFileSelect={(file) => setValue('identificationDocument', file)}
+          currentFile={watchedValues.identificationDocument}
+          error={errors.identificationDocument?.message}
+        />
+        
+        <FileUpload
+          label="Upload NAICOM License"
+          required
+          onFileSelect={(file) => setValue('naicomLicense', file)}
+          currentFile={watchedValues.naicomLicense}
+          error={errors.naicomLicense?.message}
+        />
+      </div>
+    </FormSection>
+  );
+
+  const DataPrivacyStep = () => (
+    <FormSection title="Data Privacy & Declaration" icon={<Building2 className="h-5 w-5" />}>
+      <div className="space-y-6">
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="font-medium mb-4">Data Privacy</h4>
+          <div className="space-y-2 text-sm">
+            <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+            <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+            <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+          </div>
+        </div>
+        
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="font-medium mb-4">Declaration</h4>
+          <div className="space-y-2 text-sm">
+            <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+            <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+            <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="agreeToDataPrivacy"
+            checked={watchedValues.agreeToDataPrivacy}
+            onCheckedChange={(checked) => setValue('agreeToDataPrivacy', checked as boolean)}
+          />
+          <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy policy and declaration *</Label>
+        </div>
+        {errors.agreeToDataPrivacy && <p className="text-sm text-red-600">{errors.agreeToDataPrivacy.message}</p>}
+        
+        <div>
+          <Label htmlFor="signature">Digital Signature *</Label>
+          <Input {...register('signature')} placeholder="Type your full name as signature" />
+          {errors.signature && <p className="text-sm text-red-600">{errors.signature.message}</p>}
+        </div>
+        
+        <div>
+          <Label>Date</Label>
+          <Input type="date" value={new Date().toISOString().split('T')[0]} readOnly />
+        </div>
+      </div>
+    </FormSection>
+  );
+
+  const steps = [
+    {
+      id: 'company-info',
+      title: 'Company Information',
+      component: <CompanyInfoStep />,
+      isValid: !errors.companyName && !errors.incorporationNumber && !errors.registeredAddress
+    },
+    {
+      id: 'directors',
+      title: 'Directors Information',
+      component: <DirectorsStep />,
+      isValid: !errors.directors
+    },
+    {
+      id: 'account-details',
+      title: 'Account Details',
+      component: <AccountDetailsStep />,
+      isValid: !errors.localBankName && !errors.localAccountNumber
+    },
+    {
+      id: 'documents',
+      title: 'Document Upload',
+      component: <DocumentsStep />,
+      isValid: !errors.cacCertificate && !errors.identificationDocument && !errors.naicomLicense
+    },
+    {
+      id: 'privacy-declaration',
+      title: 'Data Privacy & Declaration',
+      component: <DataPrivacyStep />,
+      isValid: watchedValues.agreeToDataPrivacy && watchedValues.signature
     }
-  };
+  ];
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">NAICOM Company CDD</h1>
-          <div className="flex items-center justify-between">
-            <p className="text-gray-600">Complete your NAICOM company customer due diligence form</p>
-            <div className="flex space-x-2">
-              {steps.map((step, index) => (
-                <div
-                  key={index}
-                  className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
-                    index === currentStep
-                      ? 'bg-red-900 text-white'
-                      : index < currentStep
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}
-                >
-                  {index + 1}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="mt-2">
-            <p className="text-sm text-gray-500">
-              Step {currentStep + 1} of {steps.length}: {steps[currentStep]?.title}
-            </p>
-          </div>
+          <h1 className="text-3xl font-bold text-gray-900">NAICOM Corporate CDD</h1>
+          <p className="text-gray-600 mt-2">Complete Customer Due Diligence for NAICOM corporate entities</p>
         </div>
 
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          {renderStep()}
+        <MultiStepForm
+          steps={steps}
+          onSubmit={handleSubmit(onSubmit)}
+          isSubmitting={isSubmitting}
+          submitButtonText="Submit NAICOM Corporate CDD"
+        />
 
-          <div className="flex justify-between mt-8">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={prevStep}
-              disabled={currentStep === 0}
-            >
-              Previous
-            </Button>
-
-            <Button type="submit">
-              {currentStep === steps.length - 1 ? 'Submit Form' : 'Next'}
-            </Button>
-          </div>
-        </form>
-
-        {/* Summary Dialog */}
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-4xl max-h-[80vh]">
-            <DialogHeader>
-              <DialogTitle>Form Summary - Please Review</DialogTitle>
-            </DialogHeader>
-            <ScrollArea className="max-h-[60vh]">
-              <div className="space-y-4 p-4">
-                <div>
-                  <h4 className="font-semibold">Company Details</h4>
-                  <p>Company Name: {watchedValues.companyName}</p>
-                  <p>Incorporation Number: {watchedValues.incorporationNumber}</p>
-                  <p>Email: {watchedValues.email}</p>
-                </div>
-                
-                <div>
-                  <h4 className="font-semibold">Directors ({watchedValues.directors?.length})</h4>
-                  {watchedValues.directors?.map((director, index) => (
-                    <p key={index}>
-                      {index + 1}. {director.firstName} {director.lastName} - {director.occupation}
-                    </p>
-                  ))}
-                </div>
-
-                <div>
-                  <h4 className="font-semibold">Bank Details</h4>
-                  <p>Bank: {watchedValues.localBankName}</p>
-                  <p>Account: {watchedValues.localAccountNumber}</p>
-                </div>
-              </div>
-            </ScrollArea>
-            <div className="flex justify-end space-x-2 p-4">
-              <Button variant="outline" onClick={() => setShowSummary(false)}>
-                Edit Form
-              </Button>
-              <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Success Dialog */}
-        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Form Submitted Successfully! 🎉</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p>Your NAICOM Corporate CDD form has been submitted successfully.</p>
-              <p className="text-sm text-gray-600">
-                For inquiries about your submission status, please contact us at support@neminsurance.com or call 01 448 9570.
-              </p>
-              <Button onClick={() => setShowSuccess(false)} className="w-full">
-                Close
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <AuthRequiredSubmit
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onProceedToSignup={() => {
+            saveDraft(watchedValues);
+            window.location.href = '/signup';
+          }}
+          formType="NAICOM Corporate CDD"
+        />
       </div>
     </div>
   );
