@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useAuth } from '../../contexts/AuthContext';
 import { motorClaimSchema } from '../../utils/validation';
-import { MotorClaimData } from '../../types';
+import { MotorClaimData as MotorClaimType } from '../../types';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -63,7 +63,7 @@ const MotorClaim: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<MotorClaimData>({
-    resolver: yupResolver(motorClaimSchema),
+    resolver: yupResolver(motorClaimSchema) as any,
     defaultValues: {
       claimantEmail: user?.email || '',
       policeReported: false,

@@ -119,7 +119,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<ProfessionalIndemnityClaimData>({
-    resolver: yupResolver(professionalIndemnitySchema),
+    resolver: yupResolver(professionalIndemnitySchema) as any,
     defaultValues: {
       email: user?.email || '',
     }
