@@ -110,10 +110,9 @@ const FireSpecialPerilsClaim = () => {
       });
 
       // Send confirmation email
-      await emailService.sendConfirmationEmail(
+      await emailService.sendSubmissionConfirmation(
         data.email,
-        'Fire and Special Perils Claim Submitted',
-        `Your claim has been submitted successfully. Reference: ${docRef.id}`
+        'Fire and Special Perils Claim'
       );
 
       clearDraft();

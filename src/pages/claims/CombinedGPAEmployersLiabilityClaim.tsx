@@ -26,18 +26,60 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<CombinedGPAEmployersLiabilityClaimData>({
-    resolver: yupResolver(combinedGPAEmployersLiabilityClaimSchema),
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm({
+    resolver: yupResolver(combinedGPAEmployersLiabilityClaimSchema) as any,
     defaultValues: {
+      policyNumber: '',
+      periodOfCoverFrom: '',
+      periodOfCoverTo: '',
+      insuredName: '',
+      insuredAddress: '',
+      insuredPhone: '',
       insuredEmail: user?.email || '',
-      agreeToDataPrivacy: false,
-      signature: '',
+      injuredPartyName: '',
+      injuredPartyAge: 0,
+      injuredPartyAddress: '',
+      averageMonthlyEarnings: 0,
+      occupation: '',
+      dateOfEmployment: '',
+      notDirectlyEmployed: false,
+      employerName: '',
+      employerAddress: '',
+      durationEmployed: '',
+      maritalStatus: '',
+      previousAccidents: false,
+      previousAccidentsDetails: '',
+      natureOfInjuries: '',
+      machineryInvolved: '',
+      accidentDate: '',
+      accidentTime: '',
+      accidentPlace: '',
+      dateReported: '',
+      dateTimeStoppedWork: '',
+      workAtTime: '',
+      howItOccurred: '',
+      receivingTreatment: false,
+      hospitalName: '',
+      hospitalAddress: '',
+      stillInHospital: false,
+      dischargeDate: '',
+      ableToDoduties: false,
+      dutiesDetails: '',
+      dateNatureResumedWork: '',
+      doctorName: '',
+      totallyDisabled: false,
+      estimatedDuration: '',
       witnesses: [],
+      otherInsurerName: '',
+      otherInsurerAddress: '',
+      otherInsurerPolicyNumber: '',
       earnings: Array.from({ length: 12 }, (_, i) => ({
         monthEnding: '',
         wagesAndBonus: 0,
         monthlyAllowances: 0
-      }))
+      })),
+      agreeToDataPrivacy: false,
+      signature: ''
     }
   });
 
@@ -609,7 +651,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={handleSubmit(onSubmit as any)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Combined Claim"
         />
