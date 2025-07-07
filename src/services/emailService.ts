@@ -61,3 +61,9 @@ export const sendClaimApprovedNotification = async (userEmail: string, claimType
   
   await sendEmail({ to: userEmail, subject, html });
 };
+
+export const emailService = {
+  sendEmail,
+  sendSubmissionConfirmation,
+  sendClaimApprovedNotification
+};
