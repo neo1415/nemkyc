@@ -27,7 +27,7 @@ const CorporateCDD: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<CorporateCDDData>({
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm({
     resolver: yupResolver(corporateCDDSchema),
     defaultValues: {
       email: user?.email || '',
@@ -483,7 +483,7 @@ const CorporateCDD: React.FC = () => {
           label="Upload Your CAC Certificate"
           required
           onFileSelect={(file) => setValue('identificationDocument', file)}
-          currentFile={watchedValues.identificationDocument}
+          currentFile={watchedValues.identificationDocument as File}
           error={errors.identificationDocument?.message}
         />
       </div>
