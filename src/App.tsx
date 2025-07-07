@@ -28,6 +28,7 @@ import BurglaryClaimForm from './pages/claims/BurglaryClaimForm';
 
 function App() {
   return (
+   <AuthProvider>
     <Router>
       <Routes>
         <Route path="/" element={<Layout />}>
@@ -78,6 +79,7 @@ function App() {
       </Routes>
       <Toaster />
     </Router>
+   </AuthProvider>
   );
 }
 
