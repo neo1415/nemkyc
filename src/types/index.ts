@@ -1,3 +1,4 @@
+
 export interface User {
   uid: string;
   email: string;
@@ -63,6 +64,7 @@ export interface CorporateCDDData {
 }
 
 export interface NaicomCorporateCDDData extends CorporateCDDData {
+  taxId: string; // Required for NAICOM
   naicomLicense?: File;
 }
 

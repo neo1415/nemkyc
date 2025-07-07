@@ -482,17 +482,9 @@ const CorporateCDD: React.FC = () => {
         <FileUpload
           label="Upload Your CAC Certificate"
           required
-          onFileSelect={(file) => setValue('cacCertificate', file)}
-          currentFile={watchedValues.cacCertificate}
-          error={errors.cacCertificate?.message}
-        />
-        
-        <FileUpload
-          label="Upload Means of Identification"
-          required
-          onFileSelect={(file) => setValue('identificationMeans', file)}
-          currentFile={watchedValues.identificationMeans}
-          error={errors.identificationMeans?.message}
+          onFileSelect={(file) => setValue('identificationDocument', file)}
+          currentFile={watchedValues.identificationDocument}
+          error={errors.identificationDocument?.message}
         />
       </div>
     </FormSection>
@@ -566,13 +558,13 @@ const CorporateCDD: React.FC = () => {
       id: 'documents',
       title: 'Document Upload',
       component: <DocumentsStep />,
-      isValid: !errors.cacCertificate && !errors.identificationMeans
+      isValid: !errors.identificationDocument
     },
     {
       id: 'privacy-declaration',
       title: 'Data Privacy & Declaration',
       component: <DataPrivacyStep />,
-      isValid: watchedValues.agreeToDataPrivacy && watchedValues.signature
+      isValid: !!watchedValues.agreeToDataPrivacy && !!watchedValues.signature
     }
   ];
 
