@@ -27,16 +27,62 @@ const EmployersLiabilityClaim: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  const { register, handleSubmit, formState: { errors }, setValue, watch, control, trigger } = useForm<EmployersLiabilityClaimData>({
-    resolver: yupResolver(employersLiabilityClaimSchema),
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control, trigger } = useForm({
+    resolver: yupResolver(employersLiabilityClaimSchema) as any,
     defaultValues: {
+      policyNumber: '',
+      periodOfCoverFrom: '',
+      periodOfCoverTo: '',
+      insuredName: '',
+      insuredAddress: '',
+      insuredPhone: '',
       insuredEmail: user?.email || '',
+      injuredPartyName: '',
+      injuredPartyAge: 0,
+      injuredPartyAddress: '',
+      averageMonthlyEarnings: 0,
+      occupation: '',
+      dateOfEmployment: '',
+      maritalStatus: '',
+      numberOfChildren: 0,
+      agesOfChildren: '',
+      previousAccidents: false,
+      previousAccidentsDetails: '',
+      natureOfInjuries: '',
+      machineryInvolved: '',
+      supervisorName: '',
+      supervisorPosition: '',
+      accidentDate: '',
+      accidentTime: '',
+      accidentPlace: '',
+      dateReported: '',
+      reportedBy: '',
+      dateStoppedWork: '',
+      descriptionOfWork: '',
+      howAccidentOccurred: '',
+      soberOrIntoxicated: true,
+      receivingTreatment: false,
+      hospitalName: '',
+      hospitalAddress: '',
+      doctorName: '',
+      doctorAddress: '',
+      totallyDisabled: false,
+      dateStoppedWorking: '',
+      estimatedDurationOfDisablement: '',
+      ableToDoAnyDuties: false,
+      dutiesDetails: '',
+      claimMadeOnYou: false,
       witnesses: [],
+      otherInsurerName: '',
+      otherInsurerAddress: '',
+      otherInsurerPolicyNumber: '',
       earnings: Array.from({ length: 12 }, (_, i) => ({
         monthEnding: '',
         wagesAndBonus: 0,
         monthlyAllowances: 0
-      }))
+      })),
+      agreeToDataPrivacy: false,
+      signature: ''
     }
   });
 
@@ -496,8 +542,8 @@ const EmployersLiabilityClaim: React.FC = () => {
               <div>
                 <Label htmlFor={`witnesses.${index}.name`}>Witness Name *</Label>
                 <Input {...register(`witnesses.${index}.name` as const)} />
-                {errors.witnesses?.[index]?.name && (
-                  <p className="text-sm text-red-600">{errors.witnesses[index]?.name?.message}</p>
+                {errors.witnesses?.[index] && (errors.witnesses[index] as any)?.name && (
+                  <p className="text-sm text-red-600">{(errors.witnesses[index] as any)?.name?.message}</p>
                 )}
               </div>
               
@@ -512,8 +558,8 @@ const EmployersLiabilityClaim: React.FC = () => {
               <div className="md:col-span-2">
                 <Label htmlFor={`witnesses.${index}.address`}>Witness Address *</Label>
                 <Textarea {...register(`witnesses.${index}.address` as const)} />
-                {errors.witnesses?.[index]?.address && (
-                  <p className="text-sm text-red-600">{errors.witnesses[index]?.address?.message}</p>
+                {errors.witnesses?.[index] && (errors.witnesses[index] as any)?.address && (
+                  <p className="text-sm text-red-600">{(errors.witnesses[index] as any)?.address?.message}</p>
                 )}
               </div>
             </div>
@@ -722,7 +768,7 @@ const EmployersLiabilityClaim: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={handleSubmit(onSubmit as any)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Claim"
         />

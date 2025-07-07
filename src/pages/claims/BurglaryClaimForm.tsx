@@ -56,12 +56,12 @@ const BurglaryClaimForm: React.FC = () => {
       roomsEntered: '',
       premisesOccupied: false,
       lastOccupiedDateTime: '',
-      lastOccupiedTime: '',
-      suspicionsOnAnyone: false,
+      suspicionOnAnyone: false,
       suspicionName: '',
       policeInformed: false,
       policeDate: '',
-      policeStationAddress: '',
+      policeStation: '',
+      firePolicyNumber: '',
       soleOwner: true,
       ownerName: '',
       ownerAddress: '',
@@ -79,8 +79,10 @@ const BurglaryClaimForm: React.FC = () => {
     }
   });
 
+  const { control, handleSubmit, formState: { errors }, setValue, watch } = form;
+  
   const { fields, append, remove } = useFieldArray({
-    control: form.control as any,
+    control,
     name: 'propertyItems'
   });
 
@@ -526,27 +528,16 @@ const BurglaryClaimForm: React.FC = () => {
             </div>
           )}
           
-          <FormField
-            control={form.control as any}
-            name="suspicionsOnAnyone"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    Suspicions on anyone?
-                  </FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
+          <div>
+            <Label htmlFor="suspicionOnAnyone">Suspicions on anyone?</Label>
+            <Checkbox
+              id="suspicionOnAnyone"
+              checked={watchedValues.suspicionOnAnyone}
+              onCheckedChange={(checked) => setValue('suspicionOnAnyone', checked as boolean)}
+            />
+          </div>
           
-          {watchedValues.suspicionsOnAnyone && (
+          {watchedValues.suspicionOnAnyone && (
             <FormField
               control={form.control as any}
               name="suspicionName"
@@ -598,19 +589,19 @@ const BurglaryClaimForm: React.FC = () => {
                 )}
               />
               
-              <FormField
-                control={form.control as any}
-                name="policeStationAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Police Station Address *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Enter police station address" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                 <FormField
+                   control={form.control as any}
+                   name="policeStation"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel>Police Station *</FormLabel>
+                       <FormControl>
+                         <Input {...field} placeholder="Enter police station" />
+                       </FormControl>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
             </div>
           )}
         </div>

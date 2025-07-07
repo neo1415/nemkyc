@@ -85,10 +85,9 @@ const GroupPersonalAccidentClaim = () => {
       });
 
       // Send confirmation email
-      await emailService.sendConfirmationEmail(
+      await emailService.sendSubmissionConfirmation(
         data.email,
-        'Group Personal Accident Insurance Claim Submitted',
-        `Your claim has been submitted successfully. Reference: ${docRef.id}`
+        'Group Personal Accident Insurance Claim'
       );
 
       clearDraft();
