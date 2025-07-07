@@ -25,6 +25,8 @@ import Unauthorized from './pages/Unauthorized';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import CombinedGPAEmployersLiabilityClaim from './pages/claims/CombinedGPAEmployersLiabilityClaim';
 import BurglaryClaimForm from './pages/claims/BurglaryClaimForm';
+import GroupPersonalAccidentClaim from './pages/claims/GroupPersonalAccidentClaim';
+import FireSpecialPerilsClaim from './pages/claims/FireSpecialPerilsClaim';
 
 function App() {
   return (
@@ -48,6 +50,8 @@ function App() {
           <Route path="/claims/employers-liability" element={<EmployersLiabilityClaim />} />
           <Route path="/claims/combined-gpa-employers-liability" element={<CombinedGPAEmployersLiabilityClaim />} />
           <Route path="/claims/burglary" element={<BurglaryClaimForm />} />
+          <Route path="/claims/group-personal-accident" element={<GroupPersonalAccidentClaim />} />
+          <Route path="/claims/fire-special-perils" element={<FireSpecialPerilsClaim />} />
           
           {/* KYC Routes - accessible without authentication */}
           <Route path="kyc" element={<KYCForms />} />

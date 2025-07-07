@@ -93,7 +93,7 @@ const PublicLiabilityClaimForm: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<PublicLiabilityClaimData>({
-    resolver: yupResolver(publicLiabilitySchema),
+    resolver: yupResolver(publicLiabilitySchema) as any,
     defaultValues: {
       email: user?.email || '',
       witnesses: [{ name: '', address: '', isEmployee: 'independent' }]
