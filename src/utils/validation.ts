@@ -439,3 +439,117 @@ export const employersLiabilityClaimSchema = Yup.object({
   agreeToDataPrivacy: Yup.boolean().oneOf([true], 'You must agree to the data privacy policy'),
   signature: Yup.string().required('Signature is required')
 });
+
+// Combined GPA & Employers Liability Claim validation schema
+export const combinedGPAEmployersLiabilityClaimSchema = Yup.object({
+  // Policy Details
+  policyNumber: Yup.string().required('Policy number is required'),
+  periodOfCoverFrom: dateValidation,
+  periodOfCoverTo: dateValidation,
+  
+  // Insured Details
+  insuredName: Yup.string().required('Name is required'),
+  insuredAddress: Yup.string().required('Address is required'),
+  insuredPhone: phoneValidation,
+  insuredEmail: emailValidation,
+  
+  // Injured Party Details
+  injuredPartyName: Yup.string().required('Name is required'),
+  injuredPartyAge: Yup.number().positive('Age must be positive').required('Age is required'),
+  injuredPartyAddress: Yup.string().required('Address is required'),
+  averageMonthlyEarnings: Yup.number().positive('Earnings must be positive').required('Average monthly earnings is required'),
+  occupation: Yup.string().required('Occupation is required'),
+  dateOfEmployment: dateValidation,
+  notDirectlyEmployed: Yup.boolean().required('Employment status is required'),
+  employerName: Yup.string().when('notDirectlyEmployed', {
+    is: true,
+    then: (schema) => schema.required('Employer name is required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  employerAddress: Yup.string().when('notDirectlyEmployed', {
+    is: true,
+    then: (schema) => schema.required('Employer address is required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  durationEmployed: Yup.string().required('Duration employed is required'),
+  maritalStatus: Yup.string().required('Marital status is required'),
+  previousAccidents: Yup.boolean().required('Previous accidents selection is required'),
+  previousAccidentsDetails: Yup.string().when('previousAccidents', {
+    is: true,
+    then: (schema) => schema.required('Previous accidents details are required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  
+  // Injury Details
+  natureOfInjuries: Yup.string().required('Nature of injuries is required'),
+  machineryInvolved: Yup.string().optional(),
+  
+  // Accident Details
+  accidentDate: dateValidation,
+  accidentTime: Yup.string().required('Accident time is required'),
+  accidentPlace: Yup.string().required('Accident place is required'),
+  dateReported: dateValidation,
+  dateTimeStoppedWork: Yup.string().required('Date/time stopped work is required'),
+  workAtTime: Yup.string().required('Work at time is required'),
+  howItOccurred: Yup.string().required('How it occurred is required'),
+  
+  // Medical
+  receivingTreatment: Yup.boolean().required('Receiving treatment selection is required'),
+  hospitalName: Yup.string().when('receivingTreatment', {
+    is: true,
+    then: (schema) => schema.required('Hospital name is required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  hospitalAddress: Yup.string().when('receivingTreatment', {
+    is: true,
+    then: (schema) => schema.required('Hospital address is required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  stillInHospital: Yup.boolean().required('Still in hospital selection is required'),
+  dischargeDate: Yup.string().when('stillInHospital', {
+    is: false,
+    then: (schema) => schema.required('Discharge date is required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  ableToDoduties: Yup.boolean().required('Able to do duties selection is required'),
+  dutiesDetails: Yup.string().when('ableToDoduties', {
+    is: true,
+    then: (schema) => schema.required('Duties details are required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  dateNatureResumedWork: Yup.string().optional(),
+  
+  // Doctor Details
+  doctorName: Yup.string().required('Doctor name is required'),
+  
+  // Disablement
+  totallyDisabled: Yup.boolean().required('Totally disabled selection is required'),
+  estimatedDuration: Yup.string().required('Estimated duration is required'),
+  
+  // Witnesses
+  witnesses: Yup.array().of(
+    Yup.object({
+      name: Yup.string().required('Witness name is required'),
+      address: Yup.string().required('Witness address is required'),
+      phone: phoneValidation.optional()
+    })
+  ).optional(),
+  
+  // Other Insurers
+  otherInsurerName: Yup.string().optional(),
+  otherInsurerAddress: Yup.string().optional(),
+  otherInsurerPolicyNumber: Yup.string().optional(),
+  
+  // Statement of Earnings (12 months)
+  earnings: Yup.array().of(
+    Yup.object({
+      monthEnding: Yup.string().required('Month ending is required'),
+      wagesAndBonus: Yup.number().min(0).required('Wages and bonus is required'),
+      monthlyAllowances: Yup.number().min(0).required('Monthly allowances is required')
+    })
+  ).min(12, 'All 12 months must be completed').required('Statement of earnings is required'),
+  
+  // Declaration
+  agreeToDataPrivacy: Yup.boolean().oneOf([true], 'You must agree to the data privacy policy'),
+  signature: Yup.string().required('Signature is required')
+});

@@ -359,3 +359,77 @@ export interface EmployersLiabilityClaimData {
   agreeToDataPrivacy: boolean;
   signature: string;
 }
+
+// Combined GPA & Employers Liability Claim Types
+export interface CombinedGPAEmployersLiabilityClaimData {
+  // Policy Details
+  policyNumber: string;
+  periodOfCoverFrom: string;
+  periodOfCoverTo: string;
+  
+  // Insured Details
+  insuredName: string;
+  insuredAddress: string;
+  insuredPhone: string;
+  insuredEmail: string;
+  
+  // Injured Party Details
+  injuredPartyName: string;
+  injuredPartyAge: number;
+  injuredPartyAddress: string;
+  averageMonthlyEarnings: number;
+  occupation: string;
+  dateOfEmployment: string;
+  notDirectlyEmployed: boolean;
+  employerName?: string;
+  employerAddress?: string;
+  durationEmployed: string;
+  maritalStatus: string;
+  previousAccidents: boolean;
+  previousAccidentsDetails?: string;
+  
+  // Injury Details
+  natureOfInjuries: string;
+  machineryInvolved?: string;
+  
+  // Accident Details
+  accidentDate: string;
+  accidentTime: string;
+  accidentPlace: string;
+  dateReported: string;
+  dateTimeStoppedWork: string;
+  workAtTime: string;
+  howItOccurred: string;
+  
+  // Medical
+  receivingTreatment: boolean;
+  hospitalName?: string;
+  hospitalAddress?: string;
+  stillInHospital: boolean;
+  dischargeDate?: string;
+  ableToDoduties: boolean;
+  dutiesDetails?: string;
+  dateNatureResumedWork?: string;
+  
+  // Doctor Details
+  doctorName: string;
+  
+  // Disablement
+  totallyDisabled: boolean;
+  estimatedDuration: string;
+  
+  // Witnesses
+  witnesses?: Witness[];
+  
+  // Other Insurers
+  otherInsurerName?: string;
+  otherInsurerAddress?: string;
+  otherInsurerPolicyNumber?: string;
+  
+  // Statement of Earnings
+  earnings: EarningsMonth[];
+  
+  // Declaration
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}

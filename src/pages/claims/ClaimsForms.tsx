@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Car, Shield, Users, Building, ArrowRight } from 'lucide-react';
+import { Car, Shield, Users, Building, ArrowRight, UserCheck } from 'lucide-react';
 
 const ClaimsForms: React.FC = () => {
   const claimForms = [
@@ -33,6 +34,13 @@ const ClaimsForms: React.FC = () => {
       icon: <Building className="h-8 w-8 text-red-600" />,
       path: '/claims/employers-liability',
       features: ['Workplace injuries', 'Employee accidents', 'Compensation claims']
+    },
+    {
+      title: 'Combined GPA & Employers Liability Claim',
+      description: 'Combined General Personal Accident and Employers Liability claims',
+      icon: <UserCheck className="h-8 w-8 text-red-600" />,
+      path: '/claims/combined-gpa-employers-liability',
+      features: ['Combined coverage', 'Personal accidents', 'Employer responsibilities']
     }
   ];
 
