@@ -27,8 +27,8 @@ const IndividualKYC: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  const { register, handleSubmit, formState: { errors }, setValue, watch, trigger } = useForm<IndividualKYCData>({
-    resolver: yupResolver(individualKYCSchema),
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm({
+    resolver: yupResolver(individualKYCSchema) as any,
     defaultValues: {
       email: user?.email || '',
     }
@@ -287,7 +287,7 @@ const IndividualKYC: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={handleSubmit(onSubmit as any)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit KYC Application"
         />
