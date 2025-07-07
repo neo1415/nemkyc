@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useAuth } from '../../contexts/AuthContext';
 import { individualKYCSchema } from '../../utils/validation';
+import { IndividualKYCData } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -15,40 +16,16 @@ import FormSection from '../../components/common/FormSection';
 import FileUpload from '../../components/common/FileUpload';
 import PhoneInput from '../../components/common/PhoneInput';
 import MultiStepForm from '../../components/common/MultiStepForm';
+import AuthRequiredSubmit from '../../components/common/AuthRequiredSubmit';
 import { User, FileText, Briefcase, Upload } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { notifySubmission } from '../../services/notificationService';
 
-interface IndividualKYCData {
-  firstName: string;
-  lastName: string;
-  middleName?: string;
-  dateOfBirth: string;
-  gender: 'male' | 'female' | 'other';
-  nationality: string;
-  countryOfResidence: string;
-  email: string;
-  phoneNumber: string;
-  alternatePhone?: string;
-  residentialAddress: string;
-  mailingAddress?: string;
-  identificationType: 'passport' | 'nationalId' | 'driversLicense';
-  identificationNumber: string;
-  issueDate: string;
-  expiryDate: string;
-  employmentStatus: 'employed' | 'selfEmployed' | 'unemployed' | 'retired' | 'student';
-  occupation: string;
-  employer?: string;
-  annualIncome: number;
-  identificationDocument?: File;
-  proofOfAddress?: File;
-  passport?: File;
-}
-
 const IndividualKYC: React.FC = () => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   
   const { register, handleSubmit, formState: { errors }, setValue, watch, trigger } = useForm<IndividualKYCData>({
     resolver: yupResolver(individualKYCSchema),
@@ -60,7 +37,10 @@ const IndividualKYC: React.FC = () => {
   const watchedValues = watch();
 
   const onSubmit = async (data: IndividualKYCData) => {
-    if (!user) return;
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
     
     setIsSubmitting(true);
     try {
@@ -76,7 +56,6 @@ const IndividualKYC: React.FC = () => {
         updatedAt: new Date(),
       });
       
-      // Send notification
       await notifySubmission(user, 'Individual KYC');
       
       toast({
@@ -84,7 +63,6 @@ const IndividualKYC: React.FC = () => {
         description: "Your Individual KYC form has been submitted successfully.",
       });
       
-      // Redirect to dashboard
       window.location.href = '/dashboard';
     } catch (error) {
       console.error('Error submitting KYC:', error);
@@ -309,9 +287,18 @@ const IndividualKYC: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={onSubmit}
+          onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit KYC Application"
+        />
+
+        <AuthRequiredSubmit
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onProceedToSignup={() => {
+            window.location.href = '/signup';
+          }}
+          formType="Individual KYC"
         />
       </div>
     </div>

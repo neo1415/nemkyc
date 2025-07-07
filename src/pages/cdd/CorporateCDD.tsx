@@ -1,91 +1,38 @@
-
 import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useAuth } from '../../contexts/AuthContext';
 import { corporateCDDSchema } from '../../utils/validation';
+import { CorporateCDDData } from '../../types';
 import { useFormDraft } from '../../hooks/useFormDraft';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Checkbox } from '../../components/ui/checkbox';
 import { toast } from '../../components/ui/use-toast';
 import FormSection from '../../components/common/FormSection';
 import FileUpload from '../../components/common/FileUpload';
 import PhoneInput from '../../components/common/PhoneInput';
 import MultiStepForm from '../../components/common/MultiStepForm';
+import AuthRequiredSubmit from '../../components/common/AuthRequiredSubmit';
 import { Building2, Users, CreditCard, Upload, Plus, Trash2 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { notifySubmission } from '../../services/notificationService';
 
-interface Director {
-  firstName: string;
-  middleName?: string;
-  lastName: string;
-  dateOfBirth: string;
-  placeOfBirth: string;
-  nationality: string;
-  country: string;
-  occupation: string;
-  email: string;
-  phoneNumber: string;
-  bvn: string;
-  employerName?: string;
-  employerPhone?: string;
-  residentialAddress: string;
-  taxIdNumber?: string;
-  idType: string;
-  identificationNumber: string;
-  issuingBody: string;
-  issuedDate: string;
-  expiryDate?: string;
-  incomeSource: string;
-  incomeSourceOther?: string;
-}
-
-interface CorporateCDDData {
-  // Company Info
-  companyName: string;
-  registeredAddress: string;
-  incorporationNumber: string;
-  incorporationState: string;
-  incorporationDate: string;
-  businessNature: string;
-  companyType: string;
-  companyTypeOther?: string;
-  email: string;
-  website: string;
-  taxId?: string;
-  telephone: string;
-  
-  // Directors
-  directors: Director[];
-  
-  // Account Details
-  localBankName: string;
-  localAccountNumber: string;
-  localBankBranch: string;
-  localAccountOpeningDate: string;
-  foreignBankName?: string;
-  foreignAccountNumber?: string;
-  foreignBankBranch?: string;
-  foreignAccountOpeningDate?: string;
-  
-  // Documents
-  cacCertificate?: File;
-  identificationMeans?: File;
-}
-
 const CorporateCDD: React.FC = () => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   
   const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<CorporateCDDData>({
     resolver: yupResolver(corporateCDDSchema),
     defaultValues: {
       email: user?.email || '',
+      agreeToDataPrivacy: false,
+      signature: '',
       directors: [{ 
         firstName: '', middleName: '', lastName: '', dateOfBirth: '', placeOfBirth: '',
         nationality: '', country: '', occupation: '', email: '', phoneNumber: '', bvn: '',
@@ -113,7 +60,10 @@ const CorporateCDD: React.FC = () => {
   }, [watch, saveDraft]);
 
   const onSubmit = async (data: CorporateCDDData) => {
-    if (!user) return;
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
     
     setIsSubmitting(true);
     try {
@@ -569,6 +519,16 @@ const CorporateCDD: React.FC = () => {
           </div>
         </div>
         
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="agreeToDataPrivacy"
+            checked={watchedValues.agreeToDataPrivacy}
+            onCheckedChange={(checked) => setValue('agreeToDataPrivacy', checked as boolean)}
+          />
+          <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy policy and declaration *</Label>
+        </div>
+        {errors.agreeToDataPrivacy && <p className="text-sm text-red-600">{errors.agreeToDataPrivacy.message}</p>}
+        
         <div>
           <Label htmlFor="signature">Digital Signature *</Label>
           <Input {...register('signature')} placeholder="Type your full name as signature" />
@@ -612,7 +572,7 @@ const CorporateCDD: React.FC = () => {
       id: 'privacy-declaration',
       title: 'Data Privacy & Declaration',
       component: <DataPrivacyStep />,
-      isValid: true
+      isValid: watchedValues.agreeToDataPrivacy && watchedValues.signature
     }
   ];
 
@@ -629,6 +589,17 @@ const CorporateCDD: React.FC = () => {
           onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Corporate CDD"
+        />
+
+        <AuthRequiredSubmit
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onProceedToSignup={() => {
+            // Save form data and redirect to signup
+            saveDraft(watchedValues);
+            window.location.href = '/signup';
+          }}
+          formType="Corporate CDD"
         />
       </div>
     </div>
