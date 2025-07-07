@@ -23,6 +23,7 @@ import PartnersCDD from './pages/cdd/PartnersCDD';
 import NotFound from './pages/NotFound';
 import Unauthorized from './pages/Unauthorized';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import CombinedGPAEmployersLiabilityClaim from './pages/claims/CombinedGPAEmployersLiabilityClaim';
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
               <Route path="claims/professional-indemnity" element={<ProfessionalIndemnityClaimForm />} />
               <Route path="claims/public-liability" element={<PublicLiabilityClaimForm />} />
               <Route path="claims/employers-liability" element={<EmployersLiabilityClaim />} />
+              <Route path="claims/combined-gpa-employers-liability" element={<CombinedGPAEmployersLiabilityClaim />} />
               
               {/* KYC Routes - accessible without authentication */}
               <Route path="kyc" element={<KYCForms />} />
