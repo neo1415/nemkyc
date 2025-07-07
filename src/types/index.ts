@@ -1,4 +1,3 @@
-
 export interface User {
   uid: string;
   email: string;
@@ -430,6 +429,66 @@ export interface CombinedGPAEmployersLiabilityClaimData {
   
   // Statement of Earnings
   earnings: EarningsMonth[];
+  
+  // Declaration
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}
+
+// Burglary, Housebreaking and Larceny Claim Types
+export interface PropertyItem {
+  description: string;
+  costPrice: number;
+  purchaseDate: string;
+  estimatedValue: number;
+  netAmountClaimed: number;
+}
+
+export interface BurglaryClaimData {
+  // Policy Details
+  policyNumber: string;
+  periodOfCoverFrom: string;
+  periodOfCoverTo: string;
+  
+  // Insured Details
+  nameOfInsured: string;
+  companyName?: string;
+  title: string;
+  dateOfBirth: string;
+  gender: string;
+  address: string;
+  phone: string;
+  email: string;
+  
+  // Details of Loss
+  premisesAddress: string;
+  premisesTelephone: string;
+  dateOfTheft: string;
+  timeOfTheft: string;
+  howEntryEffected: string;
+  roomsEntered: string;
+  premisesOccupied: boolean;
+  lastOccupiedDate?: string;
+  lastOccupiedTime?: string;
+  suspicionsOnAnyone: boolean;
+  suspicionName?: string;
+  policeInformed: boolean;
+  policeDate?: string;
+  policeStationAddress?: string;
+  soleOwner: boolean;
+  ownerName?: string;
+  ownerAddress?: string;
+  otherInsurance: boolean;
+  otherInsurerDetails?: string;
+  totalContentsValue: number;
+  sumInsuredFirePolicy: number;
+  firePolicyInsurerName?: string;
+  firePolicyInsurerAddress?: string;
+  previousBurglaryLoss: boolean;
+  previousLossExplanation?: string;
+  
+  // Property Details
+  propertyItems: PropertyItem[];
   
   // Declaration
   agreeToDataPrivacy: boolean;

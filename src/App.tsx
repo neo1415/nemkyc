@@ -24,62 +24,60 @@ import NotFound from './pages/NotFound';
 import Unauthorized from './pages/Unauthorized';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import CombinedGPAEmployersLiabilityClaim from './pages/claims/CombinedGPAEmployersLiabilityClaim';
+import BurglaryClaimForm from './pages/claims/BurglaryClaimForm';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-background">
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Index />} />
-              <Route path="signin" element={<SignIn />} />
-              <Route path="signup" element={<SignUp />} />
-              
-              {/* Auth routes with /auth prefix */}
-              <Route path="auth/signin" element={<SignIn />} />
-              <Route path="auth/signup" element={<SignUp />} />
-              
-              {/* Claims Routes - accessible without authentication */}
-              <Route path="claims" element={<ClaimsForms />} />
-              <Route path="claims/motor" element={<MotorClaim />} />
-              <Route path="claims/professional-indemnity" element={<ProfessionalIndemnityClaimForm />} />
-              <Route path="claims/public-liability" element={<PublicLiabilityClaimForm />} />
-              <Route path="claims/employers-liability" element={<EmployersLiabilityClaim />} />
-              <Route path="claims/combined-gpa-employers-liability" element={<CombinedGPAEmployersLiabilityClaim />} />
-              
-              {/* KYC Routes - accessible without authentication */}
-              <Route path="kyc" element={<KYCForms />} />
-              <Route path="kyc/individual" element={<IndividualKYC />} />
-              <Route path="kyc/corporate" element={<CorporateKYC />} />
-              
-              {/* CDD Routes - accessible without authentication */}
-              <Route path="cdd" element={<CDDForms />} />
-              <Route path="cdd/corporate" element={<CorporateCDD />} />
-              <Route path="cdd/naicom-corporate" element={<NaicomCorporateCDD />} />
-              <Route path="cdd/partners" element={<PartnersCDD />} />
-              
-              {/* Protected Routes */}
-              <Route path="dashboard" element={
-                <ProtectedRoute>
-                  <UserDashboard />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="admin" element={
-                <ProtectedRoute>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="unauthorized" element={<Unauthorized />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
-          </Routes>
-          <Toaster />
-        </div>
-      </Router>
-    </AuthProvider>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Index />} />
+          <Route path="signin" element={<SignIn />} />
+          <Route path="signup" element={<SignUp />} />
+          
+          {/* Auth routes with /auth prefix */}
+          <Route path="auth/signin" element={<SignIn />} />
+          <Route path="auth/signup" element={<SignUp />} />
+          
+          {/* Claims Routes */}
+          <Route path="/claims" element={<ClaimsForms />} />
+          <Route path="/claims/motor" element={<MotorClaim />} />
+          <Route path="/claims/professional-indemnity" element={<ProfessionalIndemnityClaimForm />} />
+          <Route path="/claims/public-liability" element={<PublicLiabilityClaimForm />} />
+          <Route path="/claims/employers-liability" element={<EmployersLiabilityClaim />} />
+          <Route path="/claims/combined-gpa-employers-liability" element={<CombinedGPAEmployersLiabilityClaim />} />
+          <Route path="/claims/burglary" element={<BurglaryClaimForm />} />
+          
+          {/* KYC Routes - accessible without authentication */}
+          <Route path="kyc" element={<KYCForms />} />
+          <Route path="kyc/individual" element={<IndividualKYC />} />
+          <Route path="kyc/corporate" element={<CorporateKYC />} />
+          
+          {/* CDD Routes - accessible without authentication */}
+          <Route path="cdd" element={<CDDForms />} />
+          <Route path="cdd/corporate" element={<CorporateCDD />} />
+          <Route path="cdd/naicom-corporate" element={<NaicomCorporateCDD />} />
+          <Route path="cdd/partners" element={<PartnersCDD />} />
+          
+          {/* Protected Routes */}
+          <Route path="dashboard" element={
+            <ProtectedRoute>
+              <UserDashboard />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin" element={
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="unauthorized" element={<Unauthorized />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+      <Toaster />
+    </Router>
   );
 }
 
