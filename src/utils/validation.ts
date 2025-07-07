@@ -553,3 +553,99 @@ export const combinedGPAEmployersLiabilityClaimSchema = Yup.object({
   agreeToDataPrivacy: Yup.boolean().oneOf([true], 'You must agree to the data privacy policy'),
   signature: Yup.string().required('Signature is required')
 });
+
+// Burglary Claim validation schema
+export const burglaryClaimSchema = Yup.object({
+  // Policy Details
+  policyNumber: Yup.string().required('Policy number is required'),
+  periodOfCoverFrom: dateValidation,
+  periodOfCoverTo: dateValidation,
+  
+  // Insured Details
+  nameOfInsured: Yup.string().required('Name of insured is required'),
+  companyName: Yup.string().optional(),
+  title: Yup.string().required('Title is required'),
+  dateOfBirth: dateValidation,
+  gender: Yup.string().required('Gender is required'),
+  address: Yup.string().required('Address is required'),
+  phone: phoneValidation,
+  email: emailValidation,
+  
+  // Details of Loss
+  premisesAddress: Yup.string().required('Premises address is required'),
+  premisesTelephone: phoneValidation,
+  dateOfTheft: dateValidation,
+  timeOfTheft: Yup.string().required('Time of theft is required'),
+  howEntryEffected: Yup.string().required('How entry was effected is required'),
+  roomsEntered: Yup.string().required('Rooms entered is required'),
+  premisesOccupied: Yup.boolean().required('Premises occupation status is required'),
+  lastOccupiedDate: Yup.string().when('premisesOccupied', {
+    is: false,
+    then: (schema) => schema.required('Last occupied date is required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  lastOccupiedTime: Yup.string().when('premisesOccupied', {
+    is: false,
+    then: (schema) => schema.required('Last occupied time is required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  suspicionsOnAnyone: Yup.boolean().required('Suspicions selection is required'),
+  suspicionName: Yup.string().when('suspicionsOnAnyone', {
+    is: true,
+    then: (schema) => schema.required('Suspicion name is required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  policeInformed: Yup.boolean().required('Police informed status is required'),
+  policeDate: Yup.string().when('policeInformed', {
+    is: true,
+    then: (schema) => schema.required('Police date is required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  policeStationAddress: Yup.string().when('policeInformed', {
+    is: true,
+    then: (schema) => schema.required('Police station address is required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  soleOwner: Yup.boolean().required('Sole owner status is required'),
+  ownerName: Yup.string().when('soleOwner', {
+    is: false,
+    then: (schema) => schema.required('Owner name is required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  ownerAddress: Yup.string().when('soleOwner', {
+    is: false,
+    then: (schema) => schema.required('Owner address is required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  otherInsurance: Yup.boolean().required('Other insurance status is required'),
+  otherInsurerDetails: Yup.string().when('otherInsurance', {
+    is: true,
+    then: (schema) => schema.required('Other insurer details are required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  totalContentsValue: Yup.number().positive('Total contents value must be positive').required('Total contents value is required'),
+  sumInsuredFirePolicy: Yup.number().positive('Sum insured must be positive').required('Sum insured under fire policy is required'),
+  firePolicyInsurerName: Yup.string().optional(),
+  firePolicyInsurerAddress: Yup.string().optional(),
+  previousBurglaryLoss: Yup.boolean().required('Previous burglary loss status is required'),
+  previousLossExplanation: Yup.string().when('previousBurglaryLoss', {
+    is: true,
+    then: (schema) => schema.required('Previous loss explanation is required'),
+    otherwise: (schema) => schema.optional()
+  }),
+  
+  // Property Details
+  propertyItems: Yup.array().of(
+    Yup.object({
+      description: Yup.string().required('Description is required'),
+      costPrice: Yup.number().min(0).required('Cost price is required'),
+      purchaseDate: Yup.string().required('Purchase date is required'),
+      estimatedValue: Yup.number().min(0).required('Estimated value is required'),
+      netAmountClaimed: Yup.number().min(0).required('Net amount claimed is required')
+    })
+  ).min(1, 'At least one property item is required').required('Property items are required'),
+  
+  // Declaration
+  agreeToDataPrivacy: Yup.boolean().oneOf([true], 'You must agree to the data privacy policy'),
+  signature: Yup.string().required('Signature is required')
+});

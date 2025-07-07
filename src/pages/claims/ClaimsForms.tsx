@@ -3,7 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Car, Shield, Users, Building, ArrowRight, UserCheck } from 'lucide-react';
+import { Car, Shield, Users, Building, ArrowRight, UserCheck, Home } from 'lucide-react';
 
 const ClaimsForms: React.FC = () => {
   const claimForms = [
@@ -41,6 +41,13 @@ const ClaimsForms: React.FC = () => {
       icon: <UserCheck className="h-8 w-8 text-red-600" />,
       path: '/claims/combined-gpa-employers-liability',
       features: ['Combined coverage', 'Personal accidents', 'Employer responsibilities']
+    },
+    {
+      title: 'Burglary, Housebreaking and Larceny Claim',
+      description: 'Claims for burglary, housebreaking, and theft incidents',
+      icon: <Home className="h-8 w-8 text-red-600" />,
+      path: '/claims/burglary',
+      features: ['Property theft', 'Burglary incidents', 'Security breaches']
     }
   ];
 
