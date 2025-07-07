@@ -79,6 +79,91 @@ export const corporateCDDSchema = Yup.object({
   signature: Yup.string().required('Signature is required')
 });
 
+// NAICOM Corporate CDD validation schema
+export const naicomCorporateCDDSchema = corporateCDDSchema.shape({
+  taxId: Yup.string().min(6).max(15).required('Tax ID is required for NAICOM forms')
+});
+
+// Partners CDD validation schema
+export const partnersCDDSchema = Yup.object({
+  companyName: Yup.string().required('Company name is required'),
+  registeredAddress: Yup.string().required('Registered address is required'),
+  city: Yup.string().required('City is required'),
+  state: Yup.string().required('State is required'),
+  country: Yup.string().required('Country is required'),
+  email: emailValidation,
+  website: Yup.string().url('Please enter a valid website URL').required('Website is required'),
+  contactPersonName: Yup.string().required('Contact person name is required'),
+  contactPersonNumber: phoneValidation,
+  taxId: Yup.string().optional(),
+  vatRegistrationNumber: Yup.string().required('VAT registration number is required'),
+  incorporationNumber: Yup.string().required('Incorporation number is required'),
+  incorporationDate: dateValidation,
+  incorporationState: Yup.string().required('Incorporation state is required'),
+  businessNature: Yup.string().required('Nature of business is required'),
+  bvn: bvnValidation,
+  directors: Yup.array().of(directorSchema).min(1, 'At least one director is required'),
+  localAccountNumber: Yup.string().required('Account number is required'),
+  localBankName: Yup.string().required('Bank name is required'),
+  localBankBranch: Yup.string().required('Bank branch is required'),
+  localAccountOpeningDate: dateValidation,
+  foreignAccountNumber: Yup.string().optional(),
+  foreignBankName: Yup.string().optional(),
+  foreignBankBranch: Yup.string().optional(),
+  foreignAccountOpeningDate: dateValidation.optional(),
+  agreeToDataPrivacy: Yup.boolean().oneOf([true], 'You must agree to the data privacy policy'),
+  signature: Yup.string().required('Signature is required')
+});
+
+// Individual KYC validation schema
+export const individualKYCSchema = Yup.object({
+  firstName: Yup.string().required('First name is required'),
+  lastName: Yup.string().required('Last name is required'),
+  middleName: Yup.string().optional(),
+  dateOfBirth: dateValidation,
+  gender: Yup.string().oneOf(['male', 'female', 'other']).required('Gender is required'),
+  nationality: Yup.string().required('Nationality is required'),
+  countryOfResidence: Yup.string().required('Country of residence is required'),
+  email: emailValidation,
+  phoneNumber: phoneValidation,
+  alternatePhone: phoneValidation.optional(),
+  residentialAddress: Yup.string().required('Residential address is required'),
+  mailingAddress: Yup.string().optional(),
+  identificationType: Yup.string().oneOf(['passport', 'nationalId', 'driversLicense']).required('Identification type is required'),
+  identificationNumber: Yup.string().required('Identification number is required'),
+  issueDate: dateValidation,
+  expiryDate: dateValidation,
+  employmentStatus: Yup.string().oneOf(['employed', 'selfEmployed', 'unemployed', 'retired', 'student']).required('Employment status is required'),
+  occupation: Yup.string().required('Occupation is required'),
+  employer: Yup.string().optional(),
+  annualIncome: Yup.number().positive('Annual income must be positive').required('Annual income is required')
+});
+
+// Corporate KYC validation schema
+export const corporateKYCSchema = Yup.object({
+  companyName: Yup.string().required('Company name is required'),
+  registrationNumber: Yup.string().required('Registration number is required'),
+  incorporationDate: dateValidation,
+  countryOfIncorporation: Yup.string().required('Country of incorporation is required'),
+  businessType: Yup.string().required('Business type is required'),
+  industry: Yup.string().required('Industry is required'),
+  registeredAddress: Yup.string().required('Registered address is required'),
+  businessAddress: Yup.string().required('Business address is required'),
+  phoneNumber: phoneValidation,
+  email: emailValidation,
+  website: Yup.string().url('Please enter a valid website URL').optional(),
+  annualRevenue: Yup.number().positive('Annual revenue must be positive').required('Annual revenue is required'),
+  numberOfEmployees: Yup.number().positive('Number of employees must be positive').required('Number of employees is required'),
+  directors: Yup.array().of(
+    Yup.object({
+      name: Yup.string().required('Director name is required'),
+      position: Yup.string().required('Director position is required'),
+      nationality: Yup.string().required('Director nationality is required'),
+      shareholding: Yup.number().min(0).max(100).optional()
+    })
+  ).min(1, 'At least one director is required')
+});
+
 // Professional Indemnity Claim validation schema
 export const professionalIndemnityClaimSchema = Yup.object({
   policyNumber: Yup.string().required('Policy number is required'),
@@ -222,10 +307,19 @@ export const motorClaimSchema = Yup.object({
   vehicleModel: Yup.string().required('Vehicle model is required'),
   vehicleYear: Yup.number().min(1900).max(new Date().getFullYear()).required('Vehicle year is required'),
   vehicleRegistration: Yup.string().required('Vehicle registration is required'),
+  chassisNumber: Yup.string().required('Chassis number is required'),
+  engineNumber: Yup.string().required('Engine number is required'),
+  policyNumber: Yup.string().required('Policy number is required'),
+  policyStartDate: dateValidation,
+  policyEndDate: dateValidation,
   incidentDate: dateValidation,
   incidentTime: Yup.string().required('Incident time is required'),
   incidentLocation: Yup.string().required('Incident location is required'),
   incidentDescription: Yup.string().required('Incident description is required'),
+  damageDescription: Yup.string().required('Damage description is required'),
+  claimAmount: Yup.number().positive('Amount must be positive').required('Claim amount is required'),
+  thirdPartyInvolved: Yup.string().oneOf(['yes', 'no']).required('Third party involvement is required'),
+  policeReportFiled: Yup.string().oneOf(['yes', 'no']).required('Police report status is required'),
   policeReported: Yup.boolean().required('Police report status is required'),
   policeStation: Yup.string().when('policeReported', {
     is: true,

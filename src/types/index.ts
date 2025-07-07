@@ -104,6 +104,59 @@ export interface PartnersCDDData {
   signature: string;
 }
 
+// KYC Form Types
+export interface IndividualKYCData {
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  dateOfBirth: string;
+  gender: 'male' | 'female' | 'other';
+  nationality: string;
+  countryOfResidence: string;
+  email: string;
+  phoneNumber: string;
+  alternatePhone?: string;
+  residentialAddress: string;
+  mailingAddress?: string;
+  identificationType: 'passport' | 'nationalId' | 'driversLicense';
+  identificationNumber: string;
+  issueDate: string;
+  expiryDate: string;
+  employmentStatus: 'employed' | 'selfEmployed' | 'unemployed' | 'retired' | 'student';
+  occupation: string;
+  employer?: string;
+  annualIncome: number;
+  identificationDocument?: File;
+  proofOfAddress?: File;
+  passport?: File;
+}
+
+export interface CorporateKYCData {
+  companyName: string;
+  registrationNumber: string;
+  incorporationDate: string;
+  countryOfIncorporation: string;
+  businessType: string;
+  industry: string;
+  registeredAddress: string;
+  businessAddress: string;
+  phoneNumber: string;
+  email: string;
+  website?: string;
+  annualRevenue: number;
+  numberOfEmployees: number;
+  directors: Array<{
+    name: string;
+    position: string;
+    nationality: string;
+    shareholding?: number;
+  }>;
+  certificateOfIncorporation?: File;
+  memorandumOfAssociation?: File;
+  auditedFinancialStatements?: File;
+  boardResolution?: File;
+}
+
 // Claims Form Types
 export interface MotorClaimData {
   claimantName: string;
@@ -114,10 +167,19 @@ export interface MotorClaimData {
   vehicleModel: string;
   vehicleYear: number;
   vehicleRegistration: string;
+  chassisNumber: string;
+  engineNumber: string;
+  policyNumber: string;
+  policyStartDate: string;
+  policyEndDate: string;
   incidentDate: string;
   incidentTime: string;
   incidentLocation: string;
   incidentDescription: string;
+  damageDescription: string;
+  claimAmount: number;
+  thirdPartyInvolved: 'yes' | 'no';
+  policeReportFiled: 'yes' | 'no';
   policeReported: boolean;
   policeStation?: string;
   policeReportNumber?: string;

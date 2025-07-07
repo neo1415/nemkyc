@@ -3,6 +3,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useAuth } from '../../contexts/AuthContext';
 import { corporateKYCSchema } from '../../utils/validation';
+import { CorporateKYCData } from '../../types';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -16,38 +17,12 @@ import { Building2, FileText, Users, Upload, Plus, Trash2 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { notifySubmission } from '../../services/notificationService';
-
-interface Director {
-  name: string;
-  position: string;
-  nationality: string;
-  shareholding?: number;
-}
-
-interface CorporateKYCData {
-  companyName: string;
-  registrationNumber: string;
-  incorporationDate: string;
-  countryOfIncorporation: string;
-  businessType: string;
-  industry: string;
-  registeredAddress: string;
-  businessAddress: string;
-  phoneNumber: string;
-  email: string;
-  website?: string;
-  annualRevenue: number;
-  numberOfEmployees: number;
-  directors: Director[];
-  certificateOfIncorporation?: File;
-  memorandumOfAssociation?: File;
-  auditedFinancialStatements?: File;
-  boardResolution?: File;
-}
+import AuthRequiredSubmit from '../../components/common/AuthRequiredSubmit';
 
 const CorporateKYC: React.FC = () => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   
   const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<CorporateKYCData>({
     resolver: yupResolver(corporateKYCSchema),
@@ -65,7 +40,10 @@ const CorporateKYC: React.FC = () => {
   const watchedValues = watch();
 
   const onSubmit = async (data: CorporateKYCData) => {
-    if (!user) return;
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
     
     setIsSubmitting(true);
     try {
@@ -331,9 +309,18 @@ const CorporateKYC: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={onSubmit}
+          onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Corporate KYC"
+        />
+
+        <AuthRequiredSubmit
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onProceedToSignup={() => {
+            window.location.href = '/signup';
+          }}
+          formType="Corporate KYC"
         />
       </div>
     </div>

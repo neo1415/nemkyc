@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useAuth } from '../../contexts/AuthContext';
 import { motorClaimSchema } from '../../utils/validation';
+import { MotorClaimData } from '../../types';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -13,6 +14,7 @@ import FormSection from '../../components/common/FormSection';
 import FileUpload from '../../components/common/FileUpload';
 import PhoneInput from '../../components/common/PhoneInput';
 import MultiStepForm from '../../components/common/MultiStepForm';
+import AuthRequiredSubmit from '../../components/common/AuthRequiredSubmit';
 import { Car, FileText, Upload, DollarSign } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
@@ -40,27 +42,43 @@ interface MotorClaimData {
   claimAmount: number;
   thirdPartyInvolved: 'yes' | 'no';
   policeReportFiled: 'yes' | 'no';
-  vehiclePhotos?: File;
-  policeReport?: File;
-  driverLicense?: File;
-  vehicleRegistrationDoc?: File;
+  policeReported: boolean;
+  policeStation?: string;
+  policeReportNumber?: string;
+  estimatedDamage: number;
+  driverName: string;
+  driverLicense: string;
+  witnessName?: string;
+  witnessPhone?: string;
+  vehiclePhotos?: FileList;
+  policeReport?: FileList;
+  vehicleRegistrationDoc?: FileList;
+  signature: string;
+  agreeToTerms: boolean;
 }
 
 const MotorClaim: React.FC = () => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<MotorClaimData>({
     resolver: yupResolver(motorClaimSchema),
     defaultValues: {
       claimantEmail: user?.email || '',
+      policeReported: false,
+      agreeToTerms: false,
+      signature: ''
     }
   });
 
   const watchedValues = watch();
 
   const onSubmit = async (data: MotorClaimData) => {
-    if (!user) return;
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
     
     setIsSubmitting(true);
     try {
@@ -288,6 +306,33 @@ const MotorClaim: React.FC = () => {
     </FormSection>
   );
 
+  const TermsAndConditionsStep = () => (
+    <FormSection title="Terms and Conditions" icon={<FileText className="h-5 w-5" />}>
+      <div className="space-y-6">
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="font-medium mb-4">Terms and Conditions</h4>
+          <div className="space-y-2 text-sm">
+            <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+            <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+            <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+          </div>
+        </div>
+        
+        <div>
+          <Label htmlFor="signature">Digital Signature *</Label>
+          <Input {...register('signature')} placeholder="Type your full name as signature" />
+          {errors.signature && <p className="text-sm text-red-600">{errors.signature.message}</p>}
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Input type="checkbox" id="agreeToTerms" {...register('agreeToTerms')} className="h-4 w-4" />
+          <Label htmlFor="agreeToTerms">I agree to the terms and conditions *</Label>
+        </div>
+        {errors.agreeToTerms && <p className="text-sm text-red-600">{errors.agreeToTerms.message}</p>}
+      </div>
+    </FormSection>
+  );
+
   const steps = [
     {
       id: 'claimant',
@@ -312,6 +357,12 @@ const MotorClaim: React.FC = () => {
       title: 'Document Upload',
       component: <DocumentsStep />,
       isValid: !errors.vehiclePhotos && !errors.driverLicense && !errors.vehicleRegistrationDoc
+    },
+    {
+      id: 'terms',
+      title: 'Terms and Conditions',
+      component: <TermsAndConditionsStep />,
+      isValid: watchedValues.agreeToTerms && watchedValues.signature
     }
   ];
 
@@ -325,9 +376,18 @@ const MotorClaim: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={onSubmit}
+          onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Motor Claim"
+        />
+
+        <AuthRequiredSubmit
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onProceedToSignup={() => {
+            window.location.href = '/signup';
+          }}
+          formType="Motor Claim"
         />
       </div>
     </div>
