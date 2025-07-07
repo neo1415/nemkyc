@@ -55,7 +55,7 @@ const BurglaryClaimForm: React.FC = () => {
       howEntryEffected: '',
       roomsEntered: '',
       premisesOccupied: false,
-      lastOccupiedDate: '',
+      lastOccupiedDateTime: '',
       lastOccupiedTime: '',
       suspicionsOnAnyone: false,
       suspicionName: '',
