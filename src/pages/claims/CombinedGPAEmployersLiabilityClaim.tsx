@@ -26,7 +26,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm({
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<CombinedGPAEmployersLiabilityClaimData>({
     resolver: yupResolver(combinedGPAEmployersLiabilityClaimSchema) as any,
     defaultValues: {
       policyNumber: '',
@@ -651,7 +651,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleSubmit(onSubmit as any)}
+          onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Combined Claim"
         />

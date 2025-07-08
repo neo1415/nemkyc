@@ -768,7 +768,7 @@ const EmployersLiabilityClaim: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleSubmit(onSubmit as any)}
+          onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Claim"
         />

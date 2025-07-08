@@ -24,11 +24,23 @@ const CorporateKYC: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm({
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<CorporateKYCData>({
     resolver: yupResolver(corporateKYCSchema) as any,
     defaultValues: {
       email: user?.email || '',
-      directors: [{ name: '', position: '', nationality: '', shareholding: 0 }]
+      directors: [{ name: '', position: '', nationality: '', shareholding: 0 }],
+      companyName: '',
+      registrationNumber: '',
+      incorporationDate: '',
+      countryOfIncorporation: '',
+      businessType: '',
+      industry: '',
+      registeredAddress: '',
+      businessAddress: '',
+      phoneNumber: '',
+      website: '',
+      annualRevenue: 0,
+      numberOfEmployees: 0
     }
   });
 
@@ -309,7 +321,7 @@ const CorporateKYC: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleSubmit(onSubmit as any)}
+          onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Corporate KYC"
         />
