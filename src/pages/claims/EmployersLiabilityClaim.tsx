@@ -771,6 +771,7 @@ const EmployersLiabilityClaim: React.FC = () => {
           onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Claim"
+          formMethods={{ register, handleSubmit, formState: { errors }, setValue, watch, control }}
         />
 
         <AuthRequiredSubmit

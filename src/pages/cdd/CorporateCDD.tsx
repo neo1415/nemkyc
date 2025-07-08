@@ -581,6 +581,7 @@ const CorporateCDD: React.FC = () => {
           onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Corporate CDD"
+          formMethods={{ register, handleSubmit, formState: { errors }, setValue, watch, control }}
         />
 
         <AuthRequiredSubmit

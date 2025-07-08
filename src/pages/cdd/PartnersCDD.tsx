@@ -628,6 +628,7 @@ const PartnersCDD: React.FC = () => {
           onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Partners CDD"
+          formMethods={{ register, handleSubmit, formState: { errors }, setValue, watch, control }}
         />
 
         <AuthRequiredSubmit

@@ -328,6 +328,7 @@ const CorporateKYC: React.FC = () => {
           steps={steps}
           onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
+          formMethods={{ register, handleSubmit, formState: { errors }, setValue, watch, control }}
           submitButtonText="Submit Corporate KYC"
         />
 

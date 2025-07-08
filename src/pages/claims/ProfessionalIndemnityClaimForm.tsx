@@ -118,7 +118,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<ProfessionalIndemnityClaimData>({
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<ProfessionalIndemnityClaimData>({
     resolver: yupResolver(professionalIndemnitySchema) as any,
     defaultValues: {
       email: user?.email || '',
@@ -596,6 +596,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
           onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Review & Submit Claim"
+          formMethods={{ register, handleSubmit, formState: { errors }, setValue, watch, control }}
         />
 
         {/* Summary Dialog */}

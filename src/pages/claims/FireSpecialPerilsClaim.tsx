@@ -1037,6 +1037,7 @@ const FireSpecialPerilsClaim = () => {
             onSubmit={onFinalSubmit}
             isSubmitting={isSubmitting}
             submitButtonText="Submit Claim"
+            formMethods={form}
           />
         </Form>
 
