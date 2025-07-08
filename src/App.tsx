@@ -33,6 +33,10 @@ import GoodsInTransitClaim from './pages/claims/GoodsInTransitClaim';
 import ContractorsPlantMachineryClaim from './pages/claims/ContractorsPlantMachineryClaim';
 import AllRiskClaim from './pages/claims/AllRiskClaim';
 import NaicomPartnersCDD from './pages/cdd/NaicomPartnersCDD';
+import IndividualCDD from './pages/cdd/IndividualCDD';
+import AgentsCDD from './pages/cdd/AgentsCDD';
+import BrokersCDD from './pages/cdd/BrokersCDD';
+import FidelityGuaranteeClaim from './pages/claims/FidelityGuaranteeClaim';
 
 function App() {
   return (
@@ -63,6 +67,7 @@ function App() {
           <Route path="/claims/goods-in-transit" element={<GoodsInTransitClaim />} />
           <Route path="/claims/contractors-plant-machinery" element={<ContractorsPlantMachineryClaim />} />
           <Route path="/claims/all-risk" element={<AllRiskClaim />} />
+          <Route path="/claims/fidelity-guarantee" element={<FidelityGuaranteeClaim />} />
           
           {/* KYC Routes - accessible without authentication */}
           <Route path="kyc" element={<KYCForms />} />
@@ -75,6 +80,9 @@ function App() {
           <Route path="cdd/naicom-corporate" element={<NaicomCorporateCDD />} />
           <Route path="cdd/partners" element={<PartnersCDD />} />
           <Route path="cdd/naicom-partners" element={<NaicomPartnersCDD />} />
+          <Route path="cdd/individual" element={<IndividualCDD />} />
+          <Route path="cdd/agents" element={<AgentsCDD />} />
+          <Route path="cdd/brokers" element={<BrokersCDD />} />
           
           {/* Protected Routes */}
           <Route path="dashboard" element={

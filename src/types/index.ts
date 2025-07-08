@@ -698,3 +698,98 @@ export interface AgentsCDDData {
   agreeToDataPrivacy: boolean;
   signature: string;
 }
+
+// Brokers CDD Types
+export interface BrokersCDDData {
+  companyName: string;
+  companyAddress: string;
+  city: string;
+  state: string;
+  country: string;
+  incorporationNumber: string;
+  registrationNumber: string;
+  incorporationState: string;
+  companyType: string;
+  companyTypeOther?: string;
+  incorporationDate: string;
+  email: string;
+  website: string;
+  businessType: string;
+  taxNumber: string;
+  telephone: string;
+  directors: Array<{
+    title: string;
+    gender: string;
+    firstName: string;
+    middleName?: string;
+    lastName: string;
+    dateOfBirth: string;
+    placeOfBirth: string;
+    nationality: string;
+    residenceCountry: string;
+    occupation: string;
+    bvn: string;
+    employerName: string;
+    phoneNumber: string;
+    address: string;
+    email: string;
+    taxIdNumber?: string;
+    passportNumber?: string;
+    passportIssuedCountry?: string;
+    idType: string;
+    identificationNumber: string;
+    issuedBy: string;
+    issuedDate: string;
+    expiryDate?: string;
+    incomeSource: string;
+    incomeSourceOther?: string;
+  }>;
+  localBankName: string;
+  localBankBranch: string;
+  localAccountNumber: string;
+  localAccountOpeningDate: string;
+  foreignAccountNumber?: string;
+  foreignBankName?: string;
+  foreignBankBranch?: string;
+  foreignCurrency?: string;
+  foreignAccountOpeningDate?: string;
+  certificateOfIncorporation?: File;
+  directorId1?: File;
+  directorId2?: File;
+  naicomLicense?: File;
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}
+
+// Fidelity Guarantee Claim Types
+export interface FidelityGuaranteeClaimData {
+  policyNumber: string;
+  periodOfCoverFrom: string;
+  periodOfCoverTo: string;
+  companyName: string;
+  address: string;
+  phone: string;
+  email: string;
+  defaulterName: string;
+  defaulterAge: number;
+  defaulterAddress: string;
+  defaulterOccupation: string;
+  discoveryDate: string;
+  defaultCarriedOut: string;
+  defaultAmount: number;
+  previousIrregularity: boolean;
+  previousIrregularityDetails?: string;
+  lastCheckedDate: string;
+  defaulterProperty: boolean;
+  defaulterPropertyDetails?: string;
+  remunerationDue: boolean;
+  remunerationDetails?: string;
+  otherSecurity: boolean;
+  otherSecurityDetails?: string;
+  defaulterDischarged: boolean;
+  dischargeDate?: string;
+  settlementProposal: boolean;
+  settlementDetails?: string;
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}
