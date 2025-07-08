@@ -601,3 +601,100 @@ export interface NaicomPartnersCDDData {
   agreeToDataPrivacy: boolean;
   signature: string;
 }
+
+// Individual CDD Types
+export interface IndividualCDDData {
+  // Personal Info
+  title: string;
+  firstName: string;
+  lastName: string;
+  contactAddress: string;
+  gender: 'male' | 'female';
+  residenceCountry: string;
+  dateOfBirth: string;
+  placeOfBirth: string;
+  email: string;
+  mobileNumber: string;
+  residentialAddress: string;
+  nationality: string;
+  occupation: string;
+  position?: string;
+  
+  // Additional Info
+  businessType: 'soleProprietor' | 'limitedLiability' | 'publicLimited' | 'jointVenture' | 'other';
+  businessTypeOther?: string;
+  employerEmail: string;
+  employerName?: string;
+  employerTelephone?: string;
+  employerAddress?: string;
+  taxId?: string;
+  bvn: string;
+  idType: 'passport' | 'nimc' | 'driversLicense' | 'votersCard' | 'nin';
+  identificationNumber: string;
+  issuingCountry: string;
+  issuedDate: string;
+  expiryDate?: string;
+  
+  // Account Details & Uploads
+  annualIncomeRange: 'lessThan1M' | '1M-4M' | '4.1M-10M' | 'moreThan10M';
+  premiumPaymentSource: 'salary' | 'investments' | 'other';
+  premiumPaymentSourceOther?: string;
+  identificationDocument?: File;
+  signature: string;
+  
+  // Declaration
+  agreeToDataPrivacy: boolean;
+}
+
+// Agents CDD Types
+export interface AgentsCDDData {
+  // Personal Info
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  residentialAddress: string;
+  gender: 'male' | 'female';
+  position: string;
+  dateOfBirth: string;
+  placeOfBirth: string;
+  otherSourceOfIncome: 'salary' | 'investments' | 'other';
+  otherSourceOfIncomeOther?: string;
+  nationality: string;
+  phoneNumber: string;
+  bvn: string;
+  taxIdNumber?: string;
+  occupation: string;
+  email: string;
+  validMeansOfId: 'passport' | 'nimc' | 'driversLicense' | 'votersCard';
+  identificationNumber: string;
+  issuedDate: string;
+  expiryDate?: string;
+  issuingBody: string;
+  
+  // Additional Info
+  agentName: string;
+  agentsOfficeAddress: string;
+  naicomLicenseNumber: string;
+  licenseIssuedDate: string;
+  licenseExpiryDate: string;
+  emailAddress: string;
+  website: string;
+  mobileNumber: string;
+  taxIdentificationNumber?: string;
+  arianMembershipNumber: string;
+  listOfAgentsApprovedPrincipals: string;
+  
+  // Financial Info
+  localAccountNumber: string;
+  localBankName: string;
+  localBankBranch: string;
+  localAccountOpeningDate: string;
+  foreignAccountNumber?: string;
+  foreignBankName?: string;
+  foreignBankBranch?: string;
+  foreignAccountOpeningDate?: string;
+  
+  // Declaration
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}
