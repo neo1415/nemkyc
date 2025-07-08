@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,59 +19,59 @@ import MultiStepForm from '@/components/common/MultiStepForm';
 import { AllRiskClaimData } from '@/types/claims';
 import { useFormDraft } from '@/hooks/useFormDraft';
 
-const allRiskClaimSchema = z.object({
+const allRiskClaimSchema = yup.object().shape({
   // Policy Details
-  policyNumber: z.string().min(1, "Policy number is required"),
-  periodOfCoverFrom: z.coerce.date(),
-  periodOfCoverTo: z.coerce.date(),
+  policyNumber: yup.string().required("Policy number is required"),
+  periodOfCoverFrom: yup.date().required("From date is required"),
+  periodOfCoverTo: yup.date().required("To date is required"),
   
   // Insured Details
-  nameOfInsured: z.string().min(1, "Name is required"),
-  address: z.string().min(1, "Address is required"),
-  phone: z.string().min(1, "Phone is required"),
-  email: z.string().email("Valid email is required"),
+  nameOfInsured: yup.string().required("Name is required"),
+  address: yup.string().required("Address is required"),
+  phone: yup.string().required("Phone is required"),
+  email: yup.string().email("Valid email is required").required("Email is required"),
   
   // Details of Loss
-  typeOfClaim: z.string().min(1, "Type of claim is required"),
-  locationOfClaim: z.string().min(1, "Location is required"),
-  dateOfOccurrence: z.coerce.date(),
-  timeOfOccurrence: z.string().min(1, "Time is required"),
-  propertyDescription: z.string().min(1, "Property description is required"),
-  circumstancesOfLoss: z.string().min(1, "Circumstances are required"),
-  estimateOfLoss: z.number().min(0, "Estimate must be positive"),
+  typeOfClaim: yup.string().required("Type of claim is required"),
+  locationOfClaim: yup.string().required("Location is required"),
+  dateOfOccurrence: yup.date().required("Date is required"),
+  timeOfOccurrence: yup.string().required("Time is required"),
+  propertyDescription: yup.string().required("Property description is required"),
+  circumstancesOfLoss: yup.string().required("Circumstances are required"),
+  estimateOfLoss: yup.number().min(0, "Estimate must be positive").required("Estimate is required"),
   
   // Property Details
-  propertyItems: z.array(z.object({
-    description: z.string().min(1, "Description is required"),
-    dateOfPurchase: z.coerce.date(),
-    costPrice: z.number().min(0, "Cost price must be positive"),
-    deductionForAge: z.number().min(0, "Deduction must be positive"),
-    amountClaimed: z.number().min(0, "Amount claimed must be positive"),
-    remarks: z.string().optional()
+  propertyItems: yup.array().of(yup.object().shape({
+    description: yup.string().required("Description is required"),
+    dateOfPurchase: yup.date().required("Date is required"),
+    costPrice: yup.number().min(0, "Cost price must be positive").required("Cost price is required"),
+    deductionForAge: yup.number().min(0, "Deduction must be positive"),
+    amountClaimed: yup.number().min(0, "Amount claimed must be positive").required("Amount is required"),
+    remarks: yup.string()
   })).min(1, "At least one property item is required"),
   
   // Ownership & Recovery
-  isSoleOwner: z.boolean(),
-  ownershipExplanation: z.string().optional(),
-  hasHirePurchase: z.boolean(),
-  hirePurchaseCompany: z.string().optional(),
-  hirePurchaseAddress: z.string().optional(),
-  recoveryStepsTaken: z.string().min(1, "Recovery steps are required"),
-  hasOtherInsurance: z.boolean(),
-  otherInsuranceDetails: z.string().optional(),
-  hasPreviousLoss: z.boolean(),
-  previousLossDetails: z.string().optional(),
-  totalPropertyValue: z.number().min(0, "Total value must be positive"),
-  hasOtherInsuranceAtTime: z.boolean(),
-  otherInsuranceAtTimeDetails: z.string().optional(),
-  hasPriorClaims: z.boolean(),
-  priorClaimsDetails: z.string().optional(),
-  policeInformed: z.boolean(),
-  policeStationDetails: z.string().optional(),
+  isSoleOwner: yup.boolean(),
+  ownershipExplanation: yup.string(),
+  hasHirePurchase: yup.boolean(),
+  hirePurchaseCompany: yup.string(),
+  hirePurchaseAddress: yup.string(),
+  recoveryStepsTaken: yup.string().required("Recovery steps are required"),
+  hasOtherInsurance: yup.boolean(),
+  otherInsuranceDetails: yup.string(),
+  hasPreviousLoss: yup.boolean(),
+  previousLossDetails: yup.string(),
+  totalPropertyValue: yup.number().min(0, "Total value must be positive").required("Total value is required"),
+  hasOtherInsuranceAtTime: yup.boolean(),
+  otherInsuranceAtTimeDetails: yup.string(),
+  hasPriorClaims: yup.boolean(),
+  priorClaimsDetails: yup.string(),
+  policeInformed: yup.boolean(),
+  policeStationDetails: yup.string(),
   
   // Declaration
-  agreeToDataPrivacy: z.boolean().refine(val => val === true, "You must agree to data privacy"),
-  signature: z.string().min(1, "Signature is required")
+  agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
+  signature: yup.string().required("Signature is required")
 });
 
 const defaultValues: Partial<AllRiskClaimData> = {
@@ -121,7 +121,7 @@ const AllRiskClaim: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formMethods = useForm<any>({
-    resolver: zodResolver(allRiskClaimSchema),
+    resolver: yupResolver(allRiskClaimSchema),
     defaultValues,
     mode: 'onChange'
   });

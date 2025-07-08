@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,66 +21,68 @@ import { NaicomPartnersCDDData, Director } from '@/types';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 
-const naicomPartnersCDDSchema = z.object({
+const naicomPartnersCDDSchema = yup.object().shape({
   // Company Info
-  companyName: z.string().min(1, "Company name is required"),
-  registeredAddress: z.string().min(1, "Registered address is required"),
-  city: z.string().min(1, "City is required"),
-  state: z.string().min(1, "State is required"),
-  country: z.string().min(1, "Country is required"),
-  email: z.string().email("Valid email is required"),
-  website: z.string().min(1, "Website is required"),
-  contactPersonName: z.string().min(1, "Contact person name is required"),
-  contactPersonNumber: z.string().min(1, "Contact person number is required"),
-  taxId: z.string().min(1, "Tax ID is required"),
-  vatRegistrationNumber: z.string().min(1, "VAT registration number is required"),
-  incorporationNumber: z.string().min(1, "Incorporation number is required"),
-  incorporationDate: z.coerce.date(),
-  incorporationState: z.string().min(1, "Incorporation state is required"),
-  businessNature: z.string().min(1, "Business nature is required"),
-  bvn: z.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits"),
-  naicomLicenseIssuingDate: z.coerce.date(),
-  naicomLicenseExpiryDate: z.coerce.date(),
+  companyName: yup.string().required("Company name is required"),
+  registeredAddress: yup.string().required("Registered address is required"),
+  city: yup.string().required("City is required"),
+  state: yup.string().required("State is required"),
+  country: yup.string().required("Country is required"),
+  email: yup.string().email("Valid email is required").required("Email is required"),
+  website: yup.string().required("Website is required"),
+  contactPersonName: yup.string().required("Contact person name is required"),
+  contactPersonNumber: yup.string().required("Contact person number is required"),
+  taxId: yup.string().required("Tax ID is required"),
+  vatRegistrationNumber: yup.string().required("VAT registration number is required"),
+  incorporationNumber: yup.string().required("Incorporation number is required"),
+  incorporationDate: yup.date().required("Incorporation date is required"),
+  incorporationState: yup.string().required("Incorporation state is required"),
+  businessNature: yup.string().required("Business nature is required"),
+  bvn: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+  naicomLicenseIssuingDate: yup.date().required("NAICOM license issuing date is required"),
+  naicomLicenseExpiryDate: yup.date().required("NAICOM license expiry date is required"),
   
   // Directors
-  directors: z.array(z.object({
-    firstName: z.string().min(1, "First name is required"),
-    middleName: z.string().optional(),
-    lastName: z.string().min(1, "Last name is required"),
-    dateOfBirth: z.coerce.date(),
-    placeOfBirth: z.string().min(1, "Place of birth is required"),
-    nationality: z.string().min(1, "Nationality is required"),
-    country: z.string().min(1, "Country is required"),
-    occupation: z.string().min(1, "Occupation is required"),
-    email: z.string().email("Valid email is required"),
-    phoneNumber: z.string().min(1, "Phone number is required"),
-    bvn: z.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits"),
-    employerName: z.string().optional(),
-    employerPhone: z.string().optional(),
-    residentialAddress: z.string().min(1, "Residential address is required"),
-    taxIdNumber: z.string().optional(),
-    idType: z.string().min(1, "ID type is required"),
-    identificationNumber: z.string().min(1, "Identification number is required"),
-    issuingBody: z.string().min(1, "Issuing body is required"),
-    issuedDate: z.coerce.date(),
-    expiryDate: z.coerce.date().optional(),
-    incomeSource: z.string().min(1, "Income source is required"),
-    incomeSourceOther: z.string().optional()
+  directors: yup.array().of(yup.object().shape({
+    title: yup.string(),
+    gender: yup.string(),
+    firstName: yup.string().required("First name is required"),
+    middleName: yup.string(),
+    lastName: yup.string().required("Last name is required"),
+    dateOfBirth: yup.date().required("Date of birth is required"),
+    placeOfBirth: yup.string().required("Place of birth is required"),
+    nationality: yup.string().required("Nationality is required"),
+    country: yup.string().required("Country is required"),
+    occupation: yup.string().required("Occupation is required"),
+    email: yup.string().email("Valid email is required").required("Email is required"),
+    phoneNumber: yup.string().required("Phone number is required"),
+    bvn: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+    employerName: yup.string(),
+    employerPhone: yup.string(),
+    residentialAddress: yup.string().required("Residential address is required"),
+    taxIdNumber: yup.string(),
+    idType: yup.string().required("ID type is required"),
+    identificationNumber: yup.string().required("Identification number is required"),
+    issuingBody: yup.string().required("Issuing body is required"),
+    issuedDate: yup.date().required("Issued date is required"),
+    expiryDate: yup.date(),
+    incomeSource: yup.string().required("Income source is required"),
+    incomeSourceOther: yup.string()
   })).min(1, "At least one director is required"),
   
   // Account Details
-  localAccountNumber: z.string().min(1, "Account number is required"),
-  localBankName: z.string().min(1, "Bank name is required"),
-  localBankBranch: z.string().min(1, "Bank branch is required"),
-  localAccountOpeningDate: z.coerce.date(),
-  foreignAccountNumber: z.string().optional(),
-  foreignBankName: z.string().optional(),
-  foreignBankBranch: z.string().optional(),
-  foreignAccountOpeningDate: z.coerce.date().optional(),
+  localAccountNumber: yup.string().required("Account number is required"),
+  localBankName: yup.string().required("Bank name is required"),
+  localBankBranch: yup.string().required("Bank branch is required"),
+  localAccountOpeningDate: yup.date().required("Account opening date is required"),
+  foreignAccountNumber: yup.string(),
+  foreignBankName: yup.string(),
+  foreignBankBranch: yup.string(),
+  foreignAccountOpeningDate: yup.date(),
   
   // Declaration
-  agreeToDataPrivacy: z.boolean().refine(val => val === true, "You must agree to data privacy"),
-  signature: z.string().min(1, "Signature is required")
+  agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
+  signature: yup.string().required("Signature is required")
 });
 
 const defaultValues: Partial<NaicomPartnersCDDData> = {
@@ -141,7 +143,7 @@ const NaicomPartnersCDD: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formMethods = useForm<any>({
-    resolver: zodResolver(naicomPartnersCDDSchema),
+    resolver: yupResolver(naicomPartnersCDDSchema),
     defaultValues,
     mode: 'onChange'
   });
