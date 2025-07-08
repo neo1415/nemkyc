@@ -158,34 +158,37 @@ const AllRiskClaim: React.FC = () => {
     }
   };
 
-  const DatePickerField = ({ field, label }: { field: any; label: string }) => (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              "w-full justify-start text-left font-normal",
-              !field.value && "text-muted-foreground"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0">
-          <ReactCalendar
-            mode="single"
-            selected={field.value}
-            onSelect={field.onChange}
-            initialFocus
-            className="pointer-events-auto"
-          />
-        </PopoverContent>
-      </Popover>
-    </div>
-  );
+  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
+    const value = formMethods.watch(name);
+    return (
+      <div className="space-y-2">
+        <Label>{label}</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !value && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <ReactCalendar
+              mode="single"
+              selected={value ? new Date(value) : undefined}
+              onSelect={(date) => formMethods.setValue(name, date)}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
+  };
 
   const steps = [
     {
@@ -208,11 +211,11 @@ const AllRiskClaim: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <DatePickerField
-              field={formMethods.control._formValues.periodOfCoverFrom}
+              name="periodOfCoverFrom"
               label="Period of Cover From *"
             />
             <DatePickerField
-              field={formMethods.control._formValues.periodOfCoverTo}
+              name="periodOfCoverTo"
               label="Period of Cover To *"
             />
           </div>
@@ -284,7 +287,7 @@ const AllRiskClaim: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <DatePickerField
-              field={formMethods.control._formValues.dateOfOccurrence}
+              name="dateOfOccurrence"
               label="Date of Occurrence *"
             />
             <div>
