@@ -91,30 +91,30 @@ function App() {
           
           {/* Protected Routes */}
           <Route path="dashboard" element={
-            <ProtectedRoute>
+       
               <UserDashboard />
-            </ProtectedRoute>
+       
           } />
           
           <Route path="admin" element={
-            <ProtectedRoute>
+      
               <AdminDashboard />
-            </ProtectedRoute>
+      
           } />
           
           {/* Admin Routes - Role-based access */}
           
           {/* Individual Claims Admin Tables */}
           <Route path="admin/claims/motor" element={
-            <ProtectedRoute>
+          
               <AdminClaimsTable formType="motor" />
-            </ProtectedRoute>
+    
           } />
           
           <Route path="admin/claims/professional-indemnity" element={
-            <ProtectedRoute>
+      
               <AdminClaimsTable formType="professional-indemnity" />
-            </ProtectedRoute>
+         
           } />
           
           <Route path="admin/claims/public-liability" element={
