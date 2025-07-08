@@ -29,6 +29,8 @@ import CombinedGPAEmployersLiabilityClaim from './pages/claims/CombinedGPAEmploy
 import BurglaryClaimForm from './pages/claims/BurglaryClaimForm';
 import GroupPersonalAccidentClaim from './pages/claims/GroupPersonalAccidentClaim';
 import FireSpecialPerilsClaim from './pages/claims/FireSpecialPerilsClaim';
+import GoodsInTransitClaim from './pages/claims/GoodsInTransitClaim';
+import ContractorsPlantMachineryClaim from './pages/claims/ContractorsPlantMachineryClaim';
 
 function App() {
   return (
@@ -56,6 +58,8 @@ function App() {
           <Route path="/claims/fire-special-perils" element={<FireSpecialPerilsClaim />} />
           <Route path="/claims/rent-assurance" element={<RentAssuranceClaim />} />
           <Route path="/claims/money-insurance" element={<MoneyInsuranceClaim />} />
+          <Route path="/claims/goods-in-transit" element={<GoodsInTransitClaim />} />
+          <Route path="/claims/contractors-plant-machinery" element={<ContractorsPlantMachineryClaim />} />
           
           {/* KYC Routes - accessible without authentication */}
           <Route path="kyc" element={<KYCForms />} />
