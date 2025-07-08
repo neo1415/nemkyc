@@ -58,50 +58,38 @@ const FireSpecialPerilsClaim = () => {
     }
   });
 
-  const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
-    control: form.control,
-    name: 'itemsLost'
-  });
+  const { control, setValue, watch, handleSubmit, formState } = methods;
+  const { fields, append } = useFieldArray({ control, name: 'itemsLost' });
 
   const { saveDraft, loadDraft, clearDraft } = useFormDraft('fire-special-perils-claim', {
-  setValue: form.setValue,
-  watch: form.watch
-});
+    setValue,
+    watch,
+  });
 
 
-useEffect(() => {
-  const frame = requestAnimationFrame(() => {
+  useEffect(() => {
     const draft = loadDraft();
     if (draft) {
+      if (Array.isArray(draft.itemsLost)) {
+        draft.itemsLost.forEach((item, index) => {
+          if (index > 0) append(item);
+        });
+      }
       Object.entries(draft).forEach(([key, value]) => {
-        try {
-          if (Array.isArray(value) && key === 'itemsLost') {
-            value.forEach((item, index) => {
-              if (index > 0) appendItem(item); // already has one by default
-              Object.entries(item).forEach(([k, v]) => {
-                form.setValue(`itemsLost.${index}.${k}` as any, v);
-              });
-            });
-          } else {
-            form.setValue(key as keyof FireSpecialPerilsClaimData, value);
-          }
-        } catch (err) {
-          console.warn(`Failed to set ${key}`, err);
+        if (key !== 'itemsLost') {
+          setValue(key as keyof FireSpecialPerilsClaimData, value);
         }
       });
     }
-  });
-
-  return () => cancelAnimationFrame(frame);
-}, []);
+  }, [append, loadDraft, setValue]);
 
   useEffect(() => {
-  const subscription = form.watch((data) => {
-    const timeout = setTimeout(() => saveDraft(data), 300);
-    return () => clearTimeout(timeout);
-  });
-  return () => subscription.unsubscribe();
-}, [form.watch, saveDraft]);
+    const subscription = watch((data) => {
+      const timeout = setTimeout(() => saveDraft(data), 300);
+      return () => clearTimeout(timeout);
+    });
+    return () => subscription.unsubscribe();
+  }, [saveDraft, watch]);
 
 
   const addItem = () => {
@@ -122,36 +110,32 @@ useEffect(() => {
     form.setValue(`itemsLost.${index}.netAmountClaimed`, Math.max(0, netAmount));
   };
 
-  const handleSubmit = async (data: FireSpecialPerilsClaimData) => {
+  const submit = async (data: FireSpecialPerilsClaimData) => {
     setIsSubmitting(true);
     try {
-      // Save to Firestore
-      const docRef = await addDoc(collection(db, 'fireSpecialPerilsClaims'), {
+      await addDoc(collection(db, 'fireSpecialPerilsClaims'), {
         ...data,
         submittedAt: new Date(),
-        status: 'submitted'
+        status: 'submitted',
       });
 
-      // Send confirmation email
-      await emailService.sendSubmissionConfirmation(
-        data.email,
-        'Fire and Special Perils Claim'
-      );
+      await emailService.sendSubmissionConfirmation(data.email, 'Fire and Special Perils Claim');
 
       clearDraft();
       setShowSummary(false);
       setShowSuccess(true);
-      
+
       toast({
-        title: "Claim Submitted Successfully",
-        description: "Your fire and special perils claim has been submitted and you'll receive a confirmation email shortly.",
+        title: 'Claim Submitted Successfully',
+        description:
+          "Your fire and special perils claim has been submitted and you'll receive a confirmation email shortly.",
       });
     } catch (error) {
       console.error('Error submitting claim:', error);
       toast({
-        title: "Submission Error",
-        description: "There was an error submitting your claim. Please try again.",
-        variant: "destructive",
+        title: 'Submission Error',
+        description: 'There was an error submitting your claim. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
