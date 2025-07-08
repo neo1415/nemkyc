@@ -50,9 +50,9 @@ interface MotorClaimData {
   driverLicense: string;
   witnessName?: string;
   witnessPhone?: string;
-  vehiclePhotos?: FileList;
-  policeReport?: FileList;
-  vehicleRegistrationDoc?: FileList;
+  vehiclePhotos?: File;
+  policeReport?: File;
+  vehicleRegistrationDoc?: File;
   signature: string;
   agreeToTerms: boolean;
 }
@@ -274,7 +274,7 @@ const MotorClaim: React.FC = () => {
       <div className="space-y-6">
         <FileUpload
           label="Vehicle Photos (Damage)"
-          onFileSelect={(file) => setValue('vehiclePhotos', file)}
+          onFileSelect={(file) => setValue('vehiclePhotos' as any, file)}
           currentFile={watchedValues.vehiclePhotos}
           error={errors.vehiclePhotos?.message}
           accept=".jpg,.jpeg,.png"
@@ -282,14 +282,14 @@ const MotorClaim: React.FC = () => {
         
         <FileUpload
           label="Driver's License"
-          onFileSelect={(file) => setValue('driverLicense', file)}
+          onFileSelect={(file) => setValue('driverLicense' as any, file)}
           currentFile={watchedValues.driverLicense}
           error={errors.driverLicense?.message}
         />
         
         <FileUpload
           label="Vehicle Registration Document"
-          onFileSelect={(file) => setValue('vehicleRegistrationDoc', file)}
+          onFileSelect={(file) => setValue('vehicleRegistrationDoc' as any, file)}
           currentFile={watchedValues.vehicleRegistrationDoc}
           error={errors.vehicleRegistrationDoc?.message}
         />
@@ -297,7 +297,7 @@ const MotorClaim: React.FC = () => {
         {watchedValues.policeReportFiled === 'yes' && (
           <FileUpload
             label="Police Report"
-            onFileSelect={(file) => setValue('policeReport', file)}
+            onFileSelect={(file) => setValue('policeReport' as any, file)}
             currentFile={watchedValues.policeReport}
             error={errors.policeReport?.message}
           />
@@ -362,7 +362,7 @@ const MotorClaim: React.FC = () => {
       id: 'terms',
       title: 'Terms and Conditions',
       component: <TermsAndConditionsStep />,
-      isValid: watchedValues.agreeToTerms && watchedValues.signature
+      isValid: !!watchedValues.agreeToTerms && !!watchedValues.signature
     }
   ];
 
