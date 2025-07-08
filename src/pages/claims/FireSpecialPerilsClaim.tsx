@@ -66,29 +66,29 @@ const FireSpecialPerilsClaim = () => {
   const { saveDraft, loadDraft, clearDraft } = useFormDraft('fire-special-perils-claim', 7);
 
 useEffect(() => {
-  const draft = loadDraft();
-  if (draft) {
-    Object.entries(draft).forEach(([key, value]) => {
-      try {
-        // Skip nested or dynamic fields like itemsLost.0.netAmountClaimed
-        if (typeof value === 'object' && Array.isArray(value)) {
-          // Manually append arrays like itemsLost
-          if (key === 'itemsLost') {
+  const frame = requestAnimationFrame(() => {
+    const draft = loadDraft();
+    if (draft) {
+      Object.entries(draft).forEach(([key, value]) => {
+        try {
+          if (Array.isArray(value) && key === 'itemsLost') {
             value.forEach((item, index) => {
-              if (index > 0) appendItem(item); // 0 is already in default
+              if (index > 0) appendItem(item); // already has one by default
               Object.entries(item).forEach(([k, v]) => {
                 form.setValue(`itemsLost.${index}.${k}` as any, v);
               });
             });
+          } else {
+            form.setValue(key as keyof FireSpecialPerilsClaimData, value);
           }
-        } else {
-          form.setValue(key as keyof FireSpecialPerilsClaimData, value);
+        } catch (err) {
+          console.warn(`Failed to set ${key}`, err);
         }
-      } catch (err) {
-        console.warn(`Failed to set ${key}`, err);
-      }
-    });
-  }
+      });
+    }
+  });
+
+  return () => cancelAnimationFrame(frame);
 }, []);
 
   useEffect(() => {
@@ -99,13 +99,6 @@ useEffect(() => {
   return () => subscription.unsubscribe();
 }, [form.watch, saveDraft]);
 
-
-  useEffect(() => {
-    const subscription = form.watch((data) => {
-      saveDraft(data);
-    });
-    return () => subscription.unsubscribe();
-  }, [form, saveDraft]);
 
   const addItem = () => {
     appendItem({ 
