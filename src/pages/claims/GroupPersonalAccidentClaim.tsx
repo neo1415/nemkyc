@@ -670,6 +670,7 @@ const GroupPersonalAccidentClaim = () => {
             onSubmit={onFinalSubmit}
             isSubmitting={isSubmitting}
             submitButtonText="Submit Claim"
+            formMethods={form}
           />
         </Form>
 

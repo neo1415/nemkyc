@@ -1019,6 +1019,7 @@ const BurglaryClaimForm: React.FC = () => {
             onSubmit={form.handleSubmit(onSubmit)}
             isSubmitting={isSubmitting}
             submitButtonText="Submit Burglary Claim"
+            formMethods={form}
           />
 
           {/* Summary Modal */}
