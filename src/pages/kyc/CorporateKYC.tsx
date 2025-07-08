@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useAuth } from '../../contexts/AuthContext';
@@ -50,6 +50,11 @@ const CorporateKYC: React.FC = () => {
   });
 
   const watchedValues = watch();
+  
+  // Use useCallback to prevent re-renders
+  const handleFileSelect = useCallback((field: string, file: File) => {
+    setValue(field as any, file);
+  }, [setValue]);
 
   const onSubmit = async (data: CorporateKYCData) => {
     if (!user) {
@@ -255,28 +260,28 @@ const CorporateKYC: React.FC = () => {
       <div className="space-y-6">
         <FileUpload
           label="Certificate of Incorporation"
-          onFileSelect={(file) => setValue('certificateOfIncorporation', file)}
+          onFileSelect={(file) => handleFileSelect('certificateOfIncorporation', file)}
           currentFile={watchedValues.certificateOfIncorporation}
           error={errors.certificateOfIncorporation?.message}
         />
         
         <FileUpload
           label="Memorandum of Association"
-          onFileSelect={(file) => setValue('memorandumOfAssociation', file)}
+          onFileSelect={(file) => handleFileSelect('memorandumOfAssociation', file)}
           currentFile={watchedValues.memorandumOfAssociation}
           error={errors.memorandumOfAssociation?.message}
         />
         
         <FileUpload
           label="Audited Financial Statements"
-          onFileSelect={(file) => setValue('auditedFinancialStatements', file)}
+          onFileSelect={(file) => handleFileSelect('auditedFinancialStatements', file)}
           currentFile={watchedValues.auditedFinancialStatements}
           error={errors.auditedFinancialStatements?.message}
         />
         
         <FileUpload
           label="Board Resolution"
-          onFileSelect={(file) => setValue('boardResolution', file)}
+          onFileSelect={(file) => handleFileSelect('boardResolution', file)}
           currentFile={watchedValues.boardResolution}
           error={errors.boardResolution?.message}
         />

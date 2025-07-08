@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useAuth } from '../../contexts/AuthContext';
@@ -73,6 +73,11 @@ const MotorClaim: React.FC = () => {
   });
 
   const watchedValues = watch();
+  
+  // Use useCallback to prevent re-renders on setValue calls
+  const handleFileSelect = React.useCallback((field: string, file: File) => {
+    setValue(field as any, file);
+  }, [setValue]);
 
   const onSubmit = async (data: MotorClaimData) => {
     if (!user) {
@@ -274,7 +279,7 @@ const MotorClaim: React.FC = () => {
       <div className="space-y-6">
         <FileUpload
           label="Vehicle Photos (Damage)"
-          onFileSelect={(file) => setValue('vehiclePhotos' as any, file)}
+          onFileSelect={(file) => handleFileSelect('vehiclePhotos', file)}
           currentFile={watchedValues.vehiclePhotos}
           error={errors.vehiclePhotos?.message}
           accept=".jpg,.jpeg,.png"
@@ -282,14 +287,14 @@ const MotorClaim: React.FC = () => {
         
         <FileUpload
           label="Driver's License"
-          onFileSelect={(file) => setValue('driverLicense' as any, file)}
+          onFileSelect={(file) => handleFileSelect('driverLicense', file)}
           currentFile={watchedValues.driverLicense}
           error={errors.driverLicense?.message}
         />
         
         <FileUpload
           label="Vehicle Registration Document"
-          onFileSelect={(file) => setValue('vehicleRegistrationDoc' as any, file)}
+          onFileSelect={(file) => handleFileSelect('vehicleRegistrationDoc', file)}
           currentFile={watchedValues.vehicleRegistrationDoc}
           error={errors.vehicleRegistrationDoc?.message}
         />
@@ -297,7 +302,7 @@ const MotorClaim: React.FC = () => {
         {watchedValues.policeReportFiled === 'yes' && (
           <FileUpload
             label="Police Report"
-            onFileSelect={(file) => setValue('policeReport' as any, file)}
+            onFileSelect={(file) => handleFileSelect('policeReport', file)}
             currentFile={watchedValues.policeReport}
             error={errors.policeReport?.message}
           />
