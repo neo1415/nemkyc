@@ -48,7 +48,7 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
 
   return (
     <FormProvider {...formMethods}>
-      <form onSubmit={onSubmit}>
+      <form onSubmit={formMethods.handleSubmit(onSubmit)}>
         <div className="space-y-6">
           {/* Progress indicator */}
           <div className="space-y-2">
