@@ -180,34 +180,37 @@ const NaicomPartnersCDD: React.FC = () => {
     }
   };
 
-  const DatePickerField = ({ field, label }: { field: any; label: string }) => (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              "w-full justify-start text-left font-normal",
-              !field.value && "text-muted-foreground"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0">
-          <ReactCalendar
-            mode="single"
-            selected={field.value}
-            onSelect={field.onChange}
-            initialFocus
-            className="pointer-events-auto"
-          />
-        </PopoverContent>
-      </Popover>
-    </div>
-  );
+  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
+    const value = formMethods.watch(name);
+    return (
+      <div className="space-y-2">
+        <Label>{label}</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !value && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <ReactCalendar
+              mode="single"
+              selected={value ? new Date(value) : undefined}
+              onSelect={(date) => formMethods.setValue(name, date)}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
+  };
 
   const steps = [
     {
@@ -317,7 +320,7 @@ const NaicomPartnersCDD: React.FC = () => {
             </div>
             <div>
               <DatePickerField
-                field={formMethods.control._formValues.incorporationDate}
+                name="incorporationDate"
                 label="Date of Incorporation *"
               />
             </div>
@@ -350,13 +353,13 @@ const NaicomPartnersCDD: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <DatePickerField
-                field={formMethods.control._formValues.naicomLicenseIssuingDate}
+                name="naicomLicenseIssuingDate"
                 label="NAICOM License Issuing Date *"
               />
             </div>
             <div>
               <DatePickerField
-                field={formMethods.control._formValues.naicomLicenseExpiryDate}
+                name="naicomLicenseExpiryDate"
                 label="NAICOM License Expiry Date *"
               />
             </div>
@@ -426,7 +429,7 @@ const NaicomPartnersCDD: React.FC = () => {
                   <div>
                     <Label>Title *</Label>
                     <Select
-                      value={(formMethods.watch('directors') as any[])?.[index]?.title || ''}
+                      value={((formMethods.watch('directors') as any[]) || [])[index]?.title || ''}
                       onValueChange={(value) => formMethods.setValue(`directors.${index}.title`, value)}
                     >
                       <SelectTrigger>
@@ -445,7 +448,7 @@ const NaicomPartnersCDD: React.FC = () => {
                   <div>
                     <Label>Gender *</Label>
                     <Select
-                      value={(formMethods.watch('directors') as any[])?.[index]?.gender || ''}
+                      value={((formMethods.watch('directors') as any[]) || [])[index]?.gender || ''}
                       onValueChange={(value) => formMethods.setValue(`directors.${index}.gender`, value)}
                     >
                       <SelectTrigger>
@@ -662,7 +665,7 @@ const NaicomPartnersCDD: React.FC = () => {
               </div>
               <div>
                 <DatePickerField
-                  field={formMethods.control._formValues.localAccountOpeningDate}
+                  name="localAccountOpeningDate"
                   label="Account Opening Date *"
                 />
               </div>
