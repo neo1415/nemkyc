@@ -1,7 +1,5 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
 import { toast } from '../../hooks/use-toast';
 import MultiStepForm from '../../components/common/MultiStepForm';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '../../components/ui/form';
@@ -19,61 +17,6 @@ import { cn } from '../../lib/utils';
 import { Checkbox } from '../../components/ui/checkbox';
 import { FidelityGuaranteeClaimData } from '../../types';
 
-const fidelityGuaranteeClaimValidationSchema = yup.object({
-  policyNumber: yup.string().required('Policy number is required'),
-  periodOfCoverFrom: yup.string().required('Period of cover from is required'),
-  periodOfCoverTo: yup.string().required('Period of cover to is required'),
-  companyName: yup.string().required('Company name is required'),
-  address: yup.string().required('Address is required'),
-  phone: yup.string().required('Phone number is required'),
-  email: yup.string().email('Invalid email').required('Email is required'),
-  defaulterName: yup.string().required('Defaulter name is required'),
-  defaulterAge: yup.number().positive('Age must be positive').required('Defaulter age is required'),
-  defaulterAddress: yup.string().required('Defaulter address is required'),
-  defaulterOccupation: yup.string().required('Defaulter occupation is required'),
-  discoveryDate: yup.string().required('Discovery date is required'),
-  defaultCarriedOut: yup.string().required('This field is required'),
-  defaultAmount: yup.number().positive('Amount must be positive').required('Default amount is required'),
-  previousIrregularity: yup.boolean().required(),
-  previousIrregularityDetails: yup.string().when('previousIrregularity', {
-    is: true,
-    then: (schema) => schema.required('Please provide details'),
-    otherwise: (schema) => schema.notRequired(),
-  }),
-  lastCheckedDate: yup.string().required('Last checked date is required'),
-  defaulterProperty: yup.boolean().required(),
-  defaulterPropertyDetails: yup.string().when('defaulterProperty', {
-    is: true,
-    then: (schema) => schema.required('Please provide details'),
-    otherwise: (schema) => schema.notRequired(),
-  }),
-  remunerationDue: yup.boolean().required(),
-  remunerationDetails: yup.string().when('remunerationDue', {
-    is: true,
-    then: (schema) => schema.required('Please provide details'),
-    otherwise: (schema) => schema.notRequired(),
-  }),
-  otherSecurity: yup.boolean().required(),
-  otherSecurityDetails: yup.string().when('otherSecurity', {
-    is: true,
-    then: (schema) => schema.required('Please provide details'),
-    otherwise: (schema) => schema.notRequired(),
-  }),
-  defaulterDischarged: yup.boolean().required(),
-  dischargeDate: yup.string().when('defaulterDischarged', {
-    is: true,
-    then: (schema) => schema.required('Discharge date is required'),
-    otherwise: (schema) => schema.notRequired(),
-  }),
-  settlementProposal: yup.boolean().required(),
-  settlementDetails: yup.string().when('settlementProposal', {
-    is: true,
-    then: (schema) => schema.required('Please provide settlement details'),
-    otherwise: (schema) => schema.notRequired(),
-  }),
-  agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to data privacy policy'),
-  signature: yup.string().required('Signature is required'),
-});
 
 const DatePickerField: React.FC<{
   name: string;
@@ -130,15 +73,35 @@ const DatePickerField: React.FC<{
 };
 
 const FidelityGuaranteeClaim: React.FC = () => {
-  const formMethods = useForm<FidelityGuaranteeClaimData>({
-    resolver: yupResolver(fidelityGuaranteeClaimValidationSchema),
+  const formMethods = useForm({
     defaultValues: {
+      policyNumber: '',
+      periodOfCoverFrom: '',
+      periodOfCoverTo: '',
+      companyName: '',
+      address: '',
+      phone: '',
+      email: '',
+      defaulterName: '',
+      defaulterAge: '',
+      defaulterAddress: '',
+      defaulterOccupation: '',
+      discoveryDate: '',
+      defaultCarriedOut: '',
+      defaultAmount: '',
       previousIrregularity: false,
+      previousIrregularityDetails: '',
+      lastCheckedDate: '',
       defaulterProperty: false,
+      defaulterPropertyDetails: '',
       remunerationDue: false,
+      remunerationDetails: '',
       otherSecurity: false,
+      otherSecurityDetails: '',
       defaulterDischarged: false,
+      dischargeDate: '',
       settlementProposal: false,
+      settlementDetails: '',
       agreeToDataPrivacy: false,
       signature: '',
     },
@@ -147,7 +110,7 @@ const FidelityGuaranteeClaim: React.FC = () => {
 
   const { watch } = formMethods;
 
-  const onSubmit = async (data: FidelityGuaranteeClaimData) => {
+  const onSubmit = async (data: any) => {
     try {
       console.log('Fidelity Guarantee Claim Data:', data);
       localStorage.setItem('fidelityGuaranteeClaimData', JSON.stringify({ ...data, submittedAt: new Date().toISOString() }));
