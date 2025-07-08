@@ -58,7 +58,8 @@ const FireSpecialPerilsClaim = () => {
     }
   });
 
-  const { control, setValue, watch, handleSubmit, formState } = methods;
+const { control, setValue, watch, handleSubmit, formState, getValues } = form;
+
   const { fields, append } = useFieldArray({ control, name: 'itemsLost' });
 
   const { saveDraft, loadDraft, clearDraft } = useFormDraft('fire-special-perils-claim', {
@@ -93,7 +94,7 @@ const FireSpecialPerilsClaim = () => {
 
 
   const addItem = () => {
-    appendItem({ 
+    append({ 
       description: '', 
       costPrice: 0, 
       purchaseDate: '', 
