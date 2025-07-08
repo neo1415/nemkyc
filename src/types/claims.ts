@@ -362,3 +362,61 @@ export interface ContractorsPlantMachineryClaimData {
   agreeToDataPrivacy: boolean;
   signature: string;
 }
+
+// All Risk Claim Types
+export interface AllRiskPropertyItem {
+  description: string;
+  dateOfPurchase: string;
+  costPrice: number;
+  deductionForAge: number;
+  amountClaimed: number;
+  remarks: string;
+}
+
+export interface AllRiskClaimData {
+  // Policy Details
+  policyNumber: string;
+  periodOfCoverFrom: string;
+  periodOfCoverTo: string;
+  
+  // Insured Details
+  nameOfInsured: string;
+  address: string;
+  phone: string;
+  email: string;
+  
+  // Details of Loss
+  typeOfClaim: string;
+  locationOfClaim: string;
+  dateOfOccurrence: string;
+  timeOfOccurrence: string;
+  propertyDescription: string;
+  circumstancesOfLoss: string;
+  estimateOfLoss: number;
+  
+  // Property Details
+  propertyItems: AllRiskPropertyItem[];
+  
+  // Ownership & Recovery
+  isSoleOwner: boolean;
+  ownershipExplanation?: string;
+  hasHirePurchase: boolean;
+  hirePurchaseCompany?: string;
+  hirePurchaseAddress?: string;
+  recoveryStepsTaken: string;
+  hasOtherInsurance: boolean;
+  otherInsuranceDetails?: string;
+  hasPreviousLoss: boolean;
+  previousLossDetails?: string;
+  totalPropertyValue: number;
+  hasOtherInsuranceAtTime: boolean;
+  otherInsuranceAtTimeDetails?: string;
+  hasPriorClaims: boolean;
+  priorClaimsDetails?: string;
+  policeInformed: boolean;
+  policeStationDetails?: string;
+  
+  // Declaration
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}
