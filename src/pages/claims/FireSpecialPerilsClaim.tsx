@@ -63,7 +63,11 @@ const FireSpecialPerilsClaim = () => {
     name: 'itemsLost'
   });
 
-  const { saveDraft, loadDraft, clearDraft } = useFormDraft('fire-special-perils-claim', 7);
+  const { saveDraft, loadDraft, clearDraft } = useFormDraft('fire-special-perils-claim', {
+  setValue: form.setValue,
+  watch: form.watch
+});
+
 
 useEffect(() => {
   const frame = requestAnimationFrame(() => {
