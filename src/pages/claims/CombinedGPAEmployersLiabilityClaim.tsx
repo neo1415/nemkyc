@@ -654,6 +654,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
           onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Combined Claim"
+          formMethods={{ register, handleSubmit, formState: { errors }, setValue, watch, control }}
         />
 
         <AuthRequiredSubmit

@@ -62,7 +62,7 @@ const MotorClaim: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<MotorClaimData>({
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<MotorClaimData>({
     resolver: yupResolver(motorClaimSchema) as any,
     defaultValues: {
       claimantEmail: user?.email || '',
@@ -384,6 +384,7 @@ const MotorClaim: React.FC = () => {
           onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Motor Claim"
+          formMethods={{ register, handleSubmit, formState: { errors }, setValue, watch, control }}
         />
 
         <AuthRequiredSubmit

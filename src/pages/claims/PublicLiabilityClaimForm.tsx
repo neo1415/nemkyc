@@ -537,6 +537,7 @@ const PublicLiabilityClaimForm: React.FC = () => {
           onSubmit={handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Review & Submit Claim"
+          formMethods={{ register, handleSubmit, formState: { errors }, setValue, watch, control }}
         />
 
         {/* Summary Dialog */}
