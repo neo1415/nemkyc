@@ -11,6 +11,8 @@ export interface User {
 
 // CDD Form Types
 export interface Director {
+  title?: string;
+  gender?: string;
   firstName: string;
   middleName?: string;
   lastName: string;

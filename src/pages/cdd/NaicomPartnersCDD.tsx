@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Calendar as ReactCalendar } from '@/components/ui/calendar';
 import { Calendar, CalendarIcon, Plus, Trash2, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -99,9 +100,12 @@ const defaultValues: Partial<NaicomPartnersCDDData> = {
   businessNature: '',
   bvn: '',
   directors: [{
+    title: '',
+    gender: '',
     firstName: '',
     middleName: '',
     lastName: '',
+    dateOfBirth: '',
     placeOfBirth: '',
     nationality: '',
     country: '',
@@ -116,6 +120,8 @@ const defaultValues: Partial<NaicomPartnersCDDData> = {
     idType: '',
     identificationNumber: '',
     issuingBody: '',
+    issuedDate: '',
+    expiryDate: '',
     incomeSource: '',
     incomeSourceOther: ''
   }],
@@ -134,7 +140,7 @@ const NaicomPartnersCDD: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const formMethods = useForm({
+  const formMethods = useForm<any>({
     resolver: zodResolver(naicomPartnersCDDSchema),
     defaultValues,
     mode: 'onChange'
@@ -189,7 +195,7 @@ const NaicomPartnersCDD: React.FC = () => {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0">
-          <Calendar
+          <ReactCalendar
             mode="single"
             selected={field.value}
             onSelect={field.onChange}
@@ -366,9 +372,12 @@ const NaicomPartnersCDD: React.FC = () => {
             <Button
               type="button"
               onClick={() => append({
+                title: '',
+                gender: '',
                 firstName: '',
                 middleName: '',
                 lastName: '',
+                dateOfBirth: '',
                 placeOfBirth: '',
                 nationality: '',
                 country: '',
@@ -383,6 +392,8 @@ const NaicomPartnersCDD: React.FC = () => {
                 idType: '',
                 identificationNumber: '',
                 issuingBody: '',
+                issuedDate: '',
+                expiryDate: '',
                 incomeSource: '',
                 incomeSourceOther: ''
               })}
@@ -413,7 +424,7 @@ const NaicomPartnersCDD: React.FC = () => {
                   <div>
                     <Label>Title *</Label>
                     <Select
-                      value={formMethods.watch(`directors.${index}.title`)}
+                      value={(formMethods.watch('directors') as any[])?.[index]?.title || ''}
                       onValueChange={(value) => formMethods.setValue(`directors.${index}.title`, value)}
                     >
                       <SelectTrigger>
@@ -432,7 +443,7 @@ const NaicomPartnersCDD: React.FC = () => {
                   <div>
                     <Label>Gender *</Label>
                     <Select
-                      value={formMethods.watch(`directors.${index}.gender`)}
+                      value={(formMethods.watch('directors') as any[])?.[index]?.gender || ''}
                       onValueChange={(value) => formMethods.setValue(`directors.${index}.gender`, value)}
                     >
                       <SelectTrigger>

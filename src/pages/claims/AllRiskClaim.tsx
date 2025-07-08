@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Calendar as ReactCalendar } from '@/components/ui/calendar';
 import { Calendar, CalendarIcon, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -87,6 +88,7 @@ const defaultValues: Partial<AllRiskClaimData> = {
   estimateOfLoss: 0,
   propertyItems: [{
     description: '',
+    dateOfPurchase: '',
     costPrice: 0,
     deductionForAge: 0,
     amountClaimed: 0,
@@ -118,7 +120,7 @@ const AllRiskClaim: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const formMethods = useForm({
+  const formMethods = useForm<any>({
     resolver: zodResolver(allRiskClaimSchema),
     defaultValues,
     mode: 'onChange'
@@ -173,7 +175,7 @@ const AllRiskClaim: React.FC = () => {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0">
-          <Calendar
+          <ReactCalendar
             mode="single"
             selected={field.value}
             onSelect={field.onChange}
@@ -199,7 +201,7 @@ const AllRiskClaim: React.FC = () => {
             />
             {formMethods.formState.errors.policyNumber && (
               <p className="text-sm text-red-600 mt-1">
-                {formMethods.formState.errors.policyNumber.message}
+                {formMethods.formState.errors.policyNumber.message as string}
               </p>
             )}
           </div>
@@ -335,6 +337,7 @@ const AllRiskClaim: React.FC = () => {
               type="button"
               onClick={() => append({
                 description: '',
+                dateOfPurchase: '',
                 costPrice: 0,
                 deductionForAge: 0,
                 amountClaimed: 0,
