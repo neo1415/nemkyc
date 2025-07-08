@@ -17,7 +17,11 @@ const theme = createTheme({
   },
 });
 
-const AdminKYCTable: React.FC = () => {
+interface AdminKYCTableProps {
+  formType?: string;
+}
+
+const AdminKYCTable: React.FC<AdminKYCTableProps> = ({ formType }) => {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -34,10 +38,12 @@ const AdminKYCTable: React.FC = () => {
 
   const fetchKYCForms = async () => {
     try {
-      const kycCollections = [
-        'individual-kyc',
-        'corporate-kyc'
-      ];
+      const kycCollections = formType ? 
+        [`${formType}-kyc`] : 
+        [
+          'individual-kyc',
+          'corporate-kyc'
+        ];
 
       const allForms: any[] = [];
       
@@ -122,7 +128,7 @@ const AdminKYCTable: React.FC = () => {
     <ThemeProvider theme={theme}>
       <Box sx={{ height: '100vh', width: '100%', p: 3 }}>
         <Typography variant="h4" gutterBottom>
-          KYC Forms Management
+          {formType ? `${formType} KYC Management` : 'KYC Forms Management'}
         </Typography>
         
         <Box sx={{ height: 600, width: '100%' }}>
