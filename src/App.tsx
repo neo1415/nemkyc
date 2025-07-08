@@ -11,6 +11,8 @@ import AdminDashboard from './pages/dashboard/AdminDashboard';
 import ClaimsForms from './pages/claims/ClaimsForms';
 import MotorClaim from './pages/claims/MotorClaim';
 import ProfessionalIndemnityClaimForm from './pages/claims/ProfessionalIndemnityClaimForm';
+import RentAssuranceClaim from './pages/claims/RentAssuranceClaim';
+import MoneyInsuranceClaim from './pages/claims/MoneyInsuranceClaim';
 import PublicLiabilityClaimForm from './pages/claims/PublicLiabilityClaimForm';
 import EmployersLiabilityClaim from './pages/claims/EmployersLiabilityClaim';
 import KYCForms from './pages/kyc/KYCForms';
@@ -52,6 +54,8 @@ function App() {
           <Route path="/claims/burglary" element={<BurglaryClaimForm />} />
           <Route path="/claims/group-personal-accident" element={<GroupPersonalAccidentClaim />} />
           <Route path="/claims/fire-special-perils" element={<FireSpecialPerilsClaim />} />
+          <Route path="/claims/rent-assurance" element={<RentAssuranceClaim />} />
+          <Route path="/claims/money-insurance" element={<MoneyInsuranceClaim />} />
           
           {/* KYC Routes - accessible without authentication */}
           <Route path="kyc" element={<KYCForms />} />
