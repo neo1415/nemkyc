@@ -60,7 +60,7 @@ const FireSpecialPerilsClaim = () => {
 
 const { control, setValue, watch, handleSubmit, formState, getValues } = form;
 
-  const { fields, append } = useFieldArray({ control, name: 'itemsLost' });
+  const { fields: itemFields, append, remove: removeItem } = useFieldArray({ control, name: 'itemsLost' });
 
   const { saveDraft, loadDraft, clearDraft } = useFormDraft('fire-special-perils-claim', {
     setValue,
@@ -78,7 +78,7 @@ const { control, setValue, watch, handleSubmit, formState, getValues } = form;
       }
       Object.entries(draft).forEach(([key, value]) => {
         if (key !== 'itemsLost') {
-          setValue(key as keyof FireSpecialPerilsClaimData, value);
+          setValue(key as any, value);
         }
       });
     }
@@ -1081,7 +1081,7 @@ const { control, setValue, watch, handleSubmit, formState, getValues } = form;
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Edit Information
               </Button>
-              <Button onClick={form.handleSubmit(handleSubmit)} disabled={isSubmitting}>
+              <Button onClick={() => submit(form.getValues())} disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

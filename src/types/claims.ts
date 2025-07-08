@@ -107,3 +107,107 @@ export interface FireSpecialPerilsClaimData {
   agreeToDataPrivacy: boolean;
   signature: string;
 }
+
+// Rent Assurance Policy Claim Types
+export interface RentAssuranceClaimData {
+  // Policy Details
+  policyNumber: string;
+  periodOfCoverFrom: string;
+  periodOfCoverTo: string;
+  
+  // Insured Details
+  nameOfInsured: string;
+  address: string;
+  age: number;
+  email: string;
+  phone: string;
+  nameOfLandlord: string;
+  addressOfLandlord: string;
+  livingAtPremisesFrom: string;
+  livingAtPremisesTo: string;
+  
+  // Claim Information
+  periodOfDefaultFrom: string;
+  periodOfDefaultTo: string;
+  amountDefaulted: number;
+  rentDueDate: string;
+  rentPaymentFrequency: string;
+  rentPaymentFrequencyOther?: string;
+  causeOfInabilityToPay: string;
+  
+  // Beneficiary Details
+  nameOfBeneficiary: string;
+  beneficiaryAge: number;
+  beneficiaryAddress: string;
+  beneficiaryEmail: string;
+  beneficiaryPhone: string;
+  beneficiaryOccupation: string;
+  
+  // Declaration
+  writtenDeclaration: string;
+  agreeToDataPrivacy: boolean;
+  signature: string;
+  
+  // Documents
+  rentAgreement?: File;
+  demandNote?: File;
+  quitNotice?: File;
+}
+
+// Money Insurance Claim Types
+export interface PersonDiscoveringLoss {
+  name: string;
+  position: string;
+  salary: number;
+}
+
+export interface KeyHolder {
+  name: string;
+  position: string;
+  salary: number;
+}
+
+export interface MoneyInsuranceClaimData {
+  // Policy Details
+  policyNumber: string;
+  periodOfCoverFrom: string;
+  periodOfCoverTo: string;
+  
+  // Insured Details
+  companyName: string;
+  address: string;
+  phone: string;
+  email: string;
+  
+  // Details of Loss
+  lossDate: string;
+  lossTime: string;
+  lossLocation: string;
+  moneyInTransitOrSafe: string;
+  
+  // If loss was in transit
+  peopleDiscoveringLoss: PersonDiscoveringLoss[];
+  hadPoliceEscort: boolean;
+  amountInPossessionAtStart?: number;
+  disbursementsDuringJourney?: number;
+  doubtEmployeeIntegrity: boolean;
+  integrityExplanation?: string;
+  
+  // If loss was in safe
+  personDiscoveringLossInSafe?: string;
+  safeBrickedOrFree: string;
+  keyHolders: KeyHolder[];
+  
+  // General
+  howItHappened: string;
+  policeNotified: boolean;
+  policeStation?: string;
+  previousLossUnderPolicy: boolean;
+  previousLossDetails?: string;
+  amountOfLoss: number;
+  lossDescription: string;
+  
+  // Declaration
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}
