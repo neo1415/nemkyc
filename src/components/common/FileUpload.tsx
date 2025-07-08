@@ -60,7 +60,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   };
 
   const getFileName = () => {
-    if (currentFile instanceof File) {
+    if (currentFile && typeof currentFile === 'object' && 'name' in currentFile) {
       return currentFile.name;
     }
     if (typeof currentFile === 'string') {
