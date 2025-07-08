@@ -31,7 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
   const navigation = [
     {
       name: 'Dashboard',
-      href: '/admin/dashboard',
+      href: '/admin',
       icon: BarChart3,
     },
     {
@@ -47,28 +47,30 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
   ];
 
   const cddItems = [
-    { name: 'Corporate', href: '/admin/cdd/corporate' },
-    { name: 'Partners', href: '/admin/cdd/partners' },
-    { name: 'Agents', href: '/admin/cdd/agents' },
-    { name: 'Brokers', href: '/admin/cdd/brokers' },
-    { name: 'Individual', href: '/admin/cdd/individual' }
+    { name: 'Corporate CDD', href: '/admin/cdd/corporate' },
+    { name: 'NAICOM Corporate CDD', href: '/admin/cdd/naicom-corporate' },
+    { name: 'Partners CDD', href: '/admin/cdd/partners' },
+    { name: 'NAICOM Partners CDD', href: '/admin/cdd/naicom-partners' },
+    { name: 'Individual CDD', href: '/admin/cdd/individual' },
+    { name: 'Agents CDD', href: '/admin/cdd/agents' },
+    { name: 'Brokers CDD', href: '/admin/cdd/brokers' }
   ];
 
   const claimsItems = [
-    { name: 'Motor', href: '/admin/claims/motor' },
-    { name: 'Money', href: '/admin/claims/money' },
-    { name: 'Burglary', href: '/admin/claims/burglary' },
-    { name: 'Travel', href: '/admin/claims/travel' },
-    { name: 'Public Liability', href: '/admin/claims/public-liability' },
-    { name: 'Combined GPA', href: '/admin/claims/combined-gpa' },
-    { name: 'Personal Accident', href: '/admin/claims/personal-accident' },
-    { name: 'Fire', href: '/admin/claims/fire' },
-    { name: 'Marine', href: '/admin/claims/marine' },
+    { name: 'Motor Claims', href: '/admin/claims/motor' },
     { name: 'Professional Indemnity', href: '/admin/claims/professional-indemnity' },
-    { name: 'Houseowners', href: '/admin/claims/houseowners' },
-    { name: 'Householders', href: '/admin/claims/householders' },
+    { name: 'Public Liability', href: '/admin/claims/public-liability' },
+    { name: 'Employers Liability', href: '/admin/claims/employers-liability' },
+    { name: 'Combined GPA & Employers', href: '/admin/claims/combined-gpa-employers' },
+    { name: 'Burglary Claims', href: '/admin/claims/burglary' },
+    { name: 'Group Personal Accident', href: '/admin/claims/group-personal-accident' },
+    { name: 'Fire Special Perils', href: '/admin/claims/fire-special-perils' },
+    { name: 'Rent Assurance', href: '/admin/claims/rent-assurance' },
+    { name: 'Money Insurance', href: '/admin/claims/money-insurance' },
     { name: 'Goods in Transit', href: '/admin/claims/goods-in-transit' },
-    { name: 'Group Life', href: '/admin/claims/group-life' }
+    { name: 'Contractors Plant Machinery', href: '/admin/claims/contractors-plant-machinery' },
+    { name: 'All Risk Claims', href: '/admin/claims/all-risk' },
+    { name: 'Fidelity Guarantee', href: '/admin/claims/fidelity-guarantee' }
   ];
 
   return (
