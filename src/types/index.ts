@@ -107,55 +107,111 @@ export interface PartnersCDDData {
 
 // KYC Form Types
 export interface IndividualKYCData {
+  // Personal Info
+  officeLocation: string;
+  title: string;
   firstName: string;
+  middleName: string;
   lastName: string;
-  middleName?: string;
-  dateOfBirth: string;
-  gender: 'male' | 'female' | 'other';
-  nationality: string;
-  countryOfResidence: string;
-  email: string;
-  phoneNumber: string;
-  alternatePhone?: string;
-  residentialAddress: string;
-  mailingAddress?: string;
-  identificationType: 'passport' | 'nationalId' | 'driversLicense';
-  identificationNumber: string;
-  issueDate: string;
-  expiryDate: string;
-  employmentStatus: 'employed' | 'selfEmployed' | 'unemployed' | 'retired' | 'student';
+  contactAddress: string;
   occupation: string;
-  employer?: string;
-  annualIncome: number;
+  gender: 'male' | 'female';
+  dateOfBirth: string;
+  mothersMaidenName: string;
+  employersName?: string;
+  employersTelephone?: string;
+  employersAddress?: string;
+  city: string;
+  state: string;
+  country: string;
+  nationality: 'Nigerian' | 'Foreign' | 'Both';
+  residentialAddress: string;
+  mobileNumber: string;
+  email: string;
+  taxId?: string;
+  bvn: string;
+  idType: 'passport' | 'nimc' | 'driversLicense' | 'votersCard' | 'nin';
+  identificationNumber: string;
+  issuingCountry: string;
+  issuedDate: string;
+  expiryDate?: string;
+  sourceOfIncome: 'salary' | 'investments' | 'other';
+  sourceOfIncomeOther?: string;
+  annualIncomeRange: 'lessThan1M' | '1M-4M' | '4.1M-10M' | 'moreThan10M';
+  premiumPaymentSource: 'salary' | 'investments' | 'other';
+  premiumPaymentSourceOther?: string;
+  
+  // Account Details
+  localBankName: string;
+  localAccountNumber: string;
+  localBankBranch: string;
+  localAccountOpeningDate: string;
+  foreignBankName?: string;
+  foreignAccountNumber?: string;
+  foreignBankBranch?: string;
+  foreignAccountOpeningDate?: string;
+  
+  // Upload
   identificationDocument?: File;
-  proofOfAddress?: File;
-  passport?: File;
+  
+  // Privacy & Declaration
+  agreeToDataPrivacy: boolean;
+  signature: string;
 }
 
 export interface CorporateKYCData {
-  companyName: string;
-  registrationNumber: string;
+  // Company Info
+  nemBranchOffice: string;
+  insured: string;
+  officeAddress: string;
+  ownershipOfCompany: 'Nigerian' | 'Foreign' | 'Both';
+  contactPerson: string;
+  website: string;
+  incorporationNumber: string;
+  incorporationState: string;
   incorporationDate: string;
-  countryOfIncorporation: string;
-  businessType: string;
-  industry: string;
-  registeredAddress: string;
-  businessAddress: string;
-  phoneNumber: string;
+  bvn: string;
+  contactPersonMobile: string;
+  taxId?: string;
   email: string;
-  website?: string;
-  annualRevenue: number;
-  numberOfEmployees: number;
+  businessType: string;
+  estimatedTurnover: 'lessThan10M' | '11M-50M' | '51M-200M' | 'moreThan200M';
+  premiumPaymentSource: 'salary' | 'investments' | 'other';
+  premiumPaymentSourceOther?: string;
+  
+  // Director Info
   directors: Array<{
-    name: string;
-    position: string;
+    firstName: string;
+    middleName?: string;
+    lastName: string;
+    dateOfBirth: string;
+    placeOfBirth: string;
     nationality: string;
-    shareholding?: number;
+    country: string;
+    occupation: string;
+    email: string;
+    phoneNumber: string;
+    bvn: string;
+    employersName?: string;
+    employersPhone?: string;
+    residentialAddress: string;
+    taxIdNumber?: string;
+    idType: 'passport' | 'nimc' | 'driversLicense' | 'votersCard';
+    identificationNumber: string;
+    issuingBody: string;
+    issuedDate: string;
+    expiryDate?: string;
+    sourceOfIncome: 'salary' | 'investments' | 'other';
+    sourceOfIncomeOther?: string;
   }>;
-  certificateOfIncorporation?: File;
-  memorandumOfAssociation?: File;
-  auditedFinancialStatements?: File;
-  boardResolution?: File;
+  
+  // Account Details & Verification
+  companyVerificationDocument: 'incorporation' | 'cacStatus' | 'boardResolution' | 'powerOfAttorney';
+  verificationDocumentUpload?: File;
+  
+  // Privacy & Declaration
+  agreeToDataPrivacy: boolean;
+  signature: string;
 }
 
 // Claims Form Types
