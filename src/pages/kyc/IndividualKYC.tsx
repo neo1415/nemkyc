@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useAuth } from '../../contexts/AuthContext';
@@ -35,6 +35,11 @@ const IndividualKYC: React.FC = () => {
   });
 
   const watchedValues = watch();
+  
+  // Use useCallback to prevent re-renders
+  const handleFileSelect = useCallback((field: string, file: File) => {
+    setValue(field as any, file);
+  }, [setValue]);
 
   const onSubmit = async (data: IndividualKYCData) => {
     if (!user) {
@@ -228,21 +233,21 @@ const IndividualKYC: React.FC = () => {
       <div className="space-y-6">
         <FileUpload
           label="Identification Document"
-          onFileSelect={(file) => setValue('identificationDocument', file)}
+          onFileSelect={(file) => handleFileSelect('identificationDocument', file)}
           currentFile={watchedValues.identificationDocument}
           error={errors.identificationDocument?.message}
         />
         
         <FileUpload
           label="Proof of Address"
-          onFileSelect={(file) => setValue('proofOfAddress', file)}
+          onFileSelect={(file) => handleFileSelect('proofOfAddress', file)}
           currentFile={watchedValues.proofOfAddress}
           error={errors.proofOfAddress?.message}
         />
         
         <FileUpload
           label="Passport Photo"
-          onFileSelect={(file) => setValue('passport', file)}
+          onFileSelect={(file) => handleFileSelect('passport', file)}
           currentFile={watchedValues.passport}
           accept=".jpg,.jpeg,.png"
         />
