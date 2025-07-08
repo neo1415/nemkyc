@@ -3,7 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Car, Shield, Users, Building, ArrowRight, UserCheck, Home } from 'lucide-react';
+import { Car, Shield, Users, Building, ArrowRight, UserCheck, Home, DollarSign, FileText, AlertTriangle, Flame, Truck, Wrench } from 'lucide-react';
 
 const ClaimsForms: React.FC = () => {
   const claimForms = [
@@ -48,6 +48,48 @@ const ClaimsForms: React.FC = () => {
       icon: <Home className="h-8 w-8 text-red-600" />,
       path: '/claims/burglary',
       features: ['Property theft', 'Burglary incidents', 'Security breaches']
+    },
+    {
+      title: 'Group Personal Accident Claim',
+      description: 'Submit claims for group personal accident insurance',
+      icon: <Users className="h-8 w-8 text-red-600" />,
+      path: '/claims/group-personal-accident',
+      features: ['Group accidents', 'Personal injury', 'Medical expenses']
+    },
+    {
+      title: 'Fire and Special Perils Claim',
+      description: 'Claims for fire damage and special perils coverage',
+      icon: <Flame className="h-8 w-8 text-red-600" />,
+      path: '/claims/fire-special-perils',
+      features: ['Fire damage', 'Special perils', 'Property coverage']
+    },
+    {
+      title: 'Rent Assurance Policy Claim',
+      description: 'Submit claims for rent assurance policy coverage',
+      icon: <Building className="h-8 w-8 text-red-600" />,
+      path: '/claims/rent-assurance',
+      features: ['Rent defaults', 'Tenant protection', 'Landlord coverage']
+    },
+    {
+      title: 'Money Insurance Claim',
+      description: 'Claims for money insurance coverage and cash-in-transit',
+      icon: <DollarSign className="h-8 w-8 text-red-600" />,
+      path: '/claims/money-insurance',
+      features: ['Cash-in-transit', 'Safe robbery', 'Money loss']
+    },
+    {
+      title: 'Goods-in-Transit Insurance Claim',
+      description: 'Submit claims for goods damaged or lost during transit',
+      icon: <Truck className="h-8 w-8 text-red-600" />,
+      path: '/claims/goods-in-transit',
+      features: ['Transit damage', 'Cargo loss', 'Transportation risks']
+    },
+    {
+      title: 'Contractors, Plant and Machinery Claim',
+      description: 'Claims for contractors equipment and machinery damage',
+      icon: <Wrench className="h-8 w-8 text-red-600" />,
+      path: '/claims/contractors-plant-machinery',
+      features: ['Equipment damage', 'Machinery theft', 'Construction risks']
     }
   ];
 
