@@ -103,21 +103,145 @@ function App() {
           } />
           
           {/* Admin Routes - Role-based access */}
-          <Route path="admin/claims" element={
+          
+          {/* Individual Claims Admin Tables */}
+          <Route path="admin/claims/motor" element={
             <ProtectedRoute>
-              <AdminClaimsTable />
+              <AdminClaimsTable formType="motor" />
             </ProtectedRoute>
           } />
           
-          <Route path="admin/cdd" element={
+          <Route path="admin/claims/professional-indemnity" element={
             <ProtectedRoute>
-              <AdminCDDTable />
+              <AdminClaimsTable formType="professional-indemnity" />
             </ProtectedRoute>
           } />
           
-          <Route path="admin/kyc" element={
+          <Route path="admin/claims/public-liability" element={
             <ProtectedRoute>
-              <AdminKYCTable />
+              <AdminClaimsTable formType="public-liability" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/claims/employers-liability" element={
+            <ProtectedRoute>
+              <AdminClaimsTable formType="employers-liability" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/claims/combined-gpa-employers" element={
+            <ProtectedRoute>
+              <AdminClaimsTable formType="combined-gpa-employers" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/claims/burglary" element={
+            <ProtectedRoute>
+              <AdminClaimsTable formType="burglary" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/claims/group-personal-accident" element={
+            <ProtectedRoute>
+              <AdminClaimsTable formType="group-personal-accident" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/claims/fire-special-perils" element={
+            <ProtectedRoute>
+              <AdminClaimsTable formType="fire-special-perils" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/claims/rent-assurance" element={
+            <ProtectedRoute>
+              <AdminClaimsTable formType="rent-assurance" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/claims/money-insurance" element={
+            <ProtectedRoute>
+              <AdminClaimsTable formType="money-insurance" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/claims/goods-in-transit" element={
+            <ProtectedRoute>
+              <AdminClaimsTable formType="goods-in-transit" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/claims/contractors-plant-machinery" element={
+            <ProtectedRoute>
+              <AdminClaimsTable formType="contractors-plant-machinery" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/claims/all-risk" element={
+            <ProtectedRoute>
+              <AdminClaimsTable formType="all-risk" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/claims/fidelity-guarantee" element={
+            <ProtectedRoute>
+              <AdminClaimsTable formType="fidelity-guarantee" />
+            </ProtectedRoute>
+          } />
+          
+          {/* Individual KYC Admin Tables */}
+          <Route path="admin/kyc/individual" element={
+            <ProtectedRoute>
+              <AdminKYCTable formType="individual" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/kyc/corporate" element={
+            <ProtectedRoute>
+              <AdminKYCTable formType="corporate" />
+            </ProtectedRoute>
+          } />
+          
+          {/* Individual CDD Admin Tables */}
+          <Route path="admin/cdd/corporate" element={
+            <ProtectedRoute>
+              <AdminCDDTable formType="corporate" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/cdd/naicom-corporate" element={
+            <ProtectedRoute>
+              <AdminCDDTable formType="naicom-corporate" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/cdd/partners" element={
+            <ProtectedRoute>
+              <AdminCDDTable formType="partners" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/cdd/naicom-partners" element={
+            <ProtectedRoute>
+              <AdminCDDTable formType="naicom-partners" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/cdd/individual" element={
+            <ProtectedRoute>
+              <AdminCDDTable formType="individual" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/cdd/agents" element={
+            <ProtectedRoute>
+              <AdminCDDTable formType="agents" />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/cdd/brokers" element={
+            <ProtectedRoute>
+              <AdminCDDTable formType="brokers" />
             </ProtectedRoute>
           } />
           

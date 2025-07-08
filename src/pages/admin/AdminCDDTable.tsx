@@ -17,7 +17,11 @@ const theme = createTheme({
   },
 });
 
-const AdminCDDTable: React.FC = () => {
+interface AdminCDDTableProps {
+  formType?: string;
+}
+
+const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -34,15 +38,17 @@ const AdminCDDTable: React.FC = () => {
 
   const fetchCDDForms = async () => {
     try {
-      const cddCollections = [
-        'corporate-cdd',
-        'naicom-corporate-cdd',
-        'partners-cdd',
-        'naicom-partners-cdd',
-        'individual-cdd',
-        'agents-cdd',
-        'brokers-cdd'
-      ];
+      const cddCollections = formType ? 
+        [`${formType}-cdd`] : 
+        [
+          'corporate-cdd',
+          'naicom-corporate-cdd',
+          'partners-cdd',
+          'naicom-partners-cdd',
+          'individual-cdd',
+          'agents-cdd',
+          'brokers-cdd'
+        ];
 
       const allForms: any[] = [];
       
@@ -126,7 +132,7 @@ const AdminCDDTable: React.FC = () => {
     <ThemeProvider theme={theme}>
       <Box sx={{ height: '100vh', width: '100%', p: 3 }}>
         <Typography variant="h4" gutterBottom>
-          CDD Forms Management
+          {formType ? `${formType.replace('-', ' ')} CDD Management` : 'CDD Forms Management'}
         </Typography>
         
         <Box sx={{ height: 600, width: '100%' }}>

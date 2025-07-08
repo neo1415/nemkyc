@@ -17,7 +17,11 @@ const theme = createTheme({
   },
 });
 
-const AdminClaimsTable: React.FC = () => {
+interface AdminClaimsTableProps {
+  formType?: string;
+}
+
+const AdminClaimsTable: React.FC<AdminClaimsTableProps> = ({ formType }) => {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
