@@ -211,3 +211,154 @@ export interface MoneyInsuranceClaimData {
   agreeToDataPrivacy: boolean;
   signature: string;
 }
+
+// Goods-in-Transit Insurance Claim Types
+export interface GoodsItem {
+  quantity: number;
+  description: string;
+  value: number;
+}
+
+export interface GoodsInTransitClaimData {
+  // Policy Details
+  policyNumber: string;
+  periodOfCoverFrom: string;
+  periodOfCoverTo: string;
+  
+  // Insured Details
+  companyName: string;
+  address: string;
+  phone: string;
+  email: string;
+  businessType: string;
+  
+  // Details of Loss
+  dateOfLoss: string;
+  timeOfLoss: string;
+  placeOfOccurrence: string;
+  descriptionOfGoods: string;
+  numberOfPackages: number;
+  totalWeight: number;
+  weightUnits: string;
+  totalValue: number;
+  howGoodsPacked: string;
+  
+  // Circumstances
+  circumstancesOfLoss: string;
+  otherVehicleInvolved: boolean;
+  otherVehicleOwnerName?: string;
+  otherVehicleOwnerAddress?: string;
+  witnessName?: string;
+  witnessAddress?: string;
+  policeStation?: string;
+  dateReportedToPolice?: string;
+  dispatchAddress: string;
+  dispatchDate: string;
+  consigneeName: string;
+  consigneeAddress: string;
+  
+  // Particulars of Goods
+  goodsItems: GoodsItem[];
+  
+  // Inspection
+  inspectionAddress: string;
+  
+  // If owner of goods
+  isOwnerOfGoods: boolean;
+  howTransported?: string;
+  transporterInsurerName?: string;
+  transporterInsurerAddress?: string;
+  
+  // If claiming as carrier
+  goodsOwnerName?: string;
+  goodsOwnerAddress?: string;
+  goodsOwnerInsurerName?: string;
+  goodsOwnerInsurerAddress?: string;
+  
+  // Vehicle/Transport
+  goodsInSoundCondition: boolean;
+  checkedByDriver: boolean;
+  vehicleRegistration: string;
+  staffLoadedUnloaded: boolean;
+  receiptGiven: boolean;
+  carriageConditionFile?: {
+    name: string;
+    type: string;
+    url: string;
+  };
+  claimMadeAgainstYou: boolean;
+  claimReceivedDate?: string;
+  
+  // Declaration
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}
+
+// Contractors, Plant and Machinery Claim Types
+export interface PlantMachineryItem {
+  itemNumber: string;
+  yearOfManufacture: number;
+  make: string;
+  registrationNumber: string;
+  dateOfPurchase: string;
+  costPrice: number;
+  deductionForAge: number;
+  sumClaimed: number;
+  claimType: 'presentValue' | 'repairs';
+}
+
+export interface Witness {
+  name: string;
+  address: string;
+  phone: string;
+}
+
+export interface ContractorsPlantMachineryClaimData {
+  // Policy Details
+  policyNumber: string;
+  periodOfCoverFrom: string;
+  periodOfCoverTo: string;
+  
+  // Insured Details
+  nameOfInsured: string;
+  companyName?: string;
+  title: string;
+  dateOfBirth: string;
+  gender: string;
+  address: string;
+  phone: string;
+  email: string;
+  
+  // Plant/Machinery Details
+  plantMachineryItems: PlantMachineryItem[];
+  
+  // Loss/Damage Details
+  dateOfLoss: string;
+  timeOfLoss: string;
+  lastSeenIntact?: string;
+  whereDidLossOccur: string;
+  partsDamaged: string;
+  whereCanBeInspected: string;
+  fullAccountCircumstances: string;
+  suspicionInformation?: string;
+  
+  // Witnesses
+  witnesses: Witness[];
+  
+  // Theft/Third Party Details
+  policeInformed: boolean;
+  policeStation?: string;
+  otherRecoveryActions?: string;
+  isSoleOwner: boolean;
+  ownershipDetails?: string;
+  hasOtherInsurance: boolean;
+  otherInsuranceDetails?: string;
+  thirdPartyInvolved: boolean;
+  thirdPartyName?: string;
+  thirdPartyAddress?: string;
+  thirdPartyInsurer?: string;
+  
+  // Declaration
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}
