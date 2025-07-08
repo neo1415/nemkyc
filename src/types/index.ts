@@ -494,3 +494,52 @@ export interface BurglaryClaimData {
   agreeToDataPrivacy: boolean;
   signature: string;
 }
+
+// NAICOM Partners CDD Types
+export interface NaicomPartnersCDDData {
+  // Company Info
+  companyName: string;
+  registeredAddress: string;
+  city: string;
+  state: string;
+  country: string;
+  email: string;
+  website: string;
+  contactPersonName: string;
+  contactPersonNumber: string;
+  taxId: string;
+  vatRegistrationNumber: string;
+  incorporationNumber: string;
+  incorporationDate: string;
+  incorporationState: string;
+  businessNature: string;
+  bvn: string;
+  naicomLicenseIssuingDate: string;
+  naicomLicenseExpiryDate: string;
+  
+  // Directors
+  directors: Director[];
+  
+  // Account Details
+  localAccountNumber: string;
+  localBankName: string;
+  localBankBranch: string;
+  localAccountOpeningDate: string;
+  foreignAccountNumber?: string;
+  foreignBankName?: string;
+  foreignBankBranch?: string;
+  foreignAccountOpeningDate?: string;
+  
+  // Documents
+  certificateOfIncorporation?: File;
+  directorId1?: File;
+  directorId2?: File;
+  cacStatusReport?: File;
+  vatRegistrationLicense?: File;
+  taxClearanceCertificate?: File;
+  naicomLicenseCertificate?: File;
+  
+  // Declaration
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}

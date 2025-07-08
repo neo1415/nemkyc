@@ -31,6 +31,8 @@ import GroupPersonalAccidentClaim from './pages/claims/GroupPersonalAccidentClai
 import FireSpecialPerilsClaim from './pages/claims/FireSpecialPerilsClaim';
 import GoodsInTransitClaim from './pages/claims/GoodsInTransitClaim';
 import ContractorsPlantMachineryClaim from './pages/claims/ContractorsPlantMachineryClaim';
+import AllRiskClaim from './pages/claims/AllRiskClaim';
+import NaicomPartnersCDD from './pages/cdd/NaicomPartnersCDD';
 
 function App() {
   return (
@@ -60,6 +62,7 @@ function App() {
           <Route path="/claims/money-insurance" element={<MoneyInsuranceClaim />} />
           <Route path="/claims/goods-in-transit" element={<GoodsInTransitClaim />} />
           <Route path="/claims/contractors-plant-machinery" element={<ContractorsPlantMachineryClaim />} />
+          <Route path="/claims/all-risk" element={<AllRiskClaim />} />
           
           {/* KYC Routes - accessible without authentication */}
           <Route path="kyc" element={<KYCForms />} />
@@ -71,6 +74,7 @@ function App() {
           <Route path="cdd/corporate" element={<CorporateCDD />} />
           <Route path="cdd/naicom-corporate" element={<NaicomCorporateCDD />} />
           <Route path="cdd/partners" element={<PartnersCDD />} />
+          <Route path="cdd/naicom-partners" element={<NaicomPartnersCDD />} />
           
           {/* Protected Routes */}
           <Route path="dashboard" element={
