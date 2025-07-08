@@ -37,6 +37,11 @@ import IndividualCDD from './pages/cdd/IndividualCDD';
 import AgentsCDD from './pages/cdd/AgentsCDD';
 import BrokersCDD from './pages/cdd/BrokersCDD';
 import FidelityGuaranteeClaim from './pages/claims/FidelityGuaranteeClaim';
+import AdminClaimsTable from './pages/admin/AdminClaimsTable';
+import AdminCDDTable from './pages/admin/AdminCDDTable';
+import AdminKYCTable from './pages/admin/AdminKYCTable';
+import AdminUsersTable from './pages/admin/AdminUsersTable';
+import FormViewer from './pages/admin/FormViewer';
 
 function App() {
   return (
@@ -94,6 +99,37 @@ function App() {
           <Route path="admin" element={
             <ProtectedRoute>
               <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          
+          {/* Admin Routes - Role-based access */}
+          <Route path="admin/claims" element={
+            <ProtectedRoute>
+              <AdminClaimsTable />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/cdd" element={
+            <ProtectedRoute>
+              <AdminCDDTable />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/kyc" element={
+            <ProtectedRoute>
+              <AdminKYCTable />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/users" element={
+            <ProtectedRoute>
+              <AdminUsersTable />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/form/:collection/:id" element={
+            <ProtectedRoute>
+              <FormViewer />
             </ProtectedRoute>
           } />
           
