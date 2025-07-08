@@ -89,7 +89,7 @@ const BurglaryClaimForm: React.FC = () => {
   const watchedValues = form.watch();
 
   // Save draft to localStorage with 7-day expiry
-  const { saveDraft } = useFormDraft('burglary-claim', 7);
+  const { saveDraft } = useFormDraft('burglary-claim', form);
 
   React.useEffect(() => {
     const subscription = form.watch((data) => {

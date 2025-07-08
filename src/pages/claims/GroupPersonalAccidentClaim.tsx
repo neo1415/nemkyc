@@ -52,7 +52,7 @@ const GroupPersonalAccidentClaim = () => {
     name: 'witnesses'
   });
 
-  const { saveDraft, loadDraft, clearDraft } = useFormDraft('group-personal-accident-claim', 7);
+  const { saveDraft, loadDraft, clearDraft } = useFormDraft('group-personal-accident-claim', form);
 
   useEffect(() => {
     const draft = loadDraft();
