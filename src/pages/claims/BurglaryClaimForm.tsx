@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useAuth } from '../../contexts/AuthContext';
 import { burglaryClaimSchema } from '../../utils/validation';
@@ -16,12 +16,10 @@ import { Badge } from '../../components/ui/badge';
 import { doc, setDoc, collection, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase/config';
-// import { generatePDF } from '../../services/pdfService';
 import { notifySubmission } from '../../services/notificationService';
 import AuthRequiredSubmit from '../../components/common/AuthRequiredSubmit';
 import PhoneInput from '../../components/common/PhoneInput';
 import MultiStepForm from '../../components/common/MultiStepForm';
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '../../components/ui/form';
 import { Shield, FileText, Home, Plus, Trash2, Upload, Check, DollarSign, X, Lock } from 'lucide-react';
 import { useFormDraft } from '../../hooks/useFormDraft';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog';
@@ -34,7 +32,7 @@ const BurglaryClaimForm: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [submittedData, setSubmittedData] = useState<BurglaryClaimData | null>(null);
 
-  const form = useForm({
+  const formMethods = useForm({
     resolver: yupResolver(burglaryClaimSchema),
     defaultValues: {
       policyNumber: '',
@@ -76,27 +74,28 @@ const BurglaryClaimForm: React.FC = () => {
       propertyItems: [{ description: '', costPrice: 0, purchaseDate: '', estimatedValue: 0, netAmountClaimed: 0 }],
       agreeToDataPrivacy: false,
       signature: ''
-    }
+    },
+    mode: 'onChange'
   });
 
-  const { control, handleSubmit, formState: { errors }, setValue, watch } = form;
+  const { register, handleSubmit, formState: { errors }, setValue, watch } = formMethods;
   
   const { fields, append, remove } = useFieldArray({
-    control,
+    control: formMethods.control,
     name: 'propertyItems'
   });
 
-  const watchedValues = form.watch();
+  const watchedValues = formMethods.watch();
 
   // Save draft to localStorage with 7-day expiry
-  const { saveDraft } = useFormDraft('burglary-claim', form);
+  const { saveDraft } = useFormDraft('burglary-claim', formMethods);
 
   React.useEffect(() => {
-    const subscription = form.watch((data) => {
+    const subscription = formMethods.watch((data) => {
       saveDraft(data);
     });
     return () => subscription.unsubscribe();
-  }, [form, saveDraft]);
+  }, [formMethods, saveDraft]);
 
   const addPropertyItem = () => {
     append({ description: '', costPrice: 0, purchaseDate: '', estimatedValue: 0, netAmountClaimed: 0 });
@@ -127,38 +126,12 @@ const BurglaryClaimForm: React.FC = () => {
     try {
       const submissionId = `claim_burglary_${Date.now()}`;
       
-      // Upload files if any
-      const uploadedFiles: { [key: string]: string } = {};
-      
       // Save to Firestore
       await setDoc(doc(db, 'submissions', submissionId), {
         id: submissionId,
         userId: user.uid,
         formType: 'burglary-claim',
-        data: {
-          ...submittedData,
-          uploadedFiles
-        },
-        status: 'pending',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      // Generate and upload PDF (placeholder)
-      // const pdfBlob = await generatePDF(submittedData, 'Burglary Claim Form');
-      // const pdfRef = ref(storage, `claims/burglary/${submissionId}/form.pdf`);
-      // await uploadBytes(pdfRef, pdfBlob);
-      // const pdfUrl = await getDownloadURL(pdfRef);
-
-      // Update submission with PDF URL
-      await setDoc(doc(db, 'submissions', submissionId), {
-        id: submissionId,
-        userId: user.uid,
-        formType: 'burglary-claim',
-        data: {
-          ...submittedData,
-          uploadedFiles
-        },
+        data: submittedData,
         status: 'pending',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -167,8 +140,6 @@ const BurglaryClaimForm: React.FC = () => {
       // Send notification
       await notifySubmission(user, 'Burglary Claim');
       
-      // Clear draft and show success
-      // clearDraft();
       setShowSuccess(true);
 
       toast({
@@ -194,621 +165,410 @@ const BurglaryClaimForm: React.FC = () => {
       title: 'Policy Details',
       component: (
         <div className="space-y-6">
-          <FormField
-            control={form.control as any}
-            name="policyNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Policy Number *</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Enter policy number" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div>
+            <Label htmlFor="policyNumber">Policy Number *</Label>
+            <Input
+              id="policyNumber"
+              {...register('policyNumber')}
+              placeholder="Enter policy number"
+            />
+            {errors.policyNumber && <p className="text-sm text-red-600">{errors.policyNumber.message}</p>}
+          </div>
           
           <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control as any}
-              name="periodOfCoverFrom"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Period of Cover From *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="periodOfCoverFrom">Period of Cover From *</Label>
+              <Input
+                id="periodOfCoverFrom"
+                type="date"
+                {...register('periodOfCoverFrom')}
+              />
+              {errors.periodOfCoverFrom && <p className="text-sm text-red-600">{errors.periodOfCoverFrom.message}</p>}
+            </div>
             
-            <FormField
-              control={form.control as any}
-              name="periodOfCoverTo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Period of Cover To *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="periodOfCoverTo">Period of Cover To *</Label>
+              <Input
+                id="periodOfCoverTo"
+                type="date"
+                {...register('periodOfCoverTo')}
+              />
+              {errors.periodOfCoverTo && <p className="text-sm text-red-600">{errors.periodOfCoverTo.message}</p>}
+            </div>
           </div>
         </div>
-      ),
-      isValid: !!watchedValues.policyNumber && !!watchedValues.periodOfCoverFrom && !!watchedValues.periodOfCoverTo
+      )
     },
     {
       id: 'insured',
       title: 'Insured Details',
       component: (
         <div className="space-y-6">
-          <FormField
-            control={form.control as any}
-            name="nameOfInsured"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Name of Insured *</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Enter name of insured" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div>
+            <Label htmlFor="nameOfInsured">Name of Insured *</Label>
+            <Input
+              id="nameOfInsured"
+              {...register('nameOfInsured')}
+              placeholder="Enter name of insured"
+            />
+            {errors.nameOfInsured && <p className="text-sm text-red-600">{errors.nameOfInsured.message}</p>}
+          </div>
           
-          <FormField
-            control={form.control as any}
-            name="companyName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Company Name (Optional)</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Enter company name" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div>
+            <Label htmlFor="companyName">Company Name (Optional)</Label>
+            <Input
+              id="companyName"
+              {...register('companyName')}
+              placeholder="Enter company name"
+            />
+          </div>
           
           <div className="grid grid-cols-3 gap-4">
-            <FormField
-              control={form.control as any}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select title" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Mr">Mr</SelectItem>
-                      <SelectItem value="Mrs">Mrs</SelectItem>
-                      <SelectItem value="Chief">Chief</SelectItem>
-                      <SelectItem value="Dr">Dr</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label>Title *</Label>
+              <Select
+                value={watchedValues.title}
+                onValueChange={(value) => setValue('title', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select title" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Mr">Mr</SelectItem>
+                  <SelectItem value="Mrs">Mrs</SelectItem>
+                  <SelectItem value="Chief">Chief</SelectItem>
+                  <SelectItem value="Dr">Dr</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.title && <p className="text-sm text-red-600">{errors.title.message}</p>}
+            </div>
             
-            <FormField
-              control={form.control as any}
-              name="dateOfBirth"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date of Birth *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+              <Input
+                id="dateOfBirth"
+                type="date"
+                {...register('dateOfBirth')}
+              />
+              {errors.dateOfBirth && <p className="text-sm text-red-600">{errors.dateOfBirth.message}</p>}
+            </div>
             
-            <FormField
-              control={form.control as any}
-              name="gender"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Gender *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label>Gender *</Label>
+              <Select
+                value={watchedValues.gender}
+                onValueChange={(value) => setValue('gender', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.gender && <p className="text-sm text-red-600">{errors.gender.message}</p>}
+            </div>
           </div>
           
-          <FormField
-            control={form.control as any}
-            name="address"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Address *</FormLabel>
-                <FormControl>
-                  <Textarea {...field} placeholder="Enter full address" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div>
+            <Label htmlFor="address">Address *</Label>
+            <Textarea
+              id="address"
+              {...register('address')}
+              placeholder="Enter full address"
+            />
+            {errors.address && <p className="text-sm text-red-600">{errors.address.message}</p>}
+          </div>
           
           <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control as any}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone Number *</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter phone number" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="phone">Phone Number *</Label>
+              <Input
+                id="phone"
+                {...register('phone')}
+                placeholder="Enter phone number"
+              />
+              {errors.phone && <p className="text-sm text-red-600">{errors.phone.message}</p>}
+            </div>
             
-            <FormField
-              control={form.control as any}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email Address *</FormLabel>
-                  <FormControl>
-                    <Input type="email" {...field} placeholder="Enter email address" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                {...register('email')}
+                placeholder="Enter email address"
+              />
+              {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
+            </div>
           </div>
         </div>
-      ),
-      isValid: !!watchedValues.nameOfInsured && !!watchedValues.title && !!watchedValues.dateOfBirth && !!watchedValues.gender && !!watchedValues.address && !!watchedValues.phone && !!watchedValues.email
+      )
     },
     {
       id: 'loss',
       title: 'Details of Loss',
       component: (
         <div className="space-y-6">
-          <FormField
-            control={form.control as any}
-            name="premisesAddress"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Full Address of Premises Involved *</FormLabel>
-                <FormControl>
-                  <Textarea {...field} placeholder="Enter premises address" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control as any}
-            name="premisesTelephone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Premises Telephone *</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Enter premises telephone" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control as any}
-              name="dateOfTheft"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date of Theft *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          <div>
+            <Label htmlFor="premisesAddress">Full Address of Premises Involved *</Label>
+            <Textarea
+              id="premisesAddress"
+              {...register('premisesAddress')}
+              placeholder="Enter premises address"
             />
-            
-            <FormField
-              control={form.control as any}
-              name="timeOfTheft"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Time of Theft *</FormLabel>
-                  <FormControl>
-                    <Input type="time" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {errors.premisesAddress && <p className="text-sm text-red-600">{errors.premisesAddress.message}</p>}
           </div>
           
-          <FormField
-            control={form.control as any}
-            name="howEntryEffected"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>How Entry was Effected *</FormLabel>
-                <FormControl>
-                  <Textarea {...field} placeholder="Describe how entry was effected" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div>
+            <Label htmlFor="premisesTelephone">Premises Telephone *</Label>
+            <Input
+              id="premisesTelephone"
+              {...register('premisesTelephone')}
+              placeholder="Enter premises telephone"
+            />
+            {errors.premisesTelephone && <p className="text-sm text-red-600">{errors.premisesTelephone.message}</p>}
+          </div>
           
-          <FormField
-            control={form.control as any}
-            name="roomsEntered"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Rooms Entered *</FormLabel>
-                <FormControl>
-                  <Textarea {...field} placeholder="List rooms that were entered" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="dateOfTheft">Date of Theft *</Label>
+              <Input
+                id="dateOfTheft"
+                type="date"
+                {...register('dateOfTheft')}
+              />
+              {errors.dateOfTheft && <p className="text-sm text-red-600">{errors.dateOfTheft.message}</p>}
+            </div>
+            
+            <div>
+              <Label htmlFor="timeOfTheft">Time of Theft *</Label>
+              <Input
+                id="timeOfTheft"
+                type="time"
+                {...register('timeOfTheft')}
+              />
+              {errors.timeOfTheft && <p className="text-sm text-red-600">{errors.timeOfTheft.message}</p>}
+            </div>
+          </div>
           
-          <FormField
-            control={form.control as any}
-            name="premisesOccupied"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    Premises occupied at time of loss?
-                  </FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
+          <div>
+            <Label htmlFor="howEntryEffected">How Entry was Effected *</Label>
+            <Textarea
+              id="howEntryEffected"
+              {...register('howEntryEffected')}
+              placeholder="Describe how entry was effected"
+            />
+            {errors.howEntryEffected && <p className="text-sm text-red-600">{errors.howEntryEffected.message}</p>}
+          </div>
+          
+          <div>
+            <Label htmlFor="roomsEntered">Rooms Entered *</Label>
+            <Textarea
+              id="roomsEntered"
+              {...register('roomsEntered')}
+              placeholder="List rooms that were entered"
+            />
+            {errors.roomsEntered && <p className="text-sm text-red-600">{errors.roomsEntered.message}</p>}
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="premisesOccupied"
+              checked={watchedValues.premisesOccupied}
+              onCheckedChange={(checked) => setValue('premisesOccupied', checked as boolean)}
+            />
+            <Label htmlFor="premisesOccupied">Premises occupied at time of loss?</Label>
+          </div>
           
           {!watchedValues.premisesOccupied && (
-            <div className="grid grid-cols-2 gap-4 ml-6">
-              <FormField
-                control={form.control as any}
-                name="lastOccupiedDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Last Occupied Date *</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control as any}
-                name="lastOccupiedTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Last Occupied Time *</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            <div className="ml-6">
+              <Label htmlFor="lastOccupiedDateTime">Last Occupied Date & Time *</Label>
+              <Input
+                id="lastOccupiedDateTime"
+                type="datetime-local"
+                {...register('lastOccupiedDateTime')}
               />
             </div>
           )}
           
-          <div>
-            <Label htmlFor="suspicionOnAnyone">Suspicions on anyone?</Label>
+          <div className="flex items-center space-x-2">
             <Checkbox
               id="suspicionOnAnyone"
               checked={watchedValues.suspicionOnAnyone}
               onCheckedChange={(checked) => setValue('suspicionOnAnyone', checked as boolean)}
             />
+            <Label htmlFor="suspicionOnAnyone">Suspicions on anyone?</Label>
           </div>
           
           {watchedValues.suspicionOnAnyone && (
-            <FormField
-              control={form.control as any}
-              name="suspicionName"
-              render={({ field }) => (
-                <FormItem className="ml-6">
-                  <FormLabel>Name of Suspected Person *</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter name of suspected person" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="ml-6">
+              <Label htmlFor="suspicionName">Name of Suspected Person *</Label>
+              <Input
+                id="suspicionName"
+                {...register('suspicionName')}
+                placeholder="Enter name of suspected person"
+              />
+            </div>
           )}
           
-          <FormField
-            control={form.control as any}
-            name="policeInformed"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    Police informed?
-                  </FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="policeInformed"
+              checked={watchedValues.policeInformed}
+              onCheckedChange={(checked) => setValue('policeInformed', checked as boolean)}
+            />
+            <Label htmlFor="policeInformed">Police informed?</Label>
+          </div>
           
           {watchedValues.policeInformed && (
             <div className="grid grid-cols-2 gap-4 ml-6">
-              <FormField
-                control={form.control as any}
-                name="policeDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Police Date *</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div>
+                <Label htmlFor="policeDate">Police Date *</Label>
+                <Input
+                  id="policeDate"
+                  type="date"
+                  {...register('policeDate')}
+                />
+              </div>
               
-                 <FormField
-                   control={form.control as any}
-                   name="policeStation"
-                   render={({ field }) => (
-                     <FormItem>
-                       <FormLabel>Police Station *</FormLabel>
-                       <FormControl>
-                         <Input {...field} placeholder="Enter police station" />
-                       </FormControl>
-                       <FormMessage />
-                     </FormItem>
-                   )}
-                 />
+              <div>
+                <Label htmlFor="policeStation">Police Station *</Label>
+                <Input
+                  id="policeStation"
+                  {...register('policeStation')}
+                  placeholder="Enter police station"
+                />
+              </div>
             </div>
           )}
         </div>
-      ),
-      isValid: !!watchedValues.premisesAddress && !!watchedValues.premisesTelephone && !!watchedValues.dateOfTheft && !!watchedValues.timeOfTheft && !!watchedValues.howEntryEffected && !!watchedValues.roomsEntered
+      )
     },
     {
       id: 'ownership',
       title: 'Ownership & Insurance',
       component: (
         <div className="space-y-6">
-          <FormField
-            control={form.control as any}
-            name="soleOwner"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    Are you the sole owner of the property?
-                  </FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="soleOwner"
+              checked={watchedValues.soleOwner}
+              onCheckedChange={(checked) => setValue('soleOwner', checked as boolean)}
+            />
+            <Label htmlFor="soleOwner">Are you the sole owner of the property?</Label>
+          </div>
           
           {!watchedValues.soleOwner && (
             <div className="grid grid-cols-2 gap-4 ml-6">
-              <FormField
-                control={form.control as any}
-                name="ownerName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Owner Name *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Enter owner name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div>
+                <Label htmlFor="ownerName">Owner Name *</Label>
+                <Input
+                  id="ownerName"
+                  {...register('ownerName')}
+                  placeholder="Enter owner name"
+                />
+              </div>
               
-              <FormField
-                control={form.control as any}
-                name="ownerAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Owner Address *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Enter owner address" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+              <div>
+                <Label htmlFor="ownerAddress">Owner Address *</Label>
+                <Input
+                  id="ownerAddress"
+                  {...register('ownerAddress')}
+                  placeholder="Enter owner address"
+                />
+              </div>
+            </div>
+          )}
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="otherInsurance"
+              checked={watchedValues.otherInsurance}
+              onCheckedChange={(checked) => setValue('otherInsurance', checked as boolean)}
+            />
+            <Label htmlFor="otherInsurance">Any other insurance covering this property?</Label>
+          </div>
+          
+          {watchedValues.otherInsurance && (
+            <div className="ml-6">
+              <Label htmlFor="otherInsurerDetails">Other Insurer Details *</Label>
+              <Textarea
+                id="otherInsurerDetails"
+                {...register('otherInsurerDetails')}
+                placeholder="Provide details of other insurance"
               />
             </div>
           )}
           
-          <FormField
-            control={form.control as any}
-            name="otherInsurance"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    Any other insurance covering this property?
-                  </FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
-          
-          {watchedValues.otherInsurance && (
-            <FormField
-              control={form.control as any}
-              name="otherInsurerDetails"
-              render={({ field }) => (
-                <FormItem className="ml-6">
-                  <FormLabel>Other Insurer Details *</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} placeholder="Provide details of other insurance" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-          
           <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control as any}
-              name="totalContentsValue"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Value of Total Contents *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                      placeholder="Enter total value"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="totalContentsValue">Value of Total Contents *</Label>
+              <Input
+                id="totalContentsValue"
+                type="number"
+                {...register('totalContentsValue', { valueAsNumber: true })}
+                placeholder="Enter total value"
+              />
+              {errors.totalContentsValue && <p className="text-sm text-red-600">{errors.totalContentsValue.message}</p>}
+            </div>
             
-            <FormField
-              control={form.control as any}
-              name="sumInsuredFirePolicy"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sum Insured Under Fire Policy *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                      placeholder="Enter sum insured"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="sumInsuredFirePolicy">Sum Insured Under Fire Policy *</Label>
+              <Input
+                id="sumInsuredFirePolicy"
+                type="number"
+                {...register('sumInsuredFirePolicy', { valueAsNumber: true })}
+                placeholder="Enter sum insured"
+              />
+              {errors.sumInsuredFirePolicy && <p className="text-sm text-red-600">{errors.sumInsuredFirePolicy.message}</p>}
+            </div>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control as any}
-              name="firePolicyInsurerName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fire Policy Insurer Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter insurer name" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="firePolicyInsurerName">Fire Policy Insurer Name</Label>
+              <Input
+                id="firePolicyInsurerName"
+                {...register('firePolicyInsurerName')}
+                placeholder="Enter insurer name"
+              />
+            </div>
             
-            <FormField
-              control={form.control as any}
-              name="firePolicyInsurerAddress"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fire Policy Insurer Address</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter insurer address" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <Label htmlFor="firePolicyInsurerAddress">Fire Policy Insurer Address</Label>
+              <Input
+                id="firePolicyInsurerAddress"
+                {...register('firePolicyInsurerAddress')}
+                placeholder="Enter insurer address"
+              />
+            </div>
           </div>
           
-          <FormField
-            control={form.control as any}
-            name="previousBurglaryLoss"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    Previous burglary/theft loss?
-                  </FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="previousBurglaryLoss"
+              checked={watchedValues.previousBurglaryLoss}
+              onCheckedChange={(checked) => setValue('previousBurglaryLoss', checked as boolean)}
+            />
+            <Label htmlFor="previousBurglaryLoss">Previous burglary/theft loss?</Label>
+          </div>
           
           {watchedValues.previousBurglaryLoss && (
-            <FormField
-              control={form.control as any}
-              name="previousLossExplanation"
-              render={({ field }) => (
-                <FormItem className="ml-6">
-                  <FormLabel>Previous Loss Explanation *</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} placeholder="Explain the previous loss" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="ml-6">
+              <Label htmlFor="previousLossExplanation">Previous Loss Explanation *</Label>
+              <Textarea
+                id="previousLossExplanation"
+                {...register('previousLossExplanation')}
+                placeholder="Explain the previous loss"
+              />
+            </div>
           )}
         </div>
-      ),
-      isValid: !!watchedValues.totalContentsValue && !!watchedValues.sumInsuredFirePolicy
+      )
     },
     {
       id: 'property',
@@ -843,103 +603,52 @@ const BurglaryClaimForm: React.FC = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <FormField
-                      control={form.control as any}
-                      name={`propertyItems.${index}.description`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description *</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} placeholder="Describe the item" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                    <Label htmlFor={`propertyItems.${index}.description`}>Description *</Label>
+                    <Textarea
+                      {...register(`propertyItems.${index}.description`)}
+                      placeholder="Describe the item"
                     />
                   </div>
                   
-                  <FormField
-                    control={form.control as any}
-                    name={`propertyItems.${index}.costPrice`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cost Price *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                            placeholder="Enter cost price"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div>
+                    <Label htmlFor={`propertyItems.${index}.costPrice`}>Cost Price *</Label>
+                    <Input
+                      type="number"
+                      {...register(`propertyItems.${index}.costPrice`, { valueAsNumber: true })}
+                      placeholder="Enter cost price"
+                    />
+                  </div>
                   
-                  <FormField
-                    control={form.control as any}
-                    name={`propertyItems.${index}.purchaseDate`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date of Purchase *</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div>
+                    <Label htmlFor={`propertyItems.${index}.purchaseDate`}>Date of Purchase *</Label>
+                    <Input
+                      type="date"
+                      {...register(`propertyItems.${index}.purchaseDate`)}
+                    />
+                  </div>
                   
-                  <FormField
-                    control={form.control as any}
-                    name={`propertyItems.${index}.estimatedValue`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Estimated Value at Time of Loss *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                            placeholder="Enter estimated value"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div>
+                    <Label htmlFor={`propertyItems.${index}.estimatedValue`}>Estimated Value at Time of Loss *</Label>
+                    <Input
+                      type="number"
+                      {...register(`propertyItems.${index}.estimatedValue`, { valueAsNumber: true })}
+                      placeholder="Enter estimated value"
+                    />
+                  </div>
                   
-                  <FormField
-                    control={form.control as any}
-                    name={`propertyItems.${index}.netAmountClaimed`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Net Amount Claimed *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                            placeholder="Enter net amount claimed"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div>
+                    <Label htmlFor={`propertyItems.${index}.netAmountClaimed`}>Net Amount Claimed *</Label>
+                    <Input
+                      type="number"
+                      {...register(`propertyItems.${index}.netAmountClaimed`, { valueAsNumber: true })}
+                      placeholder="Enter net amount claimed"
+                    />
+                  </div>
                 </div>
               </Card>
             ))}
           </div>
         </div>
-      ),
-      isValid: fields.every((_, index) => 
-        watchedValues.propertyItems?.[index]?.description &&
-        watchedValues.propertyItems?.[index]?.costPrice > 0 &&
-        watchedValues.propertyItems?.[index]?.purchaseDate &&
-        watchedValues.propertyItems?.[index]?.estimatedValue > 0 &&
-        watchedValues.propertyItems?.[index]?.netAmountClaimed > 0
       )
     },
     {
@@ -962,151 +671,135 @@ const BurglaryClaimForm: React.FC = () => {
             </div>
           </Card>
           
-          <FormField
-            control={form.control as any}
-            name="agreeToDataPrivacy"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    I agree to the data privacy policy and consent to the processing of my personal information *
-                  </FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="agreeToDataPrivacy"
+              checked={watchedValues.agreeToDataPrivacy}
+              onCheckedChange={(checked) => setValue('agreeToDataPrivacy', checked as boolean)}
+            />
+            <Label htmlFor="agreeToDataPrivacy">
+              I agree to the data privacy policy and consent to the processing of my personal information *
+            </Label>
+          </div>
           
-          <FormField
-            control={form.control as any}
-            name="signature"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Digital Signature *</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Type your full name as digital signature" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div>
+            <Label htmlFor="signature">Digital Signature *</Label>
+            <Input
+              id="signature"
+              {...register('signature')}
+              placeholder="Type your full name as digital signature"
+            />
+            {errors.signature && <p className="text-sm text-red-600">{errors.signature.message}</p>}
+          </div>
           
           <div className="text-sm text-gray-600">
             <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
           </div>
         </div>
-      ),
-      isValid: !!watchedValues.agreeToDataPrivacy && !!watchedValues.signature
+      )
     }
   ];
 
   return (
-    <FormProvider {...form}>
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Burglary, Housebreaking and Larceny Claim Form</h1>
-            <p className="text-gray-600 mt-2">Submit your burglary claim with detailed information</p>
-          </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Burglary, Housebreaking and Larceny Claim Form</h1>
+          <p className="text-gray-600 mt-2">Submit your burglary claim with detailed information</p>
+        </div>
 
-          <MultiStepForm
-            steps={steps}
-            onSubmit={form.handleSubmit(onSubmit)}
-            isSubmitting={isSubmitting}
-            submitButtonText="Submit Burglary Claim"
-            formMethods={form}
-          />
+        <MultiStepForm
+          steps={steps}
+          onSubmit={handleSubmit(onSubmit)}
+          isSubmitting={isSubmitting}
+          submitButtonText="Submit Burglary Claim"
+          formMethods={formMethods}
+        />
 
-          {/* Summary Modal */}
-          <Dialog open={showSummary} onOpenChange={setShowSummary}>
-            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Review Your Claim</DialogTitle>
-                <DialogDescription>
-                  Please review all information before final submission
-                </DialogDescription>
-              </DialogHeader>
-              
-              {submittedData && (
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="font-semibold mb-2">Policy Details</h3>
-                    <p><strong>Policy Number:</strong> {submittedData.policyNumber}</p>
-                    <p><strong>Period:</strong> {submittedData.periodOfCoverFrom} to {submittedData.periodOfCoverTo}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-semibold mb-2">Insured Details</h3>
-                    <p><strong>Name:</strong> {submittedData.nameOfInsured}</p>
-                    <p><strong>Email:</strong> {submittedData.email}</p>
-                    <p><strong>Phone:</strong> {submittedData.phone}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-semibold mb-2">Property Items</h3>
-                    <div className="space-y-2">
-                      {submittedData.propertyItems.map((item, index) => (
-                        <div key={index} className="border rounded p-3">
-                          <p><strong>Item {index + 1}:</strong> {item.description}</p>
-                          <p><strong>Amount Claimed:</strong> ₦{item.netAmountClaimed.toLocaleString()}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-3">
-                    <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
-                      {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
-                    </Button>
-                    <Button variant="outline" onClick={() => setShowSummary(false)}>
-                      Back to Edit
-                    </Button>
+        {/* Summary Modal */}
+        <Dialog open={showSummary} onOpenChange={setShowSummary}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Review Your Claim</DialogTitle>
+              <DialogDescription>
+                Please review all information before final submission
+              </DialogDescription>
+            </DialogHeader>
+            
+            {submittedData && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-semibold mb-2">Policy Details</h3>
+                  <p><strong>Policy Number:</strong> {submittedData.policyNumber}</p>
+                  <p><strong>Period:</strong> {submittedData.periodOfCoverFrom} to {submittedData.periodOfCoverTo}</p>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold mb-2">Insured Details</h3>
+                  <p><strong>Name:</strong> {submittedData.nameOfInsured}</p>
+                  <p><strong>Email:</strong> {submittedData.email}</p>
+                  <p><strong>Phone:</strong> {submittedData.phone}</p>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold mb-2">Property Items</h3>
+                  <div className="space-y-2">
+                    {submittedData.propertyItems?.map((item, index) => (
+                      <div key={index} className="border rounded p-3">
+                        <p><strong>Item {index + 1}:</strong> {item.description}</p>
+                        <p><strong>Amount Claimed:</strong> ₦{item.netAmountClaimed?.toLocaleString()}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              )}
-            </DialogContent>
-          </Dialog>
-
-          {/* Success Modal */}
-          <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Check className="h-6 w-6 text-green-600" />
-                  Claim Submitted Successfully
-                </DialogTitle>
-              </DialogHeader>
-              
-              <div className="space-y-4">
-                <p>Your burglary claim has been submitted successfully and is now being processed.</p>
-                <p>You will receive email updates on the status of your claim.</p>
                 
-                <Button onClick={() => {
-                  setShowSuccess(false);
-                  window.location.href = '/dashboard';
-                }}>
-                  Go to Dashboard
-                </Button>
+                <div className="flex gap-3">
+                  <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
+                    {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowSummary(false)}>
+                    Back to Edit
+                  </Button>
+                </div>
               </div>
-            </DialogContent>
-          </Dialog>
+            )}
+          </DialogContent>
+        </Dialog>
 
-          <AuthRequiredSubmit
-            isOpen={showAuthModal}
-            onClose={() => setShowAuthModal(false)}
-            onProceedToSignup={() => {
-              window.location.href = '/signup';
-            }}
-            formType="Burglary Claim"
-          />
-        </div>
+        {/* Success Modal */}
+        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Check className="h-6 w-6 text-green-600" />
+                Claim Submitted Successfully
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <p>Your burglary claim has been submitted successfully and is now being processed.</p>
+              <p>You will receive email updates on the status of your claim.</p>
+              
+              <Button onClick={() => {
+                setShowSuccess(false);
+                window.location.href = '/dashboard';
+              }}>
+                Go to Dashboard
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <AuthRequiredSubmit
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onProceedToSignup={() => {
+            window.location.href = '/signup';
+          }}
+          formType="Burglary Claim"
+        />
       </div>
-    </FormProvider>
+    </div>
   );
 };
 

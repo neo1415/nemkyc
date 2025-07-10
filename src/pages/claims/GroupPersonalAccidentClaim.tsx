@@ -11,25 +11,16 @@ import { useFormDraft } from '../../hooks/useFormDraft';
 import { useToast } from '../../hooks/use-toast';
 
 import MultiStepForm from '../../components/common/MultiStepForm';
-import FormSection from '../../components/common/FormSection';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Badge } from '../../components/ui/badge';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '../../components/ui/form';
+import { Label } from '../../components/ui/label';
 
 const GroupPersonalAccidentClaim = () => {
   const { toast } = useToast();
@@ -37,38 +28,62 @@ const GroupPersonalAccidentClaim = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<GroupPersonalAccidentClaimData>({
+  const formMethods = useForm<GroupPersonalAccidentClaimData>({
     resolver: yupResolver(groupPersonalAccidentSchema) as any,
     defaultValues: {
-      witnesses: [{ name: '', address: '' }],
+      policyNumber: '',
+      periodOfCoverFrom: '',
+      periodOfCoverTo: '',
+      companyName: '',
+      address: '',
+      phone: '',
+      email: '',
+      nameOfInjured: '',
+      ageOfInjured: '',
+      occupationOfInjured: '',
+      accidentDate: '',
+      accidentTime: '',
+      accidentPlace: '',
+      incidentDescription: '',
+      particularsOfInjuries: '',
+      medicalTreatmentReceived: '',
+      doctorName: '',
+      doctorAddress: '',
+      hospitalName: '',
+      hospitalAddress: '',
       isUsualDoctor: false,
+      usualDoctorReason: '',
+      witnesses: [{ name: '', address: '' }],
       agreeToDataPrivacy: false,
       signature: ''
-    }
+    },
+    mode: 'onChange'
   });
 
   const { fields: witnessFields, append: appendWitness, remove: removeWitness } = useFieldArray({
-    control: form.control,
+    control: formMethods.control,
     name: 'witnesses'
   });
 
-  const { saveDraft, loadDraft, clearDraft } = useFormDraft('group-personal-accident-claim', form);
+  const { saveDraft, loadDraft, clearDraft } = useFormDraft('group-personal-accident-claim', formMethods);
+
+  const watchedValues = formMethods.watch();
 
   useEffect(() => {
     const draft = loadDraft();
     if (draft) {
       Object.keys(draft).forEach((key) => {
-        form.setValue(key as keyof GroupPersonalAccidentClaimData, draft[key]);
+        formMethods.setValue(key as keyof GroupPersonalAccidentClaimData, draft[key]);
       });
     }
-  }, [form, loadDraft]);
+  }, [formMethods, loadDraft]);
 
   useEffect(() => {
-    const subscription = form.watch((data) => {
+    const subscription = formMethods.watch((data) => {
       saveDraft(data);
     });
     return () => subscription.unsubscribe();
-  }, [form, saveDraft]);
+  }, [formMethods, saveDraft]);
 
   const addWitness = () => {
     appendWitness({ name: '', address: '' });
@@ -110,645 +125,525 @@ const GroupPersonalAccidentClaim = () => {
     }
   };
 
-  const onFinalSubmit = () => {
-    if (form.formState.isValid) {
-      setShowSummary(true);
-    }
+  const onFinalSubmit = (data: GroupPersonalAccidentClaimData) => {
+    setShowSummary(true);
   };
-
-  const PolicyDetailsSection = () => (
-    <FormSection title="Policy Details" description="Enter your policy information">
-      <div className="grid md:grid-cols-2 gap-6">
-        <FormField
-          control={form.control}
-          name="policyNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Policy Number *</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter policy number" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="md:col-span-2">
-          <FormLabel>Period of Cover *</FormLabel>
-          <div className="grid md:grid-cols-2 gap-4 mt-2">
-            <FormField
-              control={form.control}
-              name="periodOfCoverFrom"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>From</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="periodOfCoverTo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>To</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-      </div>
-    </FormSection>
-  );
-
-  const InsuredDetailsSection = () => (
-    <FormSection title="Insured Details" description="Company and contact information">
-      <div className="space-y-6">
-        <FormField
-          control={form.control}
-          name="companyName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Company Name *</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter company name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="address"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Address *</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Enter full address" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="grid md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone Number *</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter phone number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email Address *</FormLabel>
-                <FormControl>
-                  <Input type="email" placeholder="Enter email address" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-      </div>
-    </FormSection>
-  );
-
-  const DetailsOfLossSection = () => (
-    <FormSection title="Details of Loss" description="Accident information and description">
-      <div className="space-y-6">
-        <div className="grid md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="accidentDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Accident Date *</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="accidentTime"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Time *</FormLabel>
-                <FormControl>
-                  <Input type="time" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <FormField
-          control={form.control}
-          name="accidentPlace"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Place *</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter place where accident occurred" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="incidentDescription"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Incident Description *</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Describe how the incident occurred" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="particularsOfInjuries"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Particulars of Injuries *</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Describe the injuries sustained" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-    </FormSection>
-  );
-
-  const WitnessInformationSection = () => (
-    <FormSection title="Witness Information" description="Add witness details">
-      <div className="space-y-4">
-        {witnessFields.map((field, index) => (
-          <Card key={field.id} className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="font-medium">Witness {index + 1}</h4>
-              {witnessFields.length > 1 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeWitness(index)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name={`witnesses.${index}.name`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter witness name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name={`witnesses.${index}.address`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address *</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter witness address" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </Card>
-        ))}
-        <Button type="button" variant="outline" onClick={addWitness} className="w-full">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Witness
-        </Button>
-      </div>
-    </FormSection>
-  );
-
-  const DoctorInformationSection = () => (
-    <FormSection title="Doctor Information" description="Medical practitioner details">
-      <div className="space-y-6">
-        <FormField
-          control={form.control}
-          name="doctorName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Name of Doctor *</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter doctor's name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="doctorAddress"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Address of Doctor *</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Enter doctor's address" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="isUsualDoctor"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Is this your usual doctor? *</FormLabel>
-              <FormControl>
-                <RadioGroup
-                  onValueChange={(value) => field.onChange(value === 'yes')}
-                  value={field.value ? 'yes' : 'no'}
-                  className="flex flex-col space-y-1"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="yes" id="usual-doctor-yes" />
-                    <label htmlFor="usual-doctor-yes">Yes</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="no" id="usual-doctor-no" />
-                    <label htmlFor="usual-doctor-no">No</label>
-                  </div>
-                </RadioGroup>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-    </FormSection>
-  );
-
-  const IncapacityDetailsSection = () => (
-    <FormSection title="Incapacity Details" description="Duration of incapacity periods">
-      <div className="space-y-6">
-        <div>
-          <h4 className="font-medium mb-4">Total Incapacity Period</h4>
-          <div className="grid md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="totalIncapacityFrom"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>From</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="totalIncapacityTo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>To</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-        <div>
-          <h4 className="font-medium mb-4">Partial Incapacity Period</h4>
-          <div className="grid md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="partialIncapacityFrom"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>From</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="partialIncapacityTo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>To</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-      </div>
-    </FormSection>
-  );
-
-  const OtherInsurersSection = () => (
-    <FormSection title="Other Insurers" description="Details of other insurance coverage">
-      <div className="space-y-6">
-        <FormField
-          control={form.control}
-          name="otherInsurerName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Name *</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter insurer name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="otherInsurerAddress"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Address *</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Enter insurer address" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="otherPolicyNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Policy Number *</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter policy number" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-    </FormSection>
-  );
-
-  const DataPrivacySection = () => (
-    <FormSection title="Data Privacy" description="Privacy policy and data usage">
-      <div className="prose prose-sm max-w-none">
-        <div className="bg-muted p-4 rounded-lg space-y-3">
-          <p><strong>i.</strong> Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-          <p><strong>ii.</strong> Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-          <p><strong>iii.</strong> Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
-        </div>
-      </div>
-    </FormSection>
-  );
-
-  const DeclarationSection = () => (
-    <FormSection title="Declaration & Signature" description="Final declaration and signature">
-      <div className="space-y-6">
-        <div className="space-y-4">
-          <div className="bg-muted p-4 rounded-lg">
-            <h4 className="font-medium mb-3">Declaration</h4>
-            <div className="space-y-2 text-sm">
-              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-            </div>
-          </div>
-          <FormField
-            control={form.control}
-            name="agreeToDataPrivacy"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <FormLabel className="font-normal">
-                  I agree to the data privacy policy and declaration statements above *
-                </FormLabel>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <FormField
-          control={form.control}
-          name="signature"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Digital Signature *</FormLabel>
-              <FormControl>
-                <Input placeholder="Type your full name as digital signature" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="text-sm text-muted-foreground">
-          Date: {new Date().toLocaleDateString()}
-        </div>
-      </div>
-    </FormSection>
-  );
 
   const steps = [
     {
-      id: 'policy-details',
+      id: 'policy',
       title: 'Policy Details',
-      component: <PolicyDetailsSection />,
-      isValid: true
+      component: (
+        <div className="space-y-6">
+          <div>
+            <Label htmlFor="policyNumber">Policy Number *</Label>
+            <Input
+              id="policyNumber"
+              {...formMethods.register('policyNumber')}
+              placeholder="Enter policy number"
+            />
+            {formMethods.formState.errors.policyNumber && (
+              <p className="text-sm text-red-600">{formMethods.formState.errors.policyNumber.message}</p>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="periodOfCoverFrom">Period of Cover From *</Label>
+              <Input
+                id="periodOfCoverFrom"
+                type="date"
+                {...formMethods.register('periodOfCoverFrom')}
+              />
+              {formMethods.formState.errors.periodOfCoverFrom && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.periodOfCoverFrom.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="periodOfCoverTo">Period of Cover To *</Label>
+              <Input
+                id="periodOfCoverTo"
+                type="date"
+                {...formMethods.register('periodOfCoverTo')}
+              />
+              {formMethods.formState.errors.periodOfCoverTo && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.periodOfCoverTo.message}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )
     },
     {
-      id: 'insured-details',
+      id: 'insured',
       title: 'Insured Details',
-      component: <InsuredDetailsSection />,
-      isValid: true
+      component: (
+        <div className="space-y-6">
+          <div>
+            <Label htmlFor="companyName">Company Name *</Label>
+            <Input
+              id="companyName"
+              {...formMethods.register('companyName')}
+              placeholder="Enter company name"
+            />
+            {formMethods.formState.errors.companyName && (
+              <p className="text-sm text-red-600">{formMethods.formState.errors.companyName.message}</p>
+            )}
+          </div>
+          
+          <div>
+            <Label htmlFor="address">Address *</Label>
+            <Textarea
+              id="address"
+              {...formMethods.register('address')}
+              placeholder="Enter full address"
+            />
+            {formMethods.formState.errors.address && (
+              <p className="text-sm text-red-600">{formMethods.formState.errors.address.message}</p>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="phone">Phone Number *</Label>
+              <Input
+                id="phone"
+                {...formMethods.register('phone')}
+                placeholder="Enter phone number"
+              />
+              {formMethods.formState.errors.phone && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.phone.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                {...formMethods.register('email')}
+                placeholder="Enter email address"
+              />
+              {formMethods.formState.errors.email && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.email.message}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )
     },
     {
-      id: 'details-of-loss',
-      title: 'Details of Loss',
-      component: <DetailsOfLossSection />,
-      isValid: true
+      id: 'injured',
+      title: 'Details of Injured Person',
+      component: (
+        <div className="space-y-6">
+          <div>
+            <Label htmlFor="nameOfInjured">Name of Injured Person *</Label>
+            <Input
+              id="nameOfInjured"
+              {...formMethods.register('nameOfInjured')}
+              placeholder="Enter name of injured person"
+            />
+            {formMethods.formState.errors.nameOfInjured && (
+              <p className="text-sm text-red-600">{formMethods.formState.errors.nameOfInjured.message}</p>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="ageOfInjured">Age *</Label>
+              <Input
+                id="ageOfInjured"
+                type="number"
+                {...formMethods.register('ageOfInjured')}
+                placeholder="Enter age"
+              />
+              {formMethods.formState.errors.ageOfInjured && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.ageOfInjured.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="occupationOfInjured">Occupation *</Label>
+              <Input
+                id="occupationOfInjured"
+                {...formMethods.register('occupationOfInjured')}
+                placeholder="Enter occupation"
+              />
+              {formMethods.formState.errors.occupationOfInjured && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.occupationOfInjured.message}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )
     },
     {
-      id: 'witness-information',
-      title: 'Witness Information',
-      component: <WitnessInformationSection />,
-      isValid: true
+      id: 'accident',
+      title: 'Accident Details',
+      component: (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="accidentDate">Accident Date *</Label>
+              <Input
+                id="accidentDate"
+                type="date"
+                {...formMethods.register('accidentDate')}
+              />
+              {formMethods.formState.errors.accidentDate && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.accidentDate.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="accidentTime">Accident Time *</Label>
+              <Input
+                id="accidentTime"
+                type="time"
+                {...formMethods.register('accidentTime')}
+              />
+              {formMethods.formState.errors.accidentTime && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.accidentTime.message}</p>
+              )}
+            </div>
+          </div>
+          
+          <div>
+            <Label htmlFor="accidentPlace">Place of Accident *</Label>
+            <Input
+              id="accidentPlace"
+              {...formMethods.register('accidentPlace')}
+              placeholder="Where did the accident occur?"
+            />
+            {formMethods.formState.errors.accidentPlace && (
+              <p className="text-sm text-red-600">{formMethods.formState.errors.accidentPlace.message}</p>
+            )}
+          </div>
+          
+          <div>
+            <Label htmlFor="incidentDescription">How did the incident occur? *</Label>
+            <Textarea
+              id="incidentDescription"
+              {...formMethods.register('incidentDescription')}
+              placeholder="Describe how the incident occurred"
+              rows={4}
+            />
+            {formMethods.formState.errors.incidentDescription && (
+              <p className="text-sm text-red-600">{formMethods.formState.errors.incidentDescription.message}</p>
+            )}
+          </div>
+          
+          <div>
+            <Label htmlFor="particularsOfInjuries">Particulars of Injuries *</Label>
+            <Textarea
+              id="particularsOfInjuries"
+              {...formMethods.register('particularsOfInjuries')}
+              placeholder="Describe the injuries sustained"
+              rows={4}
+            />
+            {formMethods.formState.errors.particularsOfInjuries && (
+              <p className="text-sm text-red-600">{formMethods.formState.errors.particularsOfInjuries.message}</p>
+            )}
+          </div>
+        </div>
+      )
     },
     {
-      id: 'doctor-information',
-      title: 'Doctor Information',
-      component: <DoctorInformationSection />,
-      isValid: true
+      id: 'medical',
+      title: 'Medical Details',
+      component: (
+        <div className="space-y-6">
+          <div>
+            <Label htmlFor="medicalTreatmentReceived">Medical Treatment Received *</Label>
+            <Textarea
+              id="medicalTreatmentReceived"
+              {...formMethods.register('medicalTreatmentReceived')}
+              placeholder="Describe the medical treatment received"
+              rows={3}
+            />
+            {formMethods.formState.errors.medicalTreatmentReceived && (
+              <p className="text-sm text-red-600">{formMethods.formState.errors.medicalTreatmentReceived.message}</p>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="doctorName">Doctor's Name *</Label>
+              <Input
+                id="doctorName"
+                {...formMethods.register('doctorName')}
+                placeholder="Enter doctor's name"
+              />
+              {formMethods.formState.errors.doctorName && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.doctorName.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="doctorAddress">Doctor's Address *</Label>
+              <Input
+                id="doctorAddress"
+                {...formMethods.register('doctorAddress')}
+                placeholder="Enter doctor's address"
+              />
+              {formMethods.formState.errors.doctorAddress && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.doctorAddress.message}</p>
+              )}
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="hospitalName">Hospital/Clinic Name *</Label>
+              <Input
+                id="hospitalName"
+                {...formMethods.register('hospitalName')}
+                placeholder="Enter hospital/clinic name"
+              />
+              {formMethods.formState.errors.hospitalName && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.hospitalName.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="hospitalAddress">Hospital/Clinic Address *</Label>
+              <Input
+                id="hospitalAddress"
+                {...formMethods.register('hospitalAddress')}
+                placeholder="Enter hospital/clinic address"
+              />
+              {formMethods.formState.errors.hospitalAddress && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.hospitalAddress.message}</p>
+              )}
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isUsualDoctor"
+                checked={watchedValues.isUsualDoctor}
+                onCheckedChange={(checked) => formMethods.setValue('isUsualDoctor', checked as boolean)}
+              />
+              <Label htmlFor="isUsualDoctor">Is this the injured person's usual doctor?</Label>
+            </div>
+            
+            {!watchedValues.isUsualDoctor && (
+              <div>
+                <Label htmlFor="usualDoctorReason">If no, state reason *</Label>
+                <Textarea
+                  id="usualDoctorReason"
+                  {...formMethods.register('usualDoctorReason')}
+                  placeholder="Explain why the usual doctor was not consulted"
+                  rows={3}
+                />
+                {formMethods.formState.errors.usualDoctorReason && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.usualDoctorReason.message}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )
     },
     {
-      id: 'incapacity-details',
-      title: 'Incapacity Details',
-      component: <IncapacityDetailsSection />,
-      isValid: true
-    },
-    {
-      id: 'other-insurers',
-      title: 'Other Insurers',
-      component: <OtherInsurersSection />,
-      isValid: true
-    },
-    {
-      id: 'data-privacy',
-      title: 'Data Privacy',
-      component: <DataPrivacySection />,
-      isValid: true
+      id: 'witnesses',
+      title: 'Witnesses',
+      component: (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">Witnesses to the Accident</h3>
+            <Button type="button" onClick={addWitness} variant="outline" size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Witness
+            </Button>
+          </div>
+          
+          <div className="space-y-4">
+            {witnessFields.map((field, index) => (
+              <Card key={field.id} className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-medium">Witness {index + 1}</h4>
+                  {witnessFields.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeWitness(index)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor={`witnesses.${index}.name`}>Name *</Label>
+                    <Input
+                      {...formMethods.register(`witnesses.${index}.name`)}
+                      placeholder="Enter witness name"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor={`witnesses.${index}.address`}>Address *</Label>
+                    <Input
+                      {...formMethods.register(`witnesses.${index}.address`)}
+                      placeholder="Enter witness address"
+                    />
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )
     },
     {
       id: 'declaration',
-      title: 'Declaration & Signature',
-      component: <DeclarationSection />,
-      isValid: true
+      title: 'Data Privacy & Declaration',
+      component: (
+        <div className="space-y-6">
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Data Privacy Notice</h3>
+            <div className="prose prose-sm max-w-none">
+              <p>
+                We collect and process your personal information in accordance with applicable data protection laws.
+                Your data will be used to process your claim and may be shared with relevant parties including
+                investigators, adjusters, and medical professionals as necessary for claim assessment.
+              </p>
+              <p>
+                By submitting this form, you consent to the collection, processing, and storage of your personal
+                information for the purposes of claim processing and related activities.
+              </p>
+            </div>
+          </Card>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="agreeToDataPrivacy"
+              checked={watchedValues.agreeToDataPrivacy}
+              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked as boolean)}
+            />
+            <Label htmlFor="agreeToDataPrivacy">
+              I agree to the data privacy policy and consent to the processing of my personal information *
+            </Label>
+          </div>
+          
+          <div>
+            <Label htmlFor="signature">Digital Signature *</Label>
+            <Input
+              id="signature"
+              {...formMethods.register('signature')}
+              placeholder="Type your full name as digital signature"
+            />
+            {formMethods.formState.errors.signature && (
+              <p className="text-sm text-red-600">{formMethods.formState.errors.signature.message}</p>
+            )}
+          </div>
+          
+          <div className="text-sm text-gray-600">
+            <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
+          </div>
+        </div>
+      )
     }
   ];
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Group Personal Accident Insurance Claim Form
-          </h1>
-          <p className="text-gray-600">
-            Please fill out all required fields accurately
-          </p>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Group Personal Accident Claim Form</h1>
+          <p className="text-gray-600 mt-2">Submit your personal accident claim</p>
         </div>
 
-        <Form {...form}>
-          <MultiStepForm
-            steps={steps}
-            onSubmit={onFinalSubmit}
-            isSubmitting={isSubmitting}
-            submitButtonText="Submit Claim"
-            formMethods={form}
-          />
-        </Form>
+        <MultiStepForm
+          steps={steps}
+          onSubmit={formMethods.handleSubmit(onFinalSubmit)}
+          isSubmitting={isSubmitting}
+          submitButtonText="Submit Claim"
+          formMethods={formMethods}
+        />
 
-        {/* Summary Dialog */}
+        {/* Summary Modal */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Claim Summary</DialogTitle>
+              <DialogTitle>Review Your Claim</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid gap-4">
-                <div className="space-y-2">
-                  <h4 className="font-medium">Policy Information</h4>
-                  <p className="text-sm">Policy Number: {form.getValues('policyNumber')}</p>
-                  <p className="text-sm">Company: {form.getValues('companyName')}</p>
-                  <p className="text-sm">Email: {form.getValues('email')}</p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-medium">Accident Details</h4>
-                  <p className="text-sm">Date: {form.getValues('accidentDate')}</p>
-                  <p className="text-sm">Time: {form.getValues('accidentTime')}</p>
-                  <p className="text-sm">Place: {form.getValues('accidentPlace')}</p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-medium">Witnesses</h4>
-                  {form.getValues('witnesses')?.map((witness, index) => (
-                    <p key={index} className="text-sm">{witness.name} - {witness.address}</p>
-                  ))}
-                </div>
+            
+            <div className="space-y-6">
+              <div>
+                <h3 className="font-semibold mb-2">Policy Details</h3>
+                <p><strong>Policy Number:</strong> {watchedValues.policyNumber}</p>
+                <p><strong>Company:</strong> {watchedValues.companyName}</p>
               </div>
+              
+              <div>
+                <h3 className="font-semibold mb-2">Injured Person</h3>
+                <p><strong>Name:</strong> {watchedValues.nameOfInjured}</p>
+                <p><strong>Age:</strong> {watchedValues.ageOfInjured}</p>
+                <p><strong>Occupation:</strong> {watchedValues.occupationOfInjured}</p>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold mb-2">Accident Information</h3>
+                <p><strong>Date:</strong> {watchedValues.accidentDate}</p>
+                <p><strong>Time:</strong> {watchedValues.accidentTime}</p>
+                <p><strong>Place:</strong> {watchedValues.accidentPlace}</p>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold mb-2">Witnesses</h3>
+                {watchedValues.witnesses?.map((witness, index) => (
+                  <div key={index} className="border rounded p-3 mb-2">
+                    <p><strong>{witness.name}</strong></p>
+                    <p>{witness.address}</p>
+                  </div>
+                ))}
+              </div>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowSummary(false)}>
+                  Back to Edit
+                </Button>
+                <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Confirm & Submit'
+                  )}
+                </Button>
+              </DialogFooter>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowSummary(false)}>
-                Edit Information
-              </Button>
-              <Button onClick={form.handleSubmit(handleSubmit)} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Confirm Submission'
-                )}
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Success Dialog */}
+        {/* Success Modal */}
         <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle className="text-center text-green-600">
-                Claim Submitted Successfully!
-              </DialogTitle>
+              <DialogTitle className="text-green-600">Claim Submitted Successfully!</DialogTitle>
             </DialogHeader>
-            <div className="text-center py-4">
-              <div className="mb-4">
-                <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                  ✓
-                </div>
-                <p className="text-gray-600 mb-4">
-                  Your group personal accident claim has been submitted successfully. 
-                  You will receive a confirmation email shortly.
-                </p>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm font-medium text-blue-800">
-                    For claims status enquiries, call 01 448 9570
-                  </p>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => setShowSuccess(false)} className="w-full">
-                Close
+            
+            <div className="space-y-4">
+              <p>Your group personal accident claim has been submitted successfully.</p>
+              <p>You will receive a confirmation email shortly and updates on the status of your claim.</p>
+              
+              <Button onClick={() => {
+                setShowSuccess(false);
+                window.location.href = '/dashboard';
+              }}>
+                Go to Dashboard
               </Button>
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
