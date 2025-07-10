@@ -38,21 +38,21 @@ const GroupPersonalAccidentClaim = () => {
       address: '',
       phone: '',
       email: '',
-      nameOfInjured: '',
-      ageOfInjured: '',
-      occupationOfInjured: '',
       accidentDate: '',
       accidentTime: '',
       accidentPlace: '',
       incidentDescription: '',
       particularsOfInjuries: '',
-      medicalTreatmentReceived: '',
       doctorName: '',
       doctorAddress: '',
-      hospitalName: '',
-      hospitalAddress: '',
       isUsualDoctor: false,
-      usualDoctorReason: '',
+      totalIncapacityFrom: '',
+      totalIncapacityTo: '',
+      partialIncapacityFrom: '',
+      partialIncapacityTo: '',
+      otherInsurerName: '',
+      otherInsurerAddress: '',
+      otherPolicyNumber: '',
       witnesses: [{ name: '', address: '' }],
       agreeToDataPrivacy: false,
       signature: ''
@@ -234,52 +234,6 @@ const GroupPersonalAccidentClaim = () => {
       )
     },
     {
-      id: 'injured',
-      title: 'Details of Injured Person',
-      component: (
-        <div className="space-y-6">
-          <div>
-            <Label htmlFor="nameOfInjured">Name of Injured Person *</Label>
-            <Input
-              id="nameOfInjured"
-              {...formMethods.register('nameOfInjured')}
-              placeholder="Enter name of injured person"
-            />
-            {formMethods.formState.errors.nameOfInjured && (
-              <p className="text-sm text-red-600">{formMethods.formState.errors.nameOfInjured.message}</p>
-            )}
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="ageOfInjured">Age *</Label>
-              <Input
-                id="ageOfInjured"
-                type="number"
-                {...formMethods.register('ageOfInjured')}
-                placeholder="Enter age"
-              />
-              {formMethods.formState.errors.ageOfInjured && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.ageOfInjured.message}</p>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="occupationOfInjured">Occupation *</Label>
-              <Input
-                id="occupationOfInjured"
-                {...formMethods.register('occupationOfInjured')}
-                placeholder="Enter occupation"
-              />
-              {formMethods.formState.errors.occupationOfInjured && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.occupationOfInjured.message}</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
       id: 'accident',
       title: 'Accident Details',
       component: (
@@ -352,22 +306,9 @@ const GroupPersonalAccidentClaim = () => {
     },
     {
       id: 'medical',
-      title: 'Medical Details',
+      title: 'Medical & Incapacity Details',
       component: (
         <div className="space-y-6">
-          <div>
-            <Label htmlFor="medicalTreatmentReceived">Medical Treatment Received *</Label>
-            <Textarea
-              id="medicalTreatmentReceived"
-              {...formMethods.register('medicalTreatmentReceived')}
-              placeholder="Describe the medical treatment received"
-              rows={3}
-            />
-            {formMethods.formState.errors.medicalTreatmentReceived && (
-              <p className="text-sm text-red-600">{formMethods.formState.errors.medicalTreatmentReceived.message}</p>
-            )}
-          </div>
-          
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="doctorName">Doctor's Name *</Label>
@@ -394,56 +335,91 @@ const GroupPersonalAccidentClaim = () => {
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="hospitalName">Hospital/Clinic Name *</Label>
-              <Input
-                id="hospitalName"
-                {...formMethods.register('hospitalName')}
-                placeholder="Enter hospital/clinic name"
-              />
-              {formMethods.formState.errors.hospitalName && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.hospitalName.message}</p>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="hospitalAddress">Hospital/Clinic Address *</Label>
-              <Input
-                id="hospitalAddress"
-                {...formMethods.register('hospitalAddress')}
-                placeholder="Enter hospital/clinic address"
-              />
-              {formMethods.formState.errors.hospitalAddress && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.hospitalAddress.message}</p>
-              )}
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="isUsualDoctor"
+              checked={watchedValues.isUsualDoctor}
+              onCheckedChange={(checked) => formMethods.setValue('isUsualDoctor', checked as boolean)}
+            />
+            <Label htmlFor="isUsualDoctor">Is this the injured person's usual doctor?</Label>
+          </div>
+          
+          <div>
+            <h4 className="font-medium mb-4">Period of Total Incapacity</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="totalIncapacityFrom">From</Label>
+                <Input
+                  id="totalIncapacityFrom"
+                  type="date"
+                  {...formMethods.register('totalIncapacityFrom')}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="totalIncapacityTo">To</Label>
+                <Input
+                  id="totalIncapacityTo"
+                  type="date"
+                  {...formMethods.register('totalIncapacityTo')}
+                />
+              </div>
             </div>
           </div>
           
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isUsualDoctor"
-                checked={watchedValues.isUsualDoctor}
-                onCheckedChange={(checked) => formMethods.setValue('isUsualDoctor', checked as boolean)}
-              />
-              <Label htmlFor="isUsualDoctor">Is this the injured person's usual doctor?</Label>
-            </div>
-            
-            {!watchedValues.isUsualDoctor && (
+          <div>
+            <h4 className="font-medium mb-4">Period of Partial Incapacity</h4>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="usualDoctorReason">If no, state reason *</Label>
-                <Textarea
-                  id="usualDoctorReason"
-                  {...formMethods.register('usualDoctorReason')}
-                  placeholder="Explain why the usual doctor was not consulted"
-                  rows={3}
+                <Label htmlFor="partialIncapacityFrom">From</Label>
+                <Input
+                  id="partialIncapacityFrom"
+                  type="date"
+                  {...formMethods.register('partialIncapacityFrom')}
                 />
-                {formMethods.formState.errors.usualDoctorReason && (
-                  <p className="text-sm text-red-600">{formMethods.formState.errors.usualDoctorReason.message}</p>
-                )}
               </div>
-            )}
+              
+              <div>
+                <Label htmlFor="partialIncapacityTo">To</Label>
+                <Input
+                  id="partialIncapacityTo"
+                  type="date"
+                  {...formMethods.register('partialIncapacityTo')}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="font-medium mb-4">Other Insurance Details</h4>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="otherInsurerName">Other Insurer Name</Label>
+                <Input
+                  id="otherInsurerName"
+                  {...formMethods.register('otherInsurerName')}
+                  placeholder="Enter other insurer name"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="otherInsurerAddress">Other Insurer Address</Label>
+                <Input
+                  id="otherInsurerAddress"
+                  {...formMethods.register('otherInsurerAddress')}
+                  placeholder="Enter other insurer address"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="otherPolicyNumber">Other Policy Number</Label>
+                <Input
+                  id="otherPolicyNumber"
+                  {...formMethods.register('otherPolicyNumber')}
+                  placeholder="Enter other policy number"
+                />
+              </div>
+            </div>
           </div>
         </div>
       )
@@ -581,13 +557,6 @@ const GroupPersonalAccidentClaim = () => {
                 <h3 className="font-semibold mb-2">Policy Details</h3>
                 <p><strong>Policy Number:</strong> {watchedValues.policyNumber}</p>
                 <p><strong>Company:</strong> {watchedValues.companyName}</p>
-              </div>
-              
-              <div>
-                <h3 className="font-semibold mb-2">Injured Person</h3>
-                <p><strong>Name:</strong> {watchedValues.nameOfInjured}</p>
-                <p><strong>Age:</strong> {watchedValues.ageOfInjured}</p>
-                <p><strong>Occupation:</strong> {watchedValues.occupationOfInjured}</p>
               </div>
               
               <div>
