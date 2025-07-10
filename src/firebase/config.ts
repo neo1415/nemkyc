@@ -5,13 +5,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyB4g7kYRDUxS_fQ_ilwWOq4P-F4D0YAMuY",
-  authDomain: "nem-insurance-42c48.firebaseapp.com",
-  projectId: "nem-insurance-42c48",
-  storageBucket: "nem-insurance-42c48.firebasestorage.app",
-  messagingSenderId: "1098480780228",
-  appId: "1:1098480780228:web:f8c9c2e5d3a4b6e7f8c9c2",
-  measurementId: "G-XXXXXXXXXX"
+  apiKey: "AIzaSyDTyrzbQ4xYV0IAvngwgCUBf6EPnflacSw",
+  authDomain: "nem-customer-feedback-8d3fb.firebaseapp.com",
+  projectId: "nem-customer-feedback-8d3fb",
+  storageBucket: "nem-customer-feedback-8d3fb.appspot.com",
+  messagingSenderId: "524975485983",
+  appId: "1:524975485983:web:3a859424a3314d53ab112a",
+  measurementId: "G-8BH08J5X7G"
 };
 
 // Initialize Firebase
