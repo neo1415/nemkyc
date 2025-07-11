@@ -62,7 +62,7 @@ const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
             collection: collectionName,
             type: collectionName.replace('-cdd', '').replace('-', ' '),
             ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate(),
+           createdAt: doc.data().createdAt?.toDate?.() ?? null,
             updatedAt: doc.data().updatedAt?.toDate(),
           });
         });
