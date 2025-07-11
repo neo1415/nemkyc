@@ -28,7 +28,30 @@ const SignIn: React.FC = () => {
 
     try {
       await signIn(email, password);
-      navigate(from, { replace: true });
+      // Role-based navigation
+      const { doc, getDoc } = await import('firebase/firestore');
+      const { db } = await import('../../firebase/config');
+      const { getAuth } = await import('firebase/auth');
+      
+      const currentUser = getAuth().currentUser;
+      if (currentUser) {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const role = userData.role || 'default';
+          
+          if (['admin', 'super-admin', 'compliance', 'claims'].includes(role)) {
+            navigate('/admin', { replace: true });
+          } else {
+            navigate('/dashboard', { replace: true });
+          }
+        } else {
+          navigate(from, { replace: true });
+        }
+      } else {
+        navigate(from, { replace: true });
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
     } finally {
@@ -42,7 +65,25 @@ const SignIn: React.FC = () => {
 
     try {
       await signInWithGoogle();
-      navigate(from, { replace: true });
+      // Role-based navigation
+      const { doc, getDoc } = await import('firebase/firestore');
+      const { db } = await import('../../firebase/config');
+      const { getAuth } = await import('firebase/auth');
+      
+      const userDoc = await getDoc(doc(db, 'users', getAuth().currentUser?.uid || ''));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const role = userData.role || 'default';
+        
+        if (['admin', 'super-admin', 'compliance', 'claims'].includes(role)) {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      } else {
+        navigate(from, { replace: true });
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to sign in with Google');
     } finally {
