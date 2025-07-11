@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './Sidebar';
+import AdminSidebar from './AdminSidebar';
 import Header from './Header';
 import { Menu } from 'lucide-react';
 
@@ -18,7 +19,7 @@ const Layout: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       {isAdmin() && (
         <>
-          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           <div className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'} lg:ml-64`}>
             <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
             <main className="p-6">
