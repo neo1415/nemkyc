@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { Calendar, CalendarIcon, Plus, Trash2, Upload } from 'lucide-react';
+import { Calendar, CalendarIcon, Plus, Trash2, Upload, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,9 @@ import MultiStepForm from '@/components/common/MultiStepForm';
 import { NaicomPartnersCDDData, Director } from '@/types';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
+import { uploadFile } from '@/services/fileService';
+import { db } from '@/firebase/config';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const naicomPartnersCDDSchema = yup.object().shape({
   // Company Info
@@ -141,6 +144,8 @@ const NaicomPartnersCDD: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [editingField, setEditingField] = useState<string | null>(null);
 
   const formMethods = useForm<any>({
     resolver: yupResolver(naicomPartnersCDDSchema),
@@ -167,13 +172,40 @@ const NaicomPartnersCDD: React.FC = () => {
   const handleSubmit = async (data: NaicomPartnersCDDData) => {
     setIsSubmitting(true);
     try {
-      // Submit logic would go here
-      console.log('NAICOM Partners CDD submitted:', data);
+      // Upload files to Firebase Storage
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      
+      Object.entries(uploadedFiles).forEach(([key, file]) => {
+        fileUploadPromises.push(
+          uploadFile(file, 'naicom-partners-cdd').then(url => [key + 'Url', url])
+        );
+      });
+      
+      const uploadedUrls = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(uploadedUrls);
+      
+      // Prepare form data with file URLs
+      const submissionData = {
+        ...data,
+        ...fileUrls,
+        status: 'processing',
+        submittedAt: new Date().toISOString(),
+        formType: 'naicom-partners-cdd'
+      };
+      
+      // Submit to Firestore
+      await addDoc(collection(db, 'naicom-partners-cdd'), {
+        ...submissionData,
+        timestamp: serverTimestamp(),
+        createdAt: new Date().toLocaleDateString('en-GB')
+      });
+      
       clearDraft();
       setShowSummary(false);
       setShowSuccess(true);
       toast({ title: "CDD form submitted successfully!" });
     } catch (error) {
+      console.error('Submission error:', error);
       toast({ title: "Submission failed", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
@@ -723,8 +755,15 @@ const NaicomPartnersCDD: React.FC = () => {
                 accept="application/pdf,image/*"
                 maxSize={3 * 1024 * 1024}
                 onFileSelect={(file) => {
-                  // Handle file upload
-                  console.log('File selected:', file);
+                  setUploadedFiles(prev => ({ ...prev, certificateOfIncorporation: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.certificateOfIncorporation}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { certificateOfIncorporation, ...rest } = prev;
+                    return rest;
+                  });
                 }}
               />
             </div>
@@ -735,7 +774,15 @@ const NaicomPartnersCDD: React.FC = () => {
                 accept="application/pdf,image/*"
                 maxSize={3 * 1024 * 1024}
                 onFileSelect={(file) => {
-                  console.log('File selected:', file);
+                  setUploadedFiles(prev => ({ ...prev, directorId1: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.directorId1}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { directorId1, ...rest } = prev;
+                    return rest;
+                  });
                 }}
               />
             </div>
@@ -746,7 +793,15 @@ const NaicomPartnersCDD: React.FC = () => {
                 accept="application/pdf,image/*"
                 maxSize={3 * 1024 * 1024}
                 onFileSelect={(file) => {
-                  console.log('File selected:', file);
+                  setUploadedFiles(prev => ({ ...prev, directorId2: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.directorId2}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { directorId2, ...rest } = prev;
+                    return rest;
+                  });
                 }}
               />
             </div>
@@ -757,7 +812,15 @@ const NaicomPartnersCDD: React.FC = () => {
                 accept="application/pdf,image/*"
                 maxSize={3 * 1024 * 1024}
                 onFileSelect={(file) => {
-                  console.log('File selected:', file);
+                  setUploadedFiles(prev => ({ ...prev, cacStatusReport: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.cacStatusReport}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { cacStatusReport, ...rest } = prev;
+                    return rest;
+                  });
                 }}
               />
             </div>
@@ -768,7 +831,15 @@ const NaicomPartnersCDD: React.FC = () => {
                 accept="application/pdf,image/*"
                 maxSize={3 * 1024 * 1024}
                 onFileSelect={(file) => {
-                  console.log('File selected:', file);
+                  setUploadedFiles(prev => ({ ...prev, vatRegistrationLicense: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.vatRegistrationLicense}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { vatRegistrationLicense, ...rest } = prev;
+                    return rest;
+                  });
                 }}
               />
             </div>
@@ -779,7 +850,15 @@ const NaicomPartnersCDD: React.FC = () => {
                 accept="application/pdf,image/*"
                 maxSize={3 * 1024 * 1024}
                 onFileSelect={(file) => {
-                  console.log('File selected:', file);
+                  setUploadedFiles(prev => ({ ...prev, taxClearanceCertificate: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.taxClearanceCertificate}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { taxClearanceCertificate, ...rest } = prev;
+                    return rest;
+                  });
                 }}
               />
             </div>
@@ -790,7 +869,15 @@ const NaicomPartnersCDD: React.FC = () => {
                 accept="application/pdf,image/*"
                 maxSize={3 * 1024 * 1024}
                 onFileSelect={(file) => {
-                  console.log('File selected:', file);
+                  setUploadedFiles(prev => ({ ...prev, naicomLicenseCertificate: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.naicomLicenseCertificate}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { naicomLicenseCertificate, ...rest } = prev;
+                    return rest;
+                  });
                 }}
               />
             </div>
@@ -866,29 +953,152 @@ const NaicomPartnersCDD: React.FC = () => {
 
         {/* Summary Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Review Your NAICOM Partners CDD</DialogTitle>
             </DialogHeader>
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-semibold mb-2">Company Information</h3>
-                <p><strong>Company Name:</strong> {watchedValues.companyName}</p>
-                <p><strong>Address:</strong> {watchedValues.registeredAddress}</p>
-                <p><strong>Contact:</strong> {watchedValues.contactPersonName} - {watchedValues.contactPersonNumber}</p>
+            <div className="space-y-8">
+              {/* Company Information */}
+              <div className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-lg">Company Information</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingField(editingField === 'company' ? null : 'company')}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                {editingField === 'company' ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Company Name</Label>
+                        <Input {...formMethods.register('companyName')} />
+                      </div>
+                      <div>
+                        <Label>Email</Label>
+                        <Input {...formMethods.register('email')} />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Address</Label>
+                      <Textarea {...formMethods.register('registeredAddress')} />
+                    </div>
+                    <Button onClick={() => setEditingField(null)} size="sm">Save</Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><strong>Company Name:</strong> {watchedValues.companyName}</div>
+                    <div><strong>Email:</strong> {watchedValues.email}</div>
+                    <div><strong>Website:</strong> {watchedValues.website}</div>
+                    <div><strong>City:</strong> {watchedValues.city}</div>
+                    <div><strong>State:</strong> {watchedValues.state}</div>
+                    <div><strong>Country:</strong> {watchedValues.country}</div>
+                    <div><strong>Contact Person:</strong> {watchedValues.contactPersonName}</div>
+                    <div><strong>Contact Number:</strong> {watchedValues.contactPersonNumber}</div>
+                    <div><strong>Tax ID:</strong> {watchedValues.taxId}</div>
+                    <div><strong>VAT Number:</strong> {watchedValues.vatRegistrationNumber}</div>
+                    <div><strong>RC Number:</strong> {watchedValues.incorporationNumber}</div>
+                    <div><strong>Incorporation State:</strong> {watchedValues.incorporationState}</div>
+                    <div><strong>BVN:</strong> {watchedValues.bvn}</div>
+                    <div className="col-span-2"><strong>Address:</strong> {watchedValues.registeredAddress}</div>
+                    <div className="col-span-2"><strong>Business Nature:</strong> {watchedValues.businessNature}</div>
+                    <div><strong>Incorporation Date:</strong> {watchedValues.incorporationDate ? new Date(watchedValues.incorporationDate).toLocaleDateString() : 'Not set'}</div>
+                    <div><strong>NAICOM License Issuing:</strong> {watchedValues.naicomLicenseIssuingDate ? new Date(watchedValues.naicomLicenseIssuingDate).toLocaleDateString() : 'Not set'}</div>
+                    <div><strong>NAICOM License Expiry:</strong> {watchedValues.naicomLicenseExpiryDate ? new Date(watchedValues.naicomLicenseExpiryDate).toLocaleDateString() : 'Not set'}</div>
+                  </div>
+                )}
               </div>
-              
-              <div>
-                <h3 className="font-semibold mb-2">Directors ({watchedValues.directors?.length || 0})</h3>
+
+              {/* Directors */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Directors ({watchedValues.directors?.length || 0})</h3>
                 {watchedValues.directors?.map((director, index) => (
-                  <div key={index} className="p-3 border rounded mb-2">
-                    <p><strong>Name:</strong> {director.firstName} {director.lastName}</p>
-                    <p><strong>Email:</strong> {director.email}</p>
+                  <div key={index} className="border rounded p-3 mb-3 bg-gray-50">
+                    <h4 className="font-medium mb-2">Director {index + 1}</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><strong>Title:</strong> {director.title}</div>
+                      <div><strong>Gender:</strong> {director.gender}</div>
+                      <div><strong>Full Name:</strong> {director.firstName} {director.middleName} {director.lastName}</div>
+                      <div><strong>Email:</strong> {director.email}</div>
+                      <div><strong>Phone:</strong> {director.phoneNumber}</div>
+                      <div><strong>Nationality:</strong> {director.nationality}</div>
+                      <div><strong>Occupation:</strong> {director.occupation}</div>
+                      <div><strong>BVN:</strong> {director.bvn}</div>
+                      <div><strong>Date of Birth:</strong> {director.dateOfBirth}</div>
+                      <div><strong>Place of Birth:</strong> {director.placeOfBirth}</div>
+                      <div><strong>ID Type:</strong> {director.idType}</div>
+                      <div><strong>ID Number:</strong> {director.identificationNumber}</div>
+                      <div><strong>Issuing Body:</strong> {director.issuingBody}</div>
+                      <div><strong>Income Source:</strong> {director.incomeSource}</div>
+                      <div className="col-span-2"><strong>Address:</strong> {director.residentialAddress}</div>
+                      {director.incomeSource === 'other' && director.incomeSourceOther && (
+                        <div className="col-span-2"><strong>Other Income Source:</strong> {director.incomeSourceOther}</div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
+
+              {/* Account Details */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Account Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Local Account</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div><strong>Account Number:</strong> {watchedValues.localAccountNumber}</div>
+                      <div><strong>Bank Name:</strong> {watchedValues.localBankName}</div>
+                      <div><strong>Bank Branch:</strong> {watchedValues.localBankBranch}</div>
+                      <div><strong>Opening Date:</strong> {watchedValues.localAccountOpeningDate ? new Date(watchedValues.localAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
+                    </div>
+                  </div>
+                  {(watchedValues.foreignAccountNumber || watchedValues.foreignBankName) && (
+                    <div>
+                      <h4 className="font-medium mb-2">Foreign Account</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div><strong>Account Number:</strong> {watchedValues.foreignAccountNumber}</div>
+                        <div><strong>Bank Name:</strong> {watchedValues.foreignBankName}</div>
+                        <div><strong>Bank Branch:</strong> {watchedValues.foreignBankBranch}</div>
+                        <div><strong>Opening Date:</strong> {watchedValues.foreignAccountOpeningDate ? new Date(watchedValues.foreignAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Uploaded Documents */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Uploaded Documents</h3>
+                <div className="grid grid-cols-1 gap-2 text-sm">
+                  {Object.entries(uploadedFiles).map(([key, file]) => (
+                    <div key={key} className="flex justify-between items-center py-2 border-b">
+                      <span className="font-medium">
+                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
+                      </span>
+                      <span className="text-green-600">
+                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                      </span>
+                    </div>
+                  ))}
+                  {Object.keys(uploadedFiles).length === 0 && (
+                    <p className="text-muted-foreground">No documents uploaded yet</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Declaration */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Declaration</h3>
+                <div className="text-sm">
+                  <div><strong>Data Privacy Agreement:</strong> {watchedValues.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</div>
+                  <div><strong>Digital Signature:</strong> {watchedValues.signature}</div>
+                </div>
+              </div>
               
-              <div className="flex gap-4 pt-4">
+              <div className="flex gap-4 pt-4 border-t">
                 <Button
                   variant="outline"
                   onClick={() => setShowSummary(false)}
@@ -901,6 +1111,7 @@ const NaicomPartnersCDD: React.FC = () => {
                     handleSubmit(formData as NaicomPartnersCDDData);
                   }}
                   disabled={isSubmitting}
+                  className="bg-primary text-primary-foreground"
                 >
                   {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
                 </Button>
