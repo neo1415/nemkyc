@@ -588,14 +588,14 @@ export interface NaicomPartnersCDDData {
   foreignBankBranch?: string;
   foreignAccountOpeningDate?: string;
   
-  // Documents
-  certificateOfIncorporation?: File;
-  directorId1?: File;
-  directorId2?: File;
-  cacStatusReport?: File;
-  vatRegistrationLicense?: File;
-  taxClearanceCertificate?: File;
-  naicomLicenseCertificate?: File;
+  // Document URLs (after upload)
+  certificateOfIncorporationUrl?: string;
+  directorId1Url?: string;
+  directorId2Url?: string;
+  cacStatusReportUrl?: string;
+  vatRegistrationLicenseUrl?: string;
+  taxClearanceCertificateUrl?: string;
+  naicomLicenseCertificateUrl?: string;
   
   // Declaration
   agreeToDataPrivacy: boolean;
