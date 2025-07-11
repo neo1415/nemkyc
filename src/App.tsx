@@ -222,9 +222,9 @@ function App() {
           } />
           
           <Route path="admin/cdd/naicom-partners" element={
-            <ProtectedRoute>
+      
               <AdminCDDTable formType="naicom-partners" />
-            </ProtectedRoute>
+        
           } />
           
           <Route path="admin/cdd/individual" element={
