@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+""import React, { useState, useEffect } from 'react';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import { Box, Button, Typography, Chip } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { Eye, Download } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 
 const theme = createTheme({
@@ -27,6 +27,7 @@ const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
   const { toast } = useToast();
   const [cddForms, setCddForms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [columns, setColumns] = useState<GridColDef[]>([]);
 
   useEffect(() => {
     if (!user || !isAdmin()) {
@@ -41,13 +42,14 @@ const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
       const cddCollections = formType ? 
         [`${formType}-cdd`] : 
         [
-          'corporate-cdd',
-          'naicom-corporate-cdd',
-          'partners-cdd',
+          'corporate-kyc',
+          'corporate-kyc-form',
+          'partners-kyc',
           'naicom-partners-cdd',
-          'individual-cdd',
-          'agents-cdd',
-          'brokers-cdd'
+          'individual-kyc',
+          "individual-kyc-form"
+          'agents-kyc',
+          'brokers-kyc'
         ];
 
       const allForms: any[] = [];
@@ -62,13 +64,14 @@ const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
             collection: collectionName,
             type: collectionName.replace('-cdd', '').replace('-', ' '),
             ...doc.data(),
-           createdAt: doc.data().createdAt?.toDate?.() ?? null,
-            updatedAt: doc.data().updatedAt?.toDate(),
+            createdAt: doc.data().createdAt?.toDate?.() ?? null,
+            updatedAt: doc.data().updatedAt?.toDate?.() ?? null,
           });
         });
       }
 
       setCddForms(allForms);
+      generateColumns(allForms);
     } catch (error) {
       console.error('Error fetching CDD forms:', error);
       toast({
@@ -81,48 +84,69 @@ const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
     }
   };
 
-  const columns: GridColDef[] = [
-    { field: 'id', headerName: 'ID', width: 200 },
-    { field: 'type', headerName: 'CDD Type', width: 150 },
-    { field: 'companyName', headerName: 'Company/Name', width: 200 },
-    { field: 'email', headerName: 'Email', width: 200 },
-    { field: 'phone', headerName: 'Phone', width: 150 },
-    { field: 'incorporationNumber', headerName: 'RC Number', width: 150 },
-    {
-      field: 'status',
-      headerName: 'Status',
-      width: 120,
-      renderCell: (params: any) => (
-        <Chip 
-          label={params.value || 'completed'} 
-          color={params.value === 'completed' ? 'success' : 'default'}
-          size="small"
-        />
-      ),
-    },
-    {
-      field: 'createdAt',
-      headerName: 'Submitted',
-      width: 120,
-      valueFormatter: (params: any) => params.value?.toLocaleDateString() || 'N/A',
-    },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 150,
-      renderCell: (params: any) => (
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
+  const generateColumns = (data: any[]) => {
+    if (!data.length) return;
+
+    const sample = data[0];
+    const excludedFields = ['id', 'collection', 'type', 'createdAt', 'updatedAt'];
+    const dynamicFields = Object.keys(sample).filter((key) => !excludedFields.includes(key));
+
+    const dynamicColumns: GridColDef[] = dynamicFields.map((field) => ({
+      field,
+      headerName: field.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()),
+      width: 180,
+      renderCell: (params) => {
+        const value = params.value;
+        if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+        if (typeof value === 'object' && value?.name) return value.name;
+        if (Array.isArray(value)) return `(${value.length}) items`;
+        return value?.toString() || '—';
+      },
+    }));
+
+    const defaultColumns: GridColDef[] = [
+      { field: 'id', headerName: 'ID', width: 200 },
+      { field: 'type', headerName: 'CDD Type', width: 150 },
+      ...dynamicColumns,
+      {
+        field: 'status',
+        headerName: 'Status',
+        width: 120,
+        renderCell: (params: any) => (
+          <Chip 
+            label={params.value || 'completed'} 
+            color={params.value === 'completed' ? 'success' : 'default'}
             size="small"
-            startIcon={<Eye size={16} />}
-            onClick={() => navigate(`/admin/form/${params.row.collection}/${params.row.id}`)}
-          >
-            View
-          </Button>
-        </Box>
-      ),
-    },
-  ];
+          />
+        ),
+      },
+      {
+        field: 'createdAt',
+        headerName: 'Submitted',
+        width: 120,
+        valueFormatter: (params: any) => 
+          params.value instanceof Date ? params.value.toLocaleDateString() : 'N/A',
+      },
+      {
+        field: 'actions',
+        headerName: 'Actions',
+        width: 150,
+        renderCell: (params: any) => (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              size="small"
+              startIcon={<Eye size={16} />}
+              onClick={() => navigate(`/admin/form/${params.row.collection}/${params.row.id}`)}
+            >
+              View
+            </Button>
+          </Box>
+        ),
+      },
+    ];
+
+    setColumns(defaultColumns);
+  };
 
   if (!user || !isAdmin()) {
     return null;
