@@ -1,4 +1,4 @@
-""import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import { Box, Button, Typography, Chip } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -47,7 +47,7 @@ const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
           'partners-kyc',
           'naicom-partners-cdd',
           'individual-kyc',
-          "individual-kyc-form"
+          'individual-kyc-form',
           'agents-kyc',
           'brokers-kyc'
         ];
