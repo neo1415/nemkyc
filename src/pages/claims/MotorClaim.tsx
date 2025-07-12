@@ -1,399 +1,665 @@
-import React, { useState, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useAuth } from '../../contexts/AuthContext';
-import { motorClaimSchema } from '../../utils/validation';
-import { MotorClaimData as MotorClaimType } from '../../types';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { toast } from '../../components/ui/use-toast';
-import FormSection from '../../components/common/FormSection';
-import FileUpload from '../../components/common/FileUpload';
-import PhoneInput from '../../components/common/PhoneInput';
-import MultiStepForm from '../../components/common/MultiStepForm';
-import AuthRequiredSubmit from '../../components/common/AuthRequiredSubmit';
-import { Car, FileText, Upload, DollarSign } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
-import { notifySubmission } from '../../services/notificationService';
+import * as yup from 'yup';
+import { toast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Calendar as ReactCalendar } from '@/components/ui/calendar';
+import { Calendar, CalendarIcon, Plus, Trash2, Upload, Edit2, Car, FileText } from 'lucide-react';
+import { format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import MultiStepForm from '@/components/common/MultiStepForm';
+import { useFormDraft } from '@/hooks/useFormDraft';
+import FileUpload from '@/components/common/FileUpload';
+import { uploadFile } from '@/services/fileService';
+import { db } from '@/firebase/config';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
+// Motor Claim Schema
+const motorClaimSchema = yup.object().shape({
+  // Policy Details
+  policyNumber: yup.string().required("Policy number is required"),
+  periodOfCoverFrom: yup.date().required("Period of cover from is required"),
+  periodOfCoverTo: yup.date().required("Period of cover to is required"),
+
+  // Insured Details
+  nameOfInsured: yup.string().required("Name of insured is required"),
+  address: yup.string().required("Address is required"),
+  phone: yup.string().required("Phone number is required"),
+  email: yup.string().email("Valid email is required").required("Email is required"),
+
+  // Vehicle Details
+  make: yup.string().required("Vehicle make is required"),
+  model: yup.string().required("Vehicle model is required"),
+  year: yup.number().required("Vehicle year is required"),
+  registrationNumber: yup.string().required("Registration number is required"),
+  chassisNumber: yup.string().required("Chassis number is required"),
+  engineNumber: yup.string().required("Engine number is required"),
+  color: yup.string().required("Vehicle color is required"),
+  
+  // Accident Details
+  accidentDate: yup.date().required("Accident date is required"),
+  accidentTime: yup.string().required("Accident time is required"),
+  accidentPlace: yup.string().required("Accident place is required"),
+  accidentDescription: yup.string().required("Accident description is required"),
+  
+  // Driver Details
+  driverName: yup.string().required("Driver name is required"),
+  driverLicenseNumber: yup.string().required("Driver license number is required"),
+  driverAge: yup.number().required("Driver age is required"),
+  
+  // Damage Details
+  damageDescription: yup.string().required("Damage description is required"),
+  estimatedRepairCost: yup.number().required("Estimated repair cost is required"),
+  
+  // Police Details
+  policeReported: yup.boolean(),
+  policeStation: yup.string().when('policeReported', {
+    is: true,
+    then: (schema) => schema.required("Police station is required when reported"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  
+  // Third Party Details
+  thirdPartyInvolved: yup.boolean(),
+  thirdPartyName: yup.string().when('thirdPartyInvolved', {
+    is: true,
+    then: (schema) => schema.required("Third party name is required"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  thirdPartyInsurer: yup.string().when('thirdPartyInvolved', {
+    is: true,
+    then: (schema) => schema.required("Third party insurer is required"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+
+  // Declaration
+  agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
+  signature: yup.string().required("Signature is required")
+});
 
 interface MotorClaimData {
-  claimantName: string;
-  claimantPhone: string;
-  claimantEmail: string;
-  claimantAddress: string;
-  vehicleMake: string;
-  vehicleModel: string;
-  vehicleYear: number;
-  vehicleRegistration: string;
+  // Policy Details
+  policyNumber: string;
+  periodOfCoverFrom: string;
+  periodOfCoverTo: string;
+
+  // Insured Details
+  nameOfInsured: string;
+  address: string;
+  phone: string;
+  email: string;
+
+  // Vehicle Details
+  make: string;
+  model: string;
+  year: number;
+  registrationNumber: string;
   chassisNumber: string;
   engineNumber: string;
-  policyNumber: string;
-  policyStartDate: string;
-  policyEndDate: string;
-  incidentDate: string;
-  incidentTime: string;
-  incidentLocation: string;
-  incidentDescription: string;
+  color: string;
+  
+  // Accident Details
+  accidentDate: string;
+  accidentTime: string;
+  accidentPlace: string;
+  accidentDescription: string;
+  
+  // Driver Details
+  driverName: string;
+  driverLicenseNumber: string;
+  driverAge: number;
+  
+  // Damage Details
   damageDescription: string;
-  claimAmount: number;
-  thirdPartyInvolved: 'yes' | 'no';
-  policeReportFiled: 'yes' | 'no';
+  estimatedRepairCost: number;
+  
+  // Police Details
   policeReported: boolean;
   policeStation?: string;
-  policeReportNumber?: string;
-  estimatedDamage: number;
-  driverName: string;
-  driverLicense: string;
-  witnessName?: string;
-  witnessPhone?: string;
-  vehiclePhotos?: File;
-  policeReport?: File;
-  vehicleRegistrationDoc?: File;
+  
+  // Third Party Details
+  thirdPartyInvolved: boolean;
+  thirdPartyName?: string;
+  thirdPartyInsurer?: string;
+
+  // Declaration
+  agreeToDataPrivacy: boolean;
   signature: string;
-  agreeToTerms: boolean;
 }
 
+const defaultValues: Partial<MotorClaimData> = {
+  policyNumber: '',
+  nameOfInsured: '',
+  address: '',
+  phone: '',
+  email: '',
+  make: '',
+  model: '',
+  registrationNumber: '',
+  chassisNumber: '',
+  engineNumber: '',
+  color: '',
+  accidentPlace: '',
+  accidentDescription: '',
+  driverName: '',
+  driverLicenseNumber: '',
+  damageDescription: '',
+  policeReported: false,
+  thirdPartyInvolved: false,
+  agreeToDataPrivacy: false,
+  signature: ''
+};
+
 const MotorClaim: React.FC = () => {
-  const { user } = useAuth();
+  const [showSummary, setShowSummary] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  
-  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<MotorClaimData>({
-    resolver: yupResolver(motorClaimSchema) as any,
-    defaultValues: {
-      claimantEmail: user?.email || '',
-      policeReported: false,
-      agreeToTerms: false,
-      signature: ''
-    }
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [editingField, setEditingField] = useState<string | null>(null);
+
+  const formMethods = useForm<any>({
+    resolver: yupResolver(motorClaimSchema),
+    defaultValues,
+    mode: 'onChange'
   });
 
-  const watchedValues = watch();
-  
-  // Use useCallback to prevent re-renders on setValue calls
-  const handleFileSelect = React.useCallback((field: string, file: File) => {
-    setValue(field as any, file);
-  }, [setValue]);
+  const { saveDraft, clearDraft } = useFormDraft('motorClaim', formMethods);
 
-  const onSubmit = async (data: MotorClaimData) => {
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
-    
+  const watchedValues = formMethods.watch();
+
+  // Auto-save draft
+  React.useEffect(() => {
+    const subscription = formMethods.watch((data) => {
+      saveDraft(data);
+    });
+    return () => subscription.unsubscribe();
+  }, [formMethods, saveDraft]);
+
+  const handleSubmit = async (data: MotorClaimData) => {
     setIsSubmitting(true);
     try {
-      const submissionId = `claim_motor_${Date.now()}`;
+      // Upload files to Firebase Storage
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
       
-      await setDoc(doc(db, 'submissions', submissionId), {
-        id: submissionId,
-        userId: user.uid,
-        formType: 'motor-claim',
-        claimType: 'motor',
-        claimAmount: data.claimAmount,
-        incidentDate: data.incidentDate,
-        data: data,
-        status: 'pending',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      Object.entries(uploadedFiles).forEach(([key, file]) => {
+        fileUploadPromises.push(
+          uploadFile(file, 'motor-claims').then(url => [key + 'Url', url])
+        );
       });
       
-      await notifySubmission(user, 'Motor Claim');
+      const uploadedUrls = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(uploadedUrls);
       
-      toast({
-        title: "Claim Submitted",
-        description: "Your motor claim has been submitted successfully.",
+      // Prepare form data with file URLs
+      const submissionData = {
+        ...data,
+        ...fileUrls,
+        status: 'processing',
+        submittedAt: new Date().toISOString(),
+        formType: 'motor-claim'
+      };
+      
+      // Submit to Firestore
+      await addDoc(collection(db, 'motor-claims'), {
+        ...submissionData,
+        timestamp: serverTimestamp(),
+        createdAt: new Date().toLocaleDateString('en-GB')
       });
       
-      window.location.href = '/dashboard';
+      clearDraft();
+      setShowSummary(false);
+      setShowSuccess(true);
+      toast({ title: "Motor claim submitted successfully!" });
     } catch (error) {
-      console.error('Error submitting claim:', error);
-      toast({
-        title: "Submission Error",
-        description: "Failed to submit claim. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Submission error:', error);
+      toast({ title: "Submission failed", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const ClaimantInfoStep = () => (
-    <FormSection title="Claimant Information" icon={<FileText className="h-5 w-5" />}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="claimantName">Full Name *</Label>
-          <Input {...register('claimantName')} />
-          {errors.claimantName && <p className="text-sm text-red-600">{errors.claimantName.message}</p>}
-        </div>
-        
-        <div>
-          <PhoneInput
-            label="Phone Number"
-            required
-            value={watchedValues.claimantPhone || ''}
-            onChange={(value) => setValue('claimantPhone', value)}
-            error={errors.claimantPhone?.message}
-          />
-        </div>
-        
-        <div>
-          <Label htmlFor="claimantEmail">Email *</Label>
-          <Input type="email" {...register('claimantEmail')} />
-          {errors.claimantEmail && <p className="text-sm text-red-600">{errors.claimantEmail.message}</p>}
-        </div>
-        
-        <div className="md:col-span-2">
-          <Label htmlFor="claimantAddress">Address *</Label>
-          <Textarea {...register('claimantAddress')} />
-          {errors.claimantAddress && <p className="text-sm text-red-600">{errors.claimantAddress.message}</p>}
-        </div>
+  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
+    const value = formMethods.watch(name);
+    return (
+      <div className="space-y-2">
+        <Label>{label}</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !value && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <ReactCalendar
+              mode="single"
+              selected={value ? new Date(value) : undefined}
+              onSelect={(date) => formMethods.setValue(name, date)}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
       </div>
-    </FormSection>
-  );
-
-  const VehicleInfoStep = () => (
-    <FormSection title="Vehicle Information" icon={<Car className="h-5 w-5" />}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="vehicleMake">Vehicle Make *</Label>
-          <Input {...register('vehicleMake')} placeholder="e.g., Toyota, Honda" />
-          {errors.vehicleMake && <p className="text-sm text-red-600">{errors.vehicleMake.message}</p>}
-        </div>
-        
-        <div>
-          <Label htmlFor="vehicleModel">Vehicle Model *</Label>
-          <Input {...register('vehicleModel')} placeholder="e.g., Camry, Accord" />
-          {errors.vehicleModel && <p className="text-sm text-red-600">{errors.vehicleModel.message}</p>}
-        </div>
-        
-        <div>
-          <Label htmlFor="vehicleYear">Year *</Label>
-          <Input type="number" {...register('vehicleYear')} />
-          {errors.vehicleYear && <p className="text-sm text-red-600">{errors.vehicleYear.message}</p>}
-        </div>
-        
-        <div>
-          <Label htmlFor="vehicleRegistration">Registration Number *</Label>
-          <Input {...register('vehicleRegistration')} />
-          {errors.vehicleRegistration && <p className="text-sm text-red-600">{errors.vehicleRegistration.message}</p>}
-        </div>
-        
-        <div>
-          <Label htmlFor="chassisNumber">Chassis Number *</Label>
-          <Input {...register('chassisNumber')} />
-          {errors.chassisNumber && <p className="text-sm text-red-600">{errors.chassisNumber.message}</p>}
-        </div>
-        
-        <div>
-          <Label htmlFor="engineNumber">Engine Number *</Label>
-          <Input {...register('engineNumber')} />
-          {errors.engineNumber && <p className="text-sm text-red-600">{errors.engineNumber.message}</p>}
-        </div>
-      </div>
-    </FormSection>
-  );
-
-  const IncidentDetailsStep = () => (
-    <FormSection title="Incident Details" icon={<FileText className="h-5 w-5" />}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="incidentDate">Date of Incident *</Label>
-          <Input type="date" {...register('incidentDate')} />
-          {errors.incidentDate && <p className="text-sm text-red-600">{errors.incidentDate.message}</p>}
-        </div>
-        
-        <div>
-          <Label htmlFor="incidentTime">Time of Incident *</Label>
-          <Input type="time" {...register('incidentTime')} />
-          {errors.incidentTime && <p className="text-sm text-red-600">{errors.incidentTime.message}</p>}
-        </div>
-        
-        <div className="md:col-span-2">
-          <Label htmlFor="incidentLocation">Location of Incident *</Label>
-          <Input {...register('incidentLocation')} />
-          {errors.incidentLocation && <p className="text-sm text-red-600">{errors.incidentLocation.message}</p>}
-        </div>
-        
-        <div className="md:col-span-2">
-          <Label htmlFor="incidentDescription">Description of Incident *</Label>
-          <Textarea {...register('incidentDescription')} rows={4} />
-          {errors.incidentDescription && <p className="text-sm text-red-600">{errors.incidentDescription.message}</p>}
-        </div>
-        
-        <div className="md:col-span-2">
-          <Label htmlFor="damageDescription">Description of Damage *</Label>
-          <Textarea {...register('damageDescription')} rows={4} />
-          {errors.damageDescription && <p className="text-sm text-red-600">{errors.damageDescription.message}</p>}
-        </div>
-        
-        <div>
-          <Label htmlFor="claimAmount">Claim Amount *</Label>
-          <Input type="number" {...register('claimAmount')} />
-          {errors.claimAmount && <p className="text-sm text-red-600">{errors.claimAmount.message}</p>}
-        </div>
-        
-        <div>
-          <Label>Third Party Involved? *</Label>
-          <Select
-            value={watchedValues.thirdPartyInvolved}
-            onValueChange={(value) => setValue('thirdPartyInvolved', value as any)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="yes">Yes</SelectItem>
-              <SelectItem value="no">No</SelectItem>
-            </SelectContent>
-          </Select>
-          {errors.thirdPartyInvolved && <p className="text-sm text-red-600">{errors.thirdPartyInvolved.message}</p>}
-        </div>
-        
-        <div>
-          <Label>Police Report Filed? *</Label>
-          <Select
-            value={watchedValues.policeReportFiled}
-            onValueChange={(value) => setValue('policeReportFiled', value as any)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="yes">Yes</SelectItem>
-              <SelectItem value="no">No</SelectItem>
-            </SelectContent>
-          </Select>
-          {errors.policeReportFiled && <p className="text-sm text-red-600">{errors.policeReportFiled.message}</p>}
-        </div>
-      </div>
-    </FormSection>
-  );
-
-  const DocumentsStep = () => (
-    <FormSection title="Required Documents" icon={<Upload className="h-5 w-5" />}>
-      <div className="space-y-6">
-        <FileUpload
-          label="Vehicle Photos (Damage)"
-          onFileSelect={(file) => handleFileSelect('vehiclePhotos', file)}
-          currentFile={watchedValues.vehiclePhotos}
-          error={errors.vehiclePhotos?.message}
-          accept=".jpg,.jpeg,.png"
-        />
-        
-        <FileUpload
-          label="Driver's License"
-          onFileSelect={(file) => handleFileSelect('driverLicense', file)}
-          currentFile={watchedValues.driverLicense}
-          error={errors.driverLicense?.message}
-        />
-        
-        <FileUpload
-          label="Vehicle Registration Document"
-          onFileSelect={(file) => handleFileSelect('vehicleRegistrationDoc', file)}
-          currentFile={watchedValues.vehicleRegistrationDoc}
-          error={errors.vehicleRegistrationDoc?.message}
-        />
-        
-        {watchedValues.policeReportFiled === 'yes' && (
-          <FileUpload
-            label="Police Report"
-            onFileSelect={(file) => handleFileSelect('policeReport', file)}
-            currentFile={watchedValues.policeReport}
-            error={errors.policeReport?.message}
-          />
-        )}
-      </div>
-    </FormSection>
-  );
-
-  const TermsAndConditionsStep = () => (
-    <FormSection title="Terms and Conditions" icon={<FileText className="h-5 w-5" />}>
-      <div className="space-y-6">
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h4 className="font-medium mb-4">Terms and Conditions</h4>
-          <div className="space-y-2 text-sm">
-            <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-            <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-            <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-          </div>
-        </div>
-        
-        <div>
-          <Label htmlFor="signature">Digital Signature *</Label>
-          <Input {...register('signature')} placeholder="Type your full name as signature" />
-          {errors.signature && <p className="text-sm text-red-600">{errors.signature.message}</p>}
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <Input type="checkbox" id="agreeToTerms" {...register('agreeToTerms')} className="h-4 w-4" />
-          <Label htmlFor="agreeToTerms">I agree to the terms and conditions *</Label>
-        </div>
-        {errors.agreeToTerms && <p className="text-sm text-red-600">{errors.agreeToTerms.message}</p>}
-      </div>
-    </FormSection>
-  );
+    );
+  };
 
   const steps = [
     {
-      id: 'claimant',
-      title: 'Claimant Information',
-      component: <ClaimantInfoStep />,
-      isValid: !errors.claimantName && !errors.claimantPhone && !errors.claimantEmail && !errors.claimantAddress
+      id: 'policy',
+      title: 'Policy Information',
+      component: (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="policyNumber">Policy Number *</Label>
+            <Input
+              id="policyNumber"
+              {...formMethods.register('policyNumber')}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <DatePickerField
+                name="periodOfCoverFrom"
+                label="Period of Cover From *"
+              />
+            </div>
+            <div>
+              <DatePickerField
+                name="periodOfCoverTo"
+                label="Period of Cover To *"
+              />
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'insured',
+      title: 'Insured Information',
+      component: (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="nameOfInsured">Name of Insured *</Label>
+            <Input
+              id="nameOfInsured"
+              {...formMethods.register('nameOfInsured')}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="address">Address *</Label>
+            <Textarea
+              id="address"
+              {...formMethods.register('address')}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="phone">Phone Number *</Label>
+              <Input
+                id="phone"
+                {...formMethods.register('phone')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                {...formMethods.register('email')}
+              />
+            </div>
+          </div>
+        </div>
+      )
     },
     {
       id: 'vehicle',
       title: 'Vehicle Information',
-      component: <VehicleInfoStep />,
-      isValid: !errors.vehicleMake && !errors.vehicleModel && !errors.vehicleYear && !errors.vehicleRegistration
+      component: (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="make">Make *</Label>
+              <Input
+                id="make"
+                {...formMethods.register('make')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="model">Model *</Label>
+              <Input
+                id="model"
+                {...formMethods.register('model')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="year">Year *</Label>
+              <Input
+                id="year"
+                type="number"
+                {...formMethods.register('year')}
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="registrationNumber">Registration Number *</Label>
+              <Input
+                id="registrationNumber"
+                {...formMethods.register('registrationNumber')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="color">Color *</Label>
+              <Input
+                id="color"
+                {...formMethods.register('color')}
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="chassisNumber">Chassis Number *</Label>
+              <Input
+                id="chassisNumber"
+                {...formMethods.register('chassisNumber')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="engineNumber">Engine Number *</Label>
+              <Input
+                id="engineNumber"
+                {...formMethods.register('engineNumber')}
+              />
+            </div>
+          </div>
+        </div>
+      )
     },
     {
-      id: 'incident',
-      title: 'Incident Details',
-      component: <IncidentDetailsStep />,
-      isValid: !errors.incidentDate && !errors.incidentTime && !errors.incidentLocation && !errors.claimAmount
+      id: 'accident',
+      title: 'Accident Details',
+      component: (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <DatePickerField
+                name="accidentDate"
+                label="Date of Accident *"
+              />
+            </div>
+            <div>
+              <Label htmlFor="accidentTime">Time of Accident *</Label>
+              <Input
+                id="accidentTime"
+                type="time"
+                {...formMethods.register('accidentTime')}
+              />
+            </div>
+          </div>
+          
+          <div>
+            <Label htmlFor="accidentPlace">Place of Accident *</Label>
+            <Input
+              id="accidentPlace"
+              {...formMethods.register('accidentPlace')}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="accidentDescription">Description of Accident *</Label>
+            <Textarea
+              id="accidentDescription"
+              rows={4}
+              {...formMethods.register('accidentDescription')}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="damageDescription">Description of Damage *</Label>
+            <Textarea
+              id="damageDescription"
+              rows={4}
+              {...formMethods.register('damageDescription')}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="estimatedRepairCost">Estimated Repair Cost *</Label>
+            <Input
+              id="estimatedRepairCost"
+              type="number"
+              {...formMethods.register('estimatedRepairCost')}
+            />
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'driver',
+      title: 'Driver Information',
+      component: (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="driverName">Driver Name *</Label>
+            <Input
+              id="driverName"
+              {...formMethods.register('driverName')}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="driverLicenseNumber">Driver License Number *</Label>
+              <Input
+                id="driverLicenseNumber"
+                {...formMethods.register('driverLicenseNumber')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="driverAge">Driver Age *</Label>
+              <Input
+                id="driverAge"
+                type="number"
+                {...formMethods.register('driverAge')}
+              />
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'police',
+      title: 'Police & Third Party Details',
+      component: (
+        <div className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="policeReported"
+              checked={watchedValues.policeReported || false}
+              onCheckedChange={(checked) => formMethods.setValue('policeReported', checked)}
+            />
+            <Label htmlFor="policeReported">Was the accident reported to police?</Label>
+          </div>
+          
+          {watchedValues.policeReported && (
+            <div>
+              <Label htmlFor="policeStation">Police Station *</Label>
+              <Input
+                id="policeStation"
+                {...formMethods.register('policeStation')}
+              />
+            </div>
+          )}
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="thirdPartyInvolved"
+              checked={watchedValues.thirdPartyInvolved || false}
+              onCheckedChange={(checked) => formMethods.setValue('thirdPartyInvolved', checked)}
+            />
+            <Label htmlFor="thirdPartyInvolved">Was third party involved?</Label>
+          </div>
+          
+          {watchedValues.thirdPartyInvolved && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="thirdPartyName">Third Party Name *</Label>
+                <Input
+                  id="thirdPartyName"
+                  {...formMethods.register('thirdPartyName')}
+                />
+              </div>
+              <div>
+                <Label htmlFor="thirdPartyInsurer">Third Party Insurer *</Label>
+                <Input
+                  id="thirdPartyInsurer"
+                  {...formMethods.register('thirdPartyInsurer')}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )
     },
     {
       id: 'documents',
-      title: 'Document Upload',
-      component: <DocumentsStep />,
-      isValid: !errors.vehiclePhotos && !errors.driverLicense && !errors.vehicleRegistrationDoc
+      title: 'Document Uploads',
+      component: (
+        <div className="space-y-6">
+          <FileUpload
+            label="Vehicle Photos (showing damage)"
+            onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, vehiclePhotos: file }))}
+            accept="image/*"
+            currentFile={uploadedFiles.vehiclePhotos}
+          />
+          
+          <FileUpload
+            label="Driver's License"
+            onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, driverLicense: file }))}
+            accept="image/*,.pdf"
+            currentFile={uploadedFiles.driverLicense}
+          />
+          
+          <FileUpload
+            label="Vehicle Registration Document"
+            onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, vehicleRegistration: file }))}
+            accept="image/*,.pdf"
+            currentFile={uploadedFiles.vehicleRegistration}
+          />
+          
+          {watchedValues.policeReported && (
+            <FileUpload
+              label="Police Report"
+              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, policeReport: file }))}
+              accept="image/*,.pdf"
+              currentFile={uploadedFiles.policeReport}
+            />
+          )}
+        </div>
+      )
     },
     {
-      id: 'terms',
-      title: 'Terms and Conditions',
-      component: <TermsAndConditionsStep />,
-      isValid: !!watchedValues.agreeToTerms && !!watchedValues.signature
+      id: 'declaration',
+      title: 'Declaration',
+      component: (
+        <div className="space-y-6">
+          <div className="bg-muted p-4 rounded-lg">
+            <h4 className="font-medium mb-4">Declaration</h4>
+            <div className="space-y-2 text-sm">
+              <p>I/We declare that the statements made and the answers given are true and complete. I/We understand that any false information may invalidate the claim.</p>
+              <p>I/We agree to provide additional information as may be required by the Company.</p>
+              <p>I/We authorize the Company to obtain medical reports and other information relevant to this claim.</p>
+            </div>
+          </div>
+          
+          <div>
+            <Label htmlFor="signature">Digital Signature *</Label>
+            <Input
+              id="signature"
+              placeholder="Type your full name as signature"
+              {...formMethods.register('signature')}
+            />
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="agreeToDataPrivacy"
+              checked={watchedValues.agreeToDataPrivacy || false}
+              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked)}
+            />
+            <Label htmlFor="agreeToDataPrivacy">
+              I agree to the data privacy terms and conditions *
+            </Label>
+          </div>
+        </div>
+      )
     }
   ];
+
+  if (showSuccess) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="mb-8">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">Claim Submitted Successfully!</h1>
+            <p className="text-gray-600">
+              Your motor insurance claim has been submitted and is being processed. 
+              You will receive a confirmation email shortly.
+            </p>
+          </div>
+          <Button onClick={() => window.location.href = '/dashboard'}>
+            Go to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Motor Insurance Claim</h1>
-          <p className="text-gray-600 mt-2">Submit your motor vehicle insurance claim with all required details</p>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <Car className="h-8 w-8 text-primary" />
+            Motor Insurance Claim
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Submit your motor vehicle insurance claim with all required details and supporting documents.
+          </p>
         </div>
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
-          submitButtonText="Submit Motor Claim"
-          formMethods={{ register, handleSubmit, formState: { errors }, setValue, watch, control }}
-        />
-
-        <AuthRequiredSubmit
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          onProceedToSignup={() => {
-            window.location.href = '/signup';
-          }}
-          formType="Motor Claim"
+          formMethods={formMethods}
         />
       </div>
     </div>
