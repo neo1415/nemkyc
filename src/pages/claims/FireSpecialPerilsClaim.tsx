@@ -537,25 +537,21 @@ const FireSpecialPerilsClaim: React.FC = () => {
             <FileUpload
               label="Police Report"
               onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, policeReport: file }))}
-              selectedFile={uploadedFiles.policeReport}
             />
             
             <FileUpload
               label="Fire Service Report"
               onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, fireServiceReport: file }))}
-              selectedFile={uploadedFiles.fireServiceReport}
             />
             
             <FileUpload
               label="Photos of Damage"
               onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, damagePhotos: file }))}
-              selectedFile={uploadedFiles.damagePhotos}
             />
             
             <FileUpload
               label="Receipts/Invoices"
               onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, receipts: file }))}
-              selectedFile={uploadedFiles.receipts}
             />
           </div>
         </div>
