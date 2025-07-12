@@ -53,36 +53,29 @@ const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
         ];
 
       const allForms: any[] = [];
-      
-      for (const collectionName of cddCollections) {
-        const q = query(collection(db, collectionName), orderBy('createdAt', 'desc'));
-        const querySnapshot = await getDocs(q);
-        
-        querySnapshot.forEach((doc) => {
-          allForms.push({
-            id: doc.id,
-            collection: collectionName,
-            type: collectionName.replace('-cdd', '').replace('-', ' '),
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate?.() ?? null,
-            updatedAt: doc.data().updatedAt?.toDate?.() ?? null,
-          });
+    for (const name of cddCollections) {
+      const snapshot = await getDocs(query(collection(db, name), orderBy('createdAt', 'desc')));
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        allForms.push({
+          id: doc.id,
+          collection: name,
+          type: name.replace('-cdd', '').replace(/-/g, ' '),
+          ...data,
+          createdAt: data.createdAt?.toDate?.() ?? null,
+          updatedAt: data.updatedAt?.toDate?.() ?? null,
         });
-      }
-
-      setCddForms(allForms);
-      generateColumns(allForms);
-    } catch (error) {
-      console.error('Error fetching CDD forms:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch CDD forms data',
-        variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
     }
-  };
+    setCddForms(allForms);
+    generateColumns(allForms);
+  } catch (err) {
+    console.error('Error fetching CDD forms:', err);
+    toast({ title: 'Error', description: 'Failed to fetch CDD forms data', variant: 'destructive' });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const generateColumns = (data: any[]) => {
     if (!data.length) return;
