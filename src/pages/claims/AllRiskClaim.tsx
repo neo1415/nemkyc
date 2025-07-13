@@ -61,7 +61,7 @@ const AllRiskClaim: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
-  const form = useForm<AllRiskClaimData>({
+  const form = useForm({
     resolver: yupResolver(allRiskClaimSchema),
     defaultValues: {
       propertyItems: [{ description: '', dateOfPurchase: undefined, costPrice: undefined, deductionForAge: 0, amountClaimed: undefined, remarks: '' }],
@@ -77,7 +77,7 @@ const AllRiskClaim: React.FC = () => {
 
   const { saveDraft, loadDraft, clearDraft } = useFormDraft('all-risk-claim', {});
 
-  const onSubmit = async (data: AllRiskClaimData) => {
+  const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
       const fileUrls: Record<string, string> = {};
@@ -120,7 +120,7 @@ const AllRiskClaim: React.FC = () => {
       component: (
         <div className="space-y-4">
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="policyNumber"
             render={({ field }) => (
               <FormItem>
@@ -141,7 +141,7 @@ const AllRiskClaim: React.FC = () => {
       component: (
         <div className="space-y-6">
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="agreeToDataPrivacy"
             render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0">
@@ -156,7 +156,7 @@ const AllRiskClaim: React.FC = () => {
             )}
           />
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="signature"
             render={({ field }) => (
               <FormItem>
