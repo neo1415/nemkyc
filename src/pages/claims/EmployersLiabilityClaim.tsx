@@ -332,7 +332,7 @@ const EmployersLiabilityClaim: React.FC = () => {
       });
 
       // Send confirmation email
-      await emailService.sendSubmissionConfirmation(data.email, 'Employers Liability Claim');
+      // await emailService.sendSubmissionConfirmation(data.email, 'Employers Liability Claim');
       
       clearDraft();
       setShowSuccess(true);
