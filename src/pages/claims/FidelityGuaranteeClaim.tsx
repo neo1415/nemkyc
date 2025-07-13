@@ -89,7 +89,7 @@ const FidelityGuaranteeClaim: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formMethods = useForm<FidelityGuaranteeClaimData>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema as any),
     defaultValues: {
       policyNumber: '',
       periodOfCoverFrom: '',
@@ -196,8 +196,9 @@ const FidelityGuaranteeClaim: React.FC = () => {
 
   const steps = [
     {
+      id: "policy-details",
       title: "Policy Details",
-      content: (
+      component: (
         <FormSection title="Policy Information" description="Enter your policy details">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -240,8 +241,9 @@ const FidelityGuaranteeClaim: React.FC = () => {
       ),
     },
     {
+      id: "insured-details", 
       title: "Insured Details",
-      content: (
+      component: (
         <FormSection title="Company Information" description="Enter your company details">
           <div className="space-y-4">
             <div>
@@ -299,8 +301,9 @@ const FidelityGuaranteeClaim: React.FC = () => {
       ),
     },
     {
+      id: "defaulter-details",
       title: "Details of Defaulter",
-      content: (
+      component: (
         <FormSection title="Defaulter Information" description="Provide details about the defaulter">
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -371,8 +374,9 @@ const FidelityGuaranteeClaim: React.FC = () => {
       ),
     },
     {
+      id: "default-details",
       title: "Details of Default",
-      content: (
+      component: (
         <FormSection title="Default Information" description="Provide details about the default">
           <div className="space-y-4">
             <div>
@@ -554,8 +558,9 @@ const FidelityGuaranteeClaim: React.FC = () => {
       ),
     },
     {
+      id: "employment-status",
       title: "Employment Status",
-      content: (
+      component: (
         <FormSection title="Employment Status Information" description="Details about the defaulter's employment status">
           <div className="space-y-4">
             <div>
@@ -629,8 +634,9 @@ const FidelityGuaranteeClaim: React.FC = () => {
       ),
     },
     {
+      id: "data-privacy",
       title: "Data Privacy & Declaration",
-      content: (
+      component: (
         <FormSection title="Data Privacy Notice & Declaration" description="Please read and agree to the terms below">
           <div className="space-y-6">
             <Card className="p-6">
