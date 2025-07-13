@@ -58,17 +58,13 @@ const GoodsInTransitClaim: React.FC = () => {
       goodsItems: [{ quantity: 1, description: '', value: 0 }],
       inspectionAddress: '',
       isOwnerOfGoods: true,
-      transportMethod: '',
-      transporterInsurer: '',
-      ownerName: '',
-      ownerInsurer: '',
       goodsInSoundCondition: true,
       checkedByDriver: true,
       vehicleRegistration: '',
       staffLoadedUnloaded: true,
       receiptGiven: true,
       claimMadeAgainstYou: false,
-      claimDateReceived: '',
+      
       agreeToDataPrivacy: false,
       signature: ''
     },
@@ -871,48 +867,12 @@ const GoodsInTransitClaim: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={onFinalSubmit}
+          onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
-          submitButtonText="Review Claim"
+          submitButtonText="Submit Claim"
           formMethods={formMethods}
         />
 
-        {/* Summary Dialog */}
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Review Your Goods in Transit Claim Submission</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>Policy Number:</strong> {watchedValues.policyNumber}</div>
-                <div><strong>Company:</strong> {watchedValues.companyName}</div>
-                <div><strong>Email:</strong> {watchedValues.email}</div>
-                <div><strong>Total Value:</strong> ₦{watchedValues.totalValue?.toLocaleString()}</div>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-blue-800">
-                  For claims status enquiries, call 01 448 9570
-                </p>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowSummary(false)}>
-                Back to Edit
-              </Button>
-              <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Claim'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
           {/* Success Modal */}
           <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
