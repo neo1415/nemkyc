@@ -89,6 +89,7 @@ const schema = yup.object().shape({
   periodOfCoverFrom: yup.string().required('Period of cover start date is required'),
   periodOfCoverTo: yup.string().required('Period of cover end date is required'),
   name: yup.string().required('Name is required'),
+  companyName: yup.string(),
   title: yup.string().required('Title is required'),
   dateOfBirth: yup.string().required('Date of birth is required'),
   gender: yup.string().required('Gender is required'),
@@ -101,20 +102,36 @@ const schema = yup.object().shape({
   timeOfOccurrence: yup.string().required('Time of occurrence is required'),
   incidentDescription: yup.string().required('Incident description is required'),
   causeOfFire: yup.string().required('Cause of fire is required'),
+  premisesUsedAsPerPolicy: yup.boolean(),
+  premisesUsageDetails: yup.string(),
   purposeOfPremises: yup.string().required('Purpose of premises is required'),
+  unallowedRiskIntroduced: yup.boolean(),
+  unallowedRiskDetails: yup.string(),
   measuresWhenFireDiscovered: yup.string().required('Measures taken when fire was discovered is required'),
+  soleOwner: yup.boolean(),
+  otherOwnersName: yup.string(),
+  otherOwnersAddress: yup.string(),
+  hasOtherInsurance: yup.boolean(),
+  otherInsuranceName: yup.string(),
+  otherInsuranceAddress: yup.string(),
   premisesContentsValue: yup.number().min(0, 'Value must be positive').required('Premises contents value is required'),
+  hasPreviousClaim: yup.boolean(),
+  previousClaimDate: yup.string(),
+  previousClaimAmount: yup.number().min(0, 'Amount must be positive'),
   itemsLost: yup.array().of(
     yup.object().shape({
+      sn: yup.number(),
       description: yup.string().required('Description is required'),
       costPrice: yup.number().min(0, 'Cost price must be positive').required('Cost price is required'),
       dateOfPurchase: yup.string().required('Date of purchase is required'),
       estimatedValueAtOccurrence: yup.number().min(0, 'Estimated value must be positive').required('Estimated value is required'),
       valueOfSalvage: yup.number().min(0, 'Salvage value must be positive'),
+      netAmountClaimed: yup.number().min(0, 'Net amount must be positive'),
     })
   ).min(1, 'At least one item must be added'),
   agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to the data privacy notice'),
   signature: yup.string().required('Signature is required'),
+  signatureDate: yup.string(),
 });
 
 const FireSpecialPerilsClaim: React.FC = () => {
@@ -124,7 +141,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formMethods = useForm<FireSpecialPerilsClaimData>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema as any),
     defaultValues: {
       policyNumber: '',
       periodOfCoverFrom: '',
@@ -209,9 +226,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
       // Send confirmation email
       await emailService.sendSubmissionConfirmation(
         data.email,
-        data.name,
-        'Fire and Special Perils Claim',
-        docRef.id
+        'Fire and Special Perils Claim'
       );
 
       clearDraft();
@@ -285,8 +300,9 @@ const FireSpecialPerilsClaim: React.FC = () => {
 
   const steps = [
     {
+      id: "policy-details",
       title: "Policy Details",
-      content: (
+      component: (
         <FormSection title="Policy Information" description="Enter your policy details">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -329,8 +345,9 @@ const FireSpecialPerilsClaim: React.FC = () => {
       ),
     },
     {
+      id: "insured-details",
       title: "Insured Details",
-      content: (
+      component: (
         <FormSection title="Insured Information" description="Enter your personal/company details">
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -447,8 +464,9 @@ const FireSpecialPerilsClaim: React.FC = () => {
       ),
     },
     {
+      id: "loss-details",
       title: "Loss Details",
-      content: (
+      component: (
         <FormSection title="Loss Information" description="Provide details about the incident">
           <div className="space-y-4">
             <div>
@@ -531,8 +549,9 @@ const FireSpecialPerilsClaim: React.FC = () => {
       ),
     },
     {
+      id: "premises-use",
       title: "Premises Use",
-      content: (
+      component: (
         <FormSection title="Premises Usage Information" description="Details about how the premises were being used">
           <div className="space-y-4">
             <div>
@@ -633,8 +652,9 @@ const FireSpecialPerilsClaim: React.FC = () => {
       ),
     },
     {
+      id: "property-ownership",
       title: "Property Ownership",
-      content: (
+      component: (
         <FormSection title="Property Ownership Details" description="Information about property ownership">
           <div className="space-y-4">
             <div>
@@ -685,8 +705,9 @@ const FireSpecialPerilsClaim: React.FC = () => {
       ),
     },
     {
+      id: "other-insurance",
       title: "Other Insurance",
-      content: (
+      component: (
         <FormSection title="Other Insurance Information" description="Details about any other insurance policies">
           <div className="space-y-4">
             <div>
@@ -737,8 +758,9 @@ const FireSpecialPerilsClaim: React.FC = () => {
       ),
     },
     {
+      id: "valuation",
       title: "Valuation",
-      content: (
+      component: (
         <FormSection title="Valuation Information" description="Property valuation and previous claim details">
           <div className="space-y-4">
             <div>
@@ -804,8 +826,9 @@ const FireSpecialPerilsClaim: React.FC = () => {
       ),
     },
     {
+      id: "items-lost",
       title: "Items Lost or Damaged",
-      content: (
+      component: (
         <FormSection title="Itemized List of Lost/Damaged Property" description="List all items that were lost or damaged">
           <div className="space-y-4">
             {watchedValues.itemsLost?.map((item, index) => (
@@ -902,8 +925,9 @@ const FireSpecialPerilsClaim: React.FC = () => {
       ),
     },
     {
+      id: "data-privacy",
       title: "Data Privacy & Declaration",
-      content: (
+      component: (
         <FormSection title="Data Privacy Notice & Declaration" description="Please read and agree to the terms below">
           <div className="space-y-6">
             <Card className="p-6">
