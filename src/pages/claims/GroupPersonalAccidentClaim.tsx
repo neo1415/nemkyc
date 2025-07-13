@@ -4,7 +4,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { collection, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase/config';
-import { groupPersonalAccidentSchema } from '../../utils/validation';
+// import { groupPersonalAccidentSchema } from '../../utils/validation';
 import { GroupPersonalAccidentClaimData } from '../../types/claims';
 import { emailService } from '../../services/emailService';
 import { useFormDraft } from '../../hooks/useFormDraft';
@@ -29,7 +29,7 @@ const GroupPersonalAccidentClaim = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formMethods = useForm<GroupPersonalAccidentClaimData>({
-    resolver: yupResolver(groupPersonalAccidentSchema) as any,
+    // resolver: yupResolver(groupPersonalAccidentSchema) as any,
     defaultValues: {
       policyNumber: '',
       periodOfCoverFrom: '',
@@ -198,6 +198,7 @@ const GroupPersonalAccidentClaim = () => {
               id="address"
               {...formMethods.register('address')}
               placeholder="Enter full address"
+              rows={3}
             />
             {formMethods.formState.errors.address && (
               <p className="text-sm text-red-600">{formMethods.formState.errors.address.message}</p>
@@ -235,7 +236,7 @@ const GroupPersonalAccidentClaim = () => {
     },
     {
       id: 'accident',
-      title: 'Accident Details',
+      title: 'Details of Loss',
       component: (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
@@ -252,7 +253,7 @@ const GroupPersonalAccidentClaim = () => {
             </div>
             
             <div>
-              <Label htmlFor="accidentTime">Accident Time *</Label>
+              <Label htmlFor="accidentTime">Time *</Label>
               <Input
                 id="accidentTime"
                 type="time"
@@ -265,7 +266,7 @@ const GroupPersonalAccidentClaim = () => {
           </div>
           
           <div>
-            <Label htmlFor="accidentPlace">Place of Accident *</Label>
+            <Label htmlFor="accidentPlace">Place *</Label>
             <Input
               id="accidentPlace"
               {...formMethods.register('accidentPlace')}
@@ -277,7 +278,7 @@ const GroupPersonalAccidentClaim = () => {
           </div>
           
           <div>
-            <Label htmlFor="incidentDescription">How did the incident occur? *</Label>
+            <Label htmlFor="incidentDescription">Incident Description *</Label>
             <Textarea
               id="incidentDescription"
               {...formMethods.register('incidentDescription')}
@@ -305,128 +306,8 @@ const GroupPersonalAccidentClaim = () => {
       )
     },
     {
-      id: 'medical',
-      title: 'Medical & Incapacity Details',
-      component: (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="doctorName">Doctor's Name *</Label>
-              <Input
-                id="doctorName"
-                {...formMethods.register('doctorName')}
-                placeholder="Enter doctor's name"
-              />
-              {formMethods.formState.errors.doctorName && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.doctorName.message}</p>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="doctorAddress">Doctor's Address *</Label>
-              <Input
-                id="doctorAddress"
-                {...formMethods.register('doctorAddress')}
-                placeholder="Enter doctor's address"
-              />
-              {formMethods.formState.errors.doctorAddress && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.doctorAddress.message}</p>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="isUsualDoctor"
-              checked={watchedValues.isUsualDoctor}
-              onCheckedChange={(checked) => formMethods.setValue('isUsualDoctor', checked as boolean)}
-            />
-            <Label htmlFor="isUsualDoctor">Is this the injured person's usual doctor?</Label>
-          </div>
-          
-          <div>
-            <h4 className="font-medium mb-4">Period of Total Incapacity</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="totalIncapacityFrom">From</Label>
-                <Input
-                  id="totalIncapacityFrom"
-                  type="date"
-                  {...formMethods.register('totalIncapacityFrom')}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="totalIncapacityTo">To</Label>
-                <Input
-                  id="totalIncapacityTo"
-                  type="date"
-                  {...formMethods.register('totalIncapacityTo')}
-                />
-              </div>
-            </div>
-          </div>
-          
-          <div>
-            <h4 className="font-medium mb-4">Period of Partial Incapacity</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="partialIncapacityFrom">From</Label>
-                <Input
-                  id="partialIncapacityFrom"
-                  type="date"
-                  {...formMethods.register('partialIncapacityFrom')}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="partialIncapacityTo">To</Label>
-                <Input
-                  id="partialIncapacityTo"
-                  type="date"
-                  {...formMethods.register('partialIncapacityTo')}
-                />
-              </div>
-            </div>
-          </div>
-          
-          <div>
-            <h4 className="font-medium mb-4">Other Insurance Details</h4>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="otherInsurerName">Other Insurer Name</Label>
-                <Input
-                  id="otherInsurerName"
-                  {...formMethods.register('otherInsurerName')}
-                  placeholder="Enter other insurer name"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="otherInsurerAddress">Other Insurer Address</Label>
-                <Input
-                  id="otherInsurerAddress"
-                  {...formMethods.register('otherInsurerAddress')}
-                  placeholder="Enter other insurer address"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="otherPolicyNumber">Other Policy Number</Label>
-                <Input
-                  id="otherPolicyNumber"
-                  {...formMethods.register('otherPolicyNumber')}
-                  placeholder="Enter other policy number"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
       id: 'witnesses',
-      title: 'Witnesses',
+      title: 'Witness Information',
       component: (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -466,9 +347,10 @@ const GroupPersonalAccidentClaim = () => {
                   
                   <div>
                     <Label htmlFor={`witnesses.${index}.address`}>Address *</Label>
-                    <Input
+                    <Textarea
                       {...formMethods.register(`witnesses.${index}.address`)}
                       placeholder="Enter witness address"
+                      rows={2}
                     />
                   </div>
                 </div>
@@ -479,106 +361,262 @@ const GroupPersonalAccidentClaim = () => {
       )
     },
     {
-      id: 'declaration',
+      id: 'doctor',
+      title: 'Doctor Information',
+      component: (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="doctorName">Name of doctor *</Label>
+              <Input
+                id="doctorName"
+                {...formMethods.register('doctorName')}
+                placeholder="Enter doctor's name"
+              />
+              {formMethods.formState.errors.doctorName && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.doctorName.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="doctorAddress">Address of doctor *</Label>
+              <Textarea
+                id="doctorAddress"
+                {...formMethods.register('doctorAddress')}
+                placeholder="Enter doctor's address"
+                rows={2}
+              />
+              {formMethods.formState.errors.doctorAddress && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.doctorAddress.message}</p>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="isUsualDoctor"
+              checked={watchedValues.isUsualDoctor}
+              onCheckedChange={(checked) => formMethods.setValue('isUsualDoctor', checked as boolean)}
+            />
+            <Label htmlFor="isUsualDoctor">Is this your usual doctor?</Label>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'incapacity',
+      title: 'Incapacity Details',
+      component: (
+        <div className="space-y-6">
+          <div>
+            <h4 className="font-medium mb-4">Total incapacity period:</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="totalIncapacityFrom">From</Label>
+                <Input
+                  id="totalIncapacityFrom"
+                  type="date"
+                  {...formMethods.register('totalIncapacityFrom')}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="totalIncapacityTo">To</Label>
+                <Input
+                  id="totalIncapacityTo"
+                  type="date"
+                  {...formMethods.register('totalIncapacityTo')}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="font-medium mb-4">Partial incapacity period:</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="partialIncapacityFrom">From</Label>
+                <Input
+                  id="partialIncapacityFrom"
+                  type="date"
+                  {...formMethods.register('partialIncapacityFrom')}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="partialIncapacityTo">To</Label>
+                <Input
+                  id="partialIncapacityTo"
+                  type="date"
+                  {...formMethods.register('partialIncapacityTo')}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'other-insurers',
+      title: 'Other Insurers',
+      component: (
+        <div className="space-y-6">
+          <div>
+            <Label htmlFor="otherInsurerName">Name *</Label>
+            <Input
+              id="otherInsurerName"
+              {...formMethods.register('otherInsurerName')}
+              placeholder="Enter other insurer name"
+            />
+            {formMethods.formState.errors.otherInsurerName && (
+              <p className="text-sm text-red-600">{formMethods.formState.errors.otherInsurerName.message}</p>
+            )}
+          </div>
+          
+          <div>
+            <Label htmlFor="otherInsurerAddress">Address *</Label>
+            <Textarea
+              id="otherInsurerAddress"
+              {...formMethods.register('otherInsurerAddress')}
+              placeholder="Enter other insurer address"
+              rows={3}
+            />
+            {formMethods.formState.errors.otherInsurerAddress && (
+              <p className="text-sm text-red-600">{formMethods.formState.errors.otherInsurerAddress.message}</p>
+            )}
+          </div>
+          
+          <div>
+            <Label htmlFor="otherPolicyNumber">Policy Number</Label>
+            <Input
+              id="otherPolicyNumber"
+              {...formMethods.register('otherPolicyNumber')}
+              placeholder="Enter other policy number"
+            />
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'data-privacy',
       title: 'Data Privacy & Declaration',
       component: (
         <div className="space-y-6">
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4">Data Privacy Notice</h3>
             <div className="prose prose-sm max-w-none">
-              <p>
-                We collect and process your personal information in accordance with applicable data protection laws.
-                Your data will be used to process your claim and may be shared with relevant parties including
-                investigators, adjusters, and medical professionals as necessary for claim assessment.
-              </p>
-              <p>
-                By submitting this form, you consent to the collection, processing, and storage of your personal
-                information for the purposes of claim processing and related activities.
-              </p>
+              <p><strong>i.</strong> Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+              <p><strong>ii.</strong> Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+              <p><strong>iii.</strong> Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
             </div>
           </Card>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked as boolean)}
-            />
-            <Label htmlFor="agreeToDataPrivacy">
-              I agree to the data privacy policy and consent to the processing of my personal information *
-            </Label>
-          </div>
-          
-          <div>
-            <Label htmlFor="signature">Digital Signature *</Label>
-            <Input
-              id="signature"
-              {...formMethods.register('signature')}
-              placeholder="Type your full name as digital signature"
-            />
-            {formMethods.formState.errors.signature && (
-              <p className="text-sm text-red-600">{formMethods.formState.errors.signature.message}</p>
-            )}
-          </div>
-          
-          <div className="text-sm text-gray-600">
-            <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
-          </div>
+
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Declaration</h3>
+            <div className="prose prose-sm max-w-none mb-6">
+              <p><strong>1.</strong> I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+              <p><strong>2.</strong> I/We agree to provide additional information to NEM Insurance, if required.</p>
+              <p><strong>3.</strong> I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="agreeToDataPrivacy"
+                  checked={watchedValues.agreeToDataPrivacy}
+                  onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
+                />
+                <Label htmlFor="agreeToDataPrivacy">
+                  I agree to the data privacy notice and declaration above *
+                </Label>
+              </div>
+              {formMethods.formState.errors.agreeToDataPrivacy && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.agreeToDataPrivacy.message}</p>
+              )}
+
+              <div>
+                <Label htmlFor="signature">Digital Signature *</Label>
+                <Input
+                  id="signature"
+                  {...formMethods.register('signature')}
+                  placeholder="Type your full name as signature"
+                />
+                {formMethods.formState.errors.signature && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.signature.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Label>Date</Label>
+                <Input
+                  type="date"
+                  value={new Date().toISOString().split('T')[0]}
+                  disabled
+                />
+              </div>
+            </div>
+          </Card>
         </div>
       )
     }
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Group Personal Accident Claim Form</h1>
-          <p className="text-gray-600 mt-2">Submit your personal accident claim</p>
-        </div>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              Group Personal Accident Insurance Claim Form
+            </h1>
+            <p className="text-muted-foreground">
+              Please fill out all required information to submit your claim
+            </p>
+          </div>
 
-        <MultiStepForm
-          steps={steps}
-          onSubmit={formMethods.handleSubmit(onFinalSubmit)}
-          isSubmitting={isSubmitting}
-          submitButtonText="Submit Claim"
-          formMethods={formMethods}
-        />
+          <MultiStepForm
+            steps={steps}
+            onSubmit={onFinalSubmit}
+            isSubmitting={isSubmitting}
+            submitButtonText="Submit Claim"
+            formMethods={formMethods}
+          />
 
-        {/* Summary Modal */}
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Review Your Claim</DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-semibold mb-2">Policy Details</h3>
-                <p><strong>Policy Number:</strong> {watchedValues.policyNumber}</p>
-                <p><strong>Company:</strong> {watchedValues.companyName}</p>
-              </div>
-              
-              <div>
-                <h3 className="font-semibold mb-2">Accident Information</h3>
-                <p><strong>Date:</strong> {watchedValues.accidentDate}</p>
-                <p><strong>Time:</strong> {watchedValues.accidentTime}</p>
-                <p><strong>Place:</strong> {watchedValues.accidentPlace}</p>
-              </div>
-              
-              <div>
-                <h3 className="font-semibold mb-2">Witnesses</h3>
-                {watchedValues.witnesses?.map((witness, index) => (
-                  <div key={index} className="border rounded p-3 mb-2">
-                    <p><strong>{witness.name}</strong></p>
-                    <p>{witness.address}</p>
+          {/* Summary Modal */}
+          <Dialog open={showSummary} onOpenChange={setShowSummary}>
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Review Your Claim</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <h4 className="font-semibold">Policy Details</h4>
+                    <p>Policy Number: {watchedValues.policyNumber}</p>
+                    <p>Period: {watchedValues.periodOfCoverFrom} to {watchedValues.periodOfCoverTo}</p>
                   </div>
-                ))}
+                  <div>
+                    <h4 className="font-semibold">Company Information</h4>
+                    <p>Company: {watchedValues.companyName}</p>
+                    <p>Email: {watchedValues.email}</p>
+                    <p>Phone: {watchedValues.phone}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <h4 className="font-semibold">Accident Details</h4>
+                    <p>Date: {watchedValues.accidentDate}</p>
+                    <p>Time: {watchedValues.accidentTime}</p>
+                    <p>Place: {watchedValues.accidentPlace}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <h4 className="font-semibold">Medical Details</h4>
+                    <p>Doctor: {watchedValues.doctorName}</p>
+                    <p>Address: {watchedValues.doctorAddress}</p>
+                  </div>
+                </div>
               </div>
-              
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
-                  Back to Edit
+                  Edit Details
                 </Button>
                 <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
                   {isSubmitting ? (
@@ -591,30 +629,41 @@ const GroupPersonalAccidentClaim = () => {
                   )}
                 </Button>
               </DialogFooter>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
 
-        {/* Success Modal */}
-        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="text-green-600">Claim Submitted Successfully!</DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <p>Your group personal accident claim has been submitted successfully.</p>
-              <p>You will receive a confirmation email shortly and updates on the status of your claim.</p>
-              
-              <Button onClick={() => {
-                setShowSuccess(false);
-                window.location.href = '/dashboard';
-              }}>
-                Go to Dashboard
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          {/* Success Modal */}
+          <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="text-center text-green-600">
+                  Claim Submitted Successfully!
+                </DialogTitle>
+              </DialogHeader>
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p>Your group personal accident claim has been submitted successfully.</p>
+                <p className="text-sm text-muted-foreground">
+                  You will receive a confirmation email shortly with your claim reference number.
+                </p>
+                <div className="bg-muted p-4 rounded-lg">
+                  <p className="text-sm">
+                    <strong>For claims status enquiries, call 01 448 9570</strong>
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => setShowSuccess(false)} className="w-full">
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
     </div>
   );
