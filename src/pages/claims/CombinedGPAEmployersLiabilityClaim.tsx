@@ -1259,9 +1259,9 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
           <div>
             <Label>File Uploads</Label>
             <FileUpload
-              onFileSelect={setUploadedFiles}
-              acceptedTypes={['.jpg', '.jpeg', '.png', '.pdf']}
-              maxSizeInMB={3}
+              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, [file.name]: file }))}
+              accept=".jpg,.jpeg,.png,.pdf"
+              maxSize={3}
             />
           </div>
         </div>
