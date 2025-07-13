@@ -100,10 +100,10 @@ const GroupPersonalAccidentClaim = () => {
       });
 
       // Send confirmation email
-      await emailService.sendSubmissionConfirmation(
-        data.email,
-        'Group Personal Accident Insurance Claim'
-      );
+      // await emailService.sendSubmissionConfirmation(
+      //   data.email,
+      //   'Group Personal Accident Insurance Claim'
+      // );
 
       clearDraft();
       setShowSummary(false);

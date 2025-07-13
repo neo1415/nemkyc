@@ -171,7 +171,7 @@ const RentAssuranceClaim = () => {
         createdAt: new Date().toLocaleDateString('en-GB')
       });
 
-      await emailService.sendSubmissionConfirmation(data.email, 'Rent Assurance Policy Claim');
+      // await emailService.sendSubmissionConfirmation(data.email, 'Rent Assurance Policy Claim');
 
       clearDraft();
       setShowSummary(false);

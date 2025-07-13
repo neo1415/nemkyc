@@ -275,7 +275,7 @@ const BurglaryClaimForm: React.FC = () => {
       });
 
       // Send confirmation email
-      await emailService.sendSubmissionConfirmation(data.email, 'Burglary Insurance Claim');
+      // await emailService.sendSubmissionConfirmation(data.email, 'Burglary Insurance Claim');
       
       clearDraft();
       setShowSummary(false);

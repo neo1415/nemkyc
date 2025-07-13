@@ -148,10 +148,10 @@ const GoodsInTransitClaim: React.FC = () => {
       });
 
       // Send confirmation email
-      await emailService.sendSubmissionConfirmation(
-        data.email,
-        'Goods-in-Transit Insurance Claim'
-      );
+      // await emailService.sendSubmissionConfirmation(
+      //   data.email,
+      //   'Goods-in-Transit Insurance Claim'
+      // );
 
       clearDraft();
       setShowSuccess(true);
