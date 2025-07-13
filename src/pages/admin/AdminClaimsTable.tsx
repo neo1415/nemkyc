@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import { Box, Button, Chip, Typography, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
@@ -131,10 +132,17 @@ const AdminClaimsTable: React.FC<AdminClaimsTableProps> = ({ formType }) => {
   };
 
   const columns: GridColDef[] = [
-    { field: 'id', headerName: 'ID', width: 200 },
-    { field: 'type', headerName: 'Claim Type', width: 200 },
+    { field: 'id', headerName: 'ID', width: 150 },
+    { field: 'type', headerName: 'Claim Type', width: 180 },
     { field: 'policyNumber', headerName: 'Policy Number', width: 150 },
-    { field: 'claimantName', headerName: 'Claimant', width: 180 },
+    { 
+      field: 'claimantName', 
+      headerName: 'Claimant', 
+      width: 180,
+      valueGetter: (params: any) => {
+        return params.row.nameOfInsured || params.row.insuredName || params.row.companyName || 'N/A';
+      }
+    },
     { field: 'email', headerName: 'Email', width: 200 },
     { field: 'phone', headerName: 'Phone', width: 150 },
     {
