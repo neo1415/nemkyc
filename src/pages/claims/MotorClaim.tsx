@@ -288,7 +288,7 @@ const MotorClaim: React.FC = () => {
       });
 
       // Send confirmation email
-      await emailService.sendSubmissionConfirmation(data.email, 'Motor Insurance Claim');
+      // await emailService.sendSubmissionConfirmation(data.email, 'Motor Insurance Claim');
       
       clearDraft();
       setShowSummary(false);

@@ -146,10 +146,10 @@ const FidelityGuaranteeClaim: React.FC = () => {
       });
 
       // Send confirmation email
-      await emailService.sendSubmissionConfirmation(
-        data.email,
-        'Fidelity Guarantee Claim'
-      );
+      // await emailService.sendSubmissionConfirmation(
+      //   data.email,
+      //   'Fidelity Guarantee Claim'
+      // );
 
       clearDraft();
       setShowSummary(false);
