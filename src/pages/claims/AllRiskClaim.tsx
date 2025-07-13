@@ -276,7 +276,7 @@ const AllRiskClaim: React.FC = () => {
       });
 
       // Send confirmation email
-      await emailService.sendSubmissionConfirmation(data.email, 'All Risk Insurance Claim');
+      // await emailService.sendSubmissionConfirmation(data.email, 'All Risk Insurance Claim');
       
       clearDraft();
       setShowSummary(false);

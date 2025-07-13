@@ -150,7 +150,7 @@ const MoneyInsuranceClaim = () => {
         status: 'submitted',
       });
 
-      await emailService.sendSubmissionConfirmation(data.email, 'Money Insurance Claim');
+      // await emailService.sendSubmissionConfirmation(data.email, 'Money Insurance Claim');
 
       clearDraft();
       setShowSummary(false);

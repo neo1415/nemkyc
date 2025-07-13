@@ -224,10 +224,10 @@ const FireSpecialPerilsClaim: React.FC = () => {
       });
 
       // Send confirmation email
-      await emailService.sendSubmissionConfirmation(
-        data.email,
-        'Fire and Special Perils Claim'
-      );
+      // await emailService.sendSubmissionConfirmation(
+      //   data.email,
+      //   'Fire and Special Perils Claim'
+      // );
 
       clearDraft();
       setShowSummary(false);
