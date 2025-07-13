@@ -249,9 +249,17 @@ const BurglaryClaimForm: React.FC = () => {
       const uploadedUrls = await Promise.all(fileUploadPromises);
       const fileUrls = Object.fromEntries(uploadedUrls);
       
+      // Filter out undefined values
+      const cleanData = Object.entries(data).reduce((acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as any);
+
       // Prepare form data with file URLs
       const submissionData = {
-        ...data,
+        ...cleanData,
         ...fileUrls,
         status: 'processing',
         submittedAt: new Date().toISOString(),
