@@ -3,34 +3,37 @@ import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { toast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { toast } from '@/hooks/use-toast';
-import { CheckCircle, Plus, Trash2, Calendar, Clock } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Calendar as ReactCalendar } from '@/components/ui/calendar';
+import { CalendarIcon, Plus, Trash2, Upload, Edit2, AlertTriangle, FileText, CheckCircle2, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
+import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { db } from '@/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import FileUpload from '@/components/common/FileUpload';
+import { emailService } from '@/services/emailService';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Info } from 'lucide-react';
 
+// Burglary Claim Schema
 const burglaryClaimSchema = yup.object().shape({
   // Policy Details
   policyNumber: yup.string().required("Policy number is required"),
   periodOfCoverFrom: yup.date().required("Period of cover from is required"),
   periodOfCoverTo: yup.date().required("Period of cover to is required"),
-  
+
   // Insured Details
   nameOfInsured: yup.string().required("Name of insured is required"),
   companyName: yup.string(),
@@ -39,8 +42,8 @@ const burglaryClaimSchema = yup.object().shape({
   gender: yup.string().required("Gender is required"),
   address: yup.string().required("Address is required"),
   phone: yup.string().required("Phone number is required"),
-  email: yup.string().email("Invalid email format").required("Email is required"),
-  
+  email: yup.string().email("Valid email is required").required("Email is required"),
+
   // Details of Loss
   premisesAddress: yup.string().required("Premises address is required"),
   premisesTelephone: yup.string().required("Premises telephone is required"),
@@ -48,138 +51,226 @@ const burglaryClaimSchema = yup.object().shape({
   timeOfTheft: yup.string().required("Time of theft is required"),
   howEntryEffected: yup.string().required("How entry was effected is required"),
   roomsEntered: yup.string().required("Rooms entered is required"),
-  premisesOccupied: yup.boolean().required("Please specify if premises were occupied"),
+  premisesOccupied: yup.boolean().required("Please specify if premises occupied"),
   lastOccupiedDate: yup.string().when('premisesOccupied', {
     is: false,
-    then: (schema) => schema.required("Last occupied date is required"),
-    otherwise: (schema) => schema
+    then: (schema) => schema.required("Last occupied date required"),
+    otherwise: (schema) => schema.notRequired()
   }),
   suspicions: yup.boolean().required("Please specify if you have suspicions"),
   suspicionName: yup.string().when('suspicions', {
     is: true,
-    then: (schema) => schema.required("Suspicion name is required"),
-    otherwise: (schema) => schema
+    then: (schema) => schema.required("Name required"),
+    otherwise: (schema) => schema.notRequired()
   }),
-  policeInformed: yup.boolean().required("Please specify if police were informed"),
+  policeInformed: yup.boolean().required("Please specify if police informed"),
   policeDate: yup.date().when('policeInformed', {
     is: true,
-    then: (schema) => schema.required("Police informed date is required"),
-    otherwise: (schema) => schema
+    then: (schema) => schema.required("Police date required"),
+    otherwise: (schema) => schema.notRequired()
   }),
   policeStation: yup.string().when('policeInformed', {
     is: true,
-    then: (schema) => schema.required("Police station address is required"),
-    otherwise: (schema) => schema
+    then: (schema) => schema.required("Police station required"),
+    otherwise: (schema) => schema.notRequired()
   }),
-  soleOwner: yup.boolean().required("Please specify if you are sole owner"),
+  soleOwner: yup.boolean().required("Please specify if sole owner"),
   ownerDetails: yup.string().when('soleOwner', {
     is: false,
-    then: (schema) => schema.required("Owner details are required"),
-    otherwise: (schema) => schema
+    then: (schema) => schema.required("Owner details required"),
+    otherwise: (schema) => schema.notRequired()
   }),
-  otherInsurance: yup.boolean().required("Please specify if you have other insurance"),
+  otherInsurance: yup.boolean().required("Please specify if other insurance exists"),
   otherInsurerDetails: yup.string().when('otherInsurance', {
     is: true,
-    then: (schema) => schema.required("Other insurer details are required"),
-    otherwise: (schema) => schema
+    then: (schema) => schema.required("Other insurer details required"),
+    otherwise: (schema) => schema.notRequired()
   }),
-  totalContentsValue: yup.number().positive("Must be a positive number").required("Total contents value is required"),
-  sumInsuredFirePolicy: yup.number().positive("Must be a positive number").required("Sum insured under fire policy is required"),
+  totalContentsValue: yup.number().required("Total contents value is required"),
+  sumInsuredFirePolicy: yup.number().required("Sum insured under fire policy is required"),
   fireInsurerName: yup.string().required("Fire insurer name is required"),
   fireInsurerAddress: yup.string().required("Fire insurer address is required"),
-  previousLoss: yup.boolean().required("Please specify if you had previous loss"),
+  previousLoss: yup.boolean().required("Please specify if previous loss occurred"),
   previousLossDetails: yup.string().when('previousLoss', {
     is: true,
-    then: (schema) => schema.required("Previous loss details are required"),
-    otherwise: (schema) => schema
+    then: (schema) => schema.required("Previous loss details required"),
+    otherwise: (schema) => schema.notRequired()
   }),
-  
+
   // Property Items
   propertyItems: yup.array().of(
     yup.object().shape({
       description: yup.string().required("Description is required"),
-      costPrice: yup.number().positive("Must be a positive number").required("Cost price is required"),
+      costPrice: yup.number().required("Cost price is required"),
       dateOfPurchase: yup.date().required("Date of purchase is required"),
-      estimatedValue: yup.number().positive("Must be a positive number").required("Estimated value is required"),
-      netAmountClaimed: yup.number().positive("Must be a positive number").required("Net amount claimed is required")
+      estimatedValue: yup.number().required("Estimated value is required"),
+      netAmountClaimed: yup.number().required("Net amount claimed is required")
     })
-  ).min(1, "At least one property item is required"),
-  
+  ),
+
   // Declaration
-  agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to the data privacy terms"),
-  signature: yup.string().required("Signature is required"),
-  signatureDate: yup.date().required("Signature date is required")
+  agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
+  signature: yup.string().required("Signature is required")
 });
 
-type BurglaryClaimData = yup.InferType<typeof burglaryClaimSchema>;
+interface BurglaryPropertyItem {
+  description: string;
+  costPrice: number;
+  dateOfPurchase: Date;
+  estimatedValue: number;
+  netAmountClaimed: number;
+}
+
+interface BurglaryClaimData {
+  // Policy Details
+  policyNumber: string;
+  periodOfCoverFrom: Date;
+  periodOfCoverTo: Date;
+
+  // Insured Details
+  nameOfInsured: string;
+  companyName?: string;
+  title: string;
+  dateOfBirth: Date;
+  gender: string;
+  address: string;
+  phone: string;
+  email: string;
+
+  // Details of Loss
+  premisesAddress: string;
+  premisesTelephone: string;
+  dateOfTheft: Date;
+  timeOfTheft: string;
+  howEntryEffected: string;
+  roomsEntered: string;
+  premisesOccupied: boolean;
+  lastOccupiedDate?: string;
+  suspicions: boolean;
+  suspicionName?: string;
+  policeInformed: boolean;
+  policeDate?: Date;
+  policeStation?: string;
+  soleOwner: boolean;
+  ownerDetails?: string;
+  otherInsurance: boolean;
+  otherInsurerDetails?: string;
+  totalContentsValue: number;
+  sumInsuredFirePolicy: number;
+  fireInsurerName: string;
+  fireInsurerAddress: string;
+  previousLoss: boolean;
+  previousLossDetails?: string;
+
+  // Property Items
+  propertyItems: BurglaryPropertyItem[];
+
+  // Declaration
+  agreeToDataPrivacy: boolean;
+  signature: string;
+  signatureDate: Date;
+}
+
+const defaultValues: Partial<BurglaryClaimData> = {
+  policyNumber: '',
+  nameOfInsured: '',
+  companyName: '',
+  title: '',
+  address: '',
+  phone: '',
+  email: '',
+  gender: '',
+  premisesAddress: '',
+  premisesTelephone: '',
+  timeOfTheft: '',
+  howEntryEffected: '',
+  roomsEntered: '',
+  premisesOccupied: false,
+  suspicions: false,
+  policeInformed: false,
+  soleOwner: false,
+  otherInsurance: false,
+  totalContentsValue: 0,
+  sumInsuredFirePolicy: 0,
+  fireInsurerName: '',
+  fireInsurerAddress: '',
+  previousLoss: false,
+  propertyItems: [],
+  agreeToDataPrivacy: false,
+  signature: ''
+};
 
 const BurglaryClaimForm: React.FC = () => {
+  const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
-  const form = useForm({
+  const formMethods = useForm<any>({
     resolver: yupResolver(burglaryClaimSchema),
-    defaultValues: {
-      propertyItems: [{ description: '', costPrice: undefined, dateOfPurchase: undefined, estimatedValue: undefined, netAmountClaimed: undefined }],
-      signatureDate: new Date(),
-      premisesOccupied: true,
-      suspicions: false,
-      policeInformed: false,
-      soleOwner: true,
-      otherInsurance: false,
-      previousLoss: false
-    },
+    defaultValues,
     mode: 'onChange'
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "propertyItems"
+  const { fields: propertyFields, append: addProperty, remove: removeProperty } = useFieldArray({
+    control: formMethods.control,
+    name: 'propertyItems'
   });
 
-  const { saveDraft, loadDraft, clearDraft } = useFormDraft('burglary-claim', {});
+  const { saveDraft, clearDraft } = useFormDraft('burglaryClaimForm', formMethods);
+  const watchedValues = formMethods.watch();
 
-  const watchedValues = form.watch();
-
+  // Auto-save draft
   useEffect(() => {
-    const draft = loadDraft();
-    if (draft) {
-      Object.keys(draft).forEach((key) => {
-        form.setValue(key as keyof BurglaryClaimData, draft[key]);
-      });
-    }
-  }, [form, loadDraft]);
-
-  useEffect(() => {
-    const subscription = form.watch((data) => {
+    const subscription = formMethods.watch((data) => {
       saveDraft(data);
     });
     return () => subscription.unsubscribe();
-  }, [form, saveDraft]);
+  }, [formMethods, saveDraft]);
 
-  const onSubmit = async (data: any) => {
+  const handleSubmit = async (data: BurglaryClaimData) => {
+    setShowSummary(true);
+  };
+
+  const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const fileUrls: Record<string, string> = {};
-      for (const [key, file] of Object.entries(uploadedFiles)) {
-        if (file) {
-          const url = await uploadFile(file, `burglary-claims/${Date.now()}_${file.name}`);
-          fileUrls[key] = url;
-        }
-      }
-
-      await addDoc(collection(db, 'burglary-claims'), {
+      const data = formMethods.getValues();
+      
+      // Upload files to Firebase Storage
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      
+      Object.entries(uploadedFiles).forEach(([key, file]) => {
+        fileUploadPromises.push(
+          uploadFile(file, 'burglary-claims').then(url => [key + 'Url', url])
+        );
+      });
+      
+      const uploadedUrls = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(uploadedUrls);
+      
+      // Prepare form data with file URLs
+      const submissionData = {
         ...data,
         ...fileUrls,
         status: 'processing',
         submittedAt: new Date().toISOString(),
         formType: 'burglary-claim',
+        signatureDate: new Date()
+      };
+      
+      // Submit to Firestore
+      await addDoc(collection(db, 'burglary-claims'), {
+        ...submissionData,
         timestamp: serverTimestamp(),
         createdAt: new Date().toLocaleDateString('en-GB')
       });
+
+      // Send confirmation email
+      await emailService.sendSubmissionConfirmation(data.email, 'Burglary Insurance Claim');
       
       clearDraft();
+      setShowSummary(false);
       setShowSuccess(true);
       toast({ title: "Burglary claim submitted successfully!" });
     } catch (error) {
@@ -190,859 +281,541 @@ const BurglaryClaimForm: React.FC = () => {
     }
   };
 
-  const handleFileUpload = (fieldName: string) => (file: File) => {
-    setUploadedFiles(prev => ({ ...prev, [fieldName]: file }));
+  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
+    const value = formMethods.watch(name);
+    return (
+      <TooltipProvider>
+        <div className="space-y-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Label className="flex items-center gap-1">
+                {label}
+                <Info className="h-3 w-3" />
+              </Label>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Select the {label.toLowerCase()}</p>
+            </TooltipContent>
+          </Tooltip>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !value && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <ReactCalendar
+                mode="single"
+                selected={value ? new Date(value) : undefined}
+                onSelect={(date) => formMethods.setValue(name, date)}
+                initialFocus
+                className="pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </TooltipProvider>
+    );
   };
 
   const steps = [
     {
-      id: 'policy-details',
+      id: 'policy',
       title: 'Policy Details',
       component: (
         <div className="space-y-4">
-          <FormField
-            control={form.control as any}
-            name="policyNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                  <Tooltip>
-                    <TooltipTrigger>Policy Number</TooltipTrigger>
-                    <TooltipContent>Enter your insurance policy number</TooltipContent>
-                  </Tooltip>
-                </FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter policy number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control as any}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Label htmlFor="policyNumber" className="flex items-center gap-1">
+                    Policy Number *
+                    <Info className="h-3 w-3" />
+                  </Label>
+                  <Input
+                    id="policyNumber"
+                    {...formMethods.register('policyNumber')}
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Enter your burglary insurance policy number</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <DatePickerField
               name="periodOfCoverFrom"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Tooltip>
-                      <TooltipTrigger>Period of Cover From</TooltipTrigger>
-                      <TooltipContent>Start date of your policy coverage</TooltipContent>
-                    </Tooltip>
-                  </FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <Calendar className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Period of Cover From *"
             />
-            <FormField
-              control={form.control as any}
+            <DatePickerField
               name="periodOfCoverTo"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Tooltip>
-                      <TooltipTrigger>Period of Cover To</TooltipTrigger>
-                      <TooltipContent>End date of your policy coverage</TooltipContent>
-                    </Tooltip>
-                  </FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <Calendar className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Period of Cover To *"
             />
           </div>
         </div>
       )
     },
     {
-      id: 'insured-details',
+      id: 'insured',
       title: 'Insured Details',
       component: (
-        <div className="space-y-4">
-          <FormField
-            control={form.control as any}
-            name="nameOfInsured"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                  <Tooltip>
-                    <TooltipTrigger>Name of Insured</TooltipTrigger>
-                    <TooltipContent>Full name as it appears on the policy</TooltipContent>
-                  </Tooltip>
-                </FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter full name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control as any}
-            name="companyName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  <Tooltip>
-                    <TooltipTrigger>Company Name</TooltipTrigger>
-                    <TooltipContent>Company name if applicable</TooltipContent>
-                  </Tooltip>
-                </FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter company name (optional)" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control as any}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Tooltip>
-                      <TooltipTrigger>Title</TooltipTrigger>
-                      <TooltipContent>Select your title</TooltipContent>
-                    </Tooltip>
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select title" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Mr">Mr</SelectItem>
-                      <SelectItem value="Mrs">Mrs</SelectItem>
-                      <SelectItem value="Miss">Miss</SelectItem>
-                      <SelectItem value="Dr">Dr</SelectItem>
-                      <SelectItem value="Prof">Prof</SelectItem>
-                      <SelectItem value="Chief">Chief</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control as any}
-              name="gender"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Tooltip>
-                      <TooltipTrigger>Gender</TooltipTrigger>
-                      <TooltipContent>Select your gender</TooltipContent>
-                    </Tooltip>
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Male">Male</SelectItem>
-                      <SelectItem value="Female">Female</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <FormField
-            control={form.control as any}
-            name="dateOfBirth"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                  <Tooltip>
-                    <TooltipTrigger>Date of Birth</TooltipTrigger>
-                    <TooltipContent>Your date of birth</TooltipContent>
-                  </Tooltip>
-                </FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                        <Calendar className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
+        <TooltipProvider>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Label htmlFor="nameOfInsured" className="flex items-center gap-1">
+                      Name of Insured *
+                      <Info className="h-3 w-3" />
+                    </Label>
+                    <Input
+                      id="nameOfInsured"
+                      {...formMethods.register('nameOfInsured')}
                     />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control as any}
-            name="address"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                  <Tooltip>
-                    <TooltipTrigger>Address</TooltipTrigger>
-                    <TooltipContent>Your full residential address</TooltipContent>
-                  </Tooltip>
-                </FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Enter full address" rows={3} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control as any}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Tooltip>
-                      <TooltipTrigger>Phone Number</TooltipTrigger>
-                      <TooltipContent>Your contact phone number</TooltipContent>
-                    </Tooltip>
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter phone number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control as any}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Tooltip>
-                      <TooltipTrigger>Email Address</TooltipTrigger>
-                      <TooltipContent>Your email address for correspondence</TooltipContent>
-                    </Tooltip>
-                  </FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="Enter email address" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter the full name of the insured person</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Label htmlFor="companyName" className="flex items-center gap-1">
+                      Company Name (Optional)
+                      <Info className="h-3 w-3" />
+                    </Label>
+                    <Input
+                      id="companyName"
+                      {...formMethods.register('companyName')}
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter company name if applicable</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>Title *</Label>
+                <Select
+                  value={watchedValues.title || ''}
+                  onValueChange={(value) => formMethods.setValue('title', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select title" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Mr">Mr</SelectItem>
+                    <SelectItem value="Mrs">Mrs</SelectItem>
+                    <SelectItem value="Chief">Chief</SelectItem>
+                    <SelectItem value="Dr">Dr</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <DatePickerField
+                name="dateOfBirth"
+                label="Date of Birth *"
+              />
+              <div>
+                <Label>Gender *</Label>
+                <Select
+                  value={watchedValues.gender || ''}
+                  onValueChange={(value) => formMethods.setValue('gender', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Label htmlFor="address" className="flex items-center gap-1">
+                    Address *
+                    <Info className="h-3 w-3" />
+                  </Label>
+                  <Textarea
+                    id="address"
+                    {...formMethods.register('address')}
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Enter your full residential address</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Label htmlFor="phone" className="flex items-center gap-1">
+                      Phone Number *
+                      <Info className="h-3 w-3" />
+                    </Label>
+                    <Input
+                      id="phone"
+                      {...formMethods.register('phone')}
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter your contact phone number</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Label htmlFor="email" className="flex items-center gap-1">
+                      Email Address *
+                      <Info className="h-3 w-3" />
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      {...formMethods.register('email')}
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter your email address for correspondence</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
-        </div>
+        </TooltipProvider>
       )
     },
     {
-      id: 'loss-details',
+      id: 'loss',
       title: 'Details of Loss',
       component: (
-        <div className="space-y-4">
-          <FormField
-            control={form.control as any}
-            name="premisesAddress"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                  <Tooltip>
-                    <TooltipTrigger>Full Address of Premises Involved</TooltipTrigger>
-                    <TooltipContent>Complete address where the burglary occurred</TooltipContent>
-                  </Tooltip>
-                </FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Enter full address of premises" rows={3} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control as any}
-            name="premisesTelephone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                  <Tooltip>
-                    <TooltipTrigger>Premises Telephone</TooltipTrigger>
-                    <TooltipContent>Phone number of the premises</TooltipContent>
-                  </Tooltip>
-                </FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter premises telephone" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control as any}
-              name="dateOfTheft"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Tooltip>
-                      <TooltipTrigger>Date of Theft</TooltipTrigger>
-                      <TooltipContent>Date when the theft occurred</TooltipContent>
-                    </Tooltip>
-                  </FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <Calendar className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control as any}
-              name="timeOfTheft"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Tooltip>
-                      <TooltipTrigger>Time of Theft</TooltipTrigger>
-                      <TooltipContent>Approximate time when theft occurred</TooltipContent>
-                    </Tooltip>
-                  </FormLabel>
-                  <FormControl>
-                    <Input type="time" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <FormField
-            control={form.control as any}
-            name="howEntryEffected"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                  <Tooltip>
-                    <TooltipTrigger>How Entry Was Effected</TooltipTrigger>
-                    <TooltipContent>Describe how the burglars gained entry</TooltipContent>
-                  </Tooltip>
-                </FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Describe how entry was made" rows={3} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control as any}
-            name="roomsEntered"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                  <Tooltip>
-                    <TooltipTrigger>Rooms Entered</TooltipTrigger>
-                    <TooltipContent>Which rooms were entered by the burglars</TooltipContent>
-                  </Tooltip>
-                </FormLabel>
-                <FormControl>
-                  <Textarea placeholder="List the rooms that were entered" rows={2} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <TooltipProvider>
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <FormField
-                control={form.control as any}
-                name="premisesOccupied"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormLabel>
-                      <Tooltip>
-                        <TooltipTrigger>Premises occupied at time of loss?</TooltipTrigger>
-                        <TooltipContent>Were the premises occupied when the theft occurred?</TooltipContent>
-                      </Tooltip>
-                    </FormLabel>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            <div>
+              <Label htmlFor="premisesAddress">Full address of premises involved *</Label>
+              <Textarea
+                id="premisesAddress"
+                {...formMethods.register('premisesAddress')}
               />
             </div>
-            {!watchedValues.premisesOccupied && (
-              <FormField
-                control={form.control as any}
-                name="lastOccupiedDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                      <Tooltip>
-                        <TooltipTrigger>Last Occupied Date/Time</TooltipTrigger>
-                        <TooltipContent>When were the premises last occupied?</TooltipContent>
-                      </Tooltip>
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter last occupied date/time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <FormField
-                control={form.control as any}
-                name="suspicions"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormLabel>
-                      <Tooltip>
-                        <TooltipTrigger>Do you have suspicions on anyone?</TooltipTrigger>
-                        <TooltipContent>Do you suspect anyone of involvement?</TooltipContent>
-                      </Tooltip>
-                    </FormLabel>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            
+            <div>
+              <Label htmlFor="premisesTelephone">Telephone *</Label>
+              <Input
+                id="premisesTelephone"
+                {...formMethods.register('premisesTelephone')}
               />
             </div>
-            {watchedValues.suspicions && (
-              <FormField
-                control={form.control as any}
-                name="suspicionName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                      <Tooltip>
-                        <TooltipTrigger>Name of Suspected Person</TooltipTrigger>
-                        <TooltipContent>Name of the person you suspect</TooltipContent>
-                      </Tooltip>
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter name of suspected person" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <DatePickerField
+                name="dateOfTheft"
+                label="Date of theft *"
               />
-            )}
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <FormField
-                control={form.control as any}
-                name="policeInformed"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormLabel>
-                      <Tooltip>
-                        <TooltipTrigger>Police informed?</TooltipTrigger>
-                        <TooltipContent>Have you informed the police about this incident?</TooltipContent>
-                      </Tooltip>
-                    </FormLabel>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            {watchedValues.policeInformed && (
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control as any}
-                  name="policeDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                        <Tooltip>
-                          <TooltipTrigger>Date Informed</TooltipTrigger>
-                          <TooltipContent>Date when police were informed</TooltipContent>
-                        </Tooltip>
-                      </FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <Calendar className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            initialFocus
-                            className={cn("p-3 pointer-events-auto")}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <div>
+                <Label htmlFor="timeOfTheft">Time *</Label>
+                <Input
+                  id="timeOfTheft"
+                  type="time"
+                  {...formMethods.register('timeOfTheft')}
                 />
-                <FormField
-                  control={form.control as any}
-                  name="policeStation"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                        <Tooltip>
-                          <TooltipTrigger>Police Station Address</TooltipTrigger>
-                          <TooltipContent>Address of the police station</TooltipContent>
-                        </Tooltip>
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Enter police station address" rows={3} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="howEntryEffected">How entry was effected *</Label>
+              <Textarea
+                id="howEntryEffected"
+                {...formMethods.register('howEntryEffected')}
+                rows={3}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="roomsEntered">Rooms entered *</Label>
+              <Textarea
+                id="roomsEntered"
+                {...formMethods.register('roomsEntered')}
+              />
+            </div>
+            
+            <div>
+              <Label>Premises occupied at time of loss? *</Label>
+              <div className="flex items-center space-x-4 mt-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="premisesOccupied-yes"
+                    checked={watchedValues.premisesOccupied === true}
+                    onCheckedChange={(checked) => formMethods.setValue('premisesOccupied', checked)}
+                  />
+                  <Label htmlFor="premisesOccupied-yes">Yes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="premisesOccupied-no"
+                    checked={watchedValues.premisesOccupied === false}
+                    onCheckedChange={(checked) => formMethods.setValue('premisesOccupied', !checked)}
+                  />
+                  <Label htmlFor="premisesOccupied-no">No</Label>
+                </div>
+              </div>
+            </div>
+            
+            {watchedValues.premisesOccupied === false && (
+              <div>
+                <Label htmlFor="lastOccupiedDate">Last occupied date/time *</Label>
+                <Input
+                  id="lastOccupiedDate"
+                  {...formMethods.register('lastOccupiedDate')}
+                />
+              </div>
+            )}
+            
+            <div>
+              <Label>Suspicions on anyone? *</Label>
+              <div className="flex items-center space-x-4 mt-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="suspicions-yes"
+                    checked={watchedValues.suspicions === true}
+                    onCheckedChange={(checked) => formMethods.setValue('suspicions', checked)}
+                  />
+                  <Label htmlFor="suspicions-yes">Yes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="suspicions-no"
+                    checked={watchedValues.suspicions === false}
+                    onCheckedChange={(checked) => formMethods.setValue('suspicions', !checked)}
+                  />
+                  <Label htmlFor="suspicions-no">No</Label>
+                </div>
+              </div>
+            </div>
+            
+            {watchedValues.suspicions === true && (
+              <div>
+                <Label htmlFor="suspicionName">Name *</Label>
+                <Input
+                  id="suspicionName"
+                  {...formMethods.register('suspicionName')}
+                />
+              </div>
+            )}
+            
+            <div>
+              <Label>Police informed? *</Label>
+              <div className="flex items-center space-x-4 mt-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="policeInformed-yes"
+                    checked={watchedValues.policeInformed === true}
+                    onCheckedChange={(checked) => formMethods.setValue('policeInformed', checked)}
+                  />
+                  <Label htmlFor="policeInformed-yes">Yes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="policeInformed-no"
+                    checked={watchedValues.policeInformed === false}
+                    onCheckedChange={(checked) => formMethods.setValue('policeInformed', !checked)}
+                  />
+                  <Label htmlFor="policeInformed-no">No</Label>
+                </div>
+              </div>
+            </div>
+            
+            {watchedValues.policeInformed === true && (
+              <div className="space-y-4">
+                <DatePickerField
+                  name="policeDate"
+                  label="Date *"
+                />
+                <div>
+                  <Label htmlFor="policeStation">Station address *</Label>
+                  <Textarea
+                    id="policeStation"
+                    {...formMethods.register('policeStation')}
+                  />
+                </div>
+              </div>
+            )}
+            
+            <div>
+              <Label>Are you sole owner? *</Label>
+              <div className="flex items-center space-x-4 mt-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="soleOwner-yes"
+                    checked={watchedValues.soleOwner === true}
+                    onCheckedChange={(checked) => formMethods.setValue('soleOwner', checked)}
+                  />
+                  <Label htmlFor="soleOwner-yes">Yes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="soleOwner-no"
+                    checked={watchedValues.soleOwner === false}
+                    onCheckedChange={(checked) => formMethods.setValue('soleOwner', !checked)}
+                  />
+                  <Label htmlFor="soleOwner-no">No</Label>
+                </div>
+              </div>
+            </div>
+            
+            {watchedValues.soleOwner === false && (
+              <div>
+                <Label htmlFor="ownerDetails">Owner name/address *</Label>
+                <Textarea
+                  id="ownerDetails"
+                  {...formMethods.register('ownerDetails')}
+                />
+              </div>
+            )}
+            
+            <div>
+              <Label>Any other insurance? *</Label>
+              <div className="flex items-center space-x-4 mt-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="otherInsurance-yes"
+                    checked={watchedValues.otherInsurance === true}
+                    onCheckedChange={(checked) => formMethods.setValue('otherInsurance', checked)}
+                  />
+                  <Label htmlFor="otherInsurance-yes">Yes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="otherInsurance-no"
+                    checked={watchedValues.otherInsurance === false}
+                    onCheckedChange={(checked) => formMethods.setValue('otherInsurance', !checked)}
+                  />
+                  <Label htmlFor="otherInsurance-no">No</Label>
+                </div>
+              </div>
+            </div>
+            
+            {watchedValues.otherInsurance === true && (
+              <div>
+                <Label htmlFor="otherInsurerDetails">Insurer details *</Label>
+                <Textarea
+                  id="otherInsurerDetails"
+                  {...formMethods.register('otherInsurerDetails')}
+                />
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="totalContentsValue">Value of total contents *</Label>
+                <Input
+                  id="totalContentsValue"
+                  type="number"
+                  {...formMethods.register('totalContentsValue')}
+                />
+              </div>
+              <div>
+                <Label htmlFor="sumInsuredFirePolicy">Sum insured under fire policy *</Label>
+                <Input
+                  id="sumInsuredFirePolicy"
+                  type="number"
+                  {...formMethods.register('sumInsuredFirePolicy')}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="fireInsurerName">Fire policy insurer name *</Label>
+                <Input
+                  id="fireInsurerName"
+                  {...formMethods.register('fireInsurerName')}
+                />
+              </div>
+              <div>
+                <Label htmlFor="fireInsurerAddress">Fire policy insurer address *</Label>
+                <Textarea
+                  id="fireInsurerAddress"
+                  {...formMethods.register('fireInsurerAddress')}
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label>Previous burglary/theft loss? *</Label>
+              <div className="flex items-center space-x-4 mt-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="previousLoss-yes"
+                    checked={watchedValues.previousLoss === true}
+                    onCheckedChange={(checked) => formMethods.setValue('previousLoss', checked)}
+                  />
+                  <Label htmlFor="previousLoss-yes">Yes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="previousLoss-no"
+                    checked={watchedValues.previousLoss === false}
+                    onCheckedChange={(checked) => formMethods.setValue('previousLoss', !checked)}
+                  />
+                  <Label htmlFor="previousLoss-no">No</Label>
+                </div>
+              </div>
+            </div>
+            
+            {watchedValues.previousLoss === true && (
+              <div>
+                <Label htmlFor="previousLossDetails">Explanation *</Label>
+                <Textarea
+                  id="previousLossDetails"
+                  {...formMethods.register('previousLossDetails')}
                 />
               </div>
             )}
           </div>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <FormField
-                control={form.control as any}
-                name="soleOwner"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormLabel>
-                      <Tooltip>
-                        <TooltipTrigger>Are you sole owner?</TooltipTrigger>
-                        <TooltipContent>Are you the sole owner of the stolen property?</TooltipContent>
-                      </Tooltip>
-                    </FormLabel>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            {!watchedValues.soleOwner && (
-              <FormField
-                control={form.control as any}
-                name="ownerDetails"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                      <Tooltip>
-                        <TooltipTrigger>Owner Name & Address</TooltipTrigger>
-                        <TooltipContent>Name and address of other owners</TooltipContent>
-                      </Tooltip>
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter owner name and address" rows={3} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <FormField
-                control={form.control as any}
-                name="otherInsurance"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormLabel>
-                      <Tooltip>
-                        <TooltipTrigger>Any other insurance?</TooltipTrigger>
-                        <TooltipContent>Do you have other insurance covering this property?</TooltipContent>
-                      </Tooltip>
-                    </FormLabel>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            {watchedValues.otherInsurance && (
-              <FormField
-                control={form.control as any}
-                name="otherInsurerDetails"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                      <Tooltip>
-                        <TooltipTrigger>Other Insurer Details</TooltipTrigger>
-                        <TooltipContent>Details of other insurance coverage</TooltipContent>
-                      </Tooltip>
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter other insurer details" rows={3} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control as any}
-              name="totalContentsValue"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Tooltip>
-                      <TooltipTrigger>Value of Total Contents</TooltipTrigger>
-                      <TooltipContent>Total value of all contents in the premises</TooltipContent>
-                    </Tooltip>
-                  </FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" placeholder="Enter total value" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control as any}
-              name="sumInsuredFirePolicy"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Tooltip>
-                      <TooltipTrigger>Sum Insured Under Fire Policy</TooltipTrigger>
-                      <TooltipContent>Amount insured under your fire insurance policy</TooltipContent>
-                    </Tooltip>
-                  </FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" placeholder="Enter sum insured" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control as any}
-              name="fireInsurerName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Tooltip>
-                      <TooltipTrigger>Fire Insurer Name</TooltipTrigger>
-                      <TooltipContent>Name of your fire insurance company</TooltipContent>
-                    </Tooltip>
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter fire insurer name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control as any}
-              name="fireInsurerAddress"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Tooltip>
-                      <TooltipTrigger>Fire Insurer Address</TooltipTrigger>
-                      <TooltipContent>Address of your fire insurance company</TooltipContent>
-                    </Tooltip>
-                  </FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Enter fire insurer address" rows={2} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <FormField
-                control={form.control as any}
-                name="previousLoss"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormLabel>
-                      <Tooltip>
-                        <TooltipTrigger>Previous burglary/theft loss?</TooltipTrigger>
-                        <TooltipContent>Have you had previous burglary or theft losses?</TooltipContent>
-                      </Tooltip>
-                    </FormLabel>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            {watchedValues.previousLoss && (
-              <FormField
-                control={form.control as any}
-                name="previousLossDetails"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                      <Tooltip>
-                        <TooltipTrigger>Previous Loss Details</TooltipTrigger>
-                        <TooltipContent>Provide details of previous losses</TooltipContent>
-                      </Tooltip>
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Provide details of previous losses" rows={3} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-          </div>
-        </div>
+        </TooltipProvider>
       )
     },
     {
-      id: 'property-details',
+      id: 'property',
       title: 'Property Details',
       component: (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Items Lost or Stolen</h3>
+            <h3 className="text-lg font-medium">Property Items</h3>
             <Button
               type="button"
-              onClick={() => append({ description: '', costPrice: undefined, dateOfPurchase: undefined, estimatedValue: undefined, netAmountClaimed: undefined })}
+              onClick={() => addProperty({ 
+                description: '', 
+                costPrice: 0, 
+                dateOfPurchase: new Date(), 
+                estimatedValue: 0, 
+                netAmountClaimed: 0 
+              })}
               variant="outline"
               size="sm"
             >
@@ -1051,175 +824,94 @@ const BurglaryClaimForm: React.FC = () => {
             </Button>
           </div>
           
-          {fields.map((field, index) => (
-            <Card key={field.id} className="p-4">
-              <div className="flex justify-between items-center mb-4">
+          {propertyFields.map((field, index) => (
+            <div key={field.id} className="border p-4 rounded-lg space-y-4">
+              <div className="flex justify-between items-center">
                 <h4 className="font-medium">Item {index + 1}</h4>
-                {fields.length > 1 && (
-                  <Button
-                    type="button"
-                    onClick={() => remove(index)}
-                    variant="ghost"
-                    size="sm"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  onClick={() => removeProperty(index)}
+                  variant="ghost"
+                  size="sm"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
               
-              <div className="space-y-4">
-                <FormField
-                  control={form.control as any}
-                  name={`propertyItems.${index}.description`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                        <Tooltip>
-                          <TooltipTrigger>Description</TooltipTrigger>
-                          <TooltipContent>Detailed description of the item</TooltipContent>
-                        </Tooltip>
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Describe the item in detail" rows={2} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <div>
+                <Label htmlFor={`propertyItems.${index}.description`}>Description *</Label>
+                <Textarea
+                  {...formMethods.register(`propertyItems.${index}.description`)}
                 />
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control as any}
-                    name={`propertyItems.${index}.costPrice`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                          <Tooltip>
-                            <TooltipTrigger>Cost Price</TooltipTrigger>
-                            <TooltipContent>Original purchase price of the item</TooltipContent>
-                          </Tooltip>
-                        </FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control as any}
-                    name={`propertyItems.${index}.dateOfPurchase`}
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                          <Tooltip>
-                            <TooltipTrigger>Date of Purchase</TooltipTrigger>
-                            <TooltipContent>When was this item purchased?</TooltipContent>
-                          </Tooltip>
-                        </FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <Calendar className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
-                              className={cn("p-3 pointer-events-auto")}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor={`propertyItems.${index}.costPrice`}>Cost Price *</Label>
+                  <Input
+                    type="number"
+                    {...formMethods.register(`propertyItems.${index}.costPrice`)}
                   />
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control as any}
-                    name={`propertyItems.${index}.estimatedValue`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                          <Tooltip>
-                            <TooltipTrigger>Estimated Value at Time of Loss</TooltipTrigger>
-                            <TooltipContent>Current estimated value of the item</TooltipContent>
-                          </Tooltip>
-                        </FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control as any}
-                    name={`propertyItems.${index}.netAmountClaimed`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                          <Tooltip>
-                            <TooltipTrigger>Net Amount Claimed</TooltipTrigger>
-                            <TooltipContent>Amount you are claiming for this item</TooltipContent>
-                          </Tooltip>
-                        </FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                <div>
+                  <Label>Date of Purchase *</Label>
+                  <DatePickerField
+                    name={`propertyItems.${index}.dateOfPurchase`}
+                    label="Date of Purchase"
                   />
                 </div>
               </div>
-            </Card>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor={`propertyItems.${index}.estimatedValue`}>Estimated value at time of loss *</Label>
+                  <Input
+                    type="number"
+                    {...formMethods.register(`propertyItems.${index}.estimatedValue`)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`propertyItems.${index}.netAmountClaimed`}>Net amount claimed *</Label>
+                  <Input
+                    type="number"
+                    {...formMethods.register(`propertyItems.${index}.netAmountClaimed`)}
+                  />
+                </div>
+              </div>
+            </div>
           ))}
           
-          {fields.length === 0 && (
+          {propertyFields.length === 0 && (
             <div className="text-center p-8 text-gray-500">
-              No items added yet. Click "Add Item" to add property information.
+              No property items added yet. Click "Add Item" to add property details.
             </div>
           )}
         </div>
       )
     },
     {
-      id: 'data-privacy',
+      id: 'privacy',
       title: 'Data Privacy',
       component: (
-        <Card className="p-6">
-          <CardHeader>
-            <CardTitle>Data Privacy</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="prose prose-sm max-w-none">
-              <p><strong>i.</strong> Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p><strong>ii.</strong> Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p><strong>iii.</strong> Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+        <div className="space-y-6">
+          <div className="p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">Data Privacy</h3>
+            <div className="text-sm space-y-2">
+              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="agreeToDataPrivacy"
+              checked={watchedValues.agreeToDataPrivacy || false}
+              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
+            />
+            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
+          </div>
+        </div>
       )
     },
     {
@@ -1227,99 +919,27 @@ const BurglaryClaimForm: React.FC = () => {
       title: 'Declaration & Signature',
       component: (
         <div className="space-y-6">
-          <Card className="p-6">
-            <CardHeader>
-              <CardTitle>Declaration</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="prose prose-sm max-w-none">
-                <p><strong>1.</strong> I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-                <p><strong>2.</strong> I/We agree to provide additional information to NEM Insurance, if required.</p>
-                <p><strong>3.</strong> I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="space-y-4">
-            <FormField
-              control={form.control as any}
-              name="agreeToDataPrivacy"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                  </FormControl>
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    I agree to the data privacy notice and declaration above
-                  </FormLabel>
-                  <FormMessage />
-                </FormItem>
-              )}
+          <div className="p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">Declaration</h3>
+            <div className="text-sm space-y-2">
+              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+            </div>
+          </div>
+          
+          <div>
+            <Label htmlFor="signature">Signature of policyholder (digital signature) *</Label>
+            <Input
+              id="signature"
+              {...formMethods.register('signature')}
+              placeholder="Type your full name as signature"
             />
-
-            <FormField
-              control={form.control as any}
-              name="signature"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Tooltip>
-                      <TooltipTrigger>Digital Signature</TooltipTrigger>
-                      <TooltipContent>Type your full name as signature</TooltipContent>
-                    </Tooltip>
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="Type your full name as signature" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control as any}
-              name="signatureDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Tooltip>
-                      <TooltipTrigger>Date</TooltipTrigger>
-                      <TooltipContent>Date of signature</TooltipContent>
-                    </Tooltip>
-                  </FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <Calendar className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          </div>
+          
+          <div>
+            <Label>Date</Label>
+            <Input value={new Date().toISOString().split('T')[0]} disabled />
           </div>
         </div>
       )
@@ -1327,49 +947,96 @@ const BurglaryClaimForm: React.FC = () => {
   ];
 
   return (
-    <TooltipProvider>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">Burglary, Housebreaking and Larceny Claim Form</h1>
-              <p className="text-slate-600">Please fill out all required information to submit your claim</p>
-            </div>
-
-            <Form {...form}>
-              <MultiStepForm
-                steps={steps}
-                onSubmit={onSubmit}
-                isSubmitting={isSubmitting}
-                formMethods={form}
-              />
-            </Form>
-
-            <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2 text-green-600">
-                    <CheckCircle className="h-5 w-5" />
-                    Claim Submitted Successfully
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-600">
-                    Your Burglary claim has been submitted successfully.
-                  </p>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm font-medium">For claims status enquiries:</p>
-                    <p className="text-sm">Call: 01 448 9570</p>
-                    <p className="text-sm">Email: claims@neminsurance.com</p>
-                  </div>
-                  <Button onClick={() => setShowSuccess(false)} className="w-full">Close</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <AlertTriangle className="h-8 w-8 text-primary" />
+            Burglary, Housebreaking and Larceny Claim Form
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Submit your burglary insurance claim with all required details and supporting documents.
+          </p>
         </div>
+
+        <MultiStepForm
+          steps={steps}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          submitButtonText="Review Claim"
+          formMethods={formMethods}
+        />
+
+        {/* Summary Dialog */}
+        <Dialog open={showSummary} onOpenChange={setShowSummary}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Review Your Burglary Claim Submission</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Policy Number:</strong> {watchedValues.policyNumber}</div>
+                <div><strong>Name:</strong> {watchedValues.nameOfInsured}</div>
+                <div><strong>Email:</strong> {watchedValues.email}</div>
+                <div><strong>Premises:</strong> {watchedValues.premisesAddress}</div>
+              </div>
+              <div className="p-4 rounded-lg">
+                <p className="text-sm font-medium text-blue-800">
+                  For claims status enquiries, call 01 448 9570
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSummary(false)}>
+                Back to Edit
+              </Button>
+              <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Claim'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Success Dialog */}
+        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-center text-green-600">
+                Claim Submitted Successfully!
+              </DialogTitle>
+            </DialogHeader>
+            <div className="text-center py-4">
+              <div className="mb-4">
+                <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                  ✓
+                </div>
+                <p className="text-gray-600 mb-4">
+                  Your burglary insurance claim has been submitted successfully. 
+                  You will receive a confirmation email shortly.
+                </p>
+                <div className="p-4 rounded-lg">
+                  <p className="text-sm font-medium text-blue-800">
+                    For claims status enquiries, call 01 448 9570
+                  </p>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setShowSuccess(false)} className="w-full">
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-    </TooltipProvider>
+    </div>
   );
 };
 
