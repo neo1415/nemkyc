@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { MultiStepForm } from '../../components/common/MultiStepForm';
-import { FormSection } from '../../components/common/FormSection';
-import { PhoneInput } from '../../components/common/PhoneInput';
+import MultiStepForm from '../../components/common/MultiStepForm';
+import FormSection from '../../components/common/FormSection';
+import PhoneInput from '../../components/common/PhoneInput';
 import { useToast } from '../../hooks/use-toast';
 import { useFormDraft } from '../../hooks/useFormDraft';
 import { Button } from '../../components/ui/button';
@@ -70,7 +70,7 @@ export const MoneyInsuranceClaim: React.FC = () => {
   const { toast } = useToast();
 
   const formMethods = useForm<MoneyInsuranceData>({
-    resolver: yupResolver(moneyInsuranceSchema),
+    resolver: zodResolver(moneyInsuranceSchema),
     defaultValues,
     mode: 'onChange'
   });
@@ -384,3 +384,5 @@ export const MoneyInsuranceClaim: React.FC = () => {
     </div>
   );
 };
+
+export default MoneyInsuranceClaim;
