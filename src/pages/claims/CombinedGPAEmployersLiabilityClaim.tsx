@@ -343,7 +343,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
       });
 
       // Send confirmation email
-      await emailService.sendSubmissionConfirmation(data.email, 'Combined GPA & Employers Liability Claim');
+      // await emailService.sendSubmissionConfirmation(data.email, 'Combined GPA & Employers Liability Claim');
       
       clearDraft();
       setShowSuccess(true);
