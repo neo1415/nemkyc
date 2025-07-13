@@ -26,7 +26,6 @@ import { Loader2, Plus, Trash2, Building2, MapPin, Clock, Package, FileText, Shi
 
 const GoodsInTransitClaim: React.FC = () => {
   const { toast } = useToast();
-  const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -59,17 +58,17 @@ const GoodsInTransitClaim: React.FC = () => {
       goodsItems: [{ quantity: 1, description: '', value: 0 }],
       inspectionAddress: '',
       isOwnerOfGoods: true,
-      // transportMethod: '',
-      // transporterInsurer: '',
-      // ownerName: '',
-      // ownerInsurer: '',
+      transportMethod: '',
+      transporterInsurer: '',
+      ownerName: '',
+      ownerInsurer: '',
       goodsInSoundCondition: true,
       checkedByDriver: true,
       vehicleRegistration: '',
       staffLoadedUnloaded: true,
       receiptGiven: true,
       claimMadeAgainstYou: false,
-      // claimDateReceived: '',
+      claimDateReceived: '',
       agreeToDataPrivacy: false,
       signature: ''
     },
@@ -110,11 +109,44 @@ const GoodsInTransitClaim: React.FC = () => {
   }, [watchedValues.goodsItems, formMethods, watchedValues.totalValue]);
 
   const handleSubmit = async (data: GoodsInTransitClaimData) => {
+    // Validate required fields before submission
+    const errors = formMethods.formState.errors;
+    if (Object.keys(errors).length > 0) {
+      toast({
+        title: "Form Validation Error",
+        description: "Please fill in all required fields correctly.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check data privacy agreement
+    if (!data.agreeToDataPrivacy) {
+      toast({
+        title: "Agreement Required",
+        description: "You must agree to the data privacy notice and declaration.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check signature
+    if (!data.signature || data.signature.trim() === '') {
+      toast({
+        title: "Signature Required",
+        description: "Please provide your digital signature.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // Save to Firestore
+      // Save to Firestore with all data including goodsItems
       const docRef = await addDoc(collection(db, 'goodsInTransitClaims'), {
         ...data,
+        goodsItems: data.goodsItems, // Ensure goods items are explicitly included
+        totalValue: data.totalValue,
         submittedAt: new Date(),
         status: 'submitted'
       });
@@ -126,7 +158,6 @@ const GoodsInTransitClaim: React.FC = () => {
       );
 
       clearDraft();
-      setShowSummary(false);
       setShowSuccess(true);
       
       toast({
@@ -143,10 +174,6 @@ const GoodsInTransitClaim: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const onFinalSubmit = (data: GoodsInTransitClaimData) => {
-    setShowSummary(true);
   };
 
   const steps = [
@@ -547,27 +574,33 @@ const GoodsInTransitClaim: React.FC = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor={`goodsItems.${index}.quantity`}>Quantity *</Label>
+                  <Label htmlFor={`goodsItems-${index}-quantity`}>Quantity *</Label>
                   <Input
+                    id={`goodsItems-${index}-quantity`}
                     {...formMethods.register(`goodsItems.${index}.quantity`, { valueAsNumber: true })}
                     type="number"
                     placeholder="Qty"
+                    key={`quantity-${field.id}`}
                   />
                 </div>
                 <div>
-                  <Label htmlFor={`goodsItems.${index}.description`}>Description *</Label>
+                  <Label htmlFor={`goodsItems-${index}-description`}>Description *</Label>
                   <Input
+                    id={`goodsItems-${index}-description`}
                     {...formMethods.register(`goodsItems.${index}.description`)}
                     placeholder="Item description"
+                    key={`description-${field.id}`}
                   />
                 </div>
                 <div>
-                  <Label htmlFor={`goodsItems.${index}.value`}>Value (₦) *</Label>
+                  <Label htmlFor={`goodsItems-${index}-value`}>Value (₦) *</Label>
                   <Input
+                    id={`goodsItems-${index}-value`}
                     {...formMethods.register(`goodsItems.${index}.value`, { valueAsNumber: true })}
                     type="number"
                     step="0.01"
                     placeholder="0.00"
+                    key={`value-${field.id}`}
                   />
                 </div>
               </div>
