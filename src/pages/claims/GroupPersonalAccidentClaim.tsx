@@ -318,45 +318,45 @@ const GroupPersonalAccidentClaim = () => {
             </Button>
           </div>
           
-          <div className="space-y-4">
-            {witnessFields.map((field, index) => (
-              <Card key={field.id} className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-medium">Witness {index + 1}</h4>
-                  {witnessFields.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeWitness(index)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+          {witnessFields.map((field, index) => (
+            <div key={field.id} className="border p-4 rounded-lg space-y-4">
+              <div className="flex justify-between items-center">
+                <h4 className="font-medium">Witness {index + 1}</h4>
+                <Button
+                  type="button"
+                  onClick={() => removeWitness(index)}
+                  variant="ghost"
+                  size="sm"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor={`witnesses.${index}.name`}>Name *</Label>
+                  <Input
+                    {...formMethods.register(`witnesses.${index}.name`)}
+                    placeholder="Enter witness name"
+                  />
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor={`witnesses.${index}.name`}>Name *</Label>
-                    <Input
-                      {...formMethods.register(`witnesses.${index}.name`)}
-                      placeholder="Enter witness name"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor={`witnesses.${index}.address`}>Address *</Label>
-                    <Textarea
-                      {...formMethods.register(`witnesses.${index}.address`)}
-                      placeholder="Enter witness address"
-                      rows={2}
-                    />
-                  </div>
+                <div>
+                  <Label htmlFor={`witnesses.${index}.address`}>Address *</Label>
+                  <Textarea
+                    {...formMethods.register(`witnesses.${index}.address`)}
+                    placeholder="Enter witness address"
+                    rows={2}
+                  />
                 </div>
-              </Card>
-            ))}
-          </div>
+              </div>
+            </div>
+          ))}
+          
+          {witnessFields.length === 0 && (
+            <div className="text-center p-8 text-gray-500">
+              No witnesses added yet. Click "Add Witness" to add witness information.
+            </div>
+          )}
         </div>
       )
     },
@@ -574,63 +574,50 @@ const GroupPersonalAccidentClaim = () => {
             </p>
           </div>
 
-          <MultiStepForm
-            steps={steps}
-            onSubmit={onFinalSubmit}
-            isSubmitting={isSubmitting}
-            submitButtonText="Submit Claim"
-            formMethods={formMethods}
-          />
+        <MultiStepForm
+          steps={steps}
+          onSubmit={onFinalSubmit}
+          isSubmitting={isSubmitting}
+          submitButtonText="Review Claim"
+          formMethods={formMethods}
+        />
 
-          {/* Summary Modal */}
-          <Dialog open={showSummary} onOpenChange={setShowSummary}>
-            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Review Your Claim</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <h4 className="font-semibold">Policy Details</h4>
-                    <p>Policy Number: {watchedValues.policyNumber}</p>
-                    <p>Period: {watchedValues.periodOfCoverFrom} to {watchedValues.periodOfCoverTo}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">Company Information</h4>
-                    <p>Company: {watchedValues.companyName}</p>
-                    <p>Email: {watchedValues.email}</p>
-                    <p>Phone: {watchedValues.phone}</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <h4 className="font-semibold">Accident Details</h4>
-                    <p>Date: {watchedValues.accidentDate}</p>
-                    <p>Time: {watchedValues.accidentTime}</p>
-                    <p>Place: {watchedValues.accidentPlace}</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <h4 className="font-semibold">Medical Details</h4>
-                    <p>Doctor: {watchedValues.doctorName}</p>
-                    <p>Address: {watchedValues.doctorAddress}</p>
-                  </div>
-                </div>
+        {/* Summary Dialog */}
+        <Dialog open={showSummary} onOpenChange={setShowSummary}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Review Your Group Personal Accident Claim Submission</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Policy Number:</strong> {watchedValues.policyNumber}</div>
+                <div><strong>Company:</strong> {watchedValues.companyName}</div>
+                <div><strong>Email:</strong> {watchedValues.email}</div>
+                <div><strong>Doctor:</strong> {watchedValues.doctorName}</div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowSummary(false)}>
-                  Edit Details
-                </Button>
-                <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    'Confirm & Submit'
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-blue-800">
+                  For claims status enquiries, call 01 448 9570
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSummary(false)}>
+                Back to Edit
+              </Button>
+              <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Claim'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
           {/* Success Modal */}
           <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
