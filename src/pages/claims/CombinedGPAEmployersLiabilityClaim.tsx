@@ -314,6 +314,11 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
   const handleSubmit = async (data: CombinedGPAEmployersLiabilityClaimData) => {
     setIsSubmitting(true);
     try {
+      // Clean data by removing undefined values
+      const cleanData = Object.fromEntries(
+        Object.entries(data).filter(([_, value]) => value !== undefined)
+      );
+
       // Upload files to Firebase Storage
       const fileUploadPromises: Array<Promise<[string, string]>> = [];
       
@@ -328,7 +333,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
       
       // Prepare form data with file URLs
       const submissionData = {
-        ...data,
+        ...cleanData,
         ...fileUrls,
         status: 'processing',
         submittedAt: new Date().toISOString(),

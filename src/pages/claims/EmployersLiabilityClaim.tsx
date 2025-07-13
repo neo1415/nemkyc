@@ -303,6 +303,11 @@ const EmployersLiabilityClaim: React.FC = () => {
   const handleSubmit = async (data: EmployersLiabilityClaimData) => {
     setIsSubmitting(true);
     try {
+      // Clean data by removing undefined values
+      const cleanData = Object.fromEntries(
+        Object.entries(data).filter(([_, value]) => value !== undefined)
+      );
+
       // Upload files to Firebase Storage
       const fileUploadPromises: Array<Promise<[string, string]>> = [];
       
@@ -317,7 +322,7 @@ const EmployersLiabilityClaim: React.FC = () => {
       
       // Prepare form data with file URLs
       const submissionData = {
-        ...data,
+        ...cleanData,
         ...fileUrls,
         status: 'processing',
         submittedAt: new Date().toISOString(),
