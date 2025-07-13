@@ -398,7 +398,7 @@ export interface AllRiskClaimData {
   propertyItems: AllRiskPropertyItem[];
   
   // Ownership & Recovery
-  isSoleOwner: boolean;
+  soleOwner: boolean;
   ownershipExplanation?: string;
   hasHirePurchase: boolean;
   hirePurchaseCompany?: string;
@@ -419,4 +419,64 @@ export interface AllRiskClaimData {
   // Declaration
   agreeToDataPrivacy: boolean;
   signature: string;
+  signatureDate: Date;
+}
+
+// Burglary, Housebreaking and Larceny Claim Types
+export interface BurglaryPropertyItem {
+  description: string;
+  costPrice: number;
+  dateOfPurchase: Date;
+  estimatedValue: number;
+  netAmountClaimed: number;
+}
+
+export interface BurglaryClaimData {
+  // Policy Details
+  policyNumber: string;
+  periodOfCoverFrom: Date;
+  periodOfCoverTo: Date;
+  
+  // Insured Details
+  nameOfInsured: string;
+  companyName?: string;
+  title: string;
+  dateOfBirth: Date;
+  gender: string;
+  address: string;
+  phone: string;
+  email: string;
+  
+  // Details of Loss
+  premisesAddress: string;
+  premisesTelephone: string;
+  dateOfTheft: Date;
+  timeOfTheft: string;
+  howEntryEffected: string;
+  roomsEntered: string;
+  premisesOccupied: boolean;
+  lastOccupiedDate?: string;
+  suspicions: boolean;
+  suspicionName?: string;
+  policeInformed: boolean;
+  policeDate?: Date;
+  policeStation?: string;
+  soleOwner: boolean;
+  ownerDetails?: string;
+  otherInsurance: boolean;
+  otherInsurerDetails?: string;
+  totalContentsValue: number;
+  sumInsuredFirePolicy: number;
+  fireInsurerName: string;
+  fireInsurerAddress: string;
+  previousLoss: boolean;
+  previousLossDetails?: string;
+  
+  // Property Items
+  propertyItems: BurglaryPropertyItem[];
+  
+  // Declaration
+  agreeToDataPrivacy: boolean;
+  signature: string;
+  signatureDate: Date;
 }

@@ -14,7 +14,9 @@ export const FORM_COLLECTIONS = {
   'Agents KYC': 'agents-kyc',
   'Brokers KYC': 'brokers-kyc',
   'NAICOM Partners CDD': 'naicom-partners-cdd',
-  'User Roles': 'userroles'
+  'User Roles': 'userroles',
+  'Burglary Claims': 'burglary-claims',
+  'All Risk Claims': 'all-risk-claims'
 };
 
 export const getFormData = async (collectionName: string): Promise<FormSubmission[]> => {
