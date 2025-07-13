@@ -1,673 +1,236 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Button } from '../../components/ui/button';
-import { Textarea } from '../../components/ui/textarea';
-import { Checkbox } from '../../components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
-import MultiStepForm from '../../components/common/MultiStepForm';
-import FormSection from '../../components/common/FormSection';
-import PhoneInput from '../../components/common/PhoneInput';
-import { ContractorsPlantMachineryClaimData, PlantMachineryItem, Witness } from '../../types/claims';
-import { useFormDraft } from '../../hooks/useFormDraft';
+import { yupResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { MultiStepForm } from '../../components/common/MultiStepForm';
+import { FormSection } from '../../components/common/FormSection';
+import { PhoneInput } from '../../components/common/PhoneInput';
 import { useToast } from '../../hooks/use-toast';
-import { Building2, Wrench, MapPin, Users, Shield, FileText, Plus, Trash2 } from 'lucide-react';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
+import { Label } from '../../components/ui/label';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Separator } from '../../components/ui/separator';
+import { CalendarIcon, Plus, Trash2, CheckCircle } from 'lucide-react';
+import { Calendar } from '../../components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
+import { format } from 'date-fns';
+import { cn } from '../../lib/utils';
 
-const defaultValues: Partial<ContractorsPlantMachineryClaimData> = {
-  policyNumber: '',
-  periodOfCoverFrom: '',
-  periodOfCoverTo: '',
-  nameOfInsured: '',
-  companyName: '',
-  title: '',
-  dateOfBirth: '',
-  gender: '',
-  address: '',
-  phone: '',
-  email: '',
-  plantMachineryItems: [{
-    itemNumber: '',
-    yearOfManufacture: new Date().getFullYear(),
-    make: '',
-    registrationNumber: '',
-    dateOfPurchase: '',
-    costPrice: 0,
-    deductionForAge: 0,
-    sumClaimed: 0,
-    claimType: 'presentValue'
+// Schema and types
+const contractorsSchema = z.object({
+  policyNumber: z.string().min(1, 'Policy number is required'),
+  periodOfCoverFrom: z.date({ required_error: 'Period start date is required' }),
+  periodOfCoverTo: z.date({ required_error: 'Period end date is required' }),
+  nameOfInsured: z.string().min(1, 'Name is required'),
+  companyName: z.string().optional(),
+  title: z.string().min(1, 'Title is required'),
+  dateOfBirth: z.date({ required_error: 'Date of birth is required' }),
+  gender: z.string().min(1, 'Gender is required'),
+  address: z.string().min(1, 'Address is required'),
+  phone: z.string().min(1, 'Phone is required'),
+  email: z.string().email('Invalid email'),
+  plantMachineryItems: z.array(z.object({
+    itemNumber: z.string().min(1, 'Item number required'),
+    yearOfManufacture: z.number().min(1900, 'Invalid year'),
+    make: z.string().min(1, 'Make required'),
+    registrationNumber: z.string().optional(),
+    dateOfPurchase: z.date({ required_error: 'Purchase date required' }),
+    costPrice: z.number().min(0, 'Cost must be positive'),
+    deductionForAge: z.number().min(0, 'Deduction must be positive'),
+    sumClaimed: z.number().min(0, 'Sum must be positive'),
+    sumClaimedType: z.enum(['Present Value', 'Repairs'])
+  })).min(1, 'At least one item required'),
+  dateOfLoss: z.date({ required_error: 'Loss date required' }),
+  timeOfLoss: z.string().min(1, 'Loss time required'),
+  lastSeenIntact: z.string().optional(),
+  placeOfLoss: z.string().min(1, 'Place of loss required'),
+  partsAndDamage: z.string().min(1, 'Damage details required'),
+  inspectionLocation: z.string().min(1, 'Inspection location required'),
+  circumstances: z.string().min(1, 'Circumstances required'),
+  suspicionInfo: z.string().optional(),
+  witnesses: z.array(z.object({
+    name: z.string().min(1, 'Name required'),
+    address: z.string().min(1, 'Address required'),
+    phone: z.string().min(1, 'Phone required')
+  })).optional(),
+  policeInformed: z.enum(['yes', 'no']),
+  policeStation: z.string().optional(),
+  recoveryActions: z.string().optional(),
+  soleOwner: z.enum(['yes', 'no']),
+  ownershipDetails: z.string().optional(),
+  otherInsurance: z.enum(['yes', 'no']),
+  otherInsuranceDetails: z.string().optional(),
+  thirdPartyInvolved: z.enum(['yes', 'no']),
+  thirdPartyName: z.string().optional(),
+  thirdPartyAddress: z.string().optional(),
+  thirdPartyInsurer: z.string().optional(),
+  declarationAccepted: z.boolean().refine((val) => val === true, 'Declaration required'),
+  signature: z.string().min(1, 'Signature required'),
+  signatureDate: z.date({ required_error: 'Signature date required' })
+});
+
+type ContractorsData = z.infer<typeof contractorsSchema>;
+
+const defaultValues: Partial<ContractorsData> = {
+  plantMachineryItems: [{ 
+    itemNumber: '', 
+    yearOfManufacture: new Date().getFullYear(), 
+    make: '', 
+    registrationNumber: '', 
+    dateOfPurchase: new Date(), 
+    costPrice: 0, 
+    deductionForAge: 0, 
+    sumClaimed: 0, 
+    sumClaimedType: 'Present Value' 
   }],
-  dateOfLoss: '',
-  timeOfLoss: '',
-  whereDidLossOccur: '',
-  partsDamaged: '',
-  whereCanBeInspected: '',
-  fullAccountCircumstances: '',
-  witnesses: [{
-    name: '',
-    address: '',
-    phone: ''
-  }],
-  policeInformed: false,
-  isSoleOwner: true,
-  hasOtherInsurance: false,
-  thirdPartyInvolved: false,
-  agreeToDataPrivacy: false,
-  signature: ''
+  witnesses: [],
+  signatureDate: new Date(),
+  policeInformed: 'no',
+  soleOwner: 'yes',
+  otherInsurance: 'no',
+  thirdPartyInvolved: 'no'
 };
 
-const ContractorsPlantMachineryClaim: React.FC = () => {
+export const ContractorsPlantMachineryClaim: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const formMethods = useForm<ContractorsPlantMachineryClaimData>({
+  const formMethods = useForm<ContractorsData>({
+    resolver: yupResolver(contractorsSchema),
     defaultValues,
     mode: 'onChange'
   });
 
-  const { control, handleSubmit, watch, setValue } = formMethods;
+  const { fields: plantFields, append: appendPlant, remove: removePlant } = useFieldArray({
+    control: formMethods.control,
+    name: 'plantMachineryItems'
+  });
+
+  const { fields: witnessFields, append: appendWitness, remove: removeWitness } = useFieldArray({
+    control: formMethods.control,
+    name: 'witnesses'
+  });
+
   const { saveDraft, clearDraft } = useFormDraft('contractors-plant-machinery-claim', formMethods);
 
-  const plantMachineryFieldArray = useFieldArray({
-    control,
-    name: "plantMachineryItems"
-  });
-
-  const witnessesFieldArray = useFieldArray({
-    control,
-    name: "witnesses"
-  });
-
-  const watchedValues = watch();
-  
-  // Auto-save draft when form values change
-  React.useEffect(() => {
-    const subscription = watch((data) => {
+  useEffect(() => {
+    const subscription = formMethods.watch((data) => {
       saveDraft(data);
     });
     return () => subscription.unsubscribe();
-  }, [watch, saveDraft]);
+  }, [formMethods, saveDraft]);
 
-  const onSubmit = async (data: ContractorsPlantMachineryClaimData) => {
+  const onSubmit = async (data: ContractorsData) => {
     setShowSummary(true);
   };
 
   const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const formData = formMethods.getValues();
       
+      const cleanData = Object.fromEntries(
+        Object.entries(formData).filter(([_, value]) => value !== undefined)
+      );
+
+      const submissionData = {
+        ...cleanData,
+        status: 'processing',
+        submittedAt: new Date().toISOString(),
+        formType: 'contractors-plant-machinery-claim'
+      };
+
+      await addDoc(collection(db, 'contractorsPlantMachineryClaims'), submissionData);
+
+      // await emailService.sendSubmissionConfirmation({...});
+
+      clearDraft();
       setShowSummary(false);
       setShowSuccess(true);
-      clearDraft();
       
       toast({
         title: "Claim Submitted Successfully",
-        description: "Your contractors, plant and machinery claim has been submitted and you will receive a confirmation email shortly.",
+        description: "Your contractors, plant and machinery claim has been submitted.",
       });
     } catch (error) {
+      console.error('Submission error:', error);
       toast({
-        title: "Submission Failed",
-        description: "There was an error submitting your claim. Please try again.",
-        variant: "destructive"
+        title: "Submission Error",
+        description: "There was an error submitting your claim.",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const DatePickerField = ({ name, label }: { name: keyof ContractorsData; label: string }) => (
+    <div className="space-y-2">
+      <Label htmlFor={name}>{label} *</Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-full justify-start text-left font-normal",
+              !formMethods.watch(name) && "text-muted-foreground"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {formMethods.watch(name) ? (
+              format(formMethods.watch(name) as Date, "PPP")
+            ) : (
+              <span>Pick a date</span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={formMethods.watch(name) as Date}
+            onSelect={(date) => date && formMethods.setValue(name, date)}
+            initialFocus
+            className="pointer-events-auto"
+          />
+        </PopoverContent>
+      </Popover>
+      {formMethods.formState.errors[name] && (
+        <p className="text-sm text-destructive">{formMethods.formState.errors[name]?.message}</p>
+      )}
+    </div>
+  );
+
   const steps = [
     {
       id: 'policy-details',
       title: 'Policy Details',
       component: (
-        <FormSection title="Policy Information" icon={<FileText className="h-5 w-5" />}>
+        <FormSection title="Policy Information">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="policyNumber">Policy Number *</Label>
               <Input
                 id="policyNumber"
-                {...formMethods.register('policyNumber', { required: true })}
+                {...formMethods.register('policyNumber')}
                 placeholder="Enter policy number"
               />
-            </div>
-            <div>
-              <Label htmlFor="periodOfCoverFrom">Period of Cover From *</Label>
-              <Input
-                id="periodOfCoverFrom"
-                type="date"
-                {...formMethods.register('periodOfCoverFrom', { required: true })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="periodOfCoverTo">Period of Cover To *</Label>
-              <Input
-                id="periodOfCoverTo"
-                type="date"
-                {...formMethods.register('periodOfCoverTo', { required: true })}
-              />
-            </div>
-          </div>
-        </FormSection>
-      )
-    },
-    {
-      id: 'insured-details',
-      title: 'Insured Details',
-      component: (
-        <FormSection title="Personal Information" icon={<Building2 className="h-5 w-5" />}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="nameOfInsured">Name of Insured *</Label>
-              <Input
-                id="nameOfInsured"
-                {...formMethods.register('nameOfInsured', { required: true })}
-                placeholder="Enter full name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="companyName">Company Name</Label>
-              <Input
-                id="companyName"
-                {...formMethods.register('companyName')}
-                placeholder="Enter company name (if applicable)"
-              />
-            </div>
-            <div>
-              <Label htmlFor="title">Title *</Label>
-              <Select value={watchedValues.title} onValueChange={(value) => setValue('title', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select title" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Mr">Mr</SelectItem>
-                  <SelectItem value="Mrs">Mrs</SelectItem>
-                  <SelectItem value="Ms">Ms</SelectItem>
-                  <SelectItem value="Chief">Chief</SelectItem>
-                  <SelectItem value="Dr">Dr</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-              <Input
-                id="dateOfBirth"
-                type="date"
-                {...formMethods.register('dateOfBirth', { required: true })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="gender">Gender *</Label>
-              <Select value={watchedValues.gender} onValueChange={(value) => setValue('gender', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="phone">Phone *</Label>
-              <PhoneInput
-                value={watchedValues.phone || ''}
-                onChange={(value) => setValue('phone', value)}
-                placeholder="Enter phone number"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <Label htmlFor="address">Address *</Label>
-              <Textarea
-                id="address"
-                {...formMethods.register('address', { required: true })}
-                placeholder="Enter full address"
-                rows={3}
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                {...formMethods.register('email', { required: true })}
-                placeholder="Enter email address"
-              />
-            </div>
-          </div>
-        </FormSection>
-      )
-    },
-    {
-      id: 'plant-machinery',
-      title: 'Plant/Machinery Details',
-      component: (
-        <FormSection title="Plant and Machinery Items" icon={<Wrench className="h-5 w-5" />}>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium">Equipment Details</h3>
-              <Button
-                type="button"
-                onClick={() => plantMachineryFieldArray.append({
-                  itemNumber: '',
-                  yearOfManufacture: new Date().getFullYear(),
-                  make: '',
-                  registrationNumber: '',
-                  dateOfPurchase: '',
-                  costPrice: 0,
-                  deductionForAge: 0,
-                  sumClaimed: 0,
-                  claimType: 'presentValue'
-                })}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Item
-              </Button>
-            </div>
-
-            {plantMachineryFieldArray.fields.map((field, index) => (
-              <Card key={field.id} className="p-4">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-medium">Item {index + 1}</h4>
-                    {plantMachineryFieldArray.fields.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => plantMachineryFieldArray.remove(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor={`plantMachineryItems.${index}.itemNumber`}>Item Number *</Label>
-                      <Input
-                        id={`plantMachineryItems.${index}.itemNumber`}
-                        {...formMethods.register(`plantMachineryItems.${index}.itemNumber`, { required: true })}
-                        placeholder="Item/Serial number"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`plantMachineryItems.${index}.yearOfManufacture`}>Year of Manufacture *</Label>
-                      <Input
-                        id={`plantMachineryItems.${index}.yearOfManufacture`}
-                        type="number"
-                        min="1900"
-                        max={new Date().getFullYear()}
-                        {...formMethods.register(`plantMachineryItems.${index}.yearOfManufacture`, { required: true, valueAsNumber: true })}
-                        placeholder="Year"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`plantMachineryItems.${index}.make`}>Make *</Label>
-                      <Input
-                        id={`plantMachineryItems.${index}.make`}
-                        {...formMethods.register(`plantMachineryItems.${index}.make`, { required: true })}
-                        placeholder="Manufacturer/Brand"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`plantMachineryItems.${index}.registrationNumber`}>Registration Number</Label>
-                      <Input
-                        id={`plantMachineryItems.${index}.registrationNumber`}
-                        {...formMethods.register(`plantMachineryItems.${index}.registrationNumber`)}
-                        placeholder="Registration number"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`plantMachineryItems.${index}.dateOfPurchase`}>Date of Purchase *</Label>
-                      <Input
-                        id={`plantMachineryItems.${index}.dateOfPurchase`}
-                        type="date"
-                        {...formMethods.register(`plantMachineryItems.${index}.dateOfPurchase`, { required: true })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`plantMachineryItems.${index}.costPrice`}>Cost Price (₦) *</Label>
-                      <Input
-                        id={`plantMachineryItems.${index}.costPrice`}
-                        type="number"
-                        step="0.01"
-                        {...formMethods.register(`plantMachineryItems.${index}.costPrice`, { required: true, valueAsNumber: true })}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`plantMachineryItems.${index}.deductionForAge`}>Deduction for Age/Use (₦)</Label>
-                      <Input
-                        id={`plantMachineryItems.${index}.deductionForAge`}
-                        type="number"
-                        step="0.01"
-                        {...formMethods.register(`plantMachineryItems.${index}.deductionForAge`, { valueAsNumber: true })}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`plantMachineryItems.${index}.sumClaimed`}>Sum Claimed (₦) *</Label>
-                      <Input
-                        id={`plantMachineryItems.${index}.sumClaimed`}
-                        type="number"
-                        step="0.01"
-                        {...formMethods.register(`plantMachineryItems.${index}.sumClaimed`, { required: true, valueAsNumber: true })}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <Label>Claim Type *</Label>
-                      <RadioGroup
-                        value={watchedValues.plantMachineryItems?.[index]?.claimType}
-                        onValueChange={(value) => setValue(`plantMachineryItems.${index}.claimType`, value as 'presentValue' | 'repairs')}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="presentValue" id={`presentValue-${index}`} />
-                          <Label htmlFor={`presentValue-${index}`}>Present Value</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="repairs" id={`repairs-${index}`} />
-                          <Label htmlFor={`repairs-${index}`}>Repairs</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </FormSection>
-      )
-    },
-    {
-      id: 'loss-details',
-      title: 'Loss/Damage Details',
-      component: (
-        <FormSection title="Loss and Damage Information" icon={<MapPin className="h-5 w-5" />}>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dateOfLoss">Date of Loss/Damage *</Label>
-                <Input
-                  id="dateOfLoss"
-                  type="date"
-                  {...formMethods.register('dateOfLoss', { required: true })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="timeOfLoss">Time of Loss/Damage *</Label>
-                <Input
-                  id="timeOfLoss"
-                  type="time"
-                  {...formMethods.register('timeOfLoss', { required: true })}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="lastSeenIntact">If Unknown, When and Where Last Seen Intact</Label>
-              <Textarea
-                id="lastSeenIntact"
-                {...formMethods.register('lastSeenIntact')}
-                placeholder="Describe when and where the equipment was last seen in good condition"
-                rows={2}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="whereDidLossOccur">Where Did Loss/Damage Occur? *</Label>
-              <Textarea
-                id="whereDidLossOccur"
-                {...formMethods.register('whereDidLossOccur', { required: true })}
-                placeholder="Describe the location where the loss or damage occurred"
-                rows={2}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="partsDamaged">Parts Damaged and Extent of Damage *</Label>
-              <Textarea
-                id="partsDamaged"
-                {...formMethods.register('partsDamaged', { required: true })}
-                placeholder="Describe what parts were damaged and the extent of the damage"
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="whereCanBeInspected">Where Can Plant/Machinery Be Inspected? *</Label>
-              <Textarea
-                id="whereCanBeInspected"
-                {...formMethods.register('whereCanBeInspected', { required: true })}
-                placeholder="Provide the address where the equipment can be inspected"
-                rows={2}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="fullAccountCircumstances">Full Account of Circumstances *</Label>
-              <Textarea
-                id="fullAccountCircumstances"
-                {...formMethods.register('fullAccountCircumstances', { required: true })}
-                placeholder="Provide a detailed account of how the loss or damage occurred"
-                rows={4}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="suspicionInformation">Suspicion or Information on Responsible Parties</Label>
-              <Textarea
-                id="suspicionInformation"
-                {...formMethods.register('suspicionInformation')}
-                placeholder="If you suspect anyone or have information about responsible parties, provide details"
-                rows={3}
-              />
-            </div>
-          </div>
-        </FormSection>
-      )
-    },
-    {
-      id: 'witnesses',
-      title: 'Witnesses',
-      component: (
-        <FormSection title="Witness Information" icon={<Users className="h-5 w-5" />}>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium">Witnesses</h3>
-              <Button
-                type="button"
-                onClick={() => witnessesFieldArray.append({ name: '', address: '', phone: '' })}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Witness
-              </Button>
-            </div>
-
-            {witnessesFieldArray.fields.map((field, index) => (
-              <Card key={field.id} className="p-4">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-medium">Witness {index + 1}</h4>
-                    {witnessesFieldArray.fields.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => witnessesFieldArray.remove(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor={`witnesses.${index}.name`}>Witness Name *</Label>
-                      <Input
-                        id={`witnesses.${index}.name`}
-                        {...formMethods.register(`witnesses.${index}.name`, { required: true })}
-                        placeholder="Enter witness name"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`witnesses.${index}.phone`}>Phone Number *</Label>
-                      <PhoneInput
-                        value={watchedValues.witnesses?.[index]?.phone || ''}
-                        onChange={(value) => setValue(`witnesses.${index}.phone`, value)}
-                        placeholder="Enter phone number"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <Label htmlFor={`witnesses.${index}.address`}>Address *</Label>
-                      <Textarea
-                        id={`witnesses.${index}.address`}
-                        {...formMethods.register(`witnesses.${index}.address`, { required: true })}
-                        placeholder="Enter witness address"
-                        rows={2}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </FormSection>
-      )
-    },
-    {
-      id: 'theft-third-party',
-      title: 'Theft & Third Party Details',
-      component: (
-        <FormSection title="Additional Information" icon={<Shield className="h-5 w-5" />}>
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="policeInformed"
-                  checked={watchedValues.policeInformed}
-                  onCheckedChange={(checked) => setValue('policeInformed', !!checked)}
-                />
-                <Label htmlFor="policeInformed">Police informed?</Label>
-              </div>
-
-              {watchedValues.policeInformed && (
-                <div className="ml-6">
-                  <Label htmlFor="policeStation">Police Station</Label>
-                  <Input
-                    id="policeStation"
-                    {...formMethods.register('policeStation')}
-                    placeholder="Enter police station name"
-                  />
-                </div>
+              {formMethods.formState.errors.policyNumber && (
+                <p className="text-sm text-destructive">{formMethods.formState.errors.policyNumber.message}</p>
               )}
-
-              <div>
-                <Label htmlFor="otherRecoveryActions">Other Recovery Actions Taken</Label>
-                <Textarea
-                  id="otherRecoveryActions"
-                  {...formMethods.register('otherRecoveryActions')}
-                  placeholder="Describe any other actions taken to recover the equipment"
-                  rows={2}
-                />
-              </div>
             </div>
-
-            <div className="border-t pt-4">
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="isSoleOwner"
-                    checked={watchedValues.isSoleOwner}
-                    onCheckedChange={(checked) => setValue('isSoleOwner', !!checked)}
-                  />
-                  <Label htmlFor="isSoleOwner">Are you the sole owner?</Label>
-                </div>
-
-                {!watchedValues.isSoleOwner && (
-                  <div className="ml-6">
-                    <Label htmlFor="ownershipDetails">Ownership Details</Label>
-                    <Textarea
-                      id="ownershipDetails"
-                      {...formMethods.register('ownershipDetails')}
-                      placeholder="Provide details about other owners"
-                      rows={2}
-                    />
-                  </div>
-                )}
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="hasOtherInsurance"
-                    checked={watchedValues.hasOtherInsurance}
-                    onCheckedChange={(checked) => setValue('hasOtherInsurance', !!checked)}
-                  />
-                  <Label htmlFor="hasOtherInsurance">Any other insurance on the item?</Label>
-                </div>
-
-                {watchedValues.hasOtherInsurance && (
-                  <div className="ml-6">
-                    <Label htmlFor="otherInsuranceDetails">Other Insurance Details</Label>
-                    <Textarea
-                      id="otherInsuranceDetails"
-                      {...formMethods.register('otherInsuranceDetails')}
-                      placeholder="Provide details about other insurance coverage"
-                      rows={2}
-                    />
-                  </div>
-                )}
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="thirdPartyInvolved"
-                    checked={watchedValues.thirdPartyInvolved}
-                    onCheckedChange={(checked) => setValue('thirdPartyInvolved', !!checked)}
-                  />
-                  <Label htmlFor="thirdPartyInvolved">Third party involved?</Label>
-                </div>
-
-                {watchedValues.thirdPartyInvolved && (
-                  <div className="ml-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="thirdPartyName">Third Party Name</Label>
-                      <Input
-                        id="thirdPartyName"
-                        {...formMethods.register('thirdPartyName')}
-                        placeholder="Enter third party name"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="thirdPartyInsurer">Third Party Insurer</Label>
-                      <Input
-                        id="thirdPartyInsurer"
-                        {...formMethods.register('thirdPartyInsurer')}
-                        placeholder="Enter insurer name"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <Label htmlFor="thirdPartyAddress">Third Party Address</Label>
-                      <Textarea
-                        id="thirdPartyAddress"
-                        {...formMethods.register('thirdPartyAddress')}
-                        placeholder="Enter third party address"
-                        rows={2}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <DatePickerField name="periodOfCoverFrom" label="Period of Cover From" />
+            <DatePickerField name="periodOfCoverTo" label="Period of Cover To" />
           </div>
         </FormSection>
       )
@@ -676,34 +239,55 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
       id: 'declaration',
       title: 'Declaration & Signature',
       component: (
-        <FormSection title="Declaration and Signature" icon={<FileText className="h-5 w-5" />}>
+        <FormSection title="Data Privacy & Declaration">
           <div className="space-y-6">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-medium mb-2">Data Privacy Notice</h3>
-              <p className="text-sm text-gray-600">
-                I hereby authorize the processing of my personal data in accordance with applicable data protection laws. 
-                This information will be used solely for the purpose of processing this insurance claim and related communications.
-              </p>
+            <div className="p-4 bg-muted rounded-lg">
+              <h3 className="font-semibold mb-2">Data Privacy</h3>
+              <div className="text-sm space-y-2">
+                <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with updates about our products and services.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+                <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+              </div>
             </div>
 
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="agreeToDataPrivacy"
-                checked={watchedValues.agreeToDataPrivacy}
-                onCheckedChange={(checked) => setValue('agreeToDataPrivacy', !!checked)}
-              />
-              <Label htmlFor="agreeToDataPrivacy" className="leading-normal">
-                I agree to the data privacy terms and confirm that all information provided is true and accurate to the best of my knowledge. *
-              </Label>
+            <div className="p-4 bg-muted rounded-lg">
+              <h3 className="font-semibold mb-2">Declaration</h3>
+              <div className="text-sm space-y-2">
+                <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+                <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+                <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="signature">Digital Signature *</Label>
-              <Input
-                id="signature"
-                {...formMethods.register('signature', { required: true })}
-                placeholder="Type your full name as signature"
-              />
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="declarationAccepted"
+                  checked={formMethods.watch('declarationAccepted')}
+                  onCheckedChange={(checked) => formMethods.setValue('declarationAccepted', checked as boolean)}
+                />
+                <Label htmlFor="declarationAccepted">
+                  I accept the above declaration and data privacy policy *
+                </Label>
+              </div>
+              {formMethods.formState.errors.declarationAccepted && (
+                <p className="text-sm text-destructive">{formMethods.formState.errors.declarationAccepted.message}</p>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signature">Digital Signature *</Label>
+                  <Input
+                    id="signature"
+                    {...formMethods.register('signature')}
+                    placeholder="Type your full name as signature"
+                  />
+                  {formMethods.formState.errors.signature && (
+                    <p className="text-sm text-destructive">{formMethods.formState.errors.signature.message}</p>
+                  )}
+                </div>
+                <DatePickerField name="signatureDate" label="Date" />
+              </div>
             </div>
           </div>
         </FormSection>
@@ -712,12 +296,12 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto py-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Contractors, Plant and Machinery Claim</h1>
-          <p className="text-gray-600 mt-2">
-            Please provide accurate information for your contractors, plant and machinery insurance claim.
+          <h1 className="text-3xl font-bold">Contractors, Plant and Machinery Claim Form</h1>
+          <p className="text-muted-foreground mt-2">
+            Please fill out all required information to process your claim.
           </p>
         </div>
 
@@ -725,78 +309,45 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
           steps={steps}
           onSubmit={onSubmit}
           isSubmitting={isSubmitting}
-          submitButtonText="Review Claim"
+          submitButtonText="Submit Claim"
           formMethods={formMethods}
         />
 
-        {/* Summary Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Review Your Claim</DialogTitle>
+              <DialogTitle>Claim Summary</DialogTitle>
             </DialogHeader>
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <strong>Policy Number:</strong> {watchedValues.policyNumber}
-                </div>
-                <div>
-                  <strong>Insured:</strong> {watchedValues.nameOfInsured}
-                </div>
-                <div>
-                  <strong>Loss Date:</strong> {watchedValues.dateOfLoss}
-                </div>
-                <div>
-                  <strong>Items:</strong> {watchedValues.plantMachineryItems?.length || 0}
-                </div>
-              </div>
-              
-              <div>
-                <strong>Plant/Machinery Items:</strong>
-                <div className="mt-2 space-y-2">
-                  {watchedValues.plantMachineryItems?.map((item, index) => (
-                    <div key={index} className="text-sm bg-gray-50 p-2 rounded">
-                      <div><strong>Item {index + 1}:</strong> {item.make} ({item.itemNumber})</div>
-                      <div>Year: {item.yearOfManufacture}, Claim: ₦{item.sumClaimed?.toLocaleString()}</div>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setShowSummary(false)}>
+                  Edit
+                </Button>
+                <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
+                  {isSubmitting ? 'Submitting...' : 'Confirm Submit'}
+                </Button>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowSummary(false)}>
-                Edit
-              </Button>
-              <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting...' : 'Submit Claim'}
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Success Dialog */}
         <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Claim Submitted Successfully!</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+                Claim Submitted Successfully
+              </DialogTitle>
             </DialogHeader>
-            <div className="text-center py-4">
-              <div className="text-green-600 text-4xl mb-4">✓</div>
+            <div className="space-y-4">
               <p>Your contractors, plant and machinery claim has been submitted successfully.</p>
-              <p className="text-sm text-gray-600 mt-2">
-                You will receive a confirmation email shortly with your claim reference number.
-              </p>
-            </div>
-            <DialogFooter>
               <Button onClick={() => setShowSuccess(false)} className="w-full">
                 Close
               </Button>
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
     </div>
   );
 };
-
-export default ContractorsPlantMachineryClaim;
