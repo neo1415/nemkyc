@@ -30,7 +30,7 @@ const BurglaryClaimForm: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<BurglaryClaimData>({
+  const form = useForm({
     resolver: yupResolver(burglaryClaimSchema),
     defaultValues: { signatureDate: new Date() },
     mode: 'onChange'
@@ -38,7 +38,7 @@ const BurglaryClaimForm: React.FC = () => {
 
   const { clearDraft } = useFormDraft('burglary-claim', {});
 
-  const onSubmit = async (data: BurglaryClaimData) => {
+  const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, 'burglary-claims'), {
@@ -68,7 +68,7 @@ const BurglaryClaimForm: React.FC = () => {
       component: (
         <div className="space-y-4">
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="policyNumber"
             render={({ field }) => (
               <FormItem>
@@ -89,7 +89,7 @@ const BurglaryClaimForm: React.FC = () => {
       component: (
         <div className="space-y-6">
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="agreeToDataPrivacy"
             render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0">
