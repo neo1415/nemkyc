@@ -143,7 +143,7 @@ const AllRiskClaim: React.FC = () => {
     name: "propertyItems"
   });
 
-  const { saveDraft, loadDraft, clearDraft } = useFormDraft('all-risk-claim', {});
+  const { saveDraft, loadDraft, clearDraft } = useFormDraft('all-risk-claim', form);
 
   const watchedValues = form.watch();
 
