@@ -859,7 +859,10 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
                   Back to Edit
                 </Button>
-                <Button onClick={() => formMethods.handleSubmit(handleSubmit)()} disabled={isSubmitting}>
+                <Button onClick={() => {
+                  const formData = formMethods.getValues();
+                  handleSubmit(formData);
+                }} disabled={isSubmitting}>
                   {isSubmitting ? 'Submitting...' : 'Submit Claim'}
                 </Button>
               </div>
