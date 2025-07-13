@@ -22,7 +22,7 @@ import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { db } from '@/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { emailService } from '@/services/emailService';
+// import { emailService } from '@/services/emailService';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Employers Liability Claim Schema
