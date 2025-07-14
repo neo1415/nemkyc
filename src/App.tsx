@@ -44,6 +44,10 @@ import AdminUsersTable from './pages/admin/AdminUsersTable';
 import FormViewer from './pages/admin/FormViewer';
 import AdminMotorClaimsTable from './pages/admin/AdminMotorClaimsTable';
 import AdminNaicomPartnersCDDTable from './pages/admin/AdminNaicomPartnersCDDTable';
+import AdminAgentsCDDTable from './pages/admin/AdminAgentsCDDTable';
+import AdminIndividualCDDTable from './pages/admin/AdminIndividualCDDTable';
+import AdminRentAssuranceClaimsTable from './pages/admin/AdminRentAssuranceClaimsTable';
+import AdminMoneyInsuranceClaimsTable from './pages/admin/AdminMoneyInsuranceClaimsTable';
 import EnhancedFormViewer from './pages/admin/EnhancedFormViewer';
 
 function App() {
@@ -117,6 +121,30 @@ function App() {
           <Route path="admin/naicom-partners-cdd" element={
             <ProtectedRoute>
               <AdminNaicomPartnersCDDTable />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/agents-cdd" element={
+            <ProtectedRoute>
+              <AdminAgentsCDDTable />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/individual-cdd" element={
+            <ProtectedRoute>
+              <AdminIndividualCDDTable />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/rent-assurance-claims" element={
+            <ProtectedRoute>
+              <AdminRentAssuranceClaimsTable />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/money-insurance-claims" element={
+            <ProtectedRoute>
+              <AdminMoneyInsuranceClaimsTable />
             </ProtectedRoute>
           } />
 

@@ -8,7 +8,10 @@ import {
   Building2,
   Car,
   ChevronDown,
-  X
+  X,
+  User,
+  Home,
+  Shield
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
@@ -45,6 +48,26 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       name: 'NAICOM Partners CDD',
       href: '/admin/naicom-partners-cdd',
       icon: Building2
+    },
+    {
+      name: 'Agents CDD',
+      href: '/admin/agents-cdd',
+      icon: Users
+    },
+    {
+      name: 'Individual CDD',
+      href: '/admin/individual-cdd',
+      icon: User
+    },
+    {
+      name: 'Rent Assurance Claims',
+      href: '/admin/rent-assurance-claims',
+      icon: Home
+    },
+    {
+      name: 'Money Insurance Claims',
+      href: '/admin/money-insurance-claims',
+      icon: Shield
     }
   ];
 
