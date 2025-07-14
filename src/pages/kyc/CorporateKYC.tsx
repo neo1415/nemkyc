@@ -431,14 +431,11 @@ const CorporateKYC: React.FC = () => {
             <Label>Upload Your Verification Document *</Label>
             <FileUpload
               accept="image/*,.pdf"
-              multiple={false}
-              onFileSelect={(files) => {
-                if (files.length > 0) {
-                  setUploadedFiles(prev => ({
-                    ...prev,
-                    verificationDocument: files[0]
-                  }));
-                }
+              onFileSelect={(file) => {
+                setUploadedFiles(prev => ({
+                  ...prev,
+                  verificationDocument: file
+                }));
               }}
               maxSize={3 * 1024 * 1024}
             />
