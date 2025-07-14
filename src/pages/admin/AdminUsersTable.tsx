@@ -1,220 +1,330 @@
 import React, { useState, useEffect } from 'react';
-import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
-import { Box, Button, Typography, Select, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, Tabs, Tab } from '@mui/material';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { collection, query, getDocs, doc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
-import { db } from '../../firebase/config';
-import { Delete, Edit } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
+import { 
+  collection, 
+  getDocs, 
+  orderBy, 
+  query, 
+  updateDoc, 
+  doc, 
+  deleteDoc 
+} from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '../../components/ui/table';
+import { Button } from '../../components/ui/button';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '../../components/ui/select';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../../components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { ChevronDown, Trash2 } from 'lucide-react';
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#7c2d12',
-    },
-  },
-});
+interface UserRole {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  dateCreated?: any;
+  dateModified?: any;
+}
 
 const AdminUsersTable: React.FC = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, hasRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; user: any }>({ open: false, user: null });
-  const [tabValue, setTabValue] = useState(0);
 
   useEffect(() => {
-    if (!user || user.role !== 'super-admin') {
+    if (!hasRole('super-admin')) {
       navigate('/unauthorized');
       return;
     }
     fetchUsers();
-  }, [user, navigate]);
+  }, [hasRole, navigate]);
 
   const fetchUsers = async () => {
     try {
-      const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(q);
-      
-      const usersData: any[] = [];
-      querySnapshot.forEach((doc) => {
-        usersData.push({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate(),
-          updatedAt: doc.data().updatedAt?.toDate(),
-        });
-      });
-
-      setUsers(usersData);
+      setLoading(true);
+      const usersQuery = query(
+        collection(db, 'userroles'),
+        orderBy('dateCreated', 'desc')
+      );
+      const snapshot = await getDocs(usersQuery);
+      const usersList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as UserRole[];
+      setUsers(usersList);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to fetch users data',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to fetch users",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
+  const formatDateTime = (timestamp: any) => {
+    if (!timestamp) return 'N/A';
+    
+    let date: Date;
+    if (timestamp.toDate) {
+      date = timestamp.toDate();
+    } else if (timestamp instanceof Date) {
+      date = timestamp;
+    } else {
+      return 'N/A';
+    }
+    
+    return date.toLocaleDateString('en-GB') + ' : ' + date.toLocaleTimeString('en-GB', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        role: newRole,
-        updatedAt: new Date(),
+      const serverUrl = 'https://nem-server-rhdb.onrender.com';
+      
+      // Update in Firestore via server
+      const updateResponse = await fetch(`${serverUrl}/update-user-role/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ role: newRole }),
       });
 
-      setUsers(prev => prev.map(u => 
-        u.id === userId ? { ...u, role: newRole } : u
-      ));
+      if (!updateResponse.ok) {
+        throw new Error('Failed to update role in Firestore');
+      }
 
+      // Set custom claims via server based on role
+      let roleEndpoint = '';
+      switch (newRole) {
+        case 'super admin':
+          roleEndpoint = 'assign-super-admin-role';
+          break;
+        case 'admin':
+          roleEndpoint = 'assign-admin-role';
+          break;
+        case 'compliance':
+          roleEndpoint = 'assign-compliance-role';
+          break;
+        case 'claims':
+          roleEndpoint = 'assign-claims-role';
+          break;
+        case 'default':
+          roleEndpoint = 'assign-default-role';
+          break;
+        default:
+          roleEndpoint = 'assign-default-role';
+      }
+
+      const claimsResponse = await fetch(`${serverUrl}/${roleEndpoint}/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!claimsResponse.ok) {
+        throw new Error('Failed to update custom claims');
+      }
+
+      // Update local state
+      const now = new Date();
+      await updateDoc(doc(db, 'userroles', userId), {
+        role: newRole,
+        dateModified: now
+      });
+
+      setUsers(prevUsers => 
+        prevUsers.map(u => 
+          u.id === userId 
+            ? { ...u, role: newRole, dateModified: now }
+            : u
+        )
+      );
+      
       toast({
-        title: 'Success',
-        description: 'User role updated successfully',
+        title: "Success",
+        description: "User role updated successfully",
       });
     } catch (error) {
       console.error('Error updating user role:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to update user role',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update user role",
+        variant: "destructive",
       });
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      await deleteDoc(doc(db, 'users', userId));
-      setUsers(prev => prev.filter(u => u.id !== userId));
+      await deleteDoc(doc(db, 'userroles', userId));
+      setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
       
       toast({
-        title: 'Success',
-        description: 'User deleted successfully',
+        title: "Success",
+        description: "User deleted successfully",
       });
-      
-      setDeleteDialog({ open: false, user: null });
     } catch (error) {
       console.error('Error deleting user:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to delete user',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to delete user",
+        variant: "destructive",
       });
     }
   };
 
-  const columns: GridColDef[] = [
-    { field: 'id', headerName: 'ID', width: 200 },
-    { field: 'name', headerName: 'Name', width: 200 },
-    { field: 'email', headerName: 'Email', width: 250 },
-    { field: 'phone', headerName: 'Phone', width: 150 },
-    {
-      field: 'role',
-      headerName: 'Role',
-      width: 150,
-      renderCell: (params: any) => (
-        <Select
-          value={params.value}
-          onChange={(e) => handleRoleChange(params.row.id, e.target.value)}
-          size="small"
-          disabled={params.row.id === user?.uid}
-        >
-          <MenuItem value="default">Default</MenuItem>
-          <MenuItem value="compliance">Compliance</MenuItem>
-          <MenuItem value="claims">Claims</MenuItem>
-          <MenuItem value="admin">Admin</MenuItem>
-          <MenuItem value="super-admin">Super Admin</MenuItem>
-        </Select>
-      ),
-    },
-    {
-      field: 'createdAt',
-      headerName: 'Joined',
-      width: 120,
-      valueFormatter: (params: any) => params.value?.toLocaleDateString() || 'N/A',
-    },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 100,
-      renderCell: (params: any) => (
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            size="small"
-            color="error"
-            startIcon={<Delete size={16} />}
-            onClick={() => setDeleteDialog({ open: true, user: params.row })}
-            disabled={params.row.id === user?.uid}
-          >
-            Delete
-          </Button>
-        </Box>
-      ),
-    },
-  ];
-
   const regularUsers = users.filter(u => u.role === 'default');
   const adminUsers = users.filter(u => u.role !== 'default');
 
-  if (!user || user.role !== 'super-admin') {
-    return null;
+  const UserTable = ({ usersList, title }: { usersList: UserRole[], title: string }) => (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>
+          {usersList.length} {title.toLowerCase()}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Date Created</TableHead>
+                <TableHead>Date Modified</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {usersList.map((userRole) => (
+                <TableRow key={userRole.id}>
+                  <TableCell className="font-medium">{userRole.name}</TableCell>
+                  <TableCell>{userRole.email}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="capitalize">{userRole.role}</span>
+                      <Select
+                        value={userRole.role}
+                        onValueChange={(value) => handleRoleChange(userRole.id, value)}
+                      >
+                        <SelectTrigger className="w-auto border-none shadow-none p-0 h-auto">
+                          <ChevronDown className="h-4 w-4" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default">Default</SelectItem>
+                          <SelectItem value="claims">Claims</SelectItem>
+                          <SelectItem value="compliance">Compliance</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="super admin">Super Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </TableCell>
+                  <TableCell>{formatDateTime(userRole.dateCreated)}</TableCell>
+                  <TableCell>{formatDateTime(userRole.dateModified)}</TableCell>
+                  <TableCell>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete User</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to permanently delete {userRole.name}? 
+                            This action cannot be undone and will remove them from the entire application.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleDeleteUser(userRole.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete Permanently
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-lg">Loading users...</div>
+      </div>
+    );
   }
 
   return (
-    <ThemeProvider theme={theme}>
-      <Box sx={{ height: '100vh', width: '100%', p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          User Management
-        </Typography>
-        
-        <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
-          <Tab label={`Regular Users (${regularUsers.length})`} />
-          <Tab label={`Admin Users (${adminUsers.length})`} />
-        </Tabs>
-        
-        <Box sx={{ height: 600, width: '100%', mt: 2 }}>
-          <DataGrid
-            rows={tabValue === 0 ? regularUsers : adminUsers}
-            columns={columns}
-            loading={loading}
-            slots={{ toolbar: GridToolbar }}
-            slotProps={{
-              toolbar: {
-                showQuickFilter: true,
-                quickFilterProps: { debounceMs: 500 },
-              },
-            }}
-            pageSizeOptions={[25, 50, 100]}
-            initialState={{
-              pagination: { paginationModel: { pageSize: 25 } },
-            }}
-            checkboxSelection
-            disableRowSelectionOnClick
-          />
-        </Box>
+    <div className="container mx-auto p-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">User Management</h1>
+        <p className="text-muted-foreground">Manage user roles and permissions</p>
+      </div>
 
-        <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, user: null })}>
-          <DialogTitle>Delete User</DialogTitle>
-          <DialogContent>
-            <Typography>
-              Are you sure you want to delete user "{deleteDialog.user?.name}"? This action cannot be undone.
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDeleteDialog({ open: false, user: null })}>Cancel</Button>
-            <Button onClick={() => handleDeleteUser(deleteDialog.user?.id)} color="error">
-              Delete
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
-    </ThemeProvider>
+      <Tabs defaultValue="regular" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="regular">Regular Users ({regularUsers.length})</TabsTrigger>
+          <TabsTrigger value="admin">Admin Users ({adminUsers.length})</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="regular" className="mt-6">
+          <UserTable usersList={regularUsers} title="Regular Users" />
+        </TabsContent>
+        
+        <TabsContent value="admin" className="mt-6">
+          <UserTable usersList={adminUsers} title="Admin Users" />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 
