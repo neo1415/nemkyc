@@ -35,6 +35,16 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       name: 'Users',
       href: '/admin/users',
       icon: Users
+    },
+    {
+      name: 'Motor Claims',
+      href: '/admin/motor-claims',
+      icon: Car
+    },
+    {
+      name: 'NAICOM Partners CDD',
+      href: '/admin/naicom-partners-cdd',
+      icon: Building2
     }
   ];
 
