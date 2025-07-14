@@ -842,31 +842,42 @@ const NaicomCorporateCDD: React.FC = () => {
       id: 'uploads',
       title: 'Uploads',
       component: (
-        <div className="space-y-4">
-          <div>
-            <Label>Upload Your CAC Certificate *</Label>
-            <FileUpload
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, cacCertificate: file }))}
-              accept=".jpg,.png,.pdf"
-              maxSize={3}
-            />
-          </div>
-          <div>
-            <Label>Upload Means of Identification *</Label>
-            <FileUpload
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, identification: file }))}
-              accept=".jpg,.png,.pdf"
-              maxSize={3}
-            />
-          </div>
-          <div>
-            <Label>Upload NAICOM License Certificate *</Label>
-            <FileUpload
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, naicomLicense: file }))}
-              accept=".jpg,.png,.pdf"
-              maxSize={3}
-            />
-          </div>
+        <div className="space-y-6">
+          <FileUpload
+            label="Upload Your CAC Certificate"
+            required
+            onFileSelect={(file) => {
+              formMethods.setValue('cacCertificate', file);
+              setUploadedFiles(prev => ({ ...prev, cacCertificate: file }));
+            }}
+            currentFile={watchedValues.cacCertificate as File}
+            accept=".jpg,.png,.pdf"
+            maxSize={3}
+          />
+          
+          <FileUpload
+            label="Upload Means of Identification"
+            required
+            onFileSelect={(file) => {
+              formMethods.setValue('meansOfIdentification', file);
+              setUploadedFiles(prev => ({ ...prev, meansOfIdentification: file }));
+            }}
+            currentFile={watchedValues.meansOfIdentification as File}
+            accept=".jpg,.png,.pdf"
+            maxSize={3}
+          />
+          
+          <FileUpload
+            label="Upload NAICOM License Certificate"
+            required
+            onFileSelect={(file) => {
+              formMethods.setValue('naicomLicense', file);
+              setUploadedFiles(prev => ({ ...prev, naicomLicense: file }));
+            }}
+            currentFile={watchedValues.naicomLicense as File}
+            accept=".jpg,.png,.pdf"
+            maxSize={3}
+          />
         </div>
       )
     },
