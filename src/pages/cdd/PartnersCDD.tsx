@@ -11,7 +11,7 @@ import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Checkbox } from '../../components/ui/checkbox';
-import { toast } from '../../components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import FormSection from '../../components/common/FormSection';
 import FileUpload from '../../components/common/FileUpload';
 import PhoneInput from '../../components/common/PhoneInput';
@@ -24,6 +24,7 @@ import { notifySubmission } from '../../services/notificationService';
 
 const PartnersCDD: React.FC = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   

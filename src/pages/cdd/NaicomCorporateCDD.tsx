@@ -152,7 +152,7 @@ const NaicomCorporateCDD: React.FC = () => {
           <div className="flex items-center space-x-2">
             <Checkbox
               checked={watchedValues.agreeToDataPrivacy}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked)}
+              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', Boolean(checked))}
             />
             <Label>I agree to data privacy terms *</Label>
           </div>
