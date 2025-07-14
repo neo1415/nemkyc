@@ -9,10 +9,6 @@ import {
   IconButton,
   Chip,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
   TextField,
   MenuItem,
@@ -34,6 +30,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface CorporateKYCData {
   id: string;
@@ -60,8 +57,7 @@ const AdminCorporateKYCTable: React.FC = () => {
   });
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedRecord, setSelectedRecord] = useState<CorporateKYCData | null>(null);
-  const [showViewer, setShowViewer] = useState(false);
+  const navigate = useNavigate();
 
   // Fetch data from Firestore
   useEffect(() => {
@@ -97,9 +93,8 @@ const AdminCorporateKYCTable: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleView = (record: CorporateKYCData) => {
-    setSelectedRecord(record);
-    setShowViewer(true);
+  const handleView = (id: string) => {
+    navigate(`/admin/form-viewer/corporate-kyc-form/${id}`);
   };
 
   const handleDelete = async (id: string) => {
@@ -132,6 +127,46 @@ const AdminCorporateKYCTable: React.FC = () => {
   };
 
   const columns: GridColDef[] = [
+    {
+      field: 'actions',
+      type: 'actions',
+      headerName: 'Actions',
+      width: 150,
+      getActions: (params) => [
+        <GridActionsCellItem
+          key="view"
+          icon={
+            <Tooltip title="View Details">
+              <VisibilityIcon />
+            </Tooltip>
+          }
+          label="View"
+          onClick={() => handleView(params.id.toString())}
+        />,
+        <GridActionsCellItem
+          key="delete"
+          icon={
+            <Tooltip title="Delete">
+              <DeleteIcon />
+            </Tooltip>
+          }
+          label="Delete"
+          onClick={() => handleDelete(params.id.toString())}
+        />
+      ]
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 120,
+      renderCell: (params: any) => (
+        <Chip 
+          label={params.value || 'Processing'} 
+          color={getStatusColor(params.value)}
+          size="small" 
+        />
+      )
+    },
     {
       field: 'createdAt',
       headerName: 'Date Created',
@@ -185,46 +220,6 @@ const AdminCorporateKYCTable: React.FC = () => {
           variant="outlined"
         />
       )
-    },
-    {
-      field: 'status',
-      headerName: 'Status',
-      width: 120,
-      renderCell: (params: any) => (
-        <Chip 
-          label={params.value || 'Processing'} 
-          color={getStatusColor(params.value)}
-          size="small" 
-        />
-      )
-    },
-    {
-      field: 'actions',
-      type: 'actions',
-      headerName: 'Actions',
-      width: 100,
-      getActions: (params) => [
-        <GridActionsCellItem
-          key="view"
-          icon={
-            <Tooltip title="View Details">
-              <VisibilityIcon />
-            </Tooltip>
-          }
-          label="View"
-          onClick={() => handleView(params.row)}
-        />,
-        <GridActionsCellItem
-          key="delete"
-          icon={
-            <Tooltip title="Delete">
-              <DeleteIcon />
-            </Tooltip>
-          }
-          label="Delete"
-          onClick={() => handleDelete(params.id.toString())}
-        />
-      ]
     }
   ];
 
@@ -265,7 +260,7 @@ const AdminCorporateKYCTable: React.FC = () => {
       </Box>
 
       {/* Data Grid */}
-      <Box className="h-[600px] w-full">
+      <Box className="h-[600px] w-full" sx={{ overflowX: 'auto' }}>
         <DataGrid
           rows={filteredRows}
           columns={columns}
@@ -276,6 +271,7 @@ const AdminCorporateKYCTable: React.FC = () => {
           disableRowSelectionOnClick
           className="border-0"
           sx={{
+            minWidth: 1200,
             '& .MuiDataGrid-cell': {
               borderBottom: '1px solid #f0f0f0',
             },
@@ -286,101 +282,6 @@ const AdminCorporateKYCTable: React.FC = () => {
           }}
         />
       </Box>
-
-      {/* Enhanced Form Viewer Dialog */}
-      <Dialog 
-        open={showViewer} 
-        onClose={() => setShowViewer(false)}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle>Corporate KYC Details</DialogTitle>
-        <DialogContent>
-          {selectedRecord && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <strong>Company Name:</strong> {selectedRecord.insured}
-                </div>
-                <div>
-                  <strong>Contact Person:</strong> {selectedRecord.contactPerson}
-                </div>
-                <div>
-                  <strong>Email:</strong> {selectedRecord.emailAddress}
-                </div>
-                <div>
-                  <strong>Phone:</strong> {selectedRecord.phoneNumber}
-                </div>
-                <div>
-                  <strong>Ownership:</strong> {selectedRecord.ownershipOfCompany}
-                </div>
-                <div>
-                  <strong>Registration Number:</strong> {selectedRecord.companyRegNumber}
-                </div>
-                <div>
-                  <strong>Tax ID:</strong> {selectedRecord.taxIdentificationNumber}
-                </div>
-                <div>
-                  <strong>Website:</strong> {selectedRecord.website}
-                </div>
-                <div>
-                  <strong>Status:</strong> 
-                  <Chip 
-                    label={selectedRecord.status || 'Processing'} 
-                    color={getStatusColor(selectedRecord.status)}
-                    size="small" 
-                    className="ml-2"
-                  />
-                </div>
-              </div>
-              
-              <div className="mt-4">
-                <strong>Office Address:</strong>
-                <p className="mt-1 text-gray-600">{selectedRecord.officeAddress}</p>
-              </div>
-              
-              <div className="mt-4">
-                <strong>Nature of Business:</strong>
-                <p className="mt-1 text-gray-600">{selectedRecord.natureOfBusiness}</p>
-              </div>
-              
-              {selectedRecord.directors && selectedRecord.directors.length > 0 && (
-                <div className="mt-4">
-                  <strong>Directors ({selectedRecord.directors.length}):</strong>
-                  <div className="mt-2 space-y-2">
-                    {selectedRecord.directors.map((director: any, index: number) => (
-                      <div key={index} className="p-3 bg-gray-50 rounded">
-                        <p><strong>Name:</strong> {director.firstName} {director.lastName}</p>
-                        <p><strong>Position:</strong> {director.position}</p>
-                        {director.email && <p><strong>Email:</strong> {director.email}</p>}
-                        {director.phone && <p><strong>Phone:</strong> {director.phone}</p>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
-                  <strong>Year Incorporated:</strong> {selectedRecord.yearIncorporated}
-                </div>
-                <div>
-                  <strong>Annual Turnover:</strong> {selectedRecord.annualTurnover}
-                </div>
-                <div>
-                  <strong>Number of Employees:</strong> {selectedRecord.averageNoOfEmployees}
-                </div>
-                <div>
-                  <strong>Anticipated Premium:</strong> {selectedRecord.anticipatedAnnualPremium}
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowViewer(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
     </div>
   );
 };
