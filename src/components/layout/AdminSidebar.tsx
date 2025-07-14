@@ -86,11 +86,13 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
   ];
 
   const claimsItems = [
-    { name: 'Motor Claims', href: '/admin/claims/motor' },
-    { name: 'Fire Claims', href: '/admin/claims/fire' },
-    { name: 'All Risk Claims', href: '/admin/claims/all-risk' },
-    { name: 'Professional Indemnity', href: '/admin/claims/professional-indemnity' },
-    { name: 'Public Liability', href: '/admin/claims/public-liability' }
+    { name: 'Motor Claims', href: '/admin/motor-claims' },
+    { name: 'Fire & Special Perils', href: '/admin/fire-special-perils-claims' },
+    { name: 'Employers Liability', href: '/admin/employers-liability-claims' },
+    { name: 'All Risk Claims', href: '/admin/all-risk-claims' },
+    { name: 'Professional Indemnity', href: '/admin/professional-indemnity-claims' },
+    { name: 'Rent Assurance', href: '/admin/rent-assurance-claims' },
+    { name: 'Money Insurance', href: '/admin/money-insurance-claims' }
   ];
 
   return (
