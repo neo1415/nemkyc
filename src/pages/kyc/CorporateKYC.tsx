@@ -22,6 +22,8 @@ import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { db } from '@/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useAuth } from '@/contexts/AuthContext';
+import { notifySubmission } from '@/services/notificationService';
 
 // Form validation schema
 const corporateKYCSchema = yup.object().shape({
@@ -126,6 +128,7 @@ const defaultValues = {
 };
 
 const CorporateKYC: React.FC = () => {
+  const { user } = useAuth();
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -172,7 +175,9 @@ const CorporateKYC: React.FC = () => {
         ...fileUrls,
         status: 'processing',
         submittedAt: new Date().toISOString(),
-        formType: 'corporate-kyc'
+        formType: 'corporate-kyc',
+        userId: user?.uid || 'anonymous',
+        userEmail: user?.email || data.emailAddress
       };
       
       // Submit to Firestore
@@ -181,6 +186,11 @@ const CorporateKYC: React.FC = () => {
         timestamp: serverTimestamp(),
         createdAt: new Date().toLocaleDateString('en-GB')
       });
+      
+      // Send notification email
+      if (user) {
+        await notifySubmission(user, 'Corporate KYC');
+      }
       
       clearDraft();
       setShowSummary(false);
