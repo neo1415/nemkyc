@@ -38,36 +38,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       name: 'Users',
       href: '/admin/users',
       icon: Users
-    },
-    {
-      name: 'Motor Claims',
-      href: '/admin/motor-claims',
-      icon: Car
-    },
-    {
-      name: 'NAICOM Partners CDD',
-      href: '/admin/naicom-partners-cdd',
-      icon: Building2
-    },
-    {
-      name: 'Agents CDD',
-      href: '/admin/agents-cdd',
-      icon: Users
-    },
-    {
-      name: 'Individual CDD',
-      href: '/admin/individual-cdd',
-      icon: User
-    },
-    {
-      name: 'Rent Assurance Claims',
-      href: '/admin/rent-assurance-claims',
-      icon: Home
-    },
-    {
-      name: 'Money Insurance Claims',
-      href: '/admin/money-insurance-claims',
-      icon: Shield
     }
   ];
 

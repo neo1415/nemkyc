@@ -52,6 +52,8 @@ import AdminFireSpecialPerilsClaimsTable from './pages/admin/AdminFireSpecialPer
 import AdminEmployersLiabilityClaimsTable from './pages/admin/AdminEmployersLiabilityClaimsTable';
 import AdminAllRiskClaimsTable from './pages/admin/AdminAllRiskClaimsTable';
 import AdminProfessionalIndemnityClaimsTable from './pages/admin/AdminProfessionalIndemnityClaimsTable';
+import AdminIndividualKYCTable from './pages/admin/AdminIndividualKYCTable';
+import AdminCorporateKYCTable from './pages/admin/AdminCorporateKYCTable';
 import EnhancedFormViewer from './pages/admin/EnhancedFormViewer';
 
 function App() {
@@ -149,6 +151,42 @@ function App() {
           <Route path="admin/money-insurance-claims" element={
             <ProtectedRoute>
               <AdminMoneyInsuranceClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/fire-special-perils-claims" element={
+            <ProtectedRoute>
+              <AdminFireSpecialPerilsClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/employers-liability-claims" element={
+            <ProtectedRoute>
+              <AdminEmployersLiabilityClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/all-risk-claims" element={
+            <ProtectedRoute>
+              <AdminAllRiskClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/professional-indemnity-claims" element={
+            <ProtectedRoute>
+              <AdminProfessionalIndemnityClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/kyc/individual" element={
+            <ProtectedRoute>
+              <AdminIndividualKYCTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/kyc/corporate" element={
+            <ProtectedRoute>
+              <AdminCorporateKYCTable />
             </ProtectedRoute>
           } />
 
