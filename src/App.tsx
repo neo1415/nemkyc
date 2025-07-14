@@ -42,6 +42,9 @@ import AdminCDDTable from './pages/admin/AdminCDDTable';
 import AdminKYCTable from './pages/admin/AdminKYCTable';
 import AdminUsersTable from './pages/admin/AdminUsersTable';
 import FormViewer from './pages/admin/FormViewer';
+import AdminMotorClaimsTable from './pages/admin/AdminMotorClaimsTable';
+import AdminNaicomPartnersCDDTable from './pages/admin/AdminNaicomPartnersCDDTable';
+import EnhancedFormViewer from './pages/admin/EnhancedFormViewer';
 
 function App() {
   return (
@@ -104,6 +107,19 @@ function App() {
           
           {/* Admin Routes - Role-based access */}
           
+          {/* New Enhanced Admin Tables */}
+          <Route path="admin/motor-claims" element={
+            <ProtectedRoute>
+              <AdminMotorClaimsTable />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/naicom-partners-cdd" element={
+            <ProtectedRoute>
+              <AdminNaicomPartnersCDDTable />
+            </ProtectedRoute>
+          } />
+
           {/* Individual Claims Admin Tables */}
           <Route path="admin/claims/motor" element={
             <ProtectedRoute>
@@ -254,6 +270,12 @@ function App() {
           <Route path="admin/form/:collection/:id" element={
             <ProtectedRoute>
               <FormViewer />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/form-viewer/:collection/:id" element={
+            <ProtectedRoute>
+              <EnhancedFormViewer />
             </ProtectedRoute>
           } />
           
