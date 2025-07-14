@@ -12,11 +12,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { CalendarIcon, Plus, Trash2, Upload, Edit2, Building2, FileText, CheckCircle2, Loader2, Shield } from 'lucide-react';
+import { CalendarIcon, Plus, Trash2, Upload, Edit2, Building2, FileText, CheckCircle2, Loader2, CreditCard, User, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
+import FormSection from '@/components/common/FormSection';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
@@ -24,7 +25,6 @@ import { db } from '@/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { emailService } from '@/services/emailService';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info } from 'lucide-react';
 
 // NAICOM Corporate CDD Schema
 const naicomCorporateCDDSchema = yup.object().shape({
@@ -43,7 +43,7 @@ const naicomCorporateCDDSchema = yup.object().shape({
   }),
   email: yup.string().email("Valid email is required").min(5).max(50).required("Email is required"),
   website: yup.string().required("Website is required"),
-  taxId: yup.string().min(6).max(15).required("Tax identification number is required"),
+  taxId: yup.string().min(6).max(15).required("Tax ID is required"),
   telephone: yup.string().min(5).max(11).required("Telephone number is required"),
 
   // Directors
@@ -92,135 +92,67 @@ const naicomCorporateCDDSchema = yup.object().shape({
 
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  declarationTrue: yup.boolean().oneOf([true], "You must agree that statements are true"),
-  declarationAdditionalInfo: yup.boolean().oneOf([true], "You must agree to provide additional information"),
-  declarationDocuments: yup.boolean().oneOf([true], "You must agree to submit documents"),
   signature: yup.string().required("Signature is required")
 });
 
-interface Director {
-  firstName: string;
-  middleName?: string;
-  lastName: string;
-  dateOfBirth: Date;
-  placeOfBirth: string;
-  nationality: string;
-  country: string;
-  occupation: string;
-  email: string;
-  phoneNumber: string;
-  bvn: string;
-  employerName?: string;
-  employerPhone?: string;
-  residentialAddress: string;
-  taxIdNumber?: string;
-  idType: string;
-  identificationNumber: string;
-  issuingBody: string;
-  issuedDate: Date;
-  expiryDate?: Date;
-  sourceOfIncome: string;
-  sourceOfIncomeOther?: string;
-}
-
-interface NaicomCorporateCDDData {
-  // Company Details
-  companyName: string;
-  registeredAddress: string;
-  incorporationNumber: string;
-  incorporationState: string;
-  dateOfIncorporation: Date;
-  natureOfBusiness: string;
-  companyType: string;
-  companyTypeOther?: string;
-  email: string;
-  website: string;
-  taxId: string;
-  telephone: string;
-
-  // Directors
-  directors: Director[];
-
-  // Account Details
-  bankName: string;
-  accountNumber: string;
-  bankBranch: string;
-  accountOpeningDate: Date;
-
-  // Foreign Account
-  foreignBankName?: string;
-  foreignAccountNumber?: string;
-  foreignBankBranch?: string;
-  foreignAccountOpeningDate?: Date;
-
-  // Declaration
-  agreeToDataPrivacy: boolean;
-  declarationTrue: boolean;
-  declarationAdditionalInfo: boolean;
-  declarationDocuments: boolean;
-  signature: string;
-}
-
-const defaultDirector: Director = {
-  firstName: '',
-  middleName: '',
-  lastName: '',
-  dateOfBirth: new Date(),
-  placeOfBirth: '',
-  nationality: '',
-  country: '',
-  occupation: '',
-  email: '',
-  phoneNumber: '',
-  bvn: '',
-  employerName: '',
-  employerPhone: '',
-  residentialAddress: '',
-  taxIdNumber: '',
-  idType: '',
-  identificationNumber: '',
-  issuingBody: '',
-  issuedDate: new Date(),
-  expiryDate: new Date(),
-  sourceOfIncome: '',
-  sourceOfIncomeOther: ''
-};
-
-const defaultValues: Partial<NaicomCorporateCDDData> = {
-  companyName: '',
-  registeredAddress: '',
-  incorporationNumber: '',
-  incorporationState: '',
-  natureOfBusiness: '',
-  companyType: '',
-  email: '',
-  website: '',
-  taxId: '',
-  telephone: '',
-  directors: [defaultDirector],
-  bankName: '',
-  accountNumber: '',
-  bankBranch: '',
-  foreignBankName: '',
-  foreignAccountNumber: '',
-  foreignBankBranch: '',
-  agreeToDataPrivacy: false,
-  declarationTrue: false,
-  declarationAdditionalInfo: false,
-  declarationDocuments: false,
-  signature: ''
-};
-
 const NaicomCorporateCDD: React.FC = () => {
   const { toast } = useToast();
-  const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
+  const defaultDirector = {
+    firstName: '',
+    middleName: '',
+    lastName: '',
+    dateOfBirth: '',
+    placeOfBirth: '',
+    nationality: '',
+    country: '',
+    occupation: '',
+    email: '',
+    phoneNumber: '',
+    bvn: '',
+    employerName: '',
+    employerPhone: '',
+    residentialAddress: '',
+    taxIdNumber: '',
+    idType: '',
+    identificationNumber: '',
+    issuingBody: '',
+    issuedDate: '',
+    expiryDate: '',
+    sourceOfIncome: '',
+    sourceOfIncomeOther: ''
+  };
+
   const formMethods = useForm<any>({
     resolver: yupResolver(naicomCorporateCDDSchema),
-    defaultValues,
+    defaultValues: {
+      companyName: '',
+      registeredAddress: '',
+      incorporationNumber: '',
+      incorporationState: '',
+      dateOfIncorporation: '',
+      natureOfBusiness: '',
+      companyType: '',
+      companyTypeOther: '',
+      email: '',
+      website: '',
+      taxId: '',
+      telephone: '',
+      directors: [defaultDirector],
+      bankName: '',
+      accountNumber: '',
+      bankBranch: '',
+      accountOpeningDate: '',
+      foreignBankName: '',
+      foreignAccountNumber: '',
+      foreignBankBranch: '',
+      foreignAccountOpeningDate: '',
+      agreeToDataPrivacy: false,
+      signature: ''
+    },
     mode: 'onChange'
   });
 
@@ -229,26 +161,21 @@ const NaicomCorporateCDD: React.FC = () => {
     name: 'directors'
   });
 
+  const { register, watch, setValue, formState: { errors } } = formMethods;
   const { saveDraft, clearDraft } = useFormDraft('naicomCorporateCDD', formMethods);
-  const watchedValues = formMethods.watch();
+  const watchedValues = watch();
 
   // Auto-save draft
   useEffect(() => {
-    const subscription = formMethods.watch((data) => {
+    const subscription = watch((data) => {
       saveDraft(data);
     });
     return () => subscription.unsubscribe();
-  }, [formMethods, saveDraft]);
+  }, [watch, saveDraft]);
 
-  const handleSubmit = async (data: NaicomCorporateCDDData) => {
-    setShowSummary(true);
-  };
-
-  const handleFinalSubmit = async () => {
+  const handleSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
-      const data = formMethods.getValues();
-      
       // Upload files to Firebase Storage
       const fileUploadPromises: Array<Promise<[string, string]>> = [];
       
@@ -278,10 +205,12 @@ const NaicomCorporateCDD: React.FC = () => {
       });
 
       // Send confirmation email
-      // await emailService.sendSubmissionConfirmation(data.email, 'NAICOM Corporate CDD Form');
-      
+      await emailService.sendSubmissionConfirmation(
+        data.email,
+        'NAICOM Corporate CDD'
+      );
+
       clearDraft();
-      setShowSummary(false);
       setShowSuccess(true);
       toast({ title: "NAICOM Corporate CDD form submitted successfully!" });
     } catch (error) {
@@ -292,15 +221,15 @@ const NaicomCorporateCDD: React.FC = () => {
     }
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
+  const DatePickerField = ({ name, label, required = false }: { name: string; label: string; required?: boolean }) => {
+    const value = watch(name);
     return (
       <TooltipProvider>
         <div className="space-y-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <Label className="flex items-center gap-1">
-                {label}
+                {label} {required && '*'}
                 <Info className="h-3 w-3" />
               </Label>
             </TooltipTrigger>
@@ -325,645 +254,541 @@ const NaicomCorporateCDD: React.FC = () => {
               <ReactCalendar
                 mode="single"
                 selected={value ? new Date(value) : undefined}
-                onSelect={(date) => formMethods.setValue(name, date)}
+                onSelect={(date) => setValue(name, date)}
                 initialFocus
-                className="pointer-events-auto"
               />
             </PopoverContent>
           </Popover>
+          {errors[name] && <p className="text-sm text-red-600">{String(errors[name]?.message || '')}</p>}
         </div>
       </TooltipProvider>
     );
   };
 
+  const CompanyDetailsStep = () => (
+    <FormSection title="Company Details" icon={<Building2 className="h-5 w-5" />}>
+      <TooltipProvider>
+        <div className="space-y-4">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Label htmlFor="companyName" className="flex items-center gap-1">
+                  Company Name *
+                  <Info className="h-3 w-3" />
+                </Label>
+                <Input id="companyName" {...register('companyName')} />
+                {errors.companyName && <p className="text-sm text-red-600">{String(errors.companyName.message || '')}</p>}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent><p>Enter the full registered company name</p></TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Label htmlFor="registeredAddress" className="flex items-center gap-1">
+                  Registered Company Address *
+                  <Info className="h-3 w-3" />
+                </Label>
+                <Textarea id="registeredAddress" {...register('registeredAddress')} />
+                {errors.registeredAddress && <p className="text-sm text-red-600">{String(errors.registeredAddress.message || '')}</p>}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent><p>Enter the official registered address</p></TooltipContent>
+          </Tooltip>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Label htmlFor="incorporationNumber" className="flex items-center gap-1">
+                    Incorporation Number *
+                    <Info className="h-3 w-3" />
+                  </Label>
+                  <Input id="incorporationNumber" {...register('incorporationNumber')} />
+                  {errors.incorporationNumber && <p className="text-sm text-red-600">{String(errors.incorporationNumber.message || '')}</p>}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent><p>Official company incorporation number</p></TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Label htmlFor="incorporationState" className="flex items-center gap-1">
+                    Incorporation State *
+                    <Info className="h-3 w-3" />
+                  </Label>
+                  <Input id="incorporationState" {...register('incorporationState')} />
+                  {errors.incorporationState && <p className="text-sm text-red-600">{String(errors.incorporationState.message || '')}</p>}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent><p>State where the company was incorporated</p></TooltipContent>
+            </Tooltip>
+          </div>
+
+          <DatePickerField name="dateOfIncorporation" label="Date of Incorporation/Registration" required />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Label htmlFor="natureOfBusiness" className="flex items-center gap-1">
+                  Nature of Business *
+                  <Info className="h-3 w-3" />
+                </Label>
+                <Textarea id="natureOfBusiness" {...register('natureOfBusiness')} />
+                {errors.natureOfBusiness && <p className="text-sm text-red-600">{String(errors.natureOfBusiness.message || '')}</p>}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent><p>Describe the main business activities</p></TooltipContent>
+          </Tooltip>
+
+          <div>
+            <Label>Company Type *</Label>
+            <Select
+              value={watchedValues.companyType || ''}
+              onValueChange={(value) => setValue('companyType', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose Company Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Sole Proprietor">Sole Proprietor</SelectItem>
+                <SelectItem value="Unlimited Liability Company">Unlimited Liability Company</SelectItem>
+                <SelectItem value="Limited Liability Company">Limited Liability Company</SelectItem>
+                <SelectItem value="Public Limited Company">Public Limited Company</SelectItem>
+                <SelectItem value="Joint Venture">Joint Venture</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.companyType && <p className="text-sm text-red-600">{String(errors.companyType.message || '')}</p>}
+          </div>
+
+          {watchedValues.companyType === 'Other' && (
+            <div>
+              <Label htmlFor="companyTypeOther">Please specify *</Label>
+              <Input id="companyTypeOther" {...register('companyTypeOther')} />
+              {errors.companyTypeOther && <p className="text-sm text-red-600">{String(errors.companyTypeOther.message || '')}</p>}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Label htmlFor="email" className="flex items-center gap-1">
+                    Email Address *
+                    <Info className="h-3 w-3" />
+                  </Label>
+                  <Input id="email" type="email" {...register('email')} />
+                  {errors.email && <p className="text-sm text-red-600">{String(errors.email.message || '')}</p>}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent><p>Official company email address</p></TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Label htmlFor="website" className="flex items-center gap-1">
+                    Website *
+                    <Info className="h-3 w-3" />
+                  </Label>
+                  <Input id="website" {...register('website')} />
+                  {errors.website && <p className="text-sm text-red-600">{String(errors.website.message || '')}</p>}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent><p>Company website URL</p></TooltipContent>
+            </Tooltip>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Label htmlFor="taxId" className="flex items-center gap-1">
+                    Tax Identification Number *
+                    <Info className="h-3 w-3" />
+                  </Label>
+                  <Input id="taxId" {...register('taxId')} />
+                  {errors.taxId && <p className="text-sm text-red-600">{String(errors.taxId.message || '')}</p>}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent><p>Company tax identification number</p></TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Label htmlFor="telephone" className="flex items-center gap-1">
+                    Telephone Number *
+                    <Info className="h-3 w-3" />
+                  </Label>
+                  <Input id="telephone" {...register('telephone')} />
+                  {errors.telephone && <p className="text-sm text-red-600">{String(errors.telephone.message || '')}</p>}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent><p>Company contact telephone number</p></TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
+      </TooltipProvider>
+    </FormSection>
+  );
+
+  const DirectorsStep = () => (
+    <FormSection title="Director Information" icon={<User className="h-5 w-5" />}>
+      <div className="space-y-6">
+        {directorFields.map((field, index) => (
+          <Card key={field.id} className="p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Director {index + 1}</h3>
+              {directorFields.length > 1 && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => removeDirector(index)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>First Name *</Label>
+                  <Input {...register(`directors.${index}.firstName`)} />
+                  {errors.directors?.[index]?.firstName && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.firstName?.message || '')}</p>}
+                </div>
+                <div>
+                  <Label>Middle Name</Label>
+                  <Input {...register(`directors.${index}.middleName`)} />
+                </div>
+                <div>
+                  <Label>Last Name *</Label>
+                  <Input {...register(`directors.${index}.lastName`)} />
+                  {errors.directors?.[index]?.lastName && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.lastName?.message || '')}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <DatePickerField name={`directors.${index}.dateOfBirth`} label="Date of Birth" required />
+                <div>
+                  <Label>Place of Birth *</Label>
+                  <Input {...register(`directors.${index}.placeOfBirth`)} />
+                  {errors.directors?.[index]?.placeOfBirth && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.placeOfBirth?.message || '')}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Nationality *</Label>
+                  <Input {...register(`directors.${index}.nationality`)} />
+                  {errors.directors?.[index]?.nationality && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.nationality?.message || '')}</p>}
+                </div>
+                <div>
+                  <Label>Country *</Label>
+                  <Input {...register(`directors.${index}.country`)} />
+                  {errors.directors?.[index]?.country && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.country?.message || '')}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Occupation *</Label>
+                  <Input {...register(`directors.${index}.occupation`)} />
+                  {errors.directors?.[index]?.occupation && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.occupation?.message || '')}</p>}
+                </div>
+                <div>
+                  <Label>Email *</Label>
+                  <Input type="email" {...register(`directors.${index}.email`)} />
+                  {errors.directors?.[index]?.email && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.email?.message || '')}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Phone Number *</Label>
+                  <Input {...register(`directors.${index}.phoneNumber`)} />
+                  {errors.directors?.[index]?.phoneNumber && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.phoneNumber?.message || '')}</p>}
+                </div>
+                <div>
+                  <Label>BVN *</Label>
+                  <Input {...register(`directors.${index}.bvn`)} />
+                  {errors.directors?.[index]?.bvn && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.bvn?.message || '')}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Employer's Name</Label>
+                  <Input {...register(`directors.${index}.employerName`)} />
+                </div>
+                <div>
+                  <Label>Employer's Phone</Label>
+                  <Input {...register(`directors.${index}.employerPhone`)} />
+                </div>
+              </div>
+
+              <div>
+                <Label>Residential Address *</Label>
+                <Textarea {...register(`directors.${index}.residentialAddress`)} />
+                {errors.directors?.[index]?.residentialAddress && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.residentialAddress?.message || '')}</p>}
+              </div>
+
+              <div>
+                <Label>Tax ID Number</Label>
+                <Input {...register(`directors.${index}.taxIdNumber`)} />
+              </div>
+
+              <div>
+                <Label>ID Type *</Label>
+                <Select
+                  value={watchedValues.directors?.[index]?.idType || ''}
+                  onValueChange={(value) => setValue(`directors.${index}.idType`, value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose Identification Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="International Passport">International Passport</SelectItem>
+                    <SelectItem value="NIMC">NIMC</SelectItem>
+                    <SelectItem value="Driver's Licence">Driver's Licence</SelectItem>
+                    <SelectItem value="Voters Card">Voters Card</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.directors?.[index]?.idType && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.idType?.message || '')}</p>}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Identification Number *</Label>
+                  <Input {...register(`directors.${index}.identificationNumber`)} />
+                  {errors.directors?.[index]?.identificationNumber && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.identificationNumber?.message || '')}</p>}
+                </div>
+                <div>
+                  <Label>Issuing Body *</Label>
+                  <Input {...register(`directors.${index}.issuingBody`)} />
+                  {errors.directors?.[index]?.issuingBody && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.issuingBody?.message || '')}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <DatePickerField name={`directors.${index}.issuedDate`} label="Issued Date" required />
+                <DatePickerField name={`directors.${index}.expiryDate`} label="Expiry Date" />
+              </div>
+
+              <div>
+                <Label>Source of Income *</Label>
+                <Select
+                  value={watchedValues.directors?.[index]?.sourceOfIncome || ''}
+                  onValueChange={(value) => setValue(`directors.${index}.sourceOfIncome`, value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose Income Source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Salary or Business Income">Salary or Business Income</SelectItem>
+                    <SelectItem value="Investments or Dividends">Investments or Dividends</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.directors?.[index]?.sourceOfIncome && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.sourceOfIncome?.message || '')}</p>}
+              </div>
+
+              {watchedValues.directors?.[index]?.sourceOfIncome === 'Other' && (
+                <div>
+                  <Label>Please specify *</Label>
+                  <Input {...register(`directors.${index}.sourceOfIncomeOther`)} />
+                  {errors.directors?.[index]?.sourceOfIncomeOther && <p className="text-sm text-red-600">{String((errors.directors[index] as any)?.sourceOfIncomeOther?.message || '')}</p>}
+                </div>
+              )}
+            </div>
+          </Card>
+        ))}
+        
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => addDirector(defaultDirector)}
+          className="w-full"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Director
+        </Button>
+      </div>
+    </FormSection>
+  );
+
+  const AccountDetailsStep = () => (
+    <FormSection title="Account Details" icon={<CreditCard className="h-5 w-5" />}>
+      <div className="space-y-6">
+        <div>
+          <h4 className="font-medium mb-4">Local Account Details</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="bankName">Bank Name *</Label>
+              <Input {...register('bankName')} />
+              {errors.bankName && <p className="text-sm text-red-600">{String(errors.bankName.message || '')}</p>}
+            </div>
+            
+            <div>
+              <Label htmlFor="accountNumber">Account Number *</Label>
+              <Input {...register('accountNumber')} />
+              {errors.accountNumber && <p className="text-sm text-red-600">{String(errors.accountNumber.message || '')}</p>}
+            </div>
+            
+            <div>
+              <Label htmlFor="bankBranch">Bank Branch *</Label>
+              <Input {...register('bankBranch')} />
+              {errors.bankBranch && <p className="text-sm text-red-600">{String(errors.bankBranch.message || '')}</p>}
+            </div>
+            
+            <DatePickerField name="accountOpeningDate" label="Account Opening Date" required />
+          </div>
+        </div>
+        
+        <div>
+          <h4 className="font-medium mb-4">Foreign Account Details (Optional)</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="foreignBankName">Bank Name</Label>
+              <Input {...register('foreignBankName')} />
+            </div>
+            
+            <div>
+              <Label htmlFor="foreignAccountNumber">Account Number</Label>
+              <Input {...register('foreignAccountNumber')} />
+            </div>
+            
+            <div>
+              <Label htmlFor="foreignBankBranch">Bank Branch</Label>
+              <Input {...register('foreignBankBranch')} />
+            </div>
+            
+            <DatePickerField name="foreignAccountOpeningDate" label="Account Opening Date" />
+          </div>
+        </div>
+      </div>
+    </FormSection>
+  );
+
+  const DocumentsStep = () => (
+    <FormSection title="Document Upload" icon={<Upload className="h-5 w-5" />}>
+      <div className="space-y-6">
+        <FileUpload
+          label="Upload Your CAC Certificate"
+          required
+          onFileSelect={(file) => {
+            setValue('cacCertificate', file);
+            setUploadedFiles(prev => ({ ...prev, cacCertificate: file }));
+          }}
+          currentFile={watchedValues.cacCertificate as File}
+          error={String(errors.cacCertificate?.message || '')}
+        />
+        
+        <FileUpload
+          label="Upload Means of Identification"
+          required
+          onFileSelect={(file) => {
+            setValue('meansOfIdentification', file);
+            setUploadedFiles(prev => ({ ...prev, meansOfIdentification: file }));
+          }}
+          currentFile={watchedValues.meansOfIdentification as File}
+          error={String(errors.meansOfIdentification?.message || '')}
+        />
+        
+        <FileUpload
+          label="Upload NAICOM License Certificate"
+          required
+          onFileSelect={(file) => {
+            setValue('naicomLicense', file);
+            setUploadedFiles(prev => ({ ...prev, naicomLicense: file }));
+          }}
+          currentFile={watchedValues.naicomLicense as File}
+          error={String(errors.naicomLicense?.message || '')}
+        />
+      </div>
+    </FormSection>
+  );
+
+  const DataPrivacyStep = () => (
+    <FormSection title="Data Privacy & Declaration" icon={<FileText className="h-5 w-5" />}>
+      <div className="space-y-6">
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="font-medium mb-4">Data Privacy</h4>
+          <div className="space-y-2 text-sm">
+            <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+            <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+            <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+          </div>
+        </div>
+        
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="font-medium mb-4">Declaration</h4>
+          <div className="space-y-2 text-sm">
+            <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+            <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+            <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="agreeToDataPrivacy"
+            checked={watchedValues.agreeToDataPrivacy}
+            onCheckedChange={(checked) => setValue('agreeToDataPrivacy', checked as boolean)}
+          />
+          <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy policy and declaration *</Label>
+        </div>
+        {errors.agreeToDataPrivacy && <p className="text-sm text-red-600">{String(errors.agreeToDataPrivacy.message || '')}</p>}
+        
+        <div>
+          <Label htmlFor="signature">Digital Signature *</Label>
+          <Input {...register('signature')} placeholder="Type your full name as signature" />
+          {errors.signature && <p className="text-sm text-red-600">{String(errors.signature.message || '')}</p>}
+        </div>
+        
+        <div>
+          <Label>Date</Label>
+          <Input type="date" value={new Date().toISOString().split('T')[0]} readOnly />
+        </div>
+      </div>
+    </FormSection>
+  );
+
   const steps = [
     {
-      id: 'company',
+      id: 'company-details',
       title: 'Company Details',
-      component: (
-        <TooltipProvider>
-          <div className="space-y-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="companyName" className="flex items-center gap-1">
-                    Company Name *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input
-                    id="companyName"
-                    {...formMethods.register('companyName')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter the full registered company name</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="registeredAddress" className="flex items-center gap-1">
-                    Registered Company Address *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Textarea
-                    id="registeredAddress"
-                    {...formMethods.register('registeredAddress')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter the official registered address</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Label htmlFor="incorporationNumber" className="flex items-center gap-1">
-                      Incorporation Number *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="incorporationNumber"
-                      {...formMethods.register('incorporationNumber')}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter the RC number or incorporation number</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Label htmlFor="incorporationState" className="flex items-center gap-1">
-                      Incorporation State *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="incorporationState"
-                      {...formMethods.register('incorporationState')}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>State where the company was incorporated</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-
-            <DatePickerField
-              name="dateOfIncorporation"
-              label="Date of Incorporation/Registration *"
-            />
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="natureOfBusiness" className="flex items-center gap-1">
-                    Nature of Business *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Textarea
-                    id="natureOfBusiness"
-                    {...formMethods.register('natureOfBusiness')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Describe the main business activities</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <div>
-              <Label>Company Type *</Label>
-              <Select
-                value={watchedValues.companyType || ''}
-                onValueChange={(value) => formMethods.setValue('companyType', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose Company Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Sole Proprietor">Sole Proprietor</SelectItem>
-                  <SelectItem value="Unlimited Liability Company">Unlimited Liability Company</SelectItem>
-                  <SelectItem value="Limited Liability Company">Limited Liability Company</SelectItem>
-                  <SelectItem value="Public Limited Company">Public Limited Company</SelectItem>
-                  <SelectItem value="Joint Venture">Joint Venture</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {watchedValues.companyType === 'Other' && (
-              <div>
-                <Label htmlFor="companyTypeOther">Specify Other Company Type *</Label>
-                <Input
-                  id="companyTypeOther"
-                  {...formMethods.register('companyTypeOther')}
-                />
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Label htmlFor="email" className="flex items-center gap-1">
-                      Email Address *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      {...formMethods.register('email')}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Official company email address</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Label htmlFor="website" className="flex items-center gap-1">
-                      Website *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="website"
-                      {...formMethods.register('website')}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Company website URL</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Label htmlFor="taxId" className="flex items-center gap-1">
-                      Tax Identification Number *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="taxId"
-                      {...formMethods.register('taxId')}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Company tax identification number (required for NAICOM entities)</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Label htmlFor="telephone" className="flex items-center gap-1">
-                      Telephone Number *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="telephone"
-                      {...formMethods.register('telephone')}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Company contact telephone number</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-        </TooltipProvider>
-      )
+      component: <CompanyDetailsStep />,
+      isValid: !errors.companyName && !errors.incorporationNumber && !errors.registeredAddress
     },
     {
-      id: 'directors',
-      title: 'Director Info',
-      component: (
-        <TooltipProvider>
-          <div className="space-y-6">
-            {directorFields.map((field, index) => (
-              <Card key={field.id} className="p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">Director {index + 1}</h3>
-                  {directorFields.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => removeDirector(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label>First Name *</Label>
-                      <Input {...formMethods.register(`directors.${index}.firstName`)} />
-                    </div>
-                    <div>
-                      <Label>Middle Name</Label>
-                      <Input {...formMethods.register(`directors.${index}.middleName`)} />
-                    </div>
-                    <div>
-                      <Label>Last Name *</Label>
-                      <Input {...formMethods.register(`directors.${index}.lastName`)} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <DatePickerField
-                      name={`directors.${index}.dateOfBirth`}
-                      label="Date of Birth *"
-                    />
-                    <div>
-                      <Label>Place of Birth *</Label>
-                      <Input {...formMethods.register(`directors.${index}.placeOfBirth`)} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Nationality *</Label>
-                      <Input {...formMethods.register(`directors.${index}.nationality`)} />
-                    </div>
-                    <div>
-                      <Label>Country *</Label>
-                      <Input {...formMethods.register(`directors.${index}.country`)} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Occupation *</Label>
-                      <Input {...formMethods.register(`directors.${index}.occupation`)} />
-                    </div>
-                    <div>
-                      <Label>Email *</Label>
-                      <Input type="email" {...formMethods.register(`directors.${index}.email`)} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Phone Number *</Label>
-                      <Input {...formMethods.register(`directors.${index}.phoneNumber`)} />
-                    </div>
-                    <div>
-                      <Label>BVN *</Label>
-                      <Input {...formMethods.register(`directors.${index}.bvn`)} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Employer's Name</Label>
-                      <Input {...formMethods.register(`directors.${index}.employerName`)} />
-                    </div>
-                    <div>
-                      <Label>Employer's Phone</Label>
-                      <Input {...formMethods.register(`directors.${index}.employerPhone`)} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Residential Address *</Label>
-                    <Textarea {...formMethods.register(`directors.${index}.residentialAddress`)} />
-                  </div>
-
-                  <div>
-                    <Label>Tax ID Number</Label>
-                    <Input {...formMethods.register(`directors.${index}.taxIdNumber`)} />
-                  </div>
-
-                  <div>
-                    <Label>ID Type *</Label>
-                    <Select
-                      value={watchedValues.directors?.[index]?.idType || ''}
-                      onValueChange={(value) => formMethods.setValue(`directors.${index}.idType`, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose Identification Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="International Passport">International Passport</SelectItem>
-                        <SelectItem value="NIMC">NIMC</SelectItem>
-                        <SelectItem value="Driver's Licence">Driver's Licence</SelectItem>
-                        <SelectItem value="Voters Card">Voters Card</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Identification Number *</Label>
-                      <Input {...formMethods.register(`directors.${index}.identificationNumber`)} />
-                    </div>
-                    <div>
-                      <Label>Issuing Body *</Label>
-                      <Input {...formMethods.register(`directors.${index}.issuingBody`)} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <DatePickerField
-                      name={`directors.${index}.issuedDate`}
-                      label="Issued Date *"
-                    />
-                    <DatePickerField
-                      name={`directors.${index}.expiryDate`}
-                      label="Expiry Date"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Source of Income *</Label>
-                    <Select
-                      value={watchedValues.directors?.[index]?.sourceOfIncome || ''}
-                      onValueChange={(value) => formMethods.setValue(`directors.${index}.sourceOfIncome`, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose Income Source" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Salary or Business Income">Salary or Business Income</SelectItem>
-                        <SelectItem value="Investments or Dividends">Investments or Dividends</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {watchedValues.directors?.[index]?.sourceOfIncome === 'Other' && (
-                    <div>
-                      <Label>Specify Other Income Source *</Label>
-                      <Input {...formMethods.register(`directors.${index}.sourceOfIncomeOther`)} />
-                    </div>
-                  )}
-                </div>
-              </Card>
-            ))}
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => addDirector(defaultDirector)}
-              className="w-full"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Director
-            </Button>
-          </div>
-        </TooltipProvider>
-      )
+      id: 'director-info',
+      title: 'Director Information',
+      component: <DirectorsStep />,
+      isValid: !errors.directors
     },
     {
-      id: 'accounts',
+      id: 'account-details',
       title: 'Account Details',
-      component: (
-        <TooltipProvider>
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Local Account Details</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Label htmlFor="bankName" className="flex items-center gap-1">
-                          Bank Name *
-                          <Info className="h-3 w-3" />
-                        </Label>
-                        <Input
-                          id="bankName"
-                          {...formMethods.register('bankName')}
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Name of the bank where account is held</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Label htmlFor="accountNumber" className="flex items-center gap-1">
-                          Account Number *
-                          <Info className="h-3 w-3" />
-                        </Label>
-                        <Input
-                          id="accountNumber"
-                          {...formMethods.register('accountNumber')}
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Company bank account number</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="bankBranch">Bank Branch *</Label>
-                    <Input
-                      id="bankBranch"
-                      {...formMethods.register('bankBranch')}
-                    />
-                  </div>
-
-                  <DatePickerField
-                    name="accountOpeningDate"
-                    label="Account Opening Date *"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Foreign Account Details (Optional)</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="foreignBankName">Bank Name</Label>
-                    <Input
-                      id="foreignBankName"
-                      {...formMethods.register('foreignBankName')}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="foreignAccountNumber">Account Number</Label>
-                    <Input
-                      id="foreignAccountNumber"
-                      {...formMethods.register('foreignAccountNumber')}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="foreignBankBranch">Bank Branch</Label>
-                    <Input
-                      id="foreignBankBranch"
-                      {...formMethods.register('foreignBankBranch')}
-                    />
-                  </div>
-
-                  <DatePickerField
-                    name="foreignAccountOpeningDate"
-                    label="Account Opening Date"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </TooltipProvider>
-      )
+      component: <AccountDetailsStep />,
+      isValid: !errors.bankName && !errors.accountNumber
     },
     {
       id: 'uploads',
-      title: 'Uploads',
-      component: (
-        <div className="space-y-6">
-          <FileUpload
-            label="Upload Your CAC Certificate"
-            required
-            onFileSelect={(file) => {
-              formMethods.setValue('cacCertificate', file);
-              setUploadedFiles(prev => ({ ...prev, cacCertificate: file }));
-            }}
-            currentFile={watchedValues.cacCertificate as File}
-            accept=".jpg,.png,.pdf"
-            maxSize={3}
-          />
-          
-          <FileUpload
-            label="Upload Means of Identification"
-            required
-            onFileSelect={(file) => {
-              formMethods.setValue('meansOfIdentification', file);
-              setUploadedFiles(prev => ({ ...prev, meansOfIdentification: file }));
-            }}
-            currentFile={watchedValues.meansOfIdentification as File}
-            accept=".jpg,.png,.pdf"
-            maxSize={3}
-          />
-          
-          <FileUpload
-            label="Upload NAICOM License Certificate"
-            required
-            onFileSelect={(file) => {
-              formMethods.setValue('naicomLicense', file);
-              setUploadedFiles(prev => ({ ...prev, naicomLicense: file }));
-            }}
-            currentFile={watchedValues.naicomLicense as File}
-            accept=".jpg,.png,.pdf"
-            maxSize={3}
-          />
-        </div>
-      )
+      title: 'Document Upload',
+      component: <DocumentsStep />,
+      isValid: true
     },
     {
       id: 'privacy',
-      title: 'Data Privacy',
-      component: (
-        <div className="space-y-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Data Privacy</h3>
-            <div className="text-sm space-y-2">
-              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy || false}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
-            />
-            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'declaration',
-      title: 'Declaration & Signature',
-      component: (
-        <div className="space-y-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Declaration</h3>
-            <div className="text-sm space-y-2">
-              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="declarationTrue"
-                checked={watchedValues.declarationTrue || false}
-                onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
-              />
-              <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="declarationAdditionalInfo"
-                checked={watchedValues.declarationAdditionalInfo || false}
-                onCheckedChange={(checked) => formMethods.setValue('declarationAdditionalInfo', !!checked)}
-              />
-              <Label htmlFor="declarationAdditionalInfo">I agree to provide more info *</Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="declarationDocuments"
-                checked={watchedValues.declarationDocuments || false}
-                onCheckedChange={(checked) => formMethods.setValue('declarationDocuments', !!checked)}
-              />
-              <Label htmlFor="declarationDocuments">I agree on documents requested *</Label>
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="signature">Digital Signature *</Label>
-            <Input
-              id="signature"
-              {...formMethods.register('signature')}
-              placeholder="Type your full name as signature"
-            />
-          </div>
-          
-          <div>
-            <Label>Date</Label>
-            <Input value={new Date().toISOString().split('T')[0]} disabled />
-          </div>
-        </div>
-      )
+      title: 'Data Privacy & Declaration',
+      component: <DataPrivacyStep />,
+      isValid: watchedValues.agreeToDataPrivacy && watchedValues.signature
     }
   ];
 
@@ -972,11 +797,11 @@ const NaicomCorporateCDD: React.FC = () => {
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Shield className="h-8 w-8 text-primary" />
-            NAICOM Company CDD Form
+            <Building2 className="h-8 w-8 text-primary" />
+            NAICOM Corporate CDD Form
           </h1>
           <p className="text-gray-600 mt-2">
-            Customer Due Diligence form for NAICOM-regulated companies and their directors.
+            NAICOM Customer Due Diligence form for corporate entities and their directors.
           </p>
         </div>
 
@@ -984,76 +809,34 @@ const NaicomCorporateCDD: React.FC = () => {
           steps={steps}
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
-          submitButtonText="Review CDD Form"
+          submitButtonText="Submit CDD Form"
           formMethods={formMethods}
         />
-
-        {/* Summary Dialog */}
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Review Your NAICOM Corporate CDD Submission</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>Company Name:</strong> {watchedValues.companyName}</div>
-                <div><strong>Email:</strong> {watchedValues.email}</div>
-                <div><strong>Incorporation Number:</strong> {watchedValues.incorporationNumber}</div>
-                <div><strong>Directors:</strong> {watchedValues.directors?.length || 0}</div>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-blue-800">
-                  For enquiries about your NAICOM CDD submission, contact our compliance team.
-                </p>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowSummary(false)}>
-                Back to Edit
-              </Button>
-              <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit CDD Form'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
         {/* Success Dialog */}
         <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-center text-green-600">
-                NAICOM CDD Form Submitted Successfully!
-              </DialogTitle>
+              <DialogTitle className="text-center text-green-600">CDD Form Submitted Successfully!</DialogTitle>
             </DialogHeader>
             <div className="text-center py-4">
-              <div className="mb-4">
-                <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                  <CheckCircle2 className="h-6 w-6 text-green-600" />
-                </div>
-                <p className="text-gray-600 mb-4">
-                  Your NAICOM Corporate CDD form has been submitted successfully. 
-                  You will receive a confirmation email shortly.
+              <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
+              </div>
+              <p className="text-gray-600 mb-4">Your NAICOM Corporate CDD form has been submitted successfully.</p>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Reference Number:</strong> NAICOM-CDD-{new Date().getTime()}
                 </p>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm font-medium text-blue-800">
-                    For enquiries about your NAICOM CDD submission, contact our compliance team.
-                  </p>
-                </div>
+                <p className="text-sm text-blue-800 mt-2">
+                  For status updates and enquiries, contact:
+                  <br />
+                  Email: compliance@neminsurance.ng
+                  <br />
+                  Phone: +234-1-234-5678
+                </p>
               </div>
             </div>
-            <DialogFooter>
-              <Button onClick={() => setShowSuccess(false)} className="w-full">
-                Close
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
