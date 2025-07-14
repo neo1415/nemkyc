@@ -61,6 +61,10 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
     { name: 'Employers Liability', href: '/admin/employers-liability-claims' },
     { name: 'All Risk Claims', href: '/admin/all-risk-claims' },
     { name: 'Professional Indemnity', href: '/admin/professional-indemnity-claims' },
+    { name: 'Public Liability', href: '/admin/public-liability-claims' },
+    { name: 'Combined GPA Employers Liability', href: '/admin/combined-gpa-employers-liability-claims' },
+    { name: 'Group Personal Accident', href: '/admin/group-personal-accident-claims' },
+    { name: 'Goods In Transit', href: '/admin/goods-in-transit-claims' },
     { name: 'Rent Assurance', href: '/admin/rent-assurance-claims' },
     { name: 'Money Insurance', href: '/admin/money-insurance-claims' }
   ];
