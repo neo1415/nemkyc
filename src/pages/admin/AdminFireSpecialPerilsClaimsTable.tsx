@@ -144,7 +144,7 @@ const AdminFireSpecialPerilsClaimsTable: React.FC = () => {
       field: 'createdAt',
       headerName: 'Date Created',
       width: 120,
-      valueFormatter: (value) => formatDate(value)
+      valueFormatter: (params: any) => formatDate(params.value)
     },
     {
       field: 'policyNumber',
@@ -165,7 +165,7 @@ const AdminFireSpecialPerilsClaimsTable: React.FC = () => {
       field: 'dateOfOccurrence',
       headerName: 'Date of Occurrence',
       width: 150,
-      valueFormatter: (value) => formatDate(value)
+      valueFormatter: (params: any) => formatDate(params.value)
     },
     {
       field: 'causeOfFire',
@@ -176,14 +176,14 @@ const AdminFireSpecialPerilsClaimsTable: React.FC = () => {
       field: 'premisesContentsValue',
       headerName: 'Contents Value',
       width: 150,
-      valueFormatter: (value) => value ? `₦${value.toLocaleString()}` : ''
+      valueFormatter: (params: any) => params.value ? `₦${params.value.toLocaleString()}` : ''
     },
     {
       field: 'itemsLost',
       headerName: 'Items Lost',
       width: 120,
-      valueGetter: (value) => value?.length || 0,
-      renderCell: (params) => (
+      valueGetter: (params: any) => params.row.itemsLost?.length || 0,
+      renderCell: (params: any) => (
         <Chip 
           label={`${params.value} items`} 
           size="small" 
