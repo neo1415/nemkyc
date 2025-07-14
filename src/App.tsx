@@ -48,6 +48,10 @@ import AdminAgentsCDDTable from './pages/admin/AdminAgentsCDDTable';
 import AdminIndividualCDDTable from './pages/admin/AdminIndividualCDDTable';
 import AdminRentAssuranceClaimsTable from './pages/admin/AdminRentAssuranceClaimsTable';
 import AdminMoneyInsuranceClaimsTable from './pages/admin/AdminMoneyInsuranceClaimsTable';
+import AdminFireSpecialPerilsClaimsTable from './pages/admin/AdminFireSpecialPerilsClaimsTable';
+import AdminEmployersLiabilityClaimsTable from './pages/admin/AdminEmployersLiabilityClaimsTable';
+import AdminAllRiskClaimsTable from './pages/admin/AdminAllRiskClaimsTable';
+import AdminProfessionalIndemnityClaimsTable from './pages/admin/AdminProfessionalIndemnityClaimsTable';
 import EnhancedFormViewer from './pages/admin/EnhancedFormViewer';
 
 function App() {
