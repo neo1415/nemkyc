@@ -142,7 +142,7 @@ const AdminProfessionalIndemnityClaimsTable: React.FC = () => {
       field: 'createdAt',
       headerName: 'Date Created',
       width: 120,
-      valueFormatter: (value) => formatDate(value)
+      valueFormatter: (params: any) => formatDate(params.value)
     },
     {
       field: 'policyNumber',
@@ -163,13 +163,13 @@ const AdminProfessionalIndemnityClaimsTable: React.FC = () => {
       field: 'firstAwareDate',
       headerName: 'Date First Aware',
       width: 150,
-      valueFormatter: (value) => formatDate(value)
+      valueFormatter: (params: any) => formatDate(params.value)
     },
     {
       field: 'amountClaimed',
       headerName: 'Amount Claimed',
       width: 150,
-      valueFormatter: (value) => value ? `₦${value.toLocaleString()}` : ''
+      valueFormatter: (params: any) => params.value ? `₦${params.value.toLocaleString()}` : ''
     },
     {
       field: 'claimNature',
