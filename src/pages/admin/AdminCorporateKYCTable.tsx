@@ -66,7 +66,7 @@ const AdminCorporateKYCTable: React.FC = () => {
   // Fetch data from Firestore
   useEffect(() => {
     const q = query(
-      collection(db, 'corporate-kyc-forms'),
+      collection(db, 'corporate-kyc-form'),
       orderBy('timestamp', 'desc')
     );
 
@@ -105,7 +105,7 @@ const AdminCorporateKYCTable: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this Corporate KYC record?')) {
       try {
-        await deleteDoc(doc(db, 'corporate-kyc-forms', id));
+        await deleteDoc(doc(db, 'corporate-kyc-form', id));
         toast({ title: 'Corporate KYC record deleted successfully' });
       } catch (error) {
         console.error('Error deleting record:', error);
