@@ -9,10 +9,6 @@ import {
   IconButton,
   Chip,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
   TextField,
   MenuItem,
@@ -34,6 +30,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface KYCData {
   id: string;
@@ -60,8 +57,7 @@ const AdminIndividualKYCTable: React.FC = () => {
   });
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedRecord, setSelectedRecord] = useState<KYCData | null>(null);
-  const [showViewer, setShowViewer] = useState(false);
+  const navigate = useNavigate();
 
   // Fetch data from Firestore
   useEffect(() => {
@@ -96,9 +92,8 @@ const AdminIndividualKYCTable: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleView = (record: KYCData) => {
-    setSelectedRecord(record);
-    setShowViewer(true);
+  const handleView = (id: string) => {
+    navigate(`/admin/form-viewer/Individual-kyc-form/${id}`);
   };
 
   const handleDelete = async (id: string) => {
@@ -131,6 +126,46 @@ const AdminIndividualKYCTable: React.FC = () => {
   };
 
   const columns: GridColDef[] = [
+    {
+      field: 'actions',
+      type: 'actions',
+      headerName: 'Actions',
+      width: 150,
+      getActions: (params) => [
+        <GridActionsCellItem
+          key="view"
+          icon={
+            <Tooltip title="View Details">
+              <VisibilityIcon />
+            </Tooltip>
+          }
+          label="View"
+          onClick={() => handleView(params.id.toString())}
+        />,
+        <GridActionsCellItem
+          key="delete"
+          icon={
+            <Tooltip title="Delete">
+              <DeleteIcon />
+            </Tooltip>
+          }
+          label="Delete"
+          onClick={() => handleDelete(params.id.toString())}
+        />
+      ]
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 120,
+      renderCell: (params: any) => (
+        <Chip 
+          label={params.value || 'Processing'} 
+          color={getStatusColor(params.value)}
+          size="small" 
+        />
+      )
+    },
     {
       field: 'createdAt',
       headerName: 'Date Created',
@@ -181,46 +216,6 @@ const AdminIndividualKYCTable: React.FC = () => {
       field: 'nationality',
       headerName: 'Nationality',
       width: 100
-    },
-    {
-      field: 'status',
-      headerName: 'Status',
-      width: 120,
-      renderCell: (params: any) => (
-        <Chip 
-          label={params.value || 'Processing'} 
-          color={getStatusColor(params.value)}
-          size="small" 
-        />
-      )
-    },
-    {
-      field: 'actions',
-      type: 'actions',
-      headerName: 'Actions',
-      width: 100,
-      getActions: (params) => [
-        <GridActionsCellItem
-          key="view"
-          icon={
-            <Tooltip title="View Details">
-              <VisibilityIcon />
-            </Tooltip>
-          }
-          label="View"
-          onClick={() => handleView(params.row)}
-        />,
-        <GridActionsCellItem
-          key="delete"
-          icon={
-            <Tooltip title="Delete">
-              <DeleteIcon />
-            </Tooltip>
-          }
-          label="Delete"
-          onClick={() => handleDelete(params.id.toString())}
-        />
-      ]
     }
   ];
 
@@ -282,95 +277,6 @@ const AdminIndividualKYCTable: React.FC = () => {
           }}
         />
       </Box>
-
-      {/* Enhanced Form Viewer Dialog */}
-      <Dialog 
-        open={showViewer} 
-        onClose={() => setShowViewer(false)}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle>Individual KYC Details</DialogTitle>
-        <DialogContent>
-          {selectedRecord && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <strong>Name:</strong> {selectedRecord.firstName} {selectedRecord.middleName} {selectedRecord.lastName}
-                </div>
-                <div>
-                  <strong>Email:</strong> {selectedRecord.email}
-                </div>
-                <div>
-                  <strong>Mobile:</strong> {selectedRecord.mobileNumber}
-                </div>
-                <div>
-                  <strong>BVN:</strong> {selectedRecord.bvn}
-                </div>
-                <div>
-                  <strong>Occupation:</strong> {selectedRecord.occupation}
-                </div>
-                <div>
-                  <strong>City/State:</strong> {selectedRecord.city}, {selectedRecord.state}
-                </div>
-                <div>
-                  <strong>Nationality:</strong> {selectedRecord.nationality}
-                </div>
-                <div>
-                  <strong>Status:</strong> 
-                  <Chip 
-                    label={selectedRecord.status || 'Processing'} 
-                    color={getStatusColor(selectedRecord.status)}
-                    size="small" 
-                    className="ml-2"
-                  />
-                </div>
-              </div>
-              
-              <div className="mt-4">
-                <strong>Contact Address:</strong>
-                <p className="mt-1 text-gray-600">{selectedRecord.contactAddress}</p>
-              </div>
-              
-              <div className="mt-4">
-                <strong>Residential Address:</strong>
-                <p className="mt-1 text-gray-600">{selectedRecord.residentialAddress}</p>
-              </div>
-              
-              {selectedRecord.employersName && (
-                <div className="mt-4">
-                  <strong>Employer:</strong>
-                  <p className="mt-1 text-gray-600">
-                    {selectedRecord.employersName}
-                    {selectedRecord.employersTelephone && ` - ${selectedRecord.employersTelephone}`}
-                  </p>
-                  {selectedRecord.employersAddress && (
-                    <p className="text-gray-600">{selectedRecord.employersAddress}</p>
-                  )}
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
-                  <strong>Date of Birth:</strong> {formatDate(selectedRecord.dateOfBirth)}
-                </div>
-                <div>
-                  <strong>Gender:</strong> {selectedRecord.gender}
-                </div>
-                <div>
-                  <strong>ID Type:</strong> {selectedRecord.idType}
-                </div>
-                <div>
-                  <strong>ID Number:</strong> {selectedRecord.identificationNumber}
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowViewer(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
     </div>
   );
 };
