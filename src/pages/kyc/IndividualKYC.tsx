@@ -150,8 +150,8 @@ const IndividualKYC: React.FC = () => {
         status: 'processing',
         submittedAt: new Date().toISOString(),
         formType: 'individual-kyc',
-        userId: user?.uid,
-        userEmail: user?.email
+        userId: user?.uid || 'anonymous',
+        userEmail: user?.email || data.email
       };
       
       // Submit to Firestore
