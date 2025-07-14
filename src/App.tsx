@@ -52,6 +52,10 @@ import AdminFireSpecialPerilsClaimsTable from './pages/admin/AdminFireSpecialPer
 import AdminEmployersLiabilityClaimsTable from './pages/admin/AdminEmployersLiabilityClaimsTable';
 import AdminAllRiskClaimsTable from './pages/admin/AdminAllRiskClaimsTable';
 import AdminProfessionalIndemnityClaimsTable from './pages/admin/AdminProfessionalIndemnityClaimsTable';
+import AdminPublicLiabilityClaimsTable from './pages/admin/AdminPublicLiabilityClaimsTable';
+import AdminCombinedGPAEmployersLiabilityClaimsTable from './pages/admin/AdminCombinedGPAEmployersLiabilityClaimsTable';
+import AdminGroupPersonalAccidentClaimsTable from './pages/admin/AdminGroupPersonalAccidentClaimsTable';
+import AdminGoodsInTransitClaimsTable from './pages/admin/AdminGoodsInTransitClaimsTable';
 import AdminIndividualKYCTable from './pages/admin/AdminIndividualKYCTable';
 import AdminCorporateKYCTable from './pages/admin/AdminCorporateKYCTable';
 import EnhancedFormViewer from './pages/admin/EnhancedFormViewer';
@@ -175,6 +179,30 @@ function App() {
           <Route path="admin/professional-indemnity-claims" element={
             <ProtectedRoute>
               <AdminProfessionalIndemnityClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/public-liability-claims" element={
+            <ProtectedRoute>
+              <AdminPublicLiabilityClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/combined-gpa-employers-liability-claims" element={
+            <ProtectedRoute>
+              <AdminCombinedGPAEmployersLiabilityClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/group-personal-accident-claims" element={
+            <ProtectedRoute>
+              <AdminGroupPersonalAccidentClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/goods-in-transit-claims" element={
+            <ProtectedRoute>
+              <AdminGoodsInTransitClaimsTable />
             </ProtectedRoute>
           } />
 
