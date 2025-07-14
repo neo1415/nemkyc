@@ -144,7 +144,7 @@ const AdminEmployersLiabilityClaimsTable: React.FC = () => {
       field: 'createdAt',
       headerName: 'Date Created',
       width: 120,
-      valueFormatter: (value) => formatDate(value)
+      valueFormatter: (params: any) => formatDate(params.value)
     },
     {
       field: 'policyNumber',
@@ -165,7 +165,7 @@ const AdminEmployersLiabilityClaimsTable: React.FC = () => {
       field: 'accidentDate',
       headerName: 'Accident Date',
       width: 150,
-      valueFormatter: (value) => formatDate(value)
+      valueFormatter: (params: any) => formatDate(params.value)
     },
     {
       field: 'natureOfInjuries',
@@ -176,14 +176,14 @@ const AdminEmployersLiabilityClaimsTable: React.FC = () => {
       field: 'averageMonthlyEarnings',
       headerName: 'Monthly Earnings',
       width: 150,
-      valueFormatter: (value) => value ? `₦${value.toLocaleString()}` : ''
+      valueFormatter: (params: any) => params.value ? `₦${params.value.toLocaleString()}` : ''
     },
     {
       field: 'witnesses',
       headerName: 'Witnesses',
       width: 120,
-      valueGetter: (value) => value?.length || 0,
-      renderCell: (params) => (
+      valueGetter: (params: any) => params.row.witnesses?.length || 0,
+      renderCell: (params: any) => (
         <Chip 
           label={`${params.value} witnesses`} 
           size="small" 

@@ -143,7 +143,7 @@ const AdminAllRiskClaimsTable: React.FC = () => {
       field: 'createdAt',
       headerName: 'Date Created',
       width: 120,
-      valueFormatter: (value) => formatDate(value)
+      valueFormatter: (params: any) => formatDate(params.value)
     },
     {
       field: 'policyNumber',
@@ -164,20 +164,20 @@ const AdminAllRiskClaimsTable: React.FC = () => {
       field: 'dateOfOccurrence',
       headerName: 'Date of Occurrence',
       width: 150,
-      valueFormatter: (value) => formatDate(value)
+      valueFormatter: (params: any) => formatDate(params.value)
     },
     {
       field: 'estimateOfLoss',
       headerName: 'Estimated Loss',
       width: 150,
-      valueFormatter: (params) => params.value ? `₦${params.value.toLocaleString()}` : ''
+      valueFormatter: (params: any) => params.value ? `₦${params.value.toLocaleString()}` : ''
     },
     {
       field: 'propertyItems',
       headerName: 'Property Items',
       width: 120,
-      valueGetter: (params) => params.row.propertyItems?.length || 0,
-      renderCell: (params) => (
+      valueGetter: (params: any) => params.row.propertyItems?.length || 0,
+      renderCell: (params: any) => (
         <Chip 
           label={`${params.value} items`} 
           size="small" 
