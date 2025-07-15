@@ -181,7 +181,7 @@ const AdminPartnersCDDTable: React.FC = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <Typography variant="h4" component="h1" className="font-bold">
-          Partners CDD Records
+          Partners CDD 
         </Typography>
       </div>
 
