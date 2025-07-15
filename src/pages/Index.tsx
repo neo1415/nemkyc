@@ -102,7 +102,7 @@ const Index = () => {
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-gradient-to-br from-primary-light to-primary-dark text-white">
         {/* Subtle pattern overlay */}
-        <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0 opacity-100">
           <div className="absolute inset-0" style={{
 backgroundColor: '#000000',
 backgroundImage: `radial-gradient(circle at 25% 25%, #111111 1px, #000000 1px),
