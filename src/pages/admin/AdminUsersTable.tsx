@@ -60,25 +60,36 @@ const AdminUsersTable: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('AdminUsersTable useEffect - Current user:', user);
+    console.log('AdminUsersTable useEffect - hasRole(super admin):', hasRole('super admin'));
     if (!hasRole('super admin')) {
+      console.log('User does not have super admin role, redirecting to unauthorized');
       navigate('/unauthorized');
       return;
     }
+    console.log('User has super admin role, fetching users...');
     fetchUsers();
   }, [hasRole, navigate]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      console.log('Fetching users from userroles collection...');
       const usersQuery = query(
         collection(db, 'userroles'),
         orderBy('dateCreated', 'desc')
       );
       const snapshot = await getDocs(usersQuery);
-      const usersList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as UserRole[];
+      console.log('Fetched snapshot:', snapshot.size, 'documents');
+      const usersList = snapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('User document data:', data);
+        return {
+          id: doc.id,
+          ...data
+        };
+      }) as UserRole[];
+      console.log('Parsed users list:', usersList);
       setUsers(usersList);
     } catch (error) {
       console.error('Error fetching users:', error);
