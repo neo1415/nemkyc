@@ -60,7 +60,7 @@ const AdminUsersTable: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!hasRole('super-admin')) {
+    if (!hasRole('super admin')) {
       navigate('/unauthorized');
       return;
     }

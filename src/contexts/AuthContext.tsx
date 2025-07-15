@@ -47,20 +47,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          // Get user data from Firestore
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          // Get user data from Firestore userroles collection
+          const userDoc = await getDoc(doc(db, 'userroles', firebaseUser.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data();
             
-            // Auto-assign super-admin role to neowalker502@gmail.com
+            // Auto-assign super admin role to neowalker502@gmail.com
             let userRole = userData.role || 'default';
-            if (firebaseUser.email === 'neowalker502@gmail.com' && userRole !== 'super-admin') {
-              userRole = 'super-admin';
+            if (firebaseUser.email === 'neowalker502@gmail.com' && userRole !== 'super admin') {
+              userRole = 'super admin';
               // Update in Firestore
-              await setDoc(doc(db, 'users', firebaseUser.uid), {
+              await setDoc(doc(db, 'userroles', firebaseUser.uid), {
                 ...userData,
-                role: 'super-admin',
-                updatedAt: new Date()
+                role: 'super admin',
+                dateModified: new Date()
               }, { merge: true });
             }
             
@@ -71,8 +71,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               role: userRole,
               notificationPreference: userData.notificationPreference || 'email',
               phone: userData.phone,
-              createdAt: userData.createdAt?.toDate(),
-              updatedAt: userData.updatedAt?.toDate()
+              createdAt: userData.dateCreated?.toDate(),
+              updatedAt: userData.dateModified?.toDate()
+            });
+          } else {
+            // Create user record in userroles collection if it doesn't exist
+            await setDoc(doc(db, 'userroles', firebaseUser.uid), {
+              name: firebaseUser.displayName || '',
+              email: firebaseUser.email,
+              role: 'default',
+              dateCreated: new Date(),
+              dateModified: new Date()
+            });
+            
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email!,
+              name: firebaseUser.displayName || '',
+              role: 'default',
+              notificationPreference: 'email',
+              phone: null,
+              createdAt: new Date(),
+              updatedAt: new Date()
             });
           }
           setFirebaseUser(firebaseUser);
@@ -118,15 +138,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Create user document in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
+      // Create user document in Firestore userroles collection
+      await setDoc(doc(db, 'userroles', user.uid), {
         name,
         email: user.email,
         role: 'default',
-        notificationPreference,
-        phone: phone || null,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        dateCreated: new Date(),
+        dateModified: new Date()
       });
     } catch (error: any) {
       console.error('Sign up error:', error);
@@ -151,15 +169,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const user = result.user;
 
       // Check if user document exists, create if not
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userDoc = await getDoc(doc(db, 'userroles', user.uid));
       if (!userDoc.exists()) {
-        await setDoc(doc(db, 'users', user.uid), {
+        await setDoc(doc(db, 'userroles', user.uid), {
           name: user.displayName || '',
           email: user.email,
           role: 'default',
-          notificationPreference: 'email',
-          createdAt: new Date(),
-          updatedAt: new Date()
+          dateCreated: new Date(),
+          dateModified: new Date()
         });
       }
     } catch (error: any) {
@@ -182,7 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAdmin = (): boolean => {
-    return user?.role === 'admin' || user?.role === 'compliance' || user?.role === 'super-admin' || user?.role === 'claims';
+    return user?.role === 'admin' || user?.role === 'compliance' || user?.role === 'super admin' || user?.role === 'claims';
   };
 
   // Local storage functions for form drafts
