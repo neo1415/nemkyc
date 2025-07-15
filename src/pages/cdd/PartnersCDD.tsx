@@ -626,7 +626,7 @@ const PartnersCDD: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={formMethods.handleSubmit(onSubmit)}
+          onSubmit={onSubmit}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Partners CDD"
           formMethods={formMethods}
