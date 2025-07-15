@@ -61,6 +61,7 @@ import AdminGroupPersonalAccidentClaimsTable from './pages/admin/AdminGroupPerso
 import AdminGoodsInTransitClaimsTable from './pages/admin/AdminGoodsInTransitClaimsTable';
 import AdminIndividualKYCTable from './pages/admin/AdminIndividualKYCTable';
 import AdminCorporateKYCTable from './pages/admin/AdminCorporateKYCTable';
+import AdminCorporateCDDTable from './pages/admin/AdminCorporateCDDTable';
 import EnhancedFormViewer from './pages/admin/EnhancedFormViewer';
 
 function App() {
@@ -365,7 +366,7 @@ function App() {
           {/* Individual CDD Admin Tables */}
           <Route path="admin/cdd/corporate" element={
             <ProtectedRoute>
-              <AdminCDDTable formType="corporate" />
+              <AdminCorporateCDDTable formType="corporate" />
             </ProtectedRoute>
           } />
           
