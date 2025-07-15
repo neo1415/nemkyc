@@ -104,8 +104,10 @@ const Index = () => {
         {/* Subtle pattern overlay */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute inset-0" style={{
-              backgroundImage: `radial-gradient(circle at 25% 25%, #800020 1px, #4B0015 1px),
-                  radial-gradient(circle at 75% 75%, #B03060 1px, #4B0015 1px)`,
+backgroundColor: '#000000',
+backgroundImage: `radial-gradient(circle at 25% 25%, #111111 1px, #000000 1px),
+                  radial-gradient(circle at 75% 75%, #111111 1px, #000000 1px)`,
+backgroundRepeat: 'repeat',
             backgroundSize: '60px 60px'
           }}></div>
         </div>
