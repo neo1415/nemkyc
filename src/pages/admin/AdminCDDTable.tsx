@@ -39,8 +39,8 @@ const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
 
   const fetchCDDForms = async () => {
     try {
-      const cddCollections = formType ? 
-        [`${formType}-cdd`] : 
+      const cddCollections = formType ?
+        [`${formType}-cdd`] :
         [
           'corporate-kyc',
           'corporate-kyc-form',
@@ -53,29 +53,29 @@ const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
         ];
 
       const allForms: any[] = [];
-    for (const name of cddCollections) {
-      const snapshot = await getDocs(query(collection(db, name), orderBy('createdAt', 'desc')));
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        allForms.push({
-          id: doc.id,
-          collection: name,
-          type: name.replace('-cdd', '').replace(/-/g, ' '),
-          ...data,
-          createdAt: data.createdAt?.toDate?.() ?? null,
-          updatedAt: data.updatedAt?.toDate?.() ?? null,
+      for (const name of cddCollections) {
+        const snapshot = await getDocs(query(collection(db, name), orderBy('createdAt', 'desc')));
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          allForms.push({
+            id: doc.id,
+            collection: name,
+            type: name.replace('-cdd', '').replace(/-/g, ' '),
+            ...data,
+            createdAt: data.createdAt?.toDate?.() ?? null,
+            updatedAt: data.updatedAt?.toDate?.() ?? null,
+          });
         });
-      });
+      }
+      setCddForms(allForms);
+      generateColumns(allForms);
+    } catch (err) {
+      console.error('Error fetching CDD forms:', err);
+      toast({ title: 'Error', description: 'Failed to fetch CDD forms data', variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
-    setCddForms(allForms);
-    generateColumns(allForms);
-  } catch (err) {
-    console.error('Error fetching CDD forms:', err);
-    toast({ title: 'Error', description: 'Failed to fetch CDD forms data', variant: 'destructive' });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const generateColumns = (data: any[]) => {
     if (!data.length) return;
@@ -106,8 +106,8 @@ const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
         headerName: 'Status',
         width: 120,
         renderCell: (params: any) => (
-          <Chip 
-            label={params.value || 'completed'} 
+          <Chip
+            label={params.value || 'completed'}
             color={params.value === 'completed' ? 'success' : 'default'}
             size="small"
           />
@@ -117,8 +117,8 @@ const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
         field: 'createdAt',
         headerName: 'Submitted',
         width: 120,
-        valueFormatter: (params: any) => 
-          params.value instanceof Date ? params.value.toLocaleDateString() : 'N/A',
+        valueFormatter: (params: any) =>
+          params.value instanceof Date ? params.value.toLocaleDateString() : '—',
       },
       {
         field: 'actions',
@@ -141,9 +141,7 @@ const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
     setColumns(defaultColumns);
   };
 
-  if (!user || !isAdmin()) {
-    return null;
-  }
+  if (!user || !isAdmin()) return null;
 
   return (
     <ThemeProvider theme={theme}>
@@ -151,7 +149,7 @@ const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
         <Typography variant="h4" gutterBottom>
           {formType ? `${formType.replace('-', ' ')} CDD Management` : 'CDD Forms Management'}
         </Typography>
-        
+
         <Box sx={{ height: 600, width: '100%' }}>
           <DataGrid
             rows={cddForms}
