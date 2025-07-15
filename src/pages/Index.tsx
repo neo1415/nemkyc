@@ -223,7 +223,7 @@ const Index = () => {
       <div className="py-20 bg-primary text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-6">Platform Performance</h2>
+            <h2 className="text-4xl font-bold mb-6">What Makes Us Number One</h2>
             <p className="text-xl text-white/80 max-w-2xl mx-auto">
               Real-time metrics showcasing our commitment to reliability and excellence
             </p>
