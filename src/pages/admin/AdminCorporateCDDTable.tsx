@@ -60,7 +60,7 @@ const AdminCorporateCDDTable: React.FC = () => {
     console.log('🔍 AdminCorporateCDDTable: Starting to fetch data from cdd-forms collection');
     
     const q = query(
-      collection(db, 'cdd-forms'),
+      collection(db, 'corporate-kyc'),
       orderBy('timestamp', 'desc')
     );
 
@@ -119,13 +119,13 @@ const AdminCorporateCDDTable: React.FC = () => {
   console.log('🔍 AdminCorporateCDDTable: Total rows:', rows.length, 'Filtered rows:', filteredRows.length);
 
   const handleView = (id: string) => {
-    navigate(`/admin/form-viewer/cdd-forms/${id}`);
+    navigate(`/admin/form-viewer/corporate-kyc/${id}`);
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this Corporate CDD record?')) {
       try {
-        await deleteDoc(doc(db, 'cdd-forms', id));
+        await deleteDoc(doc(db, 'corporate-kyc', id));
         toast({ title: 'Corporate CDD record deleted successfully' });
       } catch (error) {
         console.error('Error deleting record:', error);
