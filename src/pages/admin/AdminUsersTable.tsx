@@ -75,10 +75,8 @@ const AdminUsersTable: React.FC = () => {
     try {
       setLoading(true);
       console.log('Fetching users from userroles collection...');
-      const usersQuery = query(
-        collection(db, 'userroles'),
-        orderBy('dateCreated', 'desc')
-      );
+      // Remove orderBy to fetch all documents, including those without dateCreated
+      const usersQuery = collection(db, 'userroles');
       const snapshot = await getDocs(usersQuery);
       console.log('Fetched snapshot:', snapshot.size, 'documents');
       const usersList = snapshot.docs.map(doc => {
