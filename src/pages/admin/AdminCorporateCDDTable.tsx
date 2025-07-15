@@ -30,23 +30,22 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
-interface PartnersCDDData {
+interface CorporateCDDData {
   id: string;
-  companyName?: string;
-  email?: string;
-  contactPersonNumber?: string;
-  status?: string;
-  createdAt?: any;
-  incorporationNumber?: string;
-  incorporationState?: string;
-  businessNature?: string;
-  vatRegistrationNumber?: string;
-  contactPersonName?: string;
+  companyName: string;
+  email: string;
+  phoneNumber: string;
+  status: string;
+  createdAt: any;
+  rcNumber: string;
+  incorporationState: string;
+  businessNature: string;
+  contactPersonName: string;
   [key: string]: any;
 }
 
-const AdminPartnersCDDTable: React.FC = () => {
-  const [rows, setRows] = useState<PartnersCDDData[]>([]);
+const AdminCorporateCDDTable: React.FC = () => {
+  const [rows, setRows] = useState<CorporateCDDData[]>([]);
   const [loading, setLoading] = useState(true);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
@@ -56,8 +55,9 @@ const AdminPartnersCDDTable: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const navigate = useNavigate();
 
+  // Fetch data from Firestore
   useEffect(() => {
-    console.log('🔍 AdminPartnersCDDTable: Starting to fetch data from cdd-forms collection');
+    console.log('🔍 AdminCorporateCDDTable: Starting to fetch data from cdd-forms collection');
     
     const q = query(
       collection(db, 'cdd-forms'),
@@ -65,74 +65,68 @@ const AdminPartnersCDDTable: React.FC = () => {
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      console.log('🔍 AdminPartnersCDDTable: Received snapshot with', querySnapshot.docs.length, 'documents');
+      console.log('🔍 AdminCorporateCDDTable: Received snapshot with', querySnapshot.docs.length, 'documents');
       
       const data = querySnapshot.docs.map(doc => {
         const docData = doc.data();
-        console.log('🔍 AdminPartnersCDDTable: Document data:', { id: doc.id, ...docData });
+        console.log('🔍 AdminCorporateCDDTable: Document data:', { id: doc.id, ...docData });
         return {
           id: doc.id,
-          ...docData,
-          createdAt: docData.createdAt ?? docData.timestamp ?? null
+          ...docData
         };
-      }) as PartnersCDDData[];
+      }) as CorporateCDDData[];
       
-      console.log('🔍 AdminPartnersCDDTable: Processed data array:', data);
+      console.log('🔍 AdminCorporateCDDTable: Processed data array:', data);
       setRows(data);
       setLoading(false);
     }, (error) => {
-      console.error('🔍 AdminPartnersCDDTable: Error fetching data:', error);
+      console.error('🔍 AdminCorporateCDDTable: Error fetching data:', error);
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
+  // Filter data based on search and status
   const filteredRows = rows.filter(row => {
-    // First filter by form type for partners CDD
-    const isPartnersCDD = row.formType === 'partners-cdd';
-    console.log('🔍 AdminPartnersCDDTable: Row formType:', row.formType, 'isPartnersCDD:', isPartnersCDD);
+    // First filter by form type for corporate CDD
+    const isCorporateCDD = row.formType === 'corporate-cdd';
+    console.log('🔍 AdminCorporateCDDTable: Row formType:', row.formType, 'isCorporateCDD:', isCorporateCDD);
     
-    if (!isPartnersCDD) return false;
+    if (!isCorporateCDD) return false;
     
-    const lowerSearch = searchText.toLowerCase();
-    const searchFields = [
-      row.companyName,
-      row.email,
-      row.contactPersonNumber,
-      row.incorporationNumber,
-      row.vatRegistrationNumber,
-      row.contactPersonName,
-      row.businessNature
-    ];
-    const matchesSearch =
-      searchText.trim() === '' ||
-      searchFields.filter(Boolean).some(field => field!.toLowerCase().includes(lowerSearch));
-
+    const matchesSearch = 
+      row.companyName?.toLowerCase().includes(searchText.toLowerCase()) ||
+      row.email?.toLowerCase().includes(searchText.toLowerCase()) ||
+      row.phoneNumber?.includes(searchText) ||
+      row.rcNumber?.includes(searchText) ||
+      row.contactPersonName?.toLowerCase().includes(searchText.toLowerCase()) ||
+      row.businessNature?.toLowerCase().includes(searchText.toLowerCase());
+    
     const matchesStatus = statusFilter === 'all' || row.status === statusFilter;
-
-    console.log('🔍 AdminPartnersCDDTable: Filter results for row:', { 
+    
+    console.log('🔍 AdminCorporateCDDTable: Filter results for row:', { 
       id: row.id, 
       formType: row.formType,
       matchesSearch, 
       matchesStatus, 
       finalResult: matchesSearch && matchesStatus 
     });
-
+    
     return matchesSearch && matchesStatus;
   });
 
-  console.log('🔍 AdminPartnersCDDTable: Total rows:', rows.length, 'Filtered rows:', filteredRows.length);
+  console.log('🔍 AdminCorporateCDDTable: Total rows:', rows.length, 'Filtered rows:', filteredRows.length);
 
   const handleView = (id: string) => {
     navigate(`/admin/form-viewer/cdd-forms/${id}`);
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this Partners CDD record?')) {
+    if (window.confirm('Are you sure you want to delete this Corporate CDD record?')) {
       try {
         await deleteDoc(doc(db, 'cdd-forms', id));
-        toast({ title: 'Partners CDD record deleted successfully' });
+        toast({ title: 'Corporate CDD record deleted successfully' });
       } catch (error) {
         console.error('Error deleting record:', error);
         toast({ title: 'Failed to delete record', variant: 'destructive' });
@@ -166,13 +160,21 @@ const AdminPartnersCDDTable: React.FC = () => {
       getActions: (params) => [
         <GridActionsCellItem
           key="view"
-          icon={<Tooltip title="View Details"><VisibilityIcon /></Tooltip>}
+          icon={
+            <Tooltip title="View Details">
+              <VisibilityIcon />
+            </Tooltip>
+          }
           label="View"
           onClick={() => handleView(params.id.toString())}
         />,
         <GridActionsCellItem
           key="delete"
-          icon={<Tooltip title="Delete"><DeleteIcon /></Tooltip>}
+          icon={
+            <Tooltip title="Delete">
+              <DeleteIcon />
+            </Tooltip>
+          }
           label="Delete"
           onClick={() => handleDelete(params.id.toString())}
         />
@@ -183,10 +185,10 @@ const AdminPartnersCDDTable: React.FC = () => {
       headerName: 'Status',
       width: 120,
       renderCell: (params: any) => (
-        <Chip
-          label={params.value || 'Processing'}
+        <Chip 
+          label={params.value || 'Processing'} 
           color={getStatusColor(params.value)}
-          size="small"
+          size="small" 
         />
       )
     },
@@ -196,24 +198,52 @@ const AdminPartnersCDDTable: React.FC = () => {
       width: 120,
       valueFormatter: (params: any) => formatDate(params.value)
     },
-    { field: 'companyName', headerName: 'Company Name', width: 200 },
-    { field: 'contactPersonName', headerName: 'Contact Person', width: 150 },
-    { field: 'email', headerName: 'Email', width: 200 },
-    { field: 'contactPersonNumber', headerName: 'Phone', width: 130 },
-    { field: 'incorporationNumber', headerName: 'RC Number', width: 130 },
-    { field: 'incorporationState', headerName: 'State', width: 100 },
-    { field: 'vatRegistrationNumber', headerName: 'VAT Number', width: 130 },
-    { field: 'businessNature', headerName: 'Business Nature', width: 150 }
+    {
+      field: 'companyName',
+      headerName: 'Company Name',
+      width: 200
+    },
+    {
+      field: 'contactPersonName',
+      headerName: 'Contact Person',
+      width: 150
+    },
+    {
+      field: 'email',
+      headerName: 'Email',
+      width: 200
+    },
+    {
+      field: 'phoneNumber',
+      headerName: 'Phone',
+      width: 130
+    },
+    {
+      field: 'rcNumber',
+      headerName: 'RC Number',
+      width: 130
+    },
+    {
+      field: 'incorporationState',
+      headerName: 'State',
+      width: 100
+    },
+    {
+      field: 'businessNature',
+      headerName: 'Business Nature',
+      width: 150
+    }
   ];
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <Typography variant="h4" component="h1" className="font-bold">
-          Partners CDD 
+          Corporate CDD Records
         </Typography>
       </div>
 
+      {/* Filters */}
       <Box className="flex gap-4 items-center">
         <TextField
           placeholder="Search by company name, contact person, email, phone, RC number..."
@@ -241,6 +271,7 @@ const AdminPartnersCDDTable: React.FC = () => {
         </TextField>
       </Box>
 
+      {/* Data Grid */}
       <Box className="h-[600px] w-full">
         <DataGrid
           rows={filteredRows}
@@ -266,4 +297,4 @@ const AdminPartnersCDDTable: React.FC = () => {
   );
 };
 
-export default AdminPartnersCDDTable;
+export default AdminCorporateCDDTable;
