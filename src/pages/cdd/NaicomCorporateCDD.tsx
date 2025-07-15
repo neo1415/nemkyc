@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useToast } from '@/hooks/use-toast';
@@ -221,7 +221,8 @@ const NaicomCorporateCDD: React.FC = () => {
   };
 
   const DatePickerField = ({ name, label, required = false }: { name: string; label: string; required?: boolean }) => {
-    const value = formMethods.watch(name);
+    const { watch, setValue, formState: { errors } } = useFormContext();
+    const value = watch(name);
     return (
       <TooltipProvider>
         <div className="space-y-2">
@@ -253,18 +254,22 @@ const NaicomCorporateCDD: React.FC = () => {
               <ReactCalendar
                 mode="single"
                 selected={value ? new Date(value) : undefined}
-                onSelect={(date) => formMethods.setValue(name, date)}
+                onSelect={(date) => setValue(name, date)}
                 initialFocus
               />
             </PopoverContent>
           </Popover>
-          {formMethods.formState.errors[name] && <p className="text-sm text-red-600">{String(formMethods.formState.errors[name]?.message || '')}</p>}
+          {errors[name] && <p className="text-sm text-red-600">{String(errors[name]?.message || '')}</p>}
         </div>
       </TooltipProvider>
     );
   };
 
-  const CompanyDetailsStep = () => (
+  const CompanyDetailsStep = () => {
+    const { register, formState: { errors }, watch, setValue } = useFormContext();
+    const watchedValues = watch();
+    
+    return (
     <FormSection title="Company Details" icon={<Building2 className="h-5 w-5" />}>
       <TooltipProvider>
         <div className="space-y-4">
@@ -275,8 +280,8 @@ const NaicomCorporateCDD: React.FC = () => {
                   Company Name *
                   <Info className="h-3 w-3" />
                 </Label>
-                <Input id="companyName" {...formMethods.register('companyName')} />
-                {formMethods.formState.errors.companyName && <p className="text-sm text-red-600">{String(formMethods.formState.errors.companyName.message || '')}</p>}
+                <Input id="companyName" {...register('companyName')} />
+                {errors.companyName && <p className="text-sm text-red-600">{String(errors.companyName.message || '')}</p>}
               </div>
             </TooltipTrigger>
             <TooltipContent><p>Enter the full registered company name</p></TooltipContent>
@@ -289,8 +294,8 @@ const NaicomCorporateCDD: React.FC = () => {
                   Registered Company Address *
                   <Info className="h-3 w-3" />
                 </Label>
-                <Textarea id="registeredAddress" {...formMethods.register('registeredAddress')} />
-                {formMethods.formState.errors.registeredAddress && <p className="text-sm text-red-600">{String(formMethods.formState.errors.registeredAddress.message || '')}</p>}
+                <Textarea id="registeredAddress" {...register('registeredAddress')} />
+                {errors.registeredAddress && <p className="text-sm text-red-600">{String(errors.registeredAddress.message || '')}</p>}
               </div>
             </TooltipTrigger>
             <TooltipContent><p>Enter the official registered address</p></TooltipContent>
@@ -304,8 +309,8 @@ const NaicomCorporateCDD: React.FC = () => {
                     Incorporation Number *
                     <Info className="h-3 w-3" />
                   </Label>
-                  <Input id="incorporationNumber" {...formMethods.register('incorporationNumber')} />
-                  {formMethods.formState.errors.incorporationNumber && <p className="text-sm text-red-600">{String(formMethods.formState.errors.incorporationNumber.message || '')}</p>}
+                  <Input id="incorporationNumber" {...register('incorporationNumber')} />
+                  {errors.incorporationNumber && <p className="text-sm text-red-600">{String(errors.incorporationNumber.message || '')}</p>}
                 </div>
               </TooltipTrigger>
               <TooltipContent><p>Official company incorporation number</p></TooltipContent>
@@ -318,8 +323,8 @@ const NaicomCorporateCDD: React.FC = () => {
                     Incorporation State *
                     <Info className="h-3 w-3" />
                   </Label>
-                  <Input id="incorporationState" {...formMethods.register('incorporationState')} />
-                  {formMethods.formState.errors.incorporationState && <p className="text-sm text-red-600">{String(formMethods.formState.errors.incorporationState.message || '')}</p>}
+                  <Input id="incorporationState" {...register('incorporationState')} />
+                  {errors.incorporationState && <p className="text-sm text-red-600">{String(errors.incorporationState.message || '')}</p>}
                 </div>
               </TooltipTrigger>
               <TooltipContent><p>State where the company was incorporated</p></TooltipContent>
@@ -335,8 +340,8 @@ const NaicomCorporateCDD: React.FC = () => {
                   Nature of Business *
                   <Info className="h-3 w-3" />
                 </Label>
-                <Textarea id="natureOfBusiness" {...formMethods.register('natureOfBusiness')} />
-                {formMethods.formState.errors.natureOfBusiness && <p className="text-sm text-red-600">{String(formMethods.formState.errors.natureOfBusiness.message || '')}</p>}
+                <Textarea id="natureOfBusiness" {...register('natureOfBusiness')} />
+                {errors.natureOfBusiness && <p className="text-sm text-red-600">{String(errors.natureOfBusiness.message || '')}</p>}
               </div>
             </TooltipTrigger>
             <TooltipContent><p>Describe the main business activities</p></TooltipContent>
@@ -346,7 +351,7 @@ const NaicomCorporateCDD: React.FC = () => {
             <Label>Company Type *</Label>
             <Select
               value={watchedValues.companyType || ''}
-              onValueChange={(value) => formMethods.setValue('companyType', value)}
+              onValueChange={(value) => setValue('companyType', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Choose Company Type" />
@@ -360,14 +365,14 @@ const NaicomCorporateCDD: React.FC = () => {
                 <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
             </Select>
-            {formMethods.formState.errors.companyType && <p className="text-sm text-red-600">{String(formMethods.formState.errors.companyType.message || '')}</p>}
+            {errors.companyType && <p className="text-sm text-red-600">{String(errors.companyType.message || '')}</p>}
           </div>
 
           {watchedValues.companyType === 'Other' && (
             <div>
               <Label htmlFor="companyTypeOther">Please specify *</Label>
-              <Input id="companyTypeOther" {...formMethods.register('companyTypeOther')} />
-              {formMethods.formState.errors.companyTypeOther && <p className="text-sm text-red-600">{String(formMethods.formState.errors.companyTypeOther.message || '')}</p>}
+              <Input id="companyTypeOther" {...register('companyTypeOther')} />
+              {errors.companyTypeOther && <p className="text-sm text-red-600">{String(errors.companyTypeOther.message || '')}</p>}
             </div>
           )}
 
@@ -379,8 +384,8 @@ const NaicomCorporateCDD: React.FC = () => {
                     Email Address *
                     <Info className="h-3 w-3" />
                   </Label>
-                  <Input id="email" type="email" {...formMethods.register('email')} />
-                  {formMethods.formState.errors.email && <p className="text-sm text-red-600">{String(formMethods.formState.errors.email.message || '')}</p>}
+                  <Input id="email" type="email" {...register('email')} />
+                  {errors.email && <p className="text-sm text-red-600">{String(errors.email.message || '')}</p>}
                 </div>
               </TooltipTrigger>
               <TooltipContent><p>Official company email address</p></TooltipContent>
@@ -393,8 +398,8 @@ const NaicomCorporateCDD: React.FC = () => {
                     Website *
                     <Info className="h-3 w-3" />
                   </Label>
-                  <Input id="website" {...formMethods.register('website')} />
-                  {formMethods.formState.errors.website && <p className="text-sm text-red-600">{String(formMethods.formState.errors.website.message || '')}</p>}
+                  <Input id="website" {...register('website')} />
+                  {errors.website && <p className="text-sm text-red-600">{String(errors.website.message || '')}</p>}
                 </div>
               </TooltipTrigger>
               <TooltipContent><p>Company website URL</p></TooltipContent>
@@ -409,8 +414,8 @@ const NaicomCorporateCDD: React.FC = () => {
                     Tax Identification Number *
                     <Info className="h-3 w-3" />
                   </Label>
-                  <Input id="taxId" {...formMethods.register('taxId')} />
-                  {formMethods.formState.errors.taxId && <p className="text-sm text-red-600">{String(formMethods.formState.errors.taxId.message || '')}</p>}
+                  <Input id="taxId" {...register('taxId')} />
+                  {errors.taxId && <p className="text-sm text-red-600">{String(errors.taxId.message || '')}</p>}
                 </div>
               </TooltipTrigger>
               <TooltipContent><p>Company tax identification number</p></TooltipContent>
@@ -423,8 +428,8 @@ const NaicomCorporateCDD: React.FC = () => {
                     Telephone Number *
                     <Info className="h-3 w-3" />
                   </Label>
-                  <Input id="telephone" {...formMethods.register('telephone')} />
-                  {formMethods.formState.errors.telephone && <p className="text-sm text-red-600">{String(formMethods.formState.errors.telephone.message || '')}</p>}
+                  <Input id="telephone" {...register('telephone')} />
+                  {errors.telephone && <p className="text-sm text-red-600">{String(errors.telephone.message || '')}</p>}
                 </div>
               </TooltipTrigger>
               <TooltipContent><p>Company contact telephone number</p></TooltipContent>
@@ -433,7 +438,8 @@ const NaicomCorporateCDD: React.FC = () => {
         </div>
       </TooltipProvider>
     </FormSection>
-  );
+    );
+  };
 
   const DirectorsStep = () => (
     <FormSection title="Directors Information" icon={<User className="h-5 w-5" />}>
