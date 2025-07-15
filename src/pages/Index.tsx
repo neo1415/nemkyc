@@ -1,38 +1,70 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import Navbar from '../components/layout/Navbar';
+import Footer from '../components/layout/Footer';
 import { 
   FileText, 
   Shield, 
   Users, 
-  ArrowRight, 
+  ArrowDown, 
   CheckCircle,
   Building2,
   UserCheck,
-  Car
+  Car,
+  Star,
+  Award,
+  TrendingUp,
+  HeartHandshake
 } from 'lucide-react';
+import nemLogo from '../Nem-insurance-Logo.jpg';
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  const scrollToForms = () => {
+    const formsSection = document.getElementById('forms-section');
+    if (formsSection) {
+      formsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleDashboard = () => {
+    if (isAdmin()) {
+      navigate('/admin');
+    } else {
+      navigate('/dashboard');
+    }
+  };
 
   const features = [
     {
       icon: Shield,
       title: 'Secure & Compliant',
-      description: 'Your data is protected with enterprise-grade security and compliance standards.'
+      description: 'Bank-level security with end-to-end encryption and regulatory compliance.',
+      gradient: 'from-blue-500 to-blue-600'
     },
     {
-      icon: FileText,
-      title: 'Comprehensive Forms',
-      description: 'Complete KYC, CDD, and claims processing with our streamlined digital forms.'
+      icon: TrendingUp,
+      title: 'Digital Excellence',
+      description: 'Streamlined processes that reduce processing time by up to 75%.',
+      gradient: 'from-green-500 to-green-600'
     },
     {
-      icon: Users,
-      title: 'Expert Support',
-      description: 'Our team of insurance professionals is here to guide you through every step.'
+      icon: HeartHandshake,
+      title: '24/7 Support',
+      description: 'Dedicated support team available round the clock for your assistance.',
+      gradient: 'from-purple-500 to-purple-600'
+    },
+    {
+      icon: Award,
+      title: 'Industry Leader',
+      description: 'Over 50 years of excellence in providing comprehensive insurance solutions.',
+      gradient: 'from-orange-500 to-orange-600'
     }
   ];
 
@@ -42,58 +74,77 @@ const Index = () => {
       title: 'KYC Forms',
       description: 'Know Your Customer verification for individuals and corporations',
       forms: ['Individual KYC', 'Corporate KYC'],
-      color: 'bg-blue-50 text-blue-700'
+      path: '/kyc',
+      gradient: 'from-blue-500 to-indigo-500'
     },
     {
       icon: Building2,
       title: 'CDD Forms',
       description: 'Customer Due Diligence for various business relationships',
-      forms: ['Corporate', 'Partners', 'Agents', 'Brokers', 'Individual'],
-      color: 'bg-green-50 text-green-700'
+      forms: ['Corporate CDD', 'Partners CDD', 'Agents CDD', 'Brokers CDD', 'Individual CDD'],
+      path: '/cdd',
+      gradient: 'from-green-500 to-emerald-500'
     },
     {
       icon: Car,
       title: 'Claims Forms',
       description: 'Submit insurance claims across multiple categories',
-      forms: ['Motor', 'Fire', 'Marine', 'Travel', 'Public Liability', 'Personal Accident', '+ 8 more'],
-      color: 'bg-red-50 text-red-700'
+      forms: ['Motor Claims', 'Fire & Special Perils', 'Professional Indemnity', 'Public Liability', 'Burglary Claims', 'Money Insurance', '+ 6 more'],
+      path: '/claims',
+      gradient: 'from-red-500 to-rose-500'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
+      <Navbar />
+      
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-red-900 to-red-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              NEM Insurance Services
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 text-red-100">
-              Streamlined insurance onboarding, KYC, and claims processing
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary-light to-gold-dark text-white">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-10 left-10 w-20 h-20 bg-gold rounded-full animate-bounce-slow"></div>
+          <div className="absolute top-20 right-20 w-16 h-16 bg-white rounded-full animate-pulse-glow"></div>
+          <div className="absolute bottom-20 left-20 w-24 h-24 bg-gold-light rounded-full animate-bounce-slow" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute bottom-10 right-10 w-12 h-12 bg-white rounded-full animate-pulse-glow" style={{ animationDelay: '0.5s' }}></div>
+        </div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
+          <div className="text-center space-y-8">
+            <div className="animate-fade-in-up">
+              <img 
+                src={nemLogo} 
+                alt="NEM Insurance" 
+                className="h-20 w-20 mx-auto mb-6 rounded-lg shadow-2xl bg-white p-2"
+              />
+              <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white to-gold-light bg-clip-text text-transparent">
+                NEM Insurance
+              </h1>
+              <p className="text-xl md:text-2xl mb-8 text-white/90 max-w-3xl mx-auto leading-relaxed">
+                Nigeria's premier digital insurance platform. Experience seamless onboarding, 
+                KYC verification, and claims processing with cutting-edge technology.
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-in-right">
               {user ? (
-                <Link to={user.role === 'admin' || user.role === 'compliance' || user.role === 'superAdmin' ? '/admin/dashboard' : '/dashboard'}>
-                  <Button size="lg" variant="secondary" className="text-red-900">
-                    Go to Dashboard
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
+                <Button 
+                  onClick={handleDashboard}
+                  size="lg" 
+                  className="bg-white text-primary hover:bg-gold hover:text-white transition-all duration-300 shadow-lg hover:shadow-xl px-8 py-3"
+                >
+                  Go to Dashboard
+                  <ArrowDown className="ml-2 h-5 w-5" />
+                </Button>
               ) : (
-                <>
-                  <Link to="/auth/signup">
-                    <Button size="lg" variant="secondary" className="text-red-900">
-                      Get Started
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                  </Link>
-                  <Link to="/auth/signin">
-                    <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-red-900">
-                      Sign In
-                    </Button>
-                  </Link>
-                </>
+                <Button 
+                  onClick={scrollToForms}
+                  size="lg" 
+                  className="bg-white text-primary hover:bg-gold hover:text-white transition-all duration-300 shadow-lg hover:shadow-xl px-8 py-3"
+                >
+                  Explore Our Services
+                  <ArrowDown className="ml-2 h-5 w-5 animate-bounce-slow" />
+                </Button>
               )}
             </div>
           </div>
@@ -101,25 +152,31 @@ const Index = () => {
       </div>
 
       {/* Features Section */}
-      <div className="py-16 bg-white">
+      <div className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-16 animate-fade-in">
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">
               Why Choose NEM Insurance?
             </h2>
-            <p className="text-xl text-gray-600">
-              Experience the future of insurance services with our digital-first approach
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Experience the future of insurance services with our award-winning digital-first approach
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
-              <div key={index} className="text-center">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <feature.icon className="h-8 w-8 text-red-900" />
+              <div 
+                key={index} 
+                className="text-center group hover:transform hover:scale-105 transition-all duration-300 animate-fade-in-up"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <div className={`w-20 h-20 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
+                  <feature.icon className="h-10 w-10 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3 group-hover:text-primary transition-colors duration-300">
+                  {feature.title}
+                </h3>
+                <p className="text-gray-600 leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -127,45 +184,51 @@ const Index = () => {
       </div>
 
       {/* Form Categories Section */}
-      <div className="py-16 bg-gray-50">
+      <div id="forms-section" className="py-20 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Available Services
+          <div className="text-center mb-16 animate-fade-in">
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">
+              Our Digital Services
             </h2>
-            <p className="text-xl text-gray-600">
-              Complete your insurance documentation with our comprehensive form library
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Access our comprehensive suite of digital forms and services designed to streamline your insurance journey
             </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {formCategories.map((category, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${category.color}`}>
-                    <category.icon className="h-6 w-6" />
+              <Card 
+                key={index} 
+                className="group hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 bg-white border-0 shadow-lg animate-fade-in-up overflow-hidden"
+                style={{ animationDelay: `${index * 0.2}s` }}
+              >
+                <div className={`h-2 bg-gradient-to-r ${category.gradient}`}></div>
+                <CardHeader className="pb-4">
+                  <div className={`w-16 h-16 bg-gradient-to-r ${category.gradient} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                    <category.icon className="h-8 w-8 text-white" />
                   </div>
-                  <CardTitle className="text-xl font-semibold">{category.title}</CardTitle>
-                  <CardDescription>{category.description}</CardDescription>
+                  <CardTitle className="text-2xl font-bold text-gray-900 group-hover:text-primary transition-colors duration-300">
+                    {category.title}
+                  </CardTitle>
+                  <CardDescription className="text-gray-600 text-base">
+                    {category.description}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
+                  <div className="space-y-3 mb-6">
                     {category.forms.map((form, formIndex) => (
-                      <div key={formIndex} className="flex items-center space-x-2">
-                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                        <span className="text-sm text-gray-600">{form}</span>
+                      <div key={formIndex} className="flex items-center space-x-3">
+                        <div className="w-2 h-2 bg-gold rounded-full flex-shrink-0"></div>
+                        <span className="text-sm text-gray-700 font-medium">{form}</span>
                       </div>
                     ))}
                   </div>
-                  {!user && (
-                    <div className="mt-4 pt-4 border-t">
-                      <Link to="/auth/signup">
-                        <Button variant="outline" className="w-full">
-                          Sign up to access
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
+                  
+                  <Link to={category.path}>
+                    <Button className={`w-full bg-gradient-to-r ${category.gradient} hover:opacity-90 transition-all duration-300 shadow-lg hover:shadow-xl text-white border-0`}>
+                      Access {category.title}
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
             ))}
@@ -173,25 +236,38 @@ const Index = () => {
         </div>
       </div>
 
-      {/* CTA Section */}
-      <div className="bg-gradient-to-r from-yellow-600 to-yellow-500 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Ready to Get Started?
-          </h2>
-          <p className="text-xl text-yellow-100 mb-8">
-            Join thousands of satisfied customers who trust NEM Insurance
-          </p>
-          {!user && (
-            <Link to="/auth/signup">
-              <Button size="lg" variant="secondary" className="bg-white text-yellow-600 hover:bg-gray-100">
-                Create Your Account
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-          )}
+      {/* Statistics Section */}
+      <div className="py-20 bg-primary text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold mb-6">Trusted by Thousands</h2>
+            <p className="text-xl text-white/80 max-w-2xl mx-auto">
+              Join the growing community of satisfied customers who trust NEM Insurance
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
+            <div className="animate-fade-in-up">
+              <div className="text-4xl font-bold text-gold mb-2">50+</div>
+              <div className="text-white/80">Years of Excellence</div>
+            </div>
+            <div className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+              <div className="text-4xl font-bold text-gold mb-2">100K+</div>
+              <div className="text-white/80">Happy Customers</div>
+            </div>
+            <div className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+              <div className="text-4xl font-bold text-gold mb-2">99.9%</div>
+              <div className="text-white/80">Uptime Guarantee</div>
+            </div>
+            <div className="animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+              <div className="text-4xl font-bold text-gold mb-2">24/7</div>
+              <div className="text-white/80">Customer Support</div>
+            </div>
+          </div>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 };

@@ -27,7 +27,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             </Button>
           )}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-red-900 to-yellow-600 rounded"></div>
+            <img 
+              src="/src/Nem-insurance-Logo.jpg" 
+              alt="NEM Insurance" 
+              className="w-8 h-8 object-contain rounded"
+            />
             <span className="text-xl font-bold text-gray-900">NEM Insurance</span>
           </Link>
         </div>
