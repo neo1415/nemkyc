@@ -48,6 +48,9 @@ import AdminAgentsCDDTable from './pages/admin/AdminAgentsCDDTable';
 import AdminIndividualCDDTable from './pages/admin/AdminIndividualCDDTable';
 import AdminRentAssuranceClaimsTable from './pages/admin/AdminRentAssuranceClaimsTable';
 import AdminMoneyInsuranceClaimsTable from './pages/admin/AdminMoneyInsuranceClaimsTable';
+import AdminBurglaryClaimsTable from './pages/admin/AdminBurglaryClaimsTable';
+import AdminContractorsPlantMachineryClaimsTable from './pages/admin/AdminContractorsPlantMachineryClaimsTable';
+import AdminFidelityGuaranteeClaimsTable from './pages/admin/AdminFidelityGuaranteeClaimsTable';
 import AdminFireSpecialPerilsClaimsTable from './pages/admin/AdminFireSpecialPerilsClaimsTable';
 import AdminEmployersLiabilityClaimsTable from './pages/admin/AdminEmployersLiabilityClaimsTable';
 import AdminAllRiskClaimsTable from './pages/admin/AdminAllRiskClaimsTable';
@@ -155,6 +158,24 @@ function App() {
           <Route path="admin/money-insurance-claims" element={
             <ProtectedRoute>
               <AdminMoneyInsuranceClaimsTable />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/burglary-claims" element={
+            <ProtectedRoute>
+              <AdminBurglaryClaimsTable />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/contractors-plant-machinery-claims" element={
+            <ProtectedRoute>
+              <AdminContractorsPlantMachineryClaimsTable />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/fidelity-guarantee-claims" element={
+            <ProtectedRoute>
+              <AdminFidelityGuaranteeClaimsTable />
             </ProtectedRoute>
           } />
 
