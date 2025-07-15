@@ -5,7 +5,7 @@ const AdminNaicomPartnersCDDTable: React.FC = () => {
   return (
     <AdminUnifiedTable 
       collectionName="naicom-partners-cdd"
-      title="NAICOM Partners CDD Management"
+      title="NAICOM Partners CDD"
       isClaim={false}
     />
   );
