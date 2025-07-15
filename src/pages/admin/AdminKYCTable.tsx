@@ -104,7 +104,7 @@ const AdminKYCTable: React.FC<AdminKYCTableProps> = ({ formType }) => {
     },
     {
       field: 'actions',
-      headerName: 'Actions',
+      headerName: 'Achoooo',
       width: 150,
       renderCell: (params: any) => (
         <Box sx={{ display: 'flex', gap: 1 }}>
