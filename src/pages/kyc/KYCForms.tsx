@@ -3,7 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { User, Building2, FileText } from 'lucide-react';
+import { User, Building2, FileText, AlertCircle } from 'lucide-react';
 
 const KYCForms: React.FC = () => {
   const kycTypes = [
@@ -43,6 +43,16 @@ const KYCForms: React.FC = () => {
           <p className="text-lg text-gray-600">
             Complete your Know Your Customer verification to access our insurance services
           </p>
+          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start space-x-2">
+              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-amber-800">
+                <p className="font-medium">Important Note:</p>
+                <p>All KYC forms must be completed accurately and all required documents must be uploaded. 
+                False or incomplete information may result in rejection of your application.</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -3,7 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Car, Shield, Users, Building, ArrowRight, UserCheck, Home, DollarSign, FileText, AlertTriangle, Flame, Truck, Wrench } from 'lucide-react';
+import { Car, Shield, Users, Building, ArrowRight, UserCheck, Home, DollarSign, FileText, AlertTriangle, Flame, Truck, Wrench, AlertCircle } from 'lucide-react';
 
 const ClaimsForms: React.FC = () => {
   const claimForms = [
@@ -90,6 +90,20 @@ const ClaimsForms: React.FC = () => {
       icon: <Wrench className="h-8 w-8 text-red-600" />,
       path: '/claims/contractors-plant-machinery',
       features: ['Equipment damage', 'Machinery theft', 'Construction risks']
+    },
+    {
+      title: 'All Risk Insurance Claim',
+      description: 'Comprehensive all-risk insurance coverage claims',
+      icon: <Shield className="h-8 w-8 text-red-600" />,
+      path: '/claims/all-risk',
+      features: ['Comprehensive coverage', 'Property protection', 'Multiple perils']
+    },
+    {
+      title: 'Fidelity Guarantee Claim',
+      description: 'Claims for employee dishonesty and fidelity coverage',
+      icon: <FileText className="h-8 w-8 text-red-600" />,
+      path: '/claims/fidelity-guarantee',
+      features: ['Employee dishonesty', 'Fraud protection', 'Financial loss coverage']
     }
   ];
 
@@ -101,6 +115,16 @@ const ClaimsForms: React.FC = () => {
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Submit your insurance claims quickly and securely. Choose the appropriate form type below to get started.
           </p>
+          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start space-x-2">
+              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-amber-800">
+                <p className="font-medium">Important Note:</p>
+                <p>All claims forms must be completed accurately and all required documents must be uploaded. 
+                False or incomplete information may result in rejection of your application.</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
