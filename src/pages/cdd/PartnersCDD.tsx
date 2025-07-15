@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useAuth } from '../../contexts/AuthContext';
 import { partnersCDDSchema } from '../../utils/validation';
@@ -100,13 +100,17 @@ const PartnersCDD: React.FC = () => {
     }
   };
 
-  const CompanyInfoStep = () => (
+  const CompanyInfoStep = () => {
+    const { register, formState: { errors }, watch, setValue } = useFormContext();
+    const watchedValues = watch();
+    
+    return (
     <FormSection title="Company Information" icon={<Building2 className="h-5 w-5" />}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="companyName">Company Name *</Label>
-          <Input {...formMethods.register('companyName')} />
-          {formMethods.formState.errors.companyName && <p className="text-sm text-red-600">{formMethods.formState.errors.companyName.message}</p>}
+          <Input {...register('companyName')} />
+          {errors.companyName && <p className="text-sm text-red-600">{String(errors.companyName.message || '')}</p>}
         </div>
         
         <div>
@@ -204,7 +208,8 @@ const PartnersCDD: React.FC = () => {
         </div>
       </div>
     </FormSection>
-  );
+    );
+  };
 
   const DirectorsStep = () => (
     <FormSection title="Directors Information" icon={<Users className="h-5 w-5" />}>
