@@ -104,7 +104,7 @@ const Index = () => {
         {/* Subtle pattern overlay */}
         <div className="absolute inset-0 opacity-100">
           <div className="absolute inset-0" style={{
-      backgroundColor: '#800020' // classic solid burgundy
+      backgroundColor: '#800020', // classic solid burgundy
             backgroundSize: '60px 60px'
           }}></div>
         </div>
