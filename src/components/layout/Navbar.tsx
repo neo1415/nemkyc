@@ -8,6 +8,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from '../ui/navigation-menu';
 import { 
   Menu, 
   X, 
@@ -87,84 +95,103 @@ const Navbar: React.FC = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
-            {/* KYC Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="group">
-                  <Link 
-                    to="/kyc" 
-                    className="flex items-center space-x-1 px-3 py-2 text-gray-700 hover:text-primary transition-colors"
-                  >
-                    <FileText className="h-4 w-4" />
-                    <span>KYC</span>
-                    <ChevronDown className="h-4 w-4 group-hover:rotate-180 transition-transform" />
-                  </Link>
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white z-50 shadow-lg border">
-                {kycForms.map((form) => (
-                  <DropdownMenuItem key={form.path} asChild>
-                    <Link to={form.path} className="flex items-center space-x-2">
-                      <form.icon className="h-4 w-4" />
-                      <span>{form.name}</span>
+          <div className="hidden md:flex items-center">
+            <NavigationMenu>
+              <NavigationMenuList className="space-x-2">
+                {/* KYC Navigation */}
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="group">
+                    <Link 
+                      to="/kyc" 
+                      className="flex items-center space-x-1 px-3 py-2 text-gray-700 hover:text-primary transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>KYC</span>
                     </Link>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <div className="w-64 p-3 bg-white">
+                      <div className="grid gap-1">
+                        {kycForms.map((form) => (
+                          <NavigationMenuLink key={form.path} asChild>
+                            <Link 
+                              to={form.path} 
+                              className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 transition-colors"
+                            >
+                              <form.icon className="h-4 w-4" />
+                              <span>{form.name}</span>
+                            </Link>
+                          </NavigationMenuLink>
+                        ))}
+                      </div>
+                    </div>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
 
-            {/* CDD Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="group">
-                  <Link 
-                    to="/cdd" 
-                    className="flex items-center space-x-1 px-3 py-2 text-gray-700 hover:text-primary transition-colors"
-                  >
-                    <Building2 className="h-4 w-4" />
-                    <span>CDD</span>
-                    <ChevronDown className="h-4 w-4 group-hover:rotate-180 transition-transform" />
-                  </Link>
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white z-50 shadow-lg border">
-                {cddForms.map((form) => (
-                  <DropdownMenuItem key={form.path} asChild>
-                    <Link to={form.path} className="flex items-center space-x-2">
-                      <form.icon className="h-4 w-4" />
-                      <span>{form.name}</span>
+                {/* CDD Navigation */}
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="group">
+                    <Link 
+                      to="/cdd" 
+                      className="flex items-center space-x-1 px-3 py-2 text-gray-700 hover:text-primary transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Building2 className="h-4 w-4" />
+                      <span>CDD</span>
                     </Link>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <div className="w-64 p-3 bg-white">
+                      <div className="grid gap-1">
+                        {cddForms.map((form) => (
+                          <NavigationMenuLink key={form.path} asChild>
+                            <Link 
+                              to={form.path} 
+                              className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 transition-colors"
+                            >
+                              <form.icon className="h-4 w-4" />
+                              <span>{form.name}</span>
+                            </Link>
+                          </NavigationMenuLink>
+                        ))}
+                      </div>
+                    </div>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
 
-            {/* Claims Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="group">
-                  <Link 
-                    to="/claims" 
-                    className="flex items-center space-x-1 px-3 py-2 text-gray-700 hover:text-primary transition-colors"
-                  >
-                    <Car className="h-4 w-4" />
-                    <span>Claims</span>
-                    <ChevronDown className="h-4 w-4 group-hover:rotate-180 transition-transform" />
-                  </Link>
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white z-50 shadow-lg border max-h-96 overflow-y-auto">
-                {claimsForms.map((form) => (
-                  <DropdownMenuItem key={form.path} asChild>
-                    <Link to={form.path} className="flex items-center space-x-2">
-                      <form.icon className="h-4 w-4" />
-                      <span>{form.name}</span>
+                {/* Claims Navigation */}
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="group">
+                    <Link 
+                      to="/claims" 
+                      className="flex items-center space-x-1 px-3 py-2 text-gray-700 hover:text-primary transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Car className="h-4 w-4" />
+                      <span>Claims</span>
                     </Link>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <div className="w-64 p-3 bg-white max-h-96 overflow-y-auto">
+                      <div className="grid gap-1">
+                        {claimsForms.map((form) => (
+                          <NavigationMenuLink key={form.path} asChild>
+                            <Link 
+                              to={form.path} 
+                              className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 transition-colors"
+                            >
+                              <form.icon className="h-4 w-4" />
+                              <span>{form.name}</span>
+                            </Link>
+                          </NavigationMenuLink>
+                        ))}
+                      </div>
+                    </div>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
           </div>
 
           {/* User Actions */}

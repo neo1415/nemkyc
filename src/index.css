@@ -28,8 +28,8 @@ All colors MUST be HSL.
     --gold-light: 45 100% 60%;
     --gold-dark: 45 100% 40%;
 
-    /* Very dark burgundy for footer */
-    --footer-dark: 350 70% 8%;
+    /* Very dark burgundy for footer - almost black */
+    --footer-dark: 350 90% 3%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
