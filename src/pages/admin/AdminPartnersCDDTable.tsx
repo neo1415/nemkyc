@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   DataGrid,
@@ -33,16 +32,16 @@ import { useNavigate } from 'react-router-dom';
 
 interface PartnersCDDData {
   id: string;
-  companyName: string;
-  email: string;
-  contactPersonNumber: string;
-  status: string;
-  createdAt: any;
-  incorporationNumber: string;
-  incorporationState: string;
-  businessNature: string;
-  vatRegistrationNumber: string;
-  contactPersonName: string;
+  companyName?: string;
+  email?: string;
+  contactPersonNumber?: string;
+  status?: string;
+  createdAt?: any;
+  incorporationNumber?: string;
+  incorporationState?: string;
+  businessNature?: string;
+  vatRegistrationNumber?: string;
+  contactPersonName?: string;
   [key: string]: any;
 }
 
@@ -57,7 +56,6 @@ const AdminPartnersCDDTable: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const navigate = useNavigate();
 
-  // Fetch data from Firestore
   useEffect(() => {
     const q = query(
       collection(db, 'partners-kyc'),
@@ -67,7 +65,8 @@ const AdminPartnersCDDTable: React.FC = () => {
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const data = querySnapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
+        createdAt: doc.data().createdAt ?? doc.data().timestamp ?? null
       })) as PartnersCDDData[];
       setRows(data);
       setLoading(false);
@@ -76,19 +75,23 @@ const AdminPartnersCDDTable: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Filter data based on search and status
   const filteredRows = rows.filter(row => {
-    const matchesSearch = 
-      row.companyName?.toLowerCase().includes(searchText.toLowerCase()) ||
-      row.email?.toLowerCase().includes(searchText.toLowerCase()) ||
-      row.contactPersonNumber?.includes(searchText) ||
-      row.incorporationNumber?.includes(searchText) ||
-      row.vatRegistrationNumber?.includes(searchText) ||
-      row.contactPersonName?.toLowerCase().includes(searchText.toLowerCase()) ||
-      row.businessNature?.toLowerCase().includes(searchText.toLowerCase());
-    
+    const lowerSearch = searchText.toLowerCase();
+    const searchFields = [
+      row.companyName,
+      row.email,
+      row.contactPersonNumber,
+      row.incorporationNumber,
+      row.vatRegistrationNumber,
+      row.contactPersonName,
+      row.businessNature
+    ];
+    const matchesSearch =
+      searchText.trim() === '' ||
+      searchFields.filter(Boolean).some(field => field!.toLowerCase().includes(lowerSearch));
+
     const matchesStatus = statusFilter === 'all' || row.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -134,21 +137,13 @@ const AdminPartnersCDDTable: React.FC = () => {
       getActions: (params) => [
         <GridActionsCellItem
           key="view"
-          icon={
-            <Tooltip title="View Details">
-              <VisibilityIcon />
-            </Tooltip>
-          }
+          icon={<Tooltip title="View Details"><VisibilityIcon /></Tooltip>}
           label="View"
           onClick={() => handleView(params.id.toString())}
         />,
         <GridActionsCellItem
           key="delete"
-          icon={
-            <Tooltip title="Delete">
-              <DeleteIcon />
-            </Tooltip>
-          }
+          icon={<Tooltip title="Delete"><DeleteIcon /></Tooltip>}
           label="Delete"
           onClick={() => handleDelete(params.id.toString())}
         />
@@ -159,10 +154,10 @@ const AdminPartnersCDDTable: React.FC = () => {
       headerName: 'Status',
       width: 120,
       renderCell: (params: any) => (
-        <Chip 
-          label={params.value || 'Processing'} 
+        <Chip
+          label={params.value || 'Processing'}
           color={getStatusColor(params.value)}
-          size="small" 
+          size="small"
         />
       )
     },
@@ -172,46 +167,14 @@ const AdminPartnersCDDTable: React.FC = () => {
       width: 120,
       valueFormatter: (params: any) => formatDate(params.value)
     },
-    {
-      field: 'companyName',
-      headerName: 'Company Name',
-      width: 200
-    },
-    {
-      field: 'contactPersonName',
-      headerName: 'Contact Person',
-      width: 150
-    },
-    {
-      field: 'email',
-      headerName: 'Email',
-      width: 200
-    },
-    {
-      field: 'contactPersonNumber',
-      headerName: 'Phone',
-      width: 130
-    },
-    {
-      field: 'incorporationNumber',
-      headerName: 'RC Number',
-      width: 130
-    },
-    {
-      field: 'incorporationState',
-      headerName: 'State',
-      width: 100
-    },
-    {
-      field: 'vatRegistrationNumber',
-      headerName: 'VAT Number',
-      width: 130
-    },
-    {
-      field: 'businessNature',
-      headerName: 'Business Nature',
-      width: 150
-    }
+    { field: 'companyName', headerName: 'Company Name', width: 200 },
+    { field: 'contactPersonName', headerName: 'Contact Person', width: 150 },
+    { field: 'email', headerName: 'Email', width: 200 },
+    { field: 'contactPersonNumber', headerName: 'Phone', width: 130 },
+    { field: 'incorporationNumber', headerName: 'RC Number', width: 130 },
+    { field: 'incorporationState', headerName: 'State', width: 100 },
+    { field: 'vatRegistrationNumber', headerName: 'VAT Number', width: 130 },
+    { field: 'businessNature', headerName: 'Business Nature', width: 150 }
   ];
 
   return (
@@ -222,7 +185,6 @@ const AdminPartnersCDDTable: React.FC = () => {
         </Typography>
       </div>
 
-      {/* Filters */}
       <Box className="flex gap-4 items-center">
         <TextField
           placeholder="Search by company name, contact person, email, phone, RC number..."
@@ -250,7 +212,6 @@ const AdminPartnersCDDTable: React.FC = () => {
         </TextField>
       </Box>
 
-      {/* Data Grid */}
       <Box className="h-[600px] w-full">
         <DataGrid
           rows={filteredRows}
