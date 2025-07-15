@@ -28,7 +28,7 @@ const PartnersCDD: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm({
+  const formMethods = useForm({
     resolver: yupResolver(partnersCDDSchema),
     defaultValues: {
       email: user?.email || '',
@@ -45,20 +45,20 @@ const PartnersCDD: React.FC = () => {
   });
 
   const { fields, append, remove } = useFieldArray({
-    control,
+    control: formMethods.control,
     name: 'directors'
   });
 
-  const watchedValues = watch();
-  const { saveDraft } = useFormDraft('partners-cdd', { setValue, watch });
+  const watchedValues = formMethods.watch();
+  const { saveDraft } = useFormDraft('partners-cdd', formMethods);
 
   // Auto-save draft
   React.useEffect(() => {
-    const subscription = watch((data) => {
+    const subscription = formMethods.watch((data) => {
       saveDraft(data);
     });
     return () => subscription.unsubscribe();
-  }, [watch, saveDraft]);
+  }, [formMethods, saveDraft]);
 
   const onSubmit = async (data: PartnersCDDData) => {
     if (!user) {
@@ -105,56 +105,56 @@ const PartnersCDD: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="companyName">Company Name *</Label>
-          <Input {...register('companyName')} />
-          {errors.companyName && <p className="text-sm text-red-600">{errors.companyName.message}</p>}
+          <Input {...formMethods.register('companyName')} />
+          {formMethods.formState.errors.companyName && <p className="text-sm text-red-600">{formMethods.formState.errors.companyName.message}</p>}
         </div>
         
         <div>
           <Label htmlFor="incorporationNumber">Incorporation Number *</Label>
-          <Input {...register('incorporationNumber')} />
-          {errors.incorporationNumber && <p className="text-sm text-red-600">{errors.incorporationNumber.message}</p>}
+          <Input {...formMethods.register('incorporationNumber')} />
+          {formMethods.formState.errors.incorporationNumber && <p className="text-sm text-red-600">{formMethods.formState.errors.incorporationNumber.message}</p>}
         </div>
         
         <div className="md:col-span-2">
           <Label htmlFor="registeredAddress">Registered Company Address *</Label>
-          <Textarea {...register('registeredAddress')} />
-          {errors.registeredAddress && <p className="text-sm text-red-600">{errors.registeredAddress.message}</p>}
+          <Textarea {...formMethods.register('registeredAddress')} />
+          {formMethods.formState.errors.registeredAddress && <p className="text-sm text-red-600">{formMethods.formState.errors.registeredAddress.message}</p>}
         </div>
         
         <div>
           <Label htmlFor="city">City *</Label>
-          <Input {...register('city')} />
-          {errors.city && <p className="text-sm text-red-600">{errors.city.message}</p>}
+          <Input {...formMethods.register('city')} />
+          {formMethods.formState.errors.city && <p className="text-sm text-red-600">{formMethods.formState.errors.city.message}</p>}
         </div>
         
         <div>
           <Label htmlFor="state">State *</Label>
-          <Input {...register('state')} />
-          {errors.state && <p className="text-sm text-red-600">{errors.state.message}</p>}
+          <Input {...formMethods.register('state')} />
+          {formMethods.formState.errors.state && <p className="text-sm text-red-600">{formMethods.formState.errors.state.message}</p>}
         </div>
         
         <div>
           <Label htmlFor="country">Country *</Label>
-          <Input {...register('country')} />
-          {errors.country && <p className="text-sm text-red-600">{errors.country.message}</p>}
+          <Input {...formMethods.register('country')} />
+          {formMethods.formState.errors.country && <p className="text-sm text-red-600">{formMethods.formState.errors.country.message}</p>}
         </div>
         
         <div>
           <Label htmlFor="email">Email Address *</Label>
-          <Input type="email" {...register('email')} />
-          {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
+          <Input type="email" {...formMethods.register('email')} />
+          {formMethods.formState.errors.email && <p className="text-sm text-red-600">{formMethods.formState.errors.email.message}</p>}
         </div>
         
         <div>
           <Label htmlFor="website">Website *</Label>
-          <Input {...register('website')} />
-          {errors.website && <p className="text-sm text-red-600">{errors.website.message}</p>}
+          <Input {...formMethods.register('website')} />
+          {formMethods.formState.errors.website && <p className="text-sm text-red-600">{formMethods.formState.errors.website.message}</p>}
         </div>
         
         <div>
           <Label htmlFor="contactPersonName">Contact Person Name *</Label>
-          <Input {...register('contactPersonName')} />
-          {errors.contactPersonName && <p className="text-sm text-red-600">{errors.contactPersonName.message}</p>}
+          <Input {...formMethods.register('contactPersonName')} />
+          {formMethods.formState.errors.contactPersonName && <p className="text-sm text-red-600">{formMethods.formState.errors.contactPersonName.message}</p>}
         </div>
         
         <div>
@@ -162,45 +162,45 @@ const PartnersCDD: React.FC = () => {
             label="Contact Person Number"
             required
             value={watchedValues.contactPersonNumber || ''}
-            onChange={(value) => setValue('contactPersonNumber', value)}
-            error={errors.contactPersonNumber?.message}
+            onChange={(value) => formMethods.setValue('contactPersonNumber', value)}
+            error={formMethods.formState.errors.contactPersonNumber?.message}
           />
         </div>
         
         <div>
           <Label htmlFor="taxId">Tax Identification Number</Label>
-          <Input {...register('taxId')} />
-          {errors.taxId && <p className="text-sm text-red-600">{errors.taxId.message}</p>}
+          <Input {...formMethods.register('taxId')} />
+          {formMethods.formState.errors.taxId && <p className="text-sm text-red-600">{formMethods.formState.errors.taxId.message}</p>}
         </div>
         
         <div>
           <Label htmlFor="vatRegistrationNumber">VAT Registration Number *</Label>
-          <Input {...register('vatRegistrationNumber')} />
-          {errors.vatRegistrationNumber && <p className="text-sm text-red-600">{errors.vatRegistrationNumber.message}</p>}
+          <Input {...formMethods.register('vatRegistrationNumber')} />
+          {formMethods.formState.errors.vatRegistrationNumber && <p className="text-sm text-red-600">{formMethods.formState.errors.vatRegistrationNumber.message}</p>}
         </div>
         
         <div>
           <Label htmlFor="incorporationDate">Date of Incorporation *</Label>
-          <Input type="date" {...register('incorporationDate')} />
-          {errors.incorporationDate && <p className="text-sm text-red-600">{errors.incorporationDate.message}</p>}
+          <Input type="date" {...formMethods.register('incorporationDate')} />
+          {formMethods.formState.errors.incorporationDate && <p className="text-sm text-red-600">{formMethods.formState.errors.incorporationDate.message}</p>}
         </div>
         
         <div>
           <Label htmlFor="incorporationState">Incorporation State *</Label>
-          <Input {...register('incorporationState')} />
-          {errors.incorporationState && <p className="text-sm text-red-600">{errors.incorporationState.message}</p>}
+          <Input {...formMethods.register('incorporationState')} />
+          {formMethods.formState.errors.incorporationState && <p className="text-sm text-red-600">{formMethods.formState.errors.incorporationState.message}</p>}
         </div>
         
         <div className="md:col-span-2">
           <Label htmlFor="businessNature">Nature of Business *</Label>
-          <Textarea {...register('businessNature')} />
-          {errors.businessNature && <p className="text-sm text-red-600">{errors.businessNature.message}</p>}
+          <Textarea {...formMethods.register('businessNature')} />
+          {formMethods.formState.errors.businessNature && <p className="text-sm text-red-600">{formMethods.formState.errors.businessNature.message}</p>}
         </div>
         
         <div>
           <Label htmlFor="bvn">BVN *</Label>
-          <Input {...register('bvn')} maxLength={11} />
-          {errors.bvn && <p className="text-sm text-red-600">{errors.bvn.message}</p>}
+          <Input {...formMethods.register('bvn')} maxLength={11} />
+          {formMethods.formState.errors.bvn && <p className="text-sm text-red-600">{formMethods.formState.errors.bvn.message}</p>}
         </div>
       </div>
     </FormSection>
@@ -229,99 +229,99 @@ const PartnersCDD: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label>First Name *</Label>
-                <Input {...register(`directors.${index}.firstName`)} />
-                {errors.directors?.[index]?.firstName && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.firstName?.message}</p>
+                <Input {...formMethods.register(`directors.${index}.firstName`)} />
+                {formMethods.formState.errors.directors?.[index]?.firstName && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.firstName?.message}</p>
                 )}
               </div>
               
               <div>
                 <Label>Middle Name</Label>
-                <Input {...register(`directors.${index}.middleName`)} />
+                <Input {...formMethods.register(`directors.${index}.middleName`)} />
               </div>
               
               <div>
                 <Label>Last Name *</Label>
-                <Input {...register(`directors.${index}.lastName`)} />
-                {errors.directors?.[index]?.lastName && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.lastName?.message}</p>
+                <Input {...formMethods.register(`directors.${index}.lastName`)} />
+                {formMethods.formState.errors.directors?.[index]?.lastName && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.lastName?.message}</p>
                 )}
               </div>
               
               <div>
                 <Label>Date of Birth *</Label>
-                <Input type="date" {...register(`directors.${index}.dateOfBirth`)} />
-                {errors.directors?.[index]?.dateOfBirth && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.dateOfBirth?.message}</p>
+                <Input type="date" {...formMethods.register(`directors.${index}.dateOfBirth`)} />
+                {formMethods.formState.errors.directors?.[index]?.dateOfBirth && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.dateOfBirth?.message}</p>
                 )}
               </div>
               
               <div>
                 <Label>Place of Birth *</Label>
-                <Input {...register(`directors.${index}.placeOfBirth`)} />
-                {errors.directors?.[index]?.placeOfBirth && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.placeOfBirth?.message}</p>
+                <Input {...formMethods.register(`directors.${index}.placeOfBirth`)} />
+                {formMethods.formState.errors.directors?.[index]?.placeOfBirth && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.placeOfBirth?.message}</p>
                 )}
               </div>
               
               <div>
                 <Label>Nationality *</Label>
-                <Input {...register(`directors.${index}.nationality`)} />
-                {errors.directors?.[index]?.nationality && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.nationality?.message}</p>
+                <Input {...formMethods.register(`directors.${index}.nationality`)} />
+                {formMethods.formState.errors.directors?.[index]?.nationality && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.nationality?.message}</p>
                 )}
               </div>
               
               <div>
                 <Label>Country *</Label>
-                <Input {...register(`directors.${index}.country`)} />
-                {errors.directors?.[index]?.country && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.country?.message}</p>
+                <Input {...formMethods.register(`directors.${index}.country`)} />
+                {formMethods.formState.errors.directors?.[index]?.country && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.country?.message}</p>
                 )}
               </div>
               
               <div>
                 <Label>Occupation *</Label>
-                <Input {...register(`directors.${index}.occupation`)} />
-                {errors.directors?.[index]?.occupation && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.occupation?.message}</p>
+                <Input {...formMethods.register(`directors.${index}.occupation`)} />
+                {formMethods.formState.errors.directors?.[index]?.occupation && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.occupation?.message}</p>
                 )}
               </div>
               
               <div>
                 <Label>Email *</Label>
-                <Input type="email" {...register(`directors.${index}.email`)} />
-                {errors.directors?.[index]?.email && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.email?.message}</p>
+                <Input type="email" {...formMethods.register(`directors.${index}.email`)} />
+                {formMethods.formState.errors.directors?.[index]?.email && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.email?.message}</p>
                 )}
               </div>
               
               <div>
                 <Label>Phone Number *</Label>
-                <Input {...register(`directors.${index}.phoneNumber`)} />
-                {errors.directors?.[index]?.phoneNumber && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.phoneNumber?.message}</p>
+                <Input {...formMethods.register(`directors.${index}.phoneNumber`)} />
+                {formMethods.formState.errors.directors?.[index]?.phoneNumber && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.phoneNumber?.message}</p>
                 )}
               </div>
               
               <div>
                 <Label>BVN *</Label>
-                <Input {...register(`directors.${index}.bvn`)} maxLength={11} />
-                {errors.directors?.[index]?.bvn && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.bvn?.message}</p>
+                <Input {...formMethods.register(`directors.${index}.bvn`)} maxLength={11} />
+                {formMethods.formState.errors.directors?.[index]?.bvn && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.bvn?.message}</p>
                 )}
               </div>
               
               <div>
                 <Label>Employer's Name</Label>
-                <Input {...register(`directors.${index}.employerName`)} />
+                <Input {...formMethods.register(`directors.${index}.employerName`)} />
               </div>
               
               <div className="md:col-span-3">
                 <Label>Residential Address *</Label>
-                <Textarea {...register(`directors.${index}.residentialAddress`)} />
-                {errors.directors?.[index]?.residentialAddress && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.residentialAddress?.message}</p>
+                <Textarea {...formMethods.register(`directors.${index}.residentialAddress`)} />
+                {formMethods.formState.errors.directors?.[index]?.residentialAddress && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.residentialAddress?.message}</p>
                 )}
               </div>
               
@@ -329,7 +329,7 @@ const PartnersCDD: React.FC = () => {
                 <Label>ID Type *</Label>
                 <Select
                   value={watchedValues.directors?.[index]?.idType}
-                  onValueChange={(value) => setValue(`directors.${index}.idType`, value)}
+                  onValueChange={(value) => formMethods.setValue(`directors.${index}.idType`, value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Choose Identification Type" />
@@ -341,45 +341,45 @@ const PartnersCDD: React.FC = () => {
                     <SelectItem value="voters-card">Voters Card</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.directors?.[index]?.idType && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.idType?.message}</p>
+                {formMethods.formState.errors.directors?.[index]?.idType && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.idType?.message}</p>
                 )}
               </div>
               
               <div>
                 <Label>Identification Number *</Label>
-                <Input {...register(`directors.${index}.identificationNumber`)} />
-                {errors.directors?.[index]?.identificationNumber && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.identificationNumber?.message}</p>
+                <Input {...formMethods.register(`directors.${index}.identificationNumber`)} />
+                {formMethods.formState.errors.directors?.[index]?.identificationNumber && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.identificationNumber?.message}</p>
                 )}
               </div>
               
               <div>
                 <Label>Issuing Body *</Label>
-                <Input {...register(`directors.${index}.issuingBody`)} />
-                {errors.directors?.[index]?.issuingBody && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.issuingBody?.message}</p>
+                <Input {...formMethods.register(`directors.${index}.issuingBody`)} />
+                {formMethods.formState.errors.directors?.[index]?.issuingBody && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.issuingBody?.message}</p>
                 )}
               </div>
               
               <div>
                 <Label>Issued Date *</Label>
-                <Input type="date" {...register(`directors.${index}.issuedDate`)} />
-                {errors.directors?.[index]?.issuedDate && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.issuedDate?.message}</p>
+                <Input type="date" {...formMethods.register(`directors.${index}.issuedDate`)} />
+                {formMethods.formState.errors.directors?.[index]?.issuedDate && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.issuedDate?.message}</p>
                 )}
               </div>
               
               <div>
                 <Label>Expiry Date</Label>
-                <Input type="date" {...register(`directors.${index}.expiryDate`)} />
+                <Input type="date" {...formMethods.register(`directors.${index}.expiryDate`)} />
               </div>
               
               <div>
                 <Label>Source of Income *</Label>
                 <Select
                   value={watchedValues.directors?.[index]?.incomeSource}
-                  onValueChange={(value) => setValue(`directors.${index}.incomeSource`, value)}
+                  onValueChange={(value) => formMethods.setValue(`directors.${index}.incomeSource`, value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Choose Income Source" />
@@ -390,15 +390,15 @@ const PartnersCDD: React.FC = () => {
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.directors?.[index]?.incomeSource && (
-                  <p className="text-sm text-red-600">{errors.directors[index]?.incomeSource?.message}</p>
+                {formMethods.formState.errors.directors?.[index]?.incomeSource && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.directors[index]?.incomeSource?.message}</p>
                 )}
               </div>
               
               {watchedValues.directors?.[index]?.incomeSource === 'other' && (
                 <div>
                   <Label>Please specify *</Label>
-                  <Input {...register(`directors.${index}.incomeSourceOther`)} />
+                  <Input {...formMethods.register(`directors.${index}.incomeSourceOther`)} />
                 </div>
               )}
             </div>
@@ -432,26 +432,26 @@ const PartnersCDD: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="localBankName">Bank Name *</Label>
-              <Input {...register('localBankName')} />
-              {errors.localBankName && <p className="text-sm text-red-600">{errors.localBankName.message}</p>}
+              <Input {...formMethods.register('localBankName')} />
+              {formMethods.formState.errors.localBankName && <p className="text-sm text-red-600">{formMethods.formState.errors.localBankName.message}</p>}
             </div>
             
             <div>
               <Label htmlFor="localAccountNumber">Account Number *</Label>
-              <Input {...register('localAccountNumber')} />
-              {errors.localAccountNumber && <p className="text-sm text-red-600">{errors.localAccountNumber.message}</p>}
+              <Input {...formMethods.register('localAccountNumber')} />
+              {formMethods.formState.errors.localAccountNumber && <p className="text-sm text-red-600">{formMethods.formState.errors.localAccountNumber.message}</p>}
             </div>
             
             <div>
               <Label htmlFor="localBankBranch">Bank Branch *</Label>
-              <Input {...register('localBankBranch')} />
-              {errors.localBankBranch && <p className="text-sm text-red-600">{errors.localBankBranch.message}</p>}
+              <Input {...formMethods.register('localBankBranch')} />
+              {formMethods.formState.errors.localBankBranch && <p className="text-sm text-red-600">{formMethods.formState.errors.localBankBranch.message}</p>}
             </div>
             
             <div>
               <Label htmlFor="localAccountOpeningDate">Account Opening Date *</Label>
-              <Input type="date" {...register('localAccountOpeningDate')} />
-              {errors.localAccountOpeningDate && <p className="text-sm text-red-600">{errors.localAccountOpeningDate.message}</p>}
+              <Input type="date" {...formMethods.register('localAccountOpeningDate')} />
+              {formMethods.formState.errors.localAccountOpeningDate && <p className="text-sm text-red-600">{formMethods.formState.errors.localAccountOpeningDate.message}</p>}
             </div>
           </div>
         </div>
@@ -461,22 +461,22 @@ const PartnersCDD: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="foreignBankName">Bank Name</Label>
-              <Input {...register('foreignBankName')} />
+              <Input {...formMethods.register('foreignBankName')} />
             </div>
             
             <div>
               <Label htmlFor="foreignAccountNumber">Account Number</Label>
-              <Input {...register('foreignAccountNumber')} />
+              <Input {...formMethods.register('foreignAccountNumber')} />
             </div>
             
             <div>
               <Label htmlFor="foreignBankBranch">Bank Branch</Label>
-              <Input {...register('foreignBankBranch')} />
+              <Input {...formMethods.register('foreignBankBranch')} />
             </div>
             
             <div>
               <Label htmlFor="foreignAccountOpeningDate">Account Opening Date</Label>
-              <Input type="date" {...register('foreignAccountOpeningDate')} />
+              <Input type="date" {...formMethods.register('foreignAccountOpeningDate')} />
             </div>
           </div>
         </div>
@@ -490,49 +490,49 @@ const PartnersCDD: React.FC = () => {
         <FileUpload
           label="Certificate of Incorporation"
           required
-          onFileSelect={(file) => setValue('certificateOfIncorporation', file)}
+          onFileSelect={(file) => formMethods.setValue('certificateOfIncorporation', file)}
           currentFile={watchedValues.certificateOfIncorporation as File}
-          error={errors.certificateOfIncorporation?.message}
+          error={formMethods.formState.errors.certificateOfIncorporation?.message}
         />
         
         <FileUpload
           label="Director ID 1"
           required
-          onFileSelect={(file) => setValue('directorId1', file)}
+          onFileSelect={(file) => formMethods.setValue('directorId1', file)}
           currentFile={watchedValues.directorId1 as File}
-          error={errors.directorId1?.message}
+          error={formMethods.formState.errors.directorId1?.message}
         />
         
         <FileUpload
           label="Director ID 2"
           required
-          onFileSelect={(file) => setValue('directorId2', file)}
+          onFileSelect={(file) => formMethods.setValue('directorId2', file)}
           currentFile={watchedValues.directorId2 as File}
-          error={errors.directorId2?.message}
+          error={formMethods.formState.errors.directorId2?.message}
         />
         
         <FileUpload
           label="CAC Status Report"
           required
-          onFileSelect={(file) => setValue('cacStatusReport', file)}
+          onFileSelect={(file) => formMethods.setValue('cacStatusReport', file)}
           currentFile={watchedValues.cacStatusReport as File}
-          error={errors.cacStatusReport?.message}
+          error={formMethods.formState.errors.cacStatusReport?.message}
         />
         
         <FileUpload
           label="VAT Registration License"
           required
-          onFileSelect={(file) => setValue('vatRegistrationLicense', file)}
+          onFileSelect={(file) => formMethods.setValue('vatRegistrationLicense', file)}
           currentFile={watchedValues.vatRegistrationLicense as File}
-          error={errors.vatRegistrationLicense?.message}
+          error={formMethods.formState.errors.vatRegistrationLicense?.message}
         />
         
         <FileUpload
           label="Tax Clearance Certificate"
           required
-          onFileSelect={(file) => setValue('taxClearanceCertificate', file)}
+          onFileSelect={(file) => formMethods.setValue('taxClearanceCertificate', file)}
           currentFile={watchedValues.taxClearanceCertificate as File}
-          error={errors.taxClearanceCertificate?.message}
+          error={formMethods.formState.errors.taxClearanceCertificate?.message}
         />
       </div>
     </FormSection>
@@ -563,16 +563,16 @@ const PartnersCDD: React.FC = () => {
           <Checkbox 
             id="agreeToDataPrivacy"
             checked={watchedValues.agreeToDataPrivacy}
-            onCheckedChange={(checked) => setValue('agreeToDataPrivacy', checked as boolean)}
+            onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked as boolean)}
           />
           <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy policy and declaration *</Label>
         </div>
-        {errors.agreeToDataPrivacy && <p className="text-sm text-red-600">{errors.agreeToDataPrivacy.message}</p>}
+        {formMethods.formState.errors.agreeToDataPrivacy && <p className="text-sm text-red-600">{formMethods.formState.errors.agreeToDataPrivacy.message}</p>}
         
         <div>
           <Label htmlFor="signature">Digital Signature *</Label>
-          <Input {...register('signature')} placeholder="Type your full name as signature" />
-          {errors.signature && <p className="text-sm text-red-600">{errors.signature.message}</p>}
+          <Input {...formMethods.register('signature')} placeholder="Type your full name as signature" />
+          {formMethods.formState.errors.signature && <p className="text-sm text-red-600">{formMethods.formState.errors.signature.message}</p>}
         </div>
         
         <div>
@@ -588,25 +588,25 @@ const PartnersCDD: React.FC = () => {
       id: 'company-info',
       title: 'Company Information',
       component: <CompanyInfoStep />,
-      isValid: !errors.companyName && !errors.incorporationNumber && !errors.registeredAddress
+      isValid: !formMethods.formState.errors.companyName && !formMethods.formState.errors.incorporationNumber && !formMethods.formState.errors.registeredAddress
     },
     {
       id: 'directors',
       title: 'Directors Information',
       component: <DirectorsStep />,
-      isValid: !errors.directors
+      isValid: !formMethods.formState.errors.directors
     },
     {
       id: 'account-details',
       title: 'Account Details',
       component: <AccountDetailsStep />,
-      isValid: !errors.localBankName && !errors.localAccountNumber
+      isValid: !formMethods.formState.errors.localBankName && !formMethods.formState.errors.localAccountNumber
     },
     {
       id: 'documents',
       title: 'Document Upload',
       component: <DocumentsStep />,
-      isValid: !errors.certificateOfIncorporation
+      isValid: !formMethods.formState.errors.certificateOfIncorporation
     },
     {
       id: 'privacy-declaration',
@@ -626,10 +626,10 @@ const PartnersCDD: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={formMethods.handleSubmit(onSubmit)}
           isSubmitting={isSubmitting}
           submitButtonText="Submit Partners CDD"
-          formMethods={{ register, handleSubmit, formState: { errors }, setValue, watch, control }}
+          formMethods={formMethods}
         />
 
         <AuthRequiredSubmit

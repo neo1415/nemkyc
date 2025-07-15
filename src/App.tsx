@@ -366,7 +366,7 @@ function App() {
           {/* Individual CDD Admin Tables */}
           <Route path="admin/cdd/corporate" element={
             <ProtectedRoute>
-              <AdminCorporateCDDTable formType="corporate" />
+              <AdminCorporateCDDTable />
             </ProtectedRoute>
           } />
           

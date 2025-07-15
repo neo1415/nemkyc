@@ -161,17 +161,16 @@ const NaicomCorporateCDD: React.FC = () => {
     name: 'directors'
   });
 
-  const { register, watch, setValue, formState: { errors } } = formMethods;
   const { saveDraft, clearDraft } = useFormDraft('naicomCorporateCDD', formMethods);
-  const watchedValues = watch();
+  const watchedValues = formMethods.watch();
 
   // Auto-save draft
   useEffect(() => {
-    const subscription = watch((data) => {
+    const subscription = formMethods.watch((data) => {
       saveDraft(data);
     });
     return () => subscription.unsubscribe();
-  }, [watch, saveDraft]);
+  }, [formMethods, saveDraft]);
 
   const handleSubmit = async (data: any) => {
     setIsSubmitting(true);
@@ -222,7 +221,7 @@ const NaicomCorporateCDD: React.FC = () => {
   };
 
   const DatePickerField = ({ name, label, required = false }: { name: string; label: string; required?: boolean }) => {
-    const value = watch(name);
+    const value = formMethods.watch(name);
     return (
       <TooltipProvider>
         <div className="space-y-2">
@@ -254,12 +253,12 @@ const NaicomCorporateCDD: React.FC = () => {
               <ReactCalendar
                 mode="single"
                 selected={value ? new Date(value) : undefined}
-                onSelect={(date) => setValue(name, date)}
+                onSelect={(date) => formMethods.setValue(name, date)}
                 initialFocus
               />
             </PopoverContent>
           </Popover>
-          {errors[name] && <p className="text-sm text-red-600">{String(errors[name]?.message || '')}</p>}
+          {formMethods.formState.errors[name] && <p className="text-sm text-red-600">{String(formMethods.formState.errors[name]?.message || '')}</p>}
         </div>
       </TooltipProvider>
     );
