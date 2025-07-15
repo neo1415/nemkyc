@@ -6,7 +6,7 @@ const AdminAgentsCDDTable: React.FC = () => {
     <AdminUnifiedTable 
       collectionName="agents-kyc"
       title="Agents CDD Management"
-      isClaim={false}
+      isClaim={true}
     />
   );
 };
