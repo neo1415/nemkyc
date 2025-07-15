@@ -63,7 +63,7 @@ const Index = () => {
     {
       icon: Award,
       title: 'Industry Leader',
-      description: 'Over 50 years of excellence in providing comprehensive insurance solutions.',
+      description: 'Years of excellence in providing comprehensive insurance solutions.',
       gradient: 'from-orange-500 to-orange-600'
     }
   ];
@@ -100,52 +100,36 @@ const Index = () => {
       <Navbar />
       
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary-light to-gold-dark text-white">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-10 left-10 w-20 h-20 bg-gold rounded-full animate-bounce-slow"></div>
-          <div className="absolute top-20 right-20 w-16 h-16 bg-white rounded-full animate-pulse-glow"></div>
-          <div className="absolute bottom-20 left-20 w-24 h-24 bg-gold-light rounded-full animate-bounce-slow" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute bottom-10 right-10 w-12 h-12 bg-white rounded-full animate-pulse-glow" style={{ animationDelay: '0.5s' }}></div>
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary-light to-primary-dark text-white">
+        {/* Subtle pattern overlay */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `radial-gradient(circle at 25% 25%, white 1px, transparent 1px),
+                             radial-gradient(circle at 75% 75%, white 1px, transparent 1px)`,
+            backgroundSize: '60px 60px'
+          }}></div>
         </div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
           <div className="text-center space-y-8">
             <div className="animate-fade-in-up">
-              <img 
-                src={nemLogo} 
-                alt="NEM Insurance" 
-                className="h-20 w-20 mx-auto mb-6 rounded-lg shadow-2xl bg-white p-2"
-              />
-              <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white to-gold-light bg-clip-text text-transparent">
-                NEM Insurance
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-gold-light bg-clip-text text-transparent">
+                NEM Forms
               </h1>
-              <p className="text-xl md:text-2xl mb-8 text-white/90 max-w-3xl mx-auto leading-relaxed">
-                Nigeria's premier digital insurance platform. Experience seamless onboarding, 
-                KYC verification, and claims processing with cutting-edge technology.
+              <p className="text-lg md:text-xl mb-8 text-white/90 max-w-2xl mx-auto leading-relaxed">
+                Your secure digital gateway for KYC verification, CDD compliance, and insurance claims processing.
               </p>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-in-right">
-              {user ? (
-                <Button 
-                  onClick={handleDashboard}
-                  size="lg" 
-                  className="bg-white text-primary hover:bg-gold hover:text-white transition-all duration-300 shadow-lg hover:shadow-xl px-8 py-3"
-                >
-                  Go to Dashboard
-                  <ArrowDown className="ml-2 h-5 w-5" />
-                </Button>
-              ) : (
-                <Button 
-                  onClick={scrollToForms}
-                  size="lg" 
-                  className="bg-white text-primary hover:bg-gold hover:text-white transition-all duration-300 shadow-lg hover:shadow-xl px-8 py-3"
-                >
-                  Explore Our Services
-                  <ArrowDown className="ml-2 h-5 w-5 animate-bounce-slow" />
-                </Button>
-              )}
+              <Button 
+                onClick={scrollToForms}
+                size="lg" 
+                className="bg-white text-primary hover:bg-gold hover:text-white transition-all duration-300 shadow-lg hover:shadow-xl px-8 py-3"
+              >
+                Explore Our Forms
+                <ArrowDown className="ml-2 h-5 w-5 animate-bounce-slow" />
+              </Button>
             </div>
           </div>
         </div>
@@ -156,10 +140,10 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in">
             <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              Why Choose NEM Insurance?
+              Why Choose Our Platform?
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Experience the future of insurance services with our award-winning digital-first approach
+              Experience streamlined digital form processing with enterprise-grade security and reliability
             </p>
           </div>
           
@@ -188,10 +172,10 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in">
             <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              Our Digital Services
+              Our Digital Forms
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Access our comprehensive suite of digital forms and services designed to streamline your insurance journey
+              Access our comprehensive suite of digital forms designed to streamline your compliance and claims processing
             </p>
           </div>
           
@@ -240,20 +224,20 @@ const Index = () => {
       <div className="py-20 bg-primary text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-6">Trusted by Thousands</h2>
+            <h2 className="text-4xl font-bold mb-6">Platform Performance</h2>
             <p className="text-xl text-white/80 max-w-2xl mx-auto">
-              Join the growing community of satisfied customers who trust NEM Insurance
+              Real-time metrics showcasing our commitment to reliability and excellence
             </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
             <div className="animate-fade-in-up">
-              <div className="text-4xl font-bold text-gold mb-2">50+</div>
-              <div className="text-white/80">Years of Excellence</div>
+              <div className="text-4xl font-bold text-gold mb-2">₦33B</div>
+              <div className="text-white/80">Gross Premium Income</div>
             </div>
             <div className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-              <div className="text-4xl font-bold text-gold mb-2">100K+</div>
-              <div className="text-white/80">Happy Customers</div>
+              <div className="text-4xl font-bold text-gold mb-2">₦50B</div>
+              <div className="text-white/80">Claims Paid (2015-2022)</div>
             </div>
             <div className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               <div className="text-4xl font-bold text-gold mb-2">99.9%</div>
