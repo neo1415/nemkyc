@@ -25,7 +25,8 @@ import {
   DollarSign,
   Truck,
   Wrench,
-  LogOut
+  LogOut,
+  LayoutDashboard
 } from 'lucide-react';
 import nemLogo from '../../Nem-insurance-Logo.jpg';
 
@@ -81,22 +82,27 @@ const Navbar: React.FC = () => {
                 alt="NEM Insurance" 
                 className="h-10 w-10 object-contain rounded"
               />
-              <span className="text-xl font-bold text-primary">NEM Insurance</span>
+              <span className="text-xl font-bold text-primary">NEM Forms</span>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-6">
             {/* KYC Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center space-x-1">
-                  <FileText className="h-4 w-4" />
-                  <span>KYC</span>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
+                <div className="group">
+                  <Link 
+                    to="/kyc" 
+                    className="flex items-center space-x-1 px-3 py-2 text-gray-700 hover:text-primary transition-colors"
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span>KYC</span>
+                    <ChevronDown className="h-4 w-4 group-hover:rotate-180 transition-transform" />
+                  </Link>
+                </div>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white">
+              <DropdownMenuContent className="w-56 bg-white z-50 shadow-lg border">
                 {kycForms.map((form) => (
                   <DropdownMenuItem key={form.path} asChild>
                     <Link to={form.path} className="flex items-center space-x-2">
@@ -111,13 +117,18 @@ const Navbar: React.FC = () => {
             {/* CDD Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center space-x-1">
-                  <Building2 className="h-4 w-4" />
-                  <span>CDD</span>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
+                <div className="group">
+                  <Link 
+                    to="/cdd" 
+                    className="flex items-center space-x-1 px-3 py-2 text-gray-700 hover:text-primary transition-colors"
+                  >
+                    <Building2 className="h-4 w-4" />
+                    <span>CDD</span>
+                    <ChevronDown className="h-4 w-4 group-hover:rotate-180 transition-transform" />
+                  </Link>
+                </div>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white">
+              <DropdownMenuContent className="w-56 bg-white z-50 shadow-lg border">
                 {cddForms.map((form) => (
                   <DropdownMenuItem key={form.path} asChild>
                     <Link to={form.path} className="flex items-center space-x-2">
@@ -132,13 +143,18 @@ const Navbar: React.FC = () => {
             {/* Claims Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center space-x-1">
-                  <Car className="h-4 w-4" />
-                  <span>Claims</span>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
+                <div className="group">
+                  <Link 
+                    to="/claims" 
+                    className="flex items-center space-x-1 px-3 py-2 text-gray-700 hover:text-primary transition-colors"
+                  >
+                    <Car className="h-4 w-4" />
+                    <span>Claims</span>
+                    <ChevronDown className="h-4 w-4 group-hover:rotate-180 transition-transform" />
+                  </Link>
+                </div>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white max-h-96 overflow-y-auto">
+              <DropdownMenuContent className="w-56 bg-white z-50 shadow-lg border max-h-96 overflow-y-auto">
                 {claimsForms.map((form) => (
                   <DropdownMenuItem key={form.path} asChild>
                     <Link to={form.path} className="flex items-center space-x-2">
@@ -154,15 +170,28 @@ const Navbar: React.FC = () => {
           {/* User Actions */}
           <div className="flex items-center space-x-4">
             {user ? (
-              <div className="flex items-center space-x-2">
-                <Button onClick={handleDashboardClick} variant="ghost" size="sm">
-                  Dashboard
-                </Button>
-                <Button onClick={logout} variant="ghost" size="sm">
-                  <LogOut className="h-4 w-4 mr-1" />
-                  Logout
-                </Button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="flex items-center space-x-1">
+                    <User className="h-4 w-4" />
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-48 bg-white z-50 shadow-lg border" align="end">
+                  <DropdownMenuItem asChild>
+                    <button onClick={handleDashboardClick} className="flex items-center space-x-2 w-full">
+                      <LayoutDashboard className="h-4 w-4" />
+                      <span>Dashboard</span>
+                    </button>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <button onClick={logout} className="flex items-center space-x-2 w-full">
+                      <LogOut className="h-4 w-4" />
+                      <span>Logout</span>
+                    </button>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <div className="flex items-center space-x-2">
                 <Link to="/auth/signin">

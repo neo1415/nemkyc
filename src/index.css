@@ -20,8 +20,8 @@ All colors MUST be HSL.
     /* NEM Insurance Brand Colors - Burgundy primary */
     --primary: 0 50% 25%;
     --primary-foreground: 0 0% 98%;
-    --primary-light: 0 50% 35%;
-    --primary-dark: 0 50% 15%;
+    --primary-light: 0 40% 40%;
+    --primary-dark: 0 60% 20%;
 
     /* Gold accents */
     --gold: 45 100% 50%;
