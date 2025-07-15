@@ -66,7 +66,10 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
     { name: 'Group Personal Accident', href: '/admin/group-personal-accident-claims' },
     { name: 'Goods In Transit', href: '/admin/goods-in-transit-claims' },
     { name: 'Rent Assurance', href: '/admin/rent-assurance-claims' },
-    { name: 'Money Insurance', href: '/admin/money-insurance-claims' }
+    { name: 'Money Insurance', href: '/admin/money-insurance-claims' },
+    { name: 'Burglary Claims', href: '/admin/burglary-claims' },
+    { name: 'Contractors Plant Machinery', href: '/admin/contractors-plant-machinery-claims' },
+    { name: 'Fidelity Guarantee', href: '/admin/fidelity-guarantee-claims' }
   ];
 
   return (
