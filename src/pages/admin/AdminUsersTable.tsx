@@ -53,7 +53,7 @@ interface UserRole {
 }
 
 const AdminUsersTable: React.FC = () => {
-  const { user, hasRole } = useAuth();
+  const { user, firebaseUser, hasRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserRole[]>([]);
@@ -123,12 +123,37 @@ const AdminUsersTable: React.FC = () => {
     try {
       const serverUrl = 'https://nem-server-rhdb.onrender.com';
       
+      // Get CSRF token
+      const csrfRes = await fetch(`${serverUrl}/csrf-token`, { 
+        credentials: 'include' 
+      });
+      
+      if (!csrfRes.ok) {
+        throw new Error('Failed to fetch CSRF token');
+      }
+      
+      const { csrfToken } = await csrfRes.json();
+      
+      // Get Firebase ID token
+      if (!firebaseUser) {
+        throw new Error('User not authenticated');
+      }
+      
+      const firebaseToken = await firebaseUser.getIdToken();
+      
+      // Prepare headers with authentication and CSRF
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${firebaseToken}`,
+        'CSRF-Token': csrfToken,
+        'X-Timestamp': Date.now().toString(),
+      };
+      
       // Update in Firestore via server
       const updateResponse = await fetch(`${serverUrl}/update-user-role/${userId}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        credentials: 'include',
+        headers,
         body: JSON.stringify({ role: newRole }),
       });
 
@@ -160,9 +185,8 @@ const AdminUsersTable: React.FC = () => {
 
       const claimsResponse = await fetch(`${serverUrl}/${roleEndpoint}/${userId}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        credentials: 'include',
+        headers,
       });
 
       if (!claimsResponse.ok) {
