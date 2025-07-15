@@ -103,9 +103,9 @@ const AdminKYCTable: React.FC<AdminKYCTableProps> = ({ formType }) => {
       valueFormatter: (params: any) => params.value?.toLocaleDateString() || 'N/A',
     },
     {
-      field: 'actions',
+      field: 'achooooo',
       headerName: 'Achoooo',
-      width: 150,
+      width: 350,
       renderCell: (params: any) => (
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
