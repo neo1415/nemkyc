@@ -223,7 +223,7 @@ const AdminIndividualKYCTable: React.FC = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <Typography variant="h4" component="h1" className="font-bold">
-          Individual KYC Records
+          Individual KYC
         </Typography>
       </div>
 
