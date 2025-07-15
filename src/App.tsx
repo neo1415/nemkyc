@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/toaster';
@@ -64,6 +64,31 @@ import AdminCorporateKYCTable from './pages/admin/AdminCorporateKYCTable';
 import EnhancedFormViewer from './pages/admin/EnhancedFormViewer';
 
 function App() {
+  useEffect(() => {
+    // Global error handler for unhandled promise rejections and errors
+    const handleError = (event: ErrorEvent | PromiseRejectionEvent) => {
+      // Silently handle Lottie animation errors that don't affect functionality
+      if (event instanceof ErrorEvent && event.message?.includes('lottie')) {
+        console.warn('Lottie animation error suppressed:', event.message);
+        event.preventDefault();
+        return;
+      }
+      if ('reason' in event && event.reason?.message?.includes('lottie')) {
+        console.warn('Lottie promise rejection suppressed:', event.reason);
+        event.preventDefault();
+        return;
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleError);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleError);
+    };
+  }, []);
+
   return (
    <AuthProvider>
     <Router>
