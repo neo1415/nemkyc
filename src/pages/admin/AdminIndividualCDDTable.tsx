@@ -58,17 +58,30 @@ const AdminIndividualCDDTable: React.FC = () => {
 
   // Fetch data from Firestore
   useEffect(() => {
+    console.log('🔍 AdminIndividualCDDTable: Starting to fetch data from individual-cdd collection');
+    
     const q = query(
-      collection(db, 'individual-kyc'),
+      collection(db, 'cdd-forms'),
       orderBy('timestamp', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const data = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as IndividualCDDData[];
+      console.log('🔍 AdminIndividualCDDTable: Received snapshot with', querySnapshot.docs.length, 'documents');
+      
+      const data = querySnapshot.docs.map(doc => {
+        const docData = doc.data();
+        console.log('🔍 AdminIndividualCDDTable: Document data:', { id: doc.id, ...docData });
+        return {
+          id: doc.id,
+          ...docData
+        };
+      }) as IndividualCDDData[];
+      
+      console.log('🔍 AdminIndividualCDDTable: Processed data array:', data);
       setRows(data);
+      setLoading(false);
+    }, (error) => {
+      console.error('🔍 AdminIndividualCDDTable: Error fetching data:', error);
       setLoading(false);
     });
 
@@ -77,6 +90,12 @@ const AdminIndividualCDDTable: React.FC = () => {
 
   // Filter data based on search and status
   const filteredRows = rows.filter(row => {
+    // First filter by form type for individual CDD
+    const isIndividualCDD = row.formType === 'individual-cdd';
+    console.log('🔍 AdminIndividualCDDTable: Row formType:', row.formType, 'isIndividualCDD:', isIndividualCDD);
+    
+    if (!isIndividualCDD) return false;
+    
     const matchesSearch = 
       row.firstName?.toLowerCase().includes(searchText.toLowerCase()) ||
       row.lastName?.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -86,17 +105,27 @@ const AdminIndividualCDDTable: React.FC = () => {
     
     const matchesStatus = statusFilter === 'all' || row.status === statusFilter;
     
+    console.log('🔍 AdminIndividualCDDTable: Filter results for row:', { 
+      id: row.id, 
+      formType: row.formType,
+      matchesSearch, 
+      matchesStatus, 
+      finalResult: matchesSearch && matchesStatus 
+    });
+    
     return matchesSearch && matchesStatus;
   });
 
+  console.log('🔍 AdminIndividualCDDTable: Total rows:', rows.length, 'Filtered rows:', filteredRows.length);
+
   const handleView = (id: string) => {
-    navigate(`/admin/form-viewer/individual-kyc/${id}`);
+    navigate(`/admin/form-viewer/cdd-forms/${id}`);
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this CDD record?')) {
       try {
-        await deleteDoc(doc(db, 'individual-kyc', id));
+        await deleteDoc(doc(db, 'cdd-forms', id));
         toast({ title: 'CDD record deleted successfully' });
       } catch (error) {
         console.error('Error deleting record:', error);

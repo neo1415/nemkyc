@@ -57,18 +57,31 @@ const AdminPartnersCDDTable: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('🔍 AdminPartnersCDDTable: Starting to fetch data from cdd-forms collection');
+    
     const q = query(
-      collection(db, 'partners-kyc'),
+      collection(db, 'cdd-forms'),
       orderBy('timestamp', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const data = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt ?? doc.data().timestamp ?? null
-      })) as PartnersCDDData[];
+      console.log('🔍 AdminPartnersCDDTable: Received snapshot with', querySnapshot.docs.length, 'documents');
+      
+      const data = querySnapshot.docs.map(doc => {
+        const docData = doc.data();
+        console.log('🔍 AdminPartnersCDDTable: Document data:', { id: doc.id, ...docData });
+        return {
+          id: doc.id,
+          ...docData,
+          createdAt: docData.createdAt ?? docData.timestamp ?? null
+        };
+      }) as PartnersCDDData[];
+      
+      console.log('🔍 AdminPartnersCDDTable: Processed data array:', data);
       setRows(data);
+      setLoading(false);
+    }, (error) => {
+      console.error('🔍 AdminPartnersCDDTable: Error fetching data:', error);
       setLoading(false);
     });
 
@@ -76,6 +89,12 @@ const AdminPartnersCDDTable: React.FC = () => {
   }, []);
 
   const filteredRows = rows.filter(row => {
+    // First filter by form type for partners CDD
+    const isPartnersCDD = row.formType === 'partners-cdd';
+    console.log('🔍 AdminPartnersCDDTable: Row formType:', row.formType, 'isPartnersCDD:', isPartnersCDD);
+    
+    if (!isPartnersCDD) return false;
+    
     const lowerSearch = searchText.toLowerCase();
     const searchFields = [
       row.companyName,
@@ -92,17 +111,27 @@ const AdminPartnersCDDTable: React.FC = () => {
 
     const matchesStatus = statusFilter === 'all' || row.status === statusFilter;
 
+    console.log('🔍 AdminPartnersCDDTable: Filter results for row:', { 
+      id: row.id, 
+      formType: row.formType,
+      matchesSearch, 
+      matchesStatus, 
+      finalResult: matchesSearch && matchesStatus 
+    });
+
     return matchesSearch && matchesStatus;
   });
 
+  console.log('🔍 AdminPartnersCDDTable: Total rows:', rows.length, 'Filtered rows:', filteredRows.length);
+
   const handleView = (id: string) => {
-    navigate(`/admin/form-viewer/partners-kyc/${id}`);
+    navigate(`/admin/form-viewer/cdd-forms/${id}`);
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this Partners CDD record?')) {
       try {
-        await deleteDoc(doc(db, 'partners-kyc', id));
+        await deleteDoc(doc(db, 'cdd-forms', id));
         toast({ title: 'Partners CDD record deleted successfully' });
       } catch (error) {
         console.error('Error deleting record:', error);

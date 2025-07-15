@@ -60,17 +60,30 @@ const AdminAgentsCDDTable: React.FC = () => {
 
   // Fetch data from Firestore
   useEffect(() => {
+    console.log('🔍 AdminAgentsCDDTable: Starting to fetch data from cdd-forms collection');
+    
     const q = query(
-      collection(db, 'agents-kyc'),
+      collection(db, 'cdd-forms'),
       orderBy('timestamp', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const data = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as AgentsCDDData[];
+      console.log('🔍 AdminAgentsCDDTable: Received snapshot with', querySnapshot.docs.length, 'documents');
+      
+      const data = querySnapshot.docs.map(doc => {
+        const docData = doc.data();
+        console.log('🔍 AdminAgentsCDDTable: Document data:', { id: doc.id, ...docData });
+        return {
+          id: doc.id,
+          ...docData
+        };
+      }) as AgentsCDDData[];
+      
+      console.log('🔍 AdminAgentsCDDTable: Processed data array:', data);
       setRows(data);
+      setLoading(false);
+    }, (error) => {
+      console.error('🔍 AdminAgentsCDDTable: Error fetching data:', error);
       setLoading(false);
     });
 
@@ -79,6 +92,12 @@ const AdminAgentsCDDTable: React.FC = () => {
 
   // Filter data based on search and status
   const filteredRows = rows.filter(row => {
+    // First filter by form type for agents CDD
+    const isAgentsCDD = row.formType === 'agents-cdd';
+    console.log('🔍 AdminAgentsCDDTable: Row formType:', row.formType, 'isAgentsCDD:', isAgentsCDD);
+    
+    if (!isAgentsCDD) return false;
+    
     const matchesSearch = 
       row.firstName?.toLowerCase().includes(searchText.toLowerCase()) ||
       row.lastName?.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -90,17 +109,27 @@ const AdminAgentsCDDTable: React.FC = () => {
     
     const matchesStatus = statusFilter === 'all' || row.status === statusFilter;
     
+    console.log('🔍 AdminAgentsCDDTable: Filter results for row:', { 
+      id: row.id, 
+      formType: row.formType,
+      matchesSearch, 
+      matchesStatus, 
+      finalResult: matchesSearch && matchesStatus 
+    });
+    
     return matchesSearch && matchesStatus;
   });
 
+  console.log('🔍 AdminAgentsCDDTable: Total rows:', rows.length, 'Filtered rows:', filteredRows.length);
+
   const handleView = (id: string) => {
-    navigate(`/admin/form-viewer/agents-kyc/${id}`);
+    navigate(`/admin/form-viewer/cdd-forms/${id}`);
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this Agents CDD record?')) {
       try {
-        await deleteDoc(doc(db, 'agents-kyc', id));
+        await deleteDoc(doc(db, 'cdd-forms', id));
         toast({ title: 'Agents CDD record deleted successfully' });
       } catch (error) {
         console.error('Error deleting record:', error);
