@@ -5,11 +5,20 @@ import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import AdminSidebar from './AdminSidebar';
 import Header from './Header';
+import LoadingSpinner from '../common/LoadingSpinner';
 import { Menu } from 'lucide-react';
 
 const Layout: React.FC = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" text="Loading..." />
+      </div>
+    );
+  }
 
   if (!user) {
     return <Outlet />;
