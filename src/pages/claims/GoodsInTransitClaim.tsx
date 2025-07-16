@@ -180,15 +180,18 @@ const GoodsInTransitClaim: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
-  // Calculate total value from goods items
+  // Calculate total value from goods items in real-time
   // Old calculation logic: const total = watchedValues.goodsItems?.reduce((sum, item) => sum + (item.value || 0), 0) || 0;
   useEffect(() => {
-    const total = watchedValues.goodsItems?.reduce((sum, item) => 
-      sum + ((item.quantity || 0) * (item.value || 0)), 0) || 0;
-    if (total !== watchedValues.totalValue) {
-      formMethods.setValue('totalValue', total);
-    }
-  }, [watchedValues.goodsItems, formMethods, watchedValues.totalValue]);
+    const subscription = formMethods.watch((data) => {
+      const total = data.goodsItems?.reduce((sum, item) => 
+        sum + ((item.quantity || 0) * (item.value || 0)), 0) || 0;
+      if (total !== data.totalValue) {
+        formMethods.setValue('totalValue', total);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [formMethods]);
 
   const handleSubmit = async (data: GoodsInTransitClaimData) => {
     setIsSubmitting(true);
