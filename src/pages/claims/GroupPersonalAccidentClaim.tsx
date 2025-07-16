@@ -336,20 +336,16 @@ const GroupPersonalAccidentClaim = () => {
                 <div>
                   <Label htmlFor={`witnesses.${index}.name`}>Name *</Label>
                   <Input
-                    key={`${field.id}-name`}
                     {...formMethods.register(`witnesses.${index}.name`)}
                     placeholder="Enter witness name"
-                    defaultValue={field.name}
                   />
                 </div>
                 <div>
                   <Label htmlFor={`witnesses.${index}.address`}>Address *</Label>
                   <Textarea
-                    key={`${field.id}-address`}
                     {...formMethods.register(`witnesses.${index}.address`)}
                     placeholder="Enter witness address"
                     rows={2}
-                    defaultValue={field.address}
                   />
                 </div>
               </div>
