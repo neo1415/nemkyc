@@ -620,7 +620,7 @@ const CorporateCDD: React.FC = () => {
       id: 'uploads',
       title: 'Uploads',
       component: (
-        <div className="space-y-4">
+         <div className="space-y-4">
           <FileUpload
                 accept="application/pdf,image/*"
                 maxSize={3 * 1024 * 1024}
