@@ -1,120 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import { toast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { FileText, User, Shield, Signature, CalendarIcon, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import MultiStepForm from '@/components/common/MultiStepForm';
-import { useFormDraft } from '@/hooks/useFormDraft';
-import FileUpload from '@/components/common/FileUpload';
-import { uploadFile } from '@/services/fileService';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { sendEmail } from '@/services/emailService';
-import { useAuth } from '@/contexts/AuthContext';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { useToast } from '../../hooks/use-toast';
 
-const professionalIndemnitySchema = yup.object().shape({
-  // Policy Details
-  policyNumber: yup.string().required('Policy number is required'),
-  coverageFromDate: yup.date().required('Coverage from date is required'),
-  coverageToDate: yup.date().required('Coverage to date is required'),
-  
-  // Insured Details
-  insuredName: yup.string().required('Name of insured is required'),
-  companyName: yup.string(),
-  title: yup.string().required('Title is required'),
-  dateOfBirth: yup.date().required('Date of birth is required'),
-  gender: yup.string().required('Gender is required'),
-  address: yup.string().required('Address is required'),
-  phone: yup.string().required('Phone number is required'),
-  email: yup.string().email('Invalid email').required('Email is required'),
-  
-  // Claimant Details
-  claimantName: yup.string().required('Claimant name is required'),
-  claimantAddress: yup.string().required('Claimant address is required'),
-  
-  // Retainer Details
-  retainerDetails: yup.string().required('Retainer details are required'),
-  contractInWriting: yup.string().required('Please specify if contract was in writing'),
-  contractDetails: yup.string().when('contractInWriting', {
-    is: 'no',
-    then: (schema) => schema.required('Contract details are required')
-  }),
-  workPerformedFrom: yup.date().required('Work performed from date is required'),
-  workPerformedTo: yup.date().required('Work performed to date is required'),
-  
-  // Work Performer Details
-  workPerformerName: yup.string().required('Work performer name is required'),
-  workPerformerTitle: yup.string().required('Work performer title is required'),
-  workPerformerDuties: yup.string().required('Work performer duties are required'),
-  workPerformerContact: yup.string().required('Work performer contact is required'),
-  
-  // Claim Details
-  claimNature: yup.string().required('Nature of claim is required'),
-  firstAwareDate: yup.date().required('Date first became aware is required'),
-  claimMadeDate: yup.date().required('Date claim was made is required'),
-  intimationMode: yup.string().required('Please specify if intimation was oral or written'),
-  oralDetails: yup.string().when('intimationMode', {
-    is: 'oral',
-    then: (schema) => schema.required('Oral details are required')
-  }),
-  amountClaimed: yup.number().required('Amount claimed is required'),
-  
-  // Response
-  responseComments: yup.string().required('Response comments are required'),
-  quantumComments: yup.string().required('Quantum comments are required'),
-  estimatedLiability: yup.number().required('Estimated liability is required'),
-  additionalInfo: yup.string().required('Please specify if you have additional information'),
-  additionalDetails: yup.string().when('additionalInfo', {
-    is: 'yes',
-    then: (schema) => schema.required('Additional details are required')
-  }),
-  solicitorInstructed: yup.string().required('Please specify if solicitor was instructed'),
-  solicitorName: yup.string().when('solicitorInstructed', {
-    is: 'yes',
-    then: (schema) => schema.required('Solicitor name is required')
-  }),
-  solicitorAddress: yup.string().when('solicitorInstructed', {
-    is: 'yes',
-    then: (schema) => schema.required('Solicitor address is required')
-  }),
-  solicitorCompany: yup.string().when('solicitorInstructed', {
-    is: 'yes',
-    then: (schema) => schema.required('Solicitor company is required')
-  }),
-  solicitorRates: yup.string().when('solicitorInstructed', {
-    is: 'yes',
-    then: (schema) => schema.required('Solicitor rates are required')
-  }),
-  
-  // Declaration
-  agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to data privacy'),
-  declarationTrue: yup.boolean().oneOf([true], 'You must confirm the declaration is true'),
-  declarationAdditionalInfo: yup.boolean().oneOf([true], 'You must agree to provide additional information'),
-  declarationDocuments: yup.boolean().oneOf([true], 'You must agree to submit requested documents'),
-  signature: yup.string().required('Signature is required'),
-});
+import MultiStepForm from '../../components/common/MultiStepForm';
+import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { Badge } from '../../components/ui/badge';
+import { Loader2 } from 'lucide-react';
+import { Label } from '../../components/ui/label';
 
 interface ProfessionalIndemnityClaimData {
   policyNumber: string;
-  coverageFromDate: Date;
-  coverageToDate: Date;
+  coverageFromDate: string;
+  coverageToDate: string;
   insuredName: string;
   companyName?: string;
   title: string;
-  dateOfBirth: Date;
+  dateOfBirth: string;
   gender: string;
   address: string;
   phone: string;
@@ -124,15 +34,15 @@ interface ProfessionalIndemnityClaimData {
   retainerDetails: string;
   contractInWriting: 'yes' | 'no';
   contractDetails?: string;
-  workPerformedFrom: Date;
-  workPerformedTo: Date;
+  workPerformedFrom: string;
+  workPerformedTo: string;
   workPerformerName: string;
   workPerformerTitle: string;
   workPerformerDuties: string;
   workPerformerContact: string;
   claimNature: string;
-  firstAwareDate: Date;
-  claimMadeDate: Date;
+  firstAwareDate: string;
+  claimMadeDate: string;
   intimationMode: 'oral' | 'written';
   oralDetails?: string;
   amountClaimed: number;
@@ -147,17 +57,17 @@ interface ProfessionalIndemnityClaimData {
   solicitorCompany?: string;
   solicitorRates?: string;
   agreeToDataPrivacy: boolean;
-  declarationTrue: boolean;
-  declarationAdditionalInfo: boolean;
-  declarationDocuments: boolean;
   signature: string;
 }
 
 const defaultValues: Partial<ProfessionalIndemnityClaimData> = {
   policyNumber: '',
+  coverageFromDate: '',
+  coverageToDate: '',
   insuredName: '',
   companyName: '',
   title: '',
+  dateOfBirth: '',
   gender: '',
   address: '',
   phone: '',
@@ -167,11 +77,15 @@ const defaultValues: Partial<ProfessionalIndemnityClaimData> = {
   retainerDetails: '',
   contractInWriting: 'no',
   contractDetails: '',
+  workPerformedFrom: '',
+  workPerformedTo: '',
   workPerformerName: '',
   workPerformerTitle: '',
   workPerformerDuties: '',
   workPerformerContact: '',
   claimNature: '',
+  firstAwareDate: '',
+  claimMadeDate: '',
   intimationMode: 'oral',
   oralDetails: '',
   amountClaimed: 0,
@@ -186,31 +100,34 @@ const defaultValues: Partial<ProfessionalIndemnityClaimData> = {
   solicitorCompany: '',
   solicitorRates: '',
   agreeToDataPrivacy: false,
-  declarationTrue: false,
-  declarationAdditionalInfo: false,
-  declarationDocuments: false,
   signature: ''
 };
 
 const ProfessionalIndemnityClaimForm: React.FC = () => {
-  const { user } = useAuth();
+  const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const [editingField, setEditingField] = useState<string | null>(null);
 
-  const formMethods = useForm<any>({
-    resolver: yupResolver(professionalIndemnitySchema),
+  const formMethods = useForm<ProfessionalIndemnityClaimData>({
     defaultValues,
     mode: 'onChange'
   });
 
-  const { saveDraft, clearDraft } = useFormDraft('professionalIndemnity', formMethods);
+  const { saveDraft, loadDraft, clearDraft } = useFormDraft('professional-indemnity-claim', formMethods);
+
   const watchedValues = formMethods.watch();
 
-  // Auto-save draft
-  React.useEffect(() => {
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      Object.keys(draft).forEach((key) => {
+        formMethods.setValue(key as keyof ProfessionalIndemnityClaimData, draft[key]);
+      });
+    }
+  }, [formMethods, loadDraft]);
+
+  useEffect(() => {
     const subscription = formMethods.watch((data) => {
       saveDraft(data);
     });
@@ -220,40 +137,17 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
   const handleSubmit = async (data: ProfessionalIndemnityClaimData) => {
     setIsSubmitting(true);
     try {
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
-        fileUploadPromises.push(
-          uploadFile(file, 'professional-indemnity-claims').then(url => [key + 'Url', url])
-        );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Prepare form data with file URLs
-      const submissionData = {
+      // Save to Firestore
+      const docRef = await addDoc(collection(db, 'professionalIndemnityClaimsTable'), {
         ...data,
-        ...fileUrls,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        formType: 'professional-indemnity-claim'
-      };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'professional-indemnity-claims'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
+        submittedAt: new Date(),
+        status: 'submitted'
       });
 
-      // Email confirmation would be sent here
-      console.log('Claim submitted for:', data.email);
-      
       clearDraft();
       setShowSummary(false);
       setShowSuccess(true);
+      
       toast({
         title: "Claim Submitted Successfully",
         description: "Your professional indemnity claim has been submitted and you'll receive a confirmation email shortly.",
@@ -274,37 +168,6 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
     setShowSummary(true);
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
-    return (
-      <div className="space-y-2">
-        <Label>{label}</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !value && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <ReactCalendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={(date) => formMethods.setValue(name, date)}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-    );
-  };
 
   const steps = [
     {
@@ -322,15 +185,19 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <DatePickerField
-                name="coverageFromDate"
-                label="Period of Cover - From *"
+              <Label htmlFor="coverageFromDate">Period of Cover - From *</Label>
+              <Input
+                id="coverageFromDate"
+                type="date"
+                {...formMethods.register('coverageFromDate')}
               />
             </div>
             <div>
-              <DatePickerField
-                name="coverageToDate"
-                label="Period of Cover - To *"
+              <Label htmlFor="coverageToDate">Period of Cover - To *</Label>
+              <Input
+                id="coverageToDate"
+                type="date"
+                {...formMethods.register('coverageToDate')}
               />
             </div>
           </div>
@@ -379,9 +246,11 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
               </Select>
             </div>
             <div>
-              <DatePickerField
-                name="dateOfBirth"
-                label="Date of Birth *"
+              <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+              <Input
+                id="dateOfBirth"
+                type="date"
+                {...formMethods.register('dateOfBirth')}
               />
             </div>
             <div>
