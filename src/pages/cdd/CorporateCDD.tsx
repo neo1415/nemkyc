@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray, useFormContext } from 'react-hook-form';
+import React, { useState } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useToast } from '@/hooks/use-toast';
@@ -16,15 +16,12 @@ import { CalendarIcon, Plus, Trash2, Upload, Edit2, Building2, FileText, CheckCi
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import MultiStepForm from '@/components/common/MultiStepForm';
-import FormSection from '@/components/common/FormSection';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { db } from '@/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { emailService } from '@/services/emailService';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Corporate CDD Schema
 const corporateCDDSchema = yup.object().shape({
@@ -97,6 +94,7 @@ const corporateCDDSchema = yup.object().shape({
 
 const CorporateCDD: React.FC = () => {
   const { toast } = useToast();
+  const [currentStep, setCurrentStep] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
@@ -165,7 +163,7 @@ const CorporateCDD: React.FC = () => {
   const watchedValues = formMethods.watch();
 
   // Auto-save draft
-  useEffect(() => {
+  React.useEffect(() => {
     const subscription = formMethods.watch((data) => {
       saveDraft(data);
     });
@@ -220,128 +218,92 @@ const CorporateCDD: React.FC = () => {
     }
   };
 
-  const DatePickerField = ({ name, label, required = false }: { name: string; label: string; required?: boolean }) => {
+  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
     const value = formMethods.watch(name);
     return (
-      <TooltipProvider>
-        <div className="space-y-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Label className="flex items-center gap-1">
-                {label} {required && '*'}
-                <Info className="h-3 w-3" />
-              </Label>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Select the {label.toLowerCase()}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !value && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <ReactCalendar
-                mode="single"
-                selected={value ? new Date(value) : undefined}
-                onSelect={(date) => formMethods.setValue(name, date)}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-          {formMethods.formState.errors[name] && <p className="text-sm text-red-600">{String(formMethods.formState.errors[name]?.message || '')}</p>}
-        </div>
-      </TooltipProvider>
+      <div className="space-y-2">
+        <Label>{label}</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !value && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <ReactCalendar
+              mode="single"
+              selected={value ? new Date(value) : undefined}
+              onSelect={(date) => formMethods.setValue(name, date)}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
     );
   };
 
-  const CompanyInfoStep = () => (
-    <FormSection title="Company Information" icon={<Building2 className="h-5 w-5" />}>
-      <TooltipProvider>
+  const steps = [
+    {
+      id: 'company',
+      title: 'Company Information',
+      component: (
         <div className="space-y-4">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <Label htmlFor="companyName" className="flex items-center gap-1">
-                  Company Name *
-                  <Info className="h-3 w-3" />
-                </Label>
-                <Input id="companyName" {...formMethods.register('companyName')} />
-                {formMethods.formState.errors.companyName && <p className="text-sm text-red-600">{String(formMethods.formState.errors.companyName.message || '')}</p>}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent><p>Enter the full registered company name</p></TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <Label htmlFor="registeredAddress" className="flex items-center gap-1">
-                  Registered Company Address *
-                  <Info className="h-3 w-3" />
-                </Label>
-                <Textarea id="registeredAddress" {...formMethods.register('registeredAddress')} />
-                {formMethods.formState.errors.registeredAddress && <p className="text-sm text-red-600">{String(formMethods.formState.errors.registeredAddress.message || '')}</p>}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent><p>Enter the official registered address</p></TooltipContent>
-          </Tooltip>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="incorporationNumber" className="flex items-center gap-1">
-                    Incorporation Number *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input id="incorporationNumber" {...formMethods.register('incorporationNumber')} />
-                  {formMethods.formState.errors.incorporationNumber && <p className="text-sm text-red-600">{String(formMethods.formState.errors.incorporationNumber.message || '')}</p>}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent><p>Official company incorporation number</p></TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="incorporationState" className="flex items-center gap-1">
-                    Incorporation State *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input id="incorporationState" {...formMethods.register('incorporationState')} />
-                  {formMethods.formState.errors.incorporationState && <p className="text-sm text-red-600">{String(formMethods.formState.errors.incorporationState.message || '')}</p>}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent><p>State where the company was incorporated</p></TooltipContent>
-            </Tooltip>
+          <div>
+            <Label htmlFor="companyName">Company Name *</Label>
+            <Input
+              id="companyName"
+              {...formMethods.register('companyName')}
+            />
           </div>
-
-          <DatePickerField name="dateOfIncorporation" label="Date of Incorporation/Registration" required />
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <Label htmlFor="natureOfBusiness" className="flex items-center gap-1">
-                  Nature of Business *
-                  <Info className="h-3 w-3" />
-                </Label>
-                <Textarea id="natureOfBusiness" {...formMethods.register('natureOfBusiness')} />
-                {formMethods.formState.errors.natureOfBusiness && <p className="text-sm text-red-600">{String(formMethods.formState.errors.natureOfBusiness.message || '')}</p>}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent><p>Describe the main business activities</p></TooltipContent>
-          </Tooltip>
-
+          
+          <div>
+            <Label htmlFor="registeredAddress">Registered Company Address *</Label>
+            <Textarea
+              id="registeredAddress"
+              {...formMethods.register('registeredAddress')}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="incorporationNumber">Incorporation Number *</Label>
+              <Input
+                id="incorporationNumber"
+                {...formMethods.register('incorporationNumber')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="incorporationState">Incorporation State *</Label>
+              <Input
+                id="incorporationState"
+                {...formMethods.register('incorporationState')}
+              />
+            </div>
+          </div>
+          
+          <div>
+            <DatePickerField
+              name="dateOfIncorporation"
+              label="Date of Incorporation/Registration *"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="natureOfBusiness">Nature of Business *</Label>
+            <Textarea
+              id="natureOfBusiness"
+              {...formMethods.register('natureOfBusiness')}
+            />
+          </div>
+          
           <div>
             <Label>Company Type *</Label>
             <Select
@@ -360,452 +322,464 @@ const CorporateCDD: React.FC = () => {
                 <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
             </Select>
-            {formMethods.formState.errors.companyType && <p className="text-sm text-red-600">{String(formMethods.formState.errors.companyType.message || '')}</p>}
           </div>
 
           {watchedValues.companyType === 'Other' && (
             <div>
               <Label htmlFor="companyTypeOther">Please specify *</Label>
               <Input id="companyTypeOther" {...formMethods.register('companyTypeOther')} />
-              {formMethods.formState.errors.companyTypeOther && <p className="text-sm text-red-600">{String(formMethods.formState.errors.companyTypeOther.message || '')}</p>}
             </div>
           )}
-
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="email" className="flex items-center gap-1">
-                    Email Address *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input id="email" type="email" {...formMethods.register('email')} />
-                  {formMethods.formState.errors.email && <p className="text-sm text-red-600">{String(formMethods.formState.errors.email.message || '')}</p>}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent><p>Official company email address</p></TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="website" className="flex items-center gap-1">
-                    Website *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input id="website" {...formMethods.register('website')} />
-                  {formMethods.formState.errors.website && <p className="text-sm text-red-600">{String(formMethods.formState.errors.website.message || '')}</p>}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent><p>Company website URL</p></TooltipContent>
-            </Tooltip>
+            <div>
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                {...formMethods.register('email')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="website">Website *</Label>
+              <Input
+                id="website"
+                {...formMethods.register('website')}
+              />
+            </div>
           </div>
-
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="taxId" className="flex items-center gap-1">
-                    Tax Identification Number
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input id="taxId" {...formMethods.register('taxId')} />
-                  {formMethods.formState.errors.taxId && <p className="text-sm text-red-600">{String(formMethods.formState.errors.taxId.message || '')}</p>}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent><p>Company tax identification number</p></TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="telephone" className="flex items-center gap-1">
-                    Telephone Number *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input id="telephone" {...formMethods.register('telephone')} />
-                  {formMethods.formState.errors.telephone && <p className="text-sm text-red-600">{String(formMethods.formState.errors.telephone.message || '')}</p>}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent><p>Company contact telephone number</p></TooltipContent>
-            </Tooltip>
+            <div>
+              <Label htmlFor="taxId">Tax Identification Number</Label>
+              <Input
+                id="taxId"
+                {...formMethods.register('taxId')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="telephone">Telephone Number *</Label>
+              <Input
+                id="telephone"
+                {...formMethods.register('telephone')}
+              />
+            </div>
           </div>
         </div>
-      </TooltipProvider>
-    </FormSection>
-  );
-
-  const DirectorsStep = () => (
-    <FormSection title="Directors Information" icon={<User className="h-5 w-5" />}>
-      <div className="space-y-6">
-        {directorFields.map((field, index) => (
-          <Card key={field.id} className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Director {index + 1}</h3>
-              {directorFields.length > 1 && (
+      )
+    },
+    {
+      id: 'directors',
+      title: 'Directors Information',
+      component: (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium">Directors</h3>
+            <Button
+              type="button"
+              onClick={() => addDirector(defaultDirector)}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add Director
+            </Button>
+          </div>
+          
+          {directorFields.map((field, index) => (
+            <Card key={field.id} className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-medium">Director {index + 1}</h4>
                 <Button
                   type="button"
                   variant="destructive"
                   size="sm"
                   onClick={() => removeDirector(index)}
+                  disabled={directorFields.length === 1}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-              )}
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label>First Name *</Label>
-                  <Input {...formMethods.register(`directors.${index}.firstName`)} />
-                  {formMethods.formState.errors.directors?.[index]?.firstName && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.firstName?.message || '')}</p>}
-                </div>
-                <div>
-                  <Label>Middle Name</Label>
-                  <Input {...formMethods.register(`directors.${index}.middleName`)} />
-                </div>
-                <div>
-                  <Label>Last Name *</Label>
-                  <Input {...formMethods.register(`directors.${index}.lastName`)} />
-                  {formMethods.formState.errors.directors?.[index]?.lastName && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.lastName?.message || '')}</p>}
-                </div>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <DatePickerField name={`directors.${index}.dateOfBirth`} label="Date of Birth" required />
-                <div>
-                  <Label>Place of Birth *</Label>
-                  <Input {...formMethods.register(`directors.${index}.placeOfBirth`)} />
-                  {formMethods.formState.errors.directors?.[index]?.placeOfBirth && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.placeOfBirth?.message || '')}</p>}
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>First Name *</Label>
+                    <Input {...formMethods.register(`directors.${index}.firstName`)} />
+                  </div>
+                  <div>
+                    <Label>Middle Name</Label>
+                    <Input {...formMethods.register(`directors.${index}.middleName`)} />
+                  </div>
+                  <div>
+                    <Label>Last Name *</Label>
+                    <Input {...formMethods.register(`directors.${index}.lastName`)} />
+                  </div>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <DatePickerField name={`directors.${index}.dateOfBirth`} label="Date of Birth *" />
+                  <div>
+                    <Label>Place of Birth *</Label>
+                    <Input {...formMethods.register(`directors.${index}.placeOfBirth`)} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Nationality *</Label>
+                    <Input {...formMethods.register(`directors.${index}.nationality`)} />
+                  </div>
+                  <div>
+                    <Label>Country *</Label>
+                    <Input {...formMethods.register(`directors.${index}.country`)} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Occupation *</Label>
+                    <Input {...formMethods.register(`directors.${index}.occupation`)} />
+                  </div>
+                  <div>
+                    <Label>Email *</Label>
+                    <Input type="email" {...formMethods.register(`directors.${index}.email`)} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Phone Number *</Label>
+                    <Input {...formMethods.register(`directors.${index}.phoneNumber`)} />
+                  </div>
+                  <div>
+                    <Label>BVN *</Label>
+                    <Input {...formMethods.register(`directors.${index}.bvn`)} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Employer's Name</Label>
+                    <Input {...formMethods.register(`directors.${index}.employerName`)} />
+                  </div>
+                  <div>
+                    <Label>Employer's Phone</Label>
+                    <Input {...formMethods.register(`directors.${index}.employerPhone`)} />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Residential Address *</Label>
+                  <Textarea {...formMethods.register(`directors.${index}.residentialAddress`)} />
+                </div>
+
+                <div>
+                  <Label>Tax ID Number</Label>
+                  <Input {...formMethods.register(`directors.${index}.taxIdNumber`)} />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>ID Type *</Label>
+                    <Select
+                      value={watchedValues.directors?.[index]?.idType || ''}
+                      onValueChange={(value) => formMethods.setValue(`directors.${index}.idType`, value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select ID Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="National ID">National ID</SelectItem>
+                        <SelectItem value="International Passport">International Passport</SelectItem>
+                        <SelectItem value="Driver's License">Driver's License</SelectItem>
+                        <SelectItem value="Voter's Card">Voter's Card</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Identification Number *</Label>
+                    <Input {...formMethods.register(`directors.${index}.identificationNumber`)} />
+                  </div>
+                  <div>
+                    <Label>Issuing Body *</Label>
+                    <Input {...formMethods.register(`directors.${index}.issuingBody`)} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <DatePickerField name={`directors.${index}.issuedDate`} label="Issued Date *" />
+                  <DatePickerField name={`directors.${index}.expiryDate`} label="Expiry Date" />
+                </div>
+
+                <div>
+                  <Label>Source of Income *</Label>
+                  <Select
+                    value={watchedValues.directors?.[index]?.sourceOfIncome || ''}
+                    onValueChange={(value) => formMethods.setValue(`directors.${index}.sourceOfIncome`, value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Source of Income" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Salary">Salary</SelectItem>
+                      <SelectItem value="Business">Business</SelectItem>
+                      <SelectItem value="Investment">Investment</SelectItem>
+                      <SelectItem value="Inheritance">Inheritance</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {watchedValues.directors?.[index]?.sourceOfIncome === 'Other' && (
+                  <div>
+                    <Label>Please specify *</Label>
+                    <Input {...formMethods.register(`directors.${index}.sourceOfIncomeOther`)} />
+                  </div>
+                )}
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Nationality *</Label>
-                  <Input {...formMethods.register(`directors.${index}.nationality`)} />
-                  {formMethods.formState.errors.directors?.[index]?.nationality && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.nationality?.message || '')}</p>}
-                </div>
-                <div>
-                  <Label>Country *</Label>
-                  <Input {...formMethods.register(`directors.${index}.country`)} />
-                  {formMethods.formState.errors.directors?.[index]?.country && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.country?.message || '')}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Occupation *</Label>
-                  <Input {...formMethods.register(`directors.${index}.occupation`)} />
-                  {formMethods.formState.errors.directors?.[index]?.occupation && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.occupation?.message || '')}</p>}
-                </div>
-                <div>
-                  <Label>Email *</Label>
-                  <Input type="email" {...formMethods.register(`directors.${index}.email`)} />
-                  {formMethods.formState.errors.directors?.[index]?.email && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.email?.message || '')}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Phone Number *</Label>
-                  <Input {...formMethods.register(`directors.${index}.phoneNumber`)} />
-                  {formMethods.formState.errors.directors?.[index]?.phoneNumber && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.phoneNumber?.message || '')}</p>}
-                </div>
-                <div>
-                  <Label>BVN *</Label>
-                  <Input {...formMethods.register(`directors.${index}.bvn`)} />
-                  {formMethods.formState.errors.directors?.[index]?.bvn && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.bvn?.message || '')}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Employer's Name</Label>
-                  <Input {...formMethods.register(`directors.${index}.employerName`)} />
-                </div>
-                <div>
-                  <Label>Employer's Phone</Label>
-                  <Input {...formMethods.register(`directors.${index}.employerPhone`)} />
-                </div>
-              </div>
-
-              <div>
-                <Label>Residential Address *</Label>
-                <Textarea {...formMethods.register(`directors.${index}.residentialAddress`)} />
-                {formMethods.formState.errors.directors?.[index]?.residentialAddress && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.residentialAddress?.message || '')}</p>}
-              </div>
-
-              <div>
-                <Label>Tax ID Number</Label>
-                <Input {...formMethods.register(`directors.${index}.taxIdNumber`)} />
-              </div>
-
-              <div>
-                <Label>ID Type *</Label>
-                <Select
-                  value={watchedValues.directors?.[index]?.idType || ''}
-                  onValueChange={(value) => formMethods.setValue(`directors.${index}.idType`, value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose Identification Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="International Passport">International Passport</SelectItem>
-                    <SelectItem value="NIMC">NIMC</SelectItem>
-                    <SelectItem value="Driver's Licence">Driver's Licence</SelectItem>
-                    <SelectItem value="Voters Card">Voters Card</SelectItem>
-                  </SelectContent>
-                </Select>
-                {formMethods.formState.errors.directors?.[index]?.idType && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.idType?.message || '')}</p>}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Identification Number *</Label>
-                  <Input {...formMethods.register(`directors.${index}.identificationNumber`)} />
-                  {formMethods.formState.errors.directors?.[index]?.identificationNumber && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.identificationNumber?.message || '')}</p>}
-                </div>
-                <div>
-                  <Label>Issuing Body *</Label>
-                  <Input {...formMethods.register(`directors.${index}.issuingBody`)} />
-                  {formMethods.formState.errors.directors?.[index]?.issuingBody && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.issuingBody?.message || '')}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <DatePickerField name={`directors.${index}.issuedDate`} label="Issued Date" required />
-                <DatePickerField name={`directors.${index}.expiryDate`} label="Expiry Date" />
-              </div>
-
-              <div>
-                <Label>Source of Income *</Label>
-                <Select
-                  value={watchedValues.directors?.[index]?.sourceOfIncome || ''}
-                  onValueChange={(value) => formMethods.setValue(`directors.${index}.sourceOfIncome`, value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose Income Source" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Salary or Business Income">Salary or Business Income</SelectItem>
-                    <SelectItem value="Investments or Dividends">Investments or Dividends</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                {formMethods.formState.errors.directors?.[index]?.sourceOfIncome && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.sourceOfIncome?.message || '')}</p>}
-              </div>
-
-              {watchedValues.directors?.[index]?.sourceOfIncome === 'Other' && (
-                <div>
-                  <Label>Please specify *</Label>
-                  <Input {...formMethods.register(`directors.${index}.sourceOfIncomeOther`)} />
-                  {formMethods.formState.errors.directors?.[index]?.sourceOfIncomeOther && <p className="text-sm text-red-600">{String((formMethods.formState.errors.directors[index] as any)?.sourceOfIncomeOther?.message || '')}</p>}
-                </div>
-              )}
-            </div>
-          </Card>
-        ))}
-        
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => addDirector(defaultDirector)}
-          className="w-full"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Director
-        </Button>
-      </div>
-    </FormSection>
-  );
-
-  const AccountDetailsStep = () => (
-    <FormSection title="Account Details" icon={<CreditCard className="h-5 w-5" />}>
-      <div className="space-y-6">
-        <div>
-          <h4 className="font-medium mb-4">Local Account Details</h4>
+            </Card>
+          ))}
+        </div>
+      )
+    },
+    {
+      id: 'banking',
+      title: 'Banking Information',
+      component: (
+        <div className="space-y-6">
+          <h3 className="text-lg font-medium">Account Details</h3>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="bankName">Bank Name *</Label>
-              <Input {...formMethods.register('bankName')} />
-              {formMethods.formState.errors.bankName && <p className="text-sm text-red-600">{String(formMethods.formState.errors.bankName.message || '')}</p>}
+              <Input
+                id="bankName"
+                {...formMethods.register('bankName')}
+              />
             </div>
-            
             <div>
               <Label htmlFor="accountNumber">Account Number *</Label>
-              <Input {...formMethods.register('accountNumber')} />
-              {formMethods.formState.errors.accountNumber && <p className="text-sm text-red-600">{String(formMethods.formState.errors.accountNumber.message || '')}</p>}
+              <Input
+                id="accountNumber"
+                {...formMethods.register('accountNumber')}
+              />
             </div>
-            
-            <div>
-              <Label htmlFor="bankBranch">Bank Branch *</Label>
-              <Input {...formMethods.register('bankBranch')} />
-              {formMethods.formState.errors.bankBranch && <p className="text-sm text-red-600">{String(formMethods.formState.errors.bankBranch.message || '')}</p>}
-            </div>
-            
-            <DatePickerField name="accountOpeningDate" label="Account Opening Date" required />
           </div>
-        </div>
-        
-        <div>
-          <h4 className="font-medium mb-4">Foreign Account Details (Optional)</h4>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="foreignBankName">Bank Name</Label>
-              <Input {...formMethods.register('foreignBankName')} />
+              <Label htmlFor="bankBranch">Bank Branch *</Label>
+              <Input
+                id="bankBranch"
+                {...formMethods.register('bankBranch')}
+              />
             </div>
-            
             <div>
-              <Label htmlFor="foreignAccountNumber">Account Number</Label>
-              <Input {...formMethods.register('foreignAccountNumber')} />
+              <DatePickerField
+                name="accountOpeningDate"
+                label="Account Opening Date *"
+              />
             </div>
-            
+          </div>
+
+          <h3 className="text-lg font-medium mt-8">Foreign Account Details (Optional)</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="foreignBankBranch">Bank Branch</Label>
-              <Input {...formMethods.register('foreignBankBranch')} />
+              <Label htmlFor="foreignBankName">Foreign Bank Name</Label>
+              <Input
+                id="foreignBankName"
+                {...formMethods.register('foreignBankName')}
+              />
             </div>
+            <div>
+              <Label htmlFor="foreignAccountNumber">Foreign Account Number</Label>
+              <Input
+                id="foreignAccountNumber"
+                {...formMethods.register('foreignAccountNumber')}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="foreignBankBranch">Foreign Bank Branch</Label>
+              <Input
+                id="foreignBankBranch"
+                {...formMethods.register('foreignBankBranch')}
+              />
+            </div>
+            <div>
+              <DatePickerField
+                name="foreignAccountOpeningDate"
+                label="Foreign Account Opening Date"
+              />
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'declaration',
+      title: 'Declaration & Files',
+      component: (
+        <div className="space-y-6">
+          <h3 className="text-lg font-medium">Declaration</h3>
+          
+          <div className="flex items-start space-x-2">
+            <Checkbox
+              id="agreeToDataPrivacy"
+              checked={watchedValues.agreeToDataPrivacy || false}
+              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked)}
+            />
+            <Label htmlFor="agreeToDataPrivacy" className="text-sm leading-5">
+              I agree to the data privacy policy and confirm that all information provided is accurate and complete. *
+            </Label>
+          </div>
+
+          <div>
+            <Label htmlFor="signature">Digital Signature *</Label>
+            <Input
+              id="signature"
+              placeholder="Type your full name as digital signature"
+              {...formMethods.register('signature')}
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              By typing your name above, you are providing your digital signature
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="font-medium">Upload Required Documents</h4>
             
-            <DatePickerField name="foreignAccountOpeningDate" label="Account Opening Date" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FileUpload
+                label="Certificate of Incorporation"
+                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, certificateOfIncorporation: file }))}
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+              
+              <FileUpload
+                label="Memorandum & Articles of Association"
+                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, memorandumArticles: file }))}
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+              
+              <FileUpload
+                label="Form CAC 7 (Particulars of Directors)"
+                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, formCAC7: file }))}
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+              
+              <FileUpload
+                label="Tax Clearance Certificate"
+                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, taxClearance: file }))}
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+              
+              <FileUpload
+                label="Audited Financial Statements"
+                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, auditedFinancials: file }))}
+                accept=".pdf"
+              />
+              
+              <FileUpload
+                label="Board Resolution"
+                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, boardResolution: file }))}
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+            </div>
           </div>
         </div>
-      </div>
-    </FormSection>
-  );
-
-  const DocumentsStep = () => (
-    <FormSection title="Document Upload" icon={<Upload className="h-5 w-5" />}>
-      <div className="space-y-6">
-        <FileUpload
-          label="Upload Your CAC Certificate"
-          required
-          onFileSelect={(file) => {
-            formMethods.setValue('cacCertificate', file);
-            setUploadedFiles(prev => ({ ...prev, cacCertificate: file }));
-          }}
-          currentFile={watchedValues.cacCertificate as File}
-          error={String(formMethods.formState.errors.cacCertificate?.message || '')}
-        />
-        
-        <FileUpload
-          label="Upload Means of Identification"
-          required
-          onFileSelect={(file) => {
-            formMethods.setValue('meansOfIdentification', file);
-            setUploadedFiles(prev => ({ ...prev, meansOfIdentification: file }));
-          }}
-          currentFile={watchedValues.meansOfIdentification as File}
-          error={String(formMethods.formState.errors.meansOfIdentification?.message || '')}
-        />
-      </div>
-    </FormSection>
-  );
-
-  const DataPrivacyStep = () => (
-    <FormSection title="Data Privacy & Declaration" icon={<FileText className="h-5 w-5" />}>
-      <div className="space-y-6">
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h4 className="font-medium mb-4">Data Privacy</h4>
-          <div className="space-y-2 text-sm">
-            <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-            <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-            <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
-          </div>
-        </div>
-        
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h4 className="font-medium mb-4">Declaration</h4>
-          <div className="space-y-2 text-sm">
-            <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-            <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-            <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <Checkbox 
-            id="agreeToDataPrivacy"
-            checked={watchedValues.agreeToDataPrivacy}
-            onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked as boolean)}
-          />
-          <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy policy and declaration *</Label>
-        </div>
-        {formMethods.formState.errors.agreeToDataPrivacy && <p className="text-sm text-red-600">{String(formMethods.formState.errors.agreeToDataPrivacy.message || '')}</p>}
-        
-        <div>
-          <Label htmlFor="signature">Digital Signature *</Label>
-          <Input {...formMethods.register('signature')} placeholder="Type your full name as signature" />
-          {formMethods.formState.errors.signature && <p className="text-sm text-red-600">{String(formMethods.formState.errors.signature.message || '')}</p>}
-        </div>
-        
-        <div>
-          <Label>Date</Label>
-          <Input type="date" value={new Date().toISOString().split('T')[0]} readOnly />
-        </div>
-      </div>
-    </FormSection>
-  );
-
-  const steps = [
-    {
-      id: 'company-info',
-      title: 'Company Information',
-      component: <CompanyInfoStep />,
-      isValid: !formMethods.formState.errors.companyName && !formMethods.formState.errors.incorporationNumber && !formMethods.formState.errors.registeredAddress
-    },
-    {
-      id: 'directors',
-      title: 'Directors Information',
-      component: <DirectorsStep />,
-      isValid: !formMethods.formState.errors.directors
-    },
-    {
-      id: 'account-details',
-      title: 'Account Details',
-      component: <AccountDetailsStep />,
-      isValid: !formMethods.formState.errors.bankName && !formMethods.formState.errors.accountNumber
-    },
-    {
-      id: 'documents',
-      title: 'Document Upload',
-      component: <DocumentsStep />,
-      isValid: true
-    },
-    {
-      id: 'privacy',
-      title: 'Data Privacy & Declaration',
-      component: <DataPrivacyStep />,
-      isValid: watchedValues.agreeToDataPrivacy && watchedValues.signature
+      )
     }
   ];
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Building2 className="h-8 w-8 text-primary" />
-            Corporate CDD Form
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Customer Due Diligence form for corporate entities and their directors.
-          </p>
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Corporate Customer Due Diligence (CDD)</h1>
+          <p className="text-gray-600 mt-2">Complete all required information for corporate client onboarding</p>
         </div>
 
-        <MultiStepForm
-          steps={steps}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Submit CDD Form"
-          formMethods={formMethods}
-        />
+        <div className="bg-white shadow-sm rounded-lg p-6 mb-8">
+          {/* Step Indicator */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              {steps.map((step, index) => {
+                return (
+                  <div key={index} className="flex items-center">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                        index <= currentStep ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                      }`}
+                    >
+                      {index + 1}
+                    </div>
+                    <span className="ml-2 text-sm font-medium text-gray-700">{step.title}</span>
+                    {index < steps.length - 1 && <div className="w-8 h-px bg-gray-300 ml-4" />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Step Content */}
+          <div className="bg-white rounded-lg border border-gray-200">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">{steps[currentStep].title}</h2>
+            </div>
+            <div className="p-6">
+              {steps[currentStep].component}
+            </div>
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={() => setCurrentStep(prev => prev - 1)}
+              disabled={currentStep === 0}
+              size="lg"
+              className="px-8"
+            >
+              Previous
+            </Button>
+            
+            {currentStep < steps.length - 1 ? (
+              <Button
+                onClick={() => setCurrentStep(prev => prev + 1)}
+                size="lg"
+                className="px-8"
+              >
+                Next
+              </Button>
+            ) : (
+              <Button
+                onClick={formMethods.handleSubmit(handleSubmit)}
+                disabled={isSubmitting}
+                size="lg"
+                className="px-8 bg-green-600 hover:bg-green-700"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Form'
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
 
         {/* Success Dialog */}
         <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-center text-green-600">CDD Form Submitted Successfully!</DialogTitle>
+              <DialogTitle className="text-center text-green-600">Corporate CDD Form Submitted Successfully!</DialogTitle>
             </DialogHeader>
             <div className="text-center py-4">
               <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
