@@ -181,8 +181,10 @@ const GoodsInTransitClaim: React.FC = () => {
   }, [formMethods, saveDraft]);
 
   // Calculate total value from goods items
+  // Old calculation logic: const total = watchedValues.goodsItems?.reduce((sum, item) => sum + (item.value || 0), 0) || 0;
   useEffect(() => {
-    const total = watchedValues.goodsItems?.reduce((sum, item) => sum + (item.value || 0), 0) || 0;
+    const total = watchedValues.goodsItems?.reduce((sum, item) => 
+      sum + ((item.quantity || 0) * (item.value || 0)), 0) || 0;
     if (total !== watchedValues.totalValue) {
       formMethods.setValue('totalValue', total);
     }
@@ -629,11 +631,12 @@ const GoodsInTransitClaim: React.FC = () => {
                           Description *
                           <Info className="h-3 w-3" />
                         </Label>
-                        <Input
-                          id={`goodsItems_description_${index}`}
-                          placeholder="Enter description"
-                          {...formMethods.register(`goodsItems.${index}.description`)}
-                        />
+                         <Textarea
+                           id={`goodsItems_description_${index}`}
+                           placeholder="Enter description"
+                           rows={2}
+                           {...formMethods.register(`goodsItems.${index}.description`)}
+                         />
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
