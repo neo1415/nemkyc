@@ -213,9 +213,6 @@ const MotorClaim: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
-  const addWitness = () => {
-    appendWitness({ name: '', address: '', phone: '', isPassenger: false });
-  };
 
   const handleSubmit = async (data: MotorClaimData) => {
     setIsSubmitting(true);
@@ -684,7 +681,7 @@ const MotorClaim: React.FC = () => {
         </div>
       )
     },
-  {
+{
   id: 'witnesses',
   title: 'Witnesses',
   component: (
@@ -693,6 +690,7 @@ const MotorClaim: React.FC = () => {
         <Label className="text-lg font-semibold">Witnesses</Label>
         <Button
           type="button"
+          // This correctly calls the "addWitness" function from the useFieldArray hook
           onClick={() => addWitness({ name: '', address: '', phone: '', isPassenger: false })}
           variant="outline"
           size="sm"
@@ -716,6 +714,7 @@ const MotorClaim: React.FC = () => {
             </Button>
           </div>
 
+          {/* Corrected fields below */}
           <div>
             <Label htmlFor={`witnesses.${index}.name`}>Witness Name *</Label>
             <Input
