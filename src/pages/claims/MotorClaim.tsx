@@ -682,86 +682,84 @@ const MotorClaim: React.FC = () => {
         </div>
       )
     },
-{
-  id: 'witnesses',
-  title: 'Witnesses',
-  component: (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <Label className="text-lg font-semibold">Witnesses</Label>
-        <Button
-          type="button"
-          // This correctly calls the "addWitness" function from the useFieldArray hook
-          onClick={() => addWitness({ name: '', address: '', phone: '', isPassenger: false })}
-          variant="outline"
-          size="sm"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Witness
-        </Button>
-      </div>
-
-      {witnessFields.map((field, index) => (
-        <Card key={field.id} className="p-4 space-y-4">
+    {
+      id: 'witnesses',
+      title: 'Witnesses',
+      component: (
+        <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="font-semibold">Witness {index + 1}</h3>
+            <Label className="text-lg font-semibold">Witnesses</Label>
             <Button
               type="button"
-              onClick={() => removeWitness(index)}
-              variant="destructive"
+              onClick={() => addWitness({ name: '', address: '', phone: '', isPassenger: false })}
+              variant="outline"
               size="sm"
             >
-              <Trash2 className="h-4 w-4" />
+              <Plus className="h-4 w-4 mr-2" />
+              Add Witness
             </Button>
           </div>
+          
+          {witnessFields.map((field, index) => (
+            <Card key={field.id} className="p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold">Witness {index + 1}</h3>
+                <Button
+                  type="button"
+                  onClick={() => removeWitness(index)}
+                  variant="destructive"
+                  size="sm"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor={`witnesses.${index}.name`}>Witness Name *</Label>
+                  <Input
+                    {...formMethods.register(`witnesses.${index}.name`)}
+                    placeholder="Enter witness name"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor={`witnesses.${index}.address`}>Witness Address *</Label>
+                  <Textarea
+                    {...formMethods.register(`witnesses.${index}.address`)}
+                    placeholder="Enter witness address"
+                    rows={2}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor={`witnesses.${index}.phone`}>Witness Phone *</Label>
+                  <Input
+                    {...formMethods.register(`witnesses.${index}.phone`)}
+                    placeholder="Enter phone number"
+                  />
+                </div>
 
-          {/* Corrected fields below */}
-          <div>
-            <Label htmlFor={`witnesses.${index}.name`}>Witness Name *</Label>
-            <Input
-              {...formMethods.register(`witnesses.${index}.name`)}
-              placeholder="Enter witness name"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor={`witnesses.${index}.address`}>Witness Address *</Label>
-            <Textarea
-              {...formMethods.register(`witnesses.${index}.address`)}
-              placeholder="Enter witness address"
-              rows={2}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor={`witnesses.${index}.phone`}>Witness Phone *</Label>
-            <Input
-              {...formMethods.register(`witnesses.${index}.phone`)}
-              placeholder="Enter phone number"
-            />
-          </div>
-
-          <div className="flex items-center space-x-2 pt-2">
-            <Checkbox
-              id={`witnesses.${index}.isPassenger`}
-              checked={watchedValues.witnesses?.[index]?.isPassenger || false}
-              onCheckedChange={(checked) =>
-                formMethods.setValue(`witnesses.${index}.isPassenger`, !!checked)
-              }
-            />
-            <Label htmlFor={`witnesses.${index}.isPassenger`}>Was passenger</Label>
-          </div>
-        </Card>
-      ))}
-
-      {witnessFields.length === 0 && (
-        <div className="text-center text-sm text-muted-foreground border p-6 rounded-md">
-          No witnesses added yet. Click "Add Witness" to add witness information.
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`witnesses.${index}.isPassenger`}
+                    checked={watchedValues.witnesses?.[index]?.isPassenger || false}
+                    onCheckedChange={(checked) => formMethods.setValue(`witnesses.${index}.isPassenger`, !!checked)}
+                  />
+                  <Label htmlFor={`witnesses.${index}.isPassenger`}>Was passenger</Label>
+                </div>
+              </div>
+            </Card>
+          ))}
+          
+          {witnessFields.length === 0 && (
+            <div className="text-center text-sm text-muted-foreground border p-6 rounded-md">
+              No witnesses added yet. Click "Add Witness" to add witness information.
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  )
-},
+      )
+    },
     {
       id: 'other-vehicle',
       title: 'Other Vehicle/Property',
