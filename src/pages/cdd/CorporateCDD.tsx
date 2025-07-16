@@ -173,50 +173,12 @@ const CorporateCDD: React.FC = () => {
   const handleSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
-        fileUploadPromises.push(
-          uploadFile(file, 'corporate-cdd').then(url => [key + 'Url', url])
-        );
-      });
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-
-      const submissionData = {
-        ...data,
-        ...fileUrls,
-        status: 'submitted',
-        submittedAt: new Date().toISOString(),
-        formType: 'corporate-cdd'
-      };
-
-      await addDoc(collection(db, 'corporate-kyc'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
-      });
-
-      clearDraft();
-      setShowSuccess(true);
-      toast({ title: 'Corporate CDD form submitted successfully!' });
-    } catch (err) {
-      console.error(err);
-      toast({ title: 'Submission failed', variant: 'destructive' });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  const handleFinalSubmit = async () => {
-    setIsSubmitting(true);
-    try {
-      const data = formMethods.getValues();
-      
       // Upload files to Firebase Storage
       const fileUploadPromises: Array<Promise<[string, string]>> = [];
       
       Object.entries(uploadedFiles).forEach(([key, file]) => {
         fileUploadPromises.push(
-          uploadFile(file, 'corporate-kyc').then(url => [key + 'Url', url])
+          uploadFile(file, 'corporate-cdd').then(url => [key + 'Url', url])
         );
       });
       
@@ -227,7 +189,7 @@ const CorporateCDD: React.FC = () => {
       const submissionData = {
         ...data,
         ...fileUrls,
-        status: 'submitted',
+        status: 'processing',
         submittedAt: new Date().toISOString(),
         formType: 'corporate-cdd'
       };
@@ -242,7 +204,7 @@ const CorporateCDD: React.FC = () => {
       clearDraft();
       setShowSummary(false);
       setShowSuccess(true);
-      toast({ title: "Corporate CDD form submitted successfully!" });
+      toast({ title: "CDD form submitted successfully!" });
     } catch (error) {
       console.error('Submission error:', error);
       toast({ title: "Submission failed", variant: "destructive" });
@@ -719,16 +681,15 @@ const CorporateCDD: React.FC = () => {
               {...formMethods.register('signature')}
             />
           </div>
-            <div className="text-center pt-4">
+          <div className="text-center pt-4">
             <Button
               type="button"
-              onClick={async () => {
-                const valid = await formMethods.trigger();
-                if (valid) handleSubmit(formMethods.getValues());
+              onClick={() => {
+                const isValid = formMethods.trigger();
+                if (isValid) setShowSummary(true);
               }}
-              disabled={isSubmitting}
             >
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : 'Submit CDD Form'}
+              Review & Submit
             </Button>
           </div>
         </div>
@@ -777,14 +738,21 @@ const CorporateCDD: React.FC = () => {
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Back to Edit
               </Button>
-              <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
+              <Button
+                onClick={() => {
+                  const formData = formMethods.getValues();
+                  handleSubmit(formData);
+                }}
+                disabled={isSubmitting}
+                className="bg-primary text-primary-foreground"
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Submitting...
                   </>
                 ) : (
-                  'Submit CDD Form'
+                  'Confirm & Submit'
                 )}
               </Button>
             </DialogFooter>
