@@ -622,20 +622,36 @@ const CorporateCDD: React.FC = () => {
       component: (
         <div className="space-y-4">
           <FileUpload
-            accept=".jpg,.jpeg,.png,.pdf"
-            maxSize={3 * 1024 * 1024}
-            onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, cacCertificate: file }))}
-            label="Upload Your CAC Certificate"
-            required
-          />
+                accept="application/pdf,image/*"
+                maxSize={3 * 1024 * 1024}
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({ ...prev, cacCertificate: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.cacCertificate}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { cacCertificate, ...rest } = prev;
+                    return rest;
+                  });
+                }}
+              />
           
-          <FileUpload
-            accept=".jpg,.jpeg,.png,.pdf"
-            maxSize={3 * 1024 * 1024}
-            onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, identification: file }))}
-            label="Upload Means of Identification"
-            required
-          />
+           <FileUpload
+                accept="application/pdf,image/*"
+                maxSize={3 * 1024 * 1024}
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({ ...prev, identification: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.identification}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { identification, ...rest } = prev;
+                    return rest;
+                  });
+                }}
+              />
         </div>
       )
     },
@@ -709,7 +725,6 @@ const CorporateCDD: React.FC = () => {
           steps={steps}
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
-          submitButtonText="Submit CDD Form"
           formMethods={formMethods}
         />
 
