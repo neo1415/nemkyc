@@ -568,38 +568,35 @@ const GoodsInTransitClaim: React.FC = () => {
                 )}
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor={`goodsItems-${index}-quantity`}>Quantity *</Label>
-                  <Input
-                    id={`goodsItems-${index}-quantity`}
-                    {...formMethods.register(`goodsItems.${index}.quantity`, { valueAsNumber: true })}
-                    type="number"
-                    placeholder="Qty"
-                    key={`quantity-${field.id}`}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`goodsItems-${index}-description`}>Description *</Label>
-                  <Input
-                    id={`goodsItems-${index}-description`}
-                    {...formMethods.register(`goodsItems.${index}.description`)}
-                    placeholder="Item description"
-                    key={`description-${field.id}`}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`goodsItems-${index}-value`}>Value (₦) *</Label>
-                  <Input
-                    id={`goodsItems-${index}-value`}
-                    {...formMethods.register(`goodsItems.${index}.value`, { valueAsNumber: true })}
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    key={`value-${field.id}`}
-                  />
-                </div>
-              </div>
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <div>
+                   <Label htmlFor={`goodsItems-${index}-quantity`}>Quantity *</Label>
+                   <Input
+                     id={`goodsItems-${index}-quantity`}
+                     {...formMethods.register(`goodsItems.${index}.quantity`, { valueAsNumber: true })}
+                     type="number"
+                     placeholder="Qty"
+                   />
+                 </div>
+                 <div>
+                   <Label htmlFor={`goodsItems-${index}-description`}>Description *</Label>
+                   <Input
+                     id={`goodsItems-${index}-description`}
+                     {...formMethods.register(`goodsItems.${index}.description`)}
+                     placeholder="Item description"
+                   />
+                 </div>
+                 <div>
+                   <Label htmlFor={`goodsItems-${index}-value`}>Value (₦) *</Label>
+                   <Input
+                     id={`goodsItems-${index}-value`}
+                     {...formMethods.register(`goodsItems.${index}.value`, { valueAsNumber: true })}
+                     type="number"
+                     step="0.01"
+                     placeholder="0.00"
+                   />
+                 </div>
+               </div>
             </div>
           ))}
           
