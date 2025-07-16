@@ -17,10 +17,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
+import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { db } from '@/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { sendEmail } from '@/services/emailService';
 
 const agentsCDDSchema = yup.object().shape({
   // Personal Info
@@ -517,9 +517,68 @@ const AgentsCDD: React.FC = () => {
             </Label>
           </div>
           
+          <div className="space-y-4">
+            <div>
+              <Label>Agent License *</Label>
+              <FileUpload
+                accept="application/pdf,image/*"
+                maxSize={3 * 1024 * 1024}
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({ ...prev, agentLicense: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.agentLicense}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { agentLicense, ...rest } = prev;
+                    return rest;
+                  });
+                }}
+              />
+            </div>
+            
+            <div>
+              <Label>Valid Means of Identification *</Label>
+              <FileUpload
+                accept="application/pdf,image/*"
+                maxSize={3 * 1024 * 1024}
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({ ...prev, validMeansOfId: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.validMeansOfId}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { validMeansOfId, ...rest } = prev;
+                    return rest;
+                  });
+                }}
+              />
+            </div>
+            
+            <div>
+              <Label>Utility Bill *</Label>
+              <FileUpload
+                accept="application/pdf,image/*"
+                maxSize={3 * 1024 * 1024}
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({ ...prev, utilityBill: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.utilityBill}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { utilityBill, ...rest } = prev;
+                    return rest;
+                  });
+                }}
+              />
+            </div>
+          </div>
+
           <div>
             <Label htmlFor="signature">Digital Signature *</Label>
-            <Textarea
+            <Input
               id="signature"
               placeholder="Type your full name as signature"
               {...formMethods.register('signature')}
@@ -527,7 +586,15 @@ const AgentsCDD: React.FC = () => {
           </div>
           
           <div className="text-center pt-4">
-            <p className="text-sm text-muted-foreground mb-2">Date: {new Date().toLocaleDateString()}</p>
+            <Button
+              type="button"
+              onClick={() => {
+                const isValid = formMethods.trigger();
+                if (isValid) setShowSummary(true);
+              }}
+            >
+              Review & Submit
+            </Button>
           </div>
         </div>
       )
@@ -544,8 +611,9 @@ const AgentsCDD: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={(data: any) => setShowSummary(true)}
+          onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
+          submitButtonText="Submit CDD Form"
           formMethods={formMethods}
         />
 
