@@ -682,17 +682,6 @@ const CorporateCDD: React.FC = () => {
             />
           </div>
           
-          <div className="text-center pt-4">
-            <Button
-              type="button"
-              onClick={() => {
-                const isValid = formMethods.trigger();
-                if (isValid) setShowSummary(true);
-              }}
-            >
-              Review & Submit
-            </Button>
-          </div>
         </div>
       )
     }
