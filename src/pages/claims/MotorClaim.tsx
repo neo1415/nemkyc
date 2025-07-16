@@ -1027,9 +1027,9 @@ const MotorClaim: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleSubmit}
+          onSubmit={onFinalSubmit}
           isSubmitting={isSubmitting}
-          submitButtonText="Review Claim"
+          submitButtonText="Review & Submit Claim"
           formMethods={formMethods}
         />
 
@@ -1056,7 +1056,7 @@ const MotorClaim: React.FC = () => {
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Back to Edit
               </Button>
-              <Button onClick={() => formMethods.handleSubmit(handleSubmit)()} disabled={isSubmitting}>
+              <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
