@@ -190,7 +190,7 @@ const CorporateCDD: React.FC = () => {
         formType: 'corporate-cdd'
       };
 
-      await addDoc(collection(db, 'corporate-cdd'), {
+      await addDoc(collection(db, 'corporate-kyc'), {
         ...submissionData,
         timestamp: serverTimestamp(),
         createdAt: new Date().toLocaleDateString('en-GB')
@@ -216,7 +216,7 @@ const CorporateCDD: React.FC = () => {
       
       Object.entries(uploadedFiles).forEach(([key, file]) => {
         fileUploadPromises.push(
-          uploadFile(file, 'corporate-cdd').then(url => [key + 'Url', url])
+          uploadFile(file, 'corporate-kyc').then(url => [key + 'Url', url])
         );
       });
       
