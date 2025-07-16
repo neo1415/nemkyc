@@ -95,7 +95,7 @@ const naicomCorporateCDDSchema = yup.object().shape({
 
 const NaicomCorporateCDD: React.FC = () => {
   const { toast } = useToast();
-  const [showSummary, setShowSummary] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
@@ -203,7 +203,6 @@ const NaicomCorporateCDD: React.FC = () => {
       });
 
       clearDraft();
-      setShowSummary(false);
       setShowSuccess(true);
       toast({ title: "NAICOM Corporate CDD form submitted successfully!" });
     } catch (error) {
@@ -698,54 +697,53 @@ const NaicomCorporateCDD: React.FC = () => {
           {/* Step Content */}
           <div className="bg-white rounded-lg border border-gray-200">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">{steps[0].title}</h2>
+              <h2 className="text-xl font-semibold text-gray-900">{steps[currentStep].title}</h2>
             </div>
             <div className="p-6">
-              {steps[0].component}
+              {steps[currentStep].component}
             </div>
           </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-end">
+          {/* Navigation Buttons */}
+          <div className="flex justify-between">
             <Button
-              onClick={() => setShowSummary(true)}
-              disabled={isSubmitting}
+              variant="outline"
+              onClick={() => setCurrentStep(prev => prev - 1)}
+              disabled={currentStep === 0}
               size="lg"
               className="px-8"
             >
-              Review & Submit
+              Previous
             </Button>
+            
+            {currentStep < steps.length - 1 ? (
+              <Button
+                onClick={() => setCurrentStep(prev => prev + 1)}
+                size="lg"
+                className="px-8"
+              >
+                Next
+              </Button>
+            ) : (
+              <Button
+                onClick={formMethods.handleSubmit(handleSubmit)}
+                disabled={isSubmitting}
+                size="lg"
+                className="px-8 bg-green-600 hover:bg-green-700"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Form'
+                )}
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* Summary Dialog */}
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Review Your NAICOM Corporate CDD Form</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>Company Name:</strong> {watchedValues.companyName}</div>
-                <div><strong>Email:</strong> {watchedValues.email}</div>
-                <div><strong>Tax ID:</strong> {watchedValues.taxId}</div>
-                <div><strong>Directors:</strong> {directorFields.length} director(s)</div>
-              </div>
-              <div className="flex justify-end space-x-4">
-                <Button variant="outline" onClick={() => setShowSummary(false)}>
-                  Back to Edit
-                </Button>
-                <Button 
-                  onClick={formMethods.handleSubmit(handleSubmit)}
-                  disabled={isSubmitting}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {isSubmitting ? 'Submitting...' : 'Submit Form'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
 
         {/* Success Dialog */}
         <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
