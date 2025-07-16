@@ -32,7 +32,7 @@ interface ProfessionalIndemnityClaimData {
   claimantName: string;
   claimantAddress: string;
   retainerDetails: string;
-  contractInWriting: string;
+  contractInWriting: 'yes' | 'no';
   contractDetails?: string;
   workPerformedFrom: string;
   workPerformedTo: string;
@@ -43,15 +43,15 @@ interface ProfessionalIndemnityClaimData {
   claimNature: string;
   firstAwareDate: string;
   claimMadeDate: string;
-  intimationMode: string;
+  intimationMode: 'oral' | 'written';
   oralDetails?: string;
   amountClaimed: number;
   responseComments: string;
   quantumComments: string;
   estimatedLiability: number;
-  additionalInfo: string;
+  additionalInfo: 'yes' | 'no';
   additionalDetails?: string;
-  solicitorInstructed: string;
+  solicitorInstructed: 'yes' | 'no';
   solicitorName?: string;
   solicitorAddress?: string;
   solicitorCompany?: string;
@@ -167,6 +167,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
   const onFinalSubmit = (data: ProfessionalIndemnityClaimData) => {
     setShowSummary(true);
   };
+
 
   const steps = [
     {
@@ -299,81 +300,425 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
       )
     },
     {
-      id: 'declaration',
-      title: 'Declaration',
+      id: 'claimant',
+      title: 'Claimant Details',
+      component: (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="claimantName">Full Name of Claimant *</Label>
+            <Input
+              id="claimantName"
+              {...formMethods.register('claimantName')}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="claimantAddress">Address of Claimant *</Label>
+            <Textarea
+              id="claimantAddress"
+              {...formMethods.register('claimantAddress')}
+            />
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'retainer',
+      title: 'Retainer/Contract Details',
+      component: (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="retainerDetails">What were you retained/contracted to do? *</Label>
+            <Textarea
+              id="retainerDetails"
+              {...formMethods.register('retainerDetails')}
+              rows={4}
+            />
+          </div>
+          
+          <div>
+            <Label>Was your contract evidenced in writing? *</Label>
+            <Select
+              value={watchedValues.contractInWriting || ''}
+              onValueChange={(value) => formMethods.setValue('contractInWriting', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {watchedValues.contractInWriting === 'yes' && (
+            <FileUpload
+              label="Contract Document (PDF, max 3MB)"
+              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, contractDocument: file }))}
+              currentFile={uploadedFiles.contractDocument}
+              accept=".pdf"
+              maxSize={3}
+            />
+          )}
+          
+          {watchedValues.contractInWriting === 'no' && (
+            <div>
+              <Label htmlFor="contractDetails">Details of contract and its terms *</Label>
+              <Textarea
+                id="contractDetails"
+                {...formMethods.register('contractDetails')}
+                rows={4}
+              />
+            </div>
+          )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <DatePickerField
+                name="workPerformedFrom"
+                label="When did you perform the work giving rise to the claim? From *"
+              />
+            </div>
+            <div>
+              <DatePickerField
+                name="workPerformedTo"
+                label="To *"
+              />
+            </div>
+          </div>
+          
+          <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+            <h3 className="font-medium">Who actually performed the work?</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="workPerformerName">Name *</Label>
+                <Input
+                  id="workPerformerName"
+                  {...formMethods.register('workPerformerName')}
+                />
+              </div>
+              <div>
+                <Label htmlFor="workPerformerTitle">Title *</Label>
+                <Input
+                  id="workPerformerTitle"
+                  {...formMethods.register('workPerformerTitle')}
+                />
+              </div>
+              <div>
+                <Label htmlFor="workPerformerDuties">Duties *</Label>
+                <Input
+                  id="workPerformerDuties"
+                  {...formMethods.register('workPerformerDuties')}
+                />
+              </div>
+              <div>
+                <Label htmlFor="workPerformerContact">Contact *</Label>
+                <Input
+                  id="workPerformerContact"
+                  {...formMethods.register('workPerformerContact')}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'claim',
+      title: 'Claim Details',
+      component: (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="claimNature">Nature of the claim or the circumstances *</Label>
+            <Textarea
+              id="claimNature"
+              {...formMethods.register('claimNature')}
+              rows={4}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <DatePickerField
+                name="firstAwareDate"
+                label="Date first became aware of the claim *"
+              />
+            </div>
+            <div>
+              <DatePickerField
+                name="claimMadeDate"
+                label="Date claim or intimation of claim made to you *"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <Label>Was intimation oral or written? *</Label>
+            <Select
+              value={watchedValues.intimationMode || ''}
+              onValueChange={(value) => formMethods.setValue('intimationMode', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="oral">Oral</SelectItem>
+                <SelectItem value="written">Written</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {watchedValues.intimationMode === 'written' && (
+            <FileUpload
+              label="Written Intimation Document (PDF, max 3MB)"
+              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, writtenIntimation: file }))}
+              currentFile={uploadedFiles.writtenIntimation}
+              accept=".pdf"
+              maxSize={3}
+            />
+          )}
+          
+          {watchedValues.intimationMode === 'oral' && (
+            <div>
+              <Label htmlFor="oralDetails">Details of oral intimation (first-person details) *</Label>
+              <Textarea
+                id="oralDetails"
+                {...formMethods.register('oralDetails')}
+                rows={3}
+              />
+            </div>
+          )}
+          
+          <div>
+            <Label htmlFor="amountClaimed">Amount claimed *</Label>
+            <Input
+              id="amountClaimed"
+              type="number"
+              {...formMethods.register('amountClaimed')}
+            />
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'response',
+      title: "Insured's Response",
+      component: (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="responseComments">Comments in response to the claim *</Label>
+            <Textarea
+              id="responseComments"
+              {...formMethods.register('responseComments')}
+              rows={4}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="quantumComments">Comments on the quantum of the claim *</Label>
+            <Textarea
+              id="quantumComments"
+              {...formMethods.register('quantumComments')}
+              rows={4}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="estimatedLiability">Estimated monetary liability *</Label>
+            <Input
+              id="estimatedLiability"
+              type="number"
+              {...formMethods.register('estimatedLiability')}
+            />
+          </div>
+          
+          <div>
+            <Label>Any other details or info that will help insurer? *</Label>
+            <Select
+              value={watchedValues.additionalInfo || ''}
+              onValueChange={(value) => formMethods.setValue('additionalInfo', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {watchedValues.additionalInfo === 'yes' && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="additionalDetails">Additional details *</Label>
+                <Textarea
+                  id="additionalDetails"
+                  {...formMethods.register('additionalDetails')}
+                  rows={3}
+                />
+              </div>
+              <FileUpload
+                label="Additional Document (if needed)"
+                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, additionalDocument: file }))}
+                currentFile={uploadedFiles.additionalDocument}
+                accept=".pdf,.jpg,.png"
+                maxSize={3}
+              />
+            </div>
+          )}
+          
+          <div>
+            <Label>Have you instructed a solicitor? *</Label>
+            <Select
+              value={watchedValues.solicitorInstructed || ''}
+              onValueChange={(value) => formMethods.setValue('solicitorInstructed', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {watchedValues.solicitorInstructed === 'yes' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="solicitorName">Name *</Label>
+                <Input
+                  id="solicitorName"
+                  {...formMethods.register('solicitorName')}
+                />
+              </div>
+              <div>
+                <Label htmlFor="solicitorCompany">Company *</Label>
+                <Input
+                  id="solicitorCompany"
+                  {...formMethods.register('solicitorCompany')}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label htmlFor="solicitorAddress">Address *</Label>
+                <Textarea
+                  id="solicitorAddress"
+                  {...formMethods.register('solicitorAddress')}
+                />
+              </div>
+              <div>
+                <Label htmlFor="solicitorRates">Rates *</Label>
+                <Input
+                  id="solicitorRates"
+                  {...formMethods.register('solicitorRates')}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    },
+    {
+      id: 'privacy',
+      title: 'Data Privacy',
       component: (
         <div className="space-y-6">
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Data Privacy Notice</h3>
-            <div className="prose prose-sm max-w-none">
-              <p><strong>i.</strong> Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p><strong>ii.</strong> Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p><strong>iii.</strong> Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">Data Privacy</h3>
+            <div className="text-sm space-y-2">
+              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
             </div>
-          </Card>
-
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Declaration</h3>
-            <div className="prose prose-sm max-w-none mb-6">
-              <p><strong>1.</strong> I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p><strong>2.</strong> I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p><strong>3.</strong> I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="agreeToDataPrivacy"
+              checked={watchedValues.agreeToDataPrivacy || false}
+              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
+            />
+            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'declaration',
+      title: 'Declaration & Signature',
+      component: (
+        <div className="space-y-6">
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">Declaration</h3>
+            <div className="text-sm space-y-2">
+              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
             </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="agreeToDataPrivacy"
-                  checked={watchedValues.agreeToDataPrivacy}
-                  onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
-                />
-                <Label htmlFor="agreeToDataPrivacy">
-                  I agree to the data privacy notice and declaration above *
-                </Label>
-              </div>
-
-              <div>
-                <Label htmlFor="signature">Digital Signature *</Label>
-                <Input
-                  id="signature"
-                  {...formMethods.register('signature')}
-                  placeholder="Type your full name as signature"
-                />
-              </div>
-
-              <div>
-                <Label>Date</Label>
-                <Input
-                  type="date"
-                  value={new Date().toISOString().split('T')[0]}
-                  disabled
-                />
-              </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="declarationTrue"
+                checked={watchedValues.declarationTrue || false}
+                onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
+              />
+              <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
             </div>
-          </Card>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="declarationAdditionalInfo"
+                checked={watchedValues.declarationAdditionalInfo || false}
+                onCheckedChange={(checked) => formMethods.setValue('declarationAdditionalInfo', !!checked)}
+              />
+              <Label htmlFor="declarationAdditionalInfo">I agree to provide more info *</Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="declarationDocuments"
+                checked={watchedValues.declarationDocuments || false}
+                onCheckedChange={(checked) => formMethods.setValue('declarationDocuments', !!checked)}
+              />
+              <Label htmlFor="declarationDocuments">I agree on documents requested *</Label>
+            </div>
+          </div>
+          
+          <div>
+            <Label htmlFor="signature">Signature of policyholder (digital signature) *</Label>
+            <Input
+              id="signature"
+              {...formMethods.register('signature')}
+              placeholder="Type your full name as signature"
+            />
+          </div>
+          
+          <div>
+            <Label>Date</Label>
+            <Input value={new Date().toISOString().split('T')[0]} disabled />
+          </div>
         </div>
       )
     }
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">
-              Professional Indemnity Insurance Claim Form
-            </h1>
-            <p className="text-muted-foreground">
-              Please fill out all required information to submit your claim
-            </p>
-          </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Professional Indemnity Insurance Claim Form</h1>
+          <p className="text-gray-600 mt-2">Submit your professional indemnity insurance claim with all required details</p>
+        </div>
 
         <MultiStepForm
           steps={steps}
           onSubmit={onFinalSubmit}
           isSubmitting={isSubmitting}
-          submitButtonText="Review Claim"
+          submitButtonText="Review & Submit Claim"
           formMethods={formMethods}
         />
 
@@ -381,71 +726,65 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Review Your Professional Indemnity Claim Submission</DialogTitle>
+              <DialogTitle>Review Your Claim Submission</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><strong>Policy Number:</strong> {watchedValues.policyNumber}</div>
-                <div><strong>Insured:</strong> {watchedValues.insuredName}</div>
-                <div><strong>Email:</strong> {watchedValues.email}</div>
-                <div><strong>Claimant:</strong> {watchedValues.claimantName}</div>
+                <div><strong>Insured Name:</strong> {watchedValues.insuredName}</div>
+                <div><strong>Claimant Name:</strong> {watchedValues.claimantName}</div>
+                <div><strong>Amount Claimed:</strong> ₦{watchedValues.amountClaimed?.toLocaleString()}</div>
               </div>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-blue-800">
-                  For claims status enquiries, call 01 448 9570
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setShowSummary(false)}>
+                  Back to Edit
+                </Button>
+                <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Confirm & Submit'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Success Modal */}
+        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-center text-green-600">
+                Claim Submitted Successfully!
+              </DialogTitle>
+            </DialogHeader>
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p>Your professional indemnity claim has been submitted successfully.</p>
+              <p className="text-sm text-muted-foreground">
+                You will receive a confirmation email shortly with your claim reference number.
+              </p>
+              <div className="bg-muted p-4 rounded-lg">
+                <p className="text-sm">
+                  <strong>For claims status enquiries, call 01 448 9570</strong>
                 </p>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowSummary(false)}>
-                Back to Edit
-              </Button>
-              <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Claim'
-                )}
+              <Button onClick={() => setShowSuccess(false)} className="w-full">
+                Close
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-          {/* Success Modal */}
-          <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="text-center text-green-600">
-                  Claim Submitted Successfully!
-                </DialogTitle>
-              </DialogHeader>
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <p>Your professional indemnity claim has been submitted successfully.</p>
-                <p className="text-sm text-muted-foreground">
-                  You will receive a confirmation email shortly with your claim reference number.
-                </p>
-                <div className="bg-muted p-4 rounded-lg">
-                  <p className="text-sm">
-                    <strong>For claims status enquiries, call 01 448 9570</strong>
-                  </p>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={() => setShowSuccess(false)} className="w-full">
-                  Close
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
       </div>
     </div>
   );
