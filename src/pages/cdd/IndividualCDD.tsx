@@ -21,7 +21,6 @@ import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { db } from '@/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { sendEmail } from '@/services/emailService';
 
 const individualCDDSchema = yup.object().shape({
   // Personal Info
@@ -101,6 +100,7 @@ const defaultValues = {
 };
 
 const IndividualCDD: React.FC = () => {
+  const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
@@ -153,26 +153,10 @@ const IndividualCDD: React.FC = () => {
         createdAt: new Date().toLocaleDateString('en-GB')
       });
       
-      // Send confirmation email
-      try {
-        await sendEmail({
-          to: data.email,
-          subject: 'Individual CDD Form Submission Confirmation',
-          html: `
-            <h2>Individual CDD Form Submitted Successfully</h2>
-            <p>Dear ${data.firstName} ${data.lastName},</p>
-            <p>Your Individual CDD form has been successfully submitted and is being processed.</p>
-            <p>You will be contacted if any additional information is required.</p>
-            <p>Thank you for your submission.</p>
-          `
-        });
-      } catch (emailError) {
-        console.error('Email sending failed:', emailError);
-      }
-      
       clearDraft();
+      setShowSummary(false);
       setShowSuccess(true);
-      toast({ title: "Individual CDD form submitted successfully!" });
+      toast({ title: "CDD form submitted successfully!" });
     } catch (error) {
       console.error('Submission error:', error);
       toast({ title: "Submission failed", variant: "destructive" });
@@ -216,7 +200,7 @@ const IndividualCDD: React.FC = () => {
   const steps = [
     {
       id: 'personal',
-      title: 'Personal Info',
+      title: 'Personal Information',
       component: (
         <div className="space-y-4">
           <div>
@@ -348,7 +332,7 @@ const IndividualCDD: React.FC = () => {
     },
     {
       id: 'additional',
-      title: 'Additional Info',
+      title: 'Additional Information',
       component: (
         <div className="space-y-4">
           <div>
@@ -485,7 +469,7 @@ const IndividualCDD: React.FC = () => {
     },
     {
       id: 'account',
-      title: 'Account Details & Uploads',
+      title: 'Account Details & Files',
       component: (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -535,111 +519,209 @@ const IndividualCDD: React.FC = () => {
             </div>
           )}
           
-          <div>
-            <Label>Upload Means of Identification *</Label>
-            <FileUpload
-              accept="application/pdf,image/*"
-              maxSize={3 * 1024 * 1024}
-              onFileSelect={(file) => {
-                setUploadedFiles(prev => ({ ...prev, identificationDocument: file }));
-                toast({ title: "File selected for upload" });
-              }}
-              currentFile={uploadedFiles.identificationDocument}
-              onFileRemove={() => {
-                setUploadedFiles(prev => {
-                  const { identificationDocument, ...rest } = prev;
-                  return rest;
-                });
-              }}
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="signature">Digital Signature *</Label>
-            <Textarea
-              id="signature"
-              placeholder="Type your full name as signature"
-              {...formMethods.register('signature')}
-            />
+          <div className="space-y-4">
+            <div>
+              <FileUpload
+                label="Passport Photo"
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({ ...prev, passportPhoto: file }));
+                  formMethods.setValue('passportPhoto', file);
+                  toast({ title: `${file.name} uploaded successfully` });
+                }}
+                accept="image/*"
+                required
+              />
+              {uploadedFiles.passportPhoto && (
+                <div className="text-sm text-green-600 mt-2">
+                  ✓ {uploadedFiles.passportPhoto.name}
+                </div>
+              )}
+            </div>
+            
+            <div>
+              <FileUpload
+                label="Valid Means of Identification"
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({ ...prev, validMeansOfId: file }));
+                  formMethods.setValue('validMeansOfId', file);
+                  toast({ title: `${file.name} uploaded successfully` });
+                }}
+                accept=".pdf,.jpg,.jpeg,.png"
+                required
+              />
+              {uploadedFiles.validMeansOfId && (
+                <div className="text-sm text-green-600 mt-2">
+                  ✓ {uploadedFiles.validMeansOfId.name}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )
     },
     {
       id: 'declaration',
-      title: 'Data Privacy & Declaration',
+      title: 'Declaration',
       component: (
         <div className="space-y-6">
-          <div className="p-4 bg-muted rounded-lg">
-            <h3 className="font-medium mb-2">Data Privacy</h3>
-            <div className="text-sm text-muted-foreground space-y-2">
-              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
-            </div>
+          <div className="border rounded-lg p-6 bg-muted/50">
+            <h3 className="text-lg font-semibold mb-4">Data Privacy and Consent</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              I hereby agree to the processing of my personal data by NEM Insurance in accordance with the Data Protection Act. 
+              I understand that my information will be used for the purpose of customer due diligence and policy administration.
+            </p>
             
-            <h3 className="font-medium mb-2 mt-4">Declaration</h3>
-            <div className="text-sm text-muted-foreground space-y-2">
-              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="agreeToDataPrivacy"
+                checked={watchedValues.agreeToDataPrivacy || false}
+                onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked as boolean)}
+              />
+              <label
+                htmlFor="agreeToDataPrivacy"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                I agree to the data privacy policy *
+              </label>
             </div>
           </div>
           
-          <div className="flex items-start space-x-2">
-            <Checkbox
-              id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked === true)}
+          <div>
+            <Label htmlFor="signature">Digital Signature *</Label>
+            <Input
+              id="signature"
+              placeholder="Type your full name as digital signature"
+              {...formMethods.register('signature')}
             />
-            <Label htmlFor="agreeToDataPrivacy" className="text-sm">
-              I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge *
-            </Label>
-          </div>
-          
-          <div className="text-center pt-4">
-            <p className="text-sm text-muted-foreground mb-2">Date: {new Date().toLocaleDateString()}</p>
           </div>
         </div>
       )
     }
   ];
 
+  const handleFormSubmit = (data: any) => {
+    setShowSummary(true);
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Individual CDD Form</h1>
-          <p className="text-gray-600">Customer Due Diligence form for Individual</p>
-        </div>
+    <div className="container mx-auto py-8 px-4">
+      <MultiStepForm
+        steps={steps}
+        formMethods={formMethods}
+        onSubmit={handleFormSubmit}
+        isSubmitting={isSubmitting}
+      />
 
-        <MultiStepForm
-          steps={steps}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Submit CDD Form"
-          formMethods={formMethods}
-        />
+      {/* Summary Dialog */}
+      <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Review Your Individual CDD Form</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Personal Information */}
+            <div className="border rounded-lg p-4">
+              <h3 className="font-semibold text-lg mb-4">Personal Information</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Title:</strong> {watchedValues.title}</div>
+                <div><strong>Name:</strong> {watchedValues.firstName} {watchedValues.lastName}</div>
+                <div><strong>Email:</strong> {watchedValues.email}</div>
+                <div><strong>Mobile:</strong> {watchedValues.mobileNumber}</div>
+                <div><strong>Gender:</strong> {watchedValues.gender}</div>
+                <div><strong>Nationality:</strong> {watchedValues.nationality}</div>
+                <div><strong>Occupation:</strong> {watchedValues.occupation}</div>
+                <div><strong>BVN:</strong> {watchedValues.bvn}</div>
+                <div><strong>Date of Birth:</strong> {watchedValues.dateOfBirth ? new Date(watchedValues.dateOfBirth).toLocaleDateString() : 'Not set'}</div>
+                <div><strong>Place of Birth:</strong> {watchedValues.placeOfBirth}</div>
+                <div><strong>ID Type:</strong> {watchedValues.idType}</div>
+                <div><strong>ID Number:</strong> {watchedValues.identificationNumber}</div>
+                <div className="col-span-2"><strong>Contact Address:</strong> {watchedValues.contactAddress}</div>
+                <div className="col-span-2"><strong>Residential Address:</strong> {watchedValues.residentialAddress}</div>
+              </div>
+            </div>
 
-        {/* Success Dialog */}
-        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>CDD Form Submitted Successfully!</DialogTitle>
-            </DialogHeader>
-            <div className="text-center space-y-4">
-              <div className="text-green-600 text-6xl">✓</div>
-              <p>Your Individual CDD form has been submitted successfully.</p>
-              <p className="text-sm text-muted-foreground">
-                You will receive a confirmation email shortly. For inquiries about your submission status, please contact our customer service team.
-              </p>
-              <Button onClick={() => setShowSuccess(false)}>
-                Close
+            {/* Additional Information */}
+            <div className="border rounded-lg p-4">
+              <h3 className="font-semibold text-lg mb-4">Additional Information</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Business Type:</strong> {watchedValues.businessType}</div>
+                <div><strong>Employer Email:</strong> {watchedValues.employerEmail}</div>
+                <div><strong>Employer Name:</strong> {watchedValues.employerName}</div>
+                <div><strong>Annual Income:</strong> {watchedValues.annualIncomeRange}</div>
+                <div><strong>Payment Source:</strong> {watchedValues.premiumPaymentSource}</div>
+                <div className="col-span-2"><strong>Employer Address:</strong> {watchedValues.employerAddress}</div>
+              </div>
+            </div>
+
+            {/* Uploaded Documents */}
+            <div className="border rounded-lg p-4">
+              <h3 className="font-semibold text-lg mb-4">Uploaded Documents</h3>
+              <div className="grid grid-cols-1 gap-2 text-sm">
+                {Object.entries(uploadedFiles).map(([key, file]) => (
+                  <div key={key} className="flex justify-between items-center py-2 border-b">
+                    <span className="font-medium">
+                      {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
+                    </span>
+                    <span className="text-green-600">
+                      {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
+                  </div>
+                ))}
+                {Object.keys(uploadedFiles).length === 0 && (
+                  <p className="text-muted-foreground">No documents uploaded yet</p>
+                )}
+              </div>
+            </div>
+
+            {/* Declaration */}
+            <div className="border rounded-lg p-4">
+              <h3 className="font-semibold text-lg mb-4">Declaration</h3>
+              <div className="text-sm">
+                <div><strong>Data Privacy Agreement:</strong> {watchedValues.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</div>
+                <div><strong>Digital Signature:</strong> {watchedValues.signature}</div>
+              </div>
+            </div>
+            
+            <div className="flex gap-4 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setShowSummary(false)}
+              >
+                Edit Details
+              </Button>
+              <Button
+                onClick={() => {
+                  const formData = formMethods.getValues();
+                  handleSubmit(formData);
+                }}
+                disabled={isSubmitting}
+                className="bg-primary text-primary-foreground"
+              >
+                {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
               </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>CDD Form Submitted Successfully!</DialogTitle>
+          </DialogHeader>
+          <div className="text-center space-y-4">
+            <div className="text-green-600 text-6xl">✓</div>
+            <p>Your Individual CDD form has been submitted successfully.</p>
+            <p className="text-sm text-muted-foreground">
+              You will receive a confirmation email shortly.
+            </p>
+            <Button onClick={() => setShowSuccess(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
