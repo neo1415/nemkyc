@@ -2,6 +2,8 @@ import React from 'react';
 import AdminUnifiedTable from './AdminUnifiedTable';
 
 const AdminMotorClaimsTable: React.FC = () => {
+  console.log('AdminMotorClaimsTable: Rendering Motor Claims table');
+  
   return (
     <AdminUnifiedTable 
       collectionName="motor-claims"
