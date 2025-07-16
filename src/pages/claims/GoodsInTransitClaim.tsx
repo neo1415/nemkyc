@@ -1,137 +1,237 @@
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
-import { GoodsInTransitClaimData } from '../../types/claims';
-import { useFormDraft } from '../../hooks/useFormDraft';
-import { useToast } from '../../hooks/use-toast';
+import * as yup from 'yup';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Calendar as ReactCalendar } from '@/components/ui/calendar';
+import { Calendar, CalendarIcon, Upload, Edit2, Truck, FileText, CheckCircle2, Loader2, Plus, Trash2, Info } from 'lucide-react';
+import { format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import MultiStepForm from '@/components/common/MultiStepForm';
+import { useFormDraft } from '@/hooks/useFormDraft';
+import FileUpload from '@/components/common/FileUpload';
+import { uploadFile } from '@/services/fileService';
+import { db } from '@/firebase/config';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+// import { emailService } from '@/services/emailService';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import PhoneInput from '@/components/common/PhoneInput';
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Badge } from '@/components/ui/badge';
 
-import MultiStepForm from '../../components/common/MultiStepForm';
-import PhoneInput from '../../components/common/PhoneInput';
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '../../components/ui/form';
-import { Input } from '../../components/ui/input';
-import { Textarea } from '../../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Checkbox } from '../../components/ui/checkbox';
-import { Button } from '../../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { Badge } from '../../components/ui/badge';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+// Goods In Transit Claim Schema
+const goodsInTransitClaimSchema = yup.object().shape({
+  // Policy Details
+  policyNumber: yup.string().required("Policy number is required"),
+  periodOfCoverFrom: yup.date().required("Period of cover from is required"),
+  periodOfCoverTo: yup.date().required("Period of cover to is required"),
+
+  // Insured Details
+  companyName: yup.string().required("Company name is required"),
+  address: yup.string().required("Address is required"),
+  phone: yup.string().required("Phone number is required"),
+  email: yup.string().email("Valid email is required").required("Email is required"),
+
+  // Loss Details
+  dateOfLoss: yup.date().required("Date of loss is required"),
+  timeOfLoss: yup.string().required("Time of loss is required"),
+  placeOfOccurrence: yup.string().required("Place of occurrence is required"),
+  descriptionOfGoods: yup.string().required("Description of goods is required"),
+
+  // Goods Items
+  goodsItems: yup.array().of(
+    yup.object().shape({
+      quantity: yup.number().required("Quantity is required").min(1, "Quantity must be at least 1"),
+      description: yup.string().required("Description is required"),
+      value: yup.number().required("Value is required").min(0, "Value must be non-negative")
+    })
+  ),
+
+  // Declaration
+  agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
+  signature: yup.string().required("Signature is required")
+});
+
+interface GoodsItem {
+  quantity: number;
+  description: string;
+  value: number;
+}
+
+interface GoodsInTransitClaimData {
+  // Policy Details
+  policyNumber: string;
+  periodOfCoverFrom: Date;
+  periodOfCoverTo: Date;
+
+  // Insured Details
+  companyName: string;
+  address: string;
+  phone: string;
+  email: string;
+  businessType?: string;
+
+  // Loss Details
+  dateOfLoss: Date;
+  timeOfLoss: string;
+  placeOfOccurrence: string;
+  descriptionOfGoods: string;
+  numberOfPackages: number;
+  totalWeight: number;
+  weightUnits: string;
+  totalValue: number;
+  howGoodsPacked: string;
+  circumstancesOfLoss?: string;
+
+  // Transport Details
+  otherVehicleInvolved: boolean;
+  dispatchAddress?: string;
+  dispatchDate?: string;
+  consigneeName?: string;
+  consigneeAddress?: string;
+  vehicleRegistration?: string;
+
+  // Goods Items
+  goodsItems: GoodsItem[];
+
+  // Additional Details
+  inspectionAddress?: string;
+  isOwnerOfGoods: boolean;
+  goodsInSoundCondition: boolean;
+  checkedByDriver: boolean;
+  staffLoadedUnloaded: boolean;
+  receiptGiven: boolean;
+  claimMadeAgainstYou: boolean;
+
+  // Declaration
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}
+
+const defaultValues: Partial<GoodsInTransitClaimData> = {
+  policyNumber: '',
+  companyName: '',
+  address: '',
+  phone: '',
+  email: '',
+  businessType: '',
+  timeOfLoss: '',
+  placeOfOccurrence: '',
+  descriptionOfGoods: '',
+  numberOfPackages: 0,
+  totalWeight: 0,
+  weightUnits: 'kg',
+  totalValue: 0,
+  howGoodsPacked: '',
+  circumstancesOfLoss: '',
+  otherVehicleInvolved: false,
+  dispatchAddress: '',
+  dispatchDate: '',
+  consigneeName: '',
+  consigneeAddress: '',
+  goodsItems: [],
+  inspectionAddress: '',
+  isOwnerOfGoods: true,
+  goodsInSoundCondition: true,
+  checkedByDriver: true,
+  vehicleRegistration: '',
+  staffLoadedUnloaded: true,
+  receiptGiven: true,
+  claimMadeAgainstYou: false,
+  agreeToDataPrivacy: false,
+  signature: ''
+};
 
 const GoodsInTransitClaim: React.FC = () => {
   const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
-  const methods = useForm<GoodsInTransitClaimData>({
-    defaultValues: {
-      policyNumber: '',
-      periodOfCoverFrom: '',
-      periodOfCoverTo: '',
-      companyName: '',
-      address: '',
-      phone: '',
-      email: '',
-      businessType: '',
-      dateOfLoss: '',
-      timeOfLoss: '',
-      placeOfOccurrence: '',
-      descriptionOfGoods: '',
-      numberOfPackages: 0,
-      totalWeight: 0,
-      weightUnits: 'kg',
-      totalValue: 0,
-      howGoodsPacked: '',
-      circumstancesOfLoss: '',
-      otherVehicleInvolved: false,
-      dispatchAddress: '',
-      dispatchDate: '',
-      consigneeName: '',
-      consigneeAddress: '',
-      goodsItems: [{ quantity: 1, description: '', value: 0 }],
-      inspectionAddress: '',
-      isOwnerOfGoods: true,
-      goodsInSoundCondition: true,
-      checkedByDriver: true,
-      vehicleRegistration: '',
-      staffLoadedUnloaded: true,
-      receiptGiven: true,
-      claimMadeAgainstYou: false,
-      agreeToDataPrivacy: false,
-      signature: ''
-    },
+  const formMethods = useForm<any>({
+    // resolver: yupResolver(goodsInTransitClaimSchema),
+    defaultValues,
     mode: 'onChange'
   });
 
-  const { fields: goodsItemsFields, append: appendGoodsItem, remove: removeGoodsItem } = useFieldArray({
-    control: methods.control,
+  const { fields: goodsItemsFields, append: addGoodsItem, remove: removeGoodsItem } = useFieldArray({
+    control: formMethods.control,
     name: 'goodsItems'
   });
 
-  const { saveDraft, loadDraft, clearDraft } = useFormDraft('goods-in-transit-claim', methods);
+  const { saveDraft, clearDraft } = useFormDraft('goodsInTransitClaim', formMethods);
+  const watchedValues = formMethods.watch();
 
-  const watchedValues = methods.watch();
-
+  // Auto-save draft
   useEffect(() => {
-    const draft = loadDraft();
-    if (draft) {
-      Object.keys(draft).forEach((key) => {
-        methods.setValue(key as keyof GoodsInTransitClaimData, draft[key]);
-      });
-    }
-  }, [methods, loadDraft]);
-
-  useEffect(() => {
-    const subscription = methods.watch((data) => {
+    const subscription = formMethods.watch((data) => {
       saveDraft(data);
     });
     return () => subscription.unsubscribe();
-  }, [methods, saveDraft]);
+  }, [formMethods, saveDraft]);
 
   // Calculate total value from goods items
   useEffect(() => {
     const total = watchedValues.goodsItems?.reduce((sum, item) => sum + (item.value || 0), 0) || 0;
     if (total !== watchedValues.totalValue) {
-      methods.setValue('totalValue', total);
+      formMethods.setValue('totalValue', total);
     }
-  }, [watchedValues.goodsItems, methods, watchedValues.totalValue]);
+  }, [watchedValues.goodsItems, formMethods, watchedValues.totalValue]);
 
   const handleSubmit = async (data: GoodsInTransitClaimData) => {
-    if (!data.agreeToDataPrivacy) {
-      toast({
-        title: "Agreement Required",
-        description: "You must agree to the data privacy notice and declaration.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!data.signature || data.signature.trim() === '') {
-      toast({
-        title: "Signature Required",
-        description: "Please provide your digital signature.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSubmitting(true);
     try {
-      const docRef = await addDoc(collection(db, 'goodsInTransitClaims'), {
-        ...data,
+      // Clean data by removing undefined values
+      const cleanData = Object.fromEntries(
+        Object.entries(data).filter(([_, value]) => value !== undefined)
+      );
+
+      // Upload files to Firebase Storage
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      
+      Object.entries(uploadedFiles).forEach(([key, file]) => {
+        fileUploadPromises.push(
+          uploadFile(file, 'goods-in-transit-claims').then(url => [key + 'Url', url])
+        );
+      });
+      
+      const uploadedUrls = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(uploadedUrls);
+      
+      // Prepare form data with file URLs
+      const submissionData = {
+        ...cleanData,
+        ...fileUrls,
         goodsItems: data.goodsItems,
         totalValue: data.totalValue,
-        submittedAt: new Date(),
-        status: 'submitted'
+        status: 'processing',
+        submittedAt: new Date().toISOString(),
+        formType: 'goods-in-transit-claim'
+      };
+      
+      // Submit to Firestore
+      await addDoc(collection(db, 'goods-in-transit-claims'), {
+        ...submissionData,
+        timestamp: serverTimestamp(),
+        createdAt: new Date().toLocaleDateString('en-GB')
       });
 
+      // Send confirmation email
+      // await emailService.sendSubmissionConfirmation(data.email, 'Goods In Transit Claim');
+      
       clearDraft();
       setShowSummary(false);
       setShowSuccess(true);
-      
       toast({
         title: "Claim Submitted Successfully",
         description: "Your goods-in-transit claim has been submitted and you'll receive a confirmation email shortly.",
@@ -152,8 +252,48 @@ const GoodsInTransitClaim: React.FC = () => {
     setShowSummary(true);
   };
 
-  const addGoodsItem = () => {
-    appendGoodsItem({ quantity: 1, description: '', value: 0 });
+  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
+    const value = formMethods.watch(name);
+    return (
+      <TooltipProvider>
+        <div className="space-y-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Label className="flex items-center gap-1">
+                {label}
+                <Info className="h-3 w-3" />
+              </Label>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Select the {label.toLowerCase()}</p>
+            </TooltipContent>
+          </Tooltip>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !value && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <ReactCalendar
+                mode="single"
+                selected={value ? new Date(value) : undefined}
+                onSelect={(date) => formMethods.setValue(name, date)}
+                initialFocus
+                className="pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </TooltipProvider>
+    );
   };
 
   const steps = [
@@ -163,7 +303,7 @@ const GoodsInTransitClaim: React.FC = () => {
       component: (
         <div className="space-y-6">
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="policyNumber"
             render={({ field }) => (
               <FormItem>
@@ -178,7 +318,7 @@ const GoodsInTransitClaim: React.FC = () => {
           
           <div className="grid grid-cols-2 gap-4">
             <FormField
-              control={methods.control}
+              control={formMethods.control}
               name="periodOfCoverFrom"
               render={({ field }) => (
                 <FormItem>
@@ -192,7 +332,7 @@ const GoodsInTransitClaim: React.FC = () => {
             />
             
             <FormField
-              control={methods.control}
+              control={formMethods.control}
               name="periodOfCoverTo"
               render={({ field }) => (
                 <FormItem>
@@ -214,7 +354,7 @@ const GoodsInTransitClaim: React.FC = () => {
       component: (
         <div className="space-y-6">
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="companyName"
             render={({ field }) => (
               <FormItem>
@@ -228,7 +368,7 @@ const GoodsInTransitClaim: React.FC = () => {
           />
           
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="address"
             render={({ field }) => (
               <FormItem>
@@ -243,7 +383,7 @@ const GoodsInTransitClaim: React.FC = () => {
           
           <div className="grid grid-cols-2 gap-4">
             <FormField
-              control={methods.control}
+              control={formMethods.control}
               name="phone"
               render={({ field }) => (
                 <FormItem>
@@ -261,7 +401,7 @@ const GoodsInTransitClaim: React.FC = () => {
             />
             
             <FormField
-              control={methods.control}
+              control={formMethods.control}
               name="email"
               render={({ field }) => (
                 <FormItem>
@@ -276,7 +416,7 @@ const GoodsInTransitClaim: React.FC = () => {
           </div>
           
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="businessType"
             render={({ field }) => (
               <FormItem>
@@ -298,7 +438,7 @@ const GoodsInTransitClaim: React.FC = () => {
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <FormField
-              control={methods.control}
+              control={formMethods.control}
               name="dateOfLoss"
               render={({ field }) => (
                 <FormItem>
@@ -312,7 +452,7 @@ const GoodsInTransitClaim: React.FC = () => {
             />
             
             <FormField
-              control={methods.control}
+              control={formMethods.control}
               name="timeOfLoss"
               render={({ field }) => (
                 <FormItem>
@@ -327,7 +467,7 @@ const GoodsInTransitClaim: React.FC = () => {
           </div>
           
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="placeOfOccurrence"
             render={({ field }) => (
               <FormItem>
@@ -341,7 +481,7 @@ const GoodsInTransitClaim: React.FC = () => {
           />
           
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="descriptionOfGoods"
             render={({ field }) => (
               <FormItem>
@@ -356,7 +496,7 @@ const GoodsInTransitClaim: React.FC = () => {
           
           <div className="grid grid-cols-2 gap-4">
             <FormField
-              control={methods.control}
+              control={formMethods.control}
               name="numberOfPackages"
               render={({ field }) => (
                 <FormItem>
@@ -375,7 +515,7 @@ const GoodsInTransitClaim: React.FC = () => {
             />
             
             <FormField
-              control={methods.control}
+              control={formMethods.control}
               name="totalWeight"
               render={({ field }) => (
                 <FormItem>
@@ -391,7 +531,7 @@ const GoodsInTransitClaim: React.FC = () => {
                       />
                       <Select 
                         value={watchedValues.weightUnits} 
-                        onValueChange={(value) => methods.setValue('weightUnits', value)}
+                        onValueChange={(value) => formMethods.setValue('weightUnits', value)}
                       >
                         <SelectTrigger className="w-24">
                           <SelectValue />
@@ -411,7 +551,7 @@ const GoodsInTransitClaim: React.FC = () => {
           </div>
           
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="howGoodsPacked"
             render={({ field }) => (
               <FormItem>
@@ -435,7 +575,7 @@ const GoodsInTransitClaim: React.FC = () => {
             <h3 className="text-lg font-semibold">Goods Items</h3>
             <Button
               type="button"
-              onClick={addGoodsItem}
+              onClick={() => addGoodsItem({ quantity: 1, description: '', value: 0 })}
               variant="outline"
               size="sm"
             >
@@ -459,58 +599,71 @@ const GoodsInTransitClaim: React.FC = () => {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={methods.control}
-                  name={`goodsItems.${index}.quantity`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quantity</FormLabel>
-                      <FormControl>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Label htmlFor={`goodsItems_quantity_${index}`} className="flex items-center gap-1">
+                          Quantity *
+                          <Info className="h-3 w-3" />
+                        </Label>
                         <Input
+                          id={`goodsItems_quantity_${index}`}
                           type="number"
                           placeholder="Enter quantity"
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          {...formMethods.register(`goodsItems.${index}.quantity`, {
+                            setValueAs: (value) => Number(value)
+                          })}
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={methods.control}
-                  name={`goodsItems.${index}.description`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter description" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={methods.control}
-                  name={`goodsItems.${index}.value`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Value (₦)</FormLabel>
-                      <FormControl>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enter the quantity of this item</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Label htmlFor={`goodsItems_description_${index}`} className="flex items-center gap-1">
+                          Description *
+                          <Info className="h-3 w-3" />
+                        </Label>
                         <Input
+                          id={`goodsItems_description_${index}`}
+                          placeholder="Enter description"
+                          {...formMethods.register(`goodsItems.${index}.description`)}
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enter a detailed description of the item</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Label htmlFor={`goodsItems_value_${index}`} className="flex items-center gap-1">
+                          Value (₦) *
+                          <Info className="h-3 w-3" />
+                        </Label>
+                        <Input
+                          id={`goodsItems_value_${index}`}
                           type="number"
                           step="0.01"
                           placeholder="Enter value"
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          {...formMethods.register(`goodsItems.${index}.value`, {
+                            setValueAs: (value) => Number(value)
+                          })}
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enter the monetary value of the item</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </Card>
           ))}
@@ -530,7 +683,7 @@ const GoodsInTransitClaim: React.FC = () => {
       component: (
         <div className="space-y-6">
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="circumstancesOfLoss"
             render={({ field }) => (
               <FormItem>
@@ -544,7 +697,7 @@ const GoodsInTransitClaim: React.FC = () => {
           />
           
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="otherVehicleInvolved"
             render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0">
@@ -564,7 +717,7 @@ const GoodsInTransitClaim: React.FC = () => {
           {watchedValues.otherVehicleInvolved && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6">
               <FormField
-                control={methods.control}
+                control={formMethods.control}
                 name="otherVehicleOwnerName"
                 render={({ field }) => (
                   <FormItem>
@@ -578,7 +731,7 @@ const GoodsInTransitClaim: React.FC = () => {
               />
               
               <FormField
-                control={methods.control}
+                control={formMethods.control}
                 name="otherVehicleOwnerAddress"
                 render={({ field }) => (
                   <FormItem>
@@ -601,7 +754,7 @@ const GoodsInTransitClaim: React.FC = () => {
       component: (
         <div className="space-y-6">
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="dispatchAddress"
             render={({ field }) => (
               <FormItem>
@@ -615,7 +768,7 @@ const GoodsInTransitClaim: React.FC = () => {
           />
           
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="dispatchDate"
             render={({ field }) => (
               <FormItem>
@@ -629,7 +782,7 @@ const GoodsInTransitClaim: React.FC = () => {
           />
           
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="consigneeName"
             render={({ field }) => (
               <FormItem>
@@ -643,7 +796,7 @@ const GoodsInTransitClaim: React.FC = () => {
           />
           
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="consigneeAddress"
             render={({ field }) => (
               <FormItem>
@@ -664,7 +817,7 @@ const GoodsInTransitClaim: React.FC = () => {
       component: (
         <div className="space-y-6">
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="agreeToDataPrivacy"
             render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0">
@@ -684,7 +837,7 @@ const GoodsInTransitClaim: React.FC = () => {
           />
           
           <FormField
-            control={methods.control}
+            control={formMethods.control}
             name="signature"
             render={({ field }) => (
               <FormItem>
@@ -729,13 +882,13 @@ const GoodsInTransitClaim: React.FC = () => {
           </p>
         </div>
 
-        <FormProvider {...methods}>
+        <div>
           <MultiStepForm
             steps={steps}
-            onSubmit={onFinalSubmit}
-            formMethods={methods}
+      onSubmit={onFinalSubmit}
+            formMethods={formMethods}
           />
-        </FormProvider>
+        </div>
 
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
