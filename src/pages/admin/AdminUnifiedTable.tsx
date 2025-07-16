@@ -105,21 +105,53 @@ const AdminUnifiedTable: React.FC<AdminUnifiedTableProps> = ({
   const fetchForms = async () => {
     try {
       setLoading(true);
+      console.log(`AdminUnifiedTable: Fetching forms from collection '${collectionName}'`);
+      
       const formsRef = collection(db, collectionName);
-      const q = query(formsRef, orderBy('timestamp', 'desc'));
-      const snapshot = await getDocs(q);
+      
+      // Try to fetch with timestamp ordering first, fallback to no ordering
+      let snapshot;
+      try {
+        const q = query(formsRef, orderBy('timestamp', 'desc'));
+        snapshot = await getDocs(q);
+        console.log(`AdminUnifiedTable: Fetched ${snapshot.docs.length} documents with timestamp ordering`);
+      } catch (timestampError) {
+        console.log(`AdminUnifiedTable: Timestamp ordering failed, fetching without ordering`);
+        // If timestamp ordering fails, fetch without ordering
+        snapshot = await getDocs(formsRef);
+        console.log(`AdminUnifiedTable: Fetched ${snapshot.docs.length} documents without ordering`);
+      }
 
-      const formsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const formsData = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        console.log(`AdminUnifiedTable: Processing document ${doc.id}`);
+        return {
+          id: doc.id,
+          ...data,
+          // Ensure consistent timestamp field
+          timestamp: data.timestamp || data.createdAt || data.submittedAt || new Date(),
+          // Ensure status field exists for claims
+          status: data.status || (isClaim ? 'processing' : 'pending')
+        };
+      });
 
+      console.log(`AdminUnifiedTable: Processed ${formsData.length} forms from collection '${collectionName}'`);
       setForms(formsData);
+      
       if (formsData.length > 0) {
         generateColumns(formsData);
+      } else {
+        console.log(`AdminUnifiedTable: No data found in collection '${collectionName}'`);
+        // Set empty columns for empty tables
+        setColumns([{
+          field: 'message',
+          headerName: 'Status',
+          width: 300,
+          renderCell: () => 'No data available in this collection'
+        }]);
       }
     } catch (error) {
-      console.error('Error fetching forms:', error);
+      console.error(`AdminUnifiedTable: Error fetching forms from '${collectionName}':`, error);
       toast({ title: 'Error fetching data', variant: 'destructive' });
     } finally {
       setLoading(false);
