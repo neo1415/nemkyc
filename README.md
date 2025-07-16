@@ -17,7 +17,7 @@ This application is a highly professional, production-grade insurance form suite
 ✅ Send a **success email** to the user after successful submission.  
 ✅ After successful submission, display a **success modal** with a smooth professional animation. Underneath, include a **note** section with contact details for claim status and inquiries (using the language in the current printed forms).  
 
----
+--
 
 ## 📌 FIELD RULES
 
