@@ -170,44 +170,38 @@ const NaicomCorporateCDD: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
-  const handleSubmit = async (data: any) => {
+   const handleSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
-      // Upload files to Firebase Storage
       const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
       Object.entries(uploadedFiles).forEach(([key, file]) => {
         fileUploadPromises.push(
-          uploadFile(file, 'naicom-corporate-cdd').then(url => [key + 'Url', url])
+          uploadFile(file, 'corporate-cdd').then(url => [key + 'Url', url])
         );
       });
-      
       const uploadedUrls = await Promise.all(fileUploadPromises);
       const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Prepare form data with file URLs
+
       const submissionData = {
         ...data,
         ...fileUrls,
         status: 'submitted',
         submittedAt: new Date().toISOString(),
-        formType: 'naicom-corporate-cdd'
+        formType: 'corporate-cdd'
       };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'naicom-corporate-cdd'), {
+
+      await addDoc(collection(db, 'corporate-cdd'), {
         ...submissionData,
         timestamp: serverTimestamp(),
         createdAt: new Date().toLocaleDateString('en-GB')
       });
 
       clearDraft();
-      setShowSummary(false);
       setShowSuccess(true);
-      toast({ title: "NAICOM Corporate CDD form submitted successfully!" });
-    } catch (error) {
-      console.error('Submission error:', error);
-      toast({ title: "Submission failed", variant: "destructive" });
+      toast({ title: 'Corporate CDD form submitted successfully!' });
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Submission failed', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
@@ -623,28 +617,52 @@ const NaicomCorporateCDD: React.FC = () => {
       component: (
         <div className="space-y-4">
           <FileUpload
-            accept=".jpg,.jpeg,.png,.pdf"
-            maxSize={3 * 1024 * 1024}
-            onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, cacCertificate: file }))}
-            label="Upload Your CAC Certificate"
-            required
-          />
+                accept="application/pdf,image/*"
+                maxSize={3 * 1024 * 1024}
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({ ...prev, cacCertificate: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.cacCertificate}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { cacCertificate, ...rest } = prev;
+                    return rest;
+                  });
+                }}
+              />
           
-          <FileUpload
-            accept=".jpg,.jpeg,.png,.pdf"
-            maxSize={3 * 1024 * 1024}
-            onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, identification: file }))}
-            label="Upload Means of Identification"
-            required
-          />
+           <FileUpload
+                accept="application/pdf,image/*"
+                maxSize={3 * 1024 * 1024}
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({ ...prev, identification: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.identification}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { identification, ...rest } = prev;
+                    return rest;
+                  });
+                }}
+              />
           
-          <FileUpload
-            accept=".jpg,.jpeg,.png,.pdf"
-            maxSize={3 * 1024 * 1024}
-            onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, naicomLicense: file }))}
-            label="Upload NAICOM License Certificate"
-            required
-          />
+              <FileUpload
+                accept="application/pdf,image/*"
+                maxSize={3 * 1024 * 1024}
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({ ...prev, naicomLicense: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.naicomLicense}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { naicomLicense, ...rest } = prev;
+                    return rest;
+                  });
+                }}
+              />
         </div>
       )
     },
@@ -690,7 +708,18 @@ const NaicomCorporateCDD: React.FC = () => {
               {...formMethods.register('signature')}
             />
           </div>
-          
+           <div className="text-center pt-4">
+            <Button
+              type="button"
+              onClick={async () => {
+                const valid = await formMethods.trigger();
+                if (valid) handleSubmit(formMethods.getValues());
+              }}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : 'Submit CDD Form'}
+            </Button>
+          </div>
         </div>
       )
     }
