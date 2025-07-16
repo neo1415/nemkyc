@@ -120,8 +120,10 @@ const defaultValues = {
 };
 
 const AgentsCDD: React.FC = () => {
+  const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
   const formMethods = useForm<any>({
     resolver: yupResolver(agentsCDDSchema),
@@ -143,38 +145,38 @@ const AgentsCDD: React.FC = () => {
   const handleSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
+      // Upload files to Firebase Storage
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      
+      Object.entries(uploadedFiles).forEach(([key, file]) => {
+        fileUploadPromises.push(
+          uploadFile(file, 'agents-cdd').then(url => [key + 'Url', url])
+        );
+      });
+      
+      const uploadedUrls = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(uploadedUrls);
+      
+      // Prepare form data with file URLs
       const submissionData = {
         ...data,
+        ...fileUrls,
         status: 'processing',
         submittedAt: new Date().toISOString(),
         formType: 'agents-cdd'
       };
       
+      // Submit to Firestore
       await addDoc(collection(db, 'cdd-forms'), {
         ...submissionData,
         timestamp: serverTimestamp(),
         createdAt: new Date().toLocaleDateString('en-GB')
       });
       
-      try {
-        await sendEmail({
-          to: data.email,
-          subject: 'Agents CDD Form Submission Confirmation',
-          html: `
-            <h2>Agents CDD Form Submitted Successfully</h2>
-            <p>Dear ${data.firstName} ${data.lastName},</p>
-            <p>Your Agents CDD form has been successfully submitted and is being processed.</p>
-            <p>You will be contacted if any additional information is required.</p>
-            <p>Thank you for your submission.</p>
-          `
-        });
-      } catch (emailError) {
-        console.error('Email sending failed:', emailError);
-      }
-      
       clearDraft();
+      setShowSummary(false);
       setShowSuccess(true);
-      toast({ title: "Agents CDD form submitted successfully!" });
+      toast({ title: "CDD form submitted successfully!" });
     } catch (error) {
       console.error('Submission error:', error);
       toast({ title: "Submission failed", variant: "destructive" });
@@ -542,12 +544,132 @@ const AgentsCDD: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleSubmit}
+          onSubmit={(data: any) => setShowSummary(true)}
           isSubmitting={isSubmitting}
-          submitButtonText="Submit CDD Form"
           formMethods={formMethods}
         />
 
+        {/* Summary Dialog */}
+        <Dialog open={showSummary} onOpenChange={setShowSummary}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Review Your Agents CDD Form</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              {/* Personal Information */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Personal Information</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><strong>Name:</strong> {watchedValues.firstName} {watchedValues.middleName} {watchedValues.lastName}</div>
+                  <div><strong>Email:</strong> {watchedValues.email}</div>
+                  <div><strong>Phone:</strong> {watchedValues.phoneNumber}</div>
+                  <div><strong>Gender:</strong> {watchedValues.gender}</div>
+                  <div><strong>Position:</strong> {watchedValues.position}</div>
+                  <div><strong>Nationality:</strong> {watchedValues.nationality}</div>
+                  <div><strong>Occupation:</strong> {watchedValues.occupation}</div>
+                  <div><strong>BVN:</strong> {watchedValues.bvn}</div>
+                  <div><strong>Date of Birth:</strong> {watchedValues.dateOfBirth ? new Date(watchedValues.dateOfBirth).toLocaleDateString() : 'Not set'}</div>
+                  <div><strong>Place of Birth:</strong> {watchedValues.placeOfBirth}</div>
+                  <div><strong>ID Type:</strong> {watchedValues.validMeansOfId}</div>
+                  <div><strong>ID Number:</strong> {watchedValues.identificationNumber}</div>
+                  <div className="col-span-2"><strong>Address:</strong> {watchedValues.residentialAddress}</div>
+                </div>
+              </div>
+
+              {/* Agent Information */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Agent Information</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><strong>Agent Name:</strong> {watchedValues.agentName}</div>
+                  <div><strong>NAICOM License:</strong> {watchedValues.naicomLicenseNumber}</div>
+                  <div><strong>Email Address:</strong> {watchedValues.emailAddress}</div>
+                  <div><strong>Website:</strong> {watchedValues.website}</div>
+                  <div><strong>Mobile:</strong> {watchedValues.mobileNumber}</div>
+                  <div><strong>ARIAN Number:</strong> {watchedValues.arianMembershipNumber}</div>
+                  <div className="col-span-2"><strong>Office Address:</strong> {watchedValues.agentsOfficeAddress}</div>
+                  <div className="col-span-2"><strong>Approved Principals:</strong> {watchedValues.listOfAgentsApprovedPrincipals}</div>
+                </div>
+              </div>
+
+              {/* Account Details */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Account Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Local Account</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div><strong>Account Number:</strong> {watchedValues.localAccountNumber}</div>
+                      <div><strong>Bank Name:</strong> {watchedValues.localBankName}</div>
+                      <div><strong>Bank Branch:</strong> {watchedValues.localBankBranch}</div>
+                      <div><strong>Opening Date:</strong> {watchedValues.localAccountOpeningDate ? new Date(watchedValues.localAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
+                    </div>
+                  </div>
+                  {(watchedValues.foreignAccountNumber || watchedValues.foreignBankName) && (
+                    <div>
+                      <h4 className="font-medium mb-2">Foreign Account</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div><strong>Account Number:</strong> {watchedValues.foreignAccountNumber}</div>
+                        <div><strong>Bank Name:</strong> {watchedValues.foreignBankName}</div>
+                        <div><strong>Bank Branch:</strong> {watchedValues.foreignBankBranch}</div>
+                        <div><strong>Opening Date:</strong> {watchedValues.foreignAccountOpeningDate ? new Date(watchedValues.foreignAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Uploaded Documents */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Uploaded Documents</h3>
+                <div className="grid grid-cols-1 gap-2 text-sm">
+                  {Object.entries(uploadedFiles).map(([key, file]) => (
+                    <div key={key} className="flex justify-between items-center py-2 border-b">
+                      <span className="font-medium">
+                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
+                      </span>
+                      <span className="text-green-600">
+                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                      </span>
+                    </div>
+                  ))}
+                  {Object.keys(uploadedFiles).length === 0 && (
+                    <p className="text-muted-foreground">No documents uploaded yet</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Declaration */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Declaration</h3>
+                <div className="text-sm">
+                  <div><strong>Data Privacy Agreement:</strong> {watchedValues.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</div>
+                  <div><strong>Digital Signature:</strong> {watchedValues.signature}</div>
+                </div>
+              </div>
+              
+              <div className="flex gap-4 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSummary(false)}
+                >
+                  Edit Details
+                </Button>
+                <Button
+                  onClick={() => {
+                    const formData = formMethods.getValues();
+                    handleSubmit(formData);
+                  }}
+                  disabled={isSubmitting}
+                  className="bg-primary text-primary-foreground"
+                >
+                  {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Success Dialog */}
         <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
           <DialogContent>
             <DialogHeader>
@@ -557,7 +679,7 @@ const AgentsCDD: React.FC = () => {
               <div className="text-green-600 text-6xl">✓</div>
               <p>Your Agents CDD form has been submitted successfully.</p>
               <p className="text-sm text-muted-foreground">
-                You will receive a confirmation email shortly. For inquiries about your submission status, please contact our customer service team.
+                You will receive a confirmation email shortly.
               </p>
               <Button onClick={() => setShowSuccess(false)}>Close</Button>
             </div>
