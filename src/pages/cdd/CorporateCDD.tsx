@@ -171,9 +171,41 @@ const CorporateCDD: React.FC = () => {
   }, [formMethods, saveDraft]);
 
   const handleSubmit = async (data: any) => {
-    setShowSummary(true);
-  };
+    setIsSubmitting(true);
+    try {
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      Object.entries(uploadedFiles).forEach(([key, file]) => {
+        fileUploadPromises.push(
+          uploadFile(file, 'corporate-cdd').then(url => [key + 'Url', url])
+        );
+      });
+      const uploadedUrls = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(uploadedUrls);
 
+      const submissionData = {
+        ...data,
+        ...fileUrls,
+        status: 'submitted',
+        submittedAt: new Date().toISOString(),
+        formType: 'corporate-cdd'
+      };
+
+      await addDoc(collection(db, 'corporate-cdd'), {
+        ...submissionData,
+        timestamp: serverTimestamp(),
+        createdAt: new Date().toLocaleDateString('en-GB')
+      });
+
+      clearDraft();
+      setShowSuccess(true);
+      toast({ title: 'Corporate CDD form submitted successfully!' });
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Submission failed', variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     try {
@@ -687,15 +719,16 @@ const CorporateCDD: React.FC = () => {
               {...formMethods.register('signature')}
             />
           </div>
-             <div className="text-center pt-4">
+            <div className="text-center pt-4">
             <Button
               type="button"
-              onClick={() => {
-                const isValid = formMethods.trigger();
-                if (isValid) setShowSummary(true);
+              onClick={async () => {
+                const valid = await formMethods.trigger();
+                if (valid) handleSubmit(formMethods.getValues());
               }}
+              disabled={isSubmitting}
             >
-              Review & Submit
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : 'Submit CDD Form'}
             </Button>
           </div>
         </div>
