@@ -1,138 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import { toast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { Calendar, CalendarIcon, Upload, Edit2, HardHat, FileText, CheckCircle2, Loader2, Plus, Trash2, Info } from 'lucide-react';
-import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import MultiStepForm from '@/components/common/MultiStepForm';
-import { useFormDraft } from '@/hooks/useFormDraft';
-import FileUpload from '@/components/common/FileUpload';
-import { uploadFile } from '@/services/fileService';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-// import { emailService } from '@/services/emailService';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { useToast } from '../../hooks/use-toast';
 
-// Employers Liability Claim Schema
-const employersLiabilityClaimSchema = yup.object().shape({
-  // Policy Details
-  policyNumber: yup.string().required("Policy number is required"),
-  periodOfCoverFrom: yup.date().required("Period of cover from is required"),
-  periodOfCoverTo: yup.date().required("Period of cover to is required"),
+import MultiStepForm from '../../components/common/MultiStepForm';
+import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { Badge } from '../../components/ui/badge';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Label } from '../../components/ui/label';
 
-  // Insured Details
-  name: yup.string().required("Name is required"),
-  address: yup.string().required("Address is required"),
-  phone: yup.string().required("Phone number is required"),
-  email: yup.string().email("Valid email is required").required("Email is required"),
-
-  // Injured Party Details
-  injuredPartyName: yup.string().required("Injured party name is required"),
-  injuredPartyAge: yup.number().required("Injured party age is required"),
-  injuredPartyAddress: yup.string().required("Injured party address is required"),
-  averageMonthlyEarnings: yup.number().required("Average monthly earnings is required"),
-  occupation: yup.string().required("Occupation is required"),
-  dateOfEmployment: yup.date().required("Date of employment is required"),
-  maritalStatus: yup.string().required("Marital status is required"),
-  numberOfChildren: yup.number().required("Number of children is required"),
-  agesOfChildren: yup.string(),
-  previousAccidents: yup.string().required("Previous accidents field is required"),
-  previousAccidentsDetails: yup.string().when('previousAccidents', {
-    is: 'yes',
-    then: (schema) => schema.required("Details required for previous accidents"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-
-  // Injury Details
-  natureOfInjuries: yup.string().required("Nature of injuries is required"),
-  machineryInvolved: yup.string(),
-  supervisorName: yup.string(),
-  supervisorPosition: yup.string(),
-
-  // Accident Details
-  accidentDate: yup.date().required("Accident date is required"),
-  accidentTime: yup.string().required("Accident time is required"),
-  accidentPlace: yup.string().required("Accident place is required"),
-  dateReported: yup.date().required("Date reported is required"),
-  reportedBy: yup.string().required("Reported by is required"),
-  dateStoppedWork: yup.date().required("Date stopped work is required"),
-  workDescription: yup.string().required("Work description is required"),
-  howAccidentOccurred: yup.string().required("How accident occurred is required"),
-  soberOrIntoxicated: yup.string().required("Sober or intoxicated field is required"),
-
-  // Medical
-  receivingTreatment: yup.string().required("Receiving treatment field is required"),
-  hospitalName: yup.string().when('receivingTreatment', {
-    is: 'yes',
-    then: (schema) => schema.required("Hospital name required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  hospitalAddress: yup.string().when('receivingTreatment', {
-    is: 'yes',
-    then: (schema) => schema.required("Hospital address required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  doctorName: yup.string(),
-  doctorAddress: yup.string(),
-
-  // Disablement
-  totallyDisabled: yup.string().required("Totally disabled field is required"),
-  dateStoppedWorking: yup.date().when('totallyDisabled', {
-    is: 'yes',
-    then: (schema) => schema.required("Date stopped working required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  estimatedDuration: yup.string(),
-  ableToDoAnyDuties: yup.string().required("Able to do any duties field is required"),
-  dutiesDetails: yup.string().when('ableToDoAnyDuties', {
-    is: 'yes',
-    then: (schema) => schema.required("Duties details required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  claimMadeOnYou: yup.string().required("Claim made on you field is required"),
-
-  // Witnesses
-  witnesses: yup.array().of(
-    yup.object().shape({
-      name: yup.string().required("Witness name is required"),
-      address: yup.string().required("Witness address is required"),
-      phone: yup.string().required("Witness phone is required")
-    })
-  ),
-
-  // Other Insurers
-  otherInsurerName: yup.string(),
-  otherInsurerAddress: yup.string(),
-  otherInsurerPolicyNumber: yup.string(),
-
-  // Statement of Earnings (12-month table)
-  earnings: yup.array().of(
-    yup.object().shape({
-      monthEnding: yup.string(),
-      wagesAndBonus: yup.number(),
-      monthlyAllowances: yup.number()
-    })
-  ),
-
-  // Declaration
-  agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  declarationTrue: yup.boolean().oneOf([true], "You must agree that statements are true"),
-  declarationAdditionalInfo: yup.boolean().oneOf([true], "You must agree to provide additional information"),
-  declarationDocuments: yup.boolean().oneOf([true], "You must agree to submit documents"),
-  signature: yup.string().required("Signature is required")
-});
 
 interface Witness {
   name: string;
@@ -149,8 +33,8 @@ interface EarningsMonth {
 interface EmployersLiabilityClaimData {
   // Policy Details
   policyNumber: string;
-  periodOfCoverFrom: Date;
-  periodOfCoverTo: Date;
+  periodOfCoverFrom: string;
+  periodOfCoverTo: string;
 
   // Insured Details
   name: string;
@@ -164,7 +48,7 @@ interface EmployersLiabilityClaimData {
   injuredPartyAddress: string;
   averageMonthlyEarnings: number;
   occupation: string;
-  dateOfEmployment: Date;
+  dateOfEmployment: string;
   maritalStatus: string;
   numberOfChildren: number;
   agesOfChildren?: string;
@@ -178,12 +62,12 @@ interface EmployersLiabilityClaimData {
   supervisorPosition?: string;
 
   // Accident Details
-  accidentDate: Date;
+  accidentDate: string;
   accidentTime: string;
   accidentPlace: string;
-  dateReported: Date;
+  dateReported: string;
   reportedBy: string;
-  dateStoppedWork: Date;
+  dateStoppedWork: string;
   workDescription: string;
   howAccidentOccurred: string;
   soberOrIntoxicated: string;
@@ -197,7 +81,7 @@ interface EmployersLiabilityClaimData {
 
   // Disablement
   totallyDisabled: string;
-  dateStoppedWorking?: Date;
+  dateStoppedWorking?: string;
   estimatedDuration?: string;
   ableToDoAnyDuties: string;
   dutiesDetails?: string;
@@ -216,14 +100,13 @@ interface EmployersLiabilityClaimData {
 
   // Declaration
   agreeToDataPrivacy: boolean;
-  declarationTrue: boolean;
-  declarationAdditionalInfo: boolean;
-  declarationDocuments: boolean;
   signature: string;
 }
 
 const defaultValues: Partial<EmployersLiabilityClaimData> = {
   policyNumber: '',
+  periodOfCoverFrom: '',
+  periodOfCoverTo: '',
   name: '',
   address: '',
   phone: '',
@@ -233,6 +116,7 @@ const defaultValues: Partial<EmployersLiabilityClaimData> = {
   injuredPartyAddress: '',
   averageMonthlyEarnings: 0,
   occupation: '',
+  dateOfEmployment: '',
   maritalStatus: '',
   numberOfChildren: 0,
   agesOfChildren: '',
@@ -241,9 +125,12 @@ const defaultValues: Partial<EmployersLiabilityClaimData> = {
   machineryInvolved: '',
   supervisorName: '',
   supervisorPosition: '',
+  accidentDate: '',
   accidentTime: '',
   accidentPlace: '',
+  dateReported: '',
   reportedBy: '',
+  dateStoppedWork: '',
   workDescription: '',
   howAccidentOccurred: '',
   soberOrIntoxicated: '',
@@ -253,6 +140,7 @@ const defaultValues: Partial<EmployersLiabilityClaimData> = {
   doctorName: '',
   doctorAddress: '',
   totallyDisabled: '',
+  dateStoppedWorking: '',
   estimatedDuration: '',
   ableToDoAnyDuties: '',
   dutiesDetails: '',
@@ -267,20 +155,16 @@ const defaultValues: Partial<EmployersLiabilityClaimData> = {
     monthlyAllowances: 0
   })),
   agreeToDataPrivacy: false,
-  declarationTrue: false,
-  declarationAdditionalInfo: false,
-  declarationDocuments: false,
   signature: ''
 };
 
 const EmployersLiabilityClaim: React.FC = () => {
+  const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
-  const formMethods = useForm<any>({
-    resolver: yupResolver(employersLiabilityClaimSchema),
+  const formMethods = useForm<EmployersLiabilityClaimData>({
     defaultValues,
     mode: 'onChange'
   });
@@ -290,10 +174,19 @@ const EmployersLiabilityClaim: React.FC = () => {
     name: 'witnesses'
   });
 
-  const { saveDraft, clearDraft } = useFormDraft('employersLiabilityClaim', formMethods);
+  const { saveDraft, loadDraft, clearDraft } = useFormDraft('employers-liability-claim', formMethods);
+
   const watchedValues = formMethods.watch();
 
-  // Auto-save draft
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      Object.keys(draft).forEach((key) => {
+        formMethods.setValue(key as keyof EmployersLiabilityClaimData, draft[key]);
+      });
+    }
+  }, [formMethods, loadDraft]);
+
   useEffect(() => {
     const subscription = formMethods.watch((data) => {
       saveDraft(data);
@@ -304,45 +197,17 @@ const EmployersLiabilityClaim: React.FC = () => {
   const handleSubmit = async (data: EmployersLiabilityClaimData) => {
     setIsSubmitting(true);
     try {
-      // Clean data by removing undefined values
-      const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([_, value]) => value !== undefined)
-      );
-
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
-        fileUploadPromises.push(
-          uploadFile(file, 'employers-liability-claims').then(url => [key + 'Url', url])
-        );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Prepare form data with file URLs
-      const submissionData = {
-        ...cleanData,
-        ...fileUrls,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        formType: 'employers-liability-claim'
-      };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'employers-liability-claims'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
+      // Save to Firestore
+      const docRef = await addDoc(collection(db, 'employersLiabilityClaimsTable'), {
+        ...data,
+        submittedAt: new Date(),
+        status: 'submitted'
       });
 
-      // Send confirmation email
-      // await emailService.sendSubmissionConfirmation(data.email, 'Employers Liability Claim');
-      
       clearDraft();
       setShowSummary(false);
       setShowSuccess(true);
+      
       toast({
         title: "Claim Submitted Successfully",
         description: "Your employers liability claim has been submitted and you'll receive a confirmation email shortly.",
@@ -363,48 +228,8 @@ const EmployersLiabilityClaim: React.FC = () => {
     setShowSummary(true);
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
-    return (
-      <TooltipProvider>
-        <div className="space-y-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Label className="flex items-center gap-1">
-                {label}
-                <Info className="h-3 w-3" />
-              </Label>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Select the {label.toLowerCase()}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !value && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <ReactCalendar
-                mode="single"
-                selected={value ? new Date(value) : undefined}
-                onSelect={(date) => formMethods.setValue(name, date)}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </TooltipProvider>
-    );
+  const addWitness = () => {
+    addWitness({ name: '', address: '', phone: '' });
   };
 
   const steps = [
@@ -434,14 +259,22 @@ const EmployersLiabilityClaim: React.FC = () => {
           </TooltipProvider>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DatePickerField
-              name="periodOfCoverFrom"
-              label="Period of Cover From *"
-            />
-            <DatePickerField
-              name="periodOfCoverTo"
-              label="Period of Cover To *"
-            />
+            <div>
+              <Label htmlFor="periodOfCoverFrom">Period of Cover From *</Label>
+              <Input
+                id="periodOfCoverFrom"
+                type="date"
+                {...formMethods.register('periodOfCoverFrom')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="periodOfCoverTo">Period of Cover To *</Label>
+              <Input
+                id="periodOfCoverTo"
+                type="date"
+                {...formMethods.register('periodOfCoverTo')}
+              />
+            </div>
           </div>
         </div>
       )
