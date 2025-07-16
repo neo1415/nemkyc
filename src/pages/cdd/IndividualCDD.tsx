@@ -519,25 +519,7 @@ const IndividualCDD: React.FC = () => {
             </div>
           )}
           
-          <div className="space-y-4">
-            <div>
-              <FileUpload
-                label="Passport Photo"
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, passportPhoto: file }));
-                  formMethods.setValue('passportPhoto', file);
-                  toast({ title: `${file.name} uploaded successfully` });
-                }}
-                accept="image/*"
-                required
-              />
-              {uploadedFiles.passportPhoto && (
-                <div className="text-sm text-green-600 mt-2">
-                  ✓ {uploadedFiles.passportPhoto.name}
-                </div>
-              )}
-            </div>
-            
+          <div className="space-y-4">            
             <div>
               <FileUpload
                 label="Valid Means of Identification"
