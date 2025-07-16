@@ -2,27 +2,26 @@ import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from '@/hooks/use-toast';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { CalendarIcon, Plus, Trash2, Upload, Edit2, Building2, FileText, CheckCircle2, Loader2, CreditCard, User, Info } from 'lucide-react';
+import { Calendar, CalendarIcon, Plus, Trash2, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { db } from '@/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { emailService } from '@/services/emailService';
-
 
 // NAICOM Corporate CDD Schema
 const naicomCorporateCDDSchema = yup.object().shape({
@@ -94,11 +93,11 @@ const naicomCorporateCDDSchema = yup.object().shape({
 });
 
 const NaicomCorporateCDD: React.FC = () => {
-  const { toast } = useToast();
-  const [currentStep, setCurrentStep] = useState(0);
+  const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [editingField, setEditingField] = useState<string | null>(null);
 
   const defaultDirector = {
     firstName: '',
@@ -179,7 +178,7 @@ const NaicomCorporateCDD: React.FC = () => {
       
       Object.entries(uploadedFiles).forEach(([key, file]) => {
         fileUploadPromises.push(
-          uploadFile(file, 'cdd-forms').then(url => [key + 'Url', url])
+          uploadFile(file, 'naicom-corporate-cdd').then(url => [key + 'Url', url])
         );
       });
       
@@ -203,6 +202,7 @@ const NaicomCorporateCDD: React.FC = () => {
       });
 
       clearDraft();
+      setShowSummary(false);
       setShowSuccess(true);
       toast({ title: "NAICOM Corporate CDD form submitted successfully!" });
     } catch (error) {
@@ -248,7 +248,7 @@ const NaicomCorporateCDD: React.FC = () => {
   const steps = [
     {
       id: 'company',
-      title: 'Company Information',
+      title: 'Company Details',
       component: (
         <div className="space-y-4">
           <div>
@@ -365,7 +365,7 @@ const NaicomCorporateCDD: React.FC = () => {
     },
     {
       id: 'directors',
-      title: 'Directors Information',
+      title: 'Director Info',
       component: (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
@@ -507,29 +507,31 @@ const NaicomCorporateCDD: React.FC = () => {
                   <DatePickerField name={`directors.${index}.expiryDate`} label="Expiry Date" />
                 </div>
 
-                <div>
-                  <Label>Source of Income *</Label>
-                  <Select
-                    value={watchedValues.directors?.[index]?.sourceOfIncome || ''}
-                    onValueChange={(value) => formMethods.setValue(`directors.${index}.sourceOfIncome`, value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose Income Source" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Salary or Business Income">Salary or Business Income</SelectItem>
-                      <SelectItem value="Investments or Dividends">Investments or Dividends</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {watchedValues.directors?.[index]?.sourceOfIncome === 'Other' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label>Please specify *</Label>
-                    <Input {...formMethods.register(`directors.${index}.sourceOfIncomeOther`)} />
+                    <Label>Source of Income *</Label>
+                    <Select
+                      value={((formMethods.watch('directors') as any[]) || [])[index]?.sourceOfIncome || ''}
+                      onValueChange={(value) => formMethods.setValue(`directors.${index}.sourceOfIncome`, value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose Income Source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Salary or Business Income">Salary or Business Income</SelectItem>
+                        <SelectItem value="Investments or Dividends">Investments or Dividends</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
+                  
+                  {((formMethods.watch('directors') as any[]) || [])[index]?.sourceOfIncome === 'Other' && (
+                    <div>
+                      <Label>Please specify *</Label>
+                      <Input {...formMethods.register(`directors.${index}.sourceOfIncomeOther`)} />
+                    </div>
+                  )}
+                </div>
               </div>
             </Card>
           ))}
@@ -537,88 +539,118 @@ const NaicomCorporateCDD: React.FC = () => {
       )
     },
     {
-      id: 'account',
-      title: 'Account Information',
+      id: 'accounts',
+      title: 'Account Details',
       component: (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div>
-            <h4 className="font-medium mb-4">Local Account Details</h4>
+            <h3 className="text-lg font-medium mb-4">Local Account Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="bankName">Bank Name *</Label>
-                <Input {...formMethods.register('bankName')} />
+                <Input
+                  id="bankName"
+                  {...formMethods.register('bankName')}
+                />
               </div>
-              
               <div>
                 <Label htmlFor="accountNumber">Account Number *</Label>
-                <Input {...formMethods.register('accountNumber')} />
+                <Input
+                  id="accountNumber"
+                  {...formMethods.register('accountNumber')}
+                />
               </div>
-              
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div>
                 <Label htmlFor="bankBranch">Bank Branch *</Label>
-                <Input {...formMethods.register('bankBranch')} />
+                <Input
+                  id="bankBranch"
+                  {...formMethods.register('bankBranch')}
+                />
               </div>
-              
-              <DatePickerField name="accountOpeningDate" label="Account Opening Date *" />
+              <div>
+                <DatePickerField
+                  name="accountOpeningDate"
+                  label="Account Opening Date *"
+                />
+              </div>
             </div>
           </div>
-          
+
           <div>
-            <h4 className="font-medium mb-4">Foreign Account Details (Optional)</h4>
+            <h3 className="text-lg font-medium mb-4">Foreign Account Details (Optional)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="foreignBankName">Bank Name</Label>
-                <Input {...formMethods.register('foreignBankName')} />
+                <Input
+                  id="foreignBankName"
+                  {...formMethods.register('foreignBankName')}
+                />
               </div>
-              
               <div>
                 <Label htmlFor="foreignAccountNumber">Account Number</Label>
-                <Input {...formMethods.register('foreignAccountNumber')} />
+                <Input
+                  id="foreignAccountNumber"
+                  {...formMethods.register('foreignAccountNumber')}
+                />
               </div>
-              
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div>
                 <Label htmlFor="foreignBankBranch">Bank Branch</Label>
-                <Input {...formMethods.register('foreignBankBranch')} />
+                <Input
+                  id="foreignBankBranch"
+                  {...formMethods.register('foreignBankBranch')}
+                />
               </div>
-              
-              <DatePickerField name="foreignAccountOpeningDate" label="Account Opening Date" />
+              <div>
+                <DatePickerField
+                  name="foreignAccountOpeningDate"
+                  label="Account Opening Date"
+                />
+              </div>
             </div>
           </div>
         </div>
       )
     },
     {
-      id: 'documents',
-      title: 'Document Upload',
+      id: 'uploads',
+      title: 'Uploads',
       component: (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <FileUpload
+            accept=".jpg,.jpeg,.png,.pdf"
+            maxSize={3 * 1024 * 1024}
+            onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, cacCertificate: file }))}
             label="Upload Your CAC Certificate"
             required
-            onFileSelect={(file) => {
-              formMethods.setValue('cacCertificate', file);
-              setUploadedFiles(prev => ({ ...prev, cacCertificate: file }));
-            }}
-            currentFile={watchedValues.cacCertificate as File}
-            error={String(formMethods.formState.errors.cacCertificate?.message || '')}
           />
           
           <FileUpload
+            accept=".jpg,.jpeg,.png,.pdf"
+            maxSize={3 * 1024 * 1024}
+            onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, identification: file }))}
             label="Upload Means of Identification"
             required
-            onFileSelect={(file) => {
-              formMethods.setValue('meansOfIdentification', file);
-              setUploadedFiles(prev => ({ ...prev, meansOfIdentification: file }));
-            }}
-            currentFile={watchedValues.meansOfIdentification as File}
-            error={String(formMethods.formState.errors.meansOfIdentification?.message || '')}
+          />
+          
+          <FileUpload
+            accept=".jpg,.jpeg,.png,.pdf"
+            maxSize={3 * 1024 * 1024}
+            onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, naicomLicense: file }))}
+            label="Upload NAICOM License Certificate"
+            required
           />
         </div>
       )
     },
     {
       id: 'declaration',
-      title: 'Declaration',
+      title: 'Data Privacy & Declaration',
       component: (
         <div className="space-y-6">
           <div className="bg-gray-50 p-4 rounded-lg">
@@ -639,135 +671,73 @@ const NaicomCorporateCDD: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex items-center space-x-2">
-            <Checkbox 
+          <div className="flex items-start space-x-2">
+            <Checkbox
               id="agreeToDataPrivacy"
               checked={watchedValues.agreeToDataPrivacy}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked as boolean)}
+              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked === true)}
             />
-            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy policy and declaration *</Label>
+            <Label htmlFor="agreeToDataPrivacy" className="text-sm">
+              I agree to the data privacy terms and confirm that all information provided is true and accurate to the best of my knowledge *
+            </Label>
           </div>
           
           <div>
             <Label htmlFor="signature">Digital Signature *</Label>
-            <Input {...formMethods.register('signature')} placeholder="Type your full name as signature" />
+            <Input
+              id="signature"
+              placeholder="Type your full name as signature"
+              {...formMethods.register('signature')}
+            />
           </div>
           
-          <div>
-            <Label>Date</Label>
-            <Input type="date" value={new Date().toISOString().split('T')[0]} readOnly />
+          <div className="text-center pt-4">
+            <Button
+              type="button"
+              onClick={() => {
+                const isValid = formMethods.trigger();
+                if (isValid) setShowSummary(true);
+              }}
+            >
+              Review & Submit
+            </Button>
           </div>
         </div>
       )
     }
   ];
 
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Building2 className="h-8 w-8 text-primary" />
-            NAICOM Corporate CDD Form
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Customer Due Diligence form for corporate entities under NAICOM requirements.
-          </p>
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">NAICOM Company CDD Form</h1>
+          <p className="text-gray-600">Customer Due Diligence form for NAICOM Company entities</p>
         </div>
 
-        <div className="space-y-8">
-          {/* Step Navigation */}
-          <div className="flex justify-center">
-            <div className="flex space-x-8">
-              {steps.map((step, index) => (
-                <div key={step.id} className="flex items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    index === 0 ? 'bg-primary text-primary-foreground' : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {index + 1}
-                  </div>
-                  <span className="ml-2 text-sm font-medium text-gray-700">{step.title}</span>
-                  {index < steps.length - 1 && <div className="w-8 h-px bg-gray-300 ml-4" />}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Step Content */}
-          <div className="bg-white rounded-lg border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">{steps[currentStep].title}</h2>
-            </div>
-            <div className="p-6">
-              {steps[currentStep].component}
-            </div>
-          </div>
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentStep(prev => prev - 1)}
-              disabled={currentStep === 0}
-              size="lg"
-              className="px-8"
-            >
-              Previous
-            </Button>
-            
-            {currentStep < steps.length - 1 ? (
-              <Button
-                onClick={() => setCurrentStep(prev => prev + 1)}
-                size="lg"
-                className="px-8"
-              >
-                Next
-              </Button>
-            ) : (
-              <Button
-                onClick={formMethods.handleSubmit(handleSubmit)}
-                disabled={isSubmitting}
-                size="lg"
-                className="px-8 bg-green-600 hover:bg-green-700"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Form'
-                )}
-              </Button>
-            )}
-          </div>
-        </div>
-
+        <MultiStepForm
+          steps={steps}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          submitButtonText="Submit CDD Form"
+          formMethods={formMethods}
+        />
 
         {/* Success Dialog */}
         <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle className="text-center text-green-600">NAICOM CDD Form Submitted Successfully!</DialogTitle>
+              <DialogTitle>CDD Form Submitted Successfully!</DialogTitle>
             </DialogHeader>
-            <div className="text-center py-4">
-              <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <CheckCircle2 className="h-6 w-6 text-green-600" />
-              </div>
-              <p className="text-gray-600 mb-4">Your NAICOM Corporate CDD form has been submitted successfully.</p>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Reference Number:</strong> NAICOM-CDD-{new Date().getTime()}
-                </p>
-                <p className="text-sm text-blue-800 mt-2">
-                  For status updates and enquiries, contact:
-                  <br />
-                  Email: compliance@neminsurance.ng
-                  <br />
-                  Phone: +234-1-234-5678
-                </p>
-              </div>
+            <div className="text-center space-y-4">
+              <div className="text-green-600 text-6xl">✓</div>
+              <p>Your NAICOM Company CDD form has been submitted successfully.</p>
+              <p className="text-sm text-muted-foreground">
+                You will receive a confirmation email shortly.
+              </p>
+              <Button onClick={() => setShowSuccess(false)}>
+                Close
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
