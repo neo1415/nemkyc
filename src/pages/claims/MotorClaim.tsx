@@ -1029,7 +1029,7 @@ const MotorClaim: React.FC = () => {
           steps={steps}
           onSubmit={onFinalSubmit}
           isSubmitting={isSubmitting}
-          submitButtonText="Review & Submit Claim"
+          submitButtonText="Review Claim"
           formMethods={formMethods}
         />
 
