@@ -48,7 +48,7 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
 
   return (
     <FormProvider {...formMethods}>
-      <form onSubmit={formMethods.handleSubmit(onSubmit)}>
+      <form onSubmit={(e) => e.preventDefault()}>
         <div className="space-y-6">
           {/* Progress indicator */}
           <div className="space-y-2">
@@ -84,7 +84,8 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
 
           {isLastStep ? (
             <Button
-              type="submit"
+              type="button"
+              onClick={() => formMethods.handleSubmit(onSubmit)()}
               disabled={!canProceed || isSubmitting}
               className="flex items-center space-x-2"
             >
