@@ -540,7 +540,7 @@ const GoodsInTransitClaim: React.FC = () => {
       component: (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Items List</h3>
+            <Label className="text-lg font-semibold">Items List</Label>
             <Button
               type="button"
               onClick={() => appendGoodsItem({ quantity: 1, description: '', value: 0 })}
@@ -553,14 +553,14 @@ const GoodsInTransitClaim: React.FC = () => {
           </div>
           
           {goodsItemsFields.map((field, index) => (
-            <div key={field.id} className="border p-4 rounded-lg space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="font-medium">Item {index + 1}</h4>
+            <Card key={field.id} className="p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold">Item {index + 1}</h3>
                 {goodsItemsFields.length > 1 && (
                   <Button
                     type="button"
                     onClick={() => removeGoodsItem(index)}
-                    variant="ghost"
+                    variant="destructive"
                     size="sm"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -568,40 +568,39 @@ const GoodsInTransitClaim: React.FC = () => {
                 )}
               </div>
               
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                 <div>
-                   <Label htmlFor={`goodsItems-${index}-quantity`}>Quantity *</Label>
-                   <Input
-                     id={`goodsItems-${index}-quantity`}
-                     {...formMethods.register(`goodsItems.${index}.quantity`, { valueAsNumber: true })}
-                     type="number"
-                     placeholder="Qty"
-                   />
-                 </div>
-                 <div>
-                   <Label htmlFor={`goodsItems-${index}-description`}>Description *</Label>
-                   <Input
-                     id={`goodsItems-${index}-description`}
-                     {...formMethods.register(`goodsItems.${index}.description`)}
-                     placeholder="Item description"
-                   />
-                 </div>
-                 <div>
-                   <Label htmlFor={`goodsItems-${index}-value`}>Value (₦) *</Label>
-                   <Input
-                     id={`goodsItems-${index}-value`}
-                     {...formMethods.register(`goodsItems.${index}.value`, { valueAsNumber: true })}
-                     type="number"
-                     step="0.01"
-                     placeholder="0.00"
-                   />
-                 </div>
-               </div>
-            </div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor={`goodsItems.${index}.quantity`}>Quantity *</Label>
+                    <Input
+                      {...formMethods.register(`goodsItems.${index}.quantity`, { valueAsNumber: true })}
+                      type="number"
+                      placeholder="Qty"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`goodsItems.${index}.description`}>Description *</Label>
+                    <Input
+                      {...formMethods.register(`goodsItems.${index}.description`)}
+                      placeholder="Item description"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`goodsItems.${index}.value`}>Value (₦) *</Label>
+                    <Input
+                      {...formMethods.register(`goodsItems.${index}.value`, { valueAsNumber: true })}
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+              </div>
+            </Card>
           ))}
           
           {goodsItemsFields.length === 0 && (
-            <div className="text-center p-8 text-gray-500">
+            <div className="text-center text-sm text-muted-foreground border p-6 rounded-md">
               No items added yet. Click "Add Item" to add goods information.
             </div>
           )}

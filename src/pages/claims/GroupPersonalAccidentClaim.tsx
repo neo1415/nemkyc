@@ -85,9 +85,6 @@ const GroupPersonalAccidentClaim = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
-  const addWitness = () => {
-    appendWitness({ name: '', address: '' });
-  };
 
   const handleSubmit = async (data: GroupPersonalAccidentClaimData) => {
     setIsSubmitting(true);
@@ -309,39 +306,45 @@ const GroupPersonalAccidentClaim = () => {
       id: 'witnesses',
       title: 'Witness Information',
       component: (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium">Witnesses to the Accident</h3>
-            <Button type="button" onClick={addWitness} variant="outline" size="sm">
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <Label className="text-lg font-semibold">Witnesses</Label>
+            <Button
+              type="button"
+              onClick={() => appendWitness({ name: '', address: '' })}
+              variant="outline"
+              size="sm"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Witness
             </Button>
           </div>
           
           {witnessFields.map((field, index) => (
-            <div key={field.id} className="border p-4 rounded-lg space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="font-medium">Witness {index + 1}</h4>
+            <Card key={field.id} className="p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold">Witness {index + 1}</h3>
                 <Button
                   type="button"
                   onClick={() => removeWitness(index)}
-                  variant="ghost"
+                  variant="destructive"
                   size="sm"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor={`witnesses.${index}.name`}>Name *</Label>
+                  <Label htmlFor={`witnesses.${index}.name`}>Witness Name *</Label>
                   <Input
                     {...formMethods.register(`witnesses.${index}.name`)}
                     placeholder="Enter witness name"
                   />
                 </div>
+                
                 <div>
-                  <Label htmlFor={`witnesses.${index}.address`}>Address *</Label>
+                  <Label htmlFor={`witnesses.${index}.address`}>Witness Address *</Label>
                   <Textarea
                     {...formMethods.register(`witnesses.${index}.address`)}
                     placeholder="Enter witness address"
@@ -349,11 +352,11 @@ const GroupPersonalAccidentClaim = () => {
                   />
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
           
           {witnessFields.length === 0 && (
-            <div className="text-center p-8 text-gray-500">
+            <div className="text-center text-sm text-muted-foreground border p-6 rounded-md">
               No witnesses added yet. Click "Add Witness" to add witness information.
             </div>
           )}
