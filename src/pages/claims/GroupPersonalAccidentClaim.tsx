@@ -1,26 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { collection, addDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../firebase/config';
-// import { groupPersonalAccidentSchema } from '../../utils/validation';
+import { db } from '../../firebase/config';
 import { GroupPersonalAccidentClaimData } from '../../types/claims';
-import { emailService } from '../../services/emailService';
 import { useFormDraft } from '../../hooks/useFormDraft';
 import { useToast } from '../../hooks/use-toast';
 
 import MultiStepForm from '../../components/common/MultiStepForm';
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '../../components/ui/form';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Badge } from '../../components/ui/badge';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
-import { Label } from '../../components/ui/label';
 
 const GroupPersonalAccidentClaim = () => {
   const { toast } = useToast();
@@ -28,8 +24,7 @@ const GroupPersonalAccidentClaim = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const formMethods = useForm<GroupPersonalAccidentClaimData>({
-    // resolver: yupResolver(groupPersonalAccidentSchema) as any,
+  const methods = useForm<GroupPersonalAccidentClaimData>({
     defaultValues: {
       policyNumber: '',
       periodOfCoverFrom: '',
@@ -61,46 +56,38 @@ const GroupPersonalAccidentClaim = () => {
   });
 
   const { fields: witnessFields, append: appendWitness, remove: removeWitness } = useFieldArray({
-    control: formMethods.control,
+    control: methods.control,
     name: 'witnesses'
   });
 
-  const { saveDraft, loadDraft, clearDraft } = useFormDraft('group-personal-accident-claim', formMethods);
+  const { saveDraft, loadDraft, clearDraft } = useFormDraft('group-personal-accident-claim', methods);
 
-  const watchedValues = formMethods.watch();
+  const watchedValues = methods.watch();
 
   useEffect(() => {
     const draft = loadDraft();
     if (draft) {
       Object.keys(draft).forEach((key) => {
-        formMethods.setValue(key as keyof GroupPersonalAccidentClaimData, draft[key]);
+        methods.setValue(key as keyof GroupPersonalAccidentClaimData, draft[key]);
       });
     }
-  }, [formMethods, loadDraft]);
+  }, [methods, loadDraft]);
 
   useEffect(() => {
-    const subscription = formMethods.watch((data) => {
+    const subscription = methods.watch((data) => {
       saveDraft(data);
     });
     return () => subscription.unsubscribe();
-  }, [formMethods, saveDraft]);
-
+  }, [methods, saveDraft]);
 
   const handleSubmit = async (data: GroupPersonalAccidentClaimData) => {
     setIsSubmitting(true);
     try {
-      // Save to Firestore
       const docRef = await addDoc(collection(db, 'groupPersonalAccidentClaims'), {
         ...data,
         submittedAt: new Date(),
         status: 'submitted'
       });
-
-      // Send confirmation email
-      // await emailService.sendSubmissionConfirmation(
-      //   data.email,
-      //   'Group Personal Accident Insurance Claim'
-      // );
 
       clearDraft();
       setShowSummary(false);
@@ -126,48 +113,58 @@ const GroupPersonalAccidentClaim = () => {
     setShowSummary(true);
   };
 
+  const addWitness = () => {
+    appendWitness({ name: '', address: '' });
+  };
+
   const steps = [
     {
       id: 'policy',
       title: 'Policy Details',
       component: (
         <div className="space-y-6">
-          <div>
-            <Label htmlFor="policyNumber">Policy Number *</Label>
-            <Input
-              id="policyNumber"
-              {...formMethods.register('policyNumber')}
-              placeholder="Enter policy number"
-            />
-            {formMethods.formState.errors.policyNumber && (
-              <p className="text-sm text-red-600">{formMethods.formState.errors.policyNumber.message}</p>
+          <FormField
+            control={methods.control}
+            name="policyNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Policy Number *</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter policy number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
+          />
           
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="periodOfCoverFrom">Period of Cover From *</Label>
-              <Input
-                id="periodOfCoverFrom"
-                type="date"
-                {...formMethods.register('periodOfCoverFrom')}
-              />
-              {formMethods.formState.errors.periodOfCoverFrom && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.periodOfCoverFrom.message}</p>
+            <FormField
+              control={methods.control}
+              name="periodOfCoverFrom"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Period of Cover From *</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
             
-            <div>
-              <Label htmlFor="periodOfCoverTo">Period of Cover To *</Label>
-              <Input
-                id="periodOfCoverTo"
-                type="date"
-                {...formMethods.register('periodOfCoverTo')}
-              />
-              {formMethods.formState.errors.periodOfCoverTo && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.periodOfCoverTo.message}</p>
+            <FormField
+              control={methods.control}
+              name="periodOfCoverTo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Period of Cover To *</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
           </div>
         </div>
       )
@@ -177,56 +174,62 @@ const GroupPersonalAccidentClaim = () => {
       title: 'Insured Details',
       component: (
         <div className="space-y-6">
-          <div>
-            <Label htmlFor="companyName">Company Name *</Label>
-            <Input
-              id="companyName"
-              {...formMethods.register('companyName')}
-              placeholder="Enter company name"
-            />
-            {formMethods.formState.errors.companyName && (
-              <p className="text-sm text-red-600">{formMethods.formState.errors.companyName.message}</p>
+          <FormField
+            control={methods.control}
+            name="companyName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Company Name *</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter company name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
+          />
           
-          <div>
-            <Label htmlFor="address">Address *</Label>
-            <Textarea
-              id="address"
-              {...formMethods.register('address')}
-              placeholder="Enter full address"
-              rows={3}
-            />
-            {formMethods.formState.errors.address && (
-              <p className="text-sm text-red-600">{formMethods.formState.errors.address.message}</p>
+          <FormField
+            control={methods.control}
+            name="address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Address *</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Enter full address" rows={3} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
+          />
           
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="phone">Phone Number *</Label>
-              <Input
-                id="phone"
-                {...formMethods.register('phone')}
-                placeholder="Enter phone number"
-              />
-              {formMethods.formState.errors.phone && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.phone.message}</p>
+            <FormField
+              control={methods.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter phone number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
             
-            <div>
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                {...formMethods.register('email')}
-                placeholder="Enter email address"
-              />
-              {formMethods.formState.errors.email && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.email.message}</p>
+            <FormField
+              control={methods.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email Address *</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="Enter email address" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
           </div>
         </div>
       )
@@ -237,68 +240,76 @@ const GroupPersonalAccidentClaim = () => {
       component: (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="accidentDate">Accident Date *</Label>
-              <Input
-                id="accidentDate"
-                type="date"
-                {...formMethods.register('accidentDate')}
-              />
-              {formMethods.formState.errors.accidentDate && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.accidentDate.message}</p>
+            <FormField
+              control={methods.control}
+              name="accidentDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Accident Date *</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
             
-            <div>
-              <Label htmlFor="accidentTime">Time *</Label>
-              <Input
-                id="accidentTime"
-                type="time"
-                {...formMethods.register('accidentTime')}
-              />
-              {formMethods.formState.errors.accidentTime && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.accidentTime.message}</p>
+            <FormField
+              control={methods.control}
+              name="accidentTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Time *</FormLabel>
+                  <FormControl>
+                    <Input type="time" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
           </div>
           
-          <div>
-            <Label htmlFor="accidentPlace">Place *</Label>
-            <Input
-              id="accidentPlace"
-              {...formMethods.register('accidentPlace')}
-              placeholder="Where did the accident occur?"
-            />
-            {formMethods.formState.errors.accidentPlace && (
-              <p className="text-sm text-red-600">{formMethods.formState.errors.accidentPlace.message}</p>
+          <FormField
+            control={methods.control}
+            name="accidentPlace"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Place *</FormLabel>
+                <FormControl>
+                  <Input placeholder="Where did the accident occur?" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
+          />
           
-          <div>
-            <Label htmlFor="incidentDescription">Incident Description *</Label>
-            <Textarea
-              id="incidentDescription"
-              {...formMethods.register('incidentDescription')}
-              placeholder="Describe how the incident occurred"
-              rows={4}
-            />
-            {formMethods.formState.errors.incidentDescription && (
-              <p className="text-sm text-red-600">{formMethods.formState.errors.incidentDescription.message}</p>
+          <FormField
+            control={methods.control}
+            name="incidentDescription"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Incident Description *</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Describe how the incident occurred" rows={4} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
+          />
           
-          <div>
-            <Label htmlFor="particularsOfInjuries">Particulars of Injuries *</Label>
-            <Textarea
-              id="particularsOfInjuries"
-              {...formMethods.register('particularsOfInjuries')}
-              placeholder="Describe the injuries sustained"
-              rows={4}
-            />
-            {formMethods.formState.errors.particularsOfInjuries && (
-              <p className="text-sm text-red-600">{formMethods.formState.errors.particularsOfInjuries.message}</p>
+          <FormField
+            control={methods.control}
+            name="particularsOfInjuries"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Particulars of Injuries *</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Describe the injuries sustained" rows={4} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
+          />
         </div>
       )
     },
@@ -308,10 +319,10 @@ const GroupPersonalAccidentClaim = () => {
       component: (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <Label className="text-lg font-semibold">Witnesses</Label>
+            <h3 className="text-lg font-semibold">Witnesses</h3>
             <Button
               type="button"
-              onClick={() => appendWitness({ name: '', address: '' })}
+              onClick={addWitness}
               variant="outline"
               size="sm"
             >
@@ -323,7 +334,7 @@ const GroupPersonalAccidentClaim = () => {
           {witnessFields.map((field, index) => (
             <Card key={field.id} className="p-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold">Witness {index + 1}</h3>
+                <h4 className="font-semibold">Witness {index + 1}</h4>
                 <Button
                   type="button"
                   onClick={() => removeWitness(index)}
@@ -335,22 +346,33 @@ const GroupPersonalAccidentClaim = () => {
               </div>
               
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor={`witnesses.${index}.name`}>Witness Name *</Label>
-                  <Input
-                    {...formMethods.register(`witnesses.${index}.name`)}
-                    placeholder="Enter witness name"
-                  />
-                </div>
+                <FormField
+                  control={methods.control}
+                  name={`witnesses.${index}.name`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Witness Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter witness name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 
-                <div>
-                  <Label htmlFor={`witnesses.${index}.address`}>Witness Address *</Label>
-                  <Textarea
-                    {...formMethods.register(`witnesses.${index}.address`)}
-                    placeholder="Enter witness address"
-                    rows={2}
-                  />
-                </div>
+                <FormField
+                  control={methods.control}
+                  name={`witnesses.${index}.address`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Witness Address *</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter witness address" rows={2} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </Card>
           ))}
@@ -369,40 +391,52 @@ const GroupPersonalAccidentClaim = () => {
       component: (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="doctorName">Name of doctor *</Label>
-              <Input
-                id="doctorName"
-                {...formMethods.register('doctorName')}
-                placeholder="Enter doctor's name"
-              />
-              {formMethods.formState.errors.doctorName && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.doctorName.message}</p>
+            <FormField
+              control={methods.control}
+              name="doctorName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name of doctor *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter doctor's name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
             
-            <div>
-              <Label htmlFor="doctorAddress">Address of doctor *</Label>
-              <Textarea
-                id="doctorAddress"
-                {...formMethods.register('doctorAddress')}
-                placeholder="Enter doctor's address"
-                rows={2}
-              />
-              {formMethods.formState.errors.doctorAddress && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.doctorAddress.message}</p>
+            <FormField
+              control={methods.control}
+              name="doctorAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address of doctor *</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Enter doctor's address" rows={2} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
           </div>
           
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="isUsualDoctor"
-              checked={watchedValues.isUsualDoctor}
-              onCheckedChange={(checked) => formMethods.setValue('isUsualDoctor', checked as boolean)}
-            />
-            <Label htmlFor="isUsualDoctor">Is this your usual doctor?</Label>
-          </div>
+          <FormField
+            control={methods.control}
+            name="isUsualDoctor"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Is this your usual doctor?</FormLabel>
+                </div>
+              </FormItem>
+            )}
+          />
         </div>
       )
     },
@@ -414,46 +448,66 @@ const GroupPersonalAccidentClaim = () => {
           <div>
             <h4 className="font-medium mb-4">Total incapacity period:</h4>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="totalIncapacityFrom">From</Label>
-                <Input
-                  id="totalIncapacityFrom"
-                  type="date"
-                  {...formMethods.register('totalIncapacityFrom')}
-                />
-              </div>
+              <FormField
+                control={methods.control}
+                name="totalIncapacityFrom"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>From</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               
-              <div>
-                <Label htmlFor="totalIncapacityTo">To</Label>
-                <Input
-                  id="totalIncapacityTo"
-                  type="date"
-                  {...formMethods.register('totalIncapacityTo')}
-                />
-              </div>
+              <FormField
+                control={methods.control}
+                name="totalIncapacityTo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>To</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
           </div>
           
           <div>
             <h4 className="font-medium mb-4">Partial incapacity period:</h4>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="partialIncapacityFrom">From</Label>
-                <Input
-                  id="partialIncapacityFrom"
-                  type="date"
-                  {...formMethods.register('partialIncapacityFrom')}
-                />
-              </div>
+              <FormField
+                control={methods.control}
+                name="partialIncapacityFrom"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>From</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               
-              <div>
-                <Label htmlFor="partialIncapacityTo">To</Label>
-                <Input
-                  id="partialIncapacityTo"
-                  type="date"
-                  {...formMethods.register('partialIncapacityTo')}
-                />
-              </div>
+              <FormField
+                control={methods.control}
+                name="partialIncapacityTo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>To</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
           </div>
         </div>
@@ -464,151 +518,185 @@ const GroupPersonalAccidentClaim = () => {
       title: 'Other Insurers',
       component: (
         <div className="space-y-6">
-          <div>
-            <Label htmlFor="otherInsurerName">Name *</Label>
-            <Input
-              id="otherInsurerName"
-              {...formMethods.register('otherInsurerName')}
-              placeholder="Enter other insurer name"
-            />
-            {formMethods.formState.errors.otherInsurerName && (
-              <p className="text-sm text-red-600">{formMethods.formState.errors.otherInsurerName.message}</p>
+          <FormField
+            control={methods.control}
+            name="otherInsurerName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name *</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter other insurer name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
+          />
           
-          <div>
-            <Label htmlFor="otherInsurerAddress">Address *</Label>
-            <Textarea
-              id="otherInsurerAddress"
-              {...formMethods.register('otherInsurerAddress')}
-              placeholder="Enter other insurer address"
-              rows={3}
-            />
-            {formMethods.formState.errors.otherInsurerAddress && (
-              <p className="text-sm text-red-600">{formMethods.formState.errors.otherInsurerAddress.message}</p>
+          <FormField
+            control={methods.control}
+            name="otherInsurerAddress"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Address *</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Enter other insurer address" rows={3} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
+          />
           
-          <div>
-            <Label htmlFor="otherPolicyNumber">Policy Number</Label>
-            <Input
-              id="otherPolicyNumber"
-              {...formMethods.register('otherPolicyNumber')}
-              placeholder="Enter other policy number"
-            />
-          </div>
+          <FormField
+            control={methods.control}
+            name="otherPolicyNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Policy Number</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter policy number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
       )
     },
     {
-      id: 'data-privacy',
-      title: 'Data Privacy & Declaration',
+      id: 'declaration',
+      title: 'Declaration',
       component: (
         <div className="space-y-6">
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Data Privacy Notice</h3>
-            <div className="prose prose-sm max-w-none">
-              <p><strong>i.</strong> Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p><strong>ii.</strong> Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p><strong>iii.</strong> Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Declaration</h3>
-            <div className="prose prose-sm max-w-none mb-6">
-              <p><strong>1.</strong> I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p><strong>2.</strong> I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p><strong>3.</strong> I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="agreeToDataPrivacy"
-                  checked={watchedValues.agreeToDataPrivacy}
-                  onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
-                />
-                <Label htmlFor="agreeToDataPrivacy">
-                  I agree to the data privacy notice and declaration above *
-                </Label>
-              </div>
-              {formMethods.formState.errors.agreeToDataPrivacy && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.agreeToDataPrivacy.message}</p>
-              )}
-
-              <div>
-                <Label htmlFor="signature">Digital Signature *</Label>
-                <Input
-                  id="signature"
-                  {...formMethods.register('signature')}
-                  placeholder="Type your full name as signature"
-                />
-                {formMethods.formState.errors.signature && (
-                  <p className="text-sm text-red-600">{formMethods.formState.errors.signature.message}</p>
-                )}
-              </div>
-
-              <div>
-                <Label>Date</Label>
-                <Input
-                  type="date"
-                  value={new Date().toISOString().split('T')[0]}
-                  disabled
-                />
-              </div>
-            </div>
-          </Card>
+          <FormField
+            control={methods.control}
+            name="agreeToDataPrivacy"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>
+                    I agree to the data privacy notice and declaration *
+                  </FormLabel>
+                </div>
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={methods.control}
+            name="signature"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Digital Signature *</FormLabel>
+                <FormControl>
+                  <Input placeholder="Type your full name as signature" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
       )
     }
   ];
 
+  if (showSuccess) {
+    return (
+      <div className="max-w-md mx-auto text-center p-6">
+        <div className="bg-green-50 rounded-lg p-6 mb-6">
+          <h2 className="text-2xl font-bold text-green-800 mb-2">Claim Submitted Successfully!</h2>
+          <p className="text-green-600">
+            Your group personal accident claim has been submitted and you'll receive a confirmation email shortly.
+          </p>
+        </div>
+        <Button onClick={() => window.location.reload()}>
+          Submit Another Claim
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">
-              Group Personal Accident Insurance Claim Form
-            </h1>
-            <p className="text-muted-foreground">
-              Please fill out all required information to submit your claim
-            </p>
-          </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Group Personal Accident Insurance Claim
+          </h1>
+          <p className="text-lg text-gray-600">
+            Please fill out all required information accurately
+          </p>
+        </div>
 
-        <MultiStepForm
-          steps={steps}
-          onSubmit={onFinalSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Review Claim"
-          formMethods={formMethods}
-        />
+        <FormProvider {...methods}>
+          <MultiStepForm
+            steps={steps}
+            onSubmit={onFinalSubmit}
+            formMethods={methods}
+          />
+        </FormProvider>
 
-        {/* Summary Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Review Your Group Personal Accident Claim Submission</DialogTitle>
+              <DialogTitle>Review Your Claim</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>Policy Number:</strong> {watchedValues.policyNumber}</div>
-                <div><strong>Company:</strong> {watchedValues.companyName}</div>
-                <div><strong>Email:</strong> {watchedValues.email}</div>
-                <div><strong>Doctor:</strong> {watchedValues.doctorName}</div>
+            
+            <div className="space-y-6">
+              <div>
+                <h3 className="font-semibold mb-2">Policy Details</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>Policy Number: {watchedValues.policyNumber}</div>
+                  <div>Period: {watchedValues.periodOfCoverFrom} to {watchedValues.periodOfCoverTo}</div>
+                </div>
               </div>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-blue-800">
-                  For claims status enquiries, call 01 448 9570
-                </p>
+
+              <div>
+                <h3 className="font-semibold mb-2">Insured Details</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>Company: {watchedValues.companyName}</div>
+                  <div>Email: {watchedValues.email}</div>
+                  <div>Phone: {watchedValues.phone}</div>
+                  <div>Address: {watchedValues.address}</div>
+                </div>
               </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">Accident Details</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>Date: {watchedValues.accidentDate}</div>
+                  <div>Time: {watchedValues.accidentTime}</div>
+                  <div>Place: {watchedValues.accidentPlace}</div>
+                </div>
+                <div className="mt-2 text-sm">
+                  <div>Description: {watchedValues.incidentDescription}</div>
+                  <div>Injuries: {watchedValues.particularsOfInjuries}</div>
+                </div>
+              </div>
+
+              {watchedValues.witnesses && watchedValues.witnesses.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-2">Witnesses</h3>
+                  {watchedValues.witnesses.map((witness, index) => (
+                    <div key={index} className="text-sm mb-2">
+                      <div>Name: {witness.name}</div>
+                      <div>Address: {witness.address}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSummary(false)}>
-                Back to Edit
+                Edit Claim
               </Button>
-              <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={isSubmitting}>
+              <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -621,39 +709,6 @@ const GroupPersonalAccidentClaim = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-          {/* Success Modal */}
-          <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="text-center text-green-600">
-                  Claim Submitted Successfully!
-                </DialogTitle>
-              </DialogHeader>
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <p>Your group personal accident claim has been submitted successfully.</p>
-                <p className="text-sm text-muted-foreground">
-                  You will receive a confirmation email shortly with your claim reference number.
-                </p>
-                <div className="bg-muted p-4 rounded-lg">
-                  <p className="text-sm">
-                    <strong>For claims status enquiries, call 01 448 9570</strong>
-                  </p>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={() => setShowSuccess(false)} className="w-full">
-                  Close
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
       </div>
     </div>
   );

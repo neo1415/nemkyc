@@ -1442,7 +1442,7 @@ const MotorClaim: React.FC = () => {
 
           <MultiStepForm
             steps={steps}
-            onFinalSubmit={onFinalSubmit}
+            onSubmit={onFinalSubmit}
             formMethods={formMethods}
           />
 
