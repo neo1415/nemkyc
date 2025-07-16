@@ -742,7 +742,6 @@ const NaicomCorporateCDD: React.FC = () => {
           steps={steps}
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
-          submitButtonText="Submit CDD Form"
           formMethods={formMethods}
         />
 
