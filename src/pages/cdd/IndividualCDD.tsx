@@ -519,23 +519,43 @@ const IndividualCDD: React.FC = () => {
             </div>
           )}
           
-          <div className="space-y-4">            
+          <div className="space-y-4">
             <div>
+              <Label>Valid Means of Identification *</Label>
               <FileUpload
-                label="Valid Means of Identification"
+                accept="application/pdf,image/*"
+                maxSize={3 * 1024 * 1024}
                 onFileSelect={(file) => {
                   setUploadedFiles(prev => ({ ...prev, validMeansOfId: file }));
-                  formMethods.setValue('validMeansOfId', file);
-                  toast({ title: `${file.name} uploaded successfully` });
+                  toast({ title: "File selected for upload" });
                 }}
-                accept=".pdf,.jpg,.jpeg,.png"
-                required
+                currentFile={uploadedFiles.validMeansOfId}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { validMeansOfId, ...rest } = prev;
+                    return rest;
+                  });
+                }}
               />
-              {uploadedFiles.validMeansOfId && (
-                <div className="text-sm text-green-600 mt-2">
-                  ✓ {uploadedFiles.validMeansOfId.name}
-                </div>
-              )}
+            </div>
+            
+            <div>
+              <Label>Utility Bill *</Label>
+              <FileUpload
+                accept="application/pdf,image/*"
+                maxSize={3 * 1024 * 1024}
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({ ...prev, utilityBill: file }));
+                  toast({ title: "File selected for upload" });
+                }}
+                currentFile={uploadedFiles.utilityBill}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { utilityBill, ...rest } = prev;
+                    return rest;
+                  });
+                }}
+              />
             </div>
           </div>
         </div>
@@ -572,9 +592,21 @@ const IndividualCDD: React.FC = () => {
             <Label htmlFor="signature">Digital Signature *</Label>
             <Input
               id="signature"
-              placeholder="Type your full name as digital signature"
+              placeholder="Type your full name as signature"
               {...formMethods.register('signature')}
             />
+          </div>
+          
+          <div className="text-center pt-4">
+            <Button
+              type="button"
+              onClick={() => {
+                const isValid = formMethods.trigger();
+                if (isValid) setShowSummary(true);
+              }}
+            >
+              Review & Submit
+            </Button>
           </div>
         </div>
       )
@@ -587,12 +619,13 @@ const IndividualCDD: React.FC = () => {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <MultiStepForm
-        steps={steps}
-        formMethods={formMethods}
-        onSubmit={handleFormSubmit}
-        isSubmitting={isSubmitting}
-      />
+        <MultiStepForm
+          steps={steps}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          submitButtonText="Submit CDD Form"
+          formMethods={formMethods}
+        />
 
       {/* Summary Dialog */}
       <Dialog open={showSummary} onOpenChange={setShowSummary}>

@@ -729,74 +729,79 @@ const BrokersCDD: React.FC = () => {
           
           <div className="space-y-4">
             <div>
+              <Label>Certificate of Incorporation *</Label>
               <FileUpload
-                label="Certificate of Incorporation"
+                accept="application/pdf,image/*"
+                maxSize={3 * 1024 * 1024}
                 onFileSelect={(file) => {
                   setUploadedFiles(prev => ({ ...prev, certificateOfIncorporation: file }));
-                  formMethods.setValue('certificateOfIncorporation', file);
-                  toast({ title: `${file.name} uploaded successfully` });
+                  toast({ title: "File selected for upload" });
                 }}
-                accept=".pdf,.jpg,.jpeg,.png"
-                required
+                currentFile={uploadedFiles.certificateOfIncorporation}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { certificateOfIncorporation, ...rest } = prev;
+                    return rest;
+                  });
+                }}
               />
-              {uploadedFiles.certificateOfIncorporation && (
-                <div className="text-sm text-green-600 mt-2">
-                  ✓ {uploadedFiles.certificateOfIncorporation.name}
-                </div>
-              )}
             </div>
             
             <div>
+              <Label>Director 1 ID *</Label>
               <FileUpload
-                label="Director 1 ID"
+                accept="application/pdf,image/*"
+                maxSize={3 * 1024 * 1024}
                 onFileSelect={(file) => {
                   setUploadedFiles(prev => ({ ...prev, director1Id: file }));
-                  formMethods.setValue('director1Id', file);
-                  toast({ title: `${file.name} uploaded successfully` });
+                  toast({ title: "File selected for upload" });
                 }}
-                accept=".pdf,.jpg,.jpeg,.png"
-                required
+                currentFile={uploadedFiles.director1Id}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { director1Id, ...rest } = prev;
+                    return rest;
+                  });
+                }}
               />
-              {uploadedFiles.director1Id && (
-                <div className="text-sm text-green-600 mt-2">
-                  ✓ {uploadedFiles.director1Id.name}
-                </div>
-              )}
             </div>
             
             <div>
+              <Label>Director 2 ID *</Label>
               <FileUpload
-                label="Director 2 ID"
+                accept="application/pdf,image/*"
+                maxSize={3 * 1024 * 1024}
                 onFileSelect={(file) => {
                   setUploadedFiles(prev => ({ ...prev, director2Id: file }));
-                  formMethods.setValue('director2Id', file);
-                  toast({ title: `${file.name} uploaded successfully` });
+                  toast({ title: "File selected for upload" });
                 }}
-                accept=".pdf,.jpg,.jpeg,.png"
-                required
+                currentFile={uploadedFiles.director2Id}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { director2Id, ...rest } = prev;
+                    return rest;
+                  });
+                }}
               />
-              {uploadedFiles.director2Id && (
-                <div className="text-sm text-green-600 mt-2">
-                  ✓ {uploadedFiles.director2Id.name}
-                </div>
-              )}
             </div>
             
             <div>
+              <Label>NAICOM License (Optional)</Label>
               <FileUpload
-                label="NAICOM License (Optional)"
+                accept="application/pdf,image/*"
+                maxSize={3 * 1024 * 1024}
                 onFileSelect={(file) => {
                   setUploadedFiles(prev => ({ ...prev, naicomLicense: file }));
-                  formMethods.setValue('naicomLicense', file);
-                  toast({ title: `${file.name} uploaded successfully` });
+                  toast({ title: "File selected for upload" });
                 }}
-                accept=".pdf,.jpg,.jpeg,.png"
+                currentFile={uploadedFiles.naicomLicense}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => {
+                    const { naicomLicense, ...rest } = prev;
+                    return rest;
+                  });
+                }}
               />
-              {uploadedFiles.naicomLicense && (
-                <div className="text-sm text-green-600 mt-2">
-                  ✓ {uploadedFiles.naicomLicense.name}
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -833,9 +838,21 @@ const BrokersCDD: React.FC = () => {
             <Label htmlFor="signature">Digital Signature *</Label>
             <Input
               id="signature"
-              placeholder="Type your full name as digital signature"
+              placeholder="Type your full name as signature"
               {...formMethods.register('signature')}
             />
+          </div>
+          
+          <div className="text-center pt-4">
+            <Button
+              type="button"
+              onClick={() => {
+                const isValid = formMethods.trigger();
+                if (isValid) setShowSummary(true);
+              }}
+            >
+              Review & Submit
+            </Button>
           </div>
         </div>
       )
@@ -848,12 +865,13 @@ const BrokersCDD: React.FC = () => {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <MultiStepForm
-        steps={steps}
-        formMethods={formMethods}
-        onSubmit={handleFormSubmit}
-        isSubmitting={isSubmitting}
-      />
+        <MultiStepForm
+          steps={steps}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          submitButtonText="Submit CDD Form"
+          formMethods={formMethods}
+        />
 
       {/* Summary Dialog */}
       <Dialog open={showSummary} onOpenChange={setShowSummary}>
