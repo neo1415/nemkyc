@@ -141,7 +141,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formMethods = useForm<FireSpecialPerilsClaimData>({
-    resolver: yupResolver(schema as any),
+    // resolver: yupResolver(schema as any),
     defaultValues: {
       policyNumber: '',
       periodOfCoverFrom: '',
