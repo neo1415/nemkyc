@@ -6,7 +6,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { emailService } from '@/services/emailService';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { uploadFile } from '@/services/fileService';
 
 import MultiStepForm from '@/components/common/MultiStepForm';
@@ -93,13 +93,14 @@ interface RentAssuranceClaimData {
 }
 
 const RentAssuranceClaim = () => {
+  const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
   const formMethods = useForm<any>({
-    resolver: yupResolver(rentAssuranceSchema) as any,
+    // resolver: yupResolver(rentAssuranceSchema) as any,
     defaultValues: {
       policyNumber: '',
       nameOfInsured: '',
