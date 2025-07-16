@@ -7,7 +7,7 @@ import { db, storage } from '../../firebase/config';
 import { emailService } from '../../services/emailService';
 import { useFormDraft } from '../../hooks/useFormDraft';
 import { useToast } from '../../hooks/use-toast';
-
+import * as yup from 'yup';
 import MultiStepForm from '../../components/common/MultiStepForm';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
