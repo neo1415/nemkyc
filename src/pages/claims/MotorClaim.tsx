@@ -251,14 +251,8 @@ const MotorClaim: React.FC = () => {
   }, [formMethods, saveDraft]);
 
   const handleSubmit = async (data: MotorClaimData) => {
-    setShowSummary(true);
-  };
-
-  const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const data = formMethods.getValues();
-      
       // Upload files to Firebase Storage
       const fileUploadPromises: Array<Promise<[string, string]>> = [];
       
@@ -293,13 +287,24 @@ const MotorClaim: React.FC = () => {
       clearDraft();
       setShowSummary(false);
       setShowSuccess(true);
-      toast({ title: "Motor claim submitted successfully!" });
+      toast({
+        title: "Claim Submitted Successfully",
+        description: "Your motor claim has been submitted and you'll receive a confirmation email shortly.",
+      });
     } catch (error) {
-      console.error('Submission error:', error);
-      toast({ title: "Submission failed", variant: "destructive" });
+      console.error('Error submitting claim:', error);
+      toast({
+        title: "Submission Error",
+        description: "There was an error submitting your claim. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const onFinalSubmit = (data: MotorClaimData) => {
+    setShowSummary(true);
   };
 
   const DatePickerField = ({ name, label }: { name: string; label: string }) => {
@@ -1051,7 +1056,7 @@ const MotorClaim: React.FC = () => {
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Back to Edit
               </Button>
-              <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
+              <Button onClick={() => formMethods.handleSubmit(handleSubmit)()} disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
