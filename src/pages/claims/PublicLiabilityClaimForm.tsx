@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -169,6 +169,7 @@ const defaultValues: Partial<PublicLiabilityClaimData> = {
 };
 
 const PublicLiabilityClaimForm: React.FC = () => {
+  const { toast } = useToast();
   const { user } = useAuth();
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -177,7 +178,7 @@ const PublicLiabilityClaimForm: React.FC = () => {
   const [editingField, setEditingField] = useState<string | null>(null);
 
   const formMethods = useForm<any>({
-    resolver: yupResolver(publicLiabilitySchema),
+    // resolver: yupResolver(publicLiabilitySchema),
     defaultValues,
     mode: 'onChange'
   });
