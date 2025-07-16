@@ -10,9 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { Calendar, CalendarIcon, Plus, Trash2, Edit2 } from 'lucide-react';
+import { Calendar, CalendarIcon, Plus, Trash2, Edit2, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -171,8 +171,14 @@ const CorporateCDD: React.FC = () => {
   }, [formMethods, saveDraft]);
 
   const handleSubmit = async (data: any) => {
+    setShowSummary(true);
+  };
+
+  const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     try {
+      const data = formMethods.getValues();
+      
       // Upload files to Firebase Storage
       const fileUploadPromises: Array<Promise<[string, string]>> = [];
       
@@ -702,6 +708,45 @@ const CorporateCDD: React.FC = () => {
           submitButtonText="Submit CDD Form"
           formMethods={formMethods}
         />
+
+        {/* Summary Dialog */}
+        <Dialog open={showSummary} onOpenChange={setShowSummary}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Review Your Corporate CDD Submission</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Company Name:</strong> {watchedValues.companyName}</div>
+                <div><strong>Incorporation Number:</strong> {watchedValues.incorporationNumber}</div>
+                <div><strong>Email:</strong> {watchedValues.email}</div>
+                <div><strong>Phone:</strong> {watchedValues.telephone}</div>
+                <div><strong>Company Type:</strong> {watchedValues.companyType}</div>
+                <div><strong>Nature of Business:</strong> {watchedValues.natureOfBusiness}</div>
+              </div>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-blue-800">
+                  Please review all information carefully before final submission
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSummary(false)}>
+                Back to Edit
+              </Button>
+              <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit CDD Form'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Success Dialog */}
         <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
