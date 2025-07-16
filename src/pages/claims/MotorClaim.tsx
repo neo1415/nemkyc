@@ -1,187 +1,66 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import { toast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { Calendar, CalendarIcon, Plus, Trash2, Upload, Edit2, Car, FileText, CheckCircle2, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import MultiStepForm from '@/components/common/MultiStepForm';
-import { useFormDraft } from '@/hooks/useFormDraft';
-import FileUpload from '@/components/common/FileUpload';
-import { uploadFile } from '@/services/fileService';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { emailService } from '@/services/emailService';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info } from 'lucide-react';
+import { collection, addDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../firebase/config';
+import { emailService } from '../../services/emailService';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { useToast } from '../../hooks/use-toast';
 
-// Motor Claim Schema
-const motorClaimSchema = yup.object().shape({
-  // Policy Details
-  policyNumber: yup.string().required("Policy number is required"),
-  periodOfCoverFrom: yup.date().required("Period of cover from is required"),
-  periodOfCoverTo: yup.date().required("Period of cover to is required"),
-
-  // Insured Details
-  nameCompany: yup.string().required("Name/Company name is required"),
-  title: yup.string().required("Title is required"),
-  dateOfBirth: yup.date().required("Date of birth is required"),
-  gender: yup.string().required("Gender is required"),
-  address: yup.string().required("Address is required"),
-  phone: yup.string().required("Phone number is required"),
-  email: yup.string().email("Valid email is required").required("Email is required"),
-
-  // Vehicle Details
-  registrationNumber: yup.string().required("Registration number is required"),
-  make: yup.string().required("Vehicle make is required"),
-  model: yup.string().required("Vehicle model is required"),
-  year: yup.number().required("Vehicle year is required"),
-  engineNumber: yup.string().required("Engine number is required"),
-  chassisNumber: yup.string().required("Chassis number is required"),
-  registeredInYourName: yup.string().required("Please specify if registered in your name"),
-  registeredInYourNameDetails: yup.string().when('registeredInYourName', {
-    is: 'no',
-    then: (schema) => schema.required("Details required when not registered in your name"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  ownedSolely: yup.string().required("Please specify if owned solely by you"),
-  ownedSolelyDetails: yup.string().when('ownedSolely', {
-    is: 'no',
-    then: (schema) => schema.required("Details required when not owned solely by you"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  hirePurchase: yup.string().required("Please specify if subject to hire purchase"),
-  hirePurchaseDetails: yup.string().when('hirePurchase', {
-    is: 'yes',
-    then: (schema) => schema.required("Details required for hire purchase agreement"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  vehicleUsage: yup.string().required("Vehicle usage is required"),
-  trailerAttached: yup.string().required("Please specify if trailer was attached"),
-  damageDescription: yup.string().required("Damage description is required"),
-  inspectionLocation: yup.string().required("Inspection location is required"),
-  
-  // Incident Details
-  incidentLocation: yup.string().required("Incident location is required"),
-  incidentDate: yup.date().required("Incident date is required"),
-  incidentTime: yup.string().required("Incident time is required"),
-  policeReported: yup.string().required("Please specify if reported to police"),
-  policeStationDetails: yup.string().when('policeReported', {
-    is: 'yes',
-    then: (schema) => schema.required("Police station details required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  incidentDescription: yup.string().required("Incident description is required"),
-  
-  // Witnesses
-  witnesses: yup.array().of(
-    yup.object().shape({
-      name: yup.string().required("Witness name is required"),
-      address: yup.string().required("Witness address is required"),
-      phone: yup.string().required("Witness phone is required"),
-      isPassenger: yup.boolean()
-    })
-  ),
-  
-  // Other Drivers/Property Damage
-  otherVehicleInvolved: yup.string().required("Please specify if other vehicle involved"),
-  otherVehicleDetails: yup.object().when('otherVehicleInvolved', {
-    is: 'yes',
-    then: (schema) => schema.shape({
-      regNumber: yup.string().required("Registration number required"),
-      makeModel: yup.string().required("Make and model required"),
-      name: yup.string().required("Driver name required"),
-      phone: yup.string().required("Phone number required"),
-      address: yup.string().required("Address required"),
-      injuryDamage: yup.string().required("Injury/damage description required")
-    }),
-    otherwise: (schema) => schema.notRequired()
-  }),
-
-  // Declaration
-  agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  declarationTrue: yup.boolean().oneOf([true], "You must agree that statements are true"),
-  declarationAdditionalInfo: yup.boolean().oneOf([true], "You must agree to provide additional information"),
-  declarationDocuments: yup.boolean().oneOf([true], "You must agree to submit documents"),
-  signature: yup.string().required("Signature is required")
-});
-
-interface Witness {
-  name: string;
-  address: string;
-  phone: string;
-  isPassenger: boolean;
-}
-
-interface OtherVehicleDetails {
-  regNumber: string;
-  makeModel: string;
-  name: string;
-  phone: string;
-  address: string;
-  injuryDamage: string;
-}
+import MultiStepForm from '../../components/common/MultiStepForm';
+import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { Badge } from '../../components/ui/badge';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Label } from '../../components/ui/label';
 
 interface MotorClaimData {
-  // Policy Details
   policyNumber: string;
-  periodOfCoverFrom: Date;
-  periodOfCoverTo: Date;
-
-  // Insured Details
+  periodOfCoverFrom: string;
+  periodOfCoverTo: string;
   nameCompany: string;
   title: string;
-  dateOfBirth: Date;
+  dateOfBirth: string;
   gender: string;
   address: string;
   phone: string;
   email: string;
-
-  // Vehicle Details
   registrationNumber: string;
   make: string;
   model: string;
-  year: number;
+  year: string;
   engineNumber: string;
   chassisNumber: string;
   registeredInYourName: string;
-  registeredInYourNameDetails?: string;
+  registeredInYourNameDetails: string;
   ownedSolely: string;
-  ownedSolelyDetails?: string;
+  ownedSolelyDetails: string;
   hirePurchase: string;
-  hirePurchaseDetails?: string;
+  hirePurchaseDetails: string;
   vehicleUsage: string;
   trailerAttached: string;
   damageDescription: string;
   inspectionLocation: string;
-  
-  // Incident Details
   incidentLocation: string;
-  incidentDate: Date;
+  incidentDate: string;
   incidentTime: string;
   policeReported: string;
-  policeStationDetails?: string;
+  policeStationDetails: string;
   incidentDescription: string;
-  
-  // Witnesses
-  witnesses: Witness[];
-  
-  // Other Drivers/Property
+  witnesses: Array<{ name: string; address: string; phone: string; isPassenger: boolean }>;
   otherVehicleInvolved: string;
-  otherVehicleDetails?: OtherVehicleDetails;
-
-  // Declaration
+  otherVehicleRegNumber: string;
+  otherVehicleMakeModel: string;
+  otherDriverName: string;
+  otherDriverPhone: string;
+  otherDriverAddress: string;
+  otherVehicleInjuryDamage: string;
   agreeToDataPrivacy: boolean;
   declarationTrue: boolean;
   declarationAdditionalInfo: boolean;
@@ -189,60 +68,81 @@ interface MotorClaimData {
   signature: string;
 }
 
-const defaultValues: Partial<MotorClaimData> = {
-  policyNumber: '',
-  nameCompany: '',
-  title: '',
-  address: '',
-  phone: '',
-  email: '',
-  gender: '',
-  registrationNumber: '',
-  make: '',
-  model: '',
-  engineNumber: '',
-  chassisNumber: '',
-  registeredInYourName: '',
-  ownedSolely: '',
-  hirePurchase: '',
-  vehicleUsage: '',
-  trailerAttached: '',
-  damageDescription: '',
-  inspectionLocation: '',
-  incidentLocation: '',
-  incidentTime: '',
-  policeReported: '',
-  incidentDescription: '',
-  witnesses: [],
-  otherVehicleInvolved: '',
-  agreeToDataPrivacy: false,
-  declarationTrue: false,
-  declarationAdditionalInfo: false,
-  declarationDocuments: false,
-  signature: ''
-};
-
-const MotorClaim: React.FC = () => {
+const MotorClaim = () => {
+  const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
-  const formMethods = useForm<any>({
-    resolver: yupResolver(motorClaimSchema),
-    defaultValues,
+  const formMethods = useForm<MotorClaimData>({
+    defaultValues: {
+      policyNumber: '',
+      periodOfCoverFrom: '',
+      periodOfCoverTo: '',
+      nameCompany: '',
+      title: '',
+      dateOfBirth: '',
+      gender: '',
+      address: '',
+      phone: '',
+      email: '',
+      registrationNumber: '',
+      make: '',
+      model: '',
+      year: '',
+      engineNumber: '',
+      chassisNumber: '',
+      registeredInYourName: '',
+      registeredInYourNameDetails: '',
+      ownedSolely: '',
+      ownedSolelyDetails: '',
+      hirePurchase: '',
+      hirePurchaseDetails: '',
+      vehicleUsage: '',
+      trailerAttached: '',
+      damageDescription: '',
+      inspectionLocation: '',
+      incidentLocation: '',
+      incidentDate: '',
+      incidentTime: '',
+      policeReported: '',
+      policeStationDetails: '',
+      incidentDescription: '',
+      witnesses: [{ name: '', address: '', phone: '', isPassenger: false }],
+      otherVehicleInvolved: '',
+      otherVehicleRegNumber: '',
+      otherVehicleMakeModel: '',
+      otherDriverName: '',
+      otherDriverPhone: '',
+      otherDriverAddress: '',
+      otherVehicleInjuryDamage: '',
+      agreeToDataPrivacy: false,
+      declarationTrue: false,
+      declarationAdditionalInfo: false,
+      declarationDocuments: false,
+      signature: ''
+    },
     mode: 'onChange'
   });
 
-  const { fields: witnessFields, append: addWitness, remove: removeWitness } = useFieldArray({
+  const { fields: witnessFields, append: appendWitness, remove: removeWitness } = useFieldArray({
     control: formMethods.control,
     name: 'witnesses'
   });
 
-  const { saveDraft, clearDraft } = useFormDraft('motorClaim', formMethods);
+  const { saveDraft, loadDraft, clearDraft } = useFormDraft('motor-claim', formMethods);
+
   const watchedValues = formMethods.watch();
 
-  // Auto-save draft
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      Object.keys(draft).forEach((key) => {
+        formMethods.setValue(key as keyof MotorClaimData, draft[key]);
+      });
+    }
+  }, [formMethods, loadDraft]);
+
   useEffect(() => {
     const subscription = formMethods.watch((data) => {
       saveDraft(data);
@@ -250,43 +150,24 @@ const MotorClaim: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
+  const addWitness = () => {
+    appendWitness({ name: '', address: '', phone: '', isPassenger: false });
+  };
+
   const handleSubmit = async (data: MotorClaimData) => {
     setIsSubmitting(true);
     try {
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
-        fileUploadPromises.push(
-          uploadFile(file, 'motor-claims').then(url => [key + 'Url', url])
-        );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Prepare form data with file URLs
-      const submissionData = {
+      // Save to Firestore
+      const docRef = await addDoc(collection(db, 'motorClaims'), {
         ...data,
-        ...fileUrls,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        formType: 'motor-claim'
-      };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'motor-claims'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
+        submittedAt: new Date(),
+        status: 'submitted'
       });
 
-      // Send confirmation email
-      // await emailService.sendSubmissionConfirmation(data.email, 'Motor Insurance Claim');
-      
       clearDraft();
       setShowSummary(false);
       setShowSuccess(true);
+      
       toast({
         title: "Claim Submitted Successfully",
         description: "Your motor claim has been submitted and you'll receive a confirmation email shortly.",
@@ -307,85 +188,48 @@ const MotorClaim: React.FC = () => {
     setShowSummary(true);
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
-    return (
-      <TooltipProvider>
-        <div className="space-y-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Label className="flex items-center gap-1">
-                {label}
-                <Info className="h-3 w-3" />
-              </Label>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Select the {label.toLowerCase()}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !value && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <ReactCalendar
-                mode="single"
-                selected={value ? new Date(value) : undefined}
-                onSelect={(date) => formMethods.setValue(name, date)}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </TooltipProvider>
-    );
-  };
-
   const steps = [
     {
       id: 'policy',
       title: 'Policy Details',
       component: (
-        <div className="space-y-4">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="policyNumber" className="flex items-center gap-1">
-                    Policy Number *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input
-                    id="policyNumber"
-                    {...formMethods.register('policyNumber')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter your motor insurance policy number</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <div className="space-y-6">
+          <div>
+            <Label htmlFor="policyNumber">Policy Number *</Label>
+            <Input
+              id="policyNumber"
+              {...formMethods.register('policyNumber')}
+              placeholder="Enter policy number"
+            />
+            {formMethods.formState.errors.policyNumber && (
+              <p className="text-sm text-red-600">{formMethods.formState.errors.policyNumber.message}</p>
+            )}
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DatePickerField
-              name="periodOfCoverFrom"
-              label="Period of Cover From *"
-            />
-            <DatePickerField
-              name="periodOfCoverTo"
-              label="Period of Cover To *"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="periodOfCoverFrom">Period of Cover From *</Label>
+              <Input
+                id="periodOfCoverFrom"
+                type="date"
+                {...formMethods.register('periodOfCoverFrom')}
+              />
+              {formMethods.formState.errors.periodOfCoverFrom && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.periodOfCoverFrom.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="periodOfCoverTo">Period of Cover To *</Label>
+              <Input
+                id="periodOfCoverTo"
+                type="date"
+                {...formMethods.register('periodOfCoverTo')}
+              />
+              {formMethods.formState.errors.periodOfCoverTo && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.periodOfCoverTo.message}</p>
+              )}
+            </div>
           </div>
         </div>
       )
@@ -394,400 +238,397 @@ const MotorClaim: React.FC = () => {
       id: 'insured',
       title: 'Insured Details',
       component: (
-        <TooltipProvider>
-          <div className="space-y-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="nameCompany" className="flex items-center gap-1">
-                    Name / Company Name *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input
-                    id="nameCompany"
-                    {...formMethods.register('nameCompany')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter your full name or company name</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label>Title *</Label>
-                <Select
-                  value={watchedValues.title || ''}
-                  onValueChange={(value) => formMethods.setValue('title', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select title" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Mr">Mr</SelectItem>
-                    <SelectItem value="Mrs">Mrs</SelectItem>
-                    <SelectItem value="Chief">Chief</SelectItem>
-                    <SelectItem value="Dr">Dr</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <DatePickerField
-                name="dateOfBirth"
-                label="Date of Birth *"
-              />
-              <div>
-                <Label>Gender *</Label>
-                <Select
-                  value={watchedValues.gender || ''}
-                  onValueChange={(value) => formMethods.setValue('gender', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <div className="space-y-6">
+          <div>
+            <Label htmlFor="nameCompany">Name / Company Name *</Label>
+            <Input
+              id="nameCompany"
+              {...formMethods.register('nameCompany')}
+              placeholder="Enter your name or company name"
+            />
+            {formMethods.formState.errors.nameCompany && (
+              <p className="text-sm text-red-600">{formMethods.formState.errors.nameCompany.message}</p>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="title">Title *</Label>
+              <Select
+                value={watchedValues.title}
+                onValueChange={(value) => formMethods.setValue('title', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select title" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Mr">Mr</SelectItem>
+                  <SelectItem value="Mrs">Mrs</SelectItem>
+                  <SelectItem value="Chief">Chief</SelectItem>
+                  <SelectItem value="Dr">Dr</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="address" className="flex items-center gap-1">
-                    Address *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Textarea
-                    id="address"
-                    {...formMethods.register('address')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter your full residential address</p>
-              </TooltipContent>
-            </Tooltip>
+            <div>
+              <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+              <Input
+                id="dateOfBirth"
+                type="date"
+                {...formMethods.register('dateOfBirth')}
+              />
+              {formMethods.formState.errors.dateOfBirth && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.dateOfBirth.message}</p>
+              )}
+            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Label htmlFor="phone" className="flex items-center gap-1">
-                      Phone Number *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="phone"
-                      {...formMethods.register('phone')}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter your contact phone number</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Label htmlFor="email" className="flex items-center gap-1">
-                      Email Address *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      {...formMethods.register('email')}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter your email address for correspondence</p>
-                </TooltipContent>
-              </Tooltip>
+            <div>
+              <Label htmlFor="gender">Gender *</Label>
+              <Select
+                value={watchedValues.gender}
+                onValueChange={(value) => formMethods.setValue('gender', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </TooltipProvider>
+          
+          <div>
+            <Label htmlFor="address">Address *</Label>
+            <Textarea
+              id="address"
+              {...formMethods.register('address')}
+              placeholder="Enter full address"
+              rows={3}
+            />
+            {formMethods.formState.errors.address && (
+              <p className="text-sm text-red-600">{formMethods.formState.errors.address.message}</p>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="phone">Phone Number *</Label>
+              <Input
+                id="phone"
+                {...formMethods.register('phone')}
+                placeholder="Enter phone number"
+              />
+              {formMethods.formState.errors.phone && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.phone.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                {...formMethods.register('email')}
+                placeholder="Enter email address"
+              />
+              {formMethods.formState.errors.email && (
+                <p className="text-sm text-red-600">{formMethods.formState.errors.email.message}</p>
+              )}
+            </div>
+          </div>
+        </div>
       )
     },
     {
       id: 'vehicle',
       title: 'Vehicle Details',
       component: (
-        <TooltipProvider>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Label htmlFor="registrationNumber" className="flex items-center gap-1">
-                      Vehicle Registration Number *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="registrationNumber"
-                      {...formMethods.register('registrationNumber')}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter the vehicle registration number</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label htmlFor="make">Make *</Label>
-                  <Input
-                    id="make"
-                    {...formMethods.register('make')}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="model">Model *</Label>
-                  <Input
-                    id="model"
-                    {...formMethods.register('model')}
-                  />
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="year">Year *</Label>
-                <Input
-                  id="year"
-                  type="number"
-                  {...formMethods.register('year')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="engineNumber">Engine Number *</Label>
-                <Input
-                  id="engineNumber"
-                  {...formMethods.register('engineNumber')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="chassisNumber">Chassis Number *</Label>
-                <Input
-                  id="chassisNumber"
-                  {...formMethods.register('chassisNumber')}
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <Label>Registered in your name? *</Label>
-                <Select
-                  value={watchedValues.registeredInYourName || ''}
-                  onValueChange={(value) => formMethods.setValue('registeredInYourName', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="yes">Yes</SelectItem>
-                    <SelectItem value="no">No</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {watchedValues.registeredInYourName === 'no' && (
-                <div>
-                  <Label htmlFor="registeredInYourNameDetails">Details *</Label>
-                  <Textarea
-                    id="registeredInYourNameDetails"
-                    {...formMethods.register('registeredInYourNameDetails')}
-                  />
-                </div>
-              )}
-              
-              <div>
-                <Label>Owned solely by you? *</Label>
-                <Select
-                  value={watchedValues.ownedSolely || ''}
-                  onValueChange={(value) => formMethods.setValue('ownedSolely', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="yes">Yes</SelectItem>
-                    <SelectItem value="no">No</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {watchedValues.ownedSolely === 'no' && (
-                <div>
-                  <Label htmlFor="ownedSolelyDetails">Details *</Label>
-                  <Textarea
-                    id="ownedSolelyDetails"
-                    {...formMethods.register('ownedSolelyDetails')}
-                  />
-                </div>
-              )}
-              
-              <div>
-                <Label>Subject of a hire purchase agreement? *</Label>
-                <Select
-                  value={watchedValues.hirePurchase || ''}
-                  onValueChange={(value) => formMethods.setValue('hirePurchase', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="yes">Yes</SelectItem>
-                    <SelectItem value="no">No</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {watchedValues.hirePurchase === 'yes' && (
-                <div>
-                  <Label htmlFor="hirePurchaseDetails">Details *</Label>
-                  <Textarea
-                    id="hirePurchaseDetails"
-                    {...formMethods.register('hirePurchaseDetails')}
-                  />
-                </div>
-              )}
-            </div>
-            
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="vehicleUsage">What was the vehicle being used for? *</Label>
-              <Textarea
-                id="vehicleUsage"
-                {...formMethods.register('vehicleUsage')}
+              <Label htmlFor="registrationNumber">Registration Number *</Label>
+              <Input
+                id="registrationNumber"
+                {...formMethods.register('registrationNumber')}
+                placeholder="Enter registration number"
               />
             </div>
             
             <div>
-              <Label>Was a trailer attached? *</Label>
-              <Select
-                value={watchedValues.trailerAttached || ''}
-                onValueChange={(value) => formMethods.setValue('trailerAttached', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="yes">Yes</SelectItem>
-                  <SelectItem value="no">No</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="damageDescription">Brief description of damage *</Label>
-              <Textarea
-                id="damageDescription"
-                {...formMethods.register('damageDescription')}
-                rows={3}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="inspectionLocation">Name, address, phone where vehicle can be inspected *</Label>
-              <Textarea
-                id="inspectionLocation"
-                {...formMethods.register('inspectionLocation')}
-                rows={3}
+              <Label htmlFor="make">Make *</Label>
+              <Input
+                id="make"
+                {...formMethods.register('make')}
+                placeholder="Enter vehicle make"
               />
             </div>
           </div>
-        </TooltipProvider>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="model">Model *</Label>
+              <Input
+                id="model"
+                {...formMethods.register('model')}
+                placeholder="Enter vehicle model"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="year">Year *</Label>
+              <Input
+                id="year"
+                {...formMethods.register('year')}
+                placeholder="Enter year"
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="engineNumber">Engine Number *</Label>
+              <Input
+                id="engineNumber"
+                {...formMethods.register('engineNumber')}
+                placeholder="Enter engine number"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="chassisNumber">Chassis Number *</Label>
+              <Input
+                id="chassisNumber"
+                {...formMethods.register('chassisNumber')}
+                placeholder="Enter chassis number"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <Label>Is the vehicle registered in your name? *</Label>
+            <Select
+              value={watchedValues.registeredInYourName}
+              onValueChange={(value) => formMethods.setValue('registeredInYourName', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select option" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {watchedValues.registeredInYourName === 'no' && (
+              <div className="mt-2">
+                <Label htmlFor="registeredInYourNameDetails">Details *</Label>
+                <Textarea
+                  id="registeredInYourNameDetails"
+                  {...formMethods.register('registeredInYourNameDetails')}
+                  placeholder="Provide details"
+                  rows={2}
+                />
+              </div>
+            )}
+          </div>
+          
+          <div>
+            <Label>Is the vehicle owned solely by you? *</Label>
+            <Select
+              value={watchedValues.ownedSolely}
+              onValueChange={(value) => formMethods.setValue('ownedSolely', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select option" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {watchedValues.ownedSolely === 'no' && (
+              <div className="mt-2">
+                <Label htmlFor="ownedSolelyDetails">Details *</Label>
+                <Textarea
+                  id="ownedSolelyDetails"
+                  {...formMethods.register('ownedSolelyDetails')}
+                  placeholder="Provide details"
+                  rows={2}
+                />
+              </div>
+            )}
+          </div>
+          
+          <div>
+            <Label>Is the vehicle subject to hire purchase? *</Label>
+            <Select
+              value={watchedValues.hirePurchase}
+              onValueChange={(value) => formMethods.setValue('hirePurchase', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select option" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {watchedValues.hirePurchase === 'yes' && (
+              <div className="mt-2">
+                <Label htmlFor="hirePurchaseDetails">Details *</Label>
+                <Textarea
+                  id="hirePurchaseDetails"
+                  {...formMethods.register('hirePurchaseDetails')}
+                  placeholder="Provide hire purchase details"
+                  rows={2}
+                />
+              </div>
+            )}
+          </div>
+          
+          <div>
+            <Label htmlFor="vehicleUsage">Vehicle Usage *</Label>
+            <Select
+              value={watchedValues.vehicleUsage}
+              onValueChange={(value) => formMethods.setValue('vehicleUsage', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select usage" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="private">Private</SelectItem>
+                <SelectItem value="commercial">Commercial</SelectItem>
+                <SelectItem value="uber">Uber/Ride-sharing</SelectItem>
+                <SelectItem value="taxi">Taxi</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label>Was a trailer attached? *</Label>
+            <Select
+              value={watchedValues.trailerAttached}
+              onValueChange={(value) => formMethods.setValue('trailerAttached', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select option" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label htmlFor="damageDescription">Description of Damage *</Label>
+            <Textarea
+              id="damageDescription"
+              {...formMethods.register('damageDescription')}
+              placeholder="Describe the damage to your vehicle"
+              rows={4}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="inspectionLocation">Where can the vehicle be inspected? *</Label>
+            <Input
+              id="inspectionLocation"
+              {...formMethods.register('inspectionLocation')}
+              placeholder="Enter inspection location"
+            />
+          </div>
+        </div>
       )
     },
     {
       id: 'incident',
-      title: 'Circumstances of the Incident',
+      title: 'Incident Details',
       component: (
-        <TooltipProvider>
-          <div className="space-y-4">
+        <div className="space-y-6">
+          <div>
+            <Label htmlFor="incidentLocation">Where did the incident occur? *</Label>
+            <Input
+              id="incidentLocation"
+              {...formMethods.register('incidentLocation')}
+              placeholder="Enter incident location"
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="incidentLocation">Where did the incident happen? *</Label>
+              <Label htmlFor="incidentDate">Date of Incident *</Label>
               <Input
-                id="incidentLocation"
-                {...formMethods.register('incidentLocation')}
+                id="incidentDate"
+                type="date"
+                {...formMethods.register('incidentDate')}
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DatePickerField
-                name="incidentDate"
-                label="Date *"
-              />
-              <div>
-                <Label htmlFor="incidentTime">Time *</Label>
-                <Input
-                  id="incidentTime"
-                  type="time"
-                  {...formMethods.register('incidentTime')}
-                />
-              </div>
-            </div>
-            
             <div>
-              <Label>Reported to police? *</Label>
-              <Select
-                value={watchedValues.policeReported || ''}
-                onValueChange={(value) => formMethods.setValue('policeReported', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="yes">Yes</SelectItem>
-                  <SelectItem value="no">No</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {watchedValues.policeReported === 'yes' && (
-              <div>
-                <Label htmlFor="policeStationDetails">Station details *</Label>
-                <Textarea
-                  id="policeStationDetails"
-                  {...formMethods.register('policeStationDetails')}
-                />
-              </div>
-            )}
-            
-            <div>
-              <Label htmlFor="incidentDescription">Full description of what happened *</Label>
-              <Textarea
-                id="incidentDescription"
-                {...formMethods.register('incidentDescription')}
-                rows={4}
+              <Label htmlFor="incidentTime">Time *</Label>
+              <Input
+                id="incidentTime"
+                type="time"
+                {...formMethods.register('incidentTime')}
               />
             </div>
           </div>
-        </TooltipProvider>
+          
+          <div>
+            <Label>Was the incident reported to the police? *</Label>
+            <Select
+              value={watchedValues.policeReported}
+              onValueChange={(value) => formMethods.setValue('policeReported', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select option" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {watchedValues.policeReported === 'yes' && (
+              <div className="mt-2">
+                <Label htmlFor="policeStationDetails">Police Station Details *</Label>
+                <Textarea
+                  id="policeStationDetails"
+                  {...formMethods.register('policeStationDetails')}
+                  placeholder="Enter police station name and report details"
+                  rows={2}
+                />
+              </div>
+            )}
+          </div>
+          
+          <div>
+            <Label htmlFor="incidentDescription">How did the incident occur? *</Label>
+            <Textarea
+              id="incidentDescription"
+              {...formMethods.register('incidentDescription')}
+              placeholder="Describe in detail how the incident happened"
+              rows={4}
+            />
+          </div>
+        </div>
       )
     },
     {
       id: 'witnesses',
-      title: 'Witnesses',
+      title: 'Witness Information',
       component: (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Witnesses</h3>
-            <Button
-              type="button"
-              onClick={() => addWitness({ name: '', address: '', phone: '', isPassenger: false })}
-              variant="outline"
-              size="sm"
-            >
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">Witnesses to the Incident</h3>
+            <Button type="button" onClick={addWitness} variant="outline" size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Add Witness
             </Button>
@@ -807,18 +648,30 @@ const MotorClaim: React.FC = () => {
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor={`witnesses.${index}.name`}>Name *</Label>
                   <Input
                     {...formMethods.register(`witnesses.${index}.name`)}
+                    placeholder="Enter witness name"
                   />
                 </div>
                 <div>
                   <Label htmlFor={`witnesses.${index}.phone`}>Phone *</Label>
                   <Input
                     {...formMethods.register(`witnesses.${index}.phone`)}
+                    placeholder="Enter phone number"
                   />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`witnesses.${index}.isPassenger`}
+                    checked={watchedValues.witnesses?.[index]?.isPassenger || false}
+                    onCheckedChange={(checked) => 
+                      formMethods.setValue(`witnesses.${index}.isPassenger`, !!checked)
+                    }
+                  />
+                  <Label htmlFor={`witnesses.${index}.isPassenger`}>Was passenger</Label>
                 </div>
               </div>
               
@@ -826,20 +679,9 @@ const MotorClaim: React.FC = () => {
                 <Label htmlFor={`witnesses.${index}.address`}>Address *</Label>
                 <Textarea
                   {...formMethods.register(`witnesses.${index}.address`)}
+                  placeholder="Enter witness address"
+                  rows={2}
                 />
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id={`witnesses.${index}.isPassenger`}
-                  checked={watchedValues.witnesses?.[index]?.isPassenger || false}
-                  onCheckedChange={(checked) => 
-                    formMethods.setValue(`witnesses.${index}.isPassenger`, checked)
-                  }
-                />
-                <Label htmlFor={`witnesses.${index}.isPassenger`}>
-                  Was a passenger
-                </Label>
               </div>
             </div>
           ))}
@@ -853,18 +695,18 @@ const MotorClaim: React.FC = () => {
       )
     },
     {
-      id: 'otherDrivers',
-      title: 'Other Drivers Involved and Property Damage',
+      id: 'other-vehicle',
+      title: 'Other Vehicle/Property',
       component: (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div>
-            <Label>Another vehicle involved? *</Label>
+            <Label>Was another vehicle involved? *</Label>
             <Select
-              value={watchedValues.otherVehicleInvolved || ''}
+              value={watchedValues.otherVehicleInvolved}
               onValueChange={(value) => formMethods.setValue('otherVehicleInvolved', value)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select" />
+                <SelectValue placeholder="Select option" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="yes">Yes</SelectItem>
@@ -874,51 +716,64 @@ const MotorClaim: React.FC = () => {
           </div>
           
           {watchedValues.otherVehicleInvolved === 'yes' && (
-            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-              <h3 className="font-medium">Other Vehicle Details</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="otherVehicleDetails.regNumber">Car reg number *</Label>
+                  <Label htmlFor="otherVehicleRegNumber">Registration Number *</Label>
                   <Input
-                    {...formMethods.register('otherVehicleDetails.regNumber')}
+                    id="otherVehicleRegNumber"
+                    {...formMethods.register('otherVehicleRegNumber')}
+                    placeholder="Enter registration number"
                   />
                 </div>
+                
                 <div>
-                  <Label htmlFor="otherVehicleDetails.makeModel">Make/model *</Label>
+                  <Label htmlFor="otherVehicleMakeModel">Make & Model *</Label>
                   <Input
-                    {...formMethods.register('otherVehicleDetails.makeModel')}
+                    id="otherVehicleMakeModel"
+                    {...formMethods.register('otherVehicleMakeModel')}
+                    placeholder="Enter make and model"
                   />
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="otherVehicleDetails.name">Name *</Label>
+                  <Label htmlFor="otherDriverName">Driver Name *</Label>
                   <Input
-                    {...formMethods.register('otherVehicleDetails.name')}
+                    id="otherDriverName"
+                    {...formMethods.register('otherDriverName')}
+                    placeholder="Enter driver name"
                   />
                 </div>
+                
                 <div>
-                  <Label htmlFor="otherVehicleDetails.phone">Phone *</Label>
+                  <Label htmlFor="otherDriverPhone">Phone Number *</Label>
                   <Input
-                    {...formMethods.register('otherVehicleDetails.phone')}
+                    id="otherDriverPhone"
+                    {...formMethods.register('otherDriverPhone')}
+                    placeholder="Enter phone number"
                   />
                 </div>
               </div>
               
               <div>
-                <Label htmlFor="otherVehicleDetails.address">Address *</Label>
+                <Label htmlFor="otherDriverAddress">Address *</Label>
                 <Textarea
-                  {...formMethods.register('otherVehicleDetails.address')}
+                  id="otherDriverAddress"
+                  {...formMethods.register('otherDriverAddress')}
+                  placeholder="Enter address"
+                  rows={3}
                 />
               </div>
               
               <div>
-                <Label htmlFor="otherVehicleDetails.injuryDamage">Description of injury/damage *</Label>
+                <Label htmlFor="otherVehicleInjuryDamage">Nature of injury or damage to other vehicle/property *</Label>
                 <Textarea
-                  {...formMethods.register('otherVehicleDetails.injuryDamage')}
-                  rows={3}
+                  id="otherVehicleInjuryDamage"
+                  {...formMethods.register('otherVehicleInjuryDamage')}
+                  placeholder="Describe the injury or damage"
+                  rows={4}
                 />
               </div>
             </div>
@@ -927,103 +782,111 @@ const MotorClaim: React.FC = () => {
       )
     },
     {
-      id: 'privacy',
-      title: 'Data Privacy',
-      component: (
-        <div className="space-y-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Data Privacy</h3>
-            <div className="text-sm space-y-2">
-              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy || false}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
-            />
-            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
-          </div>
-        </div>
-      )
-    },
-    {
       id: 'declaration',
-      title: 'Declaration & Signature',
+      title: 'Declaration & Privacy',
       component: (
         <div className="space-y-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Declaration</h3>
-            <div className="text-sm space-y-2">
-              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Data Privacy Notice</h3>
+            <div className="prose prose-sm max-w-none">
+              <p><strong>i.</strong> Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+              <p><strong>ii.</strong> Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+              <p><strong>iii.</strong> Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
             </div>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="declarationTrue"
-                checked={watchedValues.declarationTrue || false}
-                onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
-              />
-              <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Declaration</h3>
+            <div className="prose prose-sm max-w-none mb-6">
+              <p><strong>1.</strong> I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+              <p><strong>2.</strong> I/We agree to provide additional information to NEM Insurance, if required.</p>
+              <p><strong>3.</strong> I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
             </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="declarationAdditionalInfo"
-                checked={watchedValues.declarationAdditionalInfo || false}
-                onCheckedChange={(checked) => formMethods.setValue('declarationAdditionalInfo', !!checked)}
-              />
-              <Label htmlFor="declarationAdditionalInfo">I agree to provide more info *</Label>
+
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="agreeToDataPrivacy"
+                  checked={watchedValues.agreeToDataPrivacy}
+                  onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
+                />
+                <Label htmlFor="agreeToDataPrivacy">
+                  I agree to the data privacy notice *
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="declarationTrue"
+                  checked={watchedValues.declarationTrue}
+                  onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
+                />
+                <Label htmlFor="declarationTrue">
+                  I declare that the statements above are true *
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="declarationAdditionalInfo"
+                  checked={watchedValues.declarationAdditionalInfo}
+                  onCheckedChange={(checked) => formMethods.setValue('declarationAdditionalInfo', !!checked)}
+                />
+                <Label htmlFor="declarationAdditionalInfo">
+                  I agree to provide additional information if required *
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="declarationDocuments"
+                  checked={watchedValues.declarationDocuments}
+                  onCheckedChange={(checked) => formMethods.setValue('declarationDocuments', !!checked)}
+                />
+                <Label htmlFor="declarationDocuments">
+                  I agree to submit all required documents *
+                </Label>
+              </div>
+
+              <div>
+                <Label htmlFor="signature">Digital Signature *</Label>
+                <Input
+                  id="signature"
+                  {...formMethods.register('signature')}
+                  placeholder="Type your full name as signature"
+                />
+                {formMethods.formState.errors.signature && (
+                  <p className="text-sm text-red-600">{formMethods.formState.errors.signature.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Label>Date</Label>
+                <Input
+                  type="date"
+                  value={new Date().toISOString().split('T')[0]}
+                  disabled
+                />
+              </div>
             </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="declarationDocuments"
-                checked={watchedValues.declarationDocuments || false}
-                onCheckedChange={(checked) => formMethods.setValue('declarationDocuments', !!checked)}
-              />
-              <Label htmlFor="declarationDocuments">I agree on documents requested *</Label>
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="signature">Signature of policyholder (digital signature) *</Label>
-            <Input
-              id="signature"
-              {...formMethods.register('signature')}
-              placeholder="Type your full name as signature"
-            />
-          </div>
-          
-          <div>
-            <Label>Date</Label>
-            <Input value={new Date().toISOString().split('T')[0]} disabled />
-          </div>
+          </Card>
         </div>
       )
     }
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Car className="h-8 w-8 text-primary" />
-            Motor Insurance Claim Form
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Submit your motor vehicle insurance claim with all required details and supporting documents.
-          </p>
-        </div>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              Motor Insurance Claim Form
+            </h1>
+            <p className="text-muted-foreground">
+              Please fill out all required information to submit your claim
+            </p>
+          </div>
 
         <MultiStepForm
           steps={steps}
@@ -1070,37 +933,38 @@ const MotorClaim: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Success Dialog */}
-        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-center text-green-600">
-                Claim Submitted Successfully!
-              </DialogTitle>
-            </DialogHeader>
-            <div className="text-center py-4">
-              <div className="mb-4">
-                <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                  ✓
+          {/* Success Modal */}
+          <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="text-center text-green-600">
+                  Claim Submitted Successfully!
+                </DialogTitle>
+              </DialogHeader>
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
                 </div>
-                <p className="text-gray-600 mb-4">
-                  Your motor insurance claim has been submitted successfully. 
-                  You will receive a confirmation email shortly.
+                <p>Your motor claim has been submitted successfully.</p>
+                <p className="text-sm text-muted-foreground">
+                  You will receive a confirmation email shortly with your claim reference number.
                 </p>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm font-medium text-blue-800">
-                    For claims status enquiries, call 01 448 9570
+                <div className="bg-muted p-4 rounded-lg">
+                  <p className="text-sm">
+                    <strong>For claims status enquiries, call 01 448 9570</strong>
                   </p>
                 </div>
               </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => setShowSuccess(false)} className="w-full">
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button onClick={() => setShowSuccess(false)} className="w-full">
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
     </div>
   );
