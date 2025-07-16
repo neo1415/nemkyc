@@ -1327,13 +1327,82 @@ const EmployersLiabilityClaim: React.FC = () => {
           <CardContent>
             <MultiStepForm
               steps={steps}
-              onSubmit={handleSubmit}
+              onSubmit={onFinalSubmit}
               isSubmitting={isSubmitting}
-              submitButtonText="Submit Claim"
+              submitButtonText="Review & Submit Claim"
               formMethods={formMethods}
             />
           </CardContent>
         </Card>
+
+        {/* Summary Dialog */}
+        <Dialog open={showSummary} onOpenChange={setShowSummary}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Review Your Employers Liability Claim Submission</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Policy Number:</strong> {watchedValues.policyNumber}</div>
+                <div><strong>Name:</strong> {watchedValues.name}</div>
+                <div><strong>Email:</strong> {watchedValues.email}</div>
+                <div><strong>Injured Party:</strong> {watchedValues.injuredPartyName}</div>
+              </div>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-blue-800">
+                  For claims status enquiries, call 01 448 9570
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSummary(false)}>
+                Edit Details
+              </Button>
+              <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Confirm & Submit'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Success Modal */}
+        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-center text-green-600">
+                Claim Submitted Successfully!
+              </DialogTitle>
+            </DialogHeader>
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p>Your employers liability claim has been submitted successfully.</p>
+              <p className="text-sm text-muted-foreground">
+                You will receive a confirmation email shortly with your claim reference number.
+              </p>
+              <div className="bg-muted p-4 rounded-lg">
+                <p className="text-sm">
+                  <strong>For claims status enquiries, call 01 448 9570</strong>
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setShowSuccess(false)} className="w-full">
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

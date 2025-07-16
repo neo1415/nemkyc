@@ -10,9 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { FileText, User, Shield, Signature, CalendarIcon, CheckCircle2, AlertCircle } from 'lucide-react';
+import { FileText, User, Shield, Signature, CalendarIcon, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -847,9 +847,9 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleSubmit}
+          onSubmit={onFinalSubmit}
           isSubmitting={isSubmitting}
-          submitButtonText="Submit Claim"
+          submitButtonText="Review & Submit Claim"
           formMethods={formMethods}
         />
 
@@ -870,44 +870,50 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
                   Back to Edit
                 </Button>
-                <Button onClick={() => {
-                  const formData = formMethods.getValues();
-                  handleSubmit(formData);
-                }} disabled={isSubmitting}>
-                  {isSubmitting ? 'Submitting...' : 'Submit Claim'}
+                <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Confirm & Submit'
+                  )}
                 </Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
 
-        {/* Success Dialog */}
+        {/* Success Modal */}
         <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <CheckCircle2 className="h-6 w-6 text-green-600" />
+              <DialogTitle className="text-center text-green-600">
                 Claim Submitted Successfully!
               </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="animate-pulse text-green-600 text-6xl mb-4">✓</div>
-                <p className="text-lg">Your professional indemnity claim has been submitted successfully.</p>
-                <p className="text-sm text-gray-600 mt-4">
-                  For claims status enquiries, call <strong>01 448 9570</strong>
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p>Your professional indemnity claim has been submitted successfully.</p>
+              <p className="text-sm text-muted-foreground">
+                You will receive a confirmation email shortly with your claim reference number.
+              </p>
+              <div className="bg-muted p-4 rounded-lg">
+                <p className="text-sm">
+                  <strong>For claims status enquiries, call 01 448 9570</strong>
                 </p>
               </div>
-              <Button 
-                onClick={() => {
-                  setShowSuccess(false);
-                  window.location.href = '/claims';
-                }}
-                className="w-full"
-              >
-                Return to Claims
-              </Button>
             </div>
+            <DialogFooter>
+              <Button onClick={() => setShowSuccess(false)} className="w-full">
+                Close
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
