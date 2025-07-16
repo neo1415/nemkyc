@@ -179,12 +179,13 @@ const defaultValues: Partial<MotorClaimData> = {
 };
 
 const MotorClaim: React.FC = () => {
+  const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formMethods = useForm<MotorClaimData>({
-    resolver: yupResolver(motorClaimSchema),
+    // resolver: yupResolver(motorClaimSchema),
     defaultValues,
     mode: 'onChange'
   });
