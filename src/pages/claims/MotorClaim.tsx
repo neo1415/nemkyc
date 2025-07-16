@@ -20,6 +20,68 @@ import { Badge } from '../../components/ui/badge';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { Label } from '../../components/ui/label';
 
+const motorClaimSchema = yup.object().shape({
+  policyNumber: yup.string().required('Policy number is required'),
+  periodOfCoverFrom: yup.string().required('Start of cover is required'),
+  periodOfCoverTo: yup.string().required('End of cover is required'),
+  nameCompany: yup.string().required('Name of company is required'),
+  title: yup.string().required('Title is required'),
+  dateOfBirth: yup.string().required('Date of birth is required'),
+  gender: yup.string().required('Gender is required'),
+  address: yup.string().required('Address is required'),
+  phone: yup.string().required('Phone is required'),
+  email: yup.string().email('Must be a valid email').required('Email is required'),
+  registrationNumber: yup.string().required('Registration number is required'),
+  make: yup.string().required('Make is required'),
+  model: yup.string().required('Model is required'),
+  year: yup.string().required('Year is required'),
+  engineNumber: yup.string().required('Engine number is required'),
+  chassisNumber: yup.string().required('Chassis number is required'),
+  registeredInYourName: yup.string().required('This field is required'),
+  registeredInYourNameDetails: yup.string(),
+  ownedSolely: yup.string().required('This field is required'),
+  ownedSolelyDetails: yup.string(),
+  hirePurchase: yup.string().required('This field is required'),
+  hirePurchaseDetails: yup.string(),
+  vehicleUsage: yup.string().required('Vehicle usage is required'),
+  trailerAttached: yup.string().required('This field is required'),
+  damageDescription: yup.string().required('Description of damage is required'),
+  inspectionLocation: yup.string().required('Inspection location is required'),
+  incidentLocation: yup.string().required('Incident location is required'),
+  incidentDate: yup.string().required('Incident date is required'),
+  incidentTime: yup.string().required('Incident time is required'),
+  policeReported: yup.string().required('Police reported field is required'),
+  policeStationDetails: yup.string(),
+  incidentDescription: yup.string().required('Description of incident is required'),
+  witnesses: yup.array().of(
+    yup.object().shape({
+      name: yup.string().required('Witness name is required'),
+      address: yup.string().required('Witness address is required'),
+      phone: yup.string().required('Witness phone is required'),
+      isPassenger: yup.boolean()
+    })
+  ),
+  otherVehicleInvolved: yup.string().required('This field is required'),
+  otherVehicleRegNumber: yup.string(),
+  otherVehicleMakeModel: yup.string(),
+  otherDriverName: yup.string(),
+  otherDriverPhone: yup.string(),
+  otherDriverAddress: yup.string(),
+  otherVehicleInjuryDamage: yup.string(),
+  agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to data privacy'),
+  declarationTrue: yup.boolean().oneOf([true], 'You must declare all info is true'),
+  declarationAdditionalInfo: yup.boolean().oneOf([true], 'You must agree to provide more info'),
+  declarationDocuments: yup.boolean().oneOf([true], 'You must agree to submit documents'),
+  signature: yup.string().required('Signature is required')
+});
+
+interface Witness {
+  name: string;
+  address: string;
+  phone: string;
+  isPassenger: boolean;
+}
+
 interface MotorClaimData {
   policyNumber: string;
   periodOfCoverFrom: string;
@@ -53,7 +115,7 @@ interface MotorClaimData {
   policeReported: string;
   policeStationDetails: string;
   incidentDescription: string;
-  witnesses: Array<{ name: string; address: string; phone: string; isPassenger: boolean }>;
+  witnesses: Witness[];
   otherVehicleInvolved: string;
   otherVehicleRegNumber: string;
   otherVehicleMakeModel: string;
@@ -68,70 +130,71 @@ interface MotorClaimData {
   signature: string;
 }
 
-const MotorClaim = () => {
-  const { toast } = useToast();
+const defaultValues: Partial<MotorClaimData> = {
+  policyNumber: '',
+  periodOfCoverFrom: '',
+  periodOfCoverTo: '',
+  nameCompany: '',
+  title: '',
+  dateOfBirth: '',
+  gender: '',
+  address: '',
+  phone: '',
+  email: '',
+  registrationNumber: '',
+  make: '',
+  model: '',
+  year: '',
+  engineNumber: '',
+  chassisNumber: '',
+  registeredInYourName: '',
+  registeredInYourNameDetails: '',
+  ownedSolely: '',
+  ownedSolelyDetails: '',
+  hirePurchase: '',
+  hirePurchaseDetails: '',
+  vehicleUsage: '',
+  trailerAttached: '',
+  damageDescription: '',
+  inspectionLocation: '',
+  incidentLocation: '',
+  incidentDate: '',
+  incidentTime: '',
+  policeReported: '',
+  policeStationDetails: '',
+  incidentDescription: '',
+  witnesses: [],
+  otherVehicleInvolved: '',
+  otherVehicleRegNumber: '',
+  otherVehicleMakeModel: '',
+  otherDriverName: '',
+  otherDriverPhone: '',
+  otherDriverAddress: '',
+  otherVehicleInjuryDamage: '',
+  agreeToDataPrivacy: false,
+  declarationTrue: false,
+  declarationAdditionalInfo: false,
+  declarationDocuments: false,
+  signature: ''
+};
+
+const MotorClaim: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formMethods = useForm<MotorClaimData>({
-    defaultValues: {
-      policyNumber: '',
-      periodOfCoverFrom: '',
-      periodOfCoverTo: '',
-      nameCompany: '',
-      title: '',
-      dateOfBirth: '',
-      gender: '',
-      address: '',
-      phone: '',
-      email: '',
-      registrationNumber: '',
-      make: '',
-      model: '',
-      year: '',
-      engineNumber: '',
-      chassisNumber: '',
-      registeredInYourName: '',
-      registeredInYourNameDetails: '',
-      ownedSolely: '',
-      ownedSolelyDetails: '',
-      hirePurchase: '',
-      hirePurchaseDetails: '',
-      vehicleUsage: '',
-      trailerAttached: '',
-      damageDescription: '',
-      inspectionLocation: '',
-      incidentLocation: '',
-      incidentDate: '',
-      incidentTime: '',
-      policeReported: '',
-      policeStationDetails: '',
-      incidentDescription: '',
-      witnesses: [{ name: '', address: '', phone: '', isPassenger: false }],
-      otherVehicleInvolved: '',
-      otherVehicleRegNumber: '',
-      otherVehicleMakeModel: '',
-      otherDriverName: '',
-      otherDriverPhone: '',
-      otherDriverAddress: '',
-      otherVehicleInjuryDamage: '',
-      agreeToDataPrivacy: false,
-      declarationTrue: false,
-      declarationAdditionalInfo: false,
-      declarationDocuments: false,
-      signature: ''
-    },
+    resolver: yupResolver(motorClaimSchema),
+    defaultValues,
     mode: 'onChange'
   });
 
-  const { fields: witnessFields, append: appendWitness, remove: removeWitness } = useFieldArray({
+  const { fields: witnessFields, append: addWitness, remove: removeWitness } = useFieldArray({
     control: formMethods.control,
     name: 'witnesses'
   });
 
   const { saveDraft, loadDraft, clearDraft } = useFormDraft('motor-claim', formMethods);
-
   const watchedValues = formMethods.watch();
 
   useEffect(() => {
