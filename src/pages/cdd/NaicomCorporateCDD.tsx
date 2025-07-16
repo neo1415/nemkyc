@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { Calendar, CalendarIcon, Plus, Trash2, Edit2 } from 'lucide-react';
+import { Calendar, CalendarIcon, Plus, Trash2, Edit2, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -170,38 +170,44 @@ const NaicomCorporateCDD: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
-   const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
+      // Upload files to Firebase Storage
       const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      
       Object.entries(uploadedFiles).forEach(([key, file]) => {
         fileUploadPromises.push(
-          uploadFile(file, 'corporate-cdd').then(url => [key + 'Url', url])
+          uploadFile(file, 'naicom-corporate-cdd').then(url => [key + 'Url', url])
         );
       });
+      
       const uploadedUrls = await Promise.all(fileUploadPromises);
       const fileUrls = Object.fromEntries(uploadedUrls);
-
+      
+      // Prepare form data with file URLs
       const submissionData = {
         ...data,
         ...fileUrls,
-        status: 'submitted',
+        status: 'processing',
         submittedAt: new Date().toISOString(),
-        formType: 'corporate-cdd'
+        formType: 'naicom-corporate-cdd'
       };
-
-      await addDoc(collection(db, 'corporate-cdd'), {
+      
+      // Submit to Firestore
+      await addDoc(collection(db, 'naicom-corporate-cdd'), {
         ...submissionData,
         timestamp: serverTimestamp(),
         createdAt: new Date().toLocaleDateString('en-GB')
       });
-
+      
       clearDraft();
+      setShowSummary(false);
       setShowSuccess(true);
-      toast({ title: 'Corporate CDD form submitted successfully!' });
-    } catch (err) {
-      console.error(err);
-      toast({ title: 'Submission failed', variant: 'destructive' });
+      toast({ title: "CDD form submitted successfully!" });
+    } catch (error) {
+      console.error('Submission error:', error);
+      toast({ title: "Submission failed", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -708,16 +714,15 @@ const NaicomCorporateCDD: React.FC = () => {
               {...formMethods.register('signature')}
             />
           </div>
-           <div className="text-center pt-4">
+          <div className="text-center pt-4">
             <Button
               type="button"
-              onClick={async () => {
-                const valid = await formMethods.trigger();
-                if (valid) handleSubmit(formMethods.getValues());
+              onClick={() => {
+                const isValid = formMethods.trigger();
+                if (isValid) setShowSummary(true);
               }}
-              disabled={isSubmitting}
             >
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : 'Submit CDD Form'}
+              Review & Submit
             </Button>
           </div>
         </div>
@@ -740,6 +745,142 @@ const NaicomCorporateCDD: React.FC = () => {
           submitButtonText="Submit CDD Form"
           formMethods={formMethods}
         />
+
+        {/* Summary Dialog */}
+        <Dialog open={showSummary} onOpenChange={setShowSummary}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Review Your NAICOM Corporate CDD</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-8">
+              {/* Company Information */}
+              <div className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-lg">Company Information</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingField(editingField === 'company' ? null : 'company')}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><strong>Company Name:</strong> {watchedValues.companyName}</div>
+                  <div><strong>Email:</strong> {watchedValues.email}</div>
+                  <div><strong>Website:</strong> {watchedValues.website}</div>
+                  <div><strong>Telephone:</strong> {watchedValues.telephone}</div>
+                  <div><strong>Tax ID:</strong> {watchedValues.taxId}</div>
+                  <div><strong>Incorporation Number:</strong> {watchedValues.incorporationNumber}</div>
+                  <div><strong>Incorporation State:</strong> {watchedValues.incorporationState}</div>
+                  <div><strong>Company Type:</strong> {watchedValues.companyType}</div>
+                  <div className="col-span-2"><strong>Address:</strong> {watchedValues.registeredAddress}</div>
+                  <div className="col-span-2"><strong>Business Nature:</strong> {watchedValues.natureOfBusiness}</div>
+                  <div><strong>Incorporation Date:</strong> {watchedValues.dateOfIncorporation ? new Date(watchedValues.dateOfIncorporation).toLocaleDateString() : 'Not set'}</div>
+                </div>
+              </div>
+
+              {/* Directors */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Directors ({watchedValues.directors?.length || 0})</h3>
+                {watchedValues.directors?.map((director, index) => (
+                  <div key={index} className="border rounded p-3 mb-3 bg-gray-50">
+                    <h4 className="font-medium mb-2">Director {index + 1}</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><strong>Full Name:</strong> {director.firstName} {director.middleName} {director.lastName}</div>
+                      <div><strong>Email:</strong> {director.email}</div>
+                      <div><strong>Phone:</strong> {director.phoneNumber}</div>
+                      <div><strong>Nationality:</strong> {director.nationality}</div>
+                      <div><strong>Occupation:</strong> {director.occupation}</div>
+                      <div><strong>BVN:</strong> {director.bvn}</div>
+                      <div><strong>Date of Birth:</strong> {director.dateOfBirth}</div>
+                      <div><strong>Place of Birth:</strong> {director.placeOfBirth}</div>
+                      <div><strong>ID Type:</strong> {director.idType}</div>
+                      <div><strong>ID Number:</strong> {director.identificationNumber}</div>
+                      <div><strong>Income Source:</strong> {director.sourceOfIncome}</div>
+                      <div className="col-span-2"><strong>Address:</strong> {director.residentialAddress}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Account Details */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Account Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Local Account</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div><strong>Account Number:</strong> {watchedValues.accountNumber}</div>
+                      <div><strong>Bank Name:</strong> {watchedValues.bankName}</div>
+                      <div><strong>Bank Branch:</strong> {watchedValues.bankBranch}</div>
+                      <div><strong>Opening Date:</strong> {watchedValues.accountOpeningDate ? new Date(watchedValues.accountOpeningDate).toLocaleDateString() : 'Not set'}</div>
+                    </div>
+                  </div>
+                  {(watchedValues.foreignAccountNumber || watchedValues.foreignBankName) && (
+                    <div>
+                      <h4 className="font-medium mb-2">Foreign Account</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div><strong>Account Number:</strong> {watchedValues.foreignAccountNumber}</div>
+                        <div><strong>Bank Name:</strong> {watchedValues.foreignBankName}</div>
+                        <div><strong>Bank Branch:</strong> {watchedValues.foreignBankBranch}</div>
+                        <div><strong>Opening Date:</strong> {watchedValues.foreignAccountOpeningDate ? new Date(watchedValues.foreignAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Uploaded Documents */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Uploaded Documents</h3>
+                <div className="grid grid-cols-1 gap-2 text-sm">
+                  {Object.entries(uploadedFiles).map(([key, file]) => (
+                    <div key={key} className="flex justify-between items-center py-2 border-b">
+                      <span className="font-medium">
+                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
+                      </span>
+                      <span className="text-green-600">
+                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                      </span>
+                    </div>
+                  ))}
+                  {Object.keys(uploadedFiles).length === 0 && (
+                    <p className="text-muted-foreground">No documents uploaded yet</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Declaration */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Declaration</h3>
+                <div className="text-sm">
+                  <div><strong>Data Privacy Agreement:</strong> {watchedValues.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</div>
+                  <div><strong>Digital Signature:</strong> {watchedValues.signature}</div>
+                </div>
+              </div>
+              
+              <div className="flex gap-4 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSummary(false)}
+                >
+                  Edit Details
+                </Button>
+                <Button
+                  onClick={() => {
+                    const formData = formMethods.getValues();
+                    handleSubmit(formData);
+                  }}
+                  disabled={isSubmitting}
+                  className="bg-primary text-primary-foreground"
+                >
+                  {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Success Dialog */}
         <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
