@@ -332,23 +332,25 @@ const GroupPersonalAccidentClaim = () => {
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor={`witnesses.${index}.name`}>Name *</Label>
-                  <Input
-                    {...formMethods.register(`witnesses.${index}.name`)}
-                    placeholder="Enter witness name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`witnesses.${index}.address`}>Address *</Label>
-                  <Textarea
-                    {...formMethods.register(`witnesses.${index}.address`)}
-                    placeholder="Enter witness address"
-                    rows={2}
-                  />
-                </div>
-              </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div>
+                   <Label htmlFor={`witnesses-${index}-name`}>Name *</Label>
+                   <Input
+                     id={`witnesses-${index}-name`}
+                     {...formMethods.register(`witnesses.${index}.name`)}
+                     placeholder="Enter witness name"
+                   />
+                 </div>
+                 <div>
+                   <Label htmlFor={`witnesses-${index}-address`}>Address *</Label>
+                   <Textarea
+                     id={`witnesses-${index}-address`}
+                     {...formMethods.register(`witnesses.${index}.address`)}
+                     placeholder="Enter witness address"
+                     rows={2}
+                   />
+                 </div>
+               </div>
             </div>
           ))}
           
