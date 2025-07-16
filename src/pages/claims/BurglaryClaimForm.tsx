@@ -1,122 +1,28 @@
 
 import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import { toast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { CalendarIcon, Plus, Trash2, Upload, Edit2, AlertTriangle, FileText, CheckCircle2, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import MultiStepForm from '@/components/common/MultiStepForm';
-import { useFormDraft } from '@/hooks/useFormDraft';
-import FileUpload from '@/components/common/FileUpload';
-import { uploadFile } from '@/services/fileService';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { emailService } from '@/services/emailService';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info } from 'lucide-react';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { useToast } from '../../hooks/use-toast';
 
-// Burglary Claim Schema
-const burglaryClaimSchema = yup.object().shape({
-  // Policy Details
-  policyNumber: yup.string().required("Policy number is required"),
-  periodOfCoverFrom: yup.date().required("Period of cover from is required"),
-  periodOfCoverTo: yup.date().required("Period of cover to is required"),
+import MultiStepForm from '../../components/common/MultiStepForm';
+import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { Badge } from '../../components/ui/badge';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Label } from '../../components/ui/label';
 
-  // Insured Details
-  nameOfInsured: yup.string().required("Name of insured is required"),
-  companyName: yup.string(),
-  title: yup.string().required("Title is required"),
-  dateOfBirth: yup.date().required("Date of birth is required"),
-  gender: yup.string().required("Gender is required"),
-  address: yup.string().required("Address is required"),
-  phone: yup.string().required("Phone number is required"),
-  email: yup.string().email("Valid email is required").required("Email is required"),
-
-  // Details of Loss
-  premisesAddress: yup.string().required("Premises address is required"),
-  premisesTelephone: yup.string().required("Premises telephone is required"),
-  dateOfTheft: yup.date().required("Date of theft is required"),
-  timeOfTheft: yup.string().required("Time of theft is required"),
-  howEntryEffected: yup.string().required("How entry was effected is required"),
-  roomsEntered: yup.string().required("Rooms entered is required"),
-  premisesOccupied: yup.boolean().required("Please specify if premises occupied"),
-  lastOccupiedDate: yup.string().when('premisesOccupied', {
-    is: false,
-    then: (schema) => schema.required("Last occupied date required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  suspicions: yup.boolean().required("Please specify if you have suspicions"),
-  suspicionName: yup.string().when('suspicions', {
-    is: true,
-    then: (schema) => schema.required("Name required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  policeInformed: yup.boolean().required("Please specify if police informed"),
-  policeDate: yup.date().when('policeInformed', {
-    is: true,
-    then: (schema) => schema.required("Police date required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  policeStation: yup.string().when('policeInformed', {
-    is: true,
-    then: (schema) => schema.required("Police station required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  soleOwner: yup.boolean().required("Please specify if sole owner"),
-  ownerDetails: yup.string().when('soleOwner', {
-    is: false,
-    then: (schema) => schema.required("Owner details required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  otherInsurance: yup.boolean().required("Please specify if other insurance exists"),
-  otherInsurerDetails: yup.string().when('otherInsurance', {
-    is: true,
-    then: (schema) => schema.required("Other insurer details required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  totalContentsValue: yup.number().required("Total contents value is required"),
-  sumInsuredFirePolicy: yup.number().required("Sum insured under fire policy is required"),
-  fireInsurerName: yup.string().required("Fire insurer name is required"),
-  fireInsurerAddress: yup.string().required("Fire insurer address is required"),
-  previousLoss: yup.boolean().required("Please specify if previous loss occurred"),
-  previousLossDetails: yup.string().when('previousLoss', {
-    is: true,
-    then: (schema) => schema.required("Previous loss details required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-
-  // Property Items
-  propertyItems: yup.array().of(
-    yup.object().shape({
-      description: yup.string().required("Description is required"),
-      costPrice: yup.number().required("Cost price is required"),
-      dateOfPurchase: yup.date().required("Date of purchase is required"),
-      estimatedValue: yup.number().required("Estimated value is required"),
-      netAmountClaimed: yup.number().required("Net amount claimed is required")
-    })
-  ),
-
-  // Declaration
-  agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  signature: yup.string().required("Signature is required")
-});
 
 interface BurglaryPropertyItem {
   description: string;
   costPrice: number;
-  dateOfPurchase: Date;
+  dateOfPurchase: string;
   estimatedValue: number;
   netAmountClaimed: number;
 }
@@ -124,14 +30,14 @@ interface BurglaryPropertyItem {
 interface BurglaryClaimData {
   // Policy Details
   policyNumber: string;
-  periodOfCoverFrom: Date;
-  periodOfCoverTo: Date;
+  periodOfCoverFrom: string;
+  periodOfCoverTo: string;
 
   // Insured Details
   nameOfInsured: string;
   companyName?: string;
   title: string;
-  dateOfBirth: Date;
+  dateOfBirth: string;
   gender: string;
   address: string;
   phone: string;
@@ -140,7 +46,7 @@ interface BurglaryClaimData {
   // Details of Loss
   premisesAddress: string;
   premisesTelephone: string;
-  dateOfTheft: Date;
+  dateOfTheft: string;
   timeOfTheft: string;
   howEntryEffected: string;
   roomsEntered: string;
@@ -149,7 +55,7 @@ interface BurglaryClaimData {
   suspicions: boolean;
   suspicionName?: string;
   policeInformed: boolean;
-  policeDate?: Date;
+  policeDate?: string;
   policeStation?: string;
   soleOwner: boolean;
   ownerDetails?: string;
@@ -168,26 +74,30 @@ interface BurglaryClaimData {
   // Declaration
   agreeToDataPrivacy: boolean;
   signature: string;
-  signatureDate: Date;
 }
 
 const defaultValues: Partial<BurglaryClaimData> = {
   policyNumber: '',
+  periodOfCoverFrom: '',
+  periodOfCoverTo: '',
   nameOfInsured: '',
   companyName: '',
   title: '',
+  dateOfBirth: '',
   address: '',
   phone: '',
   email: '',
   gender: '',
   premisesAddress: '',
   premisesTelephone: '',
+  dateOfTheft: '',
   timeOfTheft: '',
   howEntryEffected: '',
   roomsEntered: '',
   premisesOccupied: false,
   suspicions: false,
   policeInformed: false,
+  policeDate: '',
   soleOwner: false,
   otherInsurance: false,
   totalContentsValue: 0,
@@ -201,26 +111,34 @@ const defaultValues: Partial<BurglaryClaimData> = {
 };
 
 const BurglaryClaimForm: React.FC = () => {
+  const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
-  const formMethods = useForm<any>({
-    resolver: yupResolver(burglaryClaimSchema),
+  const formMethods = useForm<BurglaryClaimData>({
     defaultValues,
     mode: 'onChange'
   });
 
-  const { fields: propertyFields, append: addProperty, remove: removeProperty } = useFieldArray({
+  const { fields: propertyFields, append: appendProperty, remove: removeProperty } = useFieldArray({
     control: formMethods.control,
     name: 'propertyItems'
   });
 
-  const { saveDraft, clearDraft } = useFormDraft('burglaryClaimForm', formMethods);
+  const { saveDraft, loadDraft, clearDraft } = useFormDraft('burglary-claim-form', formMethods);
+
   const watchedValues = formMethods.watch();
 
-  // Auto-save draft
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      Object.keys(draft).forEach((key) => {
+        formMethods.setValue(key as keyof BurglaryClaimData, draft[key]);
+      });
+    }
+  }, [formMethods, loadDraft]);
+
   useEffect(() => {
     const subscription = formMethods.watch((data) => {
       saveDraft(data);
@@ -229,109 +147,43 @@ const BurglaryClaimForm: React.FC = () => {
   }, [formMethods, saveDraft]);
 
   const handleSubmit = async (data: BurglaryClaimData) => {
-    setShowSummary(true);
-  };
-
-  const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const data = formMethods.getValues();
-      
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
-        fileUploadPromises.push(
-          uploadFile(file, 'burglary-claims').then(url => [key + 'Url', url])
-        );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Filter out undefined values
-      const cleanData = Object.entries(data).reduce((acc, [key, value]) => {
-        if (value !== undefined) {
-          acc[key] = value;
-        }
-        return acc;
-      }, {} as any);
-
-      // Prepare form data with file URLs
-      const submissionData = {
-        ...cleanData,
-        ...fileUrls,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        formType: 'burglary-claim',
-        signatureDate: new Date()
-      };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'burglary-claims'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
+      // Save to Firestore
+      const docRef = await addDoc(collection(db, 'burglaryClaimsTable'), {
+        ...data,
+        submittedAt: new Date(),
+        status: 'submitted'
       });
 
-      // Send confirmation email
-      // await emailService.sendSubmissionConfirmation(data.email, 'Burglary Insurance Claim');
-      
       clearDraft();
       setShowSummary(false);
       setShowSuccess(true);
-      toast({ title: "Burglary claim submitted successfully!" });
+      
+      toast({
+        title: "Claim Submitted Successfully",
+        description: "Your burglary claim has been submitted and you'll receive a confirmation email shortly.",
+      });
     } catch (error) {
-      console.error('Submission error:', error);
-      toast({ title: "Submission failed", variant: "destructive" });
+      console.error('Error submitting claim:', error);
+      toast({
+        title: "Submission Error",
+        description: "There was an error submitting your claim. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
-    return (
-      <TooltipProvider>
-        <div className="space-y-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Label className="flex items-center gap-1">
-                {label}
-                <Info className="h-3 w-3" />
-              </Label>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Select the {label.toLowerCase()}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !value && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <ReactCalendar
-                mode="single"
-                selected={value ? new Date(value) : undefined}
-                onSelect={(date) => formMethods.setValue(name, date)}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </TooltipProvider>
-    );
+  const onFinalSubmit = (data: BurglaryClaimData) => {
+    setShowSummary(true);
   };
+
+  const addProperty = () => {
+    appendProperty({ description: '', costPrice: 0, dateOfPurchase: '', estimatedValue: 0, netAmountClaimed: 0 });
+  };
+
 
   const steps = [
     {
@@ -339,35 +191,31 @@ const BurglaryClaimForm: React.FC = () => {
       title: 'Policy Details',
       component: (
         <div className="space-y-4">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="policyNumber" className="flex items-center gap-1">
-                    Policy Number *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input
-                    id="policyNumber"
-                    {...formMethods.register('policyNumber')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter your burglary insurance policy number</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div>
+            <Label htmlFor="policyNumber">Policy Number *</Label>
+            <Input
+              id="policyNumber"
+              {...formMethods.register('policyNumber')}
+            />
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DatePickerField
-              name="periodOfCoverFrom"
-              label="Period of Cover From *"
-            />
-            <DatePickerField
-              name="periodOfCoverTo"
-              label="Period of Cover To *"
-            />
+            <div>
+              <Label htmlFor="periodOfCoverFrom">Period of Cover From *</Label>
+              <Input
+                id="periodOfCoverFrom"
+                type="date"
+                {...formMethods.register('periodOfCoverFrom')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="periodOfCoverTo">Period of Cover To *</Label>
+              <Input
+                id="periodOfCoverTo"
+                type="date"
+                {...formMethods.register('periodOfCoverTo')}
+              />
+            </div>
           </div>
         </div>
       )
@@ -435,10 +283,14 @@ const BurglaryClaimForm: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <DatePickerField
-                name="dateOfBirth"
-                label="Date of Birth *"
-              />
+              <div>
+                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  {...formMethods.register('dateOfBirth')}
+                />
+              </div>
               <div>
                 <Label>Gender *</Label>
                 <Select
@@ -969,7 +821,7 @@ const BurglaryClaimForm: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleSubmit}
+          onSubmit={onFinalSubmit}
           isSubmitting={isSubmitting}
           submitButtonText="Review Claim"
           formMethods={formMethods}
@@ -998,7 +850,7 @@ const BurglaryClaimForm: React.FC = () => {
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Back to Edit
               </Button>
-              <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
+              <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

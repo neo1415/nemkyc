@@ -1,98 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import { toast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { FileText, User, Shield, Signature, CalendarIcon, CheckCircle2, AlertCircle, Plus, Trash2, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import MultiStepForm from '@/components/common/MultiStepForm';
-import { useFormDraft } from '@/hooks/useFormDraft';
-import FileUpload from '@/components/common/FileUpload';
-import { uploadFile } from '@/services/fileService';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { sendEmail } from '@/services/emailService';
-import { useAuth } from '@/contexts/AuthContext';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { useToast } from '../../hooks/use-toast';
 
-const publicLiabilitySchema = yup.object().shape({
-  // Policy Details
-  policyNumber: yup.string().required('Policy number is required'),
-  coverageFromDate: yup.date().required('Coverage from date is required'),
-  coverageToDate: yup.date().required('Coverage to date is required'),
-  
-  // Insured Details
-  companyName: yup.string(),
-  address: yup.string().required('Address is required'),
-  phone: yup.string().required('Phone number is required'),
-  email: yup.string().email('Invalid email').required('Email is required'),
-  
-  // Loss Details
-  accidentDate: yup.date().required('Accident date is required'),
-  accidentTime: yup.string().required('Accident time is required'),
-  accidentPlace: yup.string().required('Place of accident is required'),
-  accidentDetails: yup.string().required('Accident details are required'),
-  witnesses: yup.array().of(yup.object().shape({
-    name: yup.string().required('Witness name is required'),
-    address: yup.string().required('Witness address is required'),
-    isEmployee: yup.string().required('Please specify if witness is employee or independent')
-  })),
-  employeeActivity: yup.string().required('Employee activity details are required'),
-  responsiblePersonName: yup.string().required('Responsible person name is required'),
-  responsiblePersonAddress: yup.string().required('Responsible person address is required'),
-  responsibleEmployer: yup.string(),
-  
-  // Police and Insurance
-  policeInvolved: yup.string().required('Please specify if police were involved'),
-  policeStation: yup.string().when('policeInvolved', {
-    is: 'yes',
-    then: (schema) => schema.required('Police station is required')
-  }),
-  officerNumber: yup.string().when('policeInvolved', {
-    is: 'yes',
-    then: (schema) => schema.required('Officer number is required')
-  }),
-  otherInsurance: yup.string().required('Please specify if you have other insurance'),
-  otherInsuranceDetails: yup.string().when('otherInsurance', {
-    is: 'yes',
-    then: (schema) => schema.required('Other insurance details are required')
-  }),
-  
-  // Claimant
-  claimantName: yup.string().required('Claimant name is required'),
-  claimantAddress: yup.string().required('Claimant address is required'),
-  injuryNature: yup.string().required('Nature of injury is required'),
-  claimNoticeReceived: yup.string().required('Please specify if claim notice was received'),
-  noticeFrom: yup.string().when('claimNoticeReceived', {
-    is: 'yes',
-    then: (schema) => schema.required('Notice from is required')
-  }),
-  noticeWhen: yup.date().when('claimNoticeReceived', {
-    is: 'yes',
-    then: (schema) => schema.required('Notice when is required')
-  }),
-  noticeForm: yup.string().when('claimNoticeReceived', {
-    is: 'yes',
-    then: (schema) => schema.required('Notice form is required')
-  }),
-  
-  // Declaration
-  agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to data privacy'),
-  declarationTrue: yup.boolean().oneOf([true], 'You must confirm the declaration is true'),
-  declarationAdditionalInfo: yup.boolean().oneOf([true], 'You must agree to provide additional information'),
-  declarationDocuments: yup.boolean().oneOf([true], 'You must agree to submit requested documents'),
-  signature: yup.string().required('Signature is required'),
-});
+import MultiStepForm from '../../components/common/MultiStepForm';
+import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { Badge } from '../../components/ui/badge';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Label } from '../../components/ui/label';
+
 
 interface Witness {
   name: string;
@@ -102,13 +26,13 @@ interface Witness {
 
 interface PublicLiabilityClaimData {
   policyNumber: string;
-  coverageFromDate: Date;
-  coverageToDate: Date;
+  coverageFromDate: string;
+  coverageToDate: string;
   companyName?: string;
   address: string;
   phone: string;
   email: string;
-  accidentDate: Date;
+  accidentDate: string;
   accidentTime: string;
   accidentPlace: string;
   accidentDetails: string;
@@ -127,21 +51,21 @@ interface PublicLiabilityClaimData {
   injuryNature: string;
   claimNoticeReceived: 'yes' | 'no';
   noticeFrom?: string;
-  noticeWhen?: Date;
+  noticeWhen?: string;
   noticeForm?: string;
   agreeToDataPrivacy: boolean;
-  declarationTrue: boolean;
-  declarationAdditionalInfo: boolean;
-  declarationDocuments: boolean;
   signature: string;
 }
 
 const defaultValues: Partial<PublicLiabilityClaimData> = {
   policyNumber: '',
+  coverageFromDate: '',
+  coverageToDate: '',
   companyName: '',
   address: '',
   phone: '',
   email: '',
+  accidentDate: '',
   accidentTime: '',
   accidentPlace: '',
   accidentDetails: '',
@@ -160,24 +84,19 @@ const defaultValues: Partial<PublicLiabilityClaimData> = {
   injuryNature: '',
   claimNoticeReceived: 'no',
   noticeFrom: '',
+  noticeWhen: '',
   noticeForm: '',
   agreeToDataPrivacy: false,
-  declarationTrue: false,
-  declarationAdditionalInfo: false,
-  declarationDocuments: false,
   signature: ''
 };
 
 const PublicLiabilityClaimForm: React.FC = () => {
-  const { user } = useAuth();
+  const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const [editingField, setEditingField] = useState<string | null>(null);
 
-  const formMethods = useForm<any>({
-    resolver: yupResolver(publicLiabilitySchema),
+  const formMethods = useForm<PublicLiabilityClaimData>({
     defaultValues,
     mode: 'onChange'
   });
@@ -187,11 +106,20 @@ const PublicLiabilityClaimForm: React.FC = () => {
     name: 'witnesses'
   });
 
-  const { saveDraft, clearDraft } = useFormDraft('publicLiability', formMethods);
+  const { saveDraft, loadDraft, clearDraft } = useFormDraft('public-liability-claim', formMethods);
+
   const watchedValues = formMethods.watch();
 
-  // Auto-save draft
-  React.useEffect(() => {
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      Object.keys(draft).forEach((key) => {
+        formMethods.setValue(key as keyof PublicLiabilityClaimData, draft[key]);
+      });
+    }
+  }, [formMethods, loadDraft]);
+
+  useEffect(() => {
     const subscription = formMethods.watch((data) => {
       saveDraft(data);
     });
@@ -201,40 +129,17 @@ const PublicLiabilityClaimForm: React.FC = () => {
   const handleSubmit = async (data: PublicLiabilityClaimData) => {
     setIsSubmitting(true);
     try {
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
-        fileUploadPromises.push(
-          uploadFile(file, 'public-liability-claims').then(url => [key + 'Url', url])
-        );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Prepare form data with file URLs
-      const submissionData = {
+      // Save to Firestore
+      const docRef = await addDoc(collection(db, 'publicLiabilityClaimsTable'), {
         ...data,
-        ...fileUrls,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        formType: 'public-liability-claim'
-      };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'public-liability-claims'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
+        submittedAt: new Date(),
+        status: 'submitted'
       });
 
-      // Email confirmation would be sent here
-      console.log('Claim submitted for:', data.email);
-      
       clearDraft();
       setShowSummary(false);
       setShowSuccess(true);
+      
       toast({
         title: "Claim Submitted Successfully",
         description: "Your public liability claim has been submitted and you'll receive a confirmation email shortly.",
@@ -255,36 +160,8 @@ const PublicLiabilityClaimForm: React.FC = () => {
     setShowSummary(true);
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
-    return (
-      <div className="space-y-2">
-        <Label>{label}</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !value && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <ReactCalendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={(date) => formMethods.setValue(name, date)}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-    );
+  const addWitness = () => {
+    addWitness({ name: '', address: '', isEmployee: 'independent' });
   };
 
   const steps = [
@@ -303,15 +180,19 @@ const PublicLiabilityClaimForm: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <DatePickerField
-                name="coverageFromDate"
-                label="Period of Cover - From *"
+              <Label htmlFor="coverageFromDate">Period of Cover - From *</Label>
+              <Input
+                id="coverageFromDate"
+                type="date"
+                {...formMethods.register('coverageFromDate')}
               />
             </div>
             <div>
-              <DatePickerField
-                name="coverageToDate"
-                label="Period of Cover - To *"
+              <Label htmlFor="coverageToDate">Period of Cover - To *</Label>
+              <Input
+                id="coverageToDate"
+                type="date"
+                {...formMethods.register('coverageToDate')}
               />
             </div>
           </div>
@@ -366,9 +247,11 @@ const PublicLiabilityClaimForm: React.FC = () => {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <DatePickerField
-                name="accidentDate"
-                label="Date of Accident *"
+              <Label htmlFor="accidentDate">Date of Accident *</Label>
+              <Input
+                id="accidentDate"
+                type="date"
+                {...formMethods.register('accidentDate')}
               />
             </div>
             <div>
@@ -401,13 +284,9 @@ const PublicLiabilityClaimForm: React.FC = () => {
           <div>
             <div className="flex items-center justify-between mb-4">
               <Label>Names & addresses of all witnesses</Label>
-              <Button
-                type="button"
-                onClick={() => addWitness({ name: '', address: '', isEmployee: 'independent' })}
-                className="flex items-center space-x-2"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Add Witness</span>
+              <Button type="button" onClick={addWitness} variant="outline" size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Witness
               </Button>
             </div>
             
@@ -415,16 +294,14 @@ const PublicLiabilityClaimForm: React.FC = () => {
               <div key={field.id} className="border p-4 rounded-lg space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium">Witness {index + 1}</h4>
-                  {witnessFields.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeWitness(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    onClick={() => removeWitness(index)}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
