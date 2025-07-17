@@ -219,6 +219,7 @@ const AdminUsersTable: React.FC = () => {
       toast({
         title: "Success",
         description: "User role updated successfully",
+        duration: 3000,
       });
     } catch (error) {
       console.error('Error updating user role:', error);
@@ -230,7 +231,14 @@ const AdminUsersTable: React.FC = () => {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`);
+    
+    if (!confirmed) {
+      return;
+    }
+
     try {
       await deleteDoc(doc(db, 'userroles', userId));
       setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
@@ -238,6 +246,7 @@ const AdminUsersTable: React.FC = () => {
       toast({
         title: "Success",
         description: "User deleted successfully",
+        duration: 3000,
       });
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -318,7 +327,7 @@ const AdminUsersTable: React.FC = () => {
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction 
-                            onClick={() => handleDeleteUser(userRole.id)}
+                            onClick={() => handleDeleteUser(userRole.id, userRole.name)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
                             Delete Permanently

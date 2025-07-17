@@ -36,7 +36,7 @@ import {
   LogOut,
   LayoutDashboard
 } from 'lucide-react';
-import nemLogo from '../../Nem-insurance-Logo.jpg';
+// Logo is now served from public folder
 
 const Navbar: React.FC = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -84,14 +84,14 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-3">
-              <img 
-                src={nemLogo} 
-                alt="NEM Insurance" 
-                className="h-10 w-10 object-contain rounded"
-              />
-              <span className="text-xl font-bold text-primary">NEM Forms</span>
-            </Link>
+             <Link to="/" className="flex items-center space-x-3">
+               <img 
+                 src="/Nem-insurance-Logo.jpg" 
+                 alt="NEM Insurance" 
+                 className="h-10 w-10 object-contain rounded"
+               />
+               <span className="text-xl font-bold text-primary">NEM Forms</span>
+             </Link>
           </div>
 
           {/* Desktop Navigation */}
@@ -198,25 +198,25 @@ const Navbar: React.FC = () => {
           <div className="flex items-center space-x-4">
             {user ? (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center space-x-1">
-                    <User className="h-4 w-4" />
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
+                 <DropdownMenuTrigger asChild>
+                   <Button variant="ghost" size="sm" className="flex items-center space-x-1 cursor-pointer">
+                     <User className="h-4 w-4" />
+                     <ChevronDown className="h-4 w-4" />
+                   </Button>
+                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-48 bg-white z-50 shadow-lg border" align="end">
-                  <DropdownMenuItem asChild>
-                    <button onClick={handleDashboardClick} className="flex items-center space-x-2 w-full">
-                      <LayoutDashboard className="h-4 w-4" />
-                      <span>Dashboard</span>
-                    </button>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <button onClick={logout} className="flex items-center space-x-2 w-full">
-                      <LogOut className="h-4 w-4" />
-                      <span>Logout</span>
-                    </button>
-                  </DropdownMenuItem>
+                   <DropdownMenuItem asChild>
+                     <button onClick={handleDashboardClick} className="flex items-center space-x-2 w-full cursor-pointer">
+                       <LayoutDashboard className="h-4 w-4" />
+                       <span>Dashboard</span>
+                     </button>
+                   </DropdownMenuItem>
+                   <DropdownMenuItem asChild>
+                     <button onClick={logout} className="flex items-center space-x-2 w-full cursor-pointer">
+                       <LogOut className="h-4 w-4" />
+                       <span>Logout</span>
+                     </button>
+                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
