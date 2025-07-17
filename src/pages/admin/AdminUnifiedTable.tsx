@@ -111,24 +111,24 @@ const fetchForms = async () => {
 
     let snapshot;
 
-    try {
-      // First try timestamp
-      const q = query(formsRef, orderBy('timestamp', 'desc'));
-      snapshot = await getDocs(q);
-      console.log(`AdminUnifiedTable: Fetched ${snapshot.docs.length} documents with 'timestamp'`);
-    } catch (timestampError) {
-      try {
-        // Then try submittedAt
-        console.log(`AdminUnifiedTable: 'timestamp' failed, trying 'submittedAt'`);
-        const q = query(formsRef, orderBy('submittedAt', 'desc'));
-        snapshot = await getDocs(q);
-        console.log(`AdminUnifiedTable: Fetched ${snapshot.docs.length} documents with 'submittedAt'`);
-      } catch (submittedAtError) {
-        // Finally fallback to no ordering
-        console.log(`AdminUnifiedTable: 'submittedAt' also failed, fetching without ordering`);
-        snapshot = await getDocs(formsRef);
-        console.log(`AdminUnifiedTable: Fetched ${snapshot.docs.length} documents without ordering`);
-      }
+    // Try timestamp first
+    const timestampQuery = query(formsRef, orderBy('timestamp', 'desc'));
+    snapshot = await getDocs(timestampQuery);
+    console.log(`AdminUnifiedTable: Fetched ${snapshot.docs.length} documents with 'timestamp'`);
+
+    // ⛔️ Fallback manually if no docs found
+    if (snapshot.empty) {
+      console.log(`AdminUnifiedTable: No docs found with 'timestamp', trying 'submittedAt'`);
+      const submittedAtQuery = query(formsRef, orderBy('submittedAt', 'desc'));
+      snapshot = await getDocs(submittedAtQuery);
+      console.log(`AdminUnifiedTable: Fetched ${snapshot.docs.length} documents with 'submittedAt'`);
+    }
+
+    // Still no docs? Try unordered
+    if (snapshot.empty) {
+      console.log(`AdminUnifiedTable: No docs found with 'submittedAt', trying unordered`);
+      snapshot = await getDocs(formsRef);
+      console.log(`AdminUnifiedTable: Fetched ${snapshot.docs.length} documents without ordering`);
     }
 
     const formsData = snapshot.docs.map((doc) => {
@@ -136,7 +136,6 @@ const fetchForms = async () => {
       return {
         id: doc.id,
         ...data,
-        // Pick the best timestamp available
         timestamp: data.timestamp || data.submittedAt || data.createdAt || new Date(),
         status: data.status || (isClaim ? 'processing' : 'pending')
       };
