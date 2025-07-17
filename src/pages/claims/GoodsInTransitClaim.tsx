@@ -220,8 +220,6 @@ const GoodsInTransitClaim: React.FC = () => {
         goodsItems: data.goodsItems,
         totalValue: data.totalValue,
         status: 'processing',
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
         submittedAt: new Date().toISOString(),
         formType: 'goods-in-transit-claim'
       };
