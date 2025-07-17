@@ -1,16 +1,21 @@
 
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import AdminSidebar from './AdminSidebar';
 import Header from './Header';
+import Navbar from './Navbar';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { Menu } from 'lucide-react';
 
 const Layout: React.FC = () => {
   const { user, isAdmin, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+  
+  // Check if current route is dashboard-related
+  const isDashboardRoute = location.pathname.startsWith('/admin') || location.pathname === '/dashboard';
 
   if (loading) {
     return (
@@ -21,12 +26,18 @@ const Layout: React.FC = () => {
   }
 
   if (!user) {
-    return <Outlet />;
+    return (
+      <div className="min-h-screen">
+        <Navbar />
+        <Outlet />
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {isAdmin() && (
+      {/* Admin dashboard view */}
+      {isAdmin() && isDashboardRoute && (
         <div className="flex h-screen">
           <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -38,9 +49,10 @@ const Layout: React.FC = () => {
         </div>
       )}
       
-      {!isAdmin() && (
+      {/* Regular authenticated view (including admins on non-dashboard pages) */}
+      {(!isAdmin() || !isDashboardRoute) && (
         <div className="min-h-screen">
-          <Header onMenuClick={() => {}} />
+          <Navbar />
           <main className="p-6">
             <Outlet />
           </main>
