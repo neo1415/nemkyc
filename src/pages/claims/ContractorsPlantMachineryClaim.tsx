@@ -93,6 +93,8 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
       await addDoc(collection(db, 'contractors-claims'), {
         ...cleanedData,
         submittedAt: new Date().toISOString(),
+        timestamp: serverTimestamp(),
+        createdAt: new Date().toLocaleDateString('en-GB')
         status: 'pending'
       });
 
