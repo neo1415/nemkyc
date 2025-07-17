@@ -121,18 +121,26 @@ const AdminUsersTable: React.FC = () => {
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
+      console.log('Starting role change for user:', userId, 'to role:', newRole);
       const serverUrl = 'https://nem-server-rhdb.onrender.com';
       
       // Get CSRF token
+      console.log('Fetching CSRF token...');
       const csrfRes = await fetch(`${serverUrl}/csrf-token`, { 
-        credentials: 'include' 
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
       
       if (!csrfRes.ok) {
-        throw new Error('Failed to fetch CSRF token');
+        console.error('CSRF token fetch failed:', csrfRes.status, csrfRes.statusText);
+        throw new Error(`Failed to fetch CSRF token: ${csrfRes.status}`);
       }
       
       const { csrfToken } = await csrfRes.json();
+      console.log('CSRF token fetched successfully');
       
       // Get Firebase ID token
       if (!firebaseUser) {
