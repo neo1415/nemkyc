@@ -15,7 +15,7 @@ import { storage } from '../../firebase/config';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#8B4513',
+      main: 'hsl(350, 50%, 30%)', // Burgundy from design system
     },
   },
 });
