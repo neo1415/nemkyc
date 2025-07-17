@@ -13,4 +13,4 @@ const AdminRentAssuranceClaimsTable: React.FC = () => {
   );
 };
 
-export default AdminRentAssuranceClaimsTable
+export default AdminRentAssuranceClaimsTable;
