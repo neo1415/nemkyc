@@ -102,61 +102,66 @@ const AdminUnifiedTable: React.FC<AdminUnifiedTableProps> = ({
     fetchForms();
   }, [user, isAdmin, navigate, collectionName]);
 
-  const fetchForms = async () => {
+const fetchForms = async () => {
+  try {
+    setLoading(true);
+    console.log(`AdminUnifiedTable: Fetching forms from collection '${collectionName}'`);
+
+    const formsRef = collection(db, collectionName);
+
+    let snapshot;
+
     try {
-      setLoading(true);
-      console.log(`AdminUnifiedTable: Fetching forms from collection '${collectionName}'`);
-      
-      const formsRef = collection(db, collectionName);
-      
-      // Try to fetch with timestamp ordering first, fallback to no ordering
-      let snapshot;
+      // First try timestamp
+      const q = query(formsRef, orderBy('timestamp', 'desc'));
+      snapshot = await getDocs(q);
+      console.log(`AdminUnifiedTable: Fetched ${snapshot.docs.length} documents with 'timestamp'`);
+    } catch (timestampError) {
       try {
-        const q = query(formsRef, orderBy('timestamp', 'desc'));
+        // Then try submittedAt
+        console.log(`AdminUnifiedTable: 'timestamp' failed, trying 'submittedAt'`);
+        const q = query(formsRef, orderBy('submittedAt', 'desc'));
         snapshot = await getDocs(q);
-        console.log(`AdminUnifiedTable: Fetched ${snapshot.docs.length} documents with timestamp ordering`);
-      } catch (timestampError) {
-        console.log(`AdminUnifiedTable: Timestamp ordering failed, fetching without ordering`);
-        // If timestamp ordering fails, fetch without ordering
+        console.log(`AdminUnifiedTable: Fetched ${snapshot.docs.length} documents with 'submittedAt'`);
+      } catch (submittedAtError) {
+        // Finally fallback to no ordering
+        console.log(`AdminUnifiedTable: 'submittedAt' also failed, fetching without ordering`);
         snapshot = await getDocs(formsRef);
         console.log(`AdminUnifiedTable: Fetched ${snapshot.docs.length} documents without ordering`);
       }
-
-      const formsData = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        console.log(`AdminUnifiedTable: Processing document ${doc.id}`);
-        return {
-          id: doc.id,
-          ...data,
-          // Ensure consistent timestamp field
-          timestamp: data.timestamp || data.createdAt || data.submittedAt || new Date(),
-          // Ensure status field exists for claims
-          status: data.status || (isClaim ? 'processing' : 'pending')
-        };
-      });
-
-      console.log(`AdminUnifiedTable: Processed ${formsData.length} forms from collection '${collectionName}'`);
-      setForms(formsData);
-      
-      if (formsData.length > 0) {
-        generateColumns(formsData);
-      } else {
-        console.log(`AdminUnifiedTable: No data found in collection '${collectionName}'`);
-        // Set empty columns for empty tables
-        setColumns([{
-          field: 'message',
-          headerName: 'Status',
-          width: 300,
-          renderCell: () => 'No data available in this collection'
-        }]);
-      }
-    } catch (error) {
-      console.error(`AdminUnifiedTable: Error fetching forms from '${collectionName}':`, error);
-      toast({ title: 'Error fetching data', variant: 'destructive' });
-    } finally {
-      setLoading(false);
     }
-  };
+
+    const formsData = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        // Pick the best timestamp available
+        timestamp: data.timestamp || data.submittedAt || data.createdAt || new Date(),
+        status: data.status || (isClaim ? 'processing' : 'pending')
+      };
+    });
+
+    console.log(`AdminUnifiedTable: Processed ${formsData.length} forms`);
+    setForms(formsData);
+
+    if (formsData.length > 0) {
+      generateColumns(formsData);
+    } else {
+      setColumns([{
+        field: 'message',
+        headerName: 'Status',
+        width: 300,
+        renderCell: () => 'No data available in this collection'
+      }]);
+    }
+  } catch (error) {
+    console.error(`AdminUnifiedTable: Error fetching forms:`, error);
+    toast({ title: 'Error fetching data', variant: 'destructive' });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const formatDate = (date: any): string => {
     if (!date) return '';
