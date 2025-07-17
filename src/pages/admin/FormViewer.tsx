@@ -95,6 +95,13 @@ const FormViewer: React.FC = () => {
     }
   };
 
+  const shouldShowField = (field: FormField, formData: any) => {
+    if (!field.conditional) return true;
+    
+    const dependentValue = formData[field.conditional.dependsOn];
+    return dependentValue === field.conditional.value;
+  };
+
   const organizeFieldsWithMapping = (data: any, mapping: any): Record<string, FormFieldWithValue[]> => {
     const organized: Record<string, FormFieldWithValue[]> = {};
     
@@ -102,7 +109,8 @@ const FormViewer: React.FC = () => {
       const sectionFields: FormFieldWithValue[] = [];
       
       section.fields.forEach((field: FormField) => {
-        if (data.hasOwnProperty(field.key)) {
+        // Check if field should be shown based on conditional logic
+        if (shouldShowField(field, data) && data.hasOwnProperty(field.key) && data[field.key] !== null && data[field.key] !== undefined && data[field.key] !== '') {
           sectionFields.push({
             ...field,
             value: data[field.key],
@@ -349,14 +357,16 @@ const FormViewer: React.FC = () => {
       
       case 'url':
       case 'file':
+        const fieldLabel = label.replace(/Url$/, '');
         return (
           <Button
             size="small"
             variant="outlined"
+            startIcon={<Download />}
             onClick={() => handleDownloadFile(value, `${label}.pdf`)}
             sx={{ mt: 1 }}
           >
-            Download {label}
+            Download {fieldLabel}
           </Button>
         );
       
@@ -366,25 +376,36 @@ const FormViewer: React.FC = () => {
         }
         
         return (
-          <Box sx={{ mt: 1 }}>
+          <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {value.map((item, index) => (
-              <Paper key={index} sx={{ p: 2, mb: 1, bgcolor: 'grey.50' }}>
-                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+              <Paper 
+                key={index} 
+                elevation={2}
+                sx={{ 
+                  p: 3, 
+                  backgroundColor: '#f8f9fa',
+                  border: '1px solid #e9ecef',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold' }}>
                   {label} {index + 1}
                 </Typography>
                 {typeof item === 'object' && item !== null ? (
-                  Object.entries(item).map(([itemKey, itemValue]) => (
-                    <Box key={itemKey} sx={{ mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        {formatFieldLabel(itemKey)}:
-                      </Typography>
-                      <Typography variant="body2" sx={{ ml: 1 }}>
-                        {String(itemValue)}
-                      </Typography>
-                    </Box>
-                  ))
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 2 }}>
+                    {Object.entries(item).map(([itemKey, itemValue]) => (
+                      <Box key={itemKey} sx={{ p: 1 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
+                          {formatFieldLabel(itemKey)}
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                          {String(itemValue || 'N/A')}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
                 ) : (
-                  <Typography variant="body2">{String(item)}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 'medium' }}>{String(item)}</Typography>
                 )}
               </Paper>
             ))}

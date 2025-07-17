@@ -62,7 +62,7 @@ import AdminGoodsInTransitClaimsTable from './pages/admin/AdminGoodsInTransitCla
 import AdminIndividualKYCTable from './pages/admin/AdminIndividualKYCTable';
 import AdminCorporateKYCTable from './pages/admin/AdminCorporateKYCTable';
 import AdminCorporateCDDTable from './pages/admin/AdminCorporateCDDTable';
-import EnhancedFormViewer from './pages/admin/EnhancedFormViewer';
+
 
 function App() {
   useEffect(() => {
@@ -418,11 +418,6 @@ function App() {
             </ProtectedRoute>
           } />
           
-          <Route path="admin/form-viewer/:collection/:id" element={
-            <ProtectedRoute>
-              <EnhancedFormViewer />
-            </ProtectedRoute>
-          } />
           
           <Route path="unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<NotFound />} />

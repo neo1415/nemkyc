@@ -225,7 +225,7 @@ const fetchForms = async () => {
           key="view"
           icon={<Visibility />}
           label="View"
-          onClick={() => navigate(`/admin/form-viewer/${collectionName}/${params.id}`)}
+          onClick={() => navigate(`/admin/form/${collectionName}/${params.id}`)}
         />,
         <GridActionsCellItem
           key="delete"
