@@ -5,7 +5,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { Button, Typography, Box, Paper, Divider, Chip, TextField } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { Download, Edit, ArrowLeft, Save, Cancel } from 'lucide-react';
+import { Download, Edit, ArrowLeft, Save, X } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { generateFormPDF, downloadPDF } from '../../services/pdfService';
 import { FORM_MAPPINGS, FormField } from '../../config/formMappings';
@@ -308,7 +308,7 @@ const FormViewer: React.FC = () => {
           <Button size="small" startIcon={<Save />} onClick={() => handleSaveField(key)}>
             Save
           </Button>
-          <Button size="small" startIcon={<Cancel />} onClick={() => handleCancelEdit(key)}>
+          <Button size="small" startIcon={<X />} onClick={() => handleCancelEdit(key)}>
             Cancel
           </Button>
         </Box>
@@ -532,4 +532,6 @@ const FormViewer: React.FC = () => {
       </Box>
     </ThemeProvider>
   );
+};
+
 export default FormViewer;
