@@ -6,6 +6,10 @@ export interface FormField {
   label: string;
   type: 'text' | 'date' | 'email' | 'url' | 'array' | 'object' | 'boolean' | 'number' | 'currency' | 'textarea' | 'file';
   editable?: boolean;
+  conditional?: {
+    dependsOn: string;
+    value: string;
+  };
 }
 
 export interface FormSection {
@@ -155,9 +159,10 @@ export const FORM_MAPPINGS: FormMapping = {
       {
         title: 'Retainer/Contract Details',
         fields: [
-          { key: 'retainerDetails', label: 'Retainer Details', type: 'text', editable: true },
-          { key: 'contractInWriting', label: 'Contract in Writing', type: 'text', editable: true },
-          { key: 'contractDetails', label: 'Contract Details', type: 'text', editable: true },
+          { key: 'retainerDetails', label: 'What were you retained/contracted to do?', type: 'textarea', editable: true },
+          { key: 'contractInWriting', label: 'Was your contract evidenced in writing?', type: 'text', editable: true },
+          { key: 'contractDocumentUrl', label: 'Contract Document', type: 'file', editable: false, conditional: { dependsOn: 'contractInWriting', value: 'yes' } },
+          { key: 'contractDetails', label: 'Contract Details', type: 'textarea', editable: true, conditional: { dependsOn: 'contractInWriting', value: 'no' } },
           { key: 'workPerformedFrom', label: 'Work Performed From', type: 'date', editable: true },
           { key: 'workPerformedTo', label: 'Work Performed To', type: 'date', editable: true },
         ]
@@ -174,32 +179,34 @@ export const FORM_MAPPINGS: FormMapping = {
       {
         title: 'Claim Details',
         fields: [
-          { key: 'claimNature', label: 'Nature of Claim', type: 'text', editable: true },
+          { key: 'claimNature', label: 'Nature of Claim', type: 'textarea', editable: true },
           { key: 'firstAwareDate', label: 'Date First Became Aware', type: 'date', editable: true },
           { key: 'claimMadeDate', label: 'Date Claim Was Made', type: 'date', editable: true },
-          { key: 'intimationMode', label: 'Intimation Mode', type: 'text', editable: true },
-          { key: 'oralDetails', label: 'Oral Details', type: 'text', editable: true },
-          { key: 'amountClaimed', label: 'Amount Claimed', type: 'number', editable: true },
+          { key: 'intimationMode', label: 'Was intimation oral or written?', type: 'text', editable: true },
+          { key: 'oralDetails', label: 'Oral Details', type: 'textarea', editable: true, conditional: { dependsOn: 'intimationMode', value: 'oral' } },
+          { key: 'writtenIntimationDocumentUrl', label: 'Written Intimation Document', type: 'file', editable: false, conditional: { dependsOn: 'intimationMode', value: 'written' } },
+          { key: 'amountClaimed', label: 'Amount Claimed', type: 'currency', editable: true },
         ]
       },
       {
         title: 'Response & Assessment',
         fields: [
-          { key: 'responseComments', label: 'Response Comments', type: 'text', editable: true },
-          { key: 'quantumComments', label: 'Quantum Comments', type: 'text', editable: true },
-          { key: 'estimatedLiability', label: 'Estimated Liability', type: 'number', editable: true },
-          { key: 'additionalInfo', label: 'Additional Information', type: 'text', editable: true },
-          { key: 'additionalDetails', label: 'Additional Details', type: 'text', editable: true },
+          { key: 'responseComments', label: 'Comments in response to the claim', type: 'textarea', editable: true },
+          { key: 'quantumComments', label: 'Comments on the quantum of the claim', type: 'textarea', editable: true },
+          { key: 'estimatedLiability', label: 'Estimated monetary liability', type: 'currency', editable: true },
+          { key: 'additionalInfo', label: 'Any other details or info that will help insurer?', type: 'text', editable: true },
+          { key: 'additionalDetails', label: 'Additional Details', type: 'textarea', editable: true, conditional: { dependsOn: 'additionalInfo', value: 'yes' } },
+          { key: 'additionalDocumentUrl', label: 'Additional Document', type: 'file', editable: false, conditional: { dependsOn: 'additionalInfo', value: 'yes' } },
         ]
       },
       {
         title: 'Solicitor Details',
         fields: [
-          { key: 'solicitorInstructed', label: 'Solicitor Instructed', type: 'text', editable: true },
-          { key: 'solicitorName', label: 'Solicitor Name', type: 'text', editable: true },
-          { key: 'solicitorAddress', label: 'Solicitor Address', type: 'text', editable: true },
-          { key: 'solicitorCompany', label: 'Solicitor Company', type: 'text', editable: true },
-          { key: 'solicitorRates', label: 'Solicitor Rates', type: 'text', editable: true },
+          { key: 'solicitorInstructed', label: 'Have you instructed a solicitor?', type: 'text', editable: true },
+          { key: 'solicitorName', label: 'Solicitor Name', type: 'text', editable: true, conditional: { dependsOn: 'solicitorInstructed', value: 'yes' } },
+          { key: 'solicitorAddress', label: 'Solicitor Address', type: 'textarea', editable: true, conditional: { dependsOn: 'solicitorInstructed', value: 'yes' } },
+          { key: 'solicitorCompany', label: 'Solicitor Company', type: 'text', editable: true, conditional: { dependsOn: 'solicitorInstructed', value: 'yes' } },
+          { key: 'solicitorRates', label: 'Solicitor Rates', type: 'text', editable: true, conditional: { dependsOn: 'solicitorInstructed', value: 'yes' } },
         ]
       },
       {
