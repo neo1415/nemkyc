@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Phone, Mail } from 'lucide-react';
-import nemLogo from '../../Nem-insurance-Logo.jpg';
+// Logo is now served from public folder
 
 const Footer: React.FC = () => {
   return (
@@ -12,11 +12,11 @@ const Footer: React.FC = () => {
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
-              <img 
-                src={nemLogo} 
-                alt="NEM Insurance" 
-                className="h-10 w-10 object-contain rounded bg-white p-1"
-              />
+               <img 
+                 src="/Nem-insurance-Logo.jpg" 
+                 alt="NEM Insurance" 
+                 className="h-10 w-10 object-contain rounded bg-white p-1"
+               />
               <span className="text-xl font-bold">NEM Insurance</span>
             </div>
             <p className="text-primary-foreground/80 text-sm">

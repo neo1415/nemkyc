@@ -20,7 +20,7 @@ import {
   TrendingUp,
   HeartHandshake
 } from 'lucide-react';
-import nemLogo from '../Nem-insurance-Logo.jpg';
+// Logo is now served from public folder
 
 const Index = () => {
   const { user, isAdmin } = useAuth();
