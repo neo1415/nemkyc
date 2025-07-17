@@ -16,37 +16,118 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
   // Add logo
   if (options.logoUrl) {
     try {
-      pdf.addImage(options.logoUrl, 'PNG', 10, 10, 30, 15);
+      pdf.addImage(options.logoUrl, 'PNG', 15, 10, 30, 15);
     } catch (error) {
       console.warn('Failed to add logo to PDF:', error);
     }
   }
   
-  // Add title
-  pdf.setFontSize(20);
+  // Add company header
+  pdf.setFontSize(16);
+  pdf.setFont(undefined, 'bold');
   pdf.setTextColor(139, 69, 19); // burgundy
-  pdf.text(options.title, 10, 35);
+  pdf.text('NEM Insurance', 55, 18);
+  
+  pdf.setFontSize(10);
+  pdf.setFont(undefined, 'normal');
+  pdf.setTextColor(0, 0, 0);
+  pdf.text('NEM Insurance Plc', 55, 24);
+  pdf.text('199, Ikorodu Road, Obanikoro Lagos', 55, 28);
+  
+  // Add title
+  pdf.setFontSize(18);
+  pdf.setFont(undefined, 'bold');
+  pdf.setTextColor(139, 69, 19);
+  pdf.text(options.title, 15, 45);
   
   if (options.subtitle) {
-    pdf.setFontSize(14);
+    pdf.setFontSize(12);
+    pdf.setFont(undefined, 'normal');
     pdf.setTextColor(0, 0, 0);
-    pdf.text(options.subtitle, 10, 45);
+    pdf.text(options.subtitle, 15, 55);
   }
   
   // Add form data
-  let yPosition = options.subtitle ? 55 : 45;
-  pdf.setFontSize(12);
+  let yPosition = options.subtitle ? 65 : 55;
+  pdf.setFontSize(10);
   
   Object.entries(options.data).forEach(([key, value]) => {
-    if (value && typeof value !== 'object') {
-      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-      pdf.setFont(undefined, 'bold');
-      pdf.text(`${label}:`, 10, yPosition);
-      pdf.setFont(undefined, 'normal');
-      pdf.text(String(value), 60, yPosition);
-      yPosition += 8;
+    if (value !== undefined && value !== null && value !== '') {
+      // Handle different data types
+      if (Array.isArray(value)) {
+        // Handle arrays (like witnesses, items, etc.)
+        const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        pdf.setFont(undefined, 'bold');
+        pdf.text(`${label}:`, 15, yPosition);
+        yPosition += 8;
+        
+        value.forEach((item, index) => {
+          if (typeof item === 'object' && item !== null) {
+            pdf.setFont(undefined, 'normal');
+            pdf.text(`${index + 1}.`, 20, yPosition);
+            yPosition += 6;
+            
+            Object.entries(item).forEach(([itemKey, itemValue]) => {
+              if (itemValue !== undefined && itemValue !== null && itemValue !== '') {
+                const itemLabel = itemKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                pdf.text(`   ${itemLabel}: ${String(itemValue)}`, 25, yPosition);
+                yPosition += 5;
+              }
+            });
+            yPosition += 3;
+          } else {
+            pdf.setFont(undefined, 'normal');
+            pdf.text(`• ${String(item)}`, 20, yPosition);
+            yPosition += 6;
+          }
+          
+          if (yPosition > 270) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+        });
+        yPosition += 5;
+      } else if (typeof value === 'object' && value !== null) {
+        // Handle objects
+        const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        pdf.setFont(undefined, 'bold');
+        pdf.text(`${label}:`, 15, yPosition);
+        yPosition += 8;
+        
+        Object.entries(value).forEach(([objKey, objValue]) => {
+          if (objValue !== undefined && objValue !== null && objValue !== '') {
+            const objLabel = objKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+            pdf.setFont(undefined, 'normal');
+            pdf.text(`   ${objLabel}: ${String(objValue)}`, 20, yPosition);
+            yPosition += 6;
+          }
+        });
+        yPosition += 5;
+      } else {
+        // Handle simple values
+        const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        pdf.setFont(undefined, 'bold');
+        pdf.text(`${label}:`, 15, yPosition);
+        pdf.setFont(undefined, 'normal');
+        
+        // Format value based on type
+        let displayValue = String(value);
+        if (key.toLowerCase().includes('date') && value instanceof Date) {
+          displayValue = value.toLocaleDateString();
+        } else if (key.toLowerCase().includes('date') && typeof value === 'string' && value.includes('T')) {
+          displayValue = new Date(value).toLocaleDateString();
+        } else if (typeof value === 'boolean') {
+          displayValue = value ? 'Yes' : 'No';
+        }
+        
+        // Wrap long text
+        const maxWidth = 130;
+        const textLines = pdf.splitTextToSize(displayValue, maxWidth);
+        pdf.text(textLines, 70, yPosition);
+        yPosition += textLines.length * 6;
+      }
       
-      if (yPosition > 280) {
+      if (yPosition > 270) {
         pdf.addPage();
         yPosition = 20;
       }
@@ -57,13 +138,18 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
   if (options.attachments && options.attachments.length > 0) {
     yPosition += 10;
     pdf.setFont(undefined, 'bold');
-    pdf.text('Attachments:', 10, yPosition);
+    pdf.text('Attachments:', 15, yPosition);
     pdf.setFont(undefined, 'normal');
     yPosition += 8;
     
     options.attachments.forEach(attachment => {
-      pdf.text(`• ${attachment.name}`, 15, yPosition);
+      pdf.text(`• ${attachment.name}`, 20, yPosition);
       yPosition += 6;
+      
+      if (yPosition > 270) {
+        pdf.addPage();
+        yPosition = 20;
+      }
     });
   }
   
