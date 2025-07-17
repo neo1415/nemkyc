@@ -47,15 +47,16 @@ const AdminClaimsTable: React.FC<AdminClaimsTableProps> = ({ formType }) => {
         'employers-liability-claims',
         'burglary-claims',
         'group-personal-accident-claims',
-        'fire-special-perils-claims',
+        'fireSpecialPerilsClaims',
         'rent-assurance-claims',
         'money-insurance-claims',
-        'goods-in-transit-claims',
-        'contractors-plant-machinery-claims',
+        'goodsInTransitClaims',
+        'contractors-claims',
         'all-risk-claims',
-        'fidelity-guarantee-claims',
+        'fidelityGuaranteeClaims',
         'combined-gpa-employers-liability-claims'
       ];
+
 
       const allClaims: any[] = [];
       
