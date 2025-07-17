@@ -117,7 +117,7 @@ const fetchForms = async () => {
     console.log(`AdminUnifiedTable: Fetched ${snapshot.docs.length} documents with 'timestamp'`);
 
     // ⛔️ Fallback manually if no docs found
-    if (snapshot.empty) {
+   if (snapshot.docs.length === 0)  {
       console.log(`AdminUnifiedTable: No docs found with 'timestamp', trying 'submittedAt'`);
       const submittedAtQuery = query(formsRef, orderBy('submittedAt', 'desc'));
       snapshot = await getDocs(submittedAtQuery);
@@ -125,7 +125,7 @@ const fetchForms = async () => {
     }
 
     // Still no docs? Try unordered
-    if (snapshot.empty) {
+   if (snapshot.docs.length === 0) {
       console.log(`AdminUnifiedTable: No docs found with 'submittedAt', trying unordered`);
       snapshot = await getDocs(formsRef);
       console.log(`AdminUnifiedTable: Fetched ${snapshot.docs.length} documents without ordering`);
