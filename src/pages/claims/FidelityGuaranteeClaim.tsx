@@ -142,7 +142,9 @@ const FidelityGuaranteeClaim: React.FC = () => {
       const docRef = await addDoc(collection(db, 'fidelityGuaranteeClaims'), {
         ...data,
         submittedAt: new Date(),
-        status: 'submitted'
+        timestamp: serverTimestamp(),
+        createdAt: new Date().toLocaleDateString('en-GB')
+        status: 'pending'
       });
 
       // Send confirmation email
