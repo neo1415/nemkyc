@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import MultiStepForm from '../../components/common/MultiStepForm';
 import FormSection from '../../components/common/FormSection';
@@ -92,7 +92,7 @@ const MoneyInsuranceClaim: React.FC = () => {
         ...cleanedData,
         submittedAt: new Date().toISOString(),
         timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
+        createdAt: new Date().toLocaleDateString('en-GB'),
         status: 'processing'
       });
 
