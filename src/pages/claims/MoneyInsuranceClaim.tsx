@@ -91,7 +91,9 @@ const MoneyInsuranceClaim: React.FC = () => {
       await addDoc(collection(db, 'money-insurance-claims'), {
         ...cleanedData,
         submittedAt: new Date().toISOString(),
-        status: 'pending'
+        timestamp: serverTimestamp(),
+        createdAt: new Date().toLocaleDateString('en-GB')
+        status: 'processing'
       });
 
       // await sendEmail({
