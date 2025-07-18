@@ -76,3 +76,24 @@ export const useAuthRequiredSubmit = () => {
     formType: pendingSubmission?.formType || ''
   };
 };
+
+// Utility function that can be called outside of React components
+export const processPendingSubmissionUtil = async (userEmail: string) => {
+  const stored = sessionStorage.getItem('pendingSubmission');
+  if (stored && userEmail) {
+    const { formData, formType, timestamp } = JSON.parse(stored);
+    
+    // Check if submission is not too old (30 minutes)
+    if (Date.now() - timestamp < 30 * 60 * 1000) {
+      sessionStorage.removeItem('pendingSubmission');
+      
+      // Import the submission service dynamically
+      const { submitFormWithNotifications } = await import('../services/submissionService');
+      await submitFormWithNotifications(formData, formType, userEmail);
+      return true;
+    } else {
+      sessionStorage.removeItem('pendingSubmission');
+    }
+  }
+  return false;
+};

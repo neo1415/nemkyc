@@ -33,9 +33,13 @@ const SignIn: React.FC = () => {
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
         // Process pending submission and redirect back to original page
-        const { useAuthRequiredSubmit } = await import('../../hooks/useAuthRequiredSubmit');
-        const { processPendingSubmission } = useAuthRequiredSubmit();
-        await processPendingSubmission();
+        const { processPendingSubmissionUtil } = await import('../../hooks/useAuthRequiredSubmit');
+        const { getAuth } = await import('firebase/auth');
+        const currentUser = getAuth().currentUser;
+        
+        if (currentUser?.email) {
+          await processPendingSubmissionUtil(currentUser.email);
+        }
         
         // Redirect back to the original page
         navigate(-1);
@@ -84,9 +88,13 @@ const SignIn: React.FC = () => {
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
         // Process pending submission and redirect back to original page
-        const { useAuthRequiredSubmit } = await import('../../hooks/useAuthRequiredSubmit');
-        const { processPendingSubmission } = useAuthRequiredSubmit();
-        await processPendingSubmission();
+        const { processPendingSubmissionUtil } = await import('../../hooks/useAuthRequiredSubmit');
+        const { getAuth } = await import('firebase/auth');
+        const currentUser = getAuth().currentUser;
+        
+        if (currentUser?.email) {
+          await processPendingSubmissionUtil(currentUser.email);
+        }
         
         // Redirect back to the original page
         navigate(-1);
