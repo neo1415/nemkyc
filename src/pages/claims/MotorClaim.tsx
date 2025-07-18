@@ -22,6 +22,7 @@ import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import SuccessModal from '@/components/common/SuccessModal';
 
 // Motor Claim Schema
 const motorClaimSchema = yup.object().shape({
@@ -250,7 +251,7 @@ const MotorClaim: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const { handleSubmitWithAuth } = useAuthRequiredSubmit();
+  const { handleSubmitWithAuth, showSuccess: authShowSuccess, setShowSuccess: setAuthShowSuccess } = useAuthRequiredSubmit();
 
   const formMethods = useForm<any>({
     // resolver: yupResolver(motorClaimSchema),
@@ -274,55 +275,32 @@ const MotorClaim: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
-  // Internal submission function (used after authentication)
-  const internalSubmit = async (data: MotorClaimData) => {
-    setIsSubmitting(true);
-    try {
-      // Clean data by removing undefined values
-      const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([_, value]) => value !== undefined)
-      );
-
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
-        fileUploadPromises.push(
-          uploadFile(file, 'motor-claims').then(url => [key + 'Url', url])
-        );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Prepare form data with file URLs
-      const submissionData = {
-        ...cleanData,
-        ...fileUrls,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        formType: 'Motor Claim'
-      };
-      
-      clearDraft();
-      setShowSummary(false);
-      setShowSuccess(true);
-    } catch (error) {
-      console.error('Error preparing submission:', error);
-      toast({
-        title: "Submission Error",
-        description: "There was an error submitting your claim. Please try again.",
-        variant: "destructive",
-      });
-      throw error;
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   // Main submit handler that checks authentication
   const handleSubmit = async (data: MotorClaimData) => {
-    await handleSubmitWithAuth(data, 'Motor Claim', internalSubmit);
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
+        fileUploadPromises.push(
+          uploadFile(file, `motor-claims/${Date.now()}-${file.name}`).then(url => [key, url])
+        );
+      }
+    }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Motor Claim'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Motor Claim');
+    clearDraft();
+    setShowSummary(false);
   };
 
   const onFinalSubmit = (data: MotorClaimData) => {
@@ -1392,31 +1370,6 @@ const MotorClaim: React.FC = () => {
     }
   ];
 
-  if (showSuccess) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardHeader>
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
-            </div>
-            <CardTitle className="text-2xl text-green-600">Claim Submitted!</CardTitle>
-            <CardDescription>
-              Your motor claim has been successfully submitted. You'll receive a confirmation email shortly.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={() => window.location.href = '/claims'}
-              className="w-full"
-            >
-              Back to Claims
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -1479,6 +1432,17 @@ const MotorClaim: React.FC = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          
+          {/* Success Modal */}
+          <SuccessModal
+            isOpen={showSuccess || authShowSuccess}
+            onClose={() => {
+              setShowSuccess(false);
+              setAuthShowSuccess(false);
+            }}
+            title="Motor Claim Submitted!"
+            formType="Motor Claim"
+          />
         </div>
       </div>
 
