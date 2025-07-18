@@ -1,22 +1,20 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import MultiStepForm from '../../components/common/MultiStepForm';
-import FormSection from '../../components/common/FormSection';
-import PhoneInput from '../../components/common/PhoneInput';
-import FileUpload from '../../components/common/FileUpload';
-import { useFormDraft } from '../../hooks/useFormDraft';
-import { useAuthRequiredSubmit } from '../../hooks/useAuthRequiredSubmit';
+import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
+import FormSection from '../../components/common/FormSection';
+import MultiStepForm from '../../components/common/MultiStepForm';
+import PhoneInput from '../../components/common/PhoneInput';
+import { useAuthRequiredSubmit } from '../../hooks/useAuthRequiredSubmit';
+import { uploadFormFiles } from '../../services/fileService';
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Label } from '../../components/ui/label';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { uploadFormFiles } from '../../services/fileService';
 import SuccessModal from '../../components/common/SuccessModal';
 
 const burglarySchema = yup.object().shape({
@@ -46,82 +44,52 @@ const burglarySchema = yup.object().shape({
 
 type BurglaryData = yup.InferType<typeof burglarySchema>;
 
-const defaultValues = {
+const defaultValues: Partial<BurglaryData> = {
   signatureDate: new Date(),
   policeNotified: 'no'
-} as Partial<BurglaryData>;
+};
 
 const BurglaryClaimForm: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
-  const formMethods = useForm<BurglaryData>({
+  const formMethods = useForm({
     resolver: yupResolver(burglarySchema),
     defaultValues,
     mode: 'onChange'
   });
 
   const { watch, handleSubmit, setValue } = formMethods;
-  const { saveDraft, loadDraft } = useFormDraft('burglary-claim', formMethods);
   const { 
     handleSubmitWithAuth, 
     showSuccess, 
     setShowSuccess, 
     isSubmitting 
   } = useAuthRequiredSubmit();
-  
+
   const watchedValues = watch();
 
-  useEffect(() => {
-    const subscription = watch((value) => {
-      saveDraft(value);
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, saveDraft]);
-
-  useEffect(() => {
-    loadDraft();
-  }, [loadDraft]);
-
-  const onSubmit = async (data: BurglaryData) => {
+  const onSubmit = async (data: any) => {
     try {
-      // Upload files if any
-      let fileUrls = {};
-      if (Object.keys(uploadedFiles).length > 0) {
-        fileUrls = await uploadFormFiles(uploadedFiles, 'burglary-claims');
-      }
-
+      const fileUrls = await uploadFormFiles(uploadedFiles, 'burglary-claims');
       const submissionData = {
         ...data,
-        ...fileUrls,
-        formType: 'burglary-claim'
+        files: fileUrls,
+        formType: 'burglary-claim',
+        submissionId: `BUR-${Date.now()}`,
+        submittedAt: new Date().toISOString()
       };
 
-      await handleSubmitWithAuth(submissionData, 'burglary-claim');
+      await handleSubmitWithAuth(submissionData, 'burglary-claims');
     } catch (error) {
       console.error('Submission error:', error);
+      toast.error('Failed to submit claim. Please try again.');
     }
-  };
-
-  const handleFormSubmit = () => {
-    setShowSummary(true);
-  };
-
-  const handleFileSelect = (key: string, file: File) => {
-    setUploadedFiles(prev => ({ ...prev, [key]: file }));
-  };
-
-  const handleFileRemove = (key: string) => {
-    setUploadedFiles(prev => {
-      const updated = { ...prev };
-      delete updated[key];
-      return updated;
-    });
   };
 
   const steps = [
     {
-      id: 'policy',
+      id: 'policy-details',
       title: 'Policy Details',
       component: (
         <FormSection title="Policy Information" description="Enter your policy details">
@@ -169,7 +137,7 @@ const BurglaryClaimForm: React.FC = () => {
       )
     },
     {
-      id: 'insured',
+      id: 'insured-details',
       title: 'Insured Details',
       component: (
         <FormSection title="Insured Information" description="Enter the insured details">
@@ -228,45 +196,43 @@ const BurglaryClaimForm: React.FC = () => {
       )
     },
     {
-      id: 'loss',
+      id: 'loss-details',
       title: 'Loss Details',
       component: (
-        <FormSection title="Loss Information" description="Provide details about the loss">
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="lossDate">Date of Loss *</Label>
-                <Input
-                  type="date"
-                  {...formMethods.register('lossDate')}
-                />
-                {formMethods.formState.errors.lossDate && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {formMethods.formState.errors.lossDate.message}
-                  </p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="lossTime">Time of Loss *</Label>
-                <Input
-                  type="time"
-                  {...formMethods.register('lossTime')}
-                />
-                {formMethods.formState.errors.lossTime && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {formMethods.formState.errors.lossTime.message}
-                  </p>
-                )}
-              </div>
+        <FormSection title="Details of Loss" description="Provide information about the burglary">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="lossDate">Date of Loss *</Label>
+              <Input
+                type="date"
+                {...formMethods.register('lossDate')}
+              />
+              {formMethods.formState.errors.lossDate && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.lossDate.message}
+                </p>
+              )}
             </div>
             
             <div>
-              <Label htmlFor="lossLocation">Where did the loss occur? *</Label>
+              <Label htmlFor="lossTime">Time of Loss *</Label>
+              <Input
+                type="time"
+                {...formMethods.register('lossTime')}
+              />
+              {formMethods.formState.errors.lossTime && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.lossTime.message}
+                </p>
+              )}
+            </div>
+            
+            <div className="md:col-span-2">
+              <Label htmlFor="lossLocation">Location of Loss *</Label>
               <Textarea
                 {...formMethods.register('lossLocation')}
-                placeholder="Describe the location where the loss occurred"
-                rows={3}
+                placeholder="Describe where the burglary occurred"
+                rows={2}
               />
               {formMethods.formState.errors.lossLocation && (
                 <p className="text-sm text-red-600 mt-1">
@@ -275,8 +241,8 @@ const BurglaryClaimForm: React.FC = () => {
               )}
             </div>
             
-            <div>
-              <Label htmlFor="howItHappened">How did the loss occur? *</Label>
+            <div className="md:col-span-2">
+              <Label htmlFor="howItHappened">How it Happened *</Label>
               <Textarea
                 {...formMethods.register('howItHappened')}
                 placeholder="Describe how the burglary occurred"
@@ -289,12 +255,12 @@ const BurglaryClaimForm: React.FC = () => {
               )}
             </div>
             
-            <div>
-              <Label>Have police been notified? *</Label>
+            <div className="md:col-span-2">
+              <Label>Was the police notified? *</Label>
               <RadioGroup
-                value={watchedValues.policeNotified}
-                onValueChange={(value: 'yes' | 'no') => setValue('policeNotified', value)}
-                className="flex space-x-4 mt-2"
+                value={watchedValues.policeNotified || ''}
+                onValueChange={(value) => setValue('policeNotified', value)}
+                className="flex flex-row space-x-4 mt-2"
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="yes" id="police-yes" />
@@ -313,7 +279,7 @@ const BurglaryClaimForm: React.FC = () => {
             </div>
             
             {watchedValues.policeNotified === 'yes' && (
-              <div>
+              <div className="md:col-span-2">
                 <Label htmlFor="policeStation">Police Station *</Label>
                 <Input
                   {...formMethods.register('policeStation')}
@@ -327,20 +293,20 @@ const BurglaryClaimForm: React.FC = () => {
               </div>
             )}
             
-            <div>
+            <div className="md:col-span-2">
               <Label htmlFor="witnessDetails">Witness Details</Label>
               <Textarea
                 {...formMethods.register('witnessDetails')}
-                placeholder="Enter witness details if any"
+                placeholder="Provide witness information if any"
                 rows={3}
               />
             </div>
             
-            <div>
-              <Label htmlFor="stolenItems">Description of Stolen Items *</Label>
+            <div className="md:col-span-2">
+              <Label htmlFor="stolenItems">Stolen Items *</Label>
               <Textarea
                 {...formMethods.register('stolenItems')}
-                placeholder="Describe what was stolen"
+                placeholder="List all stolen items"
                 rows={4}
               />
               {formMethods.formState.errors.stolenItems && (
@@ -351,12 +317,13 @@ const BurglaryClaimForm: React.FC = () => {
             </div>
             
             <div>
-              <Label htmlFor="estimatedValue">Estimated Value of Loss *</Label>
+              <Label htmlFor="estimatedValue">Estimated Value (₦) *</Label>
               <Input
                 type="number"
-                step="0.01"
                 {...formMethods.register('estimatedValue')}
                 placeholder="Enter estimated value"
+                min="0"
+                step="0.01"
               />
               {formMethods.formState.errors.estimatedValue && (
                 <p className="text-sm text-red-600 mt-1">
@@ -369,103 +336,52 @@ const BurglaryClaimForm: React.FC = () => {
       )
     },
     {
-      id: 'documents',
-      title: 'Documents',
-      component: (
-        <FormSection title="Upload Supporting Documents" description="Please upload any relevant documents">
-          <div className="space-y-6">
-            <FileUpload
-              label="Police Report"
-              onFileSelect={(file) => handleFileSelect('policeReport', file)}
-              onFileRemove={() => handleFileRemove('policeReport')}
-              currentFile={uploadedFiles.policeReport}
-            />
-            
-            <FileUpload
-              label="Photos of Damage/Scene"
-              onFileSelect={(file) => handleFileSelect('photos', file)}
-              onFileRemove={() => handleFileRemove('photos')}
-              currentFile={uploadedFiles.photos}
-            />
-            
-            <FileUpload
-              label="Other Supporting Documents"
-              onFileSelect={(file) => handleFileSelect('otherDocuments', file)}
-              onFileRemove={() => handleFileRemove('otherDocuments')}
-              currentFile={uploadedFiles.otherDocuments}
-            />
-          </div>
-        </FormSection>
-      )
-    },
-    {
       id: 'declaration',
       title: 'Declaration',
       component: (
-        <FormSection title="Data Privacy & Declaration">
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Data Privacy</h3>
-              <div className="text-sm text-gray-600 space-y-2">
-                <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-                <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
-              </div>
+        <FormSection title="Declaration and Signature" description="Complete your claim submission">
+          <div className="space-y-4">
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="declarationAccepted"
+                checked={watchedValues.declarationAccepted || false}
+                onCheckedChange={(checked) => setValue('declarationAccepted', checked)}
+              />
+              <Label htmlFor="declarationAccepted" className="text-sm">
+                I declare that the information provided is true and complete to the best of my knowledge
+                and belief. I understand that any false information may void this claim.
+              </Label>
             </div>
+            {formMethods.formState.errors.declarationAccepted && (
+              <p className="text-sm text-red-600">
+                {formMethods.formState.errors.declarationAccepted.message}
+              </p>
+            )}
             
             <div>
-              <h3 className="text-lg font-semibold mb-2">Declaration</h3>
-              <div className="text-sm text-gray-600 space-y-2">
-                <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-                <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-                <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="declaration"
-                  checked={watchedValues.declarationAccepted}
-                  onCheckedChange={(checked: boolean) => setValue('declarationAccepted', checked)}
-                />
-                <Label htmlFor="declaration" className="text-sm">
-                  I agree to the data privacy policy and declaration above *
-                </Label>
-              </div>
-              {formMethods.formState.errors.declarationAccepted && (
-                <p className="text-sm text-red-600">
-                  {formMethods.formState.errors.declarationAccepted.message}
+              <Label htmlFor="signature">Digital Signature *</Label>
+              <Input
+                {...formMethods.register('signature')}
+                placeholder="Type your full name as signature"
+              />
+              {formMethods.formState.errors.signature && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.signature.message}
                 </p>
               )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="signature">Digital Signature *</Label>
-                  <Input
-                    {...formMethods.register('signature')}
-                    placeholder="Type your full name as signature"
-                  />
-                  {formMethods.formState.errors.signature && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {formMethods.formState.errors.signature.message}
-                    </p>
-                  )}
-                </div>
-                
-                <div>
-                  <Label htmlFor="signatureDate">Date *</Label>
-                  <Input
-                    type="date"
-                    {...formMethods.register('signatureDate')}
-                  />
-                  {formMethods.formState.errors.signatureDate && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {formMethods.formState.errors.signatureDate.message}
-                    </p>
-                  )}
-                </div>
-              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="signatureDate">Date *</Label>
+              <Input
+                type="date"
+                {...formMethods.register('signatureDate')}
+              />
+              {formMethods.formState.errors.signatureDate && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.signatureDate.message}
+                </p>
+              )}
             </div>
           </div>
         </FormSection>
@@ -473,57 +389,59 @@ const BurglaryClaimForm: React.FC = () => {
     }
   ];
 
+  const handleFormSubmit = (data: any) => {
+    setShowSummary(true);
+  };
+
+  const confirmSubmission = () => {
+    setShowSummary(false);
+    handleSubmit(onSubmit)();
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Burglary Insurance Claim Form</h1>
-          <p className="text-gray-600 mt-2">Submit your claim for burglary insurance</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Burglary Claim Form
+            </h1>
+            <p className="text-gray-600">
+              Submit your burglary claim with all required details
+            </p>
+          </div>
+
+          <MultiStepForm
+            steps={steps}
+            onSubmit={handleFormSubmit}
+            formMethods={formMethods}
+            uploadedFiles={uploadedFiles}
+            setUploadedFiles={setUploadedFiles}
+          />
         </div>
 
-        <MultiStepForm
-          steps={steps}
-          onSubmit={handleFormSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Submit Claim"
-          formMethods={formMethods}
-        />
-
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Review Your Claim</DialogTitle>
+              <DialogTitle>Confirm Submission</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold">Policy Information</h3>
-                <p>Policy Number: {watchedValues.policyNumber}</p>
-                <p>Period: {watchedValues.periodOfCoverFrom?.toString()} to {watchedValues.periodOfCoverTo?.toString()}</p>
-              </div>
-              
-              <div>
-                <h3 className="font-semibold">Insured Details</h3>
-                <p>Name: {watchedValues.insuredName}</p>
-                <p>Email: {watchedValues.email}</p>
-                <p>Phone: {watchedValues.phone}</p>
-              </div>
-              
-              <div>
-                <h3 className="font-semibold">Loss Details</h3>
-                <p>Date: {watchedValues.lossDate?.toString()}</p>
-                <p>Time: {watchedValues.lossTime}</p>
-                <p>Value: ₦{watchedValues.estimatedValue}</p>
-              </div>
-              
-              <div className="flex space-x-4">
-                <Button variant="outline" onClick={() => setShowSummary(false)}>
-                  Edit Details
-                </Button>
-                <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
-                  {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
-                </Button>
+              <p>Please review your burglary claim details before submitting:</p>
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <p><strong>Policy Number:</strong> {watchedValues.policyNumber}</p>
+                <p><strong>Insured Name:</strong> {watchedValues.insuredName}</p>
+                <p><strong>Loss Date:</strong> {watchedValues.lossDate}</p>
+                <p><strong>Estimated Value:</strong> ₦{watchedValues.estimatedValue}</p>
               </div>
             </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSummary(false)}>
+                Back to Edit
+              </Button>
+              <Button onClick={confirmSubmission} disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Submit Claim'}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
