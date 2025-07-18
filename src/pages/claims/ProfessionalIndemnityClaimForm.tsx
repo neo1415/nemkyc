@@ -253,65 +253,36 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
+  // Main submit handler that checks authentication
   const handleSubmit = async (data: ProfessionalIndemnityClaimData) => {
-    setIsSubmitting(true);
-    try {
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
         fileUploadPromises.push(
-          uploadFile(file, 'professional-indemnity-claims').then(url => [key + 'Url', url])
+          uploadFile(file, `professional-indemnity-claims/${Date.now()}-${file.name}`).then(url => [key, url])
         );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Prepare form data with file URLs
-      const submissionData = {
-        ...data,
-        ...fileUrls,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        formType: 'professional-indemnity-claim'
-      };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'professional-indemnity-claims'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
-      });
-
-      // Email confirmation would be sent here
-      console.log('Claim submitted for:', data.email);
-      
-      clearDraft();
-      setShowSummary(false);
-      setShowSuccess(true);
-      toast({
-        title: "Claim Submitted Successfully",
-        description: "Your professional indemnity claim has been submitted and you'll receive a confirmation email shortly.",
-      });
-    } catch (error) {
-      console.error('Error submitting claim:', error);
-      toast({
-        title: "Submission Error",
-        description: "There was an error submitting your claim. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      }
     }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Professional Indemnity Claim'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Professional Indemnity Claim');
+    clearDraft();
+    setShowSummary(false);
   };
 
   const onFinalSubmit = (data: ProfessionalIndemnityClaimData) => {
-    if (user) {
-      setShowSummary(true);
-    } else {
-      handleSubmitWithAuth(data, 'Professional Indemnity Claim', handleSubmit);
-    }
+    setShowSummary(true);
   };
 
   const DatePickerField = ({ name, label }: { name: string; label: string }) => {
@@ -878,69 +849,76 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Professional Indemnity Insurance Claim Form</h1>
-          <p className="text-gray-600 mt-2">Submit your professional indemnity insurance claim with all required details</p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <div className="container mx-auto py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
+              <FileText className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2">Professional Indemnity Claim Form</h1>
+            <p className="text-muted-foreground">
+              Submit your professional indemnity insurance claim with all required details
+            </p>
+          </div>
 
-        <MultiStepForm
-          steps={steps}
-          onSubmit={onFinalSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Review & Submit Claim"
-          formMethods={formMethods}
-        />
+          <MultiStepForm
+            steps={steps}
+            onSubmit={onFinalSubmit}
+            formMethods={formMethods}
+          />
 
-        {/* Summary Dialog */}
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Review Your Claim Submission</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>Policy Number:</strong> {watchedValues.policyNumber}</div>
-                <div><strong>Insured Name:</strong> {watchedValues.insuredName}</div>
-                <div><strong>Claimant Name:</strong> {watchedValues.claimantName}</div>
-                <div><strong>Amount Claimed:</strong> ₦{watchedValues.amountClaimed?.toLocaleString()}</div>
+          {/* Summary Dialog */}
+          <Dialog open={showSummary} onOpenChange={setShowSummary}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Claim Summary</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium">Policy Details</h4>
+                  <p className="text-sm text-muted-foreground">Policy: {watchedValues.policyNumber}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium">Insured</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {watchedValues.insuredName} - {watchedValues.email}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium">Claimant</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {watchedValues.claimantName}
+                  </p>
+                </div>
               </div>
-              <div className="flex justify-end space-x-2">
+              <DialogFooter>
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
                   Back to Edit
                 </Button>
-                <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={isSubmitting}>
+                <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Submitting...
                     </>
                   ) : (
-                    'Confirm & Submit'
+                    'Submit Claim'
                   )}
                 </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Auth Required Submit Dialog */}
-        <AuthRequiredSubmit
-          isOpen={showAuthDialog}
-          onClose={dismissAuthDialog}
-          onProceedToSignup={proceedToSignup}
-          formType={formType}
-        />
-
-        {/* Success Modal from Auth Flow */}
-        <div className="relative">
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          {/* Success Modal */}
           <SuccessModal
-            isOpen={authShowSuccess}
-            onClose={() => setAuthShowSuccess()}
-            title="Professional Indemnity Claim Submitted Successfully!"
-            message="Your professional indemnity claim has been submitted and you'll receive a confirmation email shortly."
-            formType="professional-indemnity-claim"
+            isOpen={showSuccess || authShowSuccess || authSubmitting}
+            onClose={() => {
+              setShowSuccess(false);
+              setAuthShowSuccess();
+            }}
+            title="Professional Indemnity Claim Submitted!"
+            formType="Professional Indemnity Claim"
             isLoading={authSubmitting}
             loadingMessage="Your professional indemnity claim is being processed and submitted..."
           />
@@ -963,6 +941,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
           </div>
         )}
       </div>
+
     </div>
   );
 };
