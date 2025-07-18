@@ -25,6 +25,237 @@ export interface FormMapping {
 }
 
 export const FORM_MAPPINGS: FormMapping = {
+  'all-risk-claims': {
+    title: 'All Risk Claim',
+    sections: [
+      {
+        title: 'Policy Details',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
+          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true },
+        ]
+      },
+      {
+        title: 'Insured Details',
+        fields: [
+          { key: 'nameOfInsured', label: 'Name of Insured', type: 'text', editable: true },
+          { key: 'address', label: 'Address', type: 'textarea', editable: true },
+          { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
+          { key: 'email', label: 'Email', type: 'email', editable: true },
+        ]
+      },
+      {
+        title: 'Details of Loss',
+        fields: [
+          { key: 'typeOfClaim', label: 'Type of Claim', type: 'text', editable: true },
+          { key: 'locationOfClaim', label: 'Location of Claim', type: 'text', editable: true },
+          { key: 'dateOfOccurrence', label: 'Date of Occurrence', type: 'date', editable: true },
+          { key: 'timeOfOccurrence', label: 'Time of Occurrence', type: 'text', editable: true },
+          { key: 'propertyDescription', label: 'Property Description', type: 'textarea', editable: true },
+          { key: 'circumstancesOfLoss', label: 'Circumstances of Loss', type: 'textarea', editable: true },
+          { key: 'estimateOfLoss', label: 'Estimate of Loss', type: 'currency', editable: true },
+        ]
+      },
+      {
+        title: 'Property Details',
+        fields: [
+          { key: 'propertyItems', label: 'Property Items', type: 'array', editable: true },
+        ]
+      },
+      {
+        title: 'Ownership & Recovery',
+        fields: [
+          { key: 'soleOwner', label: 'Sole Owner', type: 'boolean', editable: true },
+          { key: 'ownershipExplanation', label: 'Ownership Explanation', type: 'textarea', editable: true, conditional: { dependsOn: 'soleOwner', value: 'false' } },
+          { key: 'hasHirePurchase', label: 'Has Hire Purchase', type: 'boolean', editable: true },
+          { key: 'hirePurchaseCompany', label: 'Hire Purchase Company', type: 'text', editable: true, conditional: { dependsOn: 'hasHirePurchase', value: 'true' } },
+          { key: 'hirePurchaseAddress', label: 'Hire Purchase Address', type: 'text', editable: true, conditional: { dependsOn: 'hasHirePurchase', value: 'true' } },
+          { key: 'recoveryStepsTaken', label: 'Recovery Steps Taken', type: 'textarea', editable: true },
+          { key: 'hasOtherInsurance', label: 'Has Other Insurance', type: 'boolean', editable: true },
+          { key: 'otherInsuranceDetails', label: 'Other Insurance Details', type: 'textarea', editable: true, conditional: { dependsOn: 'hasOtherInsurance', value: 'true' } },
+          { key: 'hasPreviousLoss', label: 'Has Previous Loss', type: 'boolean', editable: true },
+          { key: 'previousLossDetails', label: 'Previous Loss Details', type: 'textarea', editable: true, conditional: { dependsOn: 'hasPreviousLoss', value: 'true' } },
+          { key: 'totalPropertyValue', label: 'Total Property Value', type: 'currency', editable: true },
+          { key: 'hasOtherInsuranceAtTime', label: 'Has Other Insurance At Time', type: 'boolean', editable: true },
+          { key: 'otherInsuranceAtTimeDetails', label: 'Other Insurance At Time Details', type: 'textarea', editable: true, conditional: { dependsOn: 'hasOtherInsuranceAtTime', value: 'true' } },
+          { key: 'hasPriorClaims', label: 'Has Prior Claims', type: 'boolean', editable: true },
+          { key: 'priorClaimsDetails', label: 'Prior Claims Details', type: 'textarea', editable: true, conditional: { dependsOn: 'hasPriorClaims', value: 'true' } },
+          { key: 'policeInformed', label: 'Police Informed', type: 'boolean', editable: true },
+          { key: 'policeStationDetails', label: 'Police Station Details', type: 'text', editable: true, conditional: { dependsOn: 'policeInformed', value: 'true' } },
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature', type: 'text', editable: true },
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false },
+        ]
+      }
+    ]
+  },
+
+  'goods-in-transit-claims': {
+    title: 'Goods In Transit Claim',
+    sections: [
+      {
+        title: 'Policy Details',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
+          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true },
+        ]
+      },
+      {
+        title: 'Insured Details',
+        fields: [
+          { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
+          { key: 'address', label: 'Address', type: 'textarea', editable: true },
+          { key: 'phone', label: 'Phone', type: 'text', editable: true },
+          { key: 'email', label: 'Email', type: 'email', editable: true },
+          { key: 'businessType', label: 'Business Type', type: 'text', editable: true },
+        ]
+      },
+      {
+        title: 'Loss Details',
+        fields: [
+          { key: 'dateOfLoss', label: 'Date of Loss', type: 'date', editable: true },
+          { key: 'timeOfLoss', label: 'Time of Loss', type: 'text', editable: true },
+          { key: 'placeOfOccurrence', label: 'Place of Occurrence', type: 'text', editable: true },
+          { key: 'descriptionOfGoods', label: 'Description of Goods', type: 'textarea', editable: true },
+          { key: 'numberOfPackages', label: 'Number of Packages', type: 'number', editable: true },
+          { key: 'totalWeight', label: 'Total Weight', type: 'number', editable: true },
+          { key: 'weightUnits', label: 'Weight Units', type: 'text', editable: true },
+          { key: 'totalValue', label: 'Total Value', type: 'currency', editable: true },
+          { key: 'howGoodsPacked', label: 'How Goods Packed', type: 'text', editable: true },
+          { key: 'circumstancesOfLoss', label: 'Circumstances of Loss', type: 'textarea', editable: true },
+        ]
+      },
+      {
+        title: 'Transport Details',
+        fields: [
+          { key: 'otherVehicleInvolved', label: 'Other Vehicle Involved', type: 'boolean', editable: true },
+          { key: 'dispatchAddress', label: 'Dispatch Address', type: 'text', editable: true },
+          { key: 'dispatchDate', label: 'Dispatch Date', type: 'date', editable: true },
+          { key: 'consigneeName', label: 'Consignee Name', type: 'text', editable: true },
+          { key: 'consigneeAddress', label: 'Consignee Address', type: 'text', editable: true },
+          { key: 'vehicleRegistration', label: 'Vehicle Registration', type: 'text', editable: true },
+        ]
+      },
+      {
+        title: 'Goods Items',
+        fields: [
+          { key: 'goodsItems', label: 'Goods Items', type: 'array', editable: true },
+        ]
+      },
+      {
+        title: 'Additional Details',
+        fields: [
+          { key: 'inspectionAddress', label: 'Inspection Address', type: 'text', editable: true },
+          { key: 'isOwnerOfGoods', label: 'Is Owner of Goods', type: 'boolean', editable: true },
+          { key: 'goodsInSoundCondition', label: 'Goods in Sound Condition', type: 'boolean', editable: true },
+          { key: 'checkedByDriver', label: 'Checked by Driver', type: 'boolean', editable: true },
+          { key: 'staffLoadedUnloaded', label: 'Staff Loaded/Unloaded', type: 'boolean', editable: true },
+          { key: 'receiptGiven', label: 'Receipt Given', type: 'boolean', editable: true },
+          { key: 'claimMadeAgainstYou', label: 'Claim Made Against You', type: 'boolean', editable: true },
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature', type: 'text', editable: true },
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false },
+        ]
+      }
+    ]
+  },
+
+  'rent-assurance-claims': {
+    title: 'Rent Assurance Claim',
+    sections: [
+      {
+        title: 'Policy Details',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
+          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true },
+        ]
+      },
+      {
+        title: 'Insured Details',
+        fields: [
+          { key: 'nameOfInsured', label: 'Name of Insured (Tenant)', type: 'text', editable: true },
+          { key: 'address', label: 'Address', type: 'textarea', editable: true },
+          { key: 'age', label: 'Age', type: 'number', editable: true },
+          { key: 'email', label: 'Email', type: 'email', editable: true },
+          { key: 'phone', label: 'Phone', type: 'text', editable: true },
+          { key: 'nameOfLandlord', label: 'Name of Landlord', type: 'text', editable: true },
+          { key: 'addressOfLandlord', label: 'Address of Landlord', type: 'textarea', editable: true },
+          { key: 'livingAtPremisesFrom', label: 'Living at Premises From', type: 'date', editable: true },
+          { key: 'livingAtPremisesTo', label: 'Living at Premises To', type: 'date', editable: true },
+        ]
+      },
+      {
+        title: 'Claim Information',
+        fields: [
+          { key: 'periodOfDefaultFrom', label: 'Period of Default From', type: 'date', editable: true },
+          { key: 'periodOfDefaultTo', label: 'Period of Default To', type: 'date', editable: true },
+          { key: 'amountDefaulted', label: 'Amount Defaulted', type: 'currency', editable: true },
+          { key: 'rentDueDate', label: 'Rent Due Date', type: 'date', editable: true },
+          { key: 'rentPaymentFrequency', label: 'Frequency of Rent Payment', type: 'text', editable: true },
+          { key: 'rentPaymentFrequencyOther', label: 'Other Frequency', type: 'text', editable: true, conditional: { dependsOn: 'rentPaymentFrequency', value: 'other' } },
+          { key: 'causeOfInabilityToPay', label: 'Cause of Inability to Pay', type: 'textarea', editable: true },
+        ]
+      },
+      {
+        title: 'Beneficiary Details',
+        fields: [
+          { key: 'nameOfBeneficiary', label: 'Name of Beneficiary', type: 'text', editable: true },
+          { key: 'beneficiaryAge', label: 'Beneficiary Age', type: 'number', editable: true },
+          { key: 'beneficiaryAddress', label: 'Beneficiary Address', type: 'textarea', editable: true },
+          { key: 'beneficiaryEmail', label: 'Beneficiary Email', type: 'email', editable: true },
+          { key: 'beneficiaryPhone', label: 'Beneficiary Phone', type: 'text', editable: true },
+          { key: 'beneficiaryOccupation', label: 'Beneficiary Occupation', type: 'text', editable: true },
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'writtenDeclaration', label: 'Written Declaration', type: 'textarea', editable: true },
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature', type: 'text', editable: true },
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false },
+        ]
+      }
+    ]
+  },
+
   'motor-claims': {
     title: 'Motor Claim',
     sections: [
@@ -778,91 +1009,6 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'declarationAccepted', label: 'Declaration Accepted', type: 'boolean', editable: false },
           { key: 'signature', label: 'Digital Signature', type: 'text', editable: true },
           { key: 'signatureDate', label: 'Signature Date', type: 'date', editable: true },
-        ]
-      },
-      {
-        title: 'System Information',
-        fields: [
-          { key: 'status', label: 'Status', type: 'text', editable: true },
-          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
-          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
-          { key: 'formType', label: 'Form Type', type: 'text', editable: false },
-        ]
-      }
-    ]
-  },
-
-  // Goods In Transit Claims
-  'goods-in-transit-claims': {
-    title: 'Goods In Transit Claim',
-    sections: [
-      {
-        title: 'Policy Details',
-        fields: [
-          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
-          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
-          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true },
-        ]
-      },
-      {
-        title: 'Insured Details',
-        fields: [
-          { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
-          { key: 'address', label: 'Address', type: 'text', editable: true },
-          { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
-          { key: 'email', label: 'Email Address', type: 'email', editable: true },
-          { key: 'businessType', label: 'Business Type', type: 'text', editable: true },
-        ]
-      },
-      {
-        title: 'Loss Details',
-        fields: [
-          { key: 'dateOfLoss', label: 'Date of Loss', type: 'date', editable: true },
-          { key: 'timeOfLoss', label: 'Time of Loss', type: 'text', editable: true },
-          { key: 'placeOfOccurrence', label: 'Place of Occurrence', type: 'text', editable: true },
-          { key: 'descriptionOfGoods', label: 'Description of Goods', type: 'text', editable: true },
-          { key: 'numberOfPackages', label: 'Number of Packages', type: 'number', editable: true },
-          { key: 'totalWeight', label: 'Total Weight', type: 'number', editable: true },
-          { key: 'weightUnits', label: 'Weight Units', type: 'text', editable: true },
-          { key: 'totalValue', label: 'Total Value', type: 'currency', editable: true },
-          { key: 'howGoodsPacked', label: 'How Goods Packed', type: 'text', editable: true },
-          { key: 'circumstancesOfLoss', label: 'Circumstances of Loss', type: 'text', editable: true },
-        ]
-      },
-      {
-        title: 'Transport Details',
-        fields: [
-          { key: 'otherVehicleInvolved', label: 'Other Vehicle Involved', type: 'boolean', editable: true },
-          { key: 'dispatchAddress', label: 'Dispatch Address', type: 'text', editable: true },
-          { key: 'dispatchDate', label: 'Dispatch Date', type: 'text', editable: true },
-          { key: 'consigneeName', label: 'Consignee Name', type: 'text', editable: true },
-          { key: 'consigneeAddress', label: 'Consignee Address', type: 'text', editable: true },
-          { key: 'vehicleRegistration', label: 'Vehicle Registration', type: 'text', editable: true },
-        ]
-      },
-      {
-        title: 'Goods Items',
-        fields: [
-          { key: 'goodsItems', label: 'Items List', type: 'array', editable: true },
-        ]
-      },
-      {
-        title: 'Additional Details',
-        fields: [
-          { key: 'inspectionAddress', label: 'Inspection Address', type: 'text', editable: true },
-          { key: 'isOwnerOfGoods', label: 'Owner of Goods', type: 'boolean', editable: true },
-          { key: 'goodsInSoundCondition', label: 'Goods in Sound Condition', type: 'boolean', editable: true },
-          { key: 'checkedByDriver', label: 'Checked by Driver', type: 'boolean', editable: true },
-          { key: 'staffLoadedUnloaded', label: 'Staff Loaded/Unloaded', type: 'boolean', editable: true },
-          { key: 'receiptGiven', label: 'Receipt Given', type: 'boolean', editable: true },
-          { key: 'claimMadeAgainstYou', label: 'Claim Made Against You', type: 'boolean', editable: true },
-        ]
-      },
-      {
-        title: 'Declaration & Signature',
-        fields: [
-          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
-          { key: 'signature', label: 'Digital Signature', type: 'text', editable: true },
         ]
       },
       {
