@@ -9,7 +9,7 @@ import { Label } from '../../components/ui/label';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/dialog';
-import { UserPlus, Mail, CheckCircle2 } from 'lucide-react';
+import { UserPlus, Mail, CheckCircle2, Loader2 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 
 const SignUp: React.FC = () => {
@@ -266,8 +266,17 @@ const SignUp: React.FC = () => {
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Create Account
+                </>
+              )}
             </Button>
           </form>
 
@@ -287,8 +296,17 @@ const SignUp: React.FC = () => {
               disabled={loading}
               className="w-full mt-4"
             >
-              <Mail className="mr-2 h-4 w-4" />
-              Sign up with Google
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing up...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Sign up with Google
+                </>
+              )}
             </Button>
           </div>
 

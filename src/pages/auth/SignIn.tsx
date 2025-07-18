@@ -7,7 +7,7 @@ import { Input } from '../../components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Label } from '../../components/ui/label';
 import { Alert, AlertDescription } from '../../components/ui/alert';
-import { LogIn, Mail } from 'lucide-react';
+import { LogIn, Mail, Loader2 } from 'lucide-react';
 
 const SignIn: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -59,7 +59,7 @@ const SignIn: React.FC = () => {
           const userData = userDoc.data();
           const role = userData.role || 'default';
           
-          if (['admin', 'super-admin', 'compliance', 'claims'].includes(role)) {
+          if (['admin', 'super admin', 'compliance', 'claims'].includes(role)) {
             navigate('/admin', { replace: true });
           } else {
             navigate('/dashboard', { replace: true });
@@ -112,7 +112,7 @@ const SignIn: React.FC = () => {
         const userData = userDoc.data();
         const role = userData.role || 'default';
         
-        if (['admin', 'super-admin', 'compliance', 'claims'].includes(role)) {
+        if (['admin', 'super admin', 'compliance', 'claims'].includes(role)) {
           navigate('/admin', { replace: true });
         } else {
           navigate('/dashboard', { replace: true });
@@ -172,8 +172,17 @@ const SignIn: React.FC = () => {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              <LogIn className="mr-2 h-4 w-4" />
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Sign In
+                </>
+              )}
             </Button>
           </form>
 
@@ -193,8 +202,17 @@ const SignIn: React.FC = () => {
               disabled={loading}
               className="w-full mt-4"
             >
-              <Mail className="mr-2 h-4 w-4" />
-              Sign in with Google
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Sign in with Google
+                </>
+              )}
             </Button>
           </div>
 
