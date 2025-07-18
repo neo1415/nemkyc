@@ -120,14 +120,14 @@ const getFirestoreCollection = (formType: string): string => {
   if (formTypeLower.includes('allrisk') || formTypeLower.includes('all risk')) return 'allRiskClaims';
   if (formTypeLower.includes('goods')) return 'goodsInTransitClaims';
   if (formTypeLower.includes('money')) return 'moneyInsuranceClaims';
-  if (formTypeLower.includes('employers')) return 'employersLiabilityClaims';
-  if (formTypeLower.includes('public')) return 'publicLiabilityClaims';
-  if (formTypeLower.includes('professional')) return 'professionalIndemnityClaims';
+  if (formTypeLower.includes('employers')) return 'employers-liability-claims';
+  if (formTypeLower.includes('public')) return 'public-liability-claims';
+  if (formTypeLower.includes('professional')) return 'professional-indemnity-claims';
   if (formTypeLower.includes('fidelity')) return 'fidelityGuaranteeClaims';
   if (formTypeLower.includes('contractors')) return 'contractorsPlantMachineryClaims';
   if (formTypeLower.includes('group')) return 'groupPersonalAccidentClaims';
   if (formTypeLower.includes('rent')) return 'rentAssuranceClaims';
-  if (formTypeLower.includes('combined')) return 'combinedGPAEmployersLiabilityClaims';
+  if (formTypeLower.includes('combined')) return 'combined-gpa-employers-liability-claims';
   
   // KYC forms
   if (formTypeLower.includes('individual') && formTypeLower.includes('kyc')) return 'individualKYC';
