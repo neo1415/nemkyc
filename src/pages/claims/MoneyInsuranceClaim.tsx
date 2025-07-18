@@ -45,16 +45,16 @@ const moneyInsuranceSchema = yup.object().shape({
 
 type MoneyInsuranceData = yup.InferType<typeof moneyInsuranceSchema>;
 
-const defaultValues: Partial<MoneyInsuranceData> = {
+const defaultValues = {
   signatureDate: new Date(),
   policeNotified: 'no'
-};
+} as Partial<MoneyInsuranceData>;
 
 const MoneyInsuranceClaim: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
-  const formMethods = useForm<Partial<MoneyInsuranceData>>({
+  const formMethods = useForm<MoneyInsuranceData>({
     resolver: yupResolver(moneyInsuranceSchema),
     defaultValues,
     mode: 'onChange'
@@ -525,8 +525,6 @@ const MoneyInsuranceClaim: React.FC = () => {
           title="Claim Submitted Successfully!"
           message="Your money insurance claim has been submitted successfully. You will receive a confirmation email shortly."
           formType="Money Insurance Claim"
-          isLoading={isSubmitting}
-          loadingMessage="Your money insurance claim is being submitted..."
         />
       </div>
     </div>

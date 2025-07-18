@@ -46,16 +46,16 @@ const burglarySchema = yup.object().shape({
 
 type BurglaryData = yup.InferType<typeof burglarySchema>;
 
-const defaultValues: Partial<BurglaryData> = {
+const defaultValues = {
   signatureDate: new Date(),
   policeNotified: 'no'
-};
+} as Partial<BurglaryData>;
 
 const BurglaryClaimForm: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
-  const formMethods = useForm<Partial<BurglaryData>>({
+  const formMethods = useForm<BurglaryData>({
     resolver: yupResolver(burglarySchema),
     defaultValues,
     mode: 'onChange'
@@ -533,8 +533,6 @@ const BurglaryClaimForm: React.FC = () => {
           title="Claim Submitted Successfully!"
           message="Your burglary claim has been submitted successfully. You will receive a confirmation email shortly."
           formType="Burglary Claim"
-          isLoading={isSubmitting}
-          loadingMessage="Your burglary claim is being submitted..."
         />
       </div>
     </div>

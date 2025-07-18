@@ -46,16 +46,16 @@ const fireSpecialPerilsSchema = yup.object().shape({
 
 type FireSpecialPerilsData = yup.InferType<typeof fireSpecialPerilsSchema>;
 
-const defaultValues: Partial<FireSpecialPerilsData> = {
+const defaultValues = {
   signatureDate: new Date(),
   fireServiceNotified: 'no'
-};
+} as Partial<FireSpecialPerilsData>;
 
 const FireSpecialPerilsClaim: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
-  const formMethods = useForm<Partial<FireSpecialPerilsData>>({
+  const formMethods = useForm<FireSpecialPerilsData>({
     resolver: yupResolver(fireSpecialPerilsSchema),
     defaultValues,
     mode: 'onChange'
@@ -538,8 +538,6 @@ const FireSpecialPerilsClaim: React.FC = () => {
           title="Claim Submitted Successfully!"
           message="Your fire & special perils claim has been submitted successfully. You will receive a confirmation email shortly."
           formType="Fire & Special Perils Claim"
-          isLoading={isSubmitting}
-          loadingMessage="Your fire & special perils claim is being submitted..."
         />
       </div>
     </div>
