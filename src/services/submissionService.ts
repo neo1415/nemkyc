@@ -1,4 +1,4 @@
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { toast } from 'sonner';
 
@@ -86,7 +86,8 @@ export const submitFormWithNotifications = async (
     // Add metadata to form data
     const submissionData = {
       ...formData,
-      timestamp: Date.now(),
+      timestamp: serverTimestamp(),
+      createdAt: new Date().toLocaleDateString('en-GB'),
       submittedAt: new Date().toISOString(),
       submittedBy: userEmail,
       status: 'pending'

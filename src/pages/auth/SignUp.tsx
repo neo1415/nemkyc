@@ -76,7 +76,29 @@ const SignUp: React.FC = () => {
           });
         }
       } else {
-        navigate('/dashboard');
+        // Check user role and navigate appropriately
+        const { getAuth } = await import('firebase/auth');
+        const { doc, getDoc } = await import('firebase/firestore');
+        const { db } = await import('../../firebase/config');
+        
+        const currentUser = getAuth().currentUser;
+        if (currentUser) {
+          const userDoc = await getDoc(doc(db, 'userroles', currentUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const role = userData.role || 'default';
+            
+            if (['admin', 'super admin', 'compliance', 'claims'].includes(role)) {
+              navigate('/admin');
+            } else {
+              navigate('/dashboard');
+            }
+          } else {
+            navigate('/dashboard');
+          }
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
@@ -113,7 +135,29 @@ const SignUp: React.FC = () => {
           });
         }
       } else {
-        navigate('/dashboard');
+        // Check user role and navigate appropriately
+        const { getAuth } = await import('firebase/auth');
+        const { doc, getDoc } = await import('firebase/firestore');
+        const { db } = await import('../../firebase/config');
+        
+        const currentUser = getAuth().currentUser;
+        if (currentUser) {
+          const userDoc = await getDoc(doc(db, 'userroles', currentUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const role = userData.role || 'default';
+            
+            if (['admin', 'super admin', 'compliance', 'claims'].includes(role)) {
+              navigate('/admin');
+            } else {
+              navigate('/dashboard');
+            }
+          } else {
+            navigate('/dashboard');
+          }
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Failed to sign up with Google');
@@ -271,9 +315,32 @@ const SignUp: React.FC = () => {
           </DialogHeader>
           <div className="flex flex-col space-y-4 pt-4">
             <Button 
-              onClick={() => {
+              onClick={async () => {
                 setShowSuccess(false);
-                navigate('/dashboard');
+                
+                // Check user role and navigate appropriately
+                const { getAuth } = await import('firebase/auth');
+                const { doc, getDoc } = await import('firebase/firestore');
+                const { db } = await import('../../firebase/config');
+                
+                const currentUser = getAuth().currentUser;
+                if (currentUser) {
+                  const userDoc = await getDoc(doc(db, 'userroles', currentUser.uid));
+                  if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    const role = userData.role || 'default';
+                    
+                    if (['admin', 'super admin', 'compliance', 'claims'].includes(role)) {
+                      navigate('/admin');
+                    } else {
+                      navigate('/dashboard');
+                    }
+                  } else {
+                    navigate('/dashboard');
+                  }
+                } else {
+                  navigate('/dashboard');
+                }
               }}
               className="w-full"
             >
