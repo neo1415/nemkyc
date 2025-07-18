@@ -46,16 +46,16 @@ const fireSpecialPerilsSchema = yup.object().shape({
 
 type FireSpecialPerilsData = yup.InferType<typeof fireSpecialPerilsSchema>;
 
-const defaultValues = {
+const defaultValues: Partial<FireSpecialPerilsData> = {
   signatureDate: new Date(),
   fireServiceNotified: 'no'
-} as Partial<FireSpecialPerilsData>;
+};
 
 const FireSpecialPerilsClaim: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
-  const formMethods = useForm<FireSpecialPerilsData>({
+  const formMethods = useForm({
     resolver: yupResolver(fireSpecialPerilsSchema),
     defaultValues,
     mode: 'onChange'
