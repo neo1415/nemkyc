@@ -106,7 +106,6 @@ This application is a highly professional, production-grade insurance form suite
 - Add the summary-dialog + success modal  
 - Always use a professional success note for follow-up
 
----
 
 ## 📌 DATA PRIVACY & DECLARATION BLOCK (for all forms, final step)
 
