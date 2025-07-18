@@ -18,15 +18,21 @@ export const useAuthRequiredSubmit = () => {
 
   // Check for post-authentication success state
   useEffect(() => {
-    const checkPostAuthSuccess = () => {
+    const checkPostAuthStates = async () => {
+      const submissionInProgress = sessionStorage.getItem('submissionInProgress');
       const postAuthSuccess = sessionStorage.getItem('postAuthSuccess');
-      if (postAuthSuccess) {
+      
+      if (submissionInProgress) {
+        // Show loading modal first
+        setIsSubmitting(true);
+        setShowSuccess(true);
+      } else if (postAuthSuccess) {
         sessionStorage.removeItem('postAuthSuccess');
         setShowSuccess(true);
       }
     };
 
-    checkPostAuthSuccess();
+    checkPostAuthStates();
   }, [user]);
 
   const handleSubmitWithAuth = async (
@@ -71,11 +77,16 @@ export const useAuthRequiredSubmit = () => {
     setPendingSubmission(null);
   };
 
+  const closeSuccessModal = () => {
+    setShowSuccess(false);
+    setIsSubmitting(false);
+  };
+
   return {
     handleSubmitWithAuth,
     showAuthDialog,
     showSuccess,
-    setShowSuccess,
+    setShowSuccess: closeSuccessModal,
     isSubmitting,
     proceedToSignup,
     dismissAuthDialog,
@@ -94,14 +105,19 @@ export const processPendingSubmissionUtil = async (userEmail: string) => {
       sessionStorage.removeItem('pendingSubmission');
       
       try {
+        // Set flag to show loading modal
+        sessionStorage.setItem('submissionInProgress', 'true');
+        
         // Import the submission service dynamically
         const { submitFormWithNotifications } = await import('../services/submissionService');
         await submitFormWithNotifications(formData, formType, userEmail);
         
-        // Set flag for success modal to show after redirect
+        // Clear loading and set success flag
+        sessionStorage.removeItem('submissionInProgress');
         sessionStorage.setItem('postAuthSuccess', 'true');
         return true;
       } catch (error) {
+        sessionStorage.removeItem('submissionInProgress');
         console.error('Error submitting form after authentication:', error);
         throw error;
       }
