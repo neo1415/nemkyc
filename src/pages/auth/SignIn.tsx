@@ -28,7 +28,21 @@ const SignIn: React.FC = () => {
 
     try {
       await signIn(email, password);
-      // Role-based navigation
+      
+      // Check if there's a pending submission
+      const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
+      if (hasPendingSubmission) {
+        // Process pending submission and redirect back to original page
+        const { useAuthRequiredSubmit } = await import('../../hooks/useAuthRequiredSubmit');
+        const { processPendingSubmission } = useAuthRequiredSubmit();
+        await processPendingSubmission();
+        
+        // Redirect back to the original page
+        navigate(-1);
+        return;
+      }
+
+      // Normal sign-in flow - role-based navigation
       const { doc, getDoc } = await import('firebase/firestore');
       const { db } = await import('../../firebase/config');
       const { getAuth } = await import('firebase/auth');
@@ -65,7 +79,21 @@ const SignIn: React.FC = () => {
 
     try {
       await signInWithGoogle();
-      // Role-based navigation
+      
+      // Check if there's a pending submission
+      const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
+      if (hasPendingSubmission) {
+        // Process pending submission and redirect back to original page
+        const { useAuthRequiredSubmit } = await import('../../hooks/useAuthRequiredSubmit');
+        const { processPendingSubmission } = useAuthRequiredSubmit();
+        await processPendingSubmission();
+        
+        // Redirect back to the original page
+        navigate(-1);
+        return;
+      }
+
+      // Normal sign-in flow - role-based navigation
       const { doc, getDoc } = await import('firebase/firestore');
       const { db } = await import('../../firebase/config');
       const { getAuth } = await import('firebase/auth');

@@ -53,7 +53,13 @@ const SignUp: React.FC = () => {
       // Check if there's a pending submission
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
-        navigate('/dashboard', { state: { message: 'Account created and form submitted successfully!' } });
+        // Process pending submission and redirect back to original page
+        const { useAuthRequiredSubmit } = await import('../../hooks/useAuthRequiredSubmit');
+        const { processPendingSubmission } = useAuthRequiredSubmit();
+        await processPendingSubmission();
+        
+        // Redirect back to the original page
+        navigate(-1);
       } else {
         navigate('/dashboard');
       }
@@ -74,7 +80,13 @@ const SignUp: React.FC = () => {
       // Check if there's a pending submission
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
-        navigate('/dashboard', { state: { message: 'Signed in and form submitted successfully!' } });
+        // Process pending submission and redirect back to original page
+        const { useAuthRequiredSubmit } = await import('../../hooks/useAuthRequiredSubmit');
+        const { processPendingSubmission } = useAuthRequiredSubmit();
+        await processPendingSubmission();
+        
+        // Redirect back to the original page
+        navigate(-1);
       } else {
         navigate('/dashboard');
       }
