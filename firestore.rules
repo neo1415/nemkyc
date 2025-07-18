@@ -1,0 +1,207 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ========== Helper Functions ==========
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/userroles/$(request.auth.uid)).data.role;
+    }
+
+    function isSuperAdmin() {
+      return request.auth != null && getUserRole() == 'super admin';
+    }
+
+    function isAdmin() {
+      return request.auth != null && getUserRole() == 'admin';
+    }
+
+    function isCompliance() {
+      return request.auth != null && getUserRole() == 'compliance';
+    }
+
+    function isClaims() {
+      return request.auth != null && getUserRole() == 'claims';
+    }
+
+    function isDefault() {
+      return request.auth != null && (getUserRole() == 'default' || !exists(/databases/$(database)/documents/userroles/$(request.auth.uid)));
+    }
+
+    function isAdminOrSuperAdmin() {
+      return isAdmin() || isSuperAdmin();
+    }
+
+    function isAdminOrCompliance() {
+      return isAdmin() || isCompliance() || isSuperAdmin();
+    }
+
+    function isClaimsOrAdminOrCompliance() {
+      return isClaims() || isAdmin() || isCompliance() || isSuperAdmin();
+    }
+
+    function isAuthenticatedUser() {
+      return request.auth != null;
+    }
+
+    // ========== /userroles/{userId} ==========
+
+    match /userroles/{userId} {
+      // Allow everyone (even unauthenticated) to create their own doc, but not with restricted fields
+      allow create: if request.auth == null || (
+        request.auth.uid == userId &&
+        !("role" in request.resource.data) &&
+        !("dateCreated" in request.resource.data) &&
+        !("dateModified" in request.resource.data) &&
+        !("email" in request.resource.data)
+      );
+
+      // Allow users to read their own document, superAdmin can read all
+      allow read: if request.auth.uid == userId || isSuperAdmin();
+      
+      // Only superAdmin can update, delete
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // ========== KYC & CDD Collections ==========
+
+    match /partners-kyc/{docId} {
+      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /individual-kyc/{docId} {
+      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /individual-kyc-forms/{docId} {
+      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /Individual-kyc-form/{docId} {
+      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /corporate-kyc/{docId} {
+      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /corporate-kyc-form/{docId} {
+      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /corporate-kyc-forms/{docId} {
+      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /agents-kyc/{docId} {
+      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /brokers-kyc/{docId} {
+      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /naicom-partners-cdd/{docId} {
+      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /naicom-corporate-cdd/{docId} {
+      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /brokers-cdd/{docId} {
+      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    // ========== Claims Collections ==========
+
+    match /motor-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /public-liability-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /rent-assurance-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /professional-indemnity-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /employers-liability-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /goodsInTransitClaims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /fireAndSpecialPerilsClaims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /groupPersonalAccidentClaims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /combined-gpa-employers-liability-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /burglary-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /all-risk-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /money-insurance-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    match /fidelityGuaranteeClaims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+    
+    match /contractors-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+
+    // ========== General fallback ==========
+
+    match /{document=**} {
+      allow read: if isAdminOrSuperAdmin() || isDefault();
+      allow write: if isAuthenticatedUser();
+    }
+  }
+}
