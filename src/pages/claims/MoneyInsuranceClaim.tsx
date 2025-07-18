@@ -1,22 +1,23 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../firebase/config';
 import MultiStepForm from '../../components/common/MultiStepForm';
 import FormSection from '../../components/common/FormSection';
 import PhoneInput from '../../components/common/PhoneInput';
-import { useToast } from '../../hooks/use-toast';
+import FileUpload from '../../components/common/FileUpload';
 import { useFormDraft } from '../../hooks/useFormDraft';
+import { useAuthRequiredSubmit } from '../../hooks/useAuthRequiredSubmit';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Label } from '../../components/ui/label';
 import { Checkbox } from '../../components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { uploadFormFiles } from '../../services/fileService';
+import SuccessModal from '../../components/common/SuccessModal';
 
 const moneyInsuranceSchema = yup.object().shape({
   policyNumber: yup.string().required('Policy number is required'),
@@ -31,7 +32,10 @@ const moneyInsuranceSchema = yup.object().shape({
   lossLocation: yup.string().required('Loss location is required'),
   howItHappened: yup.string().required('How it happened is required'),
   policeNotified: yup.string().oneOf(['yes', 'no']).required('Police notification status is required'),
-  policeStation: yup.string(),
+  policeStation: yup.string().when('policeNotified', {
+    is: 'yes',
+    then: (schema) => schema.required('Police station is required when police is notified')
+  }),
   lossAmount: yup.number().min(0, 'Loss amount must be positive').required('Loss amount is required'),
   lossDescription: yup.string().required('Loss description is required'),
   declarationAccepted: yup.boolean().oneOf([true], 'Declaration required'),
@@ -47,18 +51,23 @@ const defaultValues: Partial<MoneyInsuranceData> = {
 };
 
 const MoneyInsuranceClaim: React.FC = () => {
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
   const formMethods = useForm<Partial<MoneyInsuranceData>>({
+    resolver: yupResolver(moneyInsuranceSchema),
     defaultValues,
     mode: 'onChange'
   });
 
   const { watch, handleSubmit, setValue } = formMethods;
   const { saveDraft, loadDraft } = useFormDraft('money-insurance-claim', formMethods);
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess, 
+    setShowSuccess, 
+    isSubmitting 
+  } = useAuthRequiredSubmit();
   
   const watchedValues = watch();
 
@@ -73,57 +82,40 @@ const MoneyInsuranceClaim: React.FC = () => {
     loadDraft();
   }, [loadDraft]);
 
-  const cleanData = (data: any) => {
-    const cleaned = Object.entries(data).reduce((acc, [key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        acc[key] = value;
-      }
-      return acc;
-    }, {} as any);
-    return cleaned;
-  };
-
   const onSubmit = async (data: MoneyInsuranceData) => {
-    setIsSubmitting(true);
     try {
-      const cleanedData = cleanData(data);
-      
-      await addDoc(collection(db, 'money-insurance-claims'), {
-        ...cleanedData,
-        submittedAt: new Date().toISOString(),
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB'),
-        status: 'processing'
-      });
+      // Upload files if any
+      let fileUrls = {};
+      if (Object.keys(uploadedFiles).length > 0) {
+        fileUrls = await uploadFormFiles(uploadedFiles, 'money-insurance-claims');
+      }
 
-      // await sendEmail({
-      //   to: data.email,
-      //   template: 'claim-confirmation',
-      //   data: { claimType: 'Money Insurance Claim', ...data }
-      // });
+      const submissionData = {
+        ...data,
+        ...fileUrls,
+        formType: 'money-insurance-claim'
+      };
 
-      setShowSummary(false);
-      setShowSuccess(true);
-      toast({
-        title: "Claim Submitted Successfully",
-        description: "Your money insurance claim has been submitted.",
-      });
+      await handleSubmitWithAuth(submissionData, 'money-insurance-claim');
     } catch (error) {
       console.error('Submission error:', error);
-      toast({
-        title: "Submission Failed",
-        description: "Please try again or contact support.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleFormSubmit = () => {
-    if (watchedValues.declarationAccepted) {
-      setShowSummary(true);
-    }
+    setShowSummary(true);
+  };
+
+  const handleFileSelect = (key: string, file: File) => {
+    setUploadedFiles(prev => ({ ...prev, [key]: file }));
+  };
+
+  const handleFileRemove = (key: string) => {
+    setUploadedFiles(prev => {
+      const updated = { ...prev };
+      delete updated[key];
+      return updated;
+    });
   };
 
   const steps = [
@@ -321,11 +313,16 @@ const MoneyInsuranceClaim: React.FC = () => {
             
             {watchedValues.policeNotified === 'yes' && (
               <div>
-                <Label htmlFor="policeStation">Police Station</Label>
+                <Label htmlFor="policeStation">Police Station *</Label>
                 <Input
                   {...formMethods.register('policeStation')}
                   placeholder="Enter police station name"
                 />
+                {formMethods.formState.errors.policeStation && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {formMethods.formState.errors.policeStation.message}
+                  </p>
+                )}
               </div>
             )}
             
@@ -359,6 +356,36 @@ const MoneyInsuranceClaim: React.FC = () => {
                 )}
               </div>
             </div>
+          </div>
+        </FormSection>
+      )
+    },
+    {
+      id: 'documents',
+      title: 'Documents',
+      component: (
+        <FormSection title="Upload Supporting Documents" description="Please upload any relevant documents">
+          <div className="space-y-6">
+            <FileUpload
+              label="Police Report"
+              onFileSelect={(file) => handleFileSelect('policeReport', file)}
+              onFileRemove={() => handleFileRemove('policeReport')}
+              currentFile={uploadedFiles.policeReport}
+            />
+            
+            <FileUpload
+              label="Evidence Photos"
+              onFileSelect={(file) => handleFileSelect('photos', file)}
+              onFileRemove={() => handleFileRemove('photos')}
+              currentFile={uploadedFiles.photos}
+            />
+            
+            <FileUpload
+              label="Other Supporting Documents"
+              onFileSelect={(file) => handleFileSelect('otherDocuments', file)}
+              onFileRemove={() => handleFileRemove('otherDocuments')}
+              currentFile={uploadedFiles.otherDocuments}
+            />
           </div>
         </FormSection>
       )
@@ -438,38 +465,10 @@ const MoneyInsuranceClaim: React.FC = () => {
     }
   ];
 
-  if (showSuccess) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <CardTitle className="text-green-600">Claim Submitted Successfully!</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-gray-600">
-              Your money insurance claim has been submitted successfully. 
-              You will receive a confirmation email shortly.
-            </p>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">For claim status and inquiries:</h4>
-              <p className="text-sm">Email: claims@neminsurance.com</p>
-              <p className="text-sm">Phone: +234 1 234 5678</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
       <div className="max-w-4xl mx-auto px-4">
-        <div className="mb-8">
+        <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-gray-900">Money Insurance Claim Form</h1>
           <p className="text-gray-600 mt-2">Submit your claim for money insurance</p>
         </div>
@@ -519,6 +518,16 @@ const MoneyInsuranceClaim: React.FC = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        <SuccessModal
+          isOpen={showSuccess}
+          onClose={() => setShowSuccess(false)}
+          title="Claim Submitted Successfully!"
+          message="Your money insurance claim has been submitted successfully. You will receive a confirmation email shortly."
+          formType="Money Insurance Claim"
+          isLoading={isSubmitting}
+          loadingMessage="Your money insurance claim is being submitted..."
+        />
       </div>
     </div>
   );
