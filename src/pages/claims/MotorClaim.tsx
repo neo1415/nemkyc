@@ -250,6 +250,7 @@ const MotorClaim: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
   const { 
     handleSubmitWithAuth, 
@@ -257,6 +258,27 @@ const MotorClaim: React.FC = () => {
     setShowSuccess: setAuthShowSuccess,
     isSubmitting: authSubmitting
   } = useAuthRequiredSubmit();
+
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        // Hide loading after 5 seconds max (in case something goes wrong)
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
 
   const formMethods = useForm<any>({
     // resolver: yupResolver(motorClaimSchema),
@@ -1451,6 +1473,23 @@ const MotorClaim: React.FC = () => {
             loadingMessage="Your motor claim is being processed and submitted..."
           />
         </div>
+
+        {/* Post-Authentication Loading Overlay */}
+        {showPostAuthLoading && (
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                </div>
+                <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
+                <p className="text-muted-foreground">
+                  Thank you for signing in! Your motor claim is now being submitted...
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
     </div>
