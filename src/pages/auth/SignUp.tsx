@@ -49,7 +49,14 @@ const SignUp: React.FC = () => {
         formData.notificationPreference,
         formData.phone || undefined
       );
-      navigate('/dashboard');
+      
+      // Check if there's a pending submission
+      const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
+      if (hasPendingSubmission) {
+        navigate('/dashboard', { state: { message: 'Account created and form submitted successfully!' } });
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
     } finally {
@@ -63,7 +70,14 @@ const SignUp: React.FC = () => {
 
     try {
       await signInWithGoogle();
-      navigate('/dashboard');
+      
+      // Check if there's a pending submission
+      const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
+      if (hasPendingSubmission) {
+        navigate('/dashboard', { state: { message: 'Signed in and form submitted successfully!' } });
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to sign up with Google');
     } finally {

@@ -20,9 +20,8 @@ import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-// import { emailService } from '@/services/emailService';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import AuthRequiredSubmit from '@/components/common/AuthRequiredSubmit';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Motor Claim Schema
@@ -252,6 +251,13 @@ const MotorClaim: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const { 
+    handleSubmitWithAuth, 
+    showAuthDialog, 
+    proceedToSignup, 
+    dismissAuthDialog, 
+    formType 
+  } = useAuthRequiredSubmit();
 
   const formMethods = useForm<any>({
     // resolver: yupResolver(motorClaimSchema),
@@ -275,7 +281,8 @@ const MotorClaim: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
-  const handleSubmit = async (data: MotorClaimData) => {
+  // Internal submission function (used after authentication)
+  const internalSubmit = async (data: MotorClaimData) => {
     setIsSubmitting(true);
     try {
       // Clean data by removing undefined values
@@ -301,36 +308,28 @@ const MotorClaim: React.FC = () => {
         ...fileUrls,
         status: 'processing',
         submittedAt: new Date().toISOString(),
-        formType: 'motor-claim'
+        formType: 'Motor Claim'
       };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'motor-claims'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
-      });
-
-      // Send confirmation email
-      // await emailService.sendSubmissionConfirmation(data.email, 'Motor Claim');
       
       clearDraft();
       setShowSummary(false);
       setShowSuccess(true);
-      toast({
-        title: "Claim Submitted Successfully",
-        description: "Your motor claim has been submitted and you'll receive a confirmation email shortly.",
-      });
     } catch (error) {
-      console.error('Error submitting claim:', error);
+      console.error('Error preparing submission:', error);
       toast({
         title: "Submission Error",
         description: "There was an error submitting your claim. Please try again.",
         variant: "destructive",
       });
+      throw error;
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Main submit handler that checks authentication
+  const handleSubmit = async (data: MotorClaimData) => {
+    await handleSubmitWithAuth(data, 'Motor Claim', internalSubmit);
   };
 
   const onFinalSubmit = (data: MotorClaimData) => {
@@ -1489,6 +1488,14 @@ const MotorClaim: React.FC = () => {
           </Dialog>
         </div>
       </div>
+
+      {/* Authentication Required Dialog */}
+      <AuthRequiredSubmit
+        isOpen={showAuthDialog}
+        onClose={dismissAuthDialog}
+        onProceedToSignup={proceedToSignup}
+        formType={formType}
+      />
     </div>
   );
 };
