@@ -84,7 +84,7 @@ const SignIn: React.FC = () => {
     try {
       await signInWithGoogle();
       
-      // Check if there's a pending submission
+      // Check  here if there's a pending submission
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
         // Process pending submission and redirect back to original page
