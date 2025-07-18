@@ -1,32 +1,25 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { Calendar, CalendarIcon, Upload, Edit2, Truck, FileText, CheckCircle2, Loader2, Plus, Trash2, Info } from 'lucide-react';
-import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import MultiStepForm from '@/components/common/MultiStepForm';
-import { useFormDraft } from '@/hooks/useFormDraft';
-import FileUpload from '@/components/common/FileUpload';
-import { uploadFile } from '@/services/fileService';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-// import { emailService } from '@/services/emailService';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import PhoneInput from '@/components/common/PhoneInput';
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { Badge } from '@/components/ui/badge';
+import MultiStepForm from '../../components/common/MultiStepForm';
+import FormSection from '../../components/common/FormSection';
+import PhoneInput from '../../components/common/PhoneInput';
+import FileUpload from '../../components/common/FileUpload';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { useAuthRequiredSubmit } from '../../hooks/useAuthRequiredSubmit';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
+import { Label } from '../../components/ui/label';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { Card, CardContent } from '../../components/ui/card';
+import { Plus, Trash2 } from 'lucide-react';
+import { uploadFormFiles } from '../../services/fileService';
+import SuccessModal from '../../components/common/SuccessModal';
 
 // Goods In Transit Claim Schema
 const goodsInTransitClaimSchema = yup.object().shape({
@@ -152,14 +145,11 @@ const defaultValues: Partial<GoodsInTransitClaimData> = {
 };
 
 const GoodsInTransitClaim: React.FC = () => {
-  const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
   const formMethods = useForm<any>({
-    // resolver: yupResolver(goodsInTransitClaimSchema),
+    resolver: yupResolver(goodsInTransitClaimSchema),
     defaultValues,
     mode: 'onChange'
   });
@@ -169,136 +159,75 @@ const GoodsInTransitClaim: React.FC = () => {
     name: 'goodsItems'
   });
 
-  const { saveDraft, clearDraft } = useFormDraft('goodsInTransitClaim', formMethods);
-  const watchedValues = formMethods.watch();
+  const { watch, handleSubmit, setValue } = formMethods;
+  const { saveDraft, loadDraft } = useFormDraft('goodsInTransitClaim', formMethods);
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess, 
+    setShowSuccess, 
+    isSubmitting 
+  } = useAuthRequiredSubmit();
+  
+  const watchedValues = watch();
 
   // Auto-save draft
   useEffect(() => {
-    const subscription = formMethods.watch((data) => {
+    const subscription = watch((data) => {
       saveDraft(data);
     });
     return () => subscription.unsubscribe();
-  }, [formMethods, saveDraft]);
+  }, [watch, saveDraft]);
+
+  useEffect(() => {
+    loadDraft();
+  }, [loadDraft]);
 
   // Calculate total value from goods items in real-time
-  // Old calculation logic: const total = watchedValues.goodsItems?.reduce((sum, item) => sum + (item.value || 0), 0) || 0;
   useEffect(() => {
-    const subscription = formMethods.watch((data) => {
+    const subscription = watch((data) => {
       const total = data.goodsItems?.reduce((sum, item) => 
         sum + ((item.quantity || 0) * (item.value || 0)), 0) || 0;
       if (total !== data.totalValue) {
-        formMethods.setValue('totalValue', total);
+        setValue('totalValue', total);
       }
     });
     return () => subscription.unsubscribe();
-  }, [formMethods]);
+  }, [watch, setValue]);
 
-  const handleSubmit = async (data: GoodsInTransitClaimData) => {
-    setIsSubmitting(true);
+  const onSubmit = async (data: GoodsInTransitClaimData) => {
     try {
-      // Clean data by removing undefined values
-      const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([_, value]) => value !== undefined)
-      );
+      // Upload files if any
+      let fileUrls = {};
+      if (Object.keys(uploadedFiles).length > 0) {
+        fileUrls = await uploadFormFiles(uploadedFiles, 'goods-in-transit-claims');
+      }
 
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
-        fileUploadPromises.push(
-          uploadFile(file, 'goods-in-transit-claims').then(url => [key + 'Url', url])
-        );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Prepare form data with file URLs
       const submissionData = {
-        ...cleanData,
+        ...data,
         ...fileUrls,
-        goodsItems: data.goodsItems,
-        totalValue: data.totalValue,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
         formType: 'goods-in-transit-claim'
       };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'goods-in-transit-claims'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
-      });
 
-      // Send confirmation email
-      // await emailService.sendSubmissionConfirmation(data.email, 'Goods In Transit Claim');
-      
-      clearDraft();
-      setShowSummary(false);
-      setShowSuccess(true);
-      toast({
-        title: "Claim Submitted Successfully",
-        description: "Your goods-in-transit claim has been submitted and you'll receive a confirmation email shortly.",
-      });
+      await handleSubmitWithAuth(submissionData, 'goods-in-transit-claim');
     } catch (error) {
-      console.error('Error submitting claim:', error);
-      toast({
-        title: "Submission Error",
-        description: "There was an error submitting your claim. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      console.error('Submission error:', error);
     }
   };
 
-  const onFinalSubmit = (data: GoodsInTransitClaimData) => {
+  const handleFormSubmit = () => {
     setShowSummary(true);
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
-    return (
-      <TooltipProvider>
-        <div className="space-y-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Label className="flex items-center gap-1">
-                {label}
-                <Info className="h-3 w-3" />
-              </Label>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Select the {label.toLowerCase()}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !value && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <ReactCalendar
-                mode="single"
-                selected={value ? new Date(value) : undefined}
-                onSelect={(date) => formMethods.setValue(name, date)}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </TooltipProvider>
-    );
+  const handleFileSelect = (key: string, file: File) => {
+    setUploadedFiles(prev => ({ ...prev, [key]: file }));
+  };
+
+  const handleFileRemove = (key: string) => {
+    setUploadedFiles(prev => {
+      const updated = { ...prev };
+      delete updated[key];
+      return updated;
+    });
   };
 
   const steps = [
@@ -306,579 +235,417 @@ const GoodsInTransitClaim: React.FC = () => {
       id: 'policy-details',
       title: 'Policy Details',
       component: (
-        <div className="space-y-6">
-          <FormField
-            control={formMethods.control}
-            name="policyNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Policy Number *</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter policy number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={formMethods.control}
-              name="periodOfCoverFrom"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Period of Cover From *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+        <FormSection title="Policy Information" description="Enter your policy details">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="policyNumber">Policy Number *</Label>
+              <Input
+                {...formMethods.register('policyNumber')}
+                placeholder="Enter policy number"
+              />
+              {formMethods.formState.errors.policyNumber && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.policyNumber.message}
+                </p>
               )}
-            />
+            </div>
             
-            <FormField
-              control={formMethods.control}
-              name="periodOfCoverTo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Period of Cover To *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            <div>
+              <Label htmlFor="periodOfCoverFrom">Period of Cover From *</Label>
+              <Input
+                type="date"
+                {...formMethods.register('periodOfCoverFrom')}
+              />
+              {formMethods.formState.errors.periodOfCoverFrom && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.periodOfCoverFrom.message}
+                </p>
               )}
-            />
+            </div>
+            
+            <div>
+              <Label htmlFor="periodOfCoverTo">Period of Cover To *</Label>
+              <Input
+                type="date"
+                {...formMethods.register('periodOfCoverTo')}
+              />
+              {formMethods.formState.errors.periodOfCoverTo && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.periodOfCoverTo.message}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        </FormSection>
       )
     },
     {
       id: 'insured-details',
       title: 'Insured Details',
       component: (
-        <div className="space-y-6">
-          <FormField
-            control={formMethods.control}
-            name="companyName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Company Name *</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter company name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={formMethods.control}
-            name="address"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Address *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Enter full address" rows={3} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={formMethods.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone *</FormLabel>
-                  <FormControl>
-                    <PhoneInput
-                      value={field.value || ''}
-                      onChange={field.onChange}
-                      placeholder="Enter phone number"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+        <FormSection title="Insured Information" description="Enter the insured details">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <Label htmlFor="companyName">Company Name *</Label>
+              <Input
+                {...formMethods.register('companyName')}
+                placeholder="Enter company name"
+              />
+              {formMethods.formState.errors.companyName && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.companyName.message}
+                </p>
               )}
-            />
+            </div>
             
-            <FormField
-              control={formMethods.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email *</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="Enter email address" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            <div className="md:col-span-2">
+              <Label htmlFor="address">Address *</Label>
+              <Textarea
+                {...formMethods.register('address')}
+                placeholder="Enter full address"
+                rows={3}
+              />
+              {formMethods.formState.errors.address && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.address.message}
+                </p>
               )}
-            />
+            </div>
+            
+            <div>
+              <PhoneInput
+                label="Phone Number *"
+                value={watchedValues.phone || ''}
+                onChange={(value) => setValue('phone', value)}
+                error={formMethods.formState.errors.phone?.message}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                type="email"
+                {...formMethods.register('email')}
+                placeholder="Enter email address"
+              />
+              {formMethods.formState.errors.email && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.email.message}
+                </p>
+              )}
+            </div>
+            
+            <div className="md:col-span-2">
+              <Label htmlFor="businessType">Business Type</Label>
+              <Input
+                {...formMethods.register('businessType')}
+                placeholder="Enter type of business"
+              />
+            </div>
           </div>
-          
-          <FormField
-            control={formMethods.control}
-            name="businessType"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Business Type</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter type of business" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        </FormSection>
       )
     },
     {
       id: 'loss-details',
       title: 'Details of Loss',
       component: (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={formMethods.control}
-              name="dateOfLoss"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date of Loss *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <FormSection title="Loss Information" description="Provide details about the loss">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="dateOfLoss">Date of Loss *</Label>
+                <Input
+                  type="date"
+                  {...formMethods.register('dateOfLoss')}
+                />
+                {formMethods.formState.errors.dateOfLoss && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {formMethods.formState.errors.dateOfLoss.message}
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <Label htmlFor="timeOfLoss">Time of Loss *</Label>
+                <Input
+                  type="time"
+                  {...formMethods.register('timeOfLoss')}
+                />
+                {formMethods.formState.errors.timeOfLoss && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {formMethods.formState.errors.timeOfLoss.message}
+                  </p>
+                )}
+              </div>
+            </div>
             
-            <FormField
-              control={formMethods.control}
-              name="timeOfLoss"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Time of Loss *</FormLabel>
-                  <FormControl>
-                    <Input type="time" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            <div>
+              <Label htmlFor="placeOfOccurrence">Place of Occurrence *</Label>
+              <Input
+                {...formMethods.register('placeOfOccurrence')}
+                placeholder="Where did the loss occur?"
+              />
+              {formMethods.formState.errors.placeOfOccurrence && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.placeOfOccurrence.message}
+                </p>
               )}
-            />
-          </div>
-          
-          <FormField
-            control={formMethods.control}
-            name="placeOfOccurrence"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Place of Occurrence *</FormLabel>
-                <FormControl>
-                  <Input placeholder="Where did the loss occur?" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={formMethods.control}
-            name="descriptionOfGoods"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description of Goods Concerned *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Describe the goods involved" rows={3} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={formMethods.control}
-              name="numberOfPackages"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Number of Packages *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Enter number"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            </div>
             
-            <FormField
-              control={formMethods.control}
-              name="totalWeight"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Total Weight *</FormLabel>
-                  <FormControl>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Enter weight"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                      <Select 
-                        value={watchedValues.weightUnits} 
-                        onValueChange={(value) => formMethods.setValue('weightUnits', value)}
-                      >
-                        <SelectTrigger className="w-24">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="kg">kg</SelectItem>
-                          <SelectItem value="lbs">lbs</SelectItem>
-                          <SelectItem value="tons">tons</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            <div>
+              <Label htmlFor="descriptionOfGoods">Description of Goods Concerned *</Label>
+              <Textarea
+                {...formMethods.register('descriptionOfGoods')}
+                placeholder="Describe the goods involved"
+                rows={3}
+              />
+              {formMethods.formState.errors.descriptionOfGoods && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.descriptionOfGoods.message}
+                </p>
               )}
-            />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="numberOfPackages">Number of Packages *</Label>
+                <Input
+                  type="number"
+                  {...formMethods.register('numberOfPackages')}
+                  placeholder="Enter number"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="totalWeight">Total Weight *</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    {...formMethods.register('totalWeight')}
+                    placeholder="Enter weight"
+                  />
+                  <Select 
+                    value={watchedValues.weightUnits} 
+                    onValueChange={(value) => setValue('weightUnits', value)}
+                  >
+                    <SelectTrigger className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="kg">kg</SelectItem>
+                      <SelectItem value="lbs">lbs</SelectItem>
+                      <SelectItem value="tons">tons</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="howGoodsPacked">How Goods Were Packed *</Label>
+              <Textarea
+                {...formMethods.register('howGoodsPacked')}
+                placeholder="Describe packaging method"
+                rows={2}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="circumstancesOfLoss">Circumstances of Loss or Damage</Label>
+              <Textarea
+                {...formMethods.register('circumstancesOfLoss')}
+                placeholder="Provide detailed circumstances"
+                rows={4}
+              />
+            </div>
           </div>
-          
-          <FormField
-            control={formMethods.control}
-            name="howGoodsPacked"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>How Goods Were Packed *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Describe packaging method" rows={2} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        </FormSection>
       )
     },
     {
       id: 'particulars-of-goods',
       title: 'Particulars of Goods',
       component: (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Goods Items</h3>
-            <Button
-              type="button"
-              onClick={() => addGoodsItem({ quantity: 1, description: '', value: 0 })}
-              variant="outline"
-              size="sm"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Item
-            </Button>
-          </div>
-          
-          {goodsItemsFields.map((field, index) => (
-            <Card key={field.id} className="p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="font-semibold">Item {index + 1}</h4>
-                <Button
-                  type="button"
-                  onClick={() => removeGoodsItem(index)}
-                  variant="destructive"
-                  size="sm"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Label htmlFor={`goodsItems_quantity_${index}`} className="flex items-center gap-1">
-                          Quantity *
-                          <Info className="h-3 w-3" />
-                        </Label>
-                        <Input
-                          id={`goodsItems_quantity_${index}`}
-                          type="number"
-                          placeholder="Enter quantity"
-                          {...formMethods.register(`goodsItems.${index}.quantity`, {
-                            setValueAs: (value) => Number(value)
-                          })}
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Enter the quantity of this item</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Label htmlFor={`goodsItems_description_${index}`} className="flex items-center gap-1">
-                          Description *
-                          <Info className="h-3 w-3" />
-                        </Label>
-                         <Textarea
-                           id={`goodsItems_description_${index}`}
-                           placeholder="Enter description"
-                           rows={2}
-                           {...formMethods.register(`goodsItems.${index}.description`)}
-                         />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Enter a detailed description of the item</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Label htmlFor={`goodsItems_value_${index}`} className="flex items-center gap-1">
-                          Value (₦) *
-                          <Info className="h-3 w-3" />
-                        </Label>
-                        <Input
-                          id={`goodsItems_value_${index}`}
-                          type="number"
-                          step="0.01"
-                          placeholder="Enter value"
-                          {...formMethods.register(`goodsItems.${index}.value`, {
-                            setValueAs: (value) => Number(value)
-                          })}
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Enter the monetary value of the item</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </Card>
-          ))}
-          
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+        <FormSection title="Goods Items" description="List all goods involved in the claim">
+          <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="font-semibold">Total Value:</span>
-              <span className="text-lg font-bold">₦{watchedValues.totalValue?.toLocaleString() || 0}</span>
+              <h3 className="text-lg font-semibold">Goods Items</h3>
+              <Button
+                type="button"
+                onClick={() => addGoodsItem({ quantity: 1, description: '', value: 0 })}
+                variant="outline"
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Item
+              </Button>
+            </div>
+            
+            {goodsItemsFields.map((field, index) => (
+              <Card key={field.id} className="p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-semibold">Item {index + 1}</h4>
+                  <Button
+                    type="button"
+                    onClick={() => removeGoodsItem(index)}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor={`goodsItems_quantity_${index}`}>Quantity *</Label>
+                    <Input
+                      id={`goodsItems_quantity_${index}`}
+                      type="number"
+                      placeholder="Enter quantity"
+                      {...formMethods.register(`goodsItems.${index}.quantity`, {
+                        setValueAs: (value) => Number(value)
+                      })}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor={`goodsItems_description_${index}`}>Description *</Label>
+                    <Textarea
+                      id={`goodsItems_description_${index}`}
+                      placeholder="Enter description"
+                      rows={2}
+                      {...formMethods.register(`goodsItems.${index}.description`)}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor={`goodsItems_value_${index}`}>Value (₦) *</Label>
+                    <Input
+                      id={`goodsItems_value_${index}`}
+                      type="number"
+                      step="0.01"
+                      placeholder="Enter value"
+                      {...formMethods.register(`goodsItems.${index}.value`, {
+                        setValueAs: (value) => Number(value)
+                      })}
+                    />
+                  </div>
+                </div>
+              </Card>
+            ))}
+            
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">Total Value:</span>
+                <span className="text-lg font-bold">₦{watchedValues.totalValue?.toLocaleString() || 0}</span>
+              </div>
             </div>
           </div>
-        </div>
+        </FormSection>
       )
     },
     {
-      id: 'circumstances',
-      title: 'Circumstances',
+      id: 'documents',
+      title: 'Documents',
       component: (
-        <div className="space-y-6">
-          <FormField
-            control={formMethods.control}
-            name="circumstancesOfLoss"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Circumstances of Loss or Damage *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Provide detailed circumstances" rows={4} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={formMethods.control}
-            name="otherVehicleInvolved"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Another vehicle was involved</FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
-
-          {watchedValues.otherVehicleInvolved && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6">
-              <FormField
-                control={formMethods.control}
-                name="otherVehicleOwnerName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name of Owner</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter owner's name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={formMethods.control}
-                name="otherVehicleOwnerAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address of Owner</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter owner's address" rows={2} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          )}
-        </div>
-      )
-    },
-    {
-      id: 'dispatch-details',
-      title: 'Dispatch Details',
-      component: (
-        <div className="space-y-6">
-          <FormField
-            control={formMethods.control}
-            name="dispatchAddress"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Dispatch Address *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Enter dispatch address" rows={3} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={formMethods.control}
-            name="dispatchDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Dispatch Date *</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={formMethods.control}
-            name="consigneeName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Consignee Name *</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter consignee name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={formMethods.control}
-            name="consigneeAddress"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Consignee Address *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Enter consignee address" rows={3} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormSection title="Upload Supporting Documents" description="Please upload any relevant documents">
+          <div className="space-y-6">
+            <FileUpload
+              label="Invoice/Receipt"
+              onFileSelect={(file) => handleFileSelect('invoice', file)}
+              onFileRemove={() => handleFileRemove('invoice')}
+              currentFile={uploadedFiles.invoice}
+            />
+            
+            <FileUpload
+              label="Photos of Goods/Damage"
+              onFileSelect={(file) => handleFileSelect('photos', file)}
+              onFileRemove={() => handleFileRemove('photos')}
+              currentFile={uploadedFiles.photos}
+            />
+            
+            <FileUpload
+              label="Transport Documents"
+              onFileSelect={(file) => handleFileSelect('transportDocs', file)}
+              onFileRemove={() => handleFileRemove('transportDocs')}
+              currentFile={uploadedFiles.transportDocs}
+            />
+            
+            <FileUpload
+              label="Other Supporting Documents"
+              onFileSelect={(file) => handleFileSelect('otherDocuments', file)}
+              onFileRemove={() => handleFileRemove('otherDocuments')}
+              currentFile={uploadedFiles.otherDocuments}
+            />
+          </div>
+        </FormSection>
       )
     },
     {
       id: 'declaration',
       title: 'Declaration',
       component: (
-        <div className="space-y-6">
-          <FormField
-            control={formMethods.control}
-            name="agreeToDataPrivacy"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    I agree to the data privacy notice and declaration *
-                  </FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={formMethods.control}
-            name="signature"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Digital Signature *</FormLabel>
-                <FormControl>
-                  <Input placeholder="Type your full name as signature" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormSection title="Data Privacy & Declaration">
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Data Privacy</h3>
+              <div className="text-sm text-gray-600 space-y-2">
+                <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+                <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Declaration</h3>
+              <div className="text-sm text-gray-600 space-y-2">
+                <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+                <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+                <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="declaration"
+                  checked={watchedValues.agreeToDataPrivacy}
+                  onCheckedChange={(checked: boolean) => setValue('agreeToDataPrivacy', checked)}
+                />
+                <Label htmlFor="declaration" className="text-sm">
+                  I agree to the data privacy policy and declaration above *
+                </Label>
+              </div>
+              {formMethods.formState.errors.agreeToDataPrivacy && (
+                <p className="text-sm text-red-600">
+                  {formMethods.formState.errors.agreeToDataPrivacy.message}
+                </p>
+              )}
+              
+              <div>
+                <Label htmlFor="signature">Digital Signature *</Label>
+                <Input
+                  {...formMethods.register('signature')}
+                  placeholder="Type your full name as signature"
+                />
+                {formMethods.formState.errors.signature && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {formMethods.formState.errors.signature.message}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </FormSection>
       )
     }
   ];
 
-  if (showSuccess) {
-    return (
-      <div className="max-w-md mx-auto text-center p-6">
-        <div className="bg-green-50 rounded-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold text-green-800 mb-2">Claim Submitted Successfully!</h2>
-          <p className="text-green-600">
-            Your goods-in-transit claim has been submitted and you'll receive a confirmation email shortly.
-          </p>
-        </div>
-        <Button onClick={() => window.location.reload()}>
-          Submit Another Claim
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
+      <div className="max-w-4xl mx-auto px-4">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Goods-in-Transit Insurance Claim
@@ -888,13 +655,11 @@ const GoodsInTransitClaim: React.FC = () => {
           </p>
         </div>
 
-        <div>
-          <MultiStepForm
-            steps={steps}
-      onSubmit={onFinalSubmit}
-            formMethods={formMethods}
-          />
-        </div>
+        <MultiStepForm
+          steps={steps}
+          onSubmit={handleFormSubmit}
+          formMethods={formMethods}
+        />
 
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -949,19 +714,22 @@ const GoodsInTransitClaim: React.FC = () => {
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Edit Claim
               </Button>
-              <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Claim'
-                )}
+              <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <SuccessModal
+          isOpen={showSuccess}
+          onClose={() => setShowSuccess(false)}
+          title="Claim Submitted Successfully!"
+          message="Your goods-in-transit claim has been submitted successfully. You will receive a confirmation email shortly."
+          formType="Goods-in-Transit Claim"
+          isLoading={isSubmitting}
+          loadingMessage="Your goods-in-transit claim is being submitted..."
+        />
       </div>
     </div>
   );
