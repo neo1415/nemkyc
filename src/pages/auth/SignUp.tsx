@@ -8,7 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Label } from '../../components/ui/label';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
-import { UserPlus, Mail } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/dialog';
+import { UserPlus, Mail, CheckCircle2 } from 'lucide-react';
+import { useToast } from '../../hooks/use-toast';
 
 const SignUp: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -21,9 +23,12 @@ const SignUp: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [submittedFormType, setSubmittedFormType] = useState('');
   
   const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,17 +58,23 @@ const SignUp: React.FC = () => {
       // Check if there's a pending submission
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
-        // Process pending submission and redirect back to original page
+        const { formType } = JSON.parse(hasPendingSubmission);
+        setSubmittedFormType(formType);
+        
+        // Process pending submission
         const { processPendingSubmissionUtil } = await import('../../hooks/useAuthRequiredSubmit');
         const { getAuth } = await import('firebase/auth');
         const currentUser = getAuth().currentUser;
         
         if (currentUser?.email) {
           await processPendingSubmissionUtil(currentUser.email);
+          setShowSuccess(true);
+          
+          toast({
+            title: "Form Submitted Successfully!",
+            description: `Your ${formType} has been submitted and confirmation emails have been sent.`,
+          });
         }
-        
-        // Redirect back to the original page
-        navigate(-1);
       } else {
         navigate('/dashboard');
       }
@@ -84,17 +95,23 @@ const SignUp: React.FC = () => {
       // Check if there's a pending submission
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
-        // Process pending submission and redirect back to original page
+        const { formType } = JSON.parse(hasPendingSubmission);
+        setSubmittedFormType(formType);
+        
+        // Process pending submission
         const { processPendingSubmissionUtil } = await import('../../hooks/useAuthRequiredSubmit');
         const { getAuth } = await import('firebase/auth');
         const currentUser = getAuth().currentUser;
         
         if (currentUser?.email) {
           await processPendingSubmissionUtil(currentUser.email);
+          setShowSuccess(true);
+          
+          toast({
+            title: "Form Submitted Successfully!",
+            description: `Your ${formType} has been submitted and confirmation emails have been sent.`,
+          });
         }
-        
-        // Redirect back to the original page
-        navigate(-1);
       } else {
         navigate('/dashboard');
       }
@@ -239,6 +256,42 @@ const SignUp: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccess} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <CheckCircle2 className="h-12 w-12 text-green-600" />
+            </div>
+            <DialogTitle className="text-center">Form Submitted Successfully!</DialogTitle>
+            <DialogDescription className="text-center">
+              Your {submittedFormType} has been submitted successfully. Confirmation emails have been sent to the relevant departments.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col space-y-4 pt-4">
+            <Button 
+              onClick={() => {
+                setShowSuccess(false);
+                navigate('/dashboard');
+              }}
+              className="w-full"
+            >
+              Go to Dashboard
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowSuccess(false);
+                navigate(-1);
+              }}
+              className="w-full"
+            >
+              Back to Form
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
