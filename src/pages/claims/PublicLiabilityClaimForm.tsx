@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -24,6 +24,9 @@ import { db } from '@/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { sendEmail } from '@/services/emailService';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import AuthRequiredSubmit from '@/components/common/AuthRequiredSubmit';
+import SuccessModal from '@/components/common/SuccessModal';
 
 const publicLiabilitySchema = yup.object().shape({
   // Policy Details
@@ -174,8 +177,40 @@ const PublicLiabilityClaimForm: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
   const [editingField, setEditingField] = useState<string | null>(null);
+  const { 
+    handleSubmitWithAuth, 
+    showAuthDialog, 
+    showSuccess: authShowSuccess,
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting,
+    proceedToSignup,
+    dismissAuthDialog,
+    formType
+  } = useAuthRequiredSubmit();
+
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        // Hide loading after 5 seconds max (in case something goes wrong)
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
 
   const formMethods = useForm<any>({
     // resolver: yupResolver(publicLiabilitySchema),
@@ -253,7 +288,11 @@ const PublicLiabilityClaimForm: React.FC = () => {
   };
 
   const onFinalSubmit = (data: PublicLiabilityClaimData) => {
-    setShowSummary(true);
+    if (user) {
+      setShowSummary(true);
+    } else {
+      handleSubmitWithAuth(data, 'Public Liability Claim', handleSubmit);
+    }
   };
 
   const DatePickerField = ({ name, label }: { name: string; label: string }) => {
@@ -777,37 +816,43 @@ const PublicLiabilityClaimForm: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Success Modal */}
-        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="text-center text-green-600">
-                Claim Submitted Successfully!
-              </DialogTitle>
-            </DialogHeader>
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <p>Your public liability claim has been submitted successfully.</p>
-              <p className="text-sm text-muted-foreground">
-                You will receive a confirmation email shortly with your claim reference number.
-              </p>
-              <div className="bg-muted p-4 rounded-lg">
-                <p className="text-sm">
-                  <strong>For claims status enquiries, call 01 448 9570</strong>
+        {/* Auth Required Submit Dialog */}
+        <AuthRequiredSubmit
+          isOpen={showAuthDialog}
+          onClose={dismissAuthDialog}
+          onProceedToSignup={proceedToSignup}
+          formType={formType}
+        />
+
+        {/* Success Modal from Auth Flow */}
+        <div className="relative">
+          <SuccessModal
+            isOpen={authShowSuccess}
+            onClose={() => setAuthShowSuccess()}
+            title="Public Liability Claim Submitted Successfully!"
+            message="Your public liability claim has been submitted and you'll receive a confirmation email shortly."
+            formType="public-liability-claim"
+            isLoading={authSubmitting}
+            loadingMessage="Your public liability claim is being processed and submitted..."
+          />
+        </div>
+
+        {/* Post-Authentication Loading Overlay */}
+        {showPostAuthLoading && (
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                </div>
+                <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
+                <p className="text-muted-foreground">
+                  Thank you for signing in! Your public liability claim is now being submitted...
                 </p>
               </div>
             </div>
-            <DialogFooter>
-              <Button onClick={() => setShowSuccess(false)} className="w-full">
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </div>
+        )}
       </div>
     </div>
   );
