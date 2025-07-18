@@ -445,7 +445,7 @@ const BurglaryClaimForm: React.FC = () => {
 
         <SuccessModal
           isOpen={showSuccess}
-          onClose={() => setShowSuccess(false)}
+          onClose={() => setShowSuccess()}
           title="Claim Submitted Successfully!"
           message="Your burglary claim has been submitted successfully. You will receive a confirmation email shortly."
           formType="Burglary Claim"
