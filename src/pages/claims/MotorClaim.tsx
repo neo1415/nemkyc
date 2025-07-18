@@ -21,7 +21,6 @@ import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
-import AuthRequiredSubmit from '@/components/common/AuthRequiredSubmit';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Motor Claim Schema
@@ -251,13 +250,7 @@ const MotorClaim: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const { 
-    handleSubmitWithAuth, 
-    showAuthDialog, 
-    proceedToSignup, 
-    dismissAuthDialog, 
-    formType 
-  } = useAuthRequiredSubmit();
+  const { handleSubmitWithAuth } = useAuthRequiredSubmit();
 
   const formMethods = useForm<any>({
     // resolver: yupResolver(motorClaimSchema),
@@ -1489,13 +1482,6 @@ const MotorClaim: React.FC = () => {
         </div>
       </div>
 
-      {/* Authentication Required Dialog */}
-      <AuthRequiredSubmit
-        isOpen={showAuthDialog}
-        onClose={dismissAuthDialog}
-        onProceedToSignup={proceedToSignup}
-        formType={formType}
-      />
     </div>
   );
 };
