@@ -555,7 +555,7 @@ const GoodsInTransitClaim: React.FC = () => {
 
         <SuccessModal
           isOpen={showSuccess}
-          onClose={() => setShowSuccess(false)}
+          onClose={() => setShowSuccess()}
           title="Claim Submitted Successfully!"
           message="Your goods-in-transit claim has been submitted successfully. You will receive a confirmation email shortly."
           formType="Goods-in-Transit Claim"

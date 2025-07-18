@@ -435,7 +435,7 @@ const MoneyInsuranceClaim: React.FC = () => {
 
         <SuccessModal
           isOpen={showSuccess}
-          onClose={() => setShowSuccess(false)}
+          onClose={() => setShowSuccess()}
           title="Claim Submitted Successfully!"
           message="Your money insurance claim has been submitted successfully. You will receive a confirmation email shortly."
           formType="Money Insurance Claim"

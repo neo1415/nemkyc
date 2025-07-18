@@ -25,7 +25,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
   const defaultMessage = `Your ${formType.toLowerCase()} has been submitted successfully. You will receive a confirmation email shortly.`;
   
   return (
-    <Dialog open={isOpen} onOpenChange={!isLoading ? onClose : undefined}>
+    <Dialog open={isOpen} onOpenChange={!isLoading ? (open) => { if (!open) onClose(); } : undefined}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
