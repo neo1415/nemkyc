@@ -54,7 +54,7 @@ const BurglaryClaimForm: React.FC = () => {
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
   const formMethods = useForm({
-    resolver: yupResolver(burglarySchema),
+    resolver: yupResolver(burglarySchema) as any,
     defaultValues,
     mode: 'onChange'
   });
@@ -259,7 +259,7 @@ const BurglaryClaimForm: React.FC = () => {
               <Label>Was the police notified? *</Label>
               <RadioGroup
                 value={watchedValues.policeNotified || ''}
-                onValueChange={(value) => setValue('policeNotified', value)}
+                onValueChange={(value: 'yes' | 'no') => setValue('policeNotified', value)}
                 className="flex flex-row space-x-4 mt-2"
               >
                 <div className="flex items-center space-x-2">
@@ -344,8 +344,8 @@ const BurglaryClaimForm: React.FC = () => {
             <div className="flex items-start space-x-2">
               <Checkbox
                 id="declarationAccepted"
-                checked={watchedValues.declarationAccepted || false}
-                onCheckedChange={(checked) => setValue('declarationAccepted', checked)}
+                checked={watchedValues.declarationAccepted as boolean || false}
+                onCheckedChange={(checked: boolean) => setValue('declarationAccepted', checked)}
               />
               <Label htmlFor="declarationAccepted" className="text-sm">
                 I declare that the information provided is true and complete to the best of my knowledge
@@ -415,8 +415,6 @@ const BurglaryClaimForm: React.FC = () => {
             steps={steps}
             onSubmit={handleFormSubmit}
             formMethods={formMethods}
-            uploadedFiles={uploadedFiles}
-            setUploadedFiles={setUploadedFiles}
           />
         </div>
 
@@ -430,7 +428,7 @@ const BurglaryClaimForm: React.FC = () => {
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                 <p><strong>Policy Number:</strong> {watchedValues.policyNumber}</p>
                 <p><strong>Insured Name:</strong> {watchedValues.insuredName}</p>
-                <p><strong>Loss Date:</strong> {watchedValues.lossDate}</p>
+                <p><strong>Loss Date:</strong> {watchedValues.lossDate?.toString()}</p>
                 <p><strong>Estimated Value:</strong> ₦{watchedValues.estimatedValue}</p>
               </div>
             </div>

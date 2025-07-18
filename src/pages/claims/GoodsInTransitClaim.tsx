@@ -1,17 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import MultiStepForm from '../../components/common/MultiStepForm';
-import FormSection from '../../components/common/FormSection';
-import PhoneInput from '../../components/common/PhoneInput';
-import FileUpload from '../../components/common/FileUpload';
-import { useFormDraft } from '../../hooks/useFormDraft';
-import { useAuthRequiredSubmit } from '../../hooks/useAuthRequiredSubmit';
+import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
+import FormSection from '../../components/common/FormSection';
+import MultiStepForm from '../../components/common/MultiStepForm';
+import PhoneInput from '../../components/common/PhoneInput';
+import { useAuthRequiredSubmit } from '../../hooks/useAuthRequiredSubmit';
 import { Label } from '../../components/ui/label';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -51,7 +49,8 @@ const goodsInTransitClaimSchema = yup.object().shape({
 
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  signature: yup.string().required("Signature is required")
+  signature: yup.string().required("Signature is required"),
+  signatureDate: yup.date().required("Signature date is required")
 });
 
 interface GoodsItem {
@@ -71,7 +70,7 @@ interface GoodsInTransitClaimData {
   address: string;
   phone: string;
   email: string;
-  businessType?: string;
+  businessType: string;
 
   // Loss Details
   dateOfLoss: Date;
@@ -83,151 +82,121 @@ interface GoodsInTransitClaimData {
   weightUnits: string;
   totalValue: number;
   howGoodsPacked: string;
-  circumstancesOfLoss?: string;
 
-  // Transport Details
+  // Circumstances
+  circumstancesOfLoss: string;
   otherVehicleInvolved: boolean;
-  dispatchAddress?: string;
-  dispatchDate?: string;
-  consigneeName?: string;
-  consigneeAddress?: string;
-  vehicleRegistration?: string;
+  otherVehicleOwnerName?: string;
+  otherVehicleOwnerAddress?: string;
+  witnessName?: string;
+  witnessAddress?: string;
+  policeStation?: string;
+  dateReportedToPolice?: Date;
+  dispatchAddress: string;
+  dispatchDate: Date;
+  consigneeName: string;
+  consigneeAddress: string;
 
-  // Goods Items
+  // Particulars of Goods
   goodsItems: GoodsItem[];
 
-  // Additional Details
-  inspectionAddress?: string;
+  // Inspection
+  inspectionAddress: string;
+
+  // If owner of goods
   isOwnerOfGoods: boolean;
+  howTransported?: string;
+  transporterInsurerName?: string;
+  transporterInsurerAddress?: string;
+
+  // If claiming as carrier
+  goodsOwnerName?: string;
+  goodsOwnerAddress?: string;
+  goodsOwnerInsurerName?: string;
+  goodsOwnerInsurerAddress?: string;
+
+  // Vehicle/Transport
   goodsInSoundCondition: boolean;
   checkedByDriver: boolean;
+  vehicleRegistration: string;
   staffLoadedUnloaded: boolean;
   receiptGiven: boolean;
+  carriageConditionFile?: {
+    name: string;
+    type: string;
+    url: string;
+  };
   claimMadeAgainstYou: boolean;
+  claimReceivedDate?: Date;
 
   // Declaration
   agreeToDataPrivacy: boolean;
   signature: string;
+  signatureDate: Date;
 }
 
-const defaultValues: Partial<GoodsInTransitClaimData> = {
-  policyNumber: '',
-  companyName: '',
-  address: '',
-  phone: '',
-  email: '',
-  businessType: '',
-  timeOfLoss: '',
-  placeOfOccurrence: '',
-  descriptionOfGoods: '',
-  numberOfPackages: 0,
-  totalWeight: 0,
-  weightUnits: 'kg',
-  totalValue: 0,
-  howGoodsPacked: '',
-  circumstancesOfLoss: '',
-  otherVehicleInvolved: false,
-  dispatchAddress: '',
-  dispatchDate: '',
-  consigneeName: '',
-  consigneeAddress: '',
-  goodsItems: [],
-  inspectionAddress: '',
-  isOwnerOfGoods: true,
-  goodsInSoundCondition: true,
-  checkedByDriver: true,
-  vehicleRegistration: '',
-  staffLoadedUnloaded: true,
-  receiptGiven: true,
-  claimMadeAgainstYou: false,
-  agreeToDataPrivacy: false,
-  signature: ''
+type GoodsInTransitData = yup.InferType<typeof goodsInTransitClaimSchema>;
+
+const defaultValues: Partial<GoodsInTransitData> = {
+  goodsItems: [{ quantity: 1, description: "", value: 0 }]
 };
 
 const GoodsInTransitClaim: React.FC = () => {
+  const [currentStep, setCurrentStep] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
-  const formMethods = useForm<any>({
-    resolver: yupResolver(goodsInTransitClaimSchema),
+  const formMethods = useForm({
+    resolver: yupResolver(goodsInTransitClaimSchema) as any,
     defaultValues,
     mode: 'onChange'
   });
 
-  const { fields: goodsItemsFields, append: addGoodsItem, remove: removeGoodsItem } = useFieldArray({
-    control: formMethods.control,
-    name: 'goodsItems'
-  });
-
-  const { watch, handleSubmit, setValue } = formMethods;
-  const { saveDraft, loadDraft } = useFormDraft('goodsInTransitClaim', formMethods);
+  const { watch, handleSubmit, setValue, formState: { errors } } = formMethods;
   const { 
     handleSubmitWithAuth, 
     showSuccess, 
     setShowSuccess, 
     isSubmitting 
   } = useAuthRequiredSubmit();
-  
+
   const watchedValues = watch();
+  const goodsItems = watch("goodsItems") || [];
 
-  // Auto-save draft
-  useEffect(() => {
-    const subscription = watch((data) => {
-      saveDraft(data);
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, saveDraft]);
-
-  useEffect(() => {
-    loadDraft();
-  }, [loadDraft]);
-
-  // Calculate total value from goods items in real-time
-  useEffect(() => {
-    const subscription = watch((data) => {
-      const total = data.goodsItems?.reduce((sum, item) => 
-        sum + ((item.quantity || 0) * (item.value || 0)), 0) || 0;
-      if (total !== data.totalValue) {
-        setValue('totalValue', total);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, setValue]);
-
-  const onSubmit = async (data: GoodsInTransitClaimData) => {
+  const onSubmit = async (data: any) => {
     try {
-      // Upload files if any
-      let fileUrls = {};
-      if (Object.keys(uploadedFiles).length > 0) {
-        fileUrls = await uploadFormFiles(uploadedFiles, 'goods-in-transit-claims');
-      }
-
+      const fileUrls = await uploadFormFiles(uploadedFiles, 'goods-in-transit-claims');
       const submissionData = {
         ...data,
-        ...fileUrls,
-        formType: 'goods-in-transit-claim'
+        files: fileUrls,
+        formType: 'goods-in-transit-claim',
+        submissionId: `GIT-${Date.now()}`,
+        submittedAt: new Date().toISOString()
       };
 
-      await handleSubmitWithAuth(submissionData, 'goods-in-transit-claim');
+      await handleSubmitWithAuth(submissionData, 'goods-in-transit-claims');
     } catch (error) {
       console.error('Submission error:', error);
+      toast.error('Failed to submit claim. Please try again.');
     }
   };
 
-  const handleFormSubmit = () => {
-    setShowSummary(true);
+  const addGoodsItem = () => {
+    const currentItems = goodsItems || [];
+    setValue("goodsItems", [...currentItems, { quantity: 1, description: "", value: 0 }]);
   };
 
-  const handleFileSelect = (key: string, file: File) => {
-    setUploadedFiles(prev => ({ ...prev, [key]: file }));
+  const removeGoodsItem = (index: number) => {
+    const currentItems = goodsItems || [];
+    if (currentItems.length > 1) {
+      setValue("goodsItems", currentItems.filter((_, i) => i !== index));
+    }
   };
 
-  const handleFileRemove = (key: string) => {
-    setUploadedFiles(prev => {
-      const updated = { ...prev };
-      delete updated[key];
-      return updated;
-    });
+  const updateGoodsItem = (index: number, field: keyof GoodsItem, value: any) => {
+    const currentItems = [...(goodsItems || [])];
+    currentItems[index] = { ...currentItems[index], [field]: value };
+    setValue("goodsItems", currentItems);
   };
 
   const steps = [
@@ -334,57 +303,48 @@ const GoodsInTransitClaim: React.FC = () => {
                 </p>
               )}
             </div>
-            
-            <div className="md:col-span-2">
-              <Label htmlFor="businessType">Business Type</Label>
-              <Input
-                {...formMethods.register('businessType')}
-                placeholder="Enter type of business"
-              />
-            </div>
           </div>
         </FormSection>
       )
     },
     {
       id: 'loss-details',
-      title: 'Details of Loss',
+      title: 'Loss Details',
       component: (
-        <FormSection title="Loss Information" description="Provide details about the loss">
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dateOfLoss">Date of Loss *</Label>
-                <Input
-                  type="date"
-                  {...formMethods.register('dateOfLoss')}
-                />
-                {formMethods.formState.errors.dateOfLoss && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {formMethods.formState.errors.dateOfLoss.message}
-                  </p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="timeOfLoss">Time of Loss *</Label>
-                <Input
-                  type="time"
-                  {...formMethods.register('timeOfLoss')}
-                />
-                {formMethods.formState.errors.timeOfLoss && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {formMethods.formState.errors.timeOfLoss.message}
-                  </p>
-                )}
-              </div>
+        <FormSection title="Details of Loss" description="Provide information about the goods-in-transit loss">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="dateOfLoss">Date of Loss *</Label>
+              <Input
+                type="date"
+                {...formMethods.register('dateOfLoss')}
+              />
+              {formMethods.formState.errors.dateOfLoss && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.dateOfLoss.message}
+                </p>
+              )}
             </div>
             
             <div>
-              <Label htmlFor="placeOfOccurrence">Place of Occurrence *</Label>
+              <Label htmlFor="timeOfLoss">Time of Loss *</Label>
               <Input
+                type="time"
+                {...formMethods.register('timeOfLoss')}
+              />
+              {formMethods.formState.errors.timeOfLoss && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.timeOfLoss.message}
+                </p>
+              )}
+            </div>
+            
+            <div className="md:col-span-2">
+              <Label htmlFor="placeOfOccurrence">Place of Occurrence *</Label>
+              <Textarea
                 {...formMethods.register('placeOfOccurrence')}
-                placeholder="Where did the loss occur?"
+                placeholder="Describe where the loss occurred"
+                rows={2}
               />
               {formMethods.formState.errors.placeOfOccurrence && (
                 <p className="text-sm text-red-600 mt-1">
@@ -393,11 +353,11 @@ const GoodsInTransitClaim: React.FC = () => {
               )}
             </div>
             
-            <div>
-              <Label htmlFor="descriptionOfGoods">Description of Goods Concerned *</Label>
+            <div className="md:col-span-2">
+              <Label htmlFor="descriptionOfGoods">Description of Goods *</Label>
               <Textarea
                 {...formMethods.register('descriptionOfGoods')}
-                placeholder="Describe the goods involved"
+                placeholder="Describe the goods that were lost or damaged"
                 rows={3}
               />
               {formMethods.formState.errors.descriptionOfGoods && (
@@ -406,179 +366,80 @@ const GoodsInTransitClaim: React.FC = () => {
                 </p>
               )}
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="numberOfPackages">Number of Packages *</Label>
-                <Input
-                  type="number"
-                  {...formMethods.register('numberOfPackages')}
-                  placeholder="Enter number"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="totalWeight">Total Weight *</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    {...formMethods.register('totalWeight')}
-                    placeholder="Enter weight"
-                  />
-                  <Select 
-                    value={watchedValues.weightUnits} 
-                    onValueChange={(value) => setValue('weightUnits', value)}
-                  >
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="kg">kg</SelectItem>
-                      <SelectItem value="lbs">lbs</SelectItem>
-                      <SelectItem value="tons">tons</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="howGoodsPacked">How Goods Were Packed *</Label>
-              <Textarea
-                {...formMethods.register('howGoodsPacked')}
-                placeholder="Describe packaging method"
-                rows={2}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="circumstancesOfLoss">Circumstances of Loss or Damage</Label>
-              <Textarea
-                {...formMethods.register('circumstancesOfLoss')}
-                placeholder="Provide detailed circumstances"
-                rows={4}
-              />
-            </div>
           </div>
         </FormSection>
       )
     },
     {
-      id: 'particulars-of-goods',
-      title: 'Particulars of Goods',
+      id: 'goods-items',
+      title: 'Goods Items',
       component: (
-        <FormSection title="Goods Items" description="List all goods involved in the claim">
+        <FormSection title="Particulars of Goods" description="List the goods that were lost or damaged">
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Goods Items</h3>
-              <Button
-                type="button"
-                onClick={() => addGoodsItem({ quantity: 1, description: '', value: 0 })}
-                variant="outline"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-            </div>
-            
-            {goodsItemsFields.map((field, index) => (
-              <Card key={field.id} className="p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold">Item {index + 1}</h4>
-                  <Button
-                    type="button"
-                    onClick={() => removeGoodsItem(index)}
-                    variant="destructive"
-                    size="sm"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor={`goodsItems_quantity_${index}`}>Quantity *</Label>
-                    <Input
-                      id={`goodsItems_quantity_${index}`}
-                      type="number"
-                      placeholder="Enter quantity"
-                      {...formMethods.register(`goodsItems.${index}.quantity`, {
-                        setValueAs: (value) => Number(value)
-                      })}
-                    />
+            {goodsItems.map((item: GoodsItem, index: number) => (
+              <Card key={index} className="p-4">
+                <CardContent className="p-0">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-medium">Item {index + 1}</h4>
+                    {goodsItems.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeGoodsItem(index)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                   
-                  <div>
-                    <Label htmlFor={`goodsItems_description_${index}`}>Description *</Label>
-                    <Textarea
-                      id={`goodsItems_description_${index}`}
-                      placeholder="Enter description"
-                      rows={2}
-                      {...formMethods.register(`goodsItems.${index}.description`)}
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor={`quantity-${index}`}>Quantity *</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantity || ''}
+                        onChange={(e) => updateGoodsItem(index, 'quantity', parseInt(e.target.value) || 0)}
+                        placeholder="Enter quantity"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor={`description-${index}`}>Description *</Label>
+                      <Input
+                        value={item.description || ''}
+                        onChange={(e) => updateGoodsItem(index, 'description', e.target.value)}
+                        placeholder="Enter description"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor={`value-${index}`}>Value (₦) *</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.value || ''}
+                        onChange={(e) => updateGoodsItem(index, 'value', parseFloat(e.target.value) || 0)}
+                        placeholder="Enter value"
+                      />
+                    </div>
                   </div>
-                  
-                  <div>
-                    <Label htmlFor={`goodsItems_value_${index}`}>Value (₦) *</Label>
-                    <Input
-                      id={`goodsItems_value_${index}`}
-                      type="number"
-                      step="0.01"
-                      placeholder="Enter value"
-                      {...formMethods.register(`goodsItems.${index}.value`, {
-                        setValueAs: (value) => Number(value)
-                      })}
-                    />
-                  </div>
-                </div>
+                </CardContent>
               </Card>
             ))}
             
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">Total Value:</span>
-                <span className="text-lg font-bold">₦{watchedValues.totalValue?.toLocaleString() || 0}</span>
-              </div>
-            </div>
-          </div>
-        </FormSection>
-      )
-    },
-    {
-      id: 'documents',
-      title: 'Documents',
-      component: (
-        <FormSection title="Upload Supporting Documents" description="Please upload any relevant documents">
-          <div className="space-y-6">
-            <FileUpload
-              label="Invoice/Receipt"
-              onFileSelect={(file) => handleFileSelect('invoice', file)}
-              onFileRemove={() => handleFileRemove('invoice')}
-              currentFile={uploadedFiles.invoice}
-            />
-            
-            <FileUpload
-              label="Photos of Goods/Damage"
-              onFileSelect={(file) => handleFileSelect('photos', file)}
-              onFileRemove={() => handleFileRemove('photos')}
-              currentFile={uploadedFiles.photos}
-            />
-            
-            <FileUpload
-              label="Transport Documents"
-              onFileSelect={(file) => handleFileSelect('transportDocs', file)}
-              onFileRemove={() => handleFileRemove('transportDocs')}
-              currentFile={uploadedFiles.transportDocs}
-            />
-            
-            <FileUpload
-              label="Other Supporting Documents"
-              onFileSelect={(file) => handleFileSelect('otherDocuments', file)}
-              onFileRemove={() => handleFileRemove('otherDocuments')}
-              currentFile={uploadedFiles.otherDocuments}
-            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addGoodsItem}
+              className="w-full"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Another Item
+            </Button>
           </div>
         </FormSection>
       )
@@ -587,55 +448,50 @@ const GoodsInTransitClaim: React.FC = () => {
       id: 'declaration',
       title: 'Declaration',
       component: (
-        <FormSection title="Data Privacy & Declaration">
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Data Privacy</h3>
-              <div className="text-sm text-gray-600 space-y-2">
-                <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-                <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
-              </div>
+        <FormSection title="Declaration and Signature" description="Complete your claim submission">
+          <div className="space-y-4">
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="agreeToDataPrivacy"
+                checked={watchedValues.agreeToDataPrivacy as boolean || false}
+                onCheckedChange={(checked: boolean) => setValue('agreeToDataPrivacy', checked)}
+              />
+              <Label htmlFor="agreeToDataPrivacy" className="text-sm">
+                I declare that the information provided is true and complete to the best of my knowledge
+                and belief. I understand that any false information may void this claim.
+              </Label>
             </div>
+            {formMethods.formState.errors.agreeToDataPrivacy && (
+              <p className="text-sm text-red-600">
+                {formMethods.formState.errors.agreeToDataPrivacy.message}
+              </p>
+            )}
             
             <div>
-              <h3 className="text-lg font-semibold mb-2">Declaration</h3>
-              <div className="text-sm text-gray-600 space-y-2">
-                <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-                <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-                <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="declaration"
-                  checked={watchedValues.agreeToDataPrivacy}
-                  onCheckedChange={(checked: boolean) => setValue('agreeToDataPrivacy', checked)}
-                />
-                <Label htmlFor="declaration" className="text-sm">
-                  I agree to the data privacy policy and declaration above *
-                </Label>
-              </div>
-              {formMethods.formState.errors.agreeToDataPrivacy && (
-                <p className="text-sm text-red-600">
-                  {formMethods.formState.errors.agreeToDataPrivacy.message}
+              <Label htmlFor="signature">Digital Signature *</Label>
+              <Input
+                {...formMethods.register('signature')}
+                placeholder="Type your full name as signature"
+              />
+              {formMethods.formState.errors.signature && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.signature.message}
                 </p>
               )}
-              
-              <div>
-                <Label htmlFor="signature">Digital Signature *</Label>
-                <Input
-                  {...formMethods.register('signature')}
-                  placeholder="Type your full name as signature"
-                />
-                {formMethods.formState.errors.signature && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {formMethods.formState.errors.signature.message}
-                  </p>
-                )}
-              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="signatureDate">Date *</Label>
+              <Input
+                type="date"
+                {...formMethods.register('signatureDate')}
+                defaultValue={new Date().toISOString().split('T')[0]}
+              />
+              {formMethods.formState.errors.signatureDate && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.signatureDate.message}
+                </p>
+              )}
             </div>
           </div>
         </FormSection>
@@ -643,79 +499,55 @@ const GoodsInTransitClaim: React.FC = () => {
     }
   ];
 
+  const handleFormSubmit = (data: any) => {
+    setShowSummary(true);
+  };
+
+  const confirmSubmission = () => {
+    setShowSummary(false);
+    handleSubmit(onSubmit)();
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Goods-in-Transit Insurance Claim
-          </h1>
-          <p className="text-lg text-gray-600">
-            Please fill out all required information accurately
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Goods-in-Transit Claim Form
+            </h1>
+            <p className="text-gray-600">
+              Submit your goods-in-transit claim with all required details
+            </p>
+          </div>
+
+          <MultiStepForm
+            steps={steps}
+            onSubmit={handleFormSubmit}
+            formMethods={formMethods}
+          />
         </div>
 
-        <MultiStepForm
-          steps={steps}
-          onSubmit={handleFormSubmit}
-          formMethods={formMethods}
-        />
-
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Review Your Claim</DialogTitle>
+              <DialogTitle>Confirm Submission</DialogTitle>
             </DialogHeader>
-            
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-semibold mb-2">Policy Details</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>Policy Number: {watchedValues.policyNumber}</div>
-                  <div>Period: {watchedValues.periodOfCoverFrom} to {watchedValues.periodOfCoverTo}</div>
-                </div>
+            <div className="space-y-4">
+              <p>Please review your goods-in-transit claim details before submitting:</p>
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <p><strong>Policy Number:</strong> {watchedValues.policyNumber}</p>
+                <p><strong>Company Name:</strong> {watchedValues.companyName}</p>
+                <p><strong>Date of Loss:</strong> {watchedValues.dateOfLoss?.toString()}</p>
+                <p><strong>Number of Items:</strong> {goodsItems.length}</p>
               </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Insured Details</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>Company: {watchedValues.companyName}</div>
-                  <div>Email: {watchedValues.email}</div>
-                  <div>Phone: {watchedValues.phone}</div>
-                  <div>Address: {watchedValues.address}</div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Loss Details</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>Date: {watchedValues.dateOfLoss}</div>
-                  <div>Time: {watchedValues.timeOfLoss}</div>
-                  <div>Place: {watchedValues.placeOfOccurrence}</div>
-                  <div>Total Value: ₦{watchedValues.totalValue?.toLocaleString()}</div>
-                </div>
-              </div>
-
-              {watchedValues.goodsItems && watchedValues.goodsItems.length > 0 && (
-                <div>
-                  <h3 className="font-semibold mb-2">Goods Items</h3>
-                  {watchedValues.goodsItems.map((item, index) => (
-                    <div key={index} className="text-sm mb-2 p-2 bg-gray-50 rounded">
-                      <div>Quantity: {item.quantity}</div>
-                      <div>Description: {item.description}</div>
-                      <div>Value: ₦{item.value?.toLocaleString()}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
-
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSummary(false)}>
-                Edit Claim
+                Back to Edit
               </Button>
-              <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
+              <Button onClick={confirmSubmission} disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Submit Claim'}
               </Button>
             </DialogFooter>
           </DialogContent>
