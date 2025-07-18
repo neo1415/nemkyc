@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,6 +15,19 @@ export const useAuthRequiredSubmit = () => {
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check for post-authentication success state
+  useEffect(() => {
+    const checkPostAuthSuccess = () => {
+      const postAuthSuccess = sessionStorage.getItem('postAuthSuccess');
+      if (postAuthSuccess) {
+        sessionStorage.removeItem('postAuthSuccess');
+        setShowSuccess(true);
+      }
+    };
+
+    checkPostAuthSuccess();
+  }, [user]);
 
   const handleSubmitWithAuth = async (
     formData: any,
@@ -80,10 +93,18 @@ export const processPendingSubmissionUtil = async (userEmail: string) => {
     if (Date.now() - timestamp < 30 * 60 * 1000) {
       sessionStorage.removeItem('pendingSubmission');
       
-      // Import the submission service dynamically
-      const { submitFormWithNotifications } = await import('../services/submissionService');
-      await submitFormWithNotifications(formData, formType, userEmail);
-      return true;
+      try {
+        // Import the submission service dynamically
+        const { submitFormWithNotifications } = await import('../services/submissionService');
+        await submitFormWithNotifications(formData, formType, userEmail);
+        
+        // Set flag for success modal to show after redirect
+        sessionStorage.setItem('postAuthSuccess', 'true');
+        return true;
+      } catch (error) {
+        console.error('Error submitting form after authentication:', error);
+        throw error;
+      }
     } else {
       sessionStorage.removeItem('pendingSubmission');
     }
