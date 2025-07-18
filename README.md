@@ -82,7 +82,7 @@ This application is a highly professional, production-grade insurance form suite
 ✅ Then submit to Firestore + Storage + send confirmation email  
 ✅ Show a success modal with an animation and note for follow-up
 
----
+-
 
 ## 📌 FIREBASE RULES
 
