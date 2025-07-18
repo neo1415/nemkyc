@@ -96,6 +96,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
           }
           setFirebaseUser(firebaseUser);
+
+          // Process pending submission after authentication
+          const stored = sessionStorage.getItem('pendingSubmission');
+          if (stored) {
+            try {
+              const { formData, formType, timestamp } = JSON.parse(stored);
+              
+              // Check if submission is not too old (30 minutes)
+              if (Date.now() - timestamp < 30 * 60 * 1000) {
+                sessionStorage.removeItem('pendingSubmission');
+                
+                // Process the submission
+                const { submitFormWithNotifications } = await import('../services/submissionService');
+                await submitFormWithNotifications(formData, formType, firebaseUser.email!);
+              } else {
+                sessionStorage.removeItem('pendingSubmission');
+              }
+            } catch (error) {
+              console.error('Error processing pending submission:', error);
+              sessionStorage.removeItem('pendingSubmission');
+            }
+          }
         } catch (error) {
           console.error('Error fetching user data:', error);
         }
