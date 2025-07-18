@@ -251,7 +251,12 @@ const MotorClaim: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const { handleSubmitWithAuth, showSuccess: authShowSuccess, setShowSuccess: setAuthShowSuccess } = useAuthRequiredSubmit();
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
+  } = useAuthRequiredSubmit();
 
   const formMethods = useForm<any>({
     // resolver: yupResolver(motorClaimSchema),
@@ -1435,13 +1440,15 @@ const MotorClaim: React.FC = () => {
           
           {/* Success Modal */}
           <SuccessModal
-            isOpen={showSuccess || authShowSuccess}
+            isOpen={showSuccess || authShowSuccess || authSubmitting}
             onClose={() => {
               setShowSuccess(false);
               setAuthShowSuccess(false);
             }}
             title="Motor Claim Submitted!"
             formType="Motor Claim"
+            isLoading={authSubmitting}
+            loadingMessage="Your motor claim is being processed and submitted..."
           />
         </div>
       </div>
