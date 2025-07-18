@@ -14,6 +14,7 @@ export const useAuthRequiredSubmit = () => {
   const [pendingSubmission, setPendingSubmission] = useState<PendingSubmission | null>(null);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmitWithAuth = async (
     formData: any,
@@ -35,10 +36,13 @@ export const useAuthRequiredSubmit = () => {
 
     // User is authenticated, proceed with direct submission using submission service
     try {
+      setIsSubmitting(true);
       const { submitFormWithNotifications } = await import('../services/submissionService');
       await submitFormWithNotifications(formData, formType, user.email || '');
+      setIsSubmitting(false);
       setShowSuccess(true);
     } catch (error) {
+      setIsSubmitting(false);
       throw error;
     }
   };
@@ -59,6 +63,7 @@ export const useAuthRequiredSubmit = () => {
     showAuthDialog,
     showSuccess,
     setShowSuccess,
+    isSubmitting,
     proceedToSignup,
     dismissAuthDialog,
     formType: pendingSubmission?.formType || ''
