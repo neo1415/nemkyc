@@ -20,9 +20,15 @@ export const useAuthRequiredSubmit = () => {
     submitFunction: (data: any) => Promise<void>
   ) => {
     if (!user) {
-      // Store pending submission and show auth dialog
-      setPendingSubmission({ formData, formType, submitFunction });
-      setShowAuthDialog(true);
+      // Store pending submission and redirect to signup
+      sessionStorage.setItem('pendingSubmission', JSON.stringify({
+        formData,
+        formType,
+        timestamp: Date.now()
+      }));
+      
+      // Redirect to signup immediately
+      navigate('/auth/signup');
       return;
     }
 
@@ -31,14 +37,7 @@ export const useAuthRequiredSubmit = () => {
   };
 
   const proceedToSignup = () => {
-    if (pendingSubmission) {
-      // Store pending submission in sessionStorage to persist across navigation
-      sessionStorage.setItem('pendingSubmission', JSON.stringify({
-        formData: pendingSubmission.formData,
-        formType: pendingSubmission.formType,
-        timestamp: Date.now()
-      }));
-    }
+    // This function is no longer needed since we redirect directly
     setShowAuthDialog(false);
     navigate('/auth/signup');
   };
@@ -48,31 +47,11 @@ export const useAuthRequiredSubmit = () => {
     setPendingSubmission(null);
   };
 
-  // Function to be called after successful authentication
-  const processPendingSubmission = async () => {
-    const stored = sessionStorage.getItem('pendingSubmission');
-    if (stored && user) {
-      const { formData, formType, timestamp } = JSON.parse(stored);
-      
-      // Check if submission is not too old (30 minutes)
-      if (Date.now() - timestamp < 30 * 60 * 1000) {
-        sessionStorage.removeItem('pendingSubmission');
-        
-        // Import the submission service dynamically
-        const { submitFormWithNotifications } = await import('../services/submissionService');
-        await submitFormWithNotifications(formData, formType, user.email);
-      } else {
-        sessionStorage.removeItem('pendingSubmission');
-      }
-    }
-  };
-
   return {
     handleSubmitWithAuth,
     showAuthDialog,
     proceedToSignup,
     dismissAuthDialog,
-    processPendingSubmission,
     formType: pendingSubmission?.formType || ''
   };
 };
