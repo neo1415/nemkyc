@@ -1443,7 +1443,7 @@ const MotorClaim: React.FC = () => {
             isOpen={showSuccess || authShowSuccess || authSubmitting}
             onClose={() => {
               setShowSuccess(false);
-              setAuthShowSuccess(false);
+              setAuthShowSuccess();
             }}
             title="Motor Claim Submitted!"
             formType="Motor Claim"
