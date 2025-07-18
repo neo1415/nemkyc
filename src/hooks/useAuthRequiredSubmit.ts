@@ -13,27 +13,34 @@ export const useAuthRequiredSubmit = () => {
   const navigate = useNavigate();
   const [pendingSubmission, setPendingSubmission] = useState<PendingSubmission | null>(null);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleSubmitWithAuth = async (
     formData: any,
     formType: string,
-    submitFunction: (data: any) => Promise<void>
+    submitFunction?: (data: any) => Promise<void>
   ) => {
     if (!user) {
-      // Store pending submission and redirect to signup
+      // Store pending submission and redirect to sign-in page first 
       sessionStorage.setItem('pendingSubmission', JSON.stringify({
         formData,
         formType,
         timestamp: Date.now()
       }));
       
-      // Redirect to signup immediately
-      navigate('/auth/signup');
+      // Redirect to sign-in page (they can signup from there if needed)
+      navigate('/auth/signin');
       return;
     }
 
-    // User is authenticated, proceed with submission
-    await submitFunction(formData);
+    // User is authenticated, proceed with direct submission using submission service
+    try {
+      const { submitFormWithNotifications } = await import('../services/submissionService');
+      await submitFormWithNotifications(formData, formType, user.email || '');
+      setShowSuccess(true);
+    } catch (error) {
+      throw error;
+    }
   };
 
   const proceedToSignup = () => {
@@ -50,6 +57,8 @@ export const useAuthRequiredSubmit = () => {
   return {
     handleSubmitWithAuth,
     showAuthDialog,
+    showSuccess,
+    setShowSuccess,
     proceedToSignup,
     dismissAuthDialog,
     formType: pendingSubmission?.formType || ''
