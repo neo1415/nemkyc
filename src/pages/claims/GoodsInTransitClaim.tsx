@@ -727,8 +727,6 @@ const GoodsInTransitClaim: React.FC = () => {
           title="Claim Submitted Successfully!"
           message="Your goods-in-transit claim has been submitted successfully. You will receive a confirmation email shortly."
           formType="Goods-in-Transit Claim"
-          isLoading={isSubmitting}
-          loadingMessage="Your goods-in-transit claim is being submitted..."
         />
       </div>
     </div>
