@@ -45,16 +45,16 @@ const moneyInsuranceSchema = yup.object().shape({
 
 type MoneyInsuranceData = yup.InferType<typeof moneyInsuranceSchema>;
 
-const defaultValues = {
+const defaultValues: Partial<MoneyInsuranceData> = {
   signatureDate: new Date(),
   policeNotified: 'no'
-} as Partial<MoneyInsuranceData>;
+};
 
 const MoneyInsuranceClaim: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
-  const formMethods = useForm<MoneyInsuranceData>({
+  const formMethods = useForm({
     resolver: yupResolver(moneyInsuranceSchema),
     defaultValues,
     mode: 'onChange'
