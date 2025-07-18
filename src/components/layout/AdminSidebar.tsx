@@ -50,7 +50,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
     { name: 'Individual CDD', href: '/admin/cdd/individual' },
     { name: 'Corporate CDD', href: '/admin/cdd/corporate' },
     { name: 'Partners CDD', href: '/admin/cdd/partners' },
-    { name: 'NAICOM Partners CDD', href: '/admin/cdd/naicom-partners' },
     { name: 'Agents CDD', href: '/admin/cdd/agents' },
     { name: 'Brokers CDD', href: '/admin/cdd/brokers' }
   ];

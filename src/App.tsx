@@ -43,7 +43,7 @@ import AdminKYCTable from './pages/admin/AdminKYCTable';
 import AdminUsersTable from './pages/admin/AdminUsersTable';
 import FormViewer from './pages/admin/FormViewer';
 import AdminMotorClaimsTable from './pages/admin/AdminMotorClaimsTable';
-import AdminNaicomPartnersCDDTable from './pages/admin/AdminNaicomPartnersCDDTable';
+
 import AdminAgentsCDDTable from './pages/admin/AdminAgentsCDDTable';
 import AdminIndividualCDDTable from './pages/admin/AdminIndividualCDDTable';
 import AdminRentAssuranceClaimsTable from './pages/admin/AdminRentAssuranceClaimsTable';
@@ -62,6 +62,8 @@ import AdminGoodsInTransitClaimsTable from './pages/admin/AdminGoodsInTransitCla
 import AdminIndividualKYCTable from './pages/admin/AdminIndividualKYCTable';
 import AdminCorporateKYCTable from './pages/admin/AdminCorporateKYCTable';
 import AdminCorporateCDDTable from './pages/admin/AdminCorporateCDDTable';
+import AdminPartnersCDDTable from './pages/admin/AdminPartnersCDDTable';
+import AdminBrokersCDDTable from './pages/admin/AdminBrokersCDDTable';
 
 
 function App() {
@@ -157,11 +159,6 @@ function App() {
             </ProtectedRoute>
           } />
           
-          <Route path="admin/naicom-partners-cdd" element={
-            <ProtectedRoute>
-              <AdminNaicomPartnersCDDTable />
-            </ProtectedRoute>
-          } />
           
           <Route path="admin/agents-cdd" element={
             <ProtectedRoute>
@@ -364,45 +361,33 @@ function App() {
           } />
           
           {/* Individual CDD Admin Tables */}
+          <Route path="admin/cdd/individual" element={
+            <ProtectedRoute>
+              <AdminIndividualCDDTable />
+            </ProtectedRoute>
+          } />
+          
           <Route path="admin/cdd/corporate" element={
             <ProtectedRoute>
               <AdminCorporateCDDTable />
             </ProtectedRoute>
           } />
           
-          <Route path="admin/cdd/naicom-corporate" element={
-            <ProtectedRoute>
-              <AdminCDDTable formType="naicom-corporate" />
-            </ProtectedRoute>
-          } />
-          
           <Route path="admin/cdd/partners" element={
             <ProtectedRoute>
-              <AdminCDDTable formType="partners" />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="admin/cdd/naicom-partners" element={
-            <ProtectedRoute>
-              <AdminCDDTable formType="naicom-partners" />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="admin/cdd/individual" element={
-            <ProtectedRoute>
-              <AdminCDDTable formType="individual" />
+              <AdminPartnersCDDTable />
             </ProtectedRoute>
           } />
           
           <Route path="admin/cdd/agents" element={
             <ProtectedRoute>
-              <AdminCDDTable formType="agents" />
+              <AdminAgentsCDDTable />
             </ProtectedRoute>
           } />
           
           <Route path="admin/cdd/brokers" element={
             <ProtectedRoute>
-              <AdminCDDTable formType="brokers" />
+              <AdminBrokersCDDTable />
             </ProtectedRoute>
           } />
           
