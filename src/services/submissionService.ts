@@ -86,6 +86,7 @@ export const submitFormWithNotifications = async (
     // Add metadata to form data
     const submissionData = {
       ...formData,
+      timestamp: Date.now(),
       submittedAt: new Date().toISOString(),
       submittedBy: userEmail,
       status: 'pending'
@@ -112,7 +113,7 @@ const getFirestoreCollection = (formType: string): string => {
   const formTypeLower = formType.toLowerCase();
   
   // Claims forms
-  if (formTypeLower.includes('motor')) return 'motorClaims';
+  if (formTypeLower.includes('motor')) return 'motor-claims';
   if (formTypeLower.includes('burglary')) return 'burglaryClaims';
   if (formTypeLower.includes('fire')) return 'fireSpecialPerilsClaims';
   if (formTypeLower.includes('allrisk') || formTypeLower.includes('all risk')) return 'allRiskClaims';
