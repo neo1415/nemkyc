@@ -115,18 +115,18 @@ const getFirestoreCollection = (formType: string): string => {
   
   // Claims forms
   if (formTypeLower.includes('motor')) return 'motor-claims';
-  if (formTypeLower.includes('burglary')) return 'burglary-claims';
-  if (formTypeLower.includes('fire')) return 'fire-special-perils-claims';
-  if (formTypeLower.includes('allrisk') || formTypeLower.includes('all risk')) return 'all-risk-claims';
-  if (formTypeLower.includes('goods')) return 'goods-in-transit-claims';
-  if (formTypeLower.includes('money')) return 'money-insurance-claims';
+  if (formTypeLower.includes('burglary')) return 'burglaryClaims';
+  if (formTypeLower.includes('fire')) return 'fireSpecialPerilsClaims';
+  if (formTypeLower.includes('allrisk') || formTypeLower.includes('all risk')) return 'allRiskClaims';
+  if (formTypeLower.includes('goods')) return 'goodsInTransitClaims';
+  if (formTypeLower.includes('money')) return 'moneyInsuranceClaims';
   if (formTypeLower.includes('employers')) return 'employers-liability-claims';
   if (formTypeLower.includes('public')) return 'public-liability-claims';
   if (formTypeLower.includes('professional')) return 'professional-indemnity-claims';
-  if (formTypeLower.includes('fidelity')) return 'fidelity-guarantee-claims';
-  if (formTypeLower.includes('contractors')) return 'contractors-plant-machinery-claims';
-  if (formTypeLower.includes('group')) return 'group-personal-accident-claims';
-  if (formTypeLower.includes('rent')) return 'rent-assurance-claims';
+  if (formTypeLower.includes('fidelity')) return 'fidelityGuaranteeClaims';
+  if (formTypeLower.includes('contractors')) return 'contractorsPlantMachineryClaims';
+  if (formTypeLower.includes('group')) return 'groupPersonalAccidentClaims';
+  if (formTypeLower.includes('rent')) return 'rentAssuranceClaims';
   if (formTypeLower.includes('combined')) return 'combined-gpa-employers-liability-claims';
   
   // KYC forms
