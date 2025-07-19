@@ -26,6 +26,8 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Badge } from '@/components/ui/badge';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import SuccessModal from '@/components/common/SuccessModal';
 
 // Group Personal Accident Claim Schema
 const groupPersonalAccidentClaimSchema = yup.object().shape({
@@ -141,7 +143,35 @@ const GroupPersonalAccidentClaim: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
+  } = useAuthRequiredSubmit();
+
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        // Hide loading after 5 seconds max (in case something goes wrong)
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
 
   const formMethods = useForm<any>({
     // resolver: yupResolver(groupPersonalAccidentClaimSchema),
@@ -165,62 +195,32 @@ const GroupPersonalAccidentClaim: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
+  // Main submit handler that checks authentication
   const handleSubmit = async (data: GroupPersonalAccidentClaimData) => {
-    setIsSubmitting(true);
-    try {
-      // Clean data by removing undefined values
-      const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([_, value]) => value !== undefined)
-      );
-
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
         fileUploadPromises.push(
-          uploadFile(file, 'group-personal-accident-claims').then(url => [key + 'Url', url])
+          uploadFile(file, `group-personal-accident-claims/${Date.now()}-${file.name}`).then(url => [key, url])
         );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Prepare form data with file URLs
-      const submissionData = {
-        ...cleanData,
-        ...fileUrls,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        formType: 'group-personal-accident-claim'
-      };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'group-personal-accident-claims'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
-      });
-
-      // Send confirmation email
-      // await emailService.sendSubmissionConfirmation(data.email, 'Group Personal Accident Claim');
-      
-      clearDraft();
-      setShowSummary(false);
-      setShowSuccess(true);
-      toast({
-        title: "Claim Submitted Successfully",
-        description: "Your group personal accident claim has been submitted and you'll receive a confirmation email shortly.",
-      });
-    } catch (error) {
-      console.error('Error submitting claim:', error);
-      toast({
-        title: "Submission Error",
-        description: "There was an error submitting your claim. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      }
     }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Group Personal Accident Claim'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Group Personal Accident Claim');
+    clearDraft();
+    setShowSummary(false);
   };
 
   const onFinalSubmit = (data: GroupPersonalAccidentClaimData) => {
@@ -884,7 +884,37 @@ const GroupPersonalAccidentClaim: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        {/* Success Modal */}
+        <SuccessModal
+          isOpen={showSuccess || authShowSuccess || authSubmitting}
+          onClose={() => {
+            setShowSuccess(false);
+            setAuthShowSuccess();
+          }}
+          title="Group Personal Accident Claim Submitted!"
+          formType="Group Personal Accident Claim"
+          isLoading={authSubmitting}
+          loadingMessage="Your group personal accident claim is being processed and submitted..."
+        />
       </div>
+
+      {/* Post-Authentication Loading Overlay */}
+      {showPostAuthLoading && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+              <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
+              <p className="text-muted-foreground">
+                Thank you for signing in! Your group personal accident claim is now being submitted...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
