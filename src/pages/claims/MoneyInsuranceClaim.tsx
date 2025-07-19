@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../firebase/config';
 import MultiStepForm from '../../components/common/MultiStepForm';
 import FormSection from '../../components/common/FormSection';
 import PhoneInput from '../../components/common/PhoneInput';
 import { useToast } from '../../hooks/use-toast';
 import { useFormDraft } from '../../hooks/useFormDraft';
+import { uploadFile } from '../../services/fileService';
+import { useAuthRequiredSubmit } from '../../hooks/useAuthRequiredSubmit';
+import SuccessModal from '../../components/common/SuccessModal';
+import { Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
@@ -51,16 +53,45 @@ const MoneyInsuranceClaim: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
+  } = useAuthRequiredSubmit();
 
   const formMethods = useForm<Partial<MoneyInsuranceData>>({
     defaultValues,
     mode: 'onChange'
   });
 
-  const { watch, handleSubmit, setValue } = formMethods;
-  const { saveDraft, loadDraft } = useFormDraft('money-insurance-claim', formMethods);
+  const { watch, setValue, getValues } = formMethods;
+  const { saveDraft, loadDraft, clearDraft } = useFormDraft('money-insurance-claim', formMethods);
   
   const watchedValues = watch();
+
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        // Hide loading after 5 seconds max (in case something goes wrong)
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
 
   useEffect(() => {
     const subscription = watch((value) => {
@@ -83,47 +114,36 @@ const MoneyInsuranceClaim: React.FC = () => {
     return cleaned;
   };
 
-  const onSubmit = async (data: MoneyInsuranceData) => {
-    setIsSubmitting(true);
-    try {
-      const cleanedData = cleanData(data);
-      
-      await addDoc(collection(db, 'money-insurance-claims'), {
-        ...cleanedData,
-        submittedAt: new Date().toISOString(),
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB'),
-        status: 'processing'
-      });
-
-      // await sendEmail({
-      //   to: data.email,
-      //   template: 'claim-confirmation',
-      //   data: { claimType: 'Money Insurance Claim', ...data }
-      // });
-
-      setShowSummary(false);
-      setShowSuccess(true);
-      toast({
-        title: "Claim Submitted Successfully",
-        description: "Your money insurance claim has been submitted.",
-      });
-    } catch (error) {
-      console.error('Submission error:', error);
-      toast({
-        title: "Submission Failed",
-        description: "Please try again or contact support.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+  // Main submit handler that checks authentication
+  const handleSubmit = async (data: MoneyInsuranceData) => {
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
+        fileUploadPromises.push(
+          uploadFile(file, `money-insurance-claims/${Date.now()}-${file.name}`).then(url => [key, url])
+        );
+      }
     }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Money Insurance Claim'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Money Insurance Claim');
+    clearDraft();
+    setShowSummary(false);
   };
 
-  const handleFormSubmit = () => {
-    if (watchedValues.declarationAccepted) {
-      setShowSummary(true);
-    }
+  const onFinalSubmit = (data: MoneyInsuranceData) => {
+    setShowSummary(true);
   };
 
   const steps = [
@@ -476,9 +496,7 @@ const MoneyInsuranceClaim: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleFormSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Submit Claim"
+          onSubmit={onFinalSubmit}
           formMethods={formMethods}
         />
 
@@ -512,14 +530,44 @@ const MoneyInsuranceClaim: React.FC = () => {
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
                   Edit Details
                 </Button>
-                <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
+                <Button onClick={() => handleSubmit(getValues())} disabled={isSubmitting}>
                   {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
                 </Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
+        
+        {/* Success Modal */}
+        <SuccessModal
+          isOpen={showSuccess || authShowSuccess || authSubmitting}
+          onClose={() => {
+            setShowSuccess(false);
+            setAuthShowSuccess();
+          }}
+          title="Money Insurance Claim Submitted!"
+          formType="Money Insurance Claim"
+          isLoading={authSubmitting}
+          loadingMessage="Your money insurance claim is being processed and submitted..."
+        />
       </div>
+
+      {/* Post-Authentication Loading Overlay */}
+      {showPostAuthLoading && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+              <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
+              <p className="text-muted-foreground">
+                Thank you for signing in! Your money insurance claim is now being submitted...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

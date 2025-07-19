@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/firebase/config';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import FormSection from '@/components/common/FormSection';
 import { Input } from '@/components/ui/input';
@@ -17,7 +15,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { CheckCircle2, Loader2, Trash2, Plus } from 'lucide-react';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import { emailService } from '@/services/emailService';
+import { uploadFile } from '@/services/fileService';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import SuccessModal from '@/components/common/SuccessModal';
 
 interface FireSpecialPerilsClaimData {
   // Policy Details
@@ -139,6 +139,14 @@ const FireSpecialPerilsClaim: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
+  } = useAuthRequiredSubmit();
 
   const formMethods = useForm<FireSpecialPerilsClaimData>({
     // resolver: yupResolver(schema as any),
@@ -194,6 +202,27 @@ const FireSpecialPerilsClaim: React.FC = () => {
   const watchedValues = formMethods.watch();
   const { saveDraft, loadDraft, clearDraft } = useFormDraft('fireSpecialPerilsClaim', formMethods);
 
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        // Hide loading after 5 seconds max (in case something goes wrong)
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
+
   useEffect(() => {
     loadDraft();
   }, [loadDraft]);
@@ -213,42 +242,32 @@ const FireSpecialPerilsClaim: React.FC = () => {
     });
   }, [watchedValues.itemsLost, formMethods]);
 
+  // Main submit handler that checks authentication
   const handleSubmit = async (data: FireSpecialPerilsClaimData) => {
-    setIsSubmitting(true);
-    try {
-      // Save to Firestore
-      const docRef = await addDoc(collection(db, 'fireSpecialPerilsClaims'), {
-        ...data,
-        submittedAt: new Date(),
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB'),
-        status: 'pending'
-      });
-
-      // Send confirmation email
-      // await emailService.sendSubmissionConfirmation(
-      //   data.email,
-      //   'Fire and Special Perils Claim'
-      // );
-
-      clearDraft();
-      setShowSummary(false);
-      setShowSuccess(true);
-      
-      toast({
-        title: "Claim Submitted Successfully",
-        description: "Your fire and special perils claim has been submitted and you will receive a confirmation email shortly.",
-      });
-
-    } catch (error) {
-      toast({
-        title: "Submission Error",
-        description: "There was an error submitting your claim. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
+        fileUploadPromises.push(
+          uploadFile(file, `fire-special-perils-claims/${Date.now()}-${file.name}`).then(url => [key, url])
+        );
+      }
     }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Fire Special Perils Claim'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Fire Special Perils Claim');
+    clearDraft();
+    setShowSummary(false);
   };
 
   const onFinalSubmit = (data: FireSpecialPerilsClaimData) => {
@@ -1040,8 +1059,6 @@ const FireSpecialPerilsClaim: React.FC = () => {
         <MultiStepForm
           steps={steps}
           onSubmit={onFinalSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Review Claim"
           formMethods={formMethods}
         />
 
@@ -1081,7 +1098,37 @@ const FireSpecialPerilsClaim: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        {/* Success Modal */}
+        <SuccessModal
+          isOpen={showSuccess || authShowSuccess || authSubmitting}
+          onClose={() => {
+            setShowSuccess(false);
+            setAuthShowSuccess();
+          }}
+          title="Fire Special Perils Claim Submitted!"
+          formType="Fire Special Perils Claim"
+          isLoading={authSubmitting}
+          loadingMessage="Your fire special perils claim is being processed and submitted..."
+        />
       </div>
+
+      {/* Post-Authentication Loading Overlay */}
+      {showPostAuthLoading && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+              <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
+              <p className="text-muted-foreground">
+                Thank you for signing in! Your fire special perils claim is now being submitted...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
