@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,9 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { CalendarIcon, Plus, Trash2, Check } from 'lucide-react';
+import { CalendarIcon, Plus, Trash2, Check, Loader2, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -20,10 +20,8 @@ import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { useAuth } from '@/contexts/AuthContext';
-import { notifySubmission } from '@/services/notificationService';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import SuccessModal from '@/components/common/SuccessModal';
 
 // Form validation schema
 const corporateKYCSchema = yup.object().shape({
@@ -128,11 +126,16 @@ const defaultValues = {
 };
 
 const CorporateKYC: React.FC = () => {
-  const { user } = useAuth();
+  const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
+  } = useAuthRequiredSubmit();
 
   const formMethods = useForm<any>({
     resolver: yupResolver(corporateKYCSchema),
@@ -146,8 +149,27 @@ const CorporateKYC: React.FC = () => {
     name: 'directors'
   });
 
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
+
   // Auto-save draft
-  React.useEffect(() => {
+  useEffect(() => {
     const subscription = formMethods.watch((data) => {
       saveDraft(data);
     });
@@ -155,53 +177,34 @@ const CorporateKYC: React.FC = () => {
   }, [formMethods, saveDraft]);
 
   const handleSubmit = async (data: any) => {
-    setIsSubmitting(true);
-    try {
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
         fileUploadPromises.push(
-          uploadFile(file, 'corporate-kyc').then(url => [key + 'Url', url])
+          uploadFile(file, `corporate-kyc/${Date.now()}-${file.name}`).then(url => [key, url])
         );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Prepare form data with file URLs
-      const submissionData = {
-        ...data,
-        ...fileUrls,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        formType: 'corporate-kyc',
-        userId: user?.uid || 'anonymous',
-        userEmail: user?.email || data.emailAddress
-      };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'corporate-kyc-forms'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
-      });
-      
-      // Send notification email
-      if (user) {
-        await notifySubmission(user, 'Corporate KYC');
       }
-      
-      clearDraft();
-      setShowSummary(false);
-      setShowSuccess(true);
-      toast({ title: "Corporate KYC form submitted successfully!" });
-    } catch (error) {
-      console.error('Submission error:', error);
-      toast({ title: "Submission failed", variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
     }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Corporate KYC'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Corporate KYC');
+    clearDraft();
+    setShowSummary(false);
+  };
+
+  const onFinalSubmit = (data: any) => {
+    setShowSummary(true);
   };
 
   const DatePickerField = ({ name, label }: { name: string; label: string }) => {
@@ -528,20 +531,34 @@ const CorporateKYC: React.FC = () => {
   ];
 
   return (
-    <div className="container mx-auto py-8">
-      <Card>
+    <div className="container mx-auto px-4 py-8">
+      {/* Post-auth loading overlay */}
+      {showPostAuthLoading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-lg font-semibold">Completing your submission...</p>
+            <p className="text-sm text-muted-foreground">Please wait while we process your KYC form.</p>
+          </div>
+        </div>
+      )}
+
+      <Card className="max-w-6xl mx-auto">
         <CardHeader>
-          <CardTitle>Corporate KYC Form</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-6 w-6" />
+            Corporate KYC Form
+          </CardTitle>
           <CardDescription>
-            Please fill out all required information for corporate KYC verification
+            Know Your Customer - Please provide accurate information for regulatory compliance
           </CardDescription>
         </CardHeader>
         <CardContent>
           <MultiStepForm
             steps={steps}
-            onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
+            onSubmit={onFinalSubmit}
             formMethods={formMethods}
+            submitButtonText="Submit KYC Form"
           />
         </CardContent>
       </Card>
@@ -550,47 +567,60 @@ const CorporateKYC: React.FC = () => {
       <Dialog open={showSummary} onOpenChange={setShowSummary}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Review Your Corporate KYC Form</DialogTitle>
+            <DialogTitle>Corporate KYC Form Summary</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><strong>NEM Branch Office:</strong> {formMethods.watch('nemBranchOffice')}</div>
+              <div><strong>Branch Office:</strong> {formMethods.watch('nemBranchOffice')}</div>
               <div><strong>Insured:</strong> {formMethods.watch('insured')}</div>
-              <div><strong>Contact Person:</strong> {formMethods.watch('contactPerson')}</div>
               <div><strong>Email:</strong> {formMethods.watch('email')}</div>
-              <div><strong>Website:</strong> {formMethods.watch('website')}</div>
+              <div><strong>Contact Person:</strong> {formMethods.watch('contactPerson')}</div>
               <div><strong>BVN:</strong> {formMethods.watch('bvn')}</div>
+              <div><strong>Business Type:</strong> {formMethods.watch('businessType')}</div>
             </div>
-            
-            <div className="flex gap-4 justify-end">
-              <Button variant="outline" onClick={() => setShowSummary(false)}>
-                Edit Form
-              </Button>
-              <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
-              </Button>
+            <div>
+              <strong>Address:</strong>
+              <p className="text-sm mt-1">{formMethods.watch('officeAddress')}</p>
+            </div>
+            <div>
+              <strong>Directors:</strong>
+              <div className="text-sm mt-1 space-y-2">
+                {formMethods.watch('directors')?.map((director: any, index: number) => (
+                  <div key={index} className="bg-gray-50 p-2 rounded">
+                    {director.firstName} {director.lastName} - {director.occupation}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSummary(false)}>
+              Edit Form
+            </Button>
+            <Button 
+              onClick={() => handleSubmit(formMethods.getValues())}
+              disabled={authSubmitting}
+            >
+              {authSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                'Submit KYC Form'
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Success Dialog */}
-      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-green-600">Form Submitted Successfully!</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p>Your Corporate KYC form has been submitted successfully. We will review your information and contact you if additional details are needed.</p>
-            <p className="text-sm text-gray-600">
-              For any inquiries about your submission, please contact our customer service team.
-            </p>
-            <Button onClick={() => setShowSuccess(false)} className="w-full">
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SuccessModal
+        isOpen={authShowSuccess}
+        onClose={() => setAuthShowSuccess()}
+        title="KYC Form Submitted Successfully!"
+        message="Your Corporate KYC form has been submitted successfully. You will receive a confirmation email shortly."
+        formType="Corporate KYC"
+      />
     </div>
   );
 };
