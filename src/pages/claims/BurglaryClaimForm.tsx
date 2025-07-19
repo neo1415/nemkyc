@@ -21,10 +21,9 @@ import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { emailService } from '@/services/emailService';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import SuccessModal from '@/components/common/SuccessModal';
 import { Info } from 'lucide-react';
 
 // Burglary Claim Schema
@@ -205,7 +204,14 @@ const BurglaryClaimForm: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
+  } = useAuthRequiredSubmit();
 
   const formMethods = useForm<any>({
     // resolver: yupResolver(burglaryClaimSchema),
@@ -221,6 +227,27 @@ const BurglaryClaimForm: React.FC = () => {
   const { saveDraft, clearDraft } = useFormDraft('burglaryClaimForm', formMethods);
   const watchedValues = formMethods.watch();
 
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        // Hide loading after 5 seconds max (in case something goes wrong)
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
+
   // Auto-save draft
   useEffect(() => {
     const subscription = formMethods.watch((data) => {
@@ -229,65 +256,36 @@ const BurglaryClaimForm: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
+  // Main submit handler that checks authentication
   const handleSubmit = async (data: BurglaryClaimData) => {
-    setShowSummary(true);
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
+        fileUploadPromises.push(
+          uploadFile(file, `burglary-claims/${Date.now()}-${file.name}`).then(url => [key, url])
+        );
+      }
+    }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Burglary Claim'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Burglary Claim');
+    clearDraft();
+    setShowSummary(false);
   };
 
-  const handleFinalSubmit = async () => {
-    setIsSubmitting(true);
-    try {
-      const data = formMethods.getValues();
-      
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
-        fileUploadPromises.push(
-          uploadFile(file, 'burglary-claims').then(url => [key + 'Url', url])
-        );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Filter out undefined values
-      const cleanData = Object.entries(data).reduce((acc, [key, value]) => {
-        if (value !== undefined) {
-          acc[key] = value;
-        }
-        return acc;
-      }, {} as any);
-
-      // Prepare form data with file URLs
-      const submissionData = {
-        ...cleanData,
-        ...fileUrls,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        formType: 'burglary-claim',
-        signatureDate: new Date()
-      };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'burglary-claims'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
-      });
-
-      // Send confirmation email
-      // await emailService.sendSubmissionConfirmation(data.email, 'Burglary Insurance Claim');
-      
-      clearDraft();
-      setShowSummary(false);
-      setShowSuccess(true);
-      toast({ title: "Burglary claim submitted successfully!" });
-    } catch (error) {
-      console.error('Submission error:', error);
-      toast({ title: "Submission failed", variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
-    }
+  const onFinalSubmit = (data: BurglaryClaimData) => {
+    setShowSummary(true);
   };
 
   const DatePickerField = ({ name, label }: { name: string; label: string }) => {
@@ -968,13 +966,11 @@ const BurglaryClaimForm: React.FC = () => {
           </p>
         </div>
 
-        <MultiStepForm
-          steps={steps}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Review Claim"
-          formMethods={formMethods}
-        />
+          <MultiStepForm
+            steps={steps}
+            onSubmit={onFinalSubmit}
+            formMethods={formMethods}
+          />
 
         {/* Summary Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
@@ -999,7 +995,7 @@ const BurglaryClaimForm: React.FC = () => {
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Back to Edit
               </Button>
-              <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
+              <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1012,39 +1008,37 @@ const BurglaryClaimForm: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        {/* Success Dialog */}
-        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-center text-green-600">
-                Claim Submitted Successfully!
-              </DialogTitle>
-            </DialogHeader>
-            <div className="text-center py-4">
-              <div className="mb-4">
-                <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                  ✓
-                </div>
-                <p className="text-gray-600 mb-4">
-                  Your burglary insurance claim has been submitted successfully. 
-                  You will receive a confirmation email shortly.
-                </p>
-                <div className="p-4 rounded-lg">
-                  <p className="text-sm font-medium text-blue-800">
-                    For claims status enquiries, call 01 448 9570
-                  </p>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => setShowSuccess(false)} className="w-full">
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        
+        {/* Success Modal */}
+        <SuccessModal
+          isOpen={showSuccess || authShowSuccess || authSubmitting}
+          onClose={() => {
+            setShowSuccess(false);
+            setAuthShowSuccess();
+          }}
+          title="Burglary Claim Submitted!"
+          formType="Burglary Claim"
+          isLoading={authSubmitting}
+          loadingMessage="Your burglary claim is being processed and submitted..."
+        />
       </div>
+
+      {/* Post-Authentication Loading Overlay */}
+      {showPostAuthLoading && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+              <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
+              <p className="text-muted-foreground">
+                Thank you for signing in! Your burglary claim is now being submitted...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
