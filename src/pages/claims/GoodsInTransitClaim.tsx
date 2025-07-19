@@ -893,7 +893,7 @@ const GoodsInTransitClaim: React.FC = () => {
         {/* Success Modal */}
         <SuccessModal 
           isOpen={authShowSuccess} 
-          onClose={() => setAuthShowSuccess(false)}
+          onClose={() => setAuthShowSuccess()}
           title="Goods In Transit Claim Submitted Successfully!"
           message="Your goods in transit claim has been submitted and you will receive a confirmation email shortly."
         />
