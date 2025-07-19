@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/firebase/config';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import FormSection from '@/components/common/FormSection';
 import { Input } from '@/components/ui/input';
@@ -16,7 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import { emailService } from '@/services/emailService';
+import { uploadFile } from '@/services/fileService';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import SuccessModal from '@/components/common/SuccessModal';
+import FileUpload from '@/components/common/FileUpload';
 
 interface FidelityGuaranteeClaimData {
   // Policy Details
@@ -85,8 +86,14 @@ const schema = yup.object().shape({
 const FidelityGuaranteeClaim: React.FC = () => {
   const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
+  } = useAuthRequiredSubmit();
 
   const formMethods = useForm<FidelityGuaranteeClaimData>({
     // resolver: yupResolver(schema as any),
@@ -125,52 +132,60 @@ const FidelityGuaranteeClaim: React.FC = () => {
   });
 
   const watchedValues = formMethods.watch();
-  const { saveDraft, loadDraft, clearDraft } = useFormDraft('fidelityGuaranteeClaim', formMethods);
+  const { saveDraft, clearDraft } = useFormDraft('fidelityGuaranteeClaim', formMethods);
 
+  // Check for pending submission when component mounts
   useEffect(() => {
-    loadDraft();
-  }, [loadDraft]);
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+    checkPendingSubmission();
+  }, []);
 
+  // Hide post-auth loading when success modal shows
   useEffect(() => {
-    saveDraft(watchedValues);
-  }, [watchedValues, saveDraft]);
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
+
+  // Auto-save draft
+  useEffect(() => {
+    const subscription = formMethods.watch((data) => {
+      saveDraft(data);
+    });
+    return () => subscription.unsubscribe();
+  }, [formMethods, saveDraft]);
 
   const handleSubmit = async (data: FidelityGuaranteeClaimData) => {
-    setIsSubmitting(true);
-    try {
-      // Save to Firestore
-      const docRef = await addDoc(collection(db, 'fidelityGuaranteeClaims'), {
-        ...data,
-        submittedAt: new Date(),
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB'),
-        status: 'pending'
-      });
-
-      // Send confirmation email
-      // await emailService.sendSubmissionConfirmation(
-      //   data.email,
-      //   'Fidelity Guarantee Claim'
-      // );
-
-      clearDraft();
-      setShowSummary(false);
-      setShowSuccess(true);
-      
-      toast({
-        title: "Claim Submitted Successfully",
-        description: "Your fidelity guarantee claim has been submitted and you will receive a confirmation email shortly.",
-      });
-
-    } catch (error) {
-      toast({
-        title: "Submission Error",
-        description: "There was an error submitting your claim. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
+        fileUploadPromises.push(
+          uploadFile(file, `fidelity-guarantee-claims/${Date.now()}-${file.name}`).then(url => [key, url])
+        );
+      }
     }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Fidelity Guarantee Claim'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Fidelity Guarantee Claim');
+    clearDraft();
+    setShowSummary(false);
   };
 
   const onFinalSubmit = (data: FidelityGuaranteeClaimData) => {
@@ -711,86 +726,81 @@ const FidelityGuaranteeClaim: React.FC = () => {
     },
   ];
 
-  if (showSuccess) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="pt-6">
-            <div className="mx-auto mb-4 w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Claim Submitted Successfully!</h2>
-            <p className="text-gray-600 mb-6">
-              Your fidelity guarantee claim has been received and is being processed.
-            </p>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm font-medium text-blue-800">
-                For claims status enquiries, call 01 448 9570
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Fidelity Guarantee Insurance Claim Form
-          </h1>
-          <p className="text-muted-foreground">
-            Please fill out all required information to submit your claim
-          </p>
+    <div className="max-w-4xl mx-auto p-6">
+      {/* Post-auth loading overlay */}
+      {showPostAuthLoading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-lg font-semibold">Completing your submission...</p>
+            <p className="text-sm text-muted-foreground">Please wait while we process your claim.</p>
+          </div>
         </div>
+      )}
 
-        <MultiStepForm
-          steps={steps}
-          onSubmit={onFinalSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Review Claim"
-          formMethods={formMethods}
-        />
+      <Card>
+        <CardHeader>
+          <CardTitle>Fidelity Guarantee Claim Form</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <MultiStepForm
+            steps={steps}
+            onSubmit={onFinalSubmit}
+            formMethods={formMethods}
+            submitButtonText="Submit Claim"
+          />
+        </CardContent>
+      </Card>
 
-        {/* Summary Dialog */}
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Review Your Fidelity Guarantee Claim Submission</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>Policy Number:</strong> {watchedValues.policyNumber}</div>
-                <div><strong>Company:</strong> {watchedValues.companyName}</div>
-                <div><strong>Email:</strong> {watchedValues.email}</div>
-                <div><strong>Default Amount:</strong> ₦{watchedValues.defaultAmount?.toLocaleString()}</div>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-blue-800">
-                  For claims status enquiries, call 01 448 9570
-                </p>
-              </div>
+      {/* Summary Dialog */}
+      <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Claim Summary</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div><strong>Policy Number:</strong> {watchedValues.policyNumber}</div>
+              <div><strong>Company Name:</strong> {watchedValues.companyName}</div>
+              <div><strong>Defaulter Name:</strong> {watchedValues.defaulterName}</div>
+              <div><strong>Default Amount:</strong> ₦{watchedValues.defaultAmount?.toLocaleString()}</div>
+              <div><strong>Email:</strong> {watchedValues.email}</div>
+              <div><strong>Phone:</strong> {watchedValues.phone}</div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowSummary(false)}>
-                Back to Edit
-              </Button>
-              <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Claim'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+            <div>
+              <strong>Default Details:</strong>
+              <p className="text-sm mt-1">{watchedValues.defaultDetails}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSummary(false)}>
+              Edit Form
+            </Button>
+            <Button 
+              onClick={() => handleSubmit(watchedValues)}
+              disabled={authSubmitting}
+            >
+              {authSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                'Submit Claim'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <SuccessModal
+        isOpen={authShowSuccess}
+        onClose={() => setAuthShowSuccess()}
+        title="Claim Submitted Successfully!"
+        message="Your fidelity guarantee claim has been submitted successfully. You will receive a confirmation email shortly."
+        formType="Fidelity Guarantee Claim"
+      />
     </div>
   );
 };
