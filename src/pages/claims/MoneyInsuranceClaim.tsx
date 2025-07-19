@@ -2,21 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../firebase/config';
-import MultiStepForm from '../../components/common/MultiStepForm';
-import FormSection from '../../components/common/FormSection';
-import PhoneInput from '../../components/common/PhoneInput';
-import { useToast } from '../../hooks/use-toast';
-import { useFormDraft } from '../../hooks/useFormDraft';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Textarea } from '../../components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
-import { Label } from '../../components/ui/label';
-import { Checkbox } from '../../components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import MultiStepForm from '@/components/common/MultiStepForm';
+import FormSection from '@/components/common/FormSection';
+import PhoneInput from '@/components/common/PhoneInput';
+import { useToast } from '@/hooks/use-toast';
+import { useFormDraft } from '@/hooks/useFormDraft';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CheckCircle2, Loader2 } from 'lucide-react';
+import { uploadFile } from '@/services/fileService';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import SuccessModal from '@/components/common/SuccessModal';
 
 const moneyInsuranceSchema = yup.object().shape({
   policyNumber: yup.string().required('Policy number is required'),
@@ -51,16 +53,46 @@ const MoneyInsuranceClaim: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
+  } = useAuthRequiredSubmit();
+
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        // Hide loading after 5 seconds max (in case something goes wrong)
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
 
   const formMethods = useForm<Partial<MoneyInsuranceData>>({
     defaultValues,
     mode: 'onChange'
   });
 
-  const { watch, handleSubmit, setValue } = formMethods;
-  const { saveDraft, loadDraft } = useFormDraft('money-insurance-claim', formMethods);
+  const { watch, setValue } = formMethods;
   
   const watchedValues = watch();
+
+  const { saveDraft, clearDraft, loadDraft } = useFormDraft('moneyInsuranceClaim', formMethods);
 
   useEffect(() => {
     const subscription = watch((value) => {
@@ -83,48 +115,38 @@ const MoneyInsuranceClaim: React.FC = () => {
     return cleaned;
   };
 
-  const onSubmit = async (data: MoneyInsuranceData) => {
-    setIsSubmitting(true);
-    try {
-      const cleanedData = cleanData(data);
-      
-      await addDoc(collection(db, 'money-insurance-claims'), {
-        ...cleanedData,
-        submittedAt: new Date().toISOString(),
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB'),
-        status: 'processing'
-      });
-
-      // await sendEmail({
-      //   to: data.email,
-      //   template: 'claim-confirmation',
-      //   data: { claimType: 'Money Insurance Claim', ...data }
-      // });
-
-      setShowSummary(false);
-      setShowSuccess(true);
-      toast({
-        title: "Claim Submitted Successfully",
-        description: "Your money insurance claim has been submitted.",
-      });
-    } catch (error) {
-      console.error('Submission error:', error);
-      toast({
-        title: "Submission Failed",
-        description: "Please try again or contact support.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+  // Main submit handler that checks authentication
+  const handleSubmit = async (data: MoneyInsuranceData) => {
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
+        fileUploadPromises.push(
+          uploadFile(file, `money-insurance-claims/${Date.now()}-${file.name}`).then(url => [key, url])
+        );
+      }
     }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Money Insurance Claim'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Money Insurance Claim');
+    clearDraft();
+    setShowSummary(false);
   };
 
-  const handleFormSubmit = () => {
-    if (watchedValues.declarationAccepted) {
-      setShowSummary(true);
-    }
+  const onFinalSubmit = (data: MoneyInsuranceData) => {
+    setShowSummary(true);
   };
+
 
   const steps = [
     {
@@ -474,13 +496,7 @@ const MoneyInsuranceClaim: React.FC = () => {
           <p className="text-gray-600 mt-2">Submit your claim for money insurance</p>
         </div>
 
-        <MultiStepForm
-          steps={steps}
-          onSubmit={handleFormSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Submit Claim"
-          formMethods={formMethods}
-        />
+        <MultiStepForm steps={steps} onSubmit={onFinalSubmit} formMethods={formMethods} />
 
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -512,8 +528,8 @@ const MoneyInsuranceClaim: React.FC = () => {
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
                   Edit Details
                 </Button>
-                <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
-                  {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
+                <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={authSubmitting}>
+                  {authSubmitting ? 'Submitting...' : 'Confirm & Submit'}
                 </Button>
               </div>
             </div>

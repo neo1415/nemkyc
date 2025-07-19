@@ -20,13 +20,12 @@ import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-// import { emailService } from '@/services/emailService';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PhoneInput from '@/components/common/PhoneInput';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Badge } from '@/components/ui/badge';
+import SuccessModal from '@/components/common/SuccessModal';
 
 // Goods In Transit Claim Schema
 const goodsInTransitClaimSchema = yup.object().shape({
@@ -156,7 +155,35 @@ const GoodsInTransitClaim: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
+  } = useAuthRequiredSubmit();
+
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        // Hide loading after 5 seconds max (in case something goes wrong)
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
 
   const formMethods = useForm<any>({
     // resolver: yupResolver(goodsInTransitClaimSchema),
@@ -193,64 +220,32 @@ const GoodsInTransitClaim: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods]);
 
+  // Main submit handler that checks authentication
   const handleSubmit = async (data: GoodsInTransitClaimData) => {
-    setIsSubmitting(true);
-    try {
-      // Clean data by removing undefined values
-      const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([_, value]) => value !== undefined)
-      );
-
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
         fileUploadPromises.push(
-          uploadFile(file, 'goods-in-transit-claims').then(url => [key + 'Url', url])
+          uploadFile(file, `goods-in-transit-claims/${Date.now()}-${file.name}`).then(url => [key, url])
         );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Prepare form data with file URLs
-      const submissionData = {
-        ...cleanData,
-        ...fileUrls,
-        goodsItems: data.goodsItems,
-        totalValue: data.totalValue,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        formType: 'goods-in-transit-claim'
-      };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'goods-in-transit-claims'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
-      });
-
-      // Send confirmation email
-      // await emailService.sendSubmissionConfirmation(data.email, 'Goods In Transit Claim');
-      
-      clearDraft();
-      setShowSummary(false);
-      setShowSuccess(true);
-      toast({
-        title: "Claim Submitted Successfully",
-        description: "Your goods-in-transit claim has been submitted and you'll receive a confirmation email shortly.",
-      });
-    } catch (error) {
-      console.error('Error submitting claim:', error);
-      toast({
-        title: "Submission Error",
-        description: "There was an error submitting your claim. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      }
     }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Goods In Transit Claim'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Goods In Transit Claim');
+    clearDraft();
+    setShowSummary(false);
   };
 
   const onFinalSubmit = (data: GoodsInTransitClaimData) => {
@@ -889,11 +884,31 @@ const GoodsInTransitClaim: React.FC = () => {
         </div>
 
         <div>
-          <MultiStepForm
-            steps={steps}
-      onSubmit={onFinalSubmit}
-            formMethods={formMethods}
-          />
+        <MultiStepForm
+          steps={steps}
+          onSubmit={onFinalSubmit}
+          formMethods={formMethods}
+        />
+        
+        {/* Success Modal */}
+        <SuccessModal 
+          isOpen={authShowSuccess} 
+          onClose={() => setAuthShowSuccess(false)}
+          title="Goods In Transit Claim Submitted Successfully!"
+          message="Your goods in transit claim has been submitted and you will receive a confirmation email shortly."
+        />
+
+        {/* Post-Auth Loading */}
+        {showPostAuthLoading && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <Card className="max-w-md mx-4">
+              <CardContent className="flex flex-col items-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                <p>Processing your submission...</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
         </div>
 
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
@@ -949,15 +964,15 @@ const GoodsInTransitClaim: React.FC = () => {
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Edit Claim
               </Button>
-              <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Claim'
-                )}
+              <Button onClick={() => handleSubmit(watchedValues)} disabled={authSubmitting}>
+                        {authSubmitting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          'Submit Claim'
+                        )}
               </Button>
             </DialogFooter>
           </DialogContent>
