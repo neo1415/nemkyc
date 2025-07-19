@@ -1305,6 +1305,290 @@ export const FORM_MAPPINGS: FormMapping = {
     ]
   },
 
+  // === PARTNERS CDD ===
+  'partners-cdd': {
+    title: 'Partners CDD',
+    sections: [
+      {
+        title: 'Company Information',
+        fields: [
+          { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
+          { key: 'registeredAddress', label: 'Registered Address', type: 'textarea', editable: true },
+          { key: 'city', label: 'City', type: 'text', editable: true },
+          { key: 'state', label: 'State', type: 'text', editable: true },
+          { key: 'country', label: 'Country', type: 'text', editable: true },
+          { key: 'email', label: 'Email Address', type: 'email', editable: true },
+          { key: 'website', label: 'Website', type: 'url', editable: true },
+          { key: 'contactPersonName', label: 'Contact Person Name', type: 'text', editable: true },
+          { key: 'contactPersonNumber', label: 'Contact Person Number', type: 'text', editable: true },
+          { key: 'taxId', label: 'Tax Identification Number', type: 'text', editable: true },
+          { key: 'vatRegistrationNumber', label: 'VAT Registration Number', type: 'text', editable: true },
+          { key: 'incorporationNumber', label: 'Incorporation/RC Number', type: 'text', editable: true },
+          { key: 'incorporationDate', label: 'Date of Incorporation', type: 'date', editable: true },
+          { key: 'incorporationState', label: 'Incorporation State', type: 'text', editable: true },
+          { key: 'businessNature', label: 'Nature of Business', type: 'textarea', editable: true },
+          { key: 'bvn', label: 'BVN', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Directors Information',
+        fields: [
+          { key: 'directors', label: 'Directors', type: 'array', editable: true } // May be flat object in older versions
+        ]
+      },
+      {
+        title: 'Bank Account Details',
+        fields: [
+          { key: 'localAccountNumber', label: 'Local Account Number', type: 'text', editable: true },
+          { key: 'localBankName', label: 'Local Bank Name', type: 'text', editable: true },
+          { key: 'localBankBranch', label: 'Local Bank Branch', type: 'text', editable: true },
+          { key: 'localAccountOpeningDate', label: 'Local Account Opening Date', type: 'date', editable: true },
+          { key: 'foreignAccountNumber', label: 'Foreign Account Number', type: 'text', editable: true },
+          { key: 'foreignBankName', label: 'Foreign Bank Name', type: 'text', editable: true },
+          { key: 'foreignBankBranch', label: 'Foreign Bank Branch', type: 'text', editable: true },
+          { key: 'foreignAccountOpeningDate', label: 'Foreign Account Opening Date', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Document Uploads',
+        fields: [
+          { key: 'certificateOfIncorporation', label: 'Certificate of Incorporation', type: 'file', editable: false },
+          { key: 'identificationMeansDirector1', label: 'Identification Means for Director 1', type: 'file', editable: false },
+          { key: 'identificationMeansDirector2', label: 'Identification Means for Director 2', type: 'file', editable: false },
+          { key: 'cacStatusReport', label: 'CAC Status Report', type: 'file', editable: false },
+          { key: 'vatRegistrationLicense', label: 'VAT Registration License', type: 'file', editable: false },
+          { key: 'taxClearanceCertificate', label: 'Tax Clearance Certificate', type: 'file', editable: false }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  // === NAICOM PARTNERS CDD ===
+  'naicom-partners-cdd': {
+    title: 'NAICOM Partners CDD',
+    sections: [
+      {
+        title: 'Company Information',
+        fields: [
+          { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
+          { key: 'registeredAddress', label: 'Registered Address', type: 'textarea', editable: true },
+          { key: 'city', label: 'City', type: 'text', editable: true },
+          { key: 'state', label: 'State', type: 'text', editable: true },
+          { key: 'country', label: 'Country', type: 'text', editable: true },
+          { key: 'email', label: 'Email Address', type: 'email', editable: true },
+          { key: 'website', label: 'Website', type: 'url', editable: true },
+          { key: 'contactPersonName', label: 'Contact Person Name', type: 'text', editable: true },
+          { key: 'contactPersonNumber', label: 'Contact Person Number', type: 'text', editable: true },
+          { key: 'taxId', label: 'Tax Identification Number', type: 'text', editable: true },
+          { key: 'vatRegistrationNumber', label: 'VAT Registration Number', type: 'text', editable: true },
+          { key: 'incorporationNumber', label: 'Incorporation/RC Number', type: 'text', editable: true },
+          { key: 'incorporationDate', label: 'Date of Incorporation', type: 'date', editable: true },
+          { key: 'incorporationState', label: 'Incorporation State', type: 'text', editable: true },
+          { key: 'businessNature', label: 'Nature of Business', type: 'textarea', editable: true },
+          { key: 'bvn', label: 'BVN', type: 'text', editable: true },
+          { key: 'naicomLicenseIssuingDate', label: 'NAICOM License Issuing Date', type: 'date', editable: true },
+          { key: 'naicomLicenseExpiryDate', label: 'NAICOM License Expiry Date', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Directors Information',
+        fields: [
+          { key: 'directors', label: 'Directors', type: 'array', editable: true } // May be flat object in older versions
+        ]
+      },
+      {
+        title: 'Bank Account Details',
+        fields: [
+          { key: 'localAccountNumber', label: 'Local Account Number', type: 'text', editable: true },
+          { key: 'localBankName', label: 'Local Bank Name', type: 'text', editable: true },
+          { key: 'localBankBranch', label: 'Local Bank Branch', type: 'text', editable: true },
+          { key: 'localAccountOpeningDate', label: 'Local Account Opening Date', type: 'date', editable: true },
+          { key: 'foreignAccountNumber', label: 'Foreign Account Number', type: 'text', editable: true },
+          { key: 'foreignBankName', label: 'Foreign Bank Name', type: 'text', editable: true },
+          { key: 'foreignBankBranch', label: 'Foreign Bank Branch', type: 'text', editable: true },
+          { key: 'foreignAccountOpeningDate', label: 'Foreign Account Opening Date', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Document Uploads',
+        fields: [
+          { key: 'certificateOfIncorporation', label: 'Certificate of Incorporation', type: 'file', editable: false },
+          { key: 'identificationMeansDirector1', label: 'Identification Means for Director 1', type: 'file', editable: false },
+          { key: 'identificationMeansDirector2', label: 'Identification Means for Director 2', type: 'file', editable: false },
+          { key: 'cacStatusReport', label: 'CAC Status Report', type: 'file', editable: false },
+          { key: 'vatRegistrationLicense', label: 'VAT Registration License', type: 'file', editable: false },
+          { key: 'taxClearanceCertificate', label: 'Tax Clearance Certificate', type: 'file', editable: false },
+          { key: 'naicomLicenseCertificate', label: 'NAICOM License Certificate', type: 'file', editable: false }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  // === CORPORATE CDD ===
+  'corporate-cdd': {
+    title: 'Corporate CDD',
+    sections: [
+      {
+        title: 'Company Information',
+        fields: [
+          { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
+          { key: 'registeredAddress', label: 'Registered Company Address', type: 'textarea', editable: true },
+          { key: 'incorporationNumber', label: 'Incorporation Number', type: 'text', editable: true },
+          { key: 'incorporationState', label: 'Incorporation State', type: 'text', editable: true },
+          { key: 'dateOfIncorporation', label: 'Date of Incorporation/Registration', type: 'date', editable: true },
+          { key: 'natureOfBusiness', label: 'Nature of Business', type: 'textarea', editable: true },
+          { key: 'companyType', label: 'Company Type', type: 'text', editable: true },
+          { key: 'companyTypeOther', label: 'Other Company Type', type: 'text', editable: true, conditional: { dependsOn: 'companyType', value: 'Other' } },
+          { key: 'email', label: 'Email Address', type: 'email', editable: true },
+          { key: 'website', label: 'Website', type: 'url', editable: true },
+          { key: 'taxId', label: 'Tax Identification Number', type: 'text', editable: true },
+          { key: 'telephone', label: 'Telephone Number', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Directors Information',
+        fields: [
+          { key: 'directors', label: 'Directors', type: 'array', editable: true } // May be flat object in older versions
+        ]
+      },
+      {
+        title: 'Bank Account Details',
+        fields: [
+          { key: 'bankName', label: 'Bank Name', type: 'text', editable: true },
+          { key: 'accountNumber', label: 'Account Number', type: 'text', editable: true },
+          { key: 'bankBranch', label: 'Bank Branch', type: 'text', editable: true },
+          { key: 'accountOpeningDate', label: 'Account Opening Date', type: 'date', editable: true },
+          { key: 'foreignBankName', label: 'Foreign Bank Name', type: 'text', editable: true },
+          { key: 'foreignAccountNumber', label: 'Foreign Account Number', type: 'text', editable: true },
+          { key: 'foreignBankBranch', label: 'Foreign Bank Branch', type: 'text', editable: true },
+          { key: 'foreignAccountOpeningDate', label: 'Foreign Account Opening Date', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Document Uploads',
+        fields: [
+          { key: 'cacCertificate', label: 'CAC Certificate', type: 'file', editable: false },
+          { key: 'identification', label: 'Identification Document', type: 'file', editable: false }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  // === NAICOM CORPORATE CDD ===
+  'naicom-corporate-cdd': {
+    title: 'NAICOM Corporate CDD',
+    sections: [
+      {
+        title: 'Company Information',
+        fields: [
+          { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
+          { key: 'registeredAddress', label: 'Registered Company Address', type: 'textarea', editable: true },
+          { key: 'incorporationNumber', label: 'Incorporation Number', type: 'text', editable: true },
+          { key: 'incorporationState', label: 'Incorporation State', type: 'text', editable: true },
+          { key: 'dateOfIncorporation', label: 'Date of Incorporation/Registration', type: 'date', editable: true },
+          { key: 'natureOfBusiness', label: 'Nature of Business', type: 'textarea', editable: true },
+          { key: 'companyType', label: 'Company Type', type: 'text', editable: true },
+          { key: 'companyTypeOther', label: 'Other Company Type', type: 'text', editable: true, conditional: { dependsOn: 'companyType', value: 'Other' } },
+          { key: 'email', label: 'Email Address', type: 'email', editable: true },
+          { key: 'website', label: 'Website', type: 'url', editable: true },
+          { key: 'taxId', label: 'Tax Identification Number', type: 'text', editable: true },
+          { key: 'telephone', label: 'Telephone Number', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Directors Information',
+        fields: [
+          { key: 'directors', label: 'Directors', type: 'array', editable: true } // May be flat object in older versions
+        ]
+      },
+      {
+        title: 'Bank Account Details',
+        fields: [
+          { key: 'bankName', label: 'Bank Name', type: 'text', editable: true },
+          { key: 'accountNumber', label: 'Account Number', type: 'text', editable: true },
+          { key: 'bankBranch', label: 'Bank Branch', type: 'text', editable: true },
+          { key: 'accountOpeningDate', label: 'Account Opening Date', type: 'date', editable: true },
+          { key: 'foreignBankName', label: 'Foreign Bank Name', type: 'text', editable: true },
+          { key: 'foreignAccountNumber', label: 'Foreign Account Number', type: 'text', editable: true },
+          { key: 'foreignBankBranch', label: 'Foreign Bank Branch', type: 'text', editable: true },
+          { key: 'foreignAccountOpeningDate', label: 'Foreign Account Opening Date', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Document Uploads',
+        fields: [
+          { key: 'cacCertificate', label: 'CAC Certificate', type: 'file', editable: false },
+          { key: 'identification', label: 'Identification Document', type: 'file', editable: false },
+          { key: 'naicomLicenseCertificate', label: 'NAICOM License Certificate', type: 'file', editable: false }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
   'corporate-kyc': {
     title: 'Corporate CDD Form',
     sections: [
