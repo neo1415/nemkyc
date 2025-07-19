@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -19,8 +19,9 @@ import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import SuccessModal from '@/components/common/SuccessModal';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 const individualCDDSchema = yup.object().shape({
   // Personal Info
@@ -101,9 +102,14 @@ const defaultValues = {
 
 const IndividualCDD: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  
+  const {
+    handleSubmitWithAuth,
+    showSuccess,
+    setShowSuccess,
+    isSubmitting
+  } = useAuthRequiredSubmit();
 
   const formMethods = useForm<any>({
     resolver: yupResolver(individualCDDSchema),
@@ -122,47 +128,42 @@ const IndividualCDD: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
-  const handleSubmit = async (data: any) => {
-    setIsSubmitting(true);
-    try {
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
-        fileUploadPromises.push(
-          uploadFile(file, 'individual-cdd').then(url => [key + 'Url', url])
-        );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Prepare form data with file URLs
-      const submissionData = {
-        ...data,
-        ...fileUrls,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        formType: 'individual-cdd'
-      };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'cdd-forms'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
-      });
-      
-      clearDraft();
+  // Post-auth loading effect
+  useEffect(() => {
+    const submissionInProgress = sessionStorage.getItem('submissionInProgress');
+    if (submissionInProgress) {
       setShowSummary(false);
-      setShowSuccess(true);
-      toast({ title: "CDD form submitted successfully!" });
-    } catch (error) {
-      console.error('Submission error:', error);
-      toast({ title: "Submission failed", variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
     }
+  }, []);
+
+  const handleSubmit = async (data: any) => {
+    // Upload files to Firebase Storage first
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    Object.entries(uploadedFiles).forEach(([key, file]) => {
+      fileUploadPromises.push(
+        uploadFile(file, 'individual-cdd').then(url => [key + 'Url', url])
+      );
+    });
+    
+    const uploadedUrls = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(uploadedUrls);
+    
+    // Prepare final data with file URLs
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Individual-CDD'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Individual-CDD');
+    clearDraft();
+    setShowSummary(false);
+  };
+
+  const onFinalSubmit = (data: any) => {
+    setShowSummary(true);
   };
 
   const DatePickerField = ({ name, label }: { name: string; label: string }) => {
@@ -619,13 +620,21 @@ const IndividualCDD: React.FC = () => {
 
   return (
     <div className="container mx-auto py-8 px-4">
-        <MultiStepForm
-          steps={steps}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Submit CDD Form"
-          formMethods={formMethods}
-        />
+      {/* Post-auth loading overlay */}
+      {sessionStorage.getItem('submissionInProgress') && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg">
+            <LoadingSpinner />
+            <p className="mt-4 text-center">Submitting your form...</p>
+          </div>
+        </div>
+      )}
+
+      <MultiStepForm
+        steps={steps}
+        onSubmit={onFinalSubmit}
+        formMethods={formMethods}
+      />
 
       {/* Summary Dialog */}
       <Dialog open={showSummary} onOpenChange={setShowSummary}>
@@ -719,24 +728,15 @@ const IndividualCDD: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Success Dialog */}
-      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>CDD Form Submitted Successfully!</DialogTitle>
-          </DialogHeader>
-          <div className="text-center space-y-4">
-            <div className="text-green-600 text-6xl">✓</div>
-            <p>Your Individual CDD form has been submitted successfully.</p>
-            <p className="text-sm text-muted-foreground">
-              You will receive a confirmation email shortly.
-            </p>
-            <Button onClick={() => setShowSuccess(false)}>
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={showSuccess}
+        onClose={() => setShowSuccess()}
+        title="Form Submitted Successfully!"
+        message="Your Individual CDD form has been submitted and is being processed."
+        isLoading={isSubmitting}
+        loadingMessage="Submitting your form..."
+      />
     </div>
   );
 };
