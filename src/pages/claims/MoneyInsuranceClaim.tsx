@@ -535,6 +535,26 @@ const MoneyInsuranceClaim: React.FC = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Success Modal */}
+        <SuccessModal 
+          isOpen={authShowSuccess} 
+          onClose={() => setAuthShowSuccess()}
+          title="Money Insurance Claim Submitted Successfully!"
+          message="Your money insurance claim has been submitted and you will receive a confirmation email shortly."
+        />
+
+        {/* Post-Auth Loading */}
+        {showPostAuthLoading && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <Card className="max-w-md mx-4">
+              <CardContent className="flex flex-col items-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                <p>Processing your submission...</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
