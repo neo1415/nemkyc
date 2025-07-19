@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -10,9 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { Calendar, CalendarIcon, Plus, Trash2, Upload, Edit2 } from 'lucide-react';
+import { Calendar, CalendarIcon, Plus, Trash2, Upload, Edit2, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,8 @@ import { NaicomPartnersCDDData, Director } from '@/types';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import SuccessModal from '@/components/common/SuccessModal';
 import { db } from '@/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -142,10 +144,15 @@ const defaultValues: Partial<NaicomPartnersCDDData> = {
 
 const NaicomPartnersCDD: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
   const [editingField, setEditingField] = useState<string | null>(null);
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
+  } = useAuthRequiredSubmit();
 
   const formMethods = useForm<any>({
     resolver: yupResolver(naicomPartnersCDDSchema),
@@ -161,55 +168,65 @@ const NaicomPartnersCDD: React.FC = () => {
 
   const watchedValues = formMethods.watch();
 
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        // Hide loading after 5 seconds max (in case something goes wrong)
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
+
   // Auto-save draft
-  React.useEffect(() => {
+  useEffect(() => {
     const subscription = formMethods.watch((data) => {
       saveDraft(data);
     });
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
+  // Main submit handler that checks authentication
   const handleSubmit = async (data: NaicomPartnersCDDData) => {
-    setIsSubmitting(true);
-    try {
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
         fileUploadPromises.push(
-          uploadFile(file, 'naicom-partners-cdd').then(url => [key + 'Url', url])
+          uploadFile(file, `naicom-partners-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
         );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Prepare form data with file URLs
-      const submissionData = {
-        ...data,
-        ...fileUrls,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        formType: 'naicom-partners-cdd'
-      };
-      
-      // Submit to Firestore
-      await addDoc(collection(db, 'naicom-partners-cdd'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
-      });
-      
-      clearDraft();
-      setShowSummary(false);
-      setShowSuccess(true);
-      toast({ title: "CDD form submitted successfully!" });
-    } catch (error) {
-      console.error('Submission error:', error);
-      toast({ title: "Submission failed", variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
+      }
     }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'NAICOM Partners CDD'
+    };
+
+    await handleSubmitWithAuth(finalData, 'NAICOM Partners CDD');
+    clearDraft();
+    setShowSummary(false);
+  };
+
+  const onFinalSubmit = (data: NaicomPartnersCDDData) => {
+    setShowSummary(true);
   };
 
   const DatePickerField = ({ name, label }: { name: string; label: string }) => {
