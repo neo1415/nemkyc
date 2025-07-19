@@ -8,6 +8,8 @@ import { emailService } from '@/services/emailService';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { useToast } from '@/hooks/use-toast';
 import { uploadFile } from '@/services/fileService';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import SuccessModal from '@/components/common/SuccessModal';
 
 import MultiStepForm from '@/components/common/MultiStepForm';
 import FileUpload from '@/components/common/FileUpload';
@@ -97,7 +99,35 @@ const RentAssuranceClaim = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
+  } = useAuthRequiredSubmit();
+
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        // Hide loading after 5 seconds max (in case something goes wrong)
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
 
   const formMethods = useForm<any>({
     // resolver: yupResolver(rentAssuranceSchema) as any,
@@ -136,62 +166,36 @@ const RentAssuranceClaim = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
+  // Main submit handler that checks authentication
   const handleSubmit = async (data: RentAssuranceClaimData) => {
-    setShowSummary(true);
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
+        fileUploadPromises.push(
+          uploadFile(file, `rent-assurance-claims/${Date.now()}-${file.name}`).then(url => [key, url])
+        );
+      }
+    }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Rent Assurance Claim'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Rent Assurance Claim');
+    clearDraft();
+    setShowSummary(false);
   };
 
-  const handleFinalSubmit = async () => {
-    setIsSubmitting(true);
-    try {
-      const data = formMethods.getValues();
-      
-      // Upload files to Firebase Storage
-      const fileUploadPromises: Array<Promise<[string, string]>> = [];
-      
-      Object.entries(uploadedFiles).forEach(([key, file]) => {
-        fileUploadPromises.push(
-          uploadFile(file, 'rent-assurance-claims').then(url => [key + 'Url', url])
-        );
-      });
-      
-      const uploadedUrls = await Promise.all(fileUploadPromises);
-      const fileUrls = Object.fromEntries(uploadedUrls);
-      
-      // Prepare form data with file URLs
-      const submissionData = {
-        ...data,
-        ...fileUrls,
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        formType: 'rent-assurance-claim'
-      };
-
-      await addDoc(collection(db, 'rent-assurance-claims'), {
-        ...submissionData,
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB')
-      });
-
-      // await emailService.sendSubmissionConfirmation(data.email, 'Rent Assurance Policy Claim');
-
-      clearDraft();
-      setShowSummary(false);
-      setShowSuccess(true);
-
-      toast({
-        title: 'Claim Submitted Successfully',
-        description: "Your rent assurance claim has been submitted and you'll receive a confirmation email shortly.",
-      });
-    } catch (error) {
-      console.error('Error submitting claim:', error);
-      toast({
-        title: 'Submission Error',
-        description: 'There was an error submitting your claim. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+  const onFinalSubmit = (data: RentAssuranceClaimData) => {
+    setShowSummary(true);
   };
 
   const DatePickerField = ({ name, label }: { name: string; label: string }) => {
@@ -668,9 +672,7 @@ const RentAssuranceClaim = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Review Claim"
+          onSubmit={onFinalSubmit}
           formMethods={formMethods}
         />
 
@@ -704,52 +706,50 @@ const RentAssuranceClaim = () => {
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Edit Information
               </Button>
-              <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
+              <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Submitting...
                   </>
                 ) : (
-                  'Confirm Submission'
+                  'Submit Claim'
                 )}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Success Dialog */}
-        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-center text-green-600">
-                Claim Submitted Successfully!
-              </DialogTitle>
-            </DialogHeader>
-            <div className="text-center py-4">
-              <div className="mb-4">
-                <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                  ✓
-                </div>
-                <p className="text-gray-600 mb-4">
-                  Your rent assurance claim has been submitted successfully. 
-                  You will receive a confirmation email shortly.
-                </p>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm font-medium text-blue-800">
-                    For claims status enquiries, call 01 448 9570
-                  </p>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => setShowSuccess(false)} className="w-full">
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Success Modal */}
+        <SuccessModal
+          isOpen={showSuccess || authShowSuccess || authSubmitting}
+          onClose={() => {
+            setShowSuccess(false);
+            setAuthShowSuccess();
+          }}
+          title="Rent Assurance Claim Submitted!"
+          formType="Rent Assurance Claim"
+          isLoading={authSubmitting}
+          loadingMessage="Your rent assurance claim is being processed and submitted..."
+        />
       </div>
+
+      {/* Post-Authentication Loading Overlay */}
+      {showPostAuthLoading && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+              <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
+              <p className="text-muted-foreground">
+                Thank you for signing in! Your rent assurance claim is now being submitted...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
