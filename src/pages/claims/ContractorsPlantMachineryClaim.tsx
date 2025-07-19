@@ -17,7 +17,11 @@ import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Label } from '../../components/ui/label';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { uploadFile } from '@/services/fileService';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import SuccessModal from '@/components/common/SuccessModal';
+import { Loader2 } from 'lucide-react';
 
 const contractorsSchema = yup.object().shape({
   policyNumber: yup.string().required('Policy number is required'),
@@ -50,17 +54,46 @@ const defaultValues: Partial<ContractorsData> = {
 
 const ContractorsPlantMachineryClaim: React.FC = () => {
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
+  } = useAuthRequiredSubmit();
+
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        // Hide loading after 5 seconds max (in case something goes wrong)
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
 
   const formMethods = useForm<Partial<ContractorsData>>({
     defaultValues,
     mode: 'onChange'
   });
 
-  const { watch, handleSubmit, setValue } = formMethods;
-  const { saveDraft, loadDraft } = useFormDraft('contractors-claim', formMethods);
+  const { watch, setValue } = formMethods;
+  const { saveDraft, clearDraft } = useFormDraft('contractors-claim', formMethods);
   
   const watchedValues = watch();
 
@@ -70,10 +103,6 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
     });
     return () => subscription.unsubscribe();
   }, [watch, saveDraft]);
-
-  useEffect(() => {
-    loadDraft();
-  }, [loadDraft]);
 
   const cleanData = (data: any) => {
     const cleaned = Object.entries(data).reduce((acc, [key, value]) => {
@@ -85,47 +114,36 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
     return cleaned;
   };
 
-  const onSubmit = async (data: ContractorsData) => {
-    setIsSubmitting(true);
-    try {
-      const cleanedData = cleanData(data);
-      
-      await addDoc(collection(db, 'contractors-claims'), {
-        ...cleanedData,
-        submittedAt: new Date().toISOString(),
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB'),
-        status: 'pending'
-      });
-
-      // await sendEmail({
-      //   to: data.email,
-      //   template: 'claim-confirmation',
-      //   data: { claimType: 'Contractors Plant & Machinery Claim', ...data }
-      // });
-
-      setShowSummary(false);
-      setShowSuccess(true);
-      toast({
-        title: "Claim Submitted Successfully",
-        description: "Your contractors plant & machinery claim has been submitted.",
-      });
-    } catch (error) {
-      console.error('Submission error:', error);
-      toast({
-        title: "Submission Failed",
-        description: "Please try again or contact support.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+  // Main submit handler that checks authentication
+  const handleFormSubmit = async (data: ContractorsData) => {
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
+        fileUploadPromises.push(
+          uploadFile(file, `contractors-claims/${Date.now()}-${file.name}`).then(url => [key, url])
+        );
+      }
     }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Contractors Plant & Machinery Claim'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Contractors Plant & Machinery Claim');
+    clearDraft();
+    setShowSummary(false);
   };
 
-  const handleFormSubmit = () => {
-    if (watchedValues.declarationAccepted) {
-      setShowSummary(true);
-    }
+  const onFinalSubmit = (data: ContractorsData) => {
+    setShowSummary(true);
   };
 
   const steps = [
@@ -498,9 +516,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleFormSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Submit Claim"
+          onSubmit={onFinalSubmit}
           formMethods={formMethods}
         />
 
@@ -533,14 +549,51 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
                   Edit Details
                 </Button>
-                <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
-                  {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
+                <Button onClick={() => handleFormSubmit(watchedValues)} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Submit Claim'
+                  )}
                 </Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
+        
+        {/* Success Modal */}
+        <SuccessModal
+          isOpen={showSuccess || authShowSuccess || authSubmitting}
+          onClose={() => {
+            setShowSuccess(false);
+            setAuthShowSuccess();
+          }}
+          title="Contractors Plant & Machinery Claim Submitted!"
+          formType="Contractors Plant & Machinery Claim"
+          isLoading={authSubmitting}
+          loadingMessage="Your contractors plant & machinery claim is being processed and submitted..."
+        />
       </div>
+
+      {/* Post-Authentication Loading Overlay */}
+      {showPostAuthLoading && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+              <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
+              <p className="text-muted-foreground">
+                Thank you for signing in! Your contractors plant & machinery claim is now being submitted...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
