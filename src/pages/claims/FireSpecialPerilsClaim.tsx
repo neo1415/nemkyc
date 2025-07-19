@@ -1065,7 +1065,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
         {/* Success Modal */}
         <SuccessModal 
           isOpen={authShowSuccess} 
-          onClose={() => setAuthShowSuccess(false)}
+          onClose={() => setAuthShowSuccess()}
           title="Fire and Special Perils Claim Submitted Successfully!"
           message="Your fire and special perils claim has been submitted and you will receive a confirmation email shortly."
         />

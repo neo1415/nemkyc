@@ -997,7 +997,7 @@ const BurglaryClaimForm: React.FC = () => {
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Back to Edit
               </Button>
-              <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
+              <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={authSubmitting}>
                       {authSubmitting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
