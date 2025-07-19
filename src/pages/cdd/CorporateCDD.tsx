@@ -218,10 +218,10 @@ const CorporateCDD: React.FC = () => {
       ...data,
       ...fileUrls,
       status: 'processing',
-      formType: 'Corporate CDD'
+      formType: 'Corporate-CDD'
     };
 
-    await handleSubmitWithAuth(finalData, 'Corporate CDD');
+    await handleSubmitWithAuth(finalData, 'Corporate-CDD');
     clearDraft();
     setShowSummary(false);
   };
