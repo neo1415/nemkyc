@@ -149,9 +149,9 @@ const NaicomPartnersCDD: React.FC = () => {
   const [editingField, setEditingField] = useState<string | null>(null);
   const { 
     handleSubmitWithAuth, 
-    showSuccess: authShowSuccess, 
-    setShowSuccess: setAuthShowSuccess,
-    isSubmitting: authSubmitting
+    showSuccess, 
+    setShowSuccess,
+    isSubmitting
   } = useAuthRequiredSubmit();
 
   const formMethods = useForm<any>({
@@ -184,10 +184,10 @@ const NaicomPartnersCDD: React.FC = () => {
 
   // Hide post-auth loading when success modal shows
   useEffect(() => {
-    if (authShowSuccess) {
+    if (showSuccess) {
       setShowPostAuthLoading(false);
     }
-  }, [authShowSuccess]);
+  }, [showSuccess]);
 
   // Auto-save draft
   useEffect(() => {
@@ -1149,7 +1149,7 @@ const NaicomPartnersCDD: React.FC = () => {
               <p className="text-sm text-muted-foreground">
                 You will receive a confirmation email shortly.
               </p>
-              <Button onClick={() => setShowSuccess(false)}>
+              <Button onClick={() => setShowSuccess()}>
                 Close
               </Button>
             </div>
