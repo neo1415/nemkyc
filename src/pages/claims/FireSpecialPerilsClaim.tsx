@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/firebase/config';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import FormSection from '@/components/common/FormSection';
 import { Input } from '@/components/ui/input';
@@ -17,7 +15,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { CheckCircle2, Loader2, Trash2, Plus } from 'lucide-react';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import { emailService } from '@/services/emailService';
+import { uploadFile } from '@/services/fileService';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import SuccessModal from '@/components/common/SuccessModal';
 
 interface FireSpecialPerilsClaimData {
   // Policy Details
@@ -139,6 +139,35 @@ const FireSpecialPerilsClaim: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
+  } = useAuthRequiredSubmit();
+
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        // Hide loading after 5 seconds max (in case something goes wrong)
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
 
   const formMethods = useForm<FireSpecialPerilsClaimData>({
     // resolver: yupResolver(schema as any),
@@ -213,42 +242,32 @@ const FireSpecialPerilsClaim: React.FC = () => {
     });
   }, [watchedValues.itemsLost, formMethods]);
 
+  // Main submit handler that checks authentication
   const handleSubmit = async (data: FireSpecialPerilsClaimData) => {
-    setIsSubmitting(true);
-    try {
-      // Save to Firestore
-      const docRef = await addDoc(collection(db, 'fireSpecialPerilsClaims'), {
-        ...data,
-        submittedAt: new Date(),
-        timestamp: serverTimestamp(),
-        createdAt: new Date().toLocaleDateString('en-GB'),
-        status: 'pending'
-      });
-
-      // Send confirmation email
-      // await emailService.sendSubmissionConfirmation(
-      //   data.email,
-      //   'Fire and Special Perils Claim'
-      // );
-
-      clearDraft();
-      setShowSummary(false);
-      setShowSuccess(true);
-      
-      toast({
-        title: "Claim Submitted Successfully",
-        description: "Your fire and special perils claim has been submitted and you will receive a confirmation email shortly.",
-      });
-
-    } catch (error) {
-      toast({
-        title: "Submission Error",
-        description: "There was an error submitting your claim. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
+        fileUploadPromises.push(
+          uploadFile(file, `fire-special-perils-claims/${Date.now()}-${file.name}`).then(url => [key, url])
+        );
+      }
     }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Fire and Special Perils Claim'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Fire and Special Perils Claim');
+    clearDraft();
+    setShowSummary(false);
   };
 
   const onFinalSubmit = (data: FireSpecialPerilsClaimData) => {
@@ -1040,10 +1059,28 @@ const FireSpecialPerilsClaim: React.FC = () => {
         <MultiStepForm
           steps={steps}
           onSubmit={onFinalSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Review Claim"
           formMethods={formMethods}
         />
+        
+        {/* Success Modal */}
+        <SuccessModal 
+          isOpen={authShowSuccess} 
+          onClose={() => setAuthShowSuccess(false)}
+          title="Fire and Special Perils Claim Submitted Successfully!"
+          message="Your fire and special perils claim has been submitted and you will receive a confirmation email shortly."
+        />
+
+        {/* Post-Auth Loading */}
+        {showPostAuthLoading && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <Card className="max-w-md mx-4">
+              <CardContent className="flex flex-col items-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                <p>Processing your submission...</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Summary Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
@@ -1068,15 +1105,15 @@ const FireSpecialPerilsClaim: React.FC = () => {
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Back to Edit
               </Button>
-              <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Claim'
-                )}
+              <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={authSubmitting}>
+                        {authSubmitting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          'Submit Claim'
+                        )}
               </Button>
             </DialogFooter>
           </DialogContent>
