@@ -110,13 +110,17 @@ const FormViewer: React.FC = () => {
       
       section.fields.forEach((field: FormField) => {
         // Check if field should be shown based on conditional logic
-        if (shouldShowField(field, data) && data.hasOwnProperty(field.key) && data[field.key] !== null && data[field.key] !== undefined && data[field.key] !== '') {
-          sectionFields.push({
-            ...field,
-            value: data[field.key],
-            section: section.title,
-            editable: field.editable !== false
-          });
+        if (shouldShowField(field, data) && data.hasOwnProperty(field.key)) {
+          const value = data[field.key];
+          // Show field if it has value OR if it's a file type (which stores URLs)
+          if (value !== null && value !== undefined && value !== '' || field.type === 'file') {
+            sectionFields.push({
+              ...field,
+              value: data[field.key],
+              section: section.title,
+              editable: field.editable !== false
+            });
+          }
         }
       });
       
