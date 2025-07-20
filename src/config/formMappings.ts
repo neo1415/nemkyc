@@ -1498,17 +1498,17 @@ export const FORM_MAPPINGS: FormMapping = {
         title: 'Company Information',
         fields: [
           { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
-          { key: 'registeredAddress', label: 'Registered Company Address', type: 'textarea', editable: true },
+          { key: 'registeredCompanyAddress', label: 'Registered Company Address', type: 'textarea', editable: true },
           { key: 'incorporationNumber', label: 'Incorporation Number', type: 'text', editable: true },
           { key: 'incorporationState', label: 'Incorporation State', type: 'text', editable: true },
-          { key: 'dateOfIncorporation', label: 'Date of Incorporation/Registration', type: 'date', editable: true },
+          { key: 'dateOfIncorporationRegistration', label: 'Date of Incorporation/Registration', type: 'date', editable: true },
           { key: 'natureOfBusiness', label: 'Nature of Business', type: 'textarea', editable: true },
-          { key: 'companyType', label: 'Company Type', type: 'text', editable: true },
-          { key: 'companyTypeOther', label: 'Other Company Type', type: 'text', editable: true, conditional: { dependsOn: 'companyType', value: 'Other' } },
+          { key: 'companyLegalForm', label: 'Company Type', type: 'text', editable: true },
+          { key: 'ccompanyLegalFormOther', label: 'Other Company Type', type: 'text', editable: true, conditional: { dependsOn: 'companyLegalForm', value: 'Other' } },
           { key: 'email', label: 'Email Address', type: 'email', editable: true },
           { key: 'website', label: 'Website', type: 'url', editable: true },
-          { key: 'taxId', label: 'Tax Identification Number', type: 'text', editable: true },
-          { key: 'telephone', label: 'Telephone Number', type: 'text', editable: true }
+          { key: 'taxIdentificationNumber', label: 'Tax Identification Number', type: 'text', editable: true },
+          { key: 'telephoneNumber', label: 'Telephone Number', type: 'text', editable: true }
         ]
       },
       {
