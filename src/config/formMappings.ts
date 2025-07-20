@@ -1333,7 +1333,24 @@ export const FORM_MAPPINGS: FormMapping = {
       {
         title: 'Directors Information',
         fields: [
-          { key: 'directors', label: 'Directors', type: 'array', editable: true } // May be flat object in older versions
+          { key: 'directors', label: 'Directors', type: 'array', editable: true }, // May be flat object in older versions
+          // Individual director fields for flat object compatibility
+          { key: 'director1Name', label: 'Director 1 Name', type: 'text', editable: true },
+          { key: 'director1Phone', label: 'Director 1 Phone', type: 'text', editable: true },
+          { key: 'director1Email', label: 'Director 1 Email', type: 'email', editable: true },
+          { key: 'director1Address', label: 'Director 1 Address', type: 'textarea', editable: true },
+          { key: 'director1DateOfBirth', label: 'Director 1 Date of Birth', type: 'date', editable: true },
+          { key: 'director1Nationality', label: 'Director 1 Nationality', type: 'text', editable: true },
+          { key: 'director1IdType', label: 'Director 1 ID Type', type: 'text', editable: true },
+          { key: 'director1IdNumber', label: 'Director 1 ID Number', type: 'text', editable: true },
+          { key: 'director2Name', label: 'Director 2 Name', type: 'text', editable: true },
+          { key: 'director2Phone', label: 'Director 2 Phone', type: 'text', editable: true },
+          { key: 'director2Email', label: 'Director 2 Email', type: 'email', editable: true },
+          { key: 'director2Address', label: 'Director 2 Address', type: 'textarea', editable: true },
+          { key: 'director2DateOfBirth', label: 'Director 2 Date of Birth', type: 'date', editable: true },
+          { key: 'director2Nationality', label: 'Director 2 Nationality', type: 'text', editable: true },
+          { key: 'director2IdType', label: 'Director 2 ID Type', type: 'text', editable: true },
+          { key: 'director2IdNumber', label: 'Director 2 ID Number', type: 'text', editable: true }
         ]
       },
       {
@@ -1409,7 +1426,24 @@ export const FORM_MAPPINGS: FormMapping = {
       {
         title: 'Directors Information',
         fields: [
-          { key: 'directors', label: 'Directors', type: 'array', editable: true } // May be flat object in older versions
+          { key: 'directors', label: 'Directors', type: 'array', editable: true }, // May be flat object in older versions
+          // Individual director fields for flat object compatibility
+          { key: 'director1Name', label: 'Director 1 Name', type: 'text', editable: true },
+          { key: 'director1Phone', label: 'Director 1 Phone', type: 'text', editable: true },
+          { key: 'director1Email', label: 'Director 1 Email', type: 'email', editable: true },
+          { key: 'director1Address', label: 'Director 1 Address', type: 'textarea', editable: true },
+          { key: 'director1DateOfBirth', label: 'Director 1 Date of Birth', type: 'date', editable: true },
+          { key: 'director1Nationality', label: 'Director 1 Nationality', type: 'text', editable: true },
+          { key: 'director1IdType', label: 'Director 1 ID Type', type: 'text', editable: true },
+          { key: 'director1IdNumber', label: 'Director 1 ID Number', type: 'text', editable: true },
+          { key: 'director2Name', label: 'Director 2 Name', type: 'text', editable: true },
+          { key: 'director2Phone', label: 'Director 2 Phone', type: 'text', editable: true },
+          { key: 'director2Email', label: 'Director 2 Email', type: 'email', editable: true },
+          { key: 'director2Address', label: 'Director 2 Address', type: 'textarea', editable: true },
+          { key: 'director2DateOfBirth', label: 'Director 2 Date of Birth', type: 'date', editable: true },
+          { key: 'director2Nationality', label: 'Director 2 Nationality', type: 'text', editable: true },
+          { key: 'director2IdType', label: 'Director 2 ID Type', type: 'text', editable: true },
+          { key: 'director2IdNumber', label: 'Director 2 ID Number', type: 'text', editable: true }
         ]
       },
       {
@@ -1480,7 +1514,24 @@ export const FORM_MAPPINGS: FormMapping = {
       {
         title: 'Directors Information',
         fields: [
-          { key: 'directors', label: 'Directors', type: 'array', editable: true } // May be flat object in older versions
+          { key: 'directors', label: 'Directors', type: 'array', editable: true }, // May be flat object in older versions
+          // Individual director fields for flat object compatibility
+          { key: 'director1Name', label: 'Director 1 Name', type: 'text', editable: true },
+          { key: 'director1Phone', label: 'Director 1 Phone', type: 'text', editable: true },
+          { key: 'director1Email', label: 'Director 1 Email', type: 'email', editable: true },
+          { key: 'director1Address', label: 'Director 1 Address', type: 'textarea', editable: true },
+          { key: 'director1DateOfBirth', label: 'Director 1 Date of Birth', type: 'date', editable: true },
+          { key: 'director1Nationality', label: 'Director 1 Nationality', type: 'text', editable: true },
+          { key: 'director1IdType', label: 'Director 1 ID Type', type: 'text', editable: true },
+          { key: 'director1IdNumber', label: 'Director 1 ID Number', type: 'text', editable: true },
+          { key: 'director2Name', label: 'Director 2 Name', type: 'text', editable: true },
+          { key: 'director2Phone', label: 'Director 2 Phone', type: 'text', editable: true },
+          { key: 'director2Email', label: 'Director 2 Email', type: 'email', editable: true },
+          { key: 'director2Address', label: 'Director 2 Address', type: 'textarea', editable: true },
+          { key: 'director2DateOfBirth', label: 'Director 2 Date of Birth', type: 'date', editable: true },
+          { key: 'director2Nationality', label: 'Director 2 Nationality', type: 'text', editable: true },
+          { key: 'director2IdType', label: 'Director 2 ID Type', type: 'text', editable: true },
+          { key: 'director2IdNumber', label: 'Director 2 ID Number', type: 'text', editable: true }
         ]
       },
       {
@@ -1546,7 +1597,24 @@ export const FORM_MAPPINGS: FormMapping = {
       {
         title: 'Directors Information',
         fields: [
-          { key: 'directors', label: 'Directors', type: 'array', editable: true } // May be flat object in older versions
+          { key: 'directors', label: 'Directors', type: 'array', editable: true }, // May be flat object in older versions
+          // Individual director fields for flat object compatibility
+          { key: 'director1Name', label: 'Director 1 Name', type: 'text', editable: true },
+          { key: 'director1Phone', label: 'Director 1 Phone', type: 'text', editable: true },
+          { key: 'director1Email', label: 'Director 1 Email', type: 'email', editable: true },
+          { key: 'director1Address', label: 'Director 1 Address', type: 'textarea', editable: true },
+          { key: 'director1DateOfBirth', label: 'Director 1 Date of Birth', type: 'date', editable: true },
+          { key: 'director1Nationality', label: 'Director 1 Nationality', type: 'text', editable: true },
+          { key: 'director1IdType', label: 'Director 1 ID Type', type: 'text', editable: true },
+          { key: 'director1IdNumber', label: 'Director 1 ID Number', type: 'text', editable: true },
+          { key: 'director2Name', label: 'Director 2 Name', type: 'text', editable: true },
+          { key: 'director2Phone', label: 'Director 2 Phone', type: 'text', editable: true },
+          { key: 'director2Email', label: 'Director 2 Email', type: 'email', editable: true },
+          { key: 'director2Address', label: 'Director 2 Address', type: 'textarea', editable: true },
+          { key: 'director2DateOfBirth', label: 'Director 2 Date of Birth', type: 'date', editable: true },
+          { key: 'director2Nationality', label: 'Director 2 Nationality', type: 'text', editable: true },
+          { key: 'director2IdType', label: 'Director 2 ID Type', type: 'text', editable: true },
+          { key: 'director2IdNumber', label: 'Director 2 ID Number', type: 'text', editable: true }
         ]
       },
       {
