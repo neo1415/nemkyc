@@ -634,71 +634,116 @@ const FormViewer: React.FC = () => {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ p: 3, maxWidth: '1000px', mx: 'auto' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ 
+        p: { xs: 2, sm: 3 }, 
+        maxWidth: '1200px', 
+        mx: 'auto',
+        width: '100%',
+        minHeight: '100vh'
+      }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: { xs: 'stretch', md: 'center' }, 
+          mb: 3,
+          gap: 2
+        }}>
           <Button
             startIcon={<ArrowLeft />}
             onClick={() => navigate(-1)}
-            sx={{ mr: 2 }}
+            sx={{ order: { xs: 1, md: 0 } }}
           >
             Back
           </Button>
-          <Typography variant="h4" sx={{ flexGrow: 1 }}>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              flexGrow: 1,
+              fontSize: { xs: '1.5rem', md: '2rem' },
+              order: { xs: 0, md: 1 }
+            }}
+          >
             {formTitle}
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Download />}
-            onClick={generatePDF}
-            disabled={isGeneratingPDF}
-            sx={{ ml: 2 }}
-          >
-            {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
-          </Button>
-          {collection?.includes('claim') && (
-            <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
-              <Button 
-                onClick={() => handleStatusUpdate('processing')}
-                variant={status === 'processing' ? 'contained' : 'outlined'}
-                size="small"
-                color="warning"
-              >
-                Processing
-              </Button>
-              <Button 
-                onClick={() => handleStatusUpdate('approved')}
-                variant={status === 'approved' ? 'contained' : 'outlined'}
-                size="small"
-                color="success"
-              >
-                Approved
-              </Button>
-              <Button 
-                onClick={() => handleStatusUpdate('rejected')}
-                variant={status === 'rejected' ? 'contained' : 'outlined'}
-                size="small"
-                color="error"
-              >
-                Rejected
-              </Button>
-            </Box>
-          )}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 1,
+            order: { xs: 2, md: 2 }
+          }}>
+            <Button
+              variant="contained"
+              startIcon={<Download />}
+              onClick={generatePDF}
+              disabled={isGeneratingPDF}
+              fullWidth={true}
+              sx={{ 
+                minWidth: { xs: 'auto', sm: 'unset' }
+              }}
+            >
+              {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
+            </Button>
+            {collection?.includes('claim') && (
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 1
+              }}>
+                <Button 
+                  onClick={() => handleStatusUpdate('processing')}
+                  variant={status === 'processing' ? 'contained' : 'outlined'}
+                  size="small"
+                  color="warning"
+                  fullWidth={true}
+                >
+                  Processing
+                </Button>
+                <Button 
+                  onClick={() => handleStatusUpdate('approved')}
+                  variant={status === 'approved' ? 'contained' : 'outlined'}
+                  size="small"
+                  color="success"
+                  fullWidth={true}
+                >
+                  Approved
+                </Button>
+                <Button 
+                  onClick={() => handleStatusUpdate('rejected')}
+                  variant={status === 'rejected' ? 'contained' : 'outlined'}
+                  size="small"
+                  color="error"
+                  fullWidth={true}
+                >
+                  Rejected
+                </Button>
+              </Box>
+            )}
+          </Box>
         </Box>
 
-        <Paper elevation={2} sx={{ p: 3 }}>
+        <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
           <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
               Form Details
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-              <Chip label={`ID: ${formData.id}`} size="small" />
+              <Chip 
+                label={`ID: ${formData.id}`} 
+                size="small" 
+                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+              />
               <Chip 
                 label={`Status: ${status || 'pending'}`} 
                 size="small" 
                 color={status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'default'}
+                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
               />
               {formData.createdAt && (
-                <Chip label={`Submitted: ${formatDate(formData.createdAt)}`} size="small" />
+                <Chip 
+                  label={`Submitted: ${formatDate(formData.createdAt)}`} 
+                  size="small" 
+                  sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                />
               )}
             </Box>
           </Box>
@@ -706,15 +751,45 @@ const FormViewer: React.FC = () => {
           <Divider sx={{ mb: 3 }} />
 
           {Object.entries(organizedFields).map(([sectionTitle, fields]) => (
-            <Paper key={sectionTitle} elevation={1} sx={{ mb: 3, p: 3, bgcolor: 'grey.50' }}>
-              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', mb: 2 }}>
+            <Paper key={sectionTitle} elevation={1} sx={{ 
+              mb: { xs: 2, sm: 3 }, 
+              p: { xs: 2, sm: 3 }, 
+              bgcolor: 'grey.50' 
+            }}>
+              <Typography 
+                variant="h6" 
+                gutterBottom 
+                sx={{ 
+                  color: 'primary.main', 
+                  mb: 2,
+                  fontSize: { xs: '1rem', sm: '1.25rem' }
+                }}
+              >
                 {sectionTitle}
               </Typography>
-              <Box sx={{ display: 'grid', gap: 3 }}>
+              <Box sx={{ 
+                display: 'grid', 
+                gap: { xs: 2, sm: 3 },
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(auto-fit, minmax(300px, 1fr))' }
+              }}>
                 {fields.map((field) => (
-                  <Box key={field.key}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="subtitle2" color="text.secondary" sx={{ flexGrow: 1, fontWeight: 'medium' }}>
+                  <Box key={field.key} sx={{ width: '100%' }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      alignItems: { xs: 'start', sm: 'center' }, 
+                      mb: 1,
+                      gap: { xs: 1, sm: 0 }
+                    }}>
+                      <Typography 
+                        variant="subtitle2" 
+                        color="text.secondary" 
+                        sx={{ 
+                          flexGrow: 1, 
+                          fontWeight: 'medium',
+                          fontSize: { xs: '0.8rem', sm: '0.875rem' }
+                        }}
+                      >
                         {field.label}
                       </Typography>
                       {field.editable && !editingFields[field.key] && (
@@ -722,13 +797,22 @@ const FormViewer: React.FC = () => {
                           size="small"
                           startIcon={<Edit />}
                           onClick={() => handleEditField(field.key)}
-                          sx={{ ml: 1 }}
+                          sx={{ 
+                            ml: { xs: 0, sm: 1 },
+                            fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                          }}
                         >
                           Edit
                         </Button>
                       )}
                     </Box>
-                    {renderFieldValue(field)}
+                    <Box sx={{ 
+                      width: '100%',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      {renderFieldValue(field)}
+                    </Box>
                   </Box>
                 ))}
               </Box>

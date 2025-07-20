@@ -59,7 +59,8 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
       pdf.setFontSize(12);
       pdf.setFont(undefined, 'bold');
       pdf.setTextColor(139, 69, 19);
-      pdf.text(section.name || 'Section', 15, yPosition);
+      const sectionName = section.name || section.title || 'Section';
+      pdf.text(String(sectionName), 15, yPosition);
       yPosition += 10;
       
       pdf.setFontSize(10);
@@ -94,18 +95,28 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
           } else {
             // Handle regular fields
             pdf.setFont(undefined, 'bold');
-            pdf.text(`${field.label}:`, 15, yPosition);
+            const fieldLabel = String(field.label || field.key || 'Field');
+            pdf.text(`${fieldLabel}:`, 15, yPosition);
             pdf.setFont(undefined, 'normal');
             
-            let displayValue = String(value);
-            if (field.key.toLowerCase().includes('date') && value instanceof Date) {
-              displayValue = value.toLocaleDateString();
-            } else if (field.key.toLowerCase().includes('date') && typeof value === 'string' && value.includes('T')) {
-              displayValue = new Date(value).toLocaleDateString();
-            } else if (typeof value === 'boolean') {
-              displayValue = value ? 'Yes' : 'No';
-            } else if (field.type === 'file' && typeof value === 'string') {
-              displayValue = value.includes('firebase') ? 'File Attached' : displayValue;
+            // Sanitize and format value
+            let displayValue = 'N/A';
+            if (value !== null && value !== undefined && value !== '') {
+              if (field.key.toLowerCase().includes('date') && value instanceof Date) {
+                displayValue = value.toLocaleDateString();
+              } else if (field.key.toLowerCase().includes('date') && typeof value === 'string' && value.includes('T')) {
+                try {
+                  displayValue = new Date(value).toLocaleDateString();
+                } catch {
+                  displayValue = String(value);
+                }
+              } else if (typeof value === 'boolean') {
+                displayValue = value ? 'Yes' : 'No';
+              } else if (field.type === 'file' && typeof value === 'string') {
+                displayValue = value.includes('firebase') ? 'File Attached' : String(value);
+              } else {
+                displayValue = String(value);
+              }
             }
             
             const maxWidth = 130;
