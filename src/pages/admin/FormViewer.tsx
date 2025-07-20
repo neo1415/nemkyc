@@ -37,6 +37,7 @@ const FormViewer: React.FC = () => {
   const [editingFields, setEditingFields] = useState<Record<string, boolean>>({});
   const [editValues, setEditValues] = useState<Record<string, any>>({});
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [status, setStatus] = useState<string>('processing');
 
   useEffect(() => {
     if (!user || !isAdmin()) {
@@ -62,9 +63,11 @@ const FormViewer: React.FC = () => {
           ...docSnap.data(),
           createdAt: docSnap.data().createdAt?.toDate?.() || docSnap.data().createdAt,
           updatedAt: docSnap.data().updatedAt?.toDate?.() || docSnap.data().updatedAt,
+          status: docSnap.data().status || 'processing'
         };
         
         setFormData(data);
+        setStatus(data.status || 'processing');
         
         // Organize fields using form mapping
         const mapping = FORM_MAPPINGS[collection];
@@ -365,6 +368,32 @@ const FormViewer: React.FC = () => {
     });
   };
 
+  const handleStatusUpdate = async (newStatus: string) => {
+    if (!formData || !collection || !id) return;
+
+    try {
+      const docRef = doc(db, collection, id);
+      await updateDoc(docRef, {
+        status: newStatus,
+        updatedAt: new Date()
+      });
+      
+      setStatus(newStatus);
+      setFormData(prev => prev ? { ...prev, status: newStatus } : null);
+      toast({
+        title: 'Success',
+        description: `Status updated to ${newStatus}`,
+      });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: 'Error',
+        description: 'Error updating status',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const generatePDF = async () => {
     if (!formData || !collection) return;
     
@@ -386,7 +415,8 @@ const FormViewer: React.FC = () => {
         title: formTitle,
         subtitle: `Form ID: ${formData.id}`,
         logoUrl: '/Nem-insurance-Logo.jpg',
-        data: cleanData
+        data: cleanData,
+        mapping: mapping
       });
       
       downloadPDF(pdfBlob, `${collection}-${formData.id}.pdf`);
@@ -625,6 +655,34 @@ const FormViewer: React.FC = () => {
           >
             {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
           </Button>
+          {collection?.includes('claim') && (
+            <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+              <Button 
+                onClick={() => handleStatusUpdate('processing')}
+                variant={status === 'processing' ? 'contained' : 'outlined'}
+                size="small"
+                color="warning"
+              >
+                Processing
+              </Button>
+              <Button 
+                onClick={() => handleStatusUpdate('approved')}
+                variant={status === 'approved' ? 'contained' : 'outlined'}
+                size="small"
+                color="success"
+              >
+                Approved
+              </Button>
+              <Button 
+                onClick={() => handleStatusUpdate('rejected')}
+                variant={status === 'rejected' ? 'contained' : 'outlined'}
+                size="small"
+                color="error"
+              >
+                Rejected
+              </Button>
+            </Box>
+          )}
         </Box>
 
         <Paper elevation={2} sx={{ p: 3 }}>
@@ -635,9 +693,9 @@ const FormViewer: React.FC = () => {
             <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
               <Chip label={`ID: ${formData.id}`} size="small" />
               <Chip 
-                label={`Status: ${formData.status || 'pending'}`} 
+                label={`Status: ${status || 'pending'}`} 
                 size="small" 
-                color={formData.status === 'approved' ? 'success' : formData.status === 'rejected' ? 'error' : 'default'}
+                color={status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'default'}
               />
               {formData.createdAt && (
                 <Chip label={`Submitted: ${formatDate(formData.createdAt)}`} size="small" />

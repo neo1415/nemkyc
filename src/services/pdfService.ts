@@ -8,6 +8,7 @@ export interface PDFOptions {
   logoUrl?: string;
   data: Record<string, any>;
   attachments?: Array<{ name: string; url: string }>;
+  mapping?: any;
 }
 
 export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
@@ -51,7 +52,79 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
   let yPosition = options.subtitle ? 65 : 55;
   pdf.setFontSize(10);
   
-  Object.entries(options.data).forEach(([key, value]) => {
+  // Use mapping if available, otherwise fallback to original logic
+  if (options.mapping) {
+    options.mapping.sections.forEach((section: any) => {
+      // Section header
+      pdf.setFontSize(12);
+      pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(139, 69, 19);
+      pdf.text(section.name, 15, yPosition);
+      yPosition += 10;
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      
+      section.fields.forEach((field: any) => {
+        const value = options.data[field.key];
+        if (value !== undefined && value !== null && value !== '') {
+          if (field.type === 'array' && field.key === 'directors') {
+            // Handle directors array
+            if (Array.isArray(value) && value.length > 0) {
+              pdf.setFont(undefined, 'bold');
+              pdf.text('Directors:', 15, yPosition);
+              yPosition += 8;
+              
+              value.forEach((director: any, index: number) => {
+                pdf.setFont(undefined, 'bold');
+                pdf.text(`Director ${index + 1}:`, 20, yPosition);
+                yPosition += 6;
+                
+                Object.entries(director).forEach(([dirKey, dirValue]) => {
+                  if (dirValue) {
+                    const dirLabel = dirKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                    pdf.setFont(undefined, 'normal');
+                    pdf.text(`   ${dirLabel}: ${String(dirValue)}`, 25, yPosition);
+                    yPosition += 5;
+                  }
+                });
+                yPosition += 3;
+              });
+            }
+          } else {
+            // Handle regular fields
+            pdf.setFont(undefined, 'bold');
+            pdf.text(`${field.label}:`, 15, yPosition);
+            pdf.setFont(undefined, 'normal');
+            
+            let displayValue = String(value);
+            if (field.key.toLowerCase().includes('date') && value instanceof Date) {
+              displayValue = value.toLocaleDateString();
+            } else if (field.key.toLowerCase().includes('date') && typeof value === 'string' && value.includes('T')) {
+              displayValue = new Date(value).toLocaleDateString();
+            } else if (typeof value === 'boolean') {
+              displayValue = value ? 'Yes' : 'No';
+            } else if (field.type === 'file' && typeof value === 'string') {
+              displayValue = value.includes('firebase') ? 'File Attached' : displayValue;
+            }
+            
+            const maxWidth = 130;
+            const textLines = pdf.splitTextToSize(displayValue, maxWidth);
+            pdf.text(textLines, 70, yPosition);
+            yPosition += textLines.length * 6;
+          }
+          
+          if (yPosition > 270) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+        }
+      });
+      yPosition += 10;
+    });
+  } else {
+    // Fallback to original logic
+    Object.entries(options.data).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
       // Handle different data types
       if (Array.isArray(value)) {
@@ -132,7 +205,8 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
         yPosition = 20;
       }
     }
-  });
+    });
+  }
   
   // Add attachments list
   if (options.attachments && options.attachments.length > 0) {
