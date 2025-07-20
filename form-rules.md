@@ -1,4 +1,4 @@
-# 📝 Lovable Project Form Implementation Instructions
+# Lovable Project Form Implementation Instructions
 
 ## 👋 Overview
 
