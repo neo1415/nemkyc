@@ -63,7 +63,7 @@ const AdminIndividualKYCTable: React.FC = () => {
   // Fetch data from Firestore
   useEffect(() => {
   const q = query(
-    collection(db, 'individual-kyc'),
+    collection(db, 'Individual-kyc-form'),
     orderBy('timestamp', 'desc')
   );
 
