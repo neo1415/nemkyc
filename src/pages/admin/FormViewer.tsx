@@ -163,6 +163,12 @@ const FormViewer: React.FC = () => {
       
       if (directors.length > 0) {
         processedData.directors = directors;
+        
+        // Remove flat director fields from processedData to avoid duplication
+        const allDirectorFields = [...director1Fields, ...director2Fields];
+        allDirectorFields.forEach(field => {
+          delete processedData[field];
+        });
       }
     }
     
