@@ -62,10 +62,10 @@ const AdminIndividualKYCTable: React.FC = () => {
 
   // Fetch data from Firestore
   useEffect(() => {
-    const q = query(
-      collection(db, 'Individual-kyc-form'),
-      orderBy('timestamp', 'desc')
-    );
+  const q = query(
+    collection(db, 'individual-kyc'),
+    orderBy('timestamp', 'desc')
+  );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const data = querySnapshot.docs.map(doc => ({
@@ -100,7 +100,7 @@ const AdminIndividualKYCTable: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this KYC record?')) {
       try {
-        await deleteDoc(doc(db, 'Individual-kyc-form', id));
+        await deleteDoc(doc(db, 'individual-kyc', id));
         toast({ title: 'KYC record deleted successfully' });
       } catch (error) {
         console.error('Error deleting record:', error);
