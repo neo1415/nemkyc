@@ -3,7 +3,8 @@ import {
   DataGrid,
   GridColDef,
   GridActionsCellItem,
-  GridPaginationModel
+  GridPaginationModel,
+  GridToolbar
 } from '@mui/x-data-grid';
 import {
   IconButton,
@@ -93,7 +94,7 @@ const AdminIndividualKYCTable: React.FC = () => {
   });
 
   const handleView = (id: string) => {
-    navigate(`/admin/form-viewer/Individual-kyc-form/${id}`);
+    navigate(`/admin/form/individual-kyc/${id}`);
   };
 
   const handleDelete = async (id: string) => {
@@ -266,6 +267,17 @@ const AdminIndividualKYCTable: React.FC = () => {
           loading={loading}
           disableRowSelectionOnClick
           className="border-0"
+          slots={{ toolbar: GridToolbar }}
+          slotProps={{
+            toolbar: {
+              showQuickFilter: true,
+              csvOptions: {
+                fileName: 'individual-kyc-data',
+                delimiter: ',',
+                includeHeaders: true,
+              },
+            },
+          }}
           sx={{
             '& .MuiDataGrid-cell': {
               borderBottom: '1px solid #f0f0f0',

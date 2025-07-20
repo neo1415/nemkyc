@@ -59,7 +59,7 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
       pdf.setFontSize(12);
       pdf.setFont(undefined, 'bold');
       pdf.setTextColor(139, 69, 19);
-      pdf.text(section.name, 15, yPosition);
+      pdf.text(section.name || 'Section', 15, yPosition);
       yPosition += 10;
       
       pdf.setFontSize(10);
