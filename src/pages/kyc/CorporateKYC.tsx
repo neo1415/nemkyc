@@ -418,6 +418,264 @@ const CorporateKYC: React.FC = () => {
       )
     },
     {
+      id: 'directors',
+      title: 'Director Information',
+      component: (
+        <div className="space-y-6">
+          {fields.map((field, index) => (
+            <Card key={field.id} className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold">Director {index + 1}</h3>
+                {fields.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => remove(index)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Remove
+                  </Button>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <Label htmlFor={`directors.${index}.firstName`}>First Name *</Label>
+                  <Input
+                    id={`directors.${index}.firstName`}
+                    {...formMethods.register(`directors.${index}.firstName`)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`directors.${index}.middleName`}>Middle Name</Label>
+                  <Input
+                    id={`directors.${index}.middleName`}
+                    {...formMethods.register(`directors.${index}.middleName`)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`directors.${index}.lastName`}>Last Name *</Label>
+                  <Input
+                    id={`directors.${index}.lastName`}
+                    {...formMethods.register(`directors.${index}.lastName`)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <DatePickerField
+                  name={`directors.${index}.dateOfBirth`}
+                  label="Date of Birth *"
+                />
+                <div>
+                  <Label htmlFor={`directors.${index}.placeOfBirth`}>Place of Birth *</Label>
+                  <Input
+                    id={`directors.${index}.placeOfBirth`}
+                    {...formMethods.register(`directors.${index}.placeOfBirth`)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <Label htmlFor={`directors.${index}.nationality`}>Nationality *</Label>
+                  <Input
+                    id={`directors.${index}.nationality`}
+                    {...formMethods.register(`directors.${index}.nationality`)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`directors.${index}.country`}>Country *</Label>
+                  <Input
+                    id={`directors.${index}.country`}
+                    {...formMethods.register(`directors.${index}.country`)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <Label htmlFor={`directors.${index}.occupation`}>Occupation *</Label>
+                  <Input
+                    id={`directors.${index}.occupation`}
+                    {...formMethods.register(`directors.${index}.occupation`)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`directors.${index}.email`}>Email *</Label>
+                  <Input
+                    id={`directors.${index}.email`}
+                    type="email"
+                    {...formMethods.register(`directors.${index}.email`)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <Label htmlFor={`directors.${index}.phoneNumber`}>Phone Number *</Label>
+                  <Input
+                    id={`directors.${index}.phoneNumber`}
+                    {...formMethods.register(`directors.${index}.phoneNumber`)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`directors.${index}.bvn`}>BVN *</Label>
+                  <Input
+                    id={`directors.${index}.bvn`}
+                    maxLength={11}
+                    {...formMethods.register(`directors.${index}.bvn`)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <Label htmlFor={`directors.${index}.employersName`}>Employer Name</Label>
+                  <Input
+                    id={`directors.${index}.employersName`}
+                    {...formMethods.register(`directors.${index}.employersName`)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`directors.${index}.employersPhone`}>Employer Phone</Label>
+                  <Input
+                    id={`directors.${index}.employersPhone`}
+                    {...formMethods.register(`directors.${index}.employersPhone`)}
+                  />
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <Label htmlFor={`directors.${index}.residentialAddress`}>Residential Address *</Label>
+                <Textarea
+                  id={`directors.${index}.residentialAddress`}
+                  {...formMethods.register(`directors.${index}.residentialAddress`)}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <Label htmlFor={`directors.${index}.taxIdNumber`}>Tax ID Number</Label>
+                  <Input
+                    id={`directors.${index}.taxIdNumber`}
+                    {...formMethods.register(`directors.${index}.taxIdNumber`)}
+                  />
+                </div>
+                <div>
+                  <Label>ID Type *</Label>
+                  <Select
+                    value={formMethods.watch(`directors.${index}.idType`)}
+                    onValueChange={(value) => formMethods.setValue(`directors.${index}.idType`, value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select ID Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="National ID">National ID</SelectItem>
+                      <SelectItem value="Driver's License">Driver's License</SelectItem>
+                      <SelectItem value="International Passport">International Passport</SelectItem>
+                      <SelectItem value="Voters Card">Voters Card</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <Label htmlFor={`directors.${index}.identificationNumber`}>Identification Number *</Label>
+                  <Input
+                    id={`directors.${index}.identificationNumber`}
+                    {...formMethods.register(`directors.${index}.identificationNumber`)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`directors.${index}.issuingBody`}>Issuing Body *</Label>
+                  <Input
+                    id={`directors.${index}.issuingBody`}
+                    {...formMethods.register(`directors.${index}.issuingBody`)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <DatePickerField
+                  name={`directors.${index}.issuedDate`}
+                  label="Issued Date *"
+                />
+                <DatePickerField
+                  name={`directors.${index}.expiryDate`}
+                  label="Expiry Date"
+                />
+              </div>
+
+              <div>
+                <Label>Source of Income *</Label>
+                <Select
+                  value={formMethods.watch(`directors.${index}.incomeSource`)}
+                  onValueChange={(value) => formMethods.setValue(`directors.${index}.incomeSource`, value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Source of Income" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Salary">Salary</SelectItem>
+                    <SelectItem value="Business Income">Business Income</SelectItem>
+                    <SelectItem value="Investment">Investment</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formMethods.watch(`directors.${index}.incomeSource`) === 'Other' && (
+                <div className="mt-4">
+                  <Label htmlFor={`directors.${index}.incomeSourceOther`}>Please specify *</Label>
+                  <Input
+                    id={`directors.${index}.incomeSourceOther`}
+                    {...formMethods.register(`directors.${index}.incomeSourceOther`)}
+                  />
+                </div>
+              )}
+            </Card>
+          ))}
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => append({
+              firstName: '',
+              middleName: '',
+              lastName: '',
+              dateOfBirth: '',
+              placeOfBirth: '',
+              nationality: '',
+              country: '',
+              occupation: '',
+              email: '',
+              phoneNumber: '',
+              bvn: '',
+              employersName: '',
+              employersPhone: '',
+              residentialAddress: '',
+              taxIdNumber: '',
+              idType: '',
+              identificationNumber: '',
+              issuingBody: '',
+              issuedDate: '',
+              expiryDate: '',
+              incomeSource: '',
+              incomeSourceOther: ''
+            })}
+            className="w-full"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Another Director
+          </Button>
+        </div>
+      )
+    },
+    {
       id: 'verification',
       title: 'Account Details & Verification Upload',
       component: (
