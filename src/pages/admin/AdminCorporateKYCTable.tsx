@@ -4,7 +4,8 @@ import {
   DataGrid,
   GridColDef,
   GridActionsCellItem,
-  GridPaginationModel
+  GridPaginationModel,
+  GridToolbar
 } from '@mui/x-data-grid';
 import {
   Chip,
@@ -91,7 +92,7 @@ const AdminCorporateKYCTable: React.FC = () => {
   });
 
   const handleView = (id: string) => {
-    navigate(`/admin/form-viewer/corporate-kyc/${id}`);
+    navigate(`/admin/form/corporate-kyc/${id}`);
   };
 
   const handleDelete = async (id: string) => {
@@ -254,6 +255,17 @@ const AdminCorporateKYCTable: React.FC = () => {
           loading={loading}
           disableRowSelectionOnClick
           className="border-0"
+          slots={{ toolbar: GridToolbar }}
+          slotProps={{
+            toolbar: {
+              showQuickFilter: true,
+              csvOptions: {
+                fileName: 'corporate-kyc-data',
+                delimiter: ',',
+                includeHeaders: true,
+              },
+            },
+          }}
           sx={{
             '& .MuiDataGrid-cell': {
               borderBottom: '1px solid #f0f0f0',
