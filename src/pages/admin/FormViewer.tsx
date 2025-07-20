@@ -110,23 +110,34 @@ const FormViewer: React.FC = () => {
       
       section.fields.forEach((field: FormField) => {
         // Check if field should be shown based on conditional logic
-        if (shouldShowField(field, data) && data.hasOwnProperty(field.key)) {
-          const value = data[field.key];
-          // Show field if it has value OR if it's a file type (which stores URLs)
-          if (value !== null && value !== undefined && value !== '' || field.type === 'file') {
-            sectionFields.push({
-              ...field,
-              value: data[field.key],
-              section: section.title,
-              editable: field.editable !== false
-            });
+        if (shouldShowField(field, data)) {
+          let value = data[field.key];
+          
+          // Handle array normalization for directors field and other array fields
+          if (field.type === 'array' && value !== null && value !== undefined) {
+            if (Array.isArray(value)) {
+              // Already an array, keep as-is
+            } else if (typeof value === 'object' && value !== null) {
+              // Single object, convert to array
+              value = [value];
+            } else {
+              // Non-object (string, null, etc.), treat as empty array
+              value = [];
+            }
           }
+          
+          // Always show all fields defined in formMappings, even if empty
+          sectionFields.push({
+            ...field,
+            value: value,
+            section: section.title,
+            editable: field.editable !== false
+          });
         }
       });
       
-      if (sectionFields.length > 0) {
-        organized[section.title] = sectionFields;
-      }
+      // Always show sections, even if they have no data
+      organized[section.title] = sectionFields;
     });
     
     return organized;
@@ -327,9 +338,39 @@ const FormViewer: React.FC = () => {
       );
     }
 
-    // Display value based on type
+    // Handle file fields - always show, even if empty
+    if (type === 'file' || type === 'url' || (typeof value === 'string' && value.startsWith('gs://'))) {
+      const fieldLabel = label.replace(/Url$/, '');
+      
+      if (!value || value === null || value === undefined || value === '') {
+        return (
+          <Button
+            size="small"
+            variant="outlined"
+            disabled
+            sx={{ mt: 1, color: 'text.secondary' }}
+          >
+            No file uploaded
+          </Button>
+        );
+      }
+      
+      return (
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<Download />}
+          onClick={() => handleDownloadFile(value, `${label}.pdf`)}
+          sx={{ mt: 1 }}
+        >
+          Download {fieldLabel}
+        </Button>
+      );
+    }
+
+    // Handle empty values - show "N/A" instead of hiding
     if (value === null || value === undefined || value === '') {
-      return <Typography variant="body2" color="text.secondary">Not provided</Typography>;
+      return <Typography variant="body2" color="text.secondary">N/A</Typography>;
     }
 
     switch (type) {
@@ -359,24 +400,9 @@ const FormViewer: React.FC = () => {
           </Typography>
         );
       
-      case 'url':
-      case 'file':
-        const fieldLabel = label.replace(/Url$/, '');
-        return (
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<Download />}
-            onClick={() => handleDownloadFile(value, `${label}.pdf`)}
-            sx={{ mt: 1 }}
-          >
-            Download {fieldLabel}
-          </Button>
-        );
-      
       case 'array':
         if (!Array.isArray(value) || value.length === 0) {
-          return <Typography variant="body2" color="text.secondary">No items</Typography>;
+          return <Typography variant="body2" color="text.secondary">N/A</Typography>;
         }
         
         return (
