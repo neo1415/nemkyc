@@ -1680,7 +1680,49 @@ export const FORM_MAPPINGS: FormMapping = {
       {
         title: 'Directors Information',
         fields: [
-          { key: 'directors', label: 'Directors', type: 'array', editable: false }
+          { key: 'directors', label: 'Directors', type: 'array', editable: false },
+          // Individual director fields for flat structure compatibility
+          { key: 'firstName', label: 'Director 1 First Name', type: 'text', editable: true },
+          { key: 'middleName', label: 'Director 1 Middle Name', type: 'text', editable: true },
+          { key: 'lastName', label: 'Director 1 Last Name', type: 'text', editable: true },
+          { key: 'email', label: 'Director 1 Email', type: 'email', editable: true },
+          { key: 'phoneNumber', label: 'Director 1 Phone Number', type: 'text', editable: true },
+          { key: 'dob', label: 'Director 1 Date of Birth', type: 'date', editable: true },
+          { key: 'nationality', label: 'Director 1 Nationality', type: 'text', editable: true },
+          { key: 'occupation', label: 'Director 1 Occupation', type: 'text', editable: true },
+          { key: 'residentialAddress', label: 'Director 1 Residential Address', type: 'textarea', editable: true },
+          { key: 'idType', label: 'Director 1 ID Type', type: 'text', editable: true },
+          { key: 'idNumber', label: 'Director 1 ID Number', type: 'text', editable: true },
+          { key: 'issuedDate', label: 'Director 1 ID Issued Date', type: 'date', editable: true },
+          { key: 'expiryDate', label: 'Director 1 ID Expiry Date', type: 'date', editable: true },
+          { key: 'issuingBody', label: 'Director 1 ID Issuing Body', type: 'text', editable: true },
+          { key: 'placeOfBirth', label: 'Director 1 Place of Birth', type: 'text', editable: true },
+          { key: 'employersName', label: 'Director 1 Employers Name', type: 'text', editable: true },
+          { key: 'employersPhoneNumber', label: 'Director 1 Employers Phone Number', type: 'text', editable: true },
+          { key: 'sourceOfIncome', label: 'Director 1 Source of Income', type: 'text', editable: true },
+          { key: 'taxIDNumber', label: 'Director 1 Tax ID Number', type: 'text', editable: true },
+          { key: 'BVNNumber', label: 'Director 1 BVN Number', type: 'text', editable: true },
+          // Director 2 fields
+          { key: 'firstName2', label: 'Director 2 First Name', type: 'text', editable: true },
+          { key: 'middleName2', label: 'Director 2 Middle Name', type: 'text', editable: true },
+          { key: 'lastName2', label: 'Director 2 Last Name', type: 'text', editable: true },
+          { key: 'email2', label: 'Director 2 Email', type: 'email', editable: true },
+          { key: 'phoneNumber2', label: 'Director 2 Phone Number', type: 'text', editable: true },
+          { key: 'dob2', label: 'Director 2 Date of Birth', type: 'date', editable: true },
+          { key: 'nationality2', label: 'Director 2 Nationality', type: 'text', editable: true },
+          { key: 'occupation2', label: 'Director 2 Occupation', type: 'text', editable: true },
+          { key: 'residentialAddress2', label: 'Director 2 Residential Address', type: 'textarea', editable: true },
+          { key: 'idType2', label: 'Director 2 ID Type', type: 'text', editable: true },
+          { key: 'idNumber2', label: 'Director 2 ID Number', type: 'text', editable: true },
+          { key: 'issuedDate2', label: 'Director 2 ID Issued Date', type: 'date', editable: true },
+          { key: 'expiryDate2', label: 'Director 2 ID Expiry Date', type: 'date', editable: true },
+          { key: 'issuingBody2', label: 'Director 2 ID Issuing Body', type: 'text', editable: true },
+          { key: 'placeOfBirth2', label: 'Director 2 Place of Birth', type: 'text', editable: true },
+          { key: 'employersName2', label: 'Director 2 Employers Name', type: 'text', editable: true },
+          { key: 'employersPhoneNumber2', label: 'Director 2 Employers Phone Number', type: 'text', editable: true },
+          { key: 'sourceOfIncome2', label: 'Director 2 Source of Income', type: 'text', editable: true },
+          { key: 'taxIDNumber2', label: 'Director 2 Tax ID Number', type: 'text', editable: true },
+          { key: 'BVNNumber2', label: 'Director 2 BVN Number', type: 'text', editable: true }
         ]
       },
       {
@@ -1699,6 +1741,8 @@ export const FORM_MAPPINGS: FormMapping = {
       {
         title: 'File Uploads',
         fields: [
+          { key: 'cac', label: 'Certificate of Incorporation', type: 'file', editable: false },
+          { key: 'identification', label: 'Identification Document', type: 'file', editable: false },
           { key: 'certificateOfIncorporationUrl', label: 'Certificate of Incorporation', type: 'file', editable: false },
           { key: 'memorandumOfAssociationUrl', label: 'Memorandum of Association', type: 'file', editable: false },
           { key: 'articlesOfAssociationUrl', label: 'Articles of Association', type: 'file', editable: false },

@@ -105,16 +105,87 @@ const FormViewer: React.FC = () => {
   const organizeFieldsWithMapping = (data: any, mapping: any): Record<string, FormFieldWithValue[]> => {
     const organized: Record<string, FormFieldWithValue[]> = {};
     
+    // Known director field keys for flat structure detection
+    const directorFieldKeys = [
+      'firstName', 'firstName2', 'middleName', 'middleName2', 'lastName', 'lastName2',
+      'email', 'email2', 'phoneNumber', 'phoneNumber2', 'dob', 'dob2',
+      'nationality', 'nationality2', 'occupation', 'occupation2', 'residentialAddress', 'residentialAddress2',
+      'idType', 'idType2', 'idNumber', 'idNumber2', 'issuedDate', 'issuedDate2',
+      'expiryDate', 'expiryDate2', 'issuingBody', 'issuingBody2', 'placeOfBirth', 'placeOfBirth2',
+      'employersName', 'employersName2', 'employersPhoneNumber', 'employersPhoneNumber2',
+      'sourceOfIncome', 'sourceOfIncome2', 'taxIDNumber', 'taxIDNumber2', 'BVNNumber', 'BVNNumber2'
+    ];
+    
+    // Check if we have a flat director structure and need to synthesize the directors array
+    const hasDirectorsArray = data.directors && Array.isArray(data.directors);
+    const hasFlatDirectorFields = directorFieldKeys.some(key => data[key] !== undefined && data[key] !== '');
+    
+    let processedData = { ...data };
+    
+    // If we don't have a directors array but have flat director fields, synthesize directors
+    if (!hasDirectorsArray && hasFlatDirectorFields) {
+      const director1: any = {};
+      const director2: any = {};
+      
+      // Extract director 1 data (fields without '2' suffix)
+      const director1Fields = ['firstName', 'middleName', 'lastName', 'email', 'phoneNumber', 'dob', 
+                              'nationality', 'occupation', 'residentialAddress', 'idType', 'idNumber', 
+                              'issuedDate', 'expiryDate', 'issuingBody', 'placeOfBirth', 'employersName', 
+                              'employersPhoneNumber', 'sourceOfIncome', 'taxIDNumber', 'BVNNumber'];
+      
+      director1Fields.forEach(field => {
+        if (data[field] !== undefined && data[field] !== '') {
+          director1[field] = data[field];
+        }
+      });
+      
+      // Extract director 2 data (fields with '2' suffix)
+      const director2Fields = ['firstName2', 'middleName2', 'lastName2', 'email2', 'phoneNumber2', 'dob2',
+                              'nationality2', 'occupation2', 'residentialAddress2', 'idType2', 'idNumber2',
+                              'issuedDate2', 'expiryDate2', 'issuingBody2', 'placeOfBirth2', 'employersName2',
+                              'employersPhoneNumber2', 'sourceOfIncome2', 'taxIDNumber2', 'BVNNumber2'];
+      
+      director2Fields.forEach(field => {
+        const baseField = field.replace('2', '');
+        if (data[field] !== undefined && data[field] !== '') {
+          director2[baseField] = data[field];
+        }
+      });
+      
+      // Only add directors if they have meaningful data
+      const directors = [];
+      if (Object.keys(director1).length > 0) {
+        directors.push(director1);
+      }
+      if (Object.keys(director2).length > 0) {
+        directors.push(director2);
+      }
+      
+      if (directors.length > 0) {
+        processedData.directors = directors;
+      }
+    }
+    
     mapping.sections.forEach((section: any) => {
       const sectionFields: FormFieldWithValue[] = [];
       
       section.fields.forEach((field: FormField) => {
         // Check if field should be shown based on conditional logic
-        if (shouldShowField(field, data)) {
-          let value = data[field.key];
+        if (shouldShowField(field, processedData)) {
+          let value = processedData[field.key];
           
           // Handle array normalization for directors field and other array fields
-          if (field.type === 'array' && value !== null && value !== undefined) {
+          if (field.type === 'array' && field.key === 'directors') {
+            if (Array.isArray(value)) {
+              // Already an array, keep as-is
+            } else if (typeof value === 'object' && value !== null) {
+              // Single object, convert to array
+              value = [value];
+            } else {
+              // No directors data, treat as empty array
+              value = [];
+            }
+          } else if (field.type === 'array' && value !== null && value !== undefined) {
             if (Array.isArray(value)) {
               // Already an array, keep as-is
             } else if (typeof value === 'object' && value !== null) {
@@ -339,7 +410,9 @@ const FormViewer: React.FC = () => {
     }
 
     // Handle file fields - always show, even if empty
-    if (type === 'file' || type === 'url' || (typeof value === 'string' && value.startsWith('gs://'))) {
+    if (type === 'file' || type === 'url' || 
+        (typeof value === 'string' && (value.startsWith('gs://') || value.includes('firebasestorage.googleapis.com'))) ||
+        key.toLowerCase().includes('url') || key.toLowerCase().includes('file')) {
       const fieldLabel = label.replace(/Url$/, '');
       
       if (!value || value === null || value === undefined || value === '') {
@@ -360,7 +433,7 @@ const FormViewer: React.FC = () => {
           size="small"
           variant="outlined"
           startIcon={<Download />}
-          onClick={() => handleDownloadFile(value, `${label}.pdf`)}
+          onClick={() => handleDownloadFile(value, `${fieldLabel}.pdf`)}
           sx={{ mt: 1 }}
         >
           Download {fieldLabel}
