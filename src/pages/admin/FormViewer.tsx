@@ -96,7 +96,25 @@ const FormViewer: React.FC = () => {
   };
 
   const shouldShowField = (field: FormField, formData: any) => {
-    if (!field.conditional) return true;
+    if (!field.conditional) {
+      // Check if this is a flat director field and we have a directors array
+      const flatDirectorFieldPatterns = [
+        'firstName', 'firstName2', 'middleName', 'middleName2', 'lastName', 'lastName2',
+        'email', 'email2', 'phoneNumber', 'phoneNumber2', 'dob', 'dob2',
+        'nationality', 'nationality2', 'occupation', 'occupation2', 'residentialAddress', 'residentialAddress2',
+        'idType', 'idType2', 'idNumber', 'idNumber2', 'issuedDate', 'issuedDate2',
+        'expiryDate', 'expiryDate2', 'issuingBody', 'issuingBody2', 'placeOfBirth', 'placeOfBirth2',
+        'employersName', 'employersName2', 'employersPhoneNumber', 'employersPhoneNumber2',
+        'sourceOfIncome', 'sourceOfIncome2', 'taxIDNumber', 'taxIDNumber2', 'BVNNumber', 'BVNNumber2'
+      ];
+      
+      // If we have a directors array and this field is a flat director field, don't show it
+      if (formData.directors && Array.isArray(formData.directors) && flatDirectorFieldPatterns.includes(field.key)) {
+        return false;
+      }
+      
+      return true;
+    }
     
     const dependentValue = formData[field.conditional.dependsOn];
     return dependentValue === field.conditional.value;
