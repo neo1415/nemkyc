@@ -351,12 +351,6 @@ const fetchForms = async () => {
           onClick={() => navigate(`/admin/form/${collectionName}/${params.id}`)}
         />,
         <GridActionsCellItem
-          key="export"
-          icon={<GetApp />}
-          label="Export CSV"
-          onClick={exportToCSV}
-        />,
-        <GridActionsCellItem
           key="delete"
           icon={<Delete />}
           label="Delete"
@@ -592,8 +586,8 @@ const fetchForms = async () => {
             {title}
           </Typography>
           
-          {/* Filters */}
-          <Box display="flex" gap={2} mb={3} alignItems="center">
+          {/* Filters and Export */}
+          <Box display="flex" gap={2} mb={3} alignItems="center" flexWrap="wrap">
             <TextField
               label="Search"
               variant="outlined"
@@ -618,6 +612,15 @@ const fetchForms = async () => {
                 </Select>
               </FormControl>
             )}
+            
+            <Button
+              variant="outlined"
+              startIcon={<GetApp />}
+              onClick={exportToCSV}
+              sx={{ ml: 'auto' }}
+            >
+              Export CSV
+            </Button>
           </Box>
         </div>
 
@@ -633,6 +636,11 @@ const fetchForms = async () => {
             slotProps={{
               toolbar: {
                 showQuickFilter: true,
+                csvOptions: {
+                  fileName: `${collectionName}-export`,
+                  delimiter: ',',
+                  includeHeaders: true,
+                },
               },
             }}
             initialState={{
