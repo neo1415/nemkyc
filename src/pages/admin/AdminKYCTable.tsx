@@ -41,7 +41,7 @@ const AdminKYCTable: React.FC<AdminKYCTableProps> = ({ formType }) => {
       const kycCollections = formType ? 
         [`${formType}-kyc`] : 
         [
-          'Individual-kyc-form',
+          'individual-kyc',
           'corporate-kyc'
         ];
 

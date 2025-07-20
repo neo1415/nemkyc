@@ -11,6 +11,20 @@ export interface PDFOptions {
   mapping?: any;
 }
 
+// System fields to exclude from PDF
+const EXCLUDED_FIELDS = [
+  'formId', 'id', 'collection', 'timestamp', 'createdAt', 'updatedAt', 'submittedAt',
+  'identificationUrl', 'cacCertificateUrl', 'memoOfAssociationUrl', 
+  'articlesOfAssociationUrl', 'certificateOfIncorporationUrl', 'taxClearanceUrl',
+  'auditedAccountsUrl', 'boardResolutionUrl', 'signatureCardUrl'
+];
+
+// Generate filename from form data
+const generateFilename = (data: Record<string, any>, formType: string): string => {
+  const name = data.companyName || data.fullName || data.firstName + ' ' + data.lastName || 'Unknown';
+  return `${name}-${formType}.pdf`;
+};
+
 export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
   const pdf = new jsPDF();
   
@@ -59,71 +73,96 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
       pdf.setFontSize(12);
       pdf.setFont(undefined, 'bold');
       pdf.setTextColor(139, 69, 19);
-      const sectionName = section.name || section.title || 'Section';
-      pdf.text(String(sectionName), 15, yPosition);
+      const sectionName = String(section.name || section.title || 'Section');
+      pdf.text(sectionName, 15, yPosition);
       yPosition += 10;
       
       pdf.setFontSize(10);
       pdf.setTextColor(0, 0, 0);
       
+      // Special handling for Declaration section
+      if (sectionName.toLowerCase().includes('declaration') && options.data.declaration) {
+        pdf.setFont(undefined, 'normal');
+        const declarationText = String(options.data.declaration);
+        const maxWidth = 170;
+        const textLines = pdf.splitTextToSize(declarationText, maxWidth);
+        pdf.text(textLines, 15, yPosition);
+        yPosition += textLines.length * 5 + 10;
+      }
+      
       section.fields.forEach((field: any) => {
+        // Skip excluded fields
+        if (EXCLUDED_FIELDS.includes(field.key)) {
+          return;
+        }
+        
         const value = options.data[field.key];
-        if (value !== undefined && value !== null && value !== '') {
-          if (field.type === 'array' && field.key === 'directors') {
-            // Handle directors array
-            if (Array.isArray(value) && value.length > 0) {
+        
+        if (field.type === 'array' && field.key === 'directors') {
+          // Handle directors array with proper section titles
+          if (Array.isArray(value) && value.length > 0) {
+            value.forEach((director: any, index: number) => {
+              pdf.setFontSize(12);
               pdf.setFont(undefined, 'bold');
-              pdf.text('Directors:', 15, yPosition);
-              yPosition += 8;
+              pdf.setTextColor(139, 69, 19);
+              pdf.text(`Director ${index + 1}`, 15, yPosition);
+              yPosition += 10;
               
-              value.forEach((director: any, index: number) => {
+              pdf.setFontSize(10);
+              pdf.setTextColor(0, 0, 0);
+              
+              Object.entries(director).forEach(([dirKey, dirValue]) => {
+                const dirLabel = dirKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                 pdf.setFont(undefined, 'bold');
-                pdf.text(`Director ${index + 1}:`, 20, yPosition);
-                yPosition += 6;
+                pdf.text(`${dirLabel}:`, 15, yPosition);
+                pdf.setFont(undefined, 'normal');
                 
-                Object.entries(director).forEach(([dirKey, dirValue]) => {
-                  if (dirValue) {
-                    const dirLabel = dirKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                    pdf.setFont(undefined, 'normal');
-                    pdf.text(`   ${dirLabel}: ${String(dirValue)}`, 25, yPosition);
-                    yPosition += 5;
-                  }
-                });
-                yPosition += 3;
-              });
-            }
-          } else {
-            // Handle regular fields
-            pdf.setFont(undefined, 'bold');
-            const fieldLabel = String(field.label || field.key || 'Field');
-            pdf.text(`${fieldLabel}:`, 15, yPosition);
-            pdf.setFont(undefined, 'normal');
-            
-            // Sanitize and format value
-            let displayValue = 'N/A';
-            if (value !== null && value !== undefined && value !== '') {
-              if (field.key.toLowerCase().includes('date') && value instanceof Date) {
-                displayValue = value.toLocaleDateString();
-              } else if (field.key.toLowerCase().includes('date') && typeof value === 'string' && value.includes('T')) {
-                try {
-                  displayValue = new Date(value).toLocaleDateString();
-                } catch {
-                  displayValue = String(value);
+                const displayValue = dirValue ? String(dirValue) : '';
+                const maxWidth = 130;
+                const textLines = pdf.splitTextToSize(displayValue, maxWidth);
+                pdf.text(textLines, 70, yPosition);
+                yPosition += Math.max(textLines.length * 5, 6);
+                
+                if (yPosition > 270) {
+                  pdf.addPage();
+                  yPosition = 20;
                 }
-              } else if (typeof value === 'boolean') {
-                displayValue = value ? 'Yes' : 'No';
-              } else if (field.type === 'file' && typeof value === 'string') {
-                displayValue = value.includes('firebase') ? 'File Attached' : String(value);
-              } else {
+              });
+              yPosition += 5;
+            });
+          }
+        } else {
+          // Handle regular fields - show all fields with empty values as blank
+          pdf.setFont(undefined, 'bold');
+          const fieldLabel = String(field.label || field.key || 'Field');
+          pdf.text(`${fieldLabel}:`, 15, yPosition);
+          pdf.setFont(undefined, 'normal');
+          
+          // Sanitize and format value - use blank for empty values
+          let displayValue = '';
+          if (value !== null && value !== undefined && value !== '') {
+            if (field.key.toLowerCase().includes('date') && value instanceof Date) {
+              displayValue = value.toLocaleDateString();
+            } else if (field.key.toLowerCase().includes('date') && typeof value === 'string' && value.includes('T')) {
+              try {
+                displayValue = new Date(value).toLocaleDateString();
+              } catch {
                 displayValue = String(value);
               }
+            } else if (typeof value === 'boolean') {
+              displayValue = value ? 'Yes' : 'No';
+            } else if (field.type === 'file' && typeof value === 'string') {
+              // Skip file fields entirely in PDF
+              return;
+            } else {
+              displayValue = String(value);
             }
-            
-            const maxWidth = 130;
-            const textLines = pdf.splitTextToSize(displayValue, maxWidth);
-            pdf.text(textLines, 70, yPosition);
-            yPosition += textLines.length * 6;
           }
+          
+          const maxWidth = 130;
+          const textLines = pdf.splitTextToSize(displayValue, maxWidth);
+          pdf.text(textLines, 70, yPosition);
+          yPosition += Math.max(textLines.length * 5, 6);
           
           if (yPosition > 270) {
             pdf.addPage();
@@ -238,14 +277,36 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
     });
   }
   
+  // Add Data Privacy Statement as footer
+  if (yPosition > 250) {
+    pdf.addPage();
+    yPosition = 20;
+  } else {
+    yPosition += 20;
+  }
+  
+  pdf.setFontSize(10);
+  pdf.setFont(undefined, 'bold');
+  pdf.setTextColor(139, 69, 19);
+  pdf.text('Data Privacy Statement', 15, yPosition);
+  yPosition += 8;
+  
+  pdf.setFontSize(8);
+  pdf.setFont(undefined, 'normal');
+  pdf.setTextColor(0, 0, 0);
+  const privacyText = 'This form contains personal and confidential information. All data collected is processed in accordance with applicable data protection laws and NEM Insurance privacy policy. The information provided will be used solely for insurance purposes and will be kept confidential.';
+  const privacyLines = pdf.splitTextToSize(privacyText, 170);
+  pdf.text(privacyLines, 15, yPosition);
+  
   return pdf.output('blob');
 };
 
-export const downloadPDF = (blob: Blob, filename: string) => {
+export const downloadPDF = (blob: Blob, filename: string, data: Record<string, any>, formType: string) => {
+  const finalFilename = filename || generateFilename(data, formType);
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename;
+  a.download = finalFilename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
