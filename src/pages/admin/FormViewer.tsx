@@ -197,6 +197,12 @@ const FormViewer: React.FC = () => {
       const sectionFields: FormFieldWithValue[] = [];
       
       section.fields.forEach((field: FormField) => {
+        // Skip system/technical fields in FormViewer
+        const excludedFields = ['formId', 'id', 'collection', 'timestamp', 'createdAt', 'updatedAt', 'submittedAt'];
+        if (excludedFields.includes(field.key)) {
+          return;
+        }
+        
         // Check if field should be shown based on conditional logic
         if (shouldShowField(field, processedData)) {
           let value = processedData[field.key];
@@ -419,7 +425,7 @@ const FormViewer: React.FC = () => {
         mapping: mapping
       });
       
-      downloadPDF(pdfBlob, `${collection}-${formData.id}.pdf`);
+      downloadPDF(pdfBlob, '', formData, collection || '');
       
       toast({
         title: 'Success',
