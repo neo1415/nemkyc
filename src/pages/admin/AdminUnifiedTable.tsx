@@ -31,7 +31,8 @@ import {
   Download,
   CheckCircle,
   Cancel,
-  FilterList
+  FilterList,
+  GetApp
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -48,6 +49,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
+import { FORM_MAPPINGS } from '@/config/formMappings';
 
 // Custom theme with burgundy and gold
 const theme = createTheme({
@@ -210,6 +212,127 @@ const fetchForms = async () => {
     return data[field];
   };
 
+  const organizeFieldsWithMapping = (data: FormData) => {
+    const mapping = FORM_MAPPINGS[collectionName];
+    if (!mapping) return data;
+
+    const organizedData = { ...data };
+
+    // Normalize director data if needed
+    if (mapping.sections.find(s => s.title === 'Directors Information')) {
+      const directorFields = ['firstName', 'firstName2', 'middleName', 'middleName2', 'lastName', 'lastName2', 
+                             'email', 'email2', 'phoneNumber', 'phoneNumber2', 'dob', 'dob2',
+                             'nationality', 'nationality2', 'occupation', 'occupation2', 'residentialAddress', 'residentialAddress2',
+                             'idType', 'idType2', 'idNumber', 'idNumber2', 'issuedDate', 'issuedDate2',
+                             'expiryDate', 'expiryDate2', 'issuingBody', 'issuingBody2', 'placeOfBirth', 'placeOfBirth2',
+                             'employersName', 'employersName2', 'employersPhoneNumber', 'employersPhoneNumber2',
+                             'sourceOfIncome', 'sourceOfIncome2', 'taxIDNumber', 'taxIDNumber2', 'BVNNumber', 'BVNNumber2'];
+
+      if (!organizedData.directors && directorFields.some(field => organizedData[field])) {
+        const directors = [];
+        
+        // Director 1
+        const director1: any = {};
+        directorFields.filter(f => !f.endsWith('2')).forEach(field => {
+          if (organizedData[field]) {
+            director1[field] = organizedData[field];
+            delete organizedData[field];
+          }
+        });
+        if (Object.keys(director1).length > 0) directors.push(director1);
+
+        // Director 2
+        const director2: any = {};
+        directorFields.filter(f => f.endsWith('2')).forEach(field => {
+          const baseField = field.replace('2', '');
+          if (organizedData[field]) {
+            director2[baseField] = organizedData[field];
+            delete organizedData[field];
+          }
+        });
+        if (Object.keys(director2).length > 0) directors.push(director2);
+
+        if (directors.length > 0) organizedData.directors = directors;
+      }
+    }
+
+    return organizedData;
+  };
+
+  const exportToCSV = () => {
+    if (forms.length === 0) return;
+
+    const mapping = FORM_MAPPINGS[collectionName];
+    const headers: string[] = [];
+    const rows: string[][] = [];
+
+    // Get headers from form mapping if available
+    if (mapping) {
+      mapping.sections.forEach(section => {
+        section.fields.forEach(field => {
+          if (field.type === 'array' && field.key === 'directors') {
+            // Add director fields
+            ['firstName', 'lastName', 'email', 'phoneNumber'].forEach(dirField => {
+              headers.push(`Director 1 ${dirField.charAt(0).toUpperCase() + dirField.slice(1)}`);
+              headers.push(`Director 2 ${dirField.charAt(0).toUpperCase() + dirField.slice(1)}`);
+            });
+          } else {
+            headers.push(field.label);
+          }
+        });
+      });
+    } else {
+      // Fallback to dynamic headers
+      Object.keys(forms[0]).forEach(key => {
+        if (key !== 'id' && key !== 'timestamp') {
+          headers.push(key.charAt(0).toUpperCase() + key.slice(1));
+        }
+      });
+    }
+
+    // Process rows
+    forms.forEach(form => {
+      const organizedForm = organizeFieldsWithMapping(form);
+      const row: string[] = [];
+      
+      if (mapping) {
+        mapping.sections.forEach(section => {
+          section.fields.forEach(field => {
+            if (field.type === 'array' && field.key === 'directors') {
+              ['firstName', 'lastName', 'email', 'phoneNumber'].forEach(dirField => {
+                const director1 = organizedForm.directors?.[0]?.[dirField] || '';
+                const director2 = organizedForm.directors?.[1]?.[dirField] || '';
+                row.push(String(director1));
+                row.push(String(director2));
+              });
+            } else {
+              const value = organizedForm[field.key];
+              row.push(Array.isArray(value) ? value.length.toString() : String(value || ''));
+            }
+          });
+        });
+      } else {
+        Object.keys(forms[0]).forEach(key => {
+          if (key !== 'id' && key !== 'timestamp') {
+            row.push(String(organizedForm[key] || ''));
+          }
+        });
+      }
+      
+      rows.push(row);
+    });
+
+    // Create CSV content
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${collectionName}-export.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const generateColumns = (data: FormData[]) => {
     const sampleData = data[0];
     const dynamicColumns: GridColDef[] = [];
@@ -218,7 +341,7 @@ const fetchForms = async () => {
     dynamicColumns.push({
       field: 'actions',
       headerName: 'Actions',
-      width: 150,
+      width: 200,
       type: 'actions',
       getActions: (params) => [
         <GridActionsCellItem
@@ -226,6 +349,12 @@ const fetchForms = async () => {
           icon={<Visibility />}
           label="View"
           onClick={() => navigate(`/admin/form/${collectionName}/${params.id}`)}
+        />,
+        <GridActionsCellItem
+          key="export"
+          icon={<GetApp />}
+          label="Export CSV"
+          onClick={exportToCSV}
         />,
         <GridActionsCellItem
           key="delete"
@@ -276,70 +405,119 @@ const fetchForms = async () => {
       }
     });
 
-    // Add other important fields
-    Object.keys(sampleData).forEach((key) => {
-      if (excludeFields.includes(key) || priorityFields.includes(key)) return;
-      
-      const value = sampleData[key];
-      
-      // Skip URL fields
-      if (typeof value === 'string' && (value.includes('firebase') || key.toLowerCase().includes('url'))) {
-        return;
-      }
+    // Use form mappings if available
+    const mapping = FORM_MAPPINGS[collectionName];
+    if (mapping) {
+      mapping.sections.forEach(section => {
+        section.fields.forEach(field => {
+          if (excludeFields.includes(field.key) || priorityFields.includes(field.key)) return;
 
-      // Handle array fields (show count)
-      if (Array.isArray(value)) {
-        const fieldName = key.charAt(0).toUpperCase() + key.slice(1);
-        dynamicColumns.push({
-          field: key,
-          headerName: `${fieldName} Count`,
-          width: 130,
-          valueFormatter: (params) => {
-            const arr = params as any[];
-            return Array.isArray(arr) ? `${arr.length} item(s)` : '0 items';
-          },
+          if (field.type === 'array' && field.key === 'directors') {
+            dynamicColumns.push({
+              field: 'directors',
+              headerName: 'Directors Count',
+              width: 130,
+              valueFormatter: (params) => {
+                const arr = params as any[];
+                return Array.isArray(arr) ? `${arr.length} director(s)` : '0 directors';
+              },
+            });
+          } else if (field.key.toLowerCase().includes('date') || field.key === 'dateOfBirth') {
+            dynamicColumns.push({
+              field: field.key,
+              headerName: field.label,
+              width: 130,
+              valueFormatter: (params) => formatDate(params),
+            });
+          } else if (field.type === 'file') {
+            dynamicColumns.push({
+              field: field.key,
+              headerName: field.label,
+              width: 150,
+              valueFormatter: (params) => params ? 'File Available' : 'No File',
+            });
+          } else {
+            dynamicColumns.push({
+              field: field.key,
+              headerName: field.label,
+              width: 150,
+              valueFormatter: (params) => {
+                const value = params as any;
+                if (typeof value === 'string' && value.length > 50) {
+                  return value.substring(0, 50) + '...';
+                }
+                return value || '';
+              },
+            });
+          }
         });
-        return;
-      }
+      });
+    } else {
+      // Fallback to dynamic generation
+      Object.keys(sampleData).forEach((key) => {
+        if (excludeFields.includes(key) || priorityFields.includes(key)) return;
+        
+        const value = sampleData[key];
+        
+        // Skip URL fields
+        if (typeof value === 'string' && (value.includes('firebase') || key.toLowerCase().includes('url'))) {
+          return;
+        }
 
-      // Handle date fields
-      if (key.toLowerCase().includes('date') || key === 'dateOfBirth') {
-        dynamicColumns.push({
-          field: key,
-          headerName: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'),
-          width: 130,
-          valueFormatter: (params) => formatDate(params),
-        });
-        return;
-      }
+        // Handle array fields (show count)
+        if (Array.isArray(value)) {
+          const fieldName = key.charAt(0).toUpperCase() + key.slice(1);
+          dynamicColumns.push({
+            field: key,
+            headerName: `${fieldName} Count`,
+            width: 130,
+            valueFormatter: (params) => {
+              const arr = params as any[];
+              return Array.isArray(arr) ? `${arr.length} item(s)` : '0 items';
+            },
+          });
+          return;
+        }
 
-      // Handle nested objects (show summary)
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        const fieldName = key.charAt(0).toUpperCase() + key.slice(1);
+        // Handle date fields
+        if (key.toLowerCase().includes('date') || key === 'dateOfBirth') {
+          dynamicColumns.push({
+            field: key,
+            headerName: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'),
+            width: 130,
+            valueFormatter: (params) => formatDate(params),
+          });
+          return;
+        }
+
+        // Handle nested objects (show summary)
+        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          const fieldName = key.charAt(0).toUpperCase() + key.slice(1);
+          dynamicColumns.push({
+            field: key,
+            headerName: fieldName,
+            width: 150,
+            valueFormatter: () => 'View Details',
+          });
+          return;
+        }
+
+        // Handle regular fields
+        const fieldName = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
         dynamicColumns.push({
           field: key,
           headerName: fieldName,
           width: 150,
-          valueFormatter: () => 'View Details',
+          valueFormatter: (params) => {
+            const value = params as any;
+            if (typeof value === 'string' && value.length > 50) {
+              return value.substring(0, 50) + '...';
+            }
+            return value || '';
+          },
         });
-        return;
-      }
-
-      // Handle regular fields
-      const fieldName = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
-      dynamicColumns.push({
-        field: key,
-        headerName: fieldName,
-        width: 150,
-        valueFormatter: (params) => {
-          const value = params as any;
-          if (typeof value === 'string' && value.length > 50) {
-            return value.substring(0, 50) + '...';
-          }
-          return value || '';
-        },
       });
-    });
+    }
 
     setColumns(dynamicColumns);
   };
