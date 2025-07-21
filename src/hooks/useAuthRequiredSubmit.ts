@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { submitFormWithNotifications } from '../services/submissionService';
+
 
 interface PendingSubmission {
   formData: any;
@@ -56,7 +58,7 @@ export const useAuthRequiredSubmit = () => {
     // User is authenticated, proceed with direct submission using submission service
     try {
       setIsSubmitting(true);
-      const { submitFormWithNotifications } = await import('../services/submissionService');
+     
       await submitFormWithNotifications(formData, formType, user.email || '');
       setIsSubmitting(false);
       setShowSuccess(true);
