@@ -392,7 +392,7 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'retainerDetails', label: 'What were you retained/contracted to do?', type: 'textarea', editable: true },
           { key: 'contractInWriting', label: 'Was your contract evidenced in writing?', type: 'text', editable: true },
-          { key: 'contractDocumentUrl', label: 'Contract Document', type: 'file', editable: false, conditional: { dependsOn: 'contractInWriting', value: 'yes' } },
+          { key: 'contractDocument', label: 'Contract Document', type: 'file', editable: false, conditional: { dependsOn: 'contractInWriting', value: 'yes' } },
           { key: 'contractDetails', label: 'Contract Details', type: 'textarea', editable: true, conditional: { dependsOn: 'contractInWriting', value: 'no' } },
           { key: 'workPerformedFrom', label: 'Work Performed From', type: 'date', editable: true },
           { key: 'workPerformedTo', label: 'Work Performed To', type: 'date', editable: true },
@@ -415,7 +415,7 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'claimMadeDate', label: 'Date Claim Was Made', type: 'date', editable: true },
           { key: 'intimationMode', label: 'Was intimation oral or written?', type: 'text', editable: true },
           { key: 'oralDetails', label: 'Oral Details', type: 'textarea', editable: true, conditional: { dependsOn: 'intimationMode', value: 'oral' } },
-          { key: 'writtenIntimationDocumentUrl', label: 'Written Intimation Document', type: 'file', editable: false, conditional: { dependsOn: 'intimationMode', value: 'written' } },
+          { key: 'writtenIntimation', label: 'Written Intimation Document', type: 'file', editable: false, conditional: { dependsOn: 'intimationMode', value: 'written' } },
           { key: 'amountClaimed', label: 'Amount Claimed', type: 'currency', editable: true },
         ]
       },
@@ -427,7 +427,7 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'estimatedLiability', label: 'Estimated monetary liability', type: 'currency', editable: true },
           { key: 'additionalInfo', label: 'Any other details or info that will help insurer?', type: 'text', editable: true },
           { key: 'additionalDetails', label: 'Additional Details', type: 'textarea', editable: true, conditional: { dependsOn: 'additionalInfo', value: 'yes' } },
-          { key: 'additionalDocumentUrl', label: 'Additional Document', type: 'file', editable: false, conditional: { dependsOn: 'additionalInfo', value: 'yes' } },
+          { key: 'additionalDocument', label: 'Additional Document', type: 'file', editable: false, conditional: { dependsOn: 'additionalInfo', value: 'yes' } },
         ]
       },
       {
@@ -445,8 +445,6 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
           { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
-          { key: 'declarationAdditionalInfo', label: 'Additional Information Agreement', type: 'boolean', editable: false },
-          { key: 'declarationDocuments', label: 'Documents Agreement', type: 'boolean', editable: false },
           { key: 'signature', label: 'Signature', type: 'text', editable: true },
         ]
       },
@@ -455,6 +453,7 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'status', label: 'Status', type: 'text', editable: true },
           { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedAt', label: 'Submitted By', type: 'date', editable: false },
           { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
           { key: 'formType', label: 'Form Type', type: 'text', editable: false },
         ]
