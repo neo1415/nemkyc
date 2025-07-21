@@ -3,12 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { Button, Typography, Box, Paper, Divider, Chip, TextField } from '@mui/material';
+import { Button, Typography, Box, Paper, Divider, Chip, TextField, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { Download, Edit, ArrowLeft, Save, X } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { generateFormPDF, downloadPDF } from '../../services/pdfService';
 import { FORM_MAPPINGS, FormField } from '../../config/formMappings';
+import { sendStatusUpdateNotification } from '../../services/emailService';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../firebase/config';
 
@@ -38,6 +39,8 @@ const FormViewer: React.FC = () => {
   const [editValues, setEditValues] = useState<Record<string, any>>({});
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [status, setStatus] = useState<string>('processing');
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string>('');
 
   useEffect(() => {
     if (!user || !isAdmin()) {
@@ -375,21 +378,46 @@ const FormViewer: React.FC = () => {
   };
 
   const handleStatusUpdate = async (newStatus: string) => {
-    if (!formData || !collection || !id) return;
+    setPendingStatus(newStatus);
+    setShowStatusModal(true);
+  };
+
+  const confirmStatusUpdate = async () => {
+    if (!formData || !collection || !id || !pendingStatus) return;
 
     try {
       const docRef = doc(db, collection, id);
       await updateDoc(docRef, {
-        status: newStatus,
+        status: pendingStatus,
         updatedAt: new Date()
       });
       
-      setStatus(newStatus);
-      setFormData(prev => prev ? { ...prev, status: newStatus } : null);
+      setStatus(pendingStatus);
+      setFormData(prev => prev ? { ...prev, status: pendingStatus } : null);
+      
+      // Send email notification if user email is available
+      if (formData?.email) {
+        try {
+          const formType = collection?.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
+          await sendStatusUpdateNotification(
+            formData.email, 
+            formType, 
+            pendingStatus,
+            formData.fullName || formData.firstName || formData.name
+          );
+        } catch (emailError) {
+          console.error('Error sending status email:', emailError);
+          // Don't fail the status update if email fails
+        }
+      }
+      
       toast({
         title: 'Success',
-        description: `Status updated to ${newStatus}`,
+        description: `Status updated to ${pendingStatus}`,
       });
+      
+      setShowStatusModal(false);
+      setPendingStatus('');
     } catch (error) {
       console.error('Error updating status:', error);
       toast({
@@ -825,6 +853,29 @@ const FormViewer: React.FC = () => {
             </Paper>
           ))}
         </Paper>
+        
+        <Dialog open={showStatusModal} onClose={() => setShowStatusModal(false)}>
+          <DialogTitle>Confirm Status Update</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to update the status to "{pendingStatus}"? 
+              {formData?.email && ' An email notification will be sent to the user.'}
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => {
+                setShowStatusModal(false);
+                setPendingStatus('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmStatusUpdate} variant="contained">
+              Confirm Update
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </ThemeProvider>
   );
