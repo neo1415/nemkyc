@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Users, FileText, CheckCircle, Clock } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { Users, FileText, CheckCircle, Clock, TrendingUp, TrendingDown } from 'lucide-react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -210,7 +210,10 @@ const AdminDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-gray-600 mt-1">Manage all forms and user submissions</p>
+        </div>
         <div className="text-sm text-gray-500">
           Role: {user?.role}
         </div>
@@ -226,6 +229,10 @@ const AdminDashboard: React.FC = () => {
                 <div>
                   <p className="text-sm text-gray-600">Total Users</p>
                   <p className="text-3xl font-bold">{totalUsers}</p>
+                  <div className="flex items-center mt-2">
+                    <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                    <span className="text-sm text-green-500">12% increase</span>
+                  </div>
                 </div>
                 <Users className="h-8 w-8 text-blue-600" />
               </div>
@@ -240,6 +247,10 @@ const AdminDashboard: React.FC = () => {
               <div>
                 <p className="text-sm text-gray-600">Total Submissions</p>
                 <p className="text-3xl font-bold">{totalSubmissions}</p>
+                <div className="flex items-center mt-2">
+                  <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                  <span className="text-sm text-green-500">8% increase</span>
+                </div>
               </div>
               <FileText className="h-8 w-8 text-green-600" />
             </div>
@@ -255,6 +266,10 @@ const AdminDashboard: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-600">Pending Claims</p>
                     <p className="text-3xl font-bold">{pendingClaims}</p>
+                    <div className="flex items-center mt-2">
+                      <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
+                      <span className="text-sm text-red-500">5% decrease</span>
+                    </div>
                   </div>
                   <Clock className="h-8 w-8 text-yellow-600" />
                 </div>
@@ -267,6 +282,10 @@ const AdminDashboard: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-600">Approved Claims</p>
                     <p className="text-3xl font-bold">{approvedClaims}</p>
+                    <div className="flex items-center mt-2">
+                      <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                      <span className="text-sm text-green-500">15% increase</span>
+                    </div>
                   </div>
                   <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
@@ -276,66 +295,14 @@ const AdminDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Form Distribution and Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Form Distribution Cards */}
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-900">Form Distribution</h2>
-          <div className="grid grid-cols-1 gap-4">
-            {/* Show KYC Forms for compliance, admin, and super admin */}
-            {['compliance', 'admin', 'super admin'].includes(user?.role || '') && (
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">KYC Forms</p>
-                      <p className="text-2xl font-bold text-blue-600">{kycForms}</p>
-                    </div>
-                    <FileText className="h-6 w-6 text-blue-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Show CDD Forms for compliance, admin, and super admin */}
-            {['compliance', 'admin', 'super admin'].includes(user?.role || '') && (
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">CDD Forms</p>
-                      <p className="text-2xl font-bold text-green-600">{cddForms}</p>
-                    </div>
-                    <FileText className="h-6 w-6 text-green-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Show Claims Forms for claims, admin, and super admin */}
-            {['claims', 'admin', 'super admin'].includes(user?.role || '') && (
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Claims Forms</p>
-                      <p className="text-2xl font-bold text-orange-600">{claimsForms}</p>
-                    </div>
-                    <FileText className="h-6 w-6 text-orange-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-
+      {/* Form Distribution */}
+      <div className="space-y-6">
+        <h2 className="text-xl font-semibold text-gray-900">Form Distribution</h2>
+        
         {/* Pie Chart - Only show if user has data to display */}
         {chartData.length > 0 && (
           <Card>
-            <CardHeader>
-              <CardTitle>Form Distribution Chart</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -359,7 +326,84 @@ const AdminDashboard: React.FC = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Form Distribution Cards in Flex Layout */}
+        <div className="flex flex-wrap gap-4">
+          {/* Show KYC Forms for compliance, admin, and super admin */}
+          {['compliance', 'admin', 'super admin'].includes(user?.role || '') && (
+            <Card className="flex-1 min-w-[200px]">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">KYC Forms</p>
+                    <p className="text-2xl font-bold text-blue-600">{kycForms}</p>
+                    <p className="text-xs text-gray-500">Individual & Corporate</p>
+                  </div>
+                  <FileText className="h-6 w-6 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Show CDD Forms for compliance, admin, and super admin */}
+          {['compliance', 'admin', 'super admin'].includes(user?.role || '') && (
+            <Card className="flex-1 min-w-[200px]">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">CDD Forms</p>
+                    <p className="text-2xl font-bold text-green-600">{cddForms}</p>
+                    <p className="text-xs text-gray-500">Agents, Brokers & Partners</p>
+                  </div>
+                  <FileText className="h-6 w-6 text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Show Claims Forms for claims, admin, and super admin */}
+          {['claims', 'admin', 'super admin'].includes(user?.role || '') && (
+            <Card className="flex-1 min-w-[200px]">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Claims Forms</p>
+                    <p className="text-2xl font-bold text-orange-600">{claimsForms}</p>
+                    <p className="text-xs text-gray-500">All insurance claims</p>
+                  </div>
+                  <FileText className="h-6 w-6 text-orange-600" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
+
+      {/* Form Submissions Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Form Submissions Over Time</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={[
+              { month: 'Jan', submissions: 65 },
+              { month: 'Feb', submissions: 78 },
+              { month: 'Mar', submissions: 90 },
+              { month: 'Apr', submissions: 81 },
+              { month: 'May', submissions: 95 },
+              { month: 'Jun', submissions: 112 },
+              { month: 'Jul', submissions: 128 }
+            ]}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="submissions" stroke="#8884d8" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       {/* Recent Submissions - Show only if user has access to any submissions */}
       {recentSubmissions.length > 0 && (
