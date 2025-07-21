@@ -240,12 +240,56 @@ const AdminUsersTable: React.FC = () => {
     }
 
     try {
+      const serverUrl = 'https://nem-server-rhdb.onrender.com';
+      
+      // Get CSRF token
+      const csrfRes = await fetch(`${serverUrl}/csrf-token`, { 
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!csrfRes.ok) {
+        throw new Error(`Failed to fetch CSRF token: ${csrfRes.status}`);
+      }
+      
+      const { csrfToken } = await csrfRes.json();
+      
+      // Get Firebase ID token
+      if (!firebaseUser) {
+        throw new Error('User not authenticated');
+      }
+      
+      const firebaseToken = await firebaseUser.getIdToken();
+      
+      // Prepare headers with authentication and CSRF
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${firebaseToken}`,
+        'CSRF-Token': csrfToken,
+        'X-Timestamp': Date.now().toString(),
+      };
+
+      // Delete from Firebase Auth via server
+      const deleteAuthResponse = await fetch(`${serverUrl}/delete-user/${userId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers,
+      });
+
+      if (!deleteAuthResponse.ok) {
+        throw new Error('Failed to delete user from Firebase Auth');
+      }
+
+      // Delete from Firestore
       await deleteDoc(doc(db, 'userroles', userId));
       setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
       
       toast({
         title: "Success",
-        description: "User deleted successfully",
+        description: "User deleted successfully from both Firebase Auth and Firestore",
         duration: 3000,
       });
     } catch (error) {
