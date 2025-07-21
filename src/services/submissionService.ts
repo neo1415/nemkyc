@@ -84,14 +84,14 @@ export const submitFormWithNotifications = async (
 ) => {
   try {
     // Add metadata to form data
-    const submissionData = {
-      ...formData,
-      timestamp: serverTimestamp(),
-      createdAt: new Date().toLocaleDateString('en-GB'),
-      submittedAt: new Date().toISOString(),
-      submittedBy: userEmail,
-      status: 'pending'
-    };
+   const submissionData = {
+  ...formData,
+  timestamp: serverTimestamp(),
+  createdAt: new Date().toLocaleDateString('en-GB'),
+  submittedAt: serverTimestamp(), // ✅ change from ISO string to Firestore Timestamp
+  submittedBy: userEmail,
+  status: 'pending'
+};
 
     // Submit to Firestore
     const collectionName = getFirestoreCollection(formType);
