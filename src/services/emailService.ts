@@ -42,14 +42,21 @@ export const sendSubmissionConfirmation = async (userEmail: string, formType: st
 
 export const sendStatusUpdateNotification = async (userEmail: string, formType: string, status: string, userName?: string) => {
   try {
-    await axios.post('/api/send-claim-approval-email', {
+    console.log('📧 emailService: Sending request to /send-claim-approval-email');
+    console.log('📧 emailService: Payload:', { userEmail, formType, status, userName });
+    
+    const response = await axios.post('/send-claim-approval-email', {
       userEmail,
       formType,
       status,
       userName
     });
+    
+    console.log('✅ emailService: Email sent successfully:', response.data);
   } catch (error) {
-    console.error('Failed to send status update email:', error);
+    console.error('❌ emailService: Failed to send status update email:', error);
+    console.log('📧 emailService: Error response:', error.response?.data);
+    console.log('📧 emailService: Error status:', error.response?.status);
     throw new Error('Failed to send status update notification');
   }
 };

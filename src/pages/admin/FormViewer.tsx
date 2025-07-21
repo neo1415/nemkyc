@@ -396,19 +396,33 @@ const FormViewer: React.FC = () => {
       setFormData(prev => prev ? { ...prev, status: pendingStatus } : null);
       
       // Send email notification if user email is available
+      console.log('📧 Starting email notification process...');
+      console.log('📧 User email:', formData?.email);
+      console.log('📝 Collection:', collection);
+      console.log('📊 Status:', pendingStatus);
+      
       if (formData?.email) {
         try {
           const formType = collection?.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
+          console.log('📝 Form type formatted:', formType);
+          console.log('👤 User name:', formData.fullName || formData.firstName || formData.name);
+          
+          console.log('📤 Calling sendStatusUpdateNotification...');
           await sendStatusUpdateNotification(
             formData.email, 
             formType, 
             pendingStatus,
             formData.fullName || formData.firstName || formData.name
           );
+          console.log('✅ Email notification sent successfully!');
         } catch (emailError) {
-          console.error('Error sending status email:', emailError);
+          console.error('❌ Error sending status email:', emailError);
+          console.log('📧 Email error details:', JSON.stringify(emailError, null, 2));
           // Don't fail the status update if email fails
         }
+      } else {
+        console.log('⚠️ No email address found in form data');
+        console.log('📋 Available form data keys:', Object.keys(formData));
       }
       
       toast({
