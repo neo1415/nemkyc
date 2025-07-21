@@ -76,6 +76,11 @@ const AdminDashboard: React.FC = () => {
     try {
       setLoading(true);
       
+      // Fetch total users from userroles collection
+      const usersRef = collection(db, 'userroles');
+      const usersSnapshot = await getDocs(usersRef);
+      const totalUsers = usersSnapshot.size;
+      
       // Fetch all forms data
       const allData = await getAllFormsData();
       setFormsData(allData);
@@ -85,21 +90,34 @@ const AdminDashboard: React.FC = () => {
       let kycForms = 0;
       let cddForms = 0;
       let claimsForms = 0;
-      let totalUsers = 0;
+      let pendingClaims = 0;
+      let approvedClaims = 0;
       const recent: any[] = [];
 
       Object.entries(allData).forEach(([formName, data]) => {
-        if (formName === 'User Roles') {
-          totalUsers = data.length;
-        } else {
+        const collectionName = FORM_COLLECTIONS[formName as keyof typeof FORM_COLLECTIONS];
+        
+        if (formName !== 'User Roles') {
           totalSubmissions += data.length;
           
-          if (formName.includes('KYC')) {
+          // Categorize forms according to requirements
+          if (formName === 'Individual KYC Form' || formName === 'Corporate KYC Form') {
             kycForms += data.length;
-          } else if (formName.includes('CDD')) {
+          } else if (formName === 'Corporate KYC' || formName === 'Individual KYC' || 
+                     formName === 'Agents KYC' || formName === 'Brokers KYC' || 
+                     collectionName?.includes('partners-cdd')) {
             cddForms += data.length;
-          } else {
+          } else if (collectionName?.includes('claims')) {
             claimsForms += data.length;
+            
+            // Count pending and approved claims
+            data.forEach(item => {
+              if (item.status === 'pending' || item.status === 'processing') {
+                pendingClaims++;
+              } else if (item.status === 'approved') {
+                approvedClaims++;
+              }
+            });
           }
           
           // Add to recent submissions
@@ -107,7 +125,7 @@ const AdminDashboard: React.FC = () => {
             recent.push({
               ...item,
               formType: formName,
-              collection: FORM_COLLECTIONS[formName as keyof typeof FORM_COLLECTIONS] || formName.toLowerCase().replace(/\s+/g, '-')
+              collection: collectionName || formName.toLowerCase().replace(/\s+/g, '-')
             });
           });
         }
@@ -133,8 +151,8 @@ const AdminDashboard: React.FC = () => {
         totalSubmissions,
         thisMonth,
         lastMonth,
-        pendingClaims: Math.ceil(claimsForms * 0.2),
-        approvedClaims: Math.ceil(claimsForms * 0.8),
+        pendingClaims,
+        approvedClaims,
         totalUsers,
         activeUsers: Math.ceil(totalUsers * 0.7),
         kycForms,
@@ -336,7 +354,7 @@ const AdminDashboard: React.FC = () => {
 
       {/* Form Categories Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/claims')}>
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -348,13 +366,13 @@ const AdminDashboard: React.FC = () => {
               </div>
               <div className="text-right">
                 <p className="text-sm text-yellow-600">{stats.pendingClaims} pending</p>
-                <p className="text-xs text-gray-500">14 form types</p>
+                <p className="text-xs text-gray-500">All claim types</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/kyc')}>
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -365,14 +383,14 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-green-600">All completed</p>
+                <p className="text-sm text-green-600">Individual & Corporate</p>
                 <p className="text-xs text-gray-500">2 form types</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/cdd/naicom-partners')}>
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -383,8 +401,8 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-blue-600">{Math.ceil(stats.cddForms * 0.1)} pending</p>
-                <p className="text-xs text-gray-500">7 form types</p>
+                <p className="text-sm text-blue-600">Agents, Brokers, Partners</p>
+                <p className="text-xs text-gray-500">5 form types</p>
               </div>
             </div>
           </CardContent>
@@ -421,15 +439,17 @@ const AdminDashboard: React.FC = () => {
                     <div>
                       <h3 className="font-medium text-gray-900">{submission.formType}</h3>
                       <p className="text-sm text-gray-500">
-                        by {submission.companyName || submission.name || 'Unknown'} • {formatDate(submission.timestamp)}
+                        by {submission.submittedBy || submission.companyName || submission.name || 'Unknown'} • {formatDate(submission.timestamp)}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <Badge className={`${getStatusColor(submission.status || 'processing')} flex items-center space-x-1`}>
-                      {getStatusIcon(submission.status || 'processing')}
-                      <span>{submission.status || 'processing'}</span>
-                    </Badge>
+                    {submission.collection?.includes('claims') && (
+                      <Badge className={`${getStatusColor(submission.status || 'processing')} flex items-center space-x-1`}>
+                        {getStatusIcon(submission.status || 'processing')}
+                        <span>{submission.status || 'processing'}</span>
+                      </Badge>
+                    )}
                     <div className="flex space-x-1">
                       <Button 
                         variant="outline" 

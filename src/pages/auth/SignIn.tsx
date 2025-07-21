@@ -53,7 +53,7 @@ const SignIn: React.FC = () => {
       
       const currentUser = getAuth().currentUser;
       if (currentUser) {
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const userDoc = await getDoc(doc(db, 'userroles', currentUser.uid));
         
         if (userDoc.exists()) {
           const userData = userDoc.data();
@@ -106,7 +106,7 @@ const SignIn: React.FC = () => {
       const { db } = await import('../../firebase/config');
       const { getAuth } = await import('firebase/auth');
       
-      const userDoc = await getDoc(doc(db, 'users', getAuth().currentUser?.uid || ''));
+      const userDoc = await getDoc(doc(db, 'userroles', getAuth().currentUser?.uid || ''));
       
       if (userDoc.exists()) {
         const userData = userDoc.data();
