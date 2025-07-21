@@ -487,21 +487,21 @@ const AdminDashboard: React.FC = () => {
                         
                         // CDD Forms
                         if (submission.collection === 'partners-kyc') {
-                          url = '/cdd/partners';
+                          url = '/admin/cdd/partners';
                         } else if (submission.collection === 'agents-kyc') {
-                          url = '/cdd/agents';
+                          url = '/admin/cdd/agents';
                         } else if (submission.collection === 'brokers-kyc') {
-                          url = '/cdd/brokers';
+                          url = '/admin/cdd/brokers';
                         } else if (submission.collection === 'individual-kyc') {
-                          url = '/cdd/individual';
+                          url = 'admin/cdd/individual';
                         } else if (submission.collection === 'corporate-kyc') {
-                          url = '/cdd/corporate';
+                          url = '/admin/cdd/corporate';
                         }
                         // KYC Forms
                         else if (submission.collection === 'Individual-kyc-form') {
-                          url = '/kyc/individual';
+                          url = '/admin/kyc/individual';
                         } else if (submission.collection === 'corporate-kyc-form') {
-                          url = '/kyc/corporate';
+                          url = '/admin/kyc/corporate';
                         }
                         // Claims Forms
                         else {
