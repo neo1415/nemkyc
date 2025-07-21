@@ -16,6 +16,7 @@ import {
 import { cn } from '../../lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface AdminSidebarProps {
   open: boolean;
@@ -23,10 +24,16 @@ interface AdminSidebarProps {
 }
 
 const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
+  const { user } = useAuth();
   const location = useLocation();
   const [kycOpen, setKycOpen] = useState(false);
   const [cddOpen, setCddOpen] = useState(false);
   const [claimsOpen, setClaimsOpen] = useState(false);
+
+  // Role-based access control
+  const canViewUsers = user?.role === 'super admin';
+  const canViewClaims = ['claims', 'admin', 'super admin'].includes(user?.role || '');
+  const canViewKYCCDD = ['compliance', 'admin', 'super admin'].includes(user?.role || '');
 
   const navigationItems = [
     {
@@ -34,11 +41,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       href: '/admin',
       icon: BarChart3
     },
-    {
+    ...(canViewUsers ? [{
       name: 'Users',
       href: '/admin/users',
       icon: Users
-    },
+    }] : []),
     {
       name: 'Profile',
       href: '/admin/profile',
@@ -126,86 +133,92 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
             );
           })}
 
-          {/* KYC Section */}
-          <Collapsible open={kycOpen} onOpenChange={setKycOpen}>
-            <CollapsibleTrigger className="group flex items-center w-full px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900">
-              <UserCheck className="mr-3 h-5 w-5" />
-              KYC Forms
-              <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", kycOpen && "rotate-180")} />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-1">
-              {kycItems.map((item) => (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={({ isActive }) =>
-                    cn(
-                      "group flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md",
-                      isActive
-                        ? "bg-red-100 text-red-900"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    )
-                  }
-                >
-                  {item.name}
-                </NavLink>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
+          {/* KYC Section - Only for compliance, admin, and super admin */}
+          {canViewKYCCDD && (
+            <Collapsible open={kycOpen} onOpenChange={setKycOpen}>
+              <CollapsibleTrigger className="group flex items-center w-full px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900">
+                <UserCheck className="mr-3 h-5 w-5" />
+                KYC Forms
+                <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", kycOpen && "rotate-180")} />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-1">
+                {kycItems.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    className={({ isActive }) =>
+                      cn(
+                        "group flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md",
+                        isActive
+                          ? "bg-red-100 text-red-900"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      )
+                    }
+                  >
+                    {item.name}
+                  </NavLink>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
-          {/* CDD Section */}
-          <Collapsible open={cddOpen} onOpenChange={setCddOpen}>
-            <CollapsibleTrigger className="group flex items-center w-full px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900">
-              <Building2 className="mr-3 h-5 w-5" />
-              CDD Forms
-              <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", cddOpen && "rotate-180")} />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-1">
-              {cddItems.map((item) => (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={({ isActive }) =>
-                    cn(
-                      "group flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md",
-                      isActive
-                        ? "bg-red-100 text-red-900"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    )
-                  }
-                >
-                  {item.name}
-                </NavLink>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
+          {/* CDD Section - Only for compliance, admin, and super admin */}
+          {canViewKYCCDD && (
+            <Collapsible open={cddOpen} onOpenChange={setCddOpen}>
+              <CollapsibleTrigger className="group flex items-center w-full px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900">
+                <Building2 className="mr-3 h-5 w-5" />
+                CDD Forms
+                <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", cddOpen && "rotate-180")} />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-1">
+                {cddItems.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    className={({ isActive }) =>
+                      cn(
+                        "group flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md",
+                        isActive
+                          ? "bg-red-100 text-red-900"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      )
+                    }
+                  >
+                    {item.name}
+                  </NavLink>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
-          {/* Claims Section */}
-          <Collapsible open={claimsOpen} onOpenChange={setClaimsOpen}>
-            <CollapsibleTrigger className="group flex items-center w-full px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900">
-              <Car className="mr-3 h-5 w-5" />
-              Claims Forms
-              <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", claimsOpen && "rotate-180")} />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-1">
-              {claimsItems.map((item) => (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={({ isActive }) =>
-                    cn(
-                      "group flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md",
-                      isActive
-                        ? "bg-red-100 text-red-900"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    )
-                  }
-                >
-                  {item.name}
-                </NavLink>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
+          {/* Claims Section - Only for claims, admin, and super admin */}
+          {canViewClaims && (
+            <Collapsible open={claimsOpen} onOpenChange={setClaimsOpen}>
+              <CollapsibleTrigger className="group flex items-center w-full px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900">
+                <Car className="mr-3 h-5 w-5" />
+                Claims Forms
+                <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", claimsOpen && "rotate-180")} />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-1">
+                {claimsItems.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    className={({ isActive }) =>
+                      cn(
+                        "group flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md",
+                        isActive
+                          ? "bg-red-100 text-red-900"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      )
+                    }
+                  >
+                    {item.name}
+                  </NavLink>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </nav>
       </div>
     </>
