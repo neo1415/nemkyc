@@ -6,7 +6,7 @@ const AdminFireSpecialPerilsClaimsTable: React.FC = () => {
   
   return (
     <AdminUnifiedTable 
-      collectionName="fireSpecialPerilsClaims"
+      collectionName="fire-special-perils-claims"
       title="Fire & Special Perils Claims Management"
       isClaim={true}
     />
