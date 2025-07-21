@@ -154,15 +154,19 @@ const AdminDashboard: React.FC = () => {
             const collectionSnapshot = await getDocs(collection(db, collectionName));
             collectionSnapshot.forEach(doc => {
               const data = doc.data();
-              if (data.timestamp) {
-                allSubmissions.push({
-                  id: doc.id,
-                  collection: collectionName,
-                  formType: data.formType || collectionName,
-                  timestamp: data.timestamp.toDate(),
-                  submittedBy: data.submittedBy || data.email || 'Unknown',
-                  status: data.status || null
-                });
+              if (data.timestamp && data.timestamp.toDate) {
+                try {
+                  allSubmissions.push({
+                    id: doc.id,
+                    collection: collectionName,
+                    formType: data.formType || collectionName,
+                    timestamp: data.timestamp.toDate(),
+                    submittedBy: data.submittedBy || data.email || 'Unknown',
+                    status: data.status || null
+                  });
+                } catch (error) {
+                  console.log(`Error processing timestamp for document ${doc.id}:`, error);
+                }
               }
             });
           } catch (error) {
@@ -220,10 +224,10 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="flex flex-wrap gap-6">
         {/* Show Total Users only for super admin */}
         {user?.role === 'super admin' && (
-          <Card>
+          <Card className="flex-1 min-w-[250px]">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -241,7 +245,7 @@ const AdminDashboard: React.FC = () => {
         )}
 
         {/* Show Total Submissions for all admin roles */}
-        <Card>
+        <Card className="flex-1 min-w-[250px]">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -257,10 +261,48 @@ const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* Show KYC Forms for compliance, admin, and super admin */}
+        {['compliance', 'admin', 'super admin'].includes(user?.role || '') && (
+          <Card className="flex-1 min-w-[250px]">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">KYC Forms</p>
+                  <p className="text-3xl font-bold">{kycForms}</p>
+                  <div className="flex items-center mt-2">
+                    <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                    <span className="text-sm text-green-500">6% increase</span>
+                  </div>
+                </div>
+                <FileText className="h-8 w-8 text-purple-600" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Show CDD Forms for compliance, admin, and super admin */}
+        {['compliance', 'admin', 'super admin'].includes(user?.role || '') && (
+          <Card className="flex-1 min-w-[250px]">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">CDD Forms</p>
+                  <p className="text-3xl font-bold">{cddForms}</p>
+                  <div className="flex items-center mt-2">
+                    <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                    <span className="text-sm text-green-500">4% increase</span>
+                  </div>
+                </div>
+                <FileText className="h-8 w-8 text-indigo-600" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Show Claims statistics only for claims, admin, and super admin */}
         {['claims', 'admin', 'super admin'].includes(user?.role || '') && (
           <>
-            <Card>
+            <Card className="flex-1 min-w-[250px]">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -276,7 +318,7 @@ const AdminDashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="flex-1 min-w-[250px]">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -440,8 +482,33 @@ const AdminDashboard: React.FC = () => {
                       variant="outline" 
                       size="sm"
                       onClick={() => {
-                        // Navigate to appropriate admin table based on collection
-                        window.location.href = `/admin/${submission.collection}`;
+                        // Navigate to appropriate form based on collection
+                        let url = '';
+                        
+                        // CDD Forms
+                        if (submission.collection === 'partners-kyc') {
+                          url = '/cdd/partners';
+                        } else if (submission.collection === 'agents-kyc') {
+                          url = '/cdd/agents';
+                        } else if (submission.collection === 'brokers-kyc') {
+                          url = '/cdd/brokers';
+                        } else if (submission.collection === 'individual-kyc') {
+                          url = '/cdd/individual';
+                        } else if (submission.collection === 'corporate-kyc') {
+                          url = '/cdd/corporate';
+                        }
+                        // KYC Forms
+                        else if (submission.collection === 'Individual-kyc-form') {
+                          url = '/kyc/individual';
+                        } else if (submission.collection === 'corporate-kyc-form') {
+                          url = '/kyc/corporate';
+                        }
+                        // Claims Forms
+                        else {
+                          url = `/admin/${submission.collection}`;
+                        }
+                        
+                        window.location.href = url;
                       }}
                     >
                       View
