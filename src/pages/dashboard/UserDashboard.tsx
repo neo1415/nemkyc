@@ -1,3 +1,5 @@
+// Debug version of UserDashboard to help identify the issue
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -6,7 +8,7 @@ import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Separator } from '../../components/ui/separator';
-import { User, FileText, Eye, Calendar, Mail, Phone, Lock, Shield } from 'lucide-react';
+import { User, FileText, Eye, Calendar, Mail, Phone, Lock, Shield, AlertCircle } from 'lucide-react';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
@@ -42,6 +44,7 @@ const UserDashboard: React.FC = () => {
     pending: 0
   });
   const [loading, setLoading] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
@@ -51,29 +54,29 @@ const UserDashboard: React.FC = () => {
 
   if (!user) return null;
 
-  // Collections to query for user forms
+  // Updated collections to match your submission service
   const formCollections = [
     'motor-claims',
-    'burglary-claims', 
-    'fire-claims',
-    'all-risk-claims',
-    'money-insurance-claims',
-    'fidelity-guarantee-claims',
-    'goods-in-transit-claims',
+    'burglaryClaims',
+    'fireSpecialPerilsClaims',
+    'allRiskClaims',
+    'goodsInTransitClaims',
+    'moneyInsuranceClaims',
+    'fidelityGuaranteeClaims',
     'employers-liability-claims',
     'professional-indemnity-claims',
     'public-liability-claims',
-    'rent-assurance-claims',
-    'group-personal-accident-claims',
-    'contractors-plant-machinery-claims',
+    'rentAssuranceClaims',
+    'groupPersonalAccidentClaims',
+    'contractorsPlantMachineryClaims',
     'combined-gpa-employers-liability-claims',
-    'corporate-cdd',
-    'individual-cdd', 
-    'brokers-cdd',
-    'agents-cdd',
-    'partners-cdd',
-    'corporate-kyc',
-    'individual-kyc'
+    'corporateCDD',
+    'individualCDD', 
+    'brokersCDD',
+    'agentsCDD',
+    'partnersCDD',
+    'corporateKYC',
+    'individualKYC'
   ];
 
   useEffect(() => {
@@ -81,22 +84,32 @@ const UserDashboard: React.FC = () => {
   }, [user]);
 
   const fetchUserForms = async () => {
-    if (!user?.email) return;
+    if (!user?.email) {
+      setDebugInfo(prev => [...prev, 'No user email found']);
+      return;
+    }
 
     try {
       const allForms: FormSubmission[] = [];
+      const debugMessages: string[] = [`Searching for forms for email: ${user.email}`];
       
       for (const collectionName of formCollections) {
-        const q = query(
-          collection(db, collectionName),
-          where('submittedBy', '==', user.email),
-          orderBy('submittedAt', 'desc')
-        );
-        
         try {
+          debugMessages.push(`Checking collection: ${collectionName}`);
+          
+          const q = query(
+            collection(db, collectionName),
+            where('submittedBy', '==', user.email),
+            orderBy('submittedAt', 'desc')
+          );
+          
           const querySnapshot = await getDocs(q);
+          debugMessages.push(`Found ${querySnapshot.size} documents in ${collectionName}`);
+          
           querySnapshot.forEach((doc) => {
             const data = doc.data();
+            debugMessages.push(`Document ${doc.id} - Status: ${data.status}, SubmittedBy: ${data.submittedBy}`);
+            
             allForms.push({
               id: doc.id,
               formType: collectionName,
@@ -105,15 +118,43 @@ const UserDashboard: React.FC = () => {
               collection: collectionName
             });
           });
-        } catch (error) {
-          console.log(`No data found for ${collectionName}`);
+        } catch (error: any) {
+          debugMessages.push(`Error in ${collectionName}: ${error.message}`);
+          
+          // Try without orderBy in case the index doesn't exist
+          try {
+            debugMessages.push(`Trying ${collectionName} without orderBy...`);
+            const q2 = query(
+              collection(db, collectionName),
+              where('submittedBy', '==', user.email)
+            );
+            
+            const querySnapshot2 = await getDocs(q2);
+            debugMessages.push(`Without orderBy - Found ${querySnapshot2.size} documents in ${collectionName}`);
+            
+            querySnapshot2.forEach((doc) => {
+              const data = doc.data();
+              allForms.push({
+                id: doc.id,
+                formType: collectionName,
+                status: data.status || 'processing',
+                submittedAt: data.submittedAt,
+                collection: collectionName
+              });
+            });
+          } catch (error2: any) {
+            debugMessages.push(`Still failed for ${collectionName}: ${error2.message}`);
+          }
         }
       }
 
+      debugMessages.push(`Total forms found: ${allForms.length}`);
+      setDebugInfo(debugMessages);
       setSubmittedForms(allForms);
       calculateStats(allForms);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching user forms:', error);
+      setDebugInfo(prev => [...prev, `General error: ${error.message}`]);
     } finally {
       setLoading(false);
     }
@@ -122,9 +163,9 @@ const UserDashboard: React.FC = () => {
   const calculateStats = (forms: FormSubmission[]) => {
     const stats: FormStats = {
       total: forms.length,
-      cdd: forms.filter(f => f.formType.includes('cdd')).length,
-      kyc: forms.filter(f => f.formType.includes('kyc')).length,
-      claims: forms.filter(f => f.formType.includes('claims')).length,
+      cdd: forms.filter(f => f.formType.toLowerCase().includes('cdd')).length,
+      kyc: forms.filter(f => f.formType.toLowerCase().includes('kyc')).length,
+      claims: forms.filter(f => f.formType.toLowerCase().includes('claims') || f.formType.toLowerCase().includes('claim')).length,
       pending: forms.filter(f => f.status === 'processing' || f.status === 'pending').length
     };
     setFormStats(stats);
@@ -152,9 +193,10 @@ const UserDashboard: React.FC = () => {
   };
 
   const getFormCategory = (formType: string) => {
-    if (formType.includes('cdd')) return 'CDD';
-    if (formType.includes('kyc')) return 'KYC';
-    if (formType.includes('claims')) return 'Claims';
+    const type = formType.toLowerCase();
+    if (type.includes('cdd')) return 'CDD';
+    if (type.includes('kyc')) return 'KYC';
+    if (type.includes('claims') || type.includes('claim')) return 'Claims';
     return 'Other';
   };
 
@@ -186,7 +228,6 @@ const UserDashboard: React.FC = () => {
     setPasswordLoading(true);
     try {
       if (firebaseUser && passwordForm.currentPassword) {
-        // Re-authenticate if current password provided
         const credential = EmailAuthProvider.credential(
           user.email,
           passwordForm.currentPassword
@@ -222,6 +263,26 @@ const UserDashboard: React.FC = () => {
           <p className="text-gray-600">Manage your insurance forms and profile</p>
         </div>
       </div>
+
+      {/* Debug Information */}
+      <Card className="border-orange-200">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2 text-orange-800">
+            <AlertCircle className="h-5 w-5" />
+            <span>Debug Information</span>
+          </CardTitle>
+          <CardDescription>Troubleshooting information (remove this card once fixed)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-gray-50 p-4 rounded-lg max-h-64 overflow-y-auto">
+            <div className="text-sm font-mono space-y-1">
+              {debugInfo.map((info, index) => (
+                <div key={index} className="text-gray-700">{info}</div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Profile and Stats Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
