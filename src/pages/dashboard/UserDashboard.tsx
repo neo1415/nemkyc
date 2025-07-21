@@ -81,7 +81,7 @@ const UserDashboard: React.FC = () => {
   }, [user]);
 
   const fetchUserForms = async () => {
-    if (!user?.uid && !user?.email) return;
+    if (!user?.email) return;
 
     try {
       const allForms: FormSubmission[] = [];
@@ -89,7 +89,7 @@ const UserDashboard: React.FC = () => {
       for (const collectionName of formCollections) {
         const q = query(
           collection(db, collectionName),
-          where('submittedBy', '==', user.uid),
+          where('submittedBy', '==', user.email),
           orderBy('submittedAt', 'desc')
         );
         
@@ -106,28 +106,7 @@ const UserDashboard: React.FC = () => {
             });
           });
         } catch (error) {
-          // Try email fallback for some collections
-          const emailQuery = query(
-            collection(db, collectionName),
-            where('email', '==', user.email),
-            orderBy('submittedAt', 'desc')
-          );
-          
-          try {
-            const emailSnapshot = await getDocs(emailQuery);
-            emailSnapshot.forEach((doc) => {
-              const data = doc.data();
-              allForms.push({
-                id: doc.id,
-                formType: collectionName,
-                status: data.status || 'processing',
-                submittedAt: data.submittedAt,
-                collection: collectionName
-              });
-            });
-          } catch (emailError) {
-            console.log(`No data found for ${collectionName}`);
-          }
+          console.log(`No data found for ${collectionName}`);
         }
       }
 
