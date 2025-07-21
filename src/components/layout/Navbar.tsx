@@ -16,6 +16,8 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from '../ui/navigation-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { AlertCircle } from 'lucide-react';
 import { 
   Menu, 
   X, 
@@ -41,6 +43,8 @@ import {
 const Navbar: React.FC = () => {
   const { user, logout, isAdmin } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showNaicomModal, setShowNaicomModal] = useState(false);
+  const [selectedForm, setSelectedForm] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const handleDashboardClick = () => {
@@ -51,6 +55,25 @@ const Navbar: React.FC = () => {
         navigate('/dashboard');
       }
     }
+  };
+
+  const handleCDDFormClick = (formId: string, originalPath: string) => {
+    if (formId === 'corporate' || formId === 'partners') {
+      setSelectedForm(formId);
+      setShowNaicomModal(true);
+    } else {
+      navigate(originalPath);
+    }
+  };
+
+  const handleNaicomChoice = (isNaicom: boolean) => {
+    if (selectedForm === 'corporate') {
+      navigate(isNaicom ? '/cdd/naicom-corporate' : '/cdd/corporate');
+    } else if (selectedForm === 'partners') {
+      navigate(isNaicom ? '/cdd/naicom-partners' : '/cdd/partners');
+    }
+    setShowNaicomModal(false);
+    setSelectedForm(null);
   };
 
   const kycForms = [
@@ -90,7 +113,7 @@ const Navbar: React.FC = () => {
                   alt="NEM Insurance" 
                   className="h-10 w-10 object-contain rounded"
                 />
-                <span className="text-xl font-bold text-primary">nem forms</span>
+                <span className="text-xl font-bold text-primary">NEM Forms</span>
               </Link>
           </div>
 
@@ -146,13 +169,26 @@ const Navbar: React.FC = () => {
                       <div className="grid gap-1">
                         {cddForms.map((form) => (
                           <NavigationMenuLink key={form.path} asChild>
-                            <Link 
-                              to={form.path} 
-                              className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 transition-colors"
-                            >
-                              <form.icon className="h-4 w-4" />
-                              <span>{form.name}</span>
-                            </Link>
+                            {form.name === 'Corporate CDD' || form.name === 'Partners CDD' ? (
+                              <button
+                                onClick={() => handleCDDFormClick(
+                                  form.name === 'Corporate CDD' ? 'corporate' : 'partners', 
+                                  form.path
+                                )}
+                                className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 transition-colors w-full text-left"
+                              >
+                                <form.icon className="h-4 w-4" />
+                                <span>{form.name}</span>
+                              </button>
+                            ) : (
+                              <Link 
+                                to={form.path} 
+                                className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 transition-colors"
+                              >
+                                <form.icon className="h-4 w-4" />
+                                <span>{form.name}</span>
+                              </Link>
+                            )}
                           </NavigationMenuLink>
                         ))}
                       </div>
@@ -264,6 +300,43 @@ const Navbar: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* NAICOM Modal */}
+      <Dialog open={showNaicomModal} onOpenChange={setShowNaicomModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">NAICOM Approval Status</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="text-center">
+              <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+              <p className="text-gray-700 mb-6">
+                Are you NAICOM approved for this type of business?
+              </p>
+            </div>
+            
+            <div className="space-y-3">
+              <Button 
+                onClick={() => handleNaicomChoice(true)}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                Yes, I am NAICOM approved
+              </Button>
+              <Button 
+                onClick={() => handleNaicomChoice(false)}
+                variant="outline" 
+                className="w-full"
+              >
+                No, I am not NAICOM approved
+              </Button>
+            </div>
+
+            <div className="text-xs text-gray-500 text-center">
+              <p>This information determines which form variant you need to complete.</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </nav>
   );
 };

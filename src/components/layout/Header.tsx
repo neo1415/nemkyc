@@ -32,7 +32,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               alt="NEM Insurance" 
               className="w-8 h-8 object-contain rounded"
             />
-            <span className="text-xl font-bold text-gray-900">NEM Insurance</span>
+            <span className="text-xl font-bold text-gray-900">NEM Forms</span>
           </Link>
         </div>
 
@@ -57,7 +57,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         <div className="flex items-center space-x-4">
           {user ? (
             <>
-              <Link to={isAdmin() ? "/admin/dashboard" : "/dashboard"}>
+              <Link to={isAdmin() ? "/admin/profile" : "/dashboard"}>
                 <Button variant="ghost" size="sm" className="flex items-center space-x-2">
                   <User className="h-4 w-4" />
                   <span>{user.name}</span>
