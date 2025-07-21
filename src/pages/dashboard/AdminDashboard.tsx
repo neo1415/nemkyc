@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
@@ -20,11 +20,116 @@ const AdminDashboard: React.FC = () => {
   const [cddForms, setCddForms] = useState(0);
   const [claimsForms, setClaimsForms] = useState(0);
   const [recentSubmissions, setRecentSubmissions] = useState<any[]>([]);
+  const [lineChartData, setLineChartData] = useState<Array<{ month: string; submissions: number }>>([]);
 
   // Redirect non-admin users
   if (!user || user.role === 'default') {
     return <Navigate to="/dashboard" replace />;
   }
+
+  // Helper function to get collections based on user role
+  const getCollectionsForRole = useCallback((role: string) => {
+    const collections: string[] = [];
+    
+    // KYC and CDD collections for compliance, admin, and super admin
+    if (['compliance', 'admin', 'super admin'].includes(role)) {
+      collections.push(
+        'Individual-kyc-form', 'corporate-kyc-form', // KYC
+        'agents-kyc', 'brokers-kyc', 'corporate-kyc', 'individual-kyc', 'partners-kyc' // CDD
+      );
+    }
+    
+    // Claims collections for claims, admin, and super admin
+    if (['claims', 'admin', 'super admin'].includes(role)) {
+      collections.push(
+        'motor-claims', 'burglary-claims', 'all-risk-claims', 'money-insurance-claims',
+        'fidelity-guarantee-claims', 'fire-special-perils-claims', 'goods-in-transit-claims',
+        'group-personal-accident-claims', 'employers-liability-claims', 'professional-indemnity-claims',
+        'public-liability-claims', 'rent-assurance-claims', 'contractors-claims', 'combined-gpa-employers-liability-claims'
+      );
+    }
+    
+    return collections;
+  }, []);
+
+  // Dynamic monthly submission data
+  const getMonthlySubmissionData = useCallback(async () => {
+    if (!user?.role) return;
+
+    try {
+      // Get last 6 months
+      const now = new Date();
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      
+      const collections = getCollectionsForRole(user.role);
+      const monthlyData: { [key: string]: number } = {};
+      
+      // Initialize last 6 months with 0 submissions
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthKey = date.toLocaleDateString('en-US', { month: 'short' });
+        monthlyData[monthKey] = 0;
+      }
+
+      // Fetch data from all collections
+      for (const collectionName of collections) {
+        try {
+          const q = query(
+            collection(db, collectionName),
+            where('timestamp', '>=', sixMonthsAgo),
+            where('timestamp', '<=', now)
+          );
+          
+          const snapshot = await getDocs(q);
+          
+          snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            let timestamp;
+            
+            // Handle different timestamp formats
+            if (data.timestamp?.toDate) {
+              timestamp = data.timestamp.toDate();
+            } else if (data.timestamp?.seconds) {
+              timestamp = new Date(data.timestamp.seconds * 1000);
+            } else if (data.timestamp) {
+              timestamp = new Date(data.timestamp);
+            } else {
+              return; // Skip if no valid timestamp
+            }
+            
+            const monthKey = timestamp.toLocaleDateString('en-US', { month: 'short' });
+            if (monthlyData.hasOwnProperty(monthKey)) {
+              monthlyData[monthKey]++;
+            }
+          });
+        } catch (error) {
+          console.log(`Collection ${collectionName} not found or error:`, error);
+        }
+      }
+
+      // Convert to array format for chart
+      const chartData = Object.entries(monthlyData).map(([month, submissions]) => ({
+        month,
+        submissions
+      }));
+
+      // Sort chronologically (last 6 months in order)
+      const monthOrder = [];
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        monthOrder.push(date.toLocaleDateString('en-US', { month: 'short' }));
+      }
+      
+      const sortedData = monthOrder.map(month => 
+        chartData.find(item => item.month === month) || { month, submissions: 0 }
+      );
+
+      setLineChartData(sortedData);
+    } catch (error) {
+      console.error('Error fetching monthly submission data:', error);
+      setLineChartData([]);
+    }
+  }, [user?.role, getCollectionsForRole]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -189,7 +294,8 @@ const AdminDashboard: React.FC = () => {
     };
 
     fetchDashboardData();
-  }, [user]);
+    getMonthlySubmissionData();
+  }, [user, getMonthlySubmissionData]);
 
   // Role-based chart data with colors
   const chartData = [];
@@ -428,15 +534,7 @@ const AdminDashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={[
-              { month: 'Jan', submissions: 65 },
-              { month: 'Feb', submissions: 78 },
-              { month: 'Mar', submissions: 90 },
-              { month: 'Apr', submissions: 81 },
-              { month: 'May', submissions: 95 },
-              { month: 'Jun', submissions: 112 },
-              { month: 'Jul', submissions: 128 }
-            ]}>
+            <LineChart data={lineChartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
