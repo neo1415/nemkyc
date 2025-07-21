@@ -40,6 +40,20 @@ export const sendSubmissionConfirmation = async (userEmail: string, formType: st
   await sendEmail({ to: userEmail, subject, html });
 };
 
+export const sendStatusUpdateNotification = async (userEmail: string, formType: string, status: string, userName?: string) => {
+  try {
+    await axios.post('/api/send-claim-approval-email', {
+      userEmail,
+      formType,
+      status,
+      userName
+    });
+  } catch (error) {
+    console.error('Failed to send status update email:', error);
+    throw new Error('Failed to send status update notification');
+  }
+};
+
 export const sendClaimApprovedNotification = async (userEmail: string, claimType: string) => {
   const subject = `Claim Approved - ${claimType}`;
   const html = `
@@ -65,5 +79,6 @@ export const sendClaimApprovedNotification = async (userEmail: string, claimType
 export const emailService = {
   sendEmail,
   sendSubmissionConfirmation,
-  sendClaimApprovedNotification
+  sendClaimApprovedNotification,
+  sendStatusUpdateNotification
 };
