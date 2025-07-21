@@ -84,14 +84,14 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
-             <Link to="/" className="flex items-center space-x-3">
-               <img 
-                 src="/Nem-insurance-Logo.jpg" 
-                 alt="NEM Insurance" 
-                 className="h-10 w-10 object-contain rounded"
-               />
-               <span className="text-xl font-bold text-primary">NEM Forms</span>
-             </Link>
+              <Link to="/" className="flex items-center space-x-3">
+                <img 
+                  src="/Nem-insurance-Logo.jpg" 
+                  alt="NEM Insurance" 
+                  className="h-10 w-10 object-contain rounded"
+                />
+                <span className="text-xl font-bold text-primary">nem forms</span>
+              </Link>
           </div>
 
           {/* Desktop Navigation */}
@@ -198,7 +198,7 @@ const Navbar: React.FC = () => {
           <div className="flex items-center space-x-4">
             {user && (
               <div className="hidden md:block text-sm text-gray-600">
-                Welcome, {user.email}
+                Welcome, {user.name || user.email}
               </div>
             )}
             {user ? (

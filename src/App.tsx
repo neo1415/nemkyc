@@ -65,6 +65,7 @@ import AdminCorporateCDDTable from './pages/admin/AdminCorporateCDDTable';
 import AdminPartnersCDDTable from './pages/admin/AdminPartnersCDDTable';
 import AdminBrokersCDDTable from './pages/admin/AdminBrokersCDDTable';
 import AdminProfile from './pages/admin/AdminProfile';
+import RoleProtectedRoute from './components/auth/RoleProtectedRoute';
 
 
 function App() {
@@ -146,15 +147,15 @@ function App() {
           } />
           
           <Route path="admin" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super admin']}>
               <AdminDashboard />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
 
           <Route path="admin/profile" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super admin']}>
               <AdminProfile />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           
           {/* Admin Routes - Role-based access */}
@@ -399,9 +400,9 @@ function App() {
           } />
           
           <Route path="admin/users" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['super admin']}>
               <AdminUsersTable />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           
           <Route path="admin/form/:collection/:id" element={
