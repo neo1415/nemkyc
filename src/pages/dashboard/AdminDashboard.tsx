@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Users, FileText, CheckCircle, Clock } from 'lucide-react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../firebase/config';
@@ -187,14 +187,16 @@ const AdminDashboard: React.FC = () => {
     fetchDashboardData();
   }, [user]);
 
-  // Role-based chart data
+  // Role-based chart data with colors
   const chartData = [];
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+  
   if (['compliance', 'admin', 'super admin'].includes(user?.role || '')) {
-    chartData.push({ name: 'KYC', value: kycForms });
-    chartData.push({ name: 'CDD', value: cddForms });
+    chartData.push({ name: 'KYC Forms', value: kycForms, color: COLORS[0] });
+    chartData.push({ name: 'CDD Forms', value: cddForms, color: COLORS[1] });
   }
   if (['claims', 'admin', 'super admin'].includes(user?.role || '')) {
-    chartData.push({ name: 'Claims', value: claimsForms });
+    chartData.push({ name: 'Claims Forms', value: claimsForms, color: COLORS[2] });
   }
 
   if (loading) {
@@ -214,175 +216,199 @@ const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Show Total Users only for super admin */}
-          {user?.role === 'super admin' && (
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Total Users</p>
-                    <p className="text-3xl font-bold">{totalUsers}</p>
-                  </div>
-                  <Users className="h-8 w-8 text-blue-600" />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Show Total Submissions for all admin roles */}
+        {/* Show Total Users only for super admin */}
+        {user?.role === 'super admin' && (
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Submissions</p>
-                  <p className="text-3xl font-bold">{totalSubmissions}</p>
+                  <p className="text-sm text-gray-600">Total Users</p>
+                  <p className="text-3xl font-bold">{totalUsers}</p>
                 </div>
-                <FileText className="h-8 w-8 text-green-600" />
+                <Users className="h-8 w-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
+        )}
 
-          {/* Show Claims statistics only for claims, admin, and super admin */}
-          {['claims', 'admin', 'super admin'].includes(user?.role || '') && (
-            <>
+        {/* Show Total Submissions for all admin roles */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Submissions</p>
+                <p className="text-3xl font-bold">{totalSubmissions}</p>
+              </div>
+              <FileText className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Show Claims statistics only for claims, admin, and super admin */}
+        {['claims', 'admin', 'super admin'].includes(user?.role || '') && (
+          <>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Pending Claims</p>
+                    <p className="text-3xl font-bold">{pendingClaims}</p>
+                  </div>
+                  <Clock className="h-8 w-8 text-yellow-600" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Approved Claims</p>
+                    <p className="text-3xl font-bold">{approvedClaims}</p>
+                  </div>
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
+
+      {/* Form Distribution and Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Form Distribution Cards */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-gray-900">Form Distribution</h2>
+          <div className="grid grid-cols-1 gap-4">
+            {/* Show KYC Forms for compliance, admin, and super admin */}
+            {['compliance', 'admin', 'super admin'].includes(user?.role || '') && (
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Pending Claims</p>
-                      <p className="text-3xl font-bold">{pendingClaims}</p>
+                      <p className="text-sm text-gray-600">KYC Forms</p>
+                      <p className="text-2xl font-bold text-blue-600">{kycForms}</p>
                     </div>
-                    <Clock className="h-8 w-8 text-yellow-600" />
+                    <FileText className="h-6 w-6 text-blue-600" />
                   </div>
                 </CardContent>
               </Card>
+            )}
 
+            {/* Show CDD Forms for compliance, admin, and super admin */}
+            {['compliance', 'admin', 'super admin'].includes(user?.role || '') && (
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Approved Claims</p>
-                      <p className="text-3xl font-bold">{approvedClaims}</p>
+                      <p className="text-sm text-gray-600">CDD Forms</p>
+                      <p className="text-2xl font-bold text-green-600">{cddForms}</p>
                     </div>
-                    <CheckCircle className="h-8 w-8 text-green-600" />
+                    <FileText className="h-6 w-6 text-green-600" />
                   </div>
                 </CardContent>
               </Card>
-            </>
-          )}
+            )}
+
+            {/* Show Claims Forms for claims, admin, and super admin */}
+            {['claims', 'admin', 'super admin'].includes(user?.role || '') && (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Claims Forms</p>
+                      <p className="text-2xl font-bold text-orange-600">{claimsForms}</p>
+                    </div>
+                    <FileText className="h-6 w-6 text-orange-600" />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
 
-        {/* Form Distribution Cards - Role-based visibility */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Show KYC Forms for compliance, admin, and super admin */}
-          {['compliance', 'admin', 'super admin'].includes(user?.role || '') && (
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">KYC Forms</p>
-                    <p className="text-3xl font-bold">{kycForms}</p>
-                  </div>
-                  <FileText className="h-8 w-8 text-purple-600" />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Show CDD Forms for compliance, admin, and super admin */}
-          {['compliance', 'admin', 'super admin'].includes(user?.role || '') && (
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">CDD Forms</p>
-                    <p className="text-3xl font-bold">{cddForms}</p>
-                  </div>
-                  <FileText className="h-8 w-8 text-indigo-600" />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Show Claims Forms for claims, admin, and super admin */}
-          {['claims', 'admin', 'super admin'].includes(user?.role || '') && (
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Claims Forms</p>
-                    <p className="text-3xl font-bold">{claimsForms}</p>
-                  </div>
-                  <FileText className="h-8 w-8 text-red-600" />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Chart - Only show if user has data to display */}
+        {/* Pie Chart - Only show if user has data to display */}
         {chartData.length > 0 && (
-          <Card className="mb-8">
+          <Card>
             <CardHeader>
-              <CardTitle>Form Distribution</CardTitle>
+              <CardTitle>Form Distribution Chart</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="value" fill="#8884d8" />
-                </BarChart>
+                </PieChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
         )}
-
-        {/* Recent Submissions - Show only if user has access to any submissions */}
-        {recentSubmissions.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Submissions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentSubmissions.map((submission, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{submission.formType}</p>
-                      <p className="text-sm text-gray-600">
-                        Submitted by: {submission.submittedBy}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {submission.timestamp.toLocaleDateString()} at {submission.timestamp.toLocaleTimeString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      {/* Show status badge only for claims forms */}
-                      {submission.status && submission.collection.includes('claims') && (
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          submission.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          submission.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          submission.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {submission.status}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
+
+      {/* Recent Submissions - Show only if user has access to any submissions */}
+      {recentSubmissions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Submissions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentSubmissions.map((submission, index) => (
+                <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium">{submission.formType}</p>
+                    <p className="text-sm text-gray-600">
+                      Submitted by: {submission.submittedBy}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {submission.timestamp.toLocaleDateString()} at {submission.timestamp.toLocaleTimeString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    {/* Show status badge only for claims forms */}
+                    {submission.status && submission.collection.includes('claims') && (
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        submission.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        submission.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        submission.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {submission.status}
+                      </span>
+                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        // Navigate to appropriate admin table based on collection
+                        window.location.href = `/admin/${submission.collection}`;
+                      }}
+                    >
+                      View
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
