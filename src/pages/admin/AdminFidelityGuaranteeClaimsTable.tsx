@@ -6,7 +6,7 @@ const AdminFidelityGuaranteeClaimsTable: React.FC = () => {
   
   return (
     <AdminUnifiedTable 
-      collectionName="fidelityGuaranteeClaims"
+      collectionName="fidelity-guarantee-claims"
       title="Fidelity Guarantee Claims Management"
       isClaim={true}
     />
