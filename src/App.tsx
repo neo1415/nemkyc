@@ -64,6 +64,7 @@ import AdminCorporateKYCTable from './pages/admin/AdminCorporateKYCTable';
 import AdminCorporateCDDTable from './pages/admin/AdminCorporateCDDTable';
 import AdminPartnersCDDTable from './pages/admin/AdminPartnersCDDTable';
 import AdminBrokersCDDTable from './pages/admin/AdminBrokersCDDTable';
+import AdminProfile from './pages/admin/AdminProfile';
 
 
 function App() {
@@ -147,6 +148,12 @@ function App() {
           <Route path="admin" element={
             <ProtectedRoute>
               <AdminDashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/profile" element={
+            <ProtectedRoute>
+              <AdminProfile />
             </ProtectedRoute>
           } />
           

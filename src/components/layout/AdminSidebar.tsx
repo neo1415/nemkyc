@@ -38,6 +38,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       name: 'Users',
       href: '/admin/users',
       icon: Users
+    },
+    {
+      name: 'Profile',
+      href: '/admin/profile',
+      icon: User
     }
   ];
 
