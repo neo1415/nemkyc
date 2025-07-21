@@ -196,6 +196,11 @@ const Navbar: React.FC = () => {
 
           {/* User Actions */}
           <div className="flex items-center space-x-4">
+            {user && (
+              <div className="hidden md:block text-sm text-gray-600">
+                Welcome, {user.email}
+              </div>
+            )}
             {user ? (
               <DropdownMenu>
                  <DropdownMenuTrigger asChild>

@@ -81,9 +81,29 @@ const AdminDashboard: React.FC = () => {
       const usersSnapshot = await getDocs(usersRef);
       const totalUsers = usersSnapshot.size;
       
-      // Fetch all forms data
-      const allData = await getAllFormsData();
-      setFormsData(allData);
+      // Define exact collection names for claims
+      const claimsCollections = [
+        'motor-claims',
+        'burglary-claims', 
+        'all-risk-claims',
+        'money-insurance-claims',
+        'fidelity-guarantee-claims',
+        'fire-special-perils-claims',
+        'goods-in-transit-claims',
+        'group-personal-accident-claims',
+        'employers-liability-claims',
+        'professional-indemnity-claims',
+        'public-liability-claims',
+        'rent-assurance-claims',
+        'contractors-claims',
+        'combined-gpa-employers-liability-claims'
+      ];
+      
+      // Define exact collection names for KYC
+      const kycCollections = ['Individual-kyc-form', 'corporate-kyc-form'];
+      
+      // Define exact collection names for CDD  
+      const cddCollections = ['agents-kyc', 'brokers-kyc', 'corporate-kyc', 'individual-kyc', 'partners-kyc'];
       
       // Calculate stats from real data
       let totalSubmissions = 0;
@@ -94,42 +114,76 @@ const AdminDashboard: React.FC = () => {
       let approvedClaims = 0;
       const recent: any[] = [];
 
-      Object.entries(allData).forEach(([formName, data]) => {
-        const collectionName = FORM_COLLECTIONS[formName as keyof typeof FORM_COLLECTIONS];
-        
-        if (formName !== 'User Roles') {
-          totalSubmissions += data.length;
+      // Count KYC forms
+      for (const collectionName of kycCollections) {
+        try {
+          const snapshot = await getDocs(collection(db, collectionName));
+          kycForms += snapshot.size;
+          totalSubmissions += snapshot.size;
           
-          // Categorize forms according to requirements
-          if (formName === 'Individual KYC Form' || formName === 'Corporate KYC Form') {
-            kycForms += data.length;
-          } else if (formName === 'Corporate KYC' || formName === 'Individual KYC' || 
-                     formName === 'Agents KYC' || formName === 'Brokers KYC' || 
-                     collectionName?.includes('partners-cdd')) {
-            cddForms += data.length;
-          } else if (collectionName?.includes('claims')) {
-            claimsForms += data.length;
-            
-            // Count pending and approved claims
-            data.forEach(item => {
-              if (item.status === 'pending' || item.status === 'processing') {
-                pendingClaims++;
-              } else if (item.status === 'approved') {
-                approvedClaims++;
-              }
-            });
-          }
-          
-          // Add to recent submissions
-          data.forEach(item => {
+          snapshot.docs.forEach(doc => {
+            const data = doc.data();
             recent.push({
-              ...item,
-              formType: formName,
-              collection: collectionName || formName.toLowerCase().replace(/\s+/g, '-')
+              ...data,
+              id: doc.id,
+              formType: collectionName.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+              collection: collectionName
             });
           });
+        } catch (error) {
+          console.log(`Collection ${collectionName} not found`);
         }
-      });
+      }
+
+      // Count CDD forms
+      for (const collectionName of cddCollections) {
+        try {
+          const snapshot = await getDocs(collection(db, collectionName));
+          cddForms += snapshot.size;
+          totalSubmissions += snapshot.size;
+          
+          snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            recent.push({
+              ...data,
+              id: doc.id,
+              formType: collectionName.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+              collection: collectionName
+            });
+          });
+        } catch (error) {
+          console.log(`Collection ${collectionName} not found`);
+        }
+      }
+
+      // Count Claims forms and pending/approved status
+      for (const collectionName of claimsCollections) {
+        try {
+          const snapshot = await getDocs(collection(db, collectionName));
+          claimsForms += snapshot.size;
+          totalSubmissions += snapshot.size;
+          
+          snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            
+            // Count pending and approved claims
+            if (data.status === 'pending' || data.status === 'processing') {
+              pendingClaims++;
+            } else if (data.status === 'approved') {
+              approvedClaims++;
+            }
+            
+            recent.push({
+              ...data,
+              id: doc.id,
+              formType: collectionName.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+              collection: collectionName
+            });
+          });
+        } catch (error) {
+          console.log(`Collection ${collectionName} not found`);
+        }
+      }
 
       // Sort recent by timestamp and take latest 5
       const sortedRecent = recent
