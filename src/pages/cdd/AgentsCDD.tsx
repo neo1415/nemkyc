@@ -551,17 +551,16 @@ const AgentsCDD: React.FC = () => {
           <p className="text-gray-600">Customer Due Diligence form for Agents</p>
         </div>
 
-        <MultiStepForm
-          steps={steps}
-          onSubmit={() => {
-                const isValid = formMethods.trigger();
-                if (isValid) setShowSummary(true);
-              }}
-          isSubmitting={isSubmitting}
-          submitButtonText="Submit CDD Form"
-          formMethods={formMethods}
-        />
-
+       <MultiStepForm
+          steps={steps}
+          onSubmit={() => {
+                const isValid = formMethods.trigger();
+                if (isValid) setShowSummary(true);
+              }}
+          isSubmitting={isSubmitting}
+          submitButtonText="Submit CDD Form"
+          formMethods={formMethods}
+        />
         {/* Summary Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
