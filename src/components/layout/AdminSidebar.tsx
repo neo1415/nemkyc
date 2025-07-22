@@ -96,7 +96,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed left-0 top-0 z-50 h-full w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+          "fixed left-0 top-0 z-50 h-full w-64 bg-background border-r border-border transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >

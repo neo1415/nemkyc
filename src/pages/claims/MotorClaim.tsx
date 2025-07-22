@@ -126,8 +126,6 @@ const motorClaimSchema = yup.object().shape({
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
   declarationTrue: yup.boolean().oneOf([true], "You must agree that statements are true"),
-  agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to data privacy'),
-  declarationTrue: yup.boolean().oneOf([true], 'You must confirm the declaration is true'),
   signature: yup.string().required("Signature is required")
 });
 

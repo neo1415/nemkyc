@@ -13,7 +13,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { user, logout, isAdmin } = useAuth();
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
+    <header className="bg-background shadow-sm border-b border-border">
       <div className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center space-x-4">
           {isAdmin() && (
