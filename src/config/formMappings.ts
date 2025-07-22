@@ -373,8 +373,6 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
           { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
-          { key: 'declarationAdditionalInfo', label: 'Additional Information Agreement', type: 'boolean', editable: false },
-          { key: 'declarationDocuments', label: 'Documents Agreement', type: 'boolean', editable: false },
           { key: 'signature', label: 'Signature', type: 'text', editable: true },
         ]
       },
@@ -383,6 +381,7 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'status', label: 'Status', type: 'text', editable: true },
           { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedby', label: 'Submitted By', type: 'date', editable: false },
           { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
           { key: 'formType', label: 'Form Type', type: 'text', editable: false },
         ]
@@ -571,8 +570,6 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
           { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
-          { key: 'declarationAdditionalInfo', label: 'Additional Information Agreement', type: 'boolean', editable: false },
-          { key: 'declarationDocuments', label: 'Documents Agreement', type: 'boolean', editable: false },
           { key: 'signature', label: 'Signature', type: 'text', editable: true },
         ]
       },
@@ -581,6 +578,7 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'status', label: 'Status', type: 'text', editable: true },
           { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'date', editable: false },
           { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
           { key: 'formType', label: 'Form Type', type: 'text', editable: false },
         ]
@@ -691,10 +689,8 @@ export const FORM_MAPPINGS: FormMapping = {
       {
         title: 'Declaration & Signature',
         fields: [
-          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+           { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
           { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
-          { key: 'declarationAdditionalInfo', label: 'Additional Information Agreement', type: 'boolean', editable: false },
-          { key: 'declarationDocuments', label: 'Documents Agreement', type: 'boolean', editable: false },
           { key: 'signature', label: 'Signature', type: 'text', editable: true },
         ]
       },
@@ -703,6 +699,7 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'status', label: 'Status', type: 'text', editable: true },
           { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'date', editable: false },
           { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
           { key: 'formType', label: 'Form Type', type: 'text', editable: false },
         ]
@@ -809,18 +806,17 @@ export const FORM_MAPPINGS: FormMapping = {
       {
         title: 'Declaration & Signature',
         fields: [
-          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+           { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
           { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
-          { key: 'declarationAdditionalInfo', label: 'Declaration Additional Info', type: 'boolean', editable: false },
-          { key: 'declarationDocuments', label: 'Declaration Documents', type: 'boolean', editable: false },
-          { key: 'signature', label: 'Digital Signature', type: 'text', editable: true },
+          { key: 'signature', label: 'Signature', type: 'text', editable: true },
         ]
       },
       {
         title: 'System Information',
         fields: [
-          { key: 'status', label: 'Status', type: 'text', editable: true },
+       { key: 'status', label: 'Status', type: 'text', editable: true },
           { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'date', editable: false },
           { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
           { key: 'formType', label: 'Form Type', type: 'text', editable: false },
         ]
