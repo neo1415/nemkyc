@@ -290,7 +290,6 @@ export const FORM_MAPPINGS: FormMapping = {
   ]
 },
 
-
  'motor-claims': {
   title: 'Motor Claim',
     sections: [
