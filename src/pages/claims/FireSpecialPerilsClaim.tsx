@@ -140,6 +140,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(true);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
   const { 
     handleSubmitWithAuth, 
@@ -231,16 +232,27 @@ const FireSpecialPerilsClaim: React.FC = () => {
     saveDraft(watchedValues);
   }, [watchedValues, saveDraft]);
 
-  // Calculate net amount claimed for each item
+  // Calculate net amount claimed for each item in real-time
   useEffect(() => {
     const items = formMethods.getValues('itemsLost');
+    let hasChanges = false;
+    
     items.forEach((item, index) => {
       const netAmount = (item.estimatedValueAtOccurrence || 0) - (item.valueOfSalvage || 0);
       if (netAmount !== item.netAmountClaimed) {
-        formMethods.setValue(`itemsLost.${index}.netAmountClaimed`, netAmount);
+        formMethods.setValue(`itemsLost.${index}.netAmountClaimed`, netAmount, { shouldValidate: false });
+        hasChanges = true;
       }
     });
-  }, [watchedValues.itemsLost, formMethods]);
+    
+    // Force re-render to show updated values
+    if (hasChanges) {
+      formMethods.trigger();
+    }
+  }, [
+    watchedValues.itemsLost?.map(item => `${item.estimatedValueAtOccurrence}-${item.valueOfSalvage}`).join(','),
+    formMethods
+  ]);
 
   // Main submit handler that checks authentication
   const handleSubmit = async (data: FireSpecialPerilsClaimData) => {
@@ -1038,6 +1050,64 @@ const FireSpecialPerilsClaim: React.FC = () => {
             Please fill out all required information to submit your claim
           </p>
         </div>
+
+        {/* Instructions Modal */}
+        <Dialog open={showInstructions} onOpenChange={setShowInstructions}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-center mb-4">
+                Please Read Carefully Before Filling the Form
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6 text-sm">
+              <div>
+                <h3 className="font-bold text-lg mb-3 text-center">INSTRUCTIONS TO BE OBSERVED IN COMPLETING THIS FORM</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-2">ADVICE OF FIRE</h4>
+                  <p>Information of any incident must be given to NEM Insurance, and pending our instructions, the salvage should be protected by the Insured from further deterioration. Any/all debris and evidence of fire MUST NOT be tampered with till a representative has an opportunity of inspecting them.</p>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold mb-2">DOCUMENTS TO BE SUBMITTED</h4>
+                  <p>should include, but not limited to, Fire Brigade Report, Pictures of Loss, Police Report etc</p>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold mb-2">CAUSE OF FIRE</h4>
+                  <p>should be explicitly stated and where the cause is not discovered, any suspicions should be clearly stated.</p>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold mb-2">BUILDINGS:</h4>
+                  <p>If the Claim is in respect of a Building, the Claim must be accompanied by 2 Builders' Estimates obtained at the Insured's own expense of the cost of putting the Building into the same state it was in prior to the occurrence – no contemplated improvements may be included in such estimate.</p>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold mb-2">CONTENTS:</h4>
+                  <p>If the Claims are for contents i.e. Goods, Merchandise, Furniture etc., a full list of the Articles destroyed or damaged must be given and against each item must be declared:</p>
+                  <ol className="list-decimal ml-6 mt-2 space-y-1">
+                    <li>Their original Cost Price</li>
+                    <li>Their value immediately before the Occurrence (after making due allowance for "wear and tear")</li>
+                    <li>Their value (if any) after the occurrence or "Value of Salvage"</li>
+                    <li>The difference between 2 and 3, which will be the net amount of loss sustained.</li>
+                  </ol>
+                  <p className="mt-3">In the case of Claims for STOCK-IN-TRADE, COST PRICES (after deduction of all Discounts and Trade Allowances for Cash Payments) are alone recognized in estimating sound values.</p>
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="mt-6">
+              <Button 
+                onClick={() => setShowInstructions(false)}
+                className="w-full"
+              >
+                Continue
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <MultiStepForm
           steps={steps}
