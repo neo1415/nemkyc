@@ -288,7 +288,7 @@ export const FORM_MAPPINGS: FormMapping = {
       ]
     }
   ]
-}
+},
 
 
  'motor-claims': {
