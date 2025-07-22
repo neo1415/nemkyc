@@ -233,8 +233,6 @@ interface CombinedGPAEmployersLiabilityClaimData {
   // Declaration
   agreeToDataPrivacy: boolean;
   declarationTrue: boolean;
-  declarationAdditionalInfo: boolean;
-  declarationDocuments: boolean;
   signature: string;
 }
 
@@ -283,8 +281,6 @@ const defaultValues: Partial<CombinedGPAEmployersLiabilityClaimData> = {
   })),
   agreeToDataPrivacy: false,
   declarationTrue: false,
-  declarationAdditionalInfo: false,
-  declarationDocuments: false,
   signature: ''
 };
 
@@ -655,6 +651,14 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
               name="dateOfEmployment"
               label="Date of Employment *"
             />
+
+            <div>
+              <Label htmlFor="durationEmployed">Duration Employed</Label>
+                <Input
+                  id="durationEmployed"
+                  {...formMethods.register('durationEmployed')}
+                 />
+            </div>
             
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -676,13 +680,6 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
                     />
                   </div>
                   
-                  <div>
-                    <Label htmlFor="durationEmployed">Duration Employed</Label>
-                    <Input
-                      id="durationEmployed"
-                      {...formMethods.register('durationEmployed')}
-                    />
-                  </div>
                 </div>
                 
                 <div>
@@ -1193,102 +1190,57 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
     },
     {
       id: 'declaration',
-      title: 'Data Privacy & Declaration',
+      title: 'Declaration & Signature',
       component: (
         <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Data Privacy</h3>
-            <div className="text-sm space-y-2 mb-4 p-4 bg-gray-50 rounded">
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">Data Privacy</h3>
+            <div className="text-sm space-y-2">
               <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
               <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
               <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
             </div>
-            
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="agreeToDataPrivacy"
-                checked={watchedValues.agreeToDataPrivacy || false}
-                onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked)}
-                className="mt-1"
-              />
-              <Label htmlFor="agreeToDataPrivacy" className="text-sm">
-                I agree to the data privacy policy *
-              </Label>
-            </div>
           </div>
           
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Declaration</h3>
-            <div className="text-sm space-y-2 mb-4 p-4 bg-gray-50 rounded">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="agreeToDataPrivacy"
+              checked={watchedValues.agreeToDataPrivacy || false}
+              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
+            />
+            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
+          </div>
+          
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">Declaration</h3>
+            <div className="text-sm space-y-2">
               <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
               <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
               <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
             </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-start space-x-2">
-                <Checkbox
-                  id="declarationTrue"
-                  checked={watchedValues.declarationTrue || false}
-                  onCheckedChange={(checked) => formMethods.setValue('declarationTrue', checked)}
-                  className="mt-1"
-                />
-                <Label htmlFor="declarationTrue" className="text-sm">
-                  I declare that the information given is true *
-                </Label>
-              </div>
-              
-              <div className="flex items-start space-x-2">
-                <Checkbox
-                  id="declarationAdditionalInfo"
-                  checked={watchedValues.declarationAdditionalInfo || false}
-                  onCheckedChange={(checked) => formMethods.setValue('declarationAdditionalInfo', checked)}
-                  className="mt-1"
-                />
-                <Label htmlFor="declarationAdditionalInfo" className="text-sm">
-                  I agree to provide additional information if required *
-                </Label>
-              </div>
-              
-              <div className="flex items-start space-x-2">
-                <Checkbox
-                  id="declarationDocuments"
-                  checked={watchedValues.declarationDocuments || false}
-                  onCheckedChange={(checked) => formMethods.setValue('declarationDocuments', checked)}
-                  className="mt-1"
-                />
-                <Label htmlFor="declarationDocuments" className="text-sm">
-                  I agree to submit all required documents *
-                </Label>
-              </div>
-            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="declarationTrue"
+              checked={watchedValues.declarationTrue || false}
+              onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
+            />
+            <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
           </div>
           
           <div>
-            <Label htmlFor="signature">Digital Signature *</Label>
+            <Label htmlFor="signature">Signature of policyholder (digital signature) *</Label>
             <Input
               id="signature"
-              placeholder="Type your full name as signature"
               {...formMethods.register('signature')}
+              placeholder="Type your full name as signature"
             />
           </div>
           
           <div>
             <Label>Date</Label>
-            <Input
-              value={new Date().toLocaleDateString()}
-              disabled
-              className="bg-gray-100"
-            />
-          </div>
-          
-          <div>
-            <Label>File Uploads</Label>
-            <FileUpload
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, [file.name]: file }))}
-              accept=".jpg,.jpeg,.png,.pdf"
-              maxSize={3}
-            />
+            <Input value={new Date().toISOString().split('T')[0]} disabled />
           </div>
         </div>
       )
