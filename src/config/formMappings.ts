@@ -267,7 +267,7 @@ export const FORM_MAPPINGS: FormMapping = {
     {
       title: 'Data Privacy',
       fields: [
-        { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'checkbox', editable: false }
+        { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false }
       ]
     },
     {
@@ -897,7 +897,7 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'status', label: 'Status', type: 'text', editable: true },
           { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
-          { key: 'submittedBy, label: 'Submitted By', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'date', editable: false },
           { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
           { key: 'formType', label: 'Form Type', type: 'text', editable: false },
         ]

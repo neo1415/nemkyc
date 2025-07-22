@@ -557,7 +557,7 @@ const BurglaryClaimForm: React.FC = () => {
             </div>
             
             <div>
-              <Label htmlFor="howEntryEffected"Give full details of how entry was affected *</Label>
+              <Label htmlFor="howEntryEffected">Give full details of how entry was affected *</Label>
               <Textarea
                 id="howEntryEffected"
                 {...formMethods.register('howEntryEffected')}
