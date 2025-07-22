@@ -917,6 +917,7 @@ const AllRiskClaim: React.FC = () => {
             </div>
           </div>
           
+          <div className="p-4 rounded-lg">
             <h3 className="font-semibold mb-2">Declaration</h3>
             <div className="text-sm space-y-2">
               <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
