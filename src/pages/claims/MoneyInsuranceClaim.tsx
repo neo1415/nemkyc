@@ -31,9 +31,28 @@ const moneyInsuranceSchema = yup.object().shape({
   lossDate: yup.date().required('Loss date is required'),
   lossTime: yup.string().required('Loss time is required'),
   lossLocation: yup.string().required('Loss location is required'),
+  moneyLocation: yup.string().oneOf(['transit', 'safe']).required('Money location is required'),
+  discovererName: yup.string().required('Discoverer name is required'),
+  discovererPosition: yup.string(),
+  discovererSalary: yup.number().min(0, 'Salary must be positive'),
+  policeEscort: yup.string().oneOf(['yes', 'no']),
+  amountAtStart: yup.number().min(0, 'Amount must be positive'),
+  disbursements: yup.number().min(0, 'Disbursements must be positive'),
+  doubtIntegrity: yup.string().oneOf(['yes', 'no']),
+  integrityExplanation: yup.string(),
+  safeType: yup.string(),
+  keyholders: yup.array().of(
+    yup.object({
+      name: yup.string().required('Name is required'),
+      position: yup.string().required('Position is required'),
+      salary: yup.number().min(0, 'Salary must be positive').required('Salary is required')
+    })
+  ),
   howItHappened: yup.string().required('How it happened is required'),
   policeNotified: yup.string().oneOf(['yes', 'no']).required('Police notification status is required'),
   policeStation: yup.string(),
+  previousLoss: yup.string().oneOf(['yes', 'no']).required('Previous loss status is required'),
+  previousLossDetails: yup.string(),
   lossAmount: yup.number().min(0, 'Loss amount must be positive').required('Loss amount is required'),
   lossDescription: yup.string().required('Loss description is required'),
   declarationAccepted: yup.boolean().oneOf([true], 'Declaration required'),
@@ -45,7 +64,9 @@ type MoneyInsuranceData = yup.InferType<typeof moneyInsuranceSchema>;
 
 const defaultValues: Partial<MoneyInsuranceData> = {
   signatureDate: new Date(),
-  policeNotified: 'no'
+  policeNotified: 'no',
+  previousLoss: 'no',
+  keyholders: [{ name: '', position: '', salary: 0 }]
 };
 
 const MoneyInsuranceClaim: React.FC = () => {
@@ -151,7 +172,7 @@ const MoneyInsuranceClaim: React.FC = () => {
       id: 'policy',
       title: 'Policy Details',
       component: (
-        <FormSection title="Policy Information" description="Enter your policy details">
+        <FormSection title="Policy Details" description="Enter your policy information">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="policyNumber">Policy Number *</Label>
@@ -199,7 +220,7 @@ const MoneyInsuranceClaim: React.FC = () => {
       id: 'insured',
       title: 'Insured Details',
       component: (
-        <FormSection title="Company Information" description="Enter the insured company details">
+        <FormSection title="Insured Details" description="Enter the insured company details">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <Label htmlFor="companyName">Company Name *</Label>
@@ -256,13 +277,13 @@ const MoneyInsuranceClaim: React.FC = () => {
     },
     {
       id: 'loss',
-      title: 'Loss Details',
+      title: 'Details of Loss',
       component: (
-        <FormSection title="Loss Information" description="Provide details about the loss">
+        <FormSection title="Details of Loss" description="Provide details about when and where the loss occurred">
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="lossDate">Date of Loss *</Label>
+                <Label htmlFor="lossDate">Date *</Label>
                 <Input
                   type="date"
                   {...formMethods.register('lossDate')}
@@ -275,7 +296,7 @@ const MoneyInsuranceClaim: React.FC = () => {
               </div>
               
               <div>
-                <Label htmlFor="lossTime">Time of Loss *</Label>
+                <Label htmlFor="lossTime">Time *</Label>
                 <Input
                   type="time"
                   {...formMethods.register('lossTime')}
@@ -289,7 +310,7 @@ const MoneyInsuranceClaim: React.FC = () => {
             </div>
             
             <div>
-              <Label htmlFor="lossLocation">Where did the loss occur? *</Label>
+              <Label htmlFor="lossLocation">Where did it happen? *</Label>
               <Textarea
                 {...formMethods.register('lossLocation')}
                 placeholder="Describe the location where the loss occurred"
@@ -303,7 +324,221 @@ const MoneyInsuranceClaim: React.FC = () => {
             </div>
             
             <div>
-              <Label htmlFor="howItHappened">How did the loss occur? *</Label>
+              <Label>Was the money in transit or locked in a safe? *</Label>
+              <RadioGroup
+                value={watchedValues.moneyLocation}
+                onValueChange={(value: 'transit' | 'safe') => setValue('moneyLocation', value)}
+                className="flex space-x-4 mt-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="transit" id="transit" />
+                  <Label htmlFor="transit">In Transit</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="safe" id="safe" />
+                  <Label htmlFor="safe">Locked in Safe</Label>
+                </div>
+              </RadioGroup>
+              {formMethods.formState.errors.moneyLocation && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.moneyLocation.message}
+                </p>
+              )}
+            </div>
+          </div>
+        </FormSection>
+      )
+    },
+    {
+      id: 'transit',
+      title: 'If loss was in transit',
+      component: (
+        <FormSection title="Transit Loss Details" description="Complete this section if money was lost in transit">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="discovererName">Name of person who discovered loss *</Label>
+              <Input
+                {...formMethods.register('discovererName')}
+                placeholder="Enter name"
+              />
+              {formMethods.formState.errors.discovererName && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.discovererName.message}
+                </p>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="discovererPosition">Position</Label>
+                <Input
+                  {...formMethods.register('discovererPosition')}
+                  placeholder="Enter position"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="discovererSalary">Salary (₦)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  {...formMethods.register('discovererSalary')}
+                  placeholder="Enter salary"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label>Was there a police escort?</Label>
+              <RadioGroup
+                value={watchedValues.policeEscort}
+                onValueChange={(value: 'yes' | 'no') => setValue('policeEscort', value)}
+                className="flex space-x-4 mt-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="yes" id="escort-yes" />
+                  <Label htmlFor="escort-yes">Yes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="no" id="escort-no" />
+                  <Label htmlFor="escort-no">No</Label>
+                </div>
+              </RadioGroup>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="amountAtStart">How much was in employee's possession at journey start? (₦)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  {...formMethods.register('amountAtStart')}
+                  placeholder="Enter amount"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="disbursements">What disbursements were made by him during journey? (₦)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  {...formMethods.register('disbursements')}
+                  placeholder="Enter disbursements"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label>Any reason to doubt integrity of employee?</Label>
+              <RadioGroup
+                value={watchedValues.doubtIntegrity}
+                onValueChange={(value: 'yes' | 'no') => setValue('doubtIntegrity', value)}
+                className="flex space-x-4 mt-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="yes" id="doubt-yes" />
+                  <Label htmlFor="doubt-yes">Yes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="no" id="doubt-no" />
+                  <Label htmlFor="doubt-no">No</Label>
+                </div>
+              </RadioGroup>
+            </div>
+            
+            {watchedValues.doubtIntegrity === 'yes' && (
+              <div>
+                <Label htmlFor="integrityExplanation">Explanation</Label>
+                <Textarea
+                  {...formMethods.register('integrityExplanation')}
+                  placeholder="Explain your concerns"
+                  rows={3}
+                />
+              </div>
+            )}
+          </div>
+        </FormSection>
+      )
+    },
+    {
+      id: 'safe',
+      title: 'If loss was in safe',
+      component: (
+        <FormSection title="Safe Loss Details" description="Complete this section if money was lost from a safe">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="discovererName">Name of person who discovered loss</Label>
+              <Input
+                {...formMethods.register('discovererName')}
+                placeholder="Enter name"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="safeType">Was the safe bricked into wall or standing free?</Label>
+              <select
+                {...formMethods.register('safeType')}
+                className="w-full p-2 border border-gray-300 rounded-md"
+              >
+                <option value="">Select option</option>
+                <option value="bricked">Bricked into wall</option>
+                <option value="standing">Standing free</option>
+              </select>
+            </div>
+            
+            <div>
+              <Label>Names, positions, salaries of employees in charge of keys</Label>
+              {watchedValues.keyholders?.map((_, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 p-4 border rounded">
+                  <div>
+                    <Label htmlFor={`keyholders.${index}.name`}>Name</Label>
+                    <Input
+                      {...formMethods.register(`keyholders.${index}.name`)}
+                      placeholder="Enter name"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`keyholders.${index}.position`}>Position</Label>
+                    <Input
+                      {...formMethods.register(`keyholders.${index}.position`)}
+                      placeholder="Enter position"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`keyholders.${index}.salary`}>Salary (₦)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      {...formMethods.register(`keyholders.${index}.salary`)}
+                      placeholder="Enter salary"
+                    />
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const current = getValues('keyholders') || [];
+                  setValue('keyholders', [...current, { name: '', position: '', salary: 0 }]);
+                }}
+                className="mt-2"
+              >
+                Add Another Keyholder
+              </Button>
+            </div>
+          </div>
+        </FormSection>
+      )
+    },
+    {
+      id: 'general',
+      title: 'General',
+      component: (
+        <FormSection title="General Information" description="Additional details about the loss">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="howItHappened">How did it happen? *</Label>
               <Textarea
                 {...formMethods.register('howItHappened')}
                 placeholder="Describe how the loss occurred"
@@ -349,9 +584,43 @@ const MoneyInsuranceClaim: React.FC = () => {
               </div>
             )}
             
+            <div>
+              <Label>Previous loss under the policy? *</Label>
+              <RadioGroup
+                value={watchedValues.previousLoss}
+                onValueChange={(value: 'yes' | 'no') => setValue('previousLoss', value)}
+                className="flex space-x-4 mt-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="yes" id="previous-yes" />
+                  <Label htmlFor="previous-yes">Yes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="no" id="previous-no" />
+                  <Label htmlFor="previous-no">No</Label>
+                </div>
+              </RadioGroup>
+              {formMethods.formState.errors.previousLoss && (
+                <p className="text-sm text-red-600 mt-1">
+                  {formMethods.formState.errors.previousLoss.message}
+                </p>
+              )}
+            </div>
+            
+            {watchedValues.previousLoss === 'yes' && (
+              <div>
+                <Label htmlFor="previousLossDetails">Details of previous loss</Label>
+                <Textarea
+                  {...formMethods.register('previousLossDetails')}
+                  placeholder="Provide details of previous loss"
+                  rows={3}
+                />
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="lossAmount">Amount of Loss *</Label>
+                <Label htmlFor="lossAmount">What is the amount of loss? (₦) *</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -366,7 +635,7 @@ const MoneyInsuranceClaim: React.FC = () => {
               </div>
               
               <div>
-                <Label htmlFor="lossDescription">Description of Loss *</Label>
+                <Label htmlFor="lossDescription">What did it consist of? *</Label>
                 <Textarea
                   {...formMethods.register('lossDescription')}
                   placeholder="Describe what was lost"
