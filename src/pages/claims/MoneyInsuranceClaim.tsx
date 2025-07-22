@@ -63,7 +63,7 @@ const moneyInsuranceSchema = yup.object().shape({
 type MoneyInsuranceData = yup.InferType<typeof moneyInsuranceSchema>;
 
 const defaultValues: Partial<MoneyInsuranceData> = {
-  signatureDate: new Date(),
+  signature: '',
   policeNotified: 'no',
   previousLoss: 'no',
   keyholders: [{ name: '', position: '', salary: 0 }]
