@@ -904,12 +904,12 @@ const AllRiskClaim: React.FC = () => {
       )
     },
     {
-      id: 'privacy',
-      title: 'Data Privacy',
+      id: 'declaration',
+      title: 'Declaration & Signature',
       component: (
         <div className="space-y-6">
           <div className="p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Data Privacy</h3>
+           <h3 className="font-semibold mb-2">Data Privacy</h3>
             <div className="text-sm space-y-2">
               <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
               <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
@@ -917,6 +917,13 @@ const AllRiskClaim: React.FC = () => {
             </div>
           </div>
           
+            <h3 className="font-semibold mb-2">Declaration</h3>
+            <div className="text-sm space-y-2">
+              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+            </div>
+          </div>
           <div className="flex items-center space-x-2">
             <Checkbox 
               id="agreeToDataPrivacy"
@@ -924,22 +931,6 @@ const AllRiskClaim: React.FC = () => {
               onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
             />
             <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'declaration',
-      title: 'Declaration & Signature',
-      component: (
-        <div className="space-y-6">
-          <div className="p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Declaration</h3>
-            <div className="text-sm space-y-2">
-              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-            </div>
           </div>
           
           <div>
