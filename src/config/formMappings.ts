@@ -1161,209 +1161,243 @@ export const FORM_MAPPINGS: FormMapping = {
 };
 
   // Contractors Plant & Machinery Claims
-  'contractors-claims': {
-    title: 'Contractors Plant & Machinery Claim',
-    sections: [
-      {
-        title: 'Policy Details',
-        fields: [
-          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
-          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
-          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true },
-        ]
-      },
-      {
-        title: 'Insured Details',
-        fields: [
-          { key: 'nameOfInsured', label: 'Name of Insured', type: 'text', editable: true },
-          { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
-          { key: 'title', label: 'Title', type: 'text', editable: true },
-          { key: 'dateOfBirth', label: 'Date of Birth', type: 'date', editable: true },
-          { key: 'gender', label: 'Gender', type: 'text', editable: true },
-          { key: 'address', label: 'Address', type: 'text', editable: true },
-          { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
-          { key: 'email', label: 'Email Address', type: 'email', editable: true },
-        ]
-      },
-      {
-        title: 'Loss Details',
-        fields: [
-          { key: 'howItHappened', label: 'How Loss Occurred', type: 'text', editable: true },
-          { key: 'policeNotified', label: 'Police Notified', type: 'text', editable: true },
-          { key: 'policeStation', label: 'Police Station', type: 'text', editable: true },
-          { key: 'lossAmount', label: 'Loss Amount', type: 'currency', editable: true },
-          { key: 'lossDescription', label: 'Loss Description', type: 'text', editable: true },
-        ]
-      },
-      {
-        title: 'Declaration & Signature',
-        fields: [
-          { key: 'declarationAccepted', label: 'Declaration Accepted', type: 'boolean', editable: false },
-          { key: 'signature', label: 'Digital Signature', type: 'text', editable: true },
-          { key: 'signatureDate', label: 'Signature Date', type: 'date', editable: true },
-        ]
-      },
-      {
-        title: 'System Information',
-        fields: [
-          { key: 'status', label: 'Status', type: 'text', editable: true },
-          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
-          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
-        ]
-      }
-    ]
-  },
+'contractors-claims': {
+  title: 'Contractors Plant & Machinery Claim',
+  sections: [
+    {
+      title: 'Policy Details',
+      fields: [
+        { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+        { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
+        { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true },
+      ]
+    },
+    {
+      title: 'Insured Details',
+      fields: [
+        { key: 'nameOfInsured', label: 'Name of Insured', type: 'text', editable: true },
+        { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
+        { key: 'title', label: 'Title', type: 'text', editable: true },
+        { key: 'dateOfBirth', label: 'Date of Birth', type: 'date', editable: true },
+        { key: 'gender', label: 'Gender', type: 'text', editable: true },
+        { key: 'address', label: 'Address', type: 'textarea', editable: true },
+        { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
+        { key: 'email', label: 'Email', type: 'email', editable: true },
+      ]
+    },
+    {
+      title: 'Plant/Machinery Details',
+      fields: [
+        { key: 'plantMachineryItems', label: 'Plant/Machinery Items', type: 'array', editable: true },
+      ]
+    },
+    {
+      title: 'Loss/Damage Details',
+      fields: [
+        { key: 'dateOfLoss', label: 'Date of Loss', type: 'date', editable: true },
+        { key: 'timeOfLoss', label: 'Time of Loss', type: 'text', editable: true },
+        { key: 'lastSeenIntact', label: 'When was it last seen intact?', type: 'textarea', editable: true },
+        { key: 'whereDidLossOccur', label: 'Where did the loss occur?', type: 'textarea', editable: true },
+        { key: 'partsDamaged', label: 'What parts were damaged?', type: 'textarea', editable: true },
+        { key: 'whereCanBeInspected', label: 'Where can it be inspected?', type: 'textarea', editable: true },
+        { key: 'fullAccountCircumstances', label: 'Full account of the circumstances', type: 'textarea', editable: true },
+        { key: 'suspicionInformation', label: 'Any suspicion or other information', type: 'textarea', editable: true },
+      ]
+    },
+    {
+      title: 'Theft / Third Party',
+      fields: [
+        { key: 'policeInformed', label: 'Have police been informed?', type: 'boolean', editable: true },
+        { key: 'policeStation', label: 'Police Station & Details', type: 'textarea', editable: true, conditional: { dependsOn: 'policeInformed', value: 'true' } },
+        { key: 'otherRecoveryActions', label: 'Other recovery actions taken', type: 'textarea', editable: true },
+        { key: 'isSoleOwner', label: 'Are you the sole owner?', type: 'boolean', editable: true },
+        { key: 'ownershipDetails', label: 'Ownership details', type: 'textarea', editable: true, conditional: { dependsOn: 'isSoleOwner', value: 'false' } },
+        { key: 'hasOtherInsurance', label: 'Do you have other insurance on this property?', type: 'boolean', editable: true },
+        { key: 'otherInsuranceDetails', label: 'Other insurance details', type: 'textarea', editable: true, conditional: { dependsOn: 'hasOtherInsurance', value: 'true' } },
+        { key: 'thirdPartyInvolved', label: 'Is a third party involved?', type: 'boolean', editable: true },
+        { key: 'thirdPartyName', label: 'Third Party Name', type: 'text', editable: true, conditional: { dependsOn: 'thirdPartyInvolved', value: 'true' } },
+        { key: 'thirdPartyAddress', label: 'Third Party Address', type: 'textarea', editable: true, conditional: { dependsOn: 'thirdPartyInvolved', value: 'true' } },
+        { key: 'thirdPartyInsurer', label: 'Third Party Insurer', type: 'text', editable: true, conditional: { dependsOn: 'thirdPartyInvolved', value: 'true' } },
+      ]
+    },
+    {
+      title: 'Declaration',
+      fields: [
+        { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy & Declaration', type: 'boolean', editable: true },
+        { key: 'signature', label: 'Digital Signature', type: 'text', editable: true },
+      ]
+    },
+    {
+      title: 'System Information',
+      fields: [
+        { key: 'status', label: 'Status', type: 'text', editable: true },
+        { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+        { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+        { key: 'formType', label: 'Form Type', type: 'text', editable: false },
+      ]
+    }
+  ]
+}
 
   // Fidelity Guarantee Claims
-  'fidelityGuaranteeClaims': {
-    title: 'Fidelity Guarantee Claim',
-    sections: [
-      {
-        title: 'Policy Details',
-        fields: [
-          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
-          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
-          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true },
-        ]
-      },
-      {
-        title: 'Insured Details',
-        fields: [
-          { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
-          { key: 'address', label: 'Address', type: 'text', editable: true },
-          { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
-          { key: 'email', label: 'Email Address', type: 'email', editable: true },
-        ]
-      },
-      {
-        title: 'Defaulter Details',
-        fields: [
-          { key: 'defaulterName', label: 'Defaulter Name', type: 'text', editable: true },
-          { key: 'defaulterAge', label: 'Age', type: 'number', editable: true },
-          { key: 'defaulterAddress', label: 'Present Address', type: 'text', editable: true },
-          { key: 'defaulterOccupation', label: 'Occupation', type: 'text', editable: true },
-          { key: 'dateOfDiscovery', label: 'Date of Discovery', type: 'date', editable: true },
-        ]
-      },
-      {
-        title: 'Default Details',
-        fields: [
-          { key: 'defaultDetails', label: 'Default Details', type: 'text', editable: true },
-          { key: 'defaultAmount', label: 'Default Amount', type: 'currency', editable: true },
-          { key: 'hasPreviousIrregularity', label: 'Previous Irregularity', type: 'boolean', editable: true },
-          { key: 'previousIrregularityDetails', label: 'Previous Irregularity Details', type: 'text', editable: true },
-          { key: 'lastCorrectCheckDate', label: 'Last Correct Check Date', type: 'date', editable: true },
-          { key: 'hasDefaulterProperty', label: 'Defaulter Property Known', type: 'boolean', editable: true },
-          { key: 'defaulterPropertyDetails', label: 'Property Details', type: 'text', editable: true },
-          { key: 'hasRemunerationDue', label: 'Remuneration Due', type: 'boolean', editable: true },
-          { key: 'remunerationDetails', label: 'Remuneration Details', type: 'text', editable: true },
-          { key: 'hasOtherSecurity', label: 'Other Security', type: 'boolean', editable: true },
-          { key: 'otherSecurityDetails', label: 'Other Security Details', type: 'text', editable: true },
-        ]
-      },
-      {
-        title: 'Employment Status',
-        fields: [
-          { key: 'hasBeenDischarged', label: 'Been Discharged', type: 'boolean', editable: true },
-          { key: 'dischargeDate', label: 'Discharge Date', type: 'date', editable: true },
-          { key: 'hasSettlementProposal', label: 'Settlement Proposal', type: 'boolean', editable: true },
-          { key: 'settlementProposalDetails', label: 'Settlement Proposal Details', type: 'text', editable: true },
-        ]
-      },
-      {
-        title: 'Declaration & Signature',
-        fields: [
-          { key: 'agreeToDataPrivacy', label: 'Data Privacy Agreement', type: 'boolean', editable: false },
-          { key: 'signature', label: 'Digital Signature', type: 'text', editable: true },
-          { key: 'signatureDate', label: 'Signature Date', type: 'date', editable: true },
-        ]
-      },
-      {
-        title: 'System Information',
-        fields: [
-          { key: 'status', label: 'Status', type: 'text', editable: true },
-          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
-          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
-        ]
-      }
-    ]
-  },
+ 'fidelityGuaranteeClaims': {
+  title: 'Fidelity Guarantee Claim',
+  sections: [
+    {
+      title: 'Policy Details',
+      fields: [
+        { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+        { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
+        { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true },
+      ]
+    },
+    {
+      title: 'Insured Details',
+      fields: [
+        { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
+        { key: 'address', label: 'Address', type: 'textarea', editable: true },
+        { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
+        { key: 'email', label: 'Email Address', type: 'email', editable: true },
+      ]
+    },
+    {
+      title: 'Details of Defaulter',
+      fields: [
+        { key: 'defaulterName', label: 'Defaulter Name', type: 'text', editable: true },
+        { key: 'defaulterAge', label: 'Defaulter Age', type: 'number', editable: true },
+        { key: 'defaulterAddress', label: 'Defaulter Present Address', type: 'textarea', editable: true },
+        { key: 'defaulterOccupation', label: 'Defaulter Occupation', type: 'text', editable: true },
+        { key: 'dateOfDiscovery', label: 'Date of Discovery of Default', type: 'date', editable: true },
+      ]
+    },
+    {
+      title: 'Details of Default',
+      fields: [
+        { key: 'defaultDetails', label: 'Default Details & Concealment', type: 'textarea', editable: true },
+        { key: 'defaultAmount', label: 'Amount of the Default', type: 'currency', editable: true },
+        { key: 'hasPreviousIrregularity', label: 'Previous irregularity in accounts?', type: 'boolean', editable: true },
+        { key: 'previousIrregularityDetails', label: 'Details of Previous Irregularity', type: 'textarea', editable: true, conditional: { dependsOn: 'hasPreviousIrregularity', value: 'true' } },
+        { key: 'lastCorrectCheckDate', label: 'Date Account was Last Checked and Correct', type: 'date', editable: true },
+        { key: 'hasDefaulterProperty', label: 'Is property/furniture of the defaulter known?', type: 'boolean', editable: true },
+        { key: 'defaulterPropertyDetails', label: 'Details of Defaulter Property', type: 'textarea', editable: true, conditional: { dependsOn: 'hasDefaulterProperty', value: 'true' } },
+        { key: 'hasRemunerationDue', label: 'Is any salary/commission due to defaulter?', type: 'boolean', editable: true },
+        { key: 'remunerationDetails', label: 'Details of Remuneration Due', type: 'textarea', editable: true, conditional: { dependsOn: 'hasRemunerationDue', value: 'true' } },
+        { key: 'hasOtherSecurity', label: 'Is there other security besides the guarantee?', type: 'boolean', editable: true },
+        { key: 'otherSecurityDetails', label: 'Details of Other Security', type: 'textarea', editable: true, conditional: { dependsOn: 'hasOtherSecurity', value: 'true' } },
+      ]
+    },
+    {
+      title: 'Employment Status',
+      fields: [
+        { key: 'hasBeenDischarged', label: 'Has the defaulter been discharged?', type: 'boolean', editable: true },
+        { key: 'dischargeDate', label: 'Date of Discharge', type: 'date', editable: true, conditional: { dependsOn: 'hasBeenDischarged', value: 'true' } },
+        { key: 'hasSettlementProposal', label: 'Has a settlement proposal been made?', type: 'boolean', editable: true },
+        { key: 'settlementProposalDetails', label: 'Details of Settlement Proposal', type: 'textarea', editable: true, conditional: { dependsOn: 'hasSettlementProposal', value: 'true' } },
+      ]
+    },
+    {
+      title: 'Declaration & Signature',
+      fields: [
+        { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: true },
+        { key: 'declarationTrue', label: 'Agree that Statements are True', type: 'boolean', editable: true },
+        { key: 'signature', label: 'Digital Signature', type: 'text', editable: true },
+        { key: 'signatureDate', label: 'Signature Date', type: 'date', editable: false },
+      ]
+    },
+    {
+      title: 'System Information',
+      fields: [
+        { key: 'status', label: 'Status', type: 'text', editable: true },
+        { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+        { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+        { key: 'formType', label: 'Form Type', type: 'text', editable: false },
+      ]
+    }
+  ]
+},
 
   // Group Personal Accident Claims
-  'group-personal-accident-claims': {
-    title: 'Group Personal Accident Claim',
-    sections: [
-      {
-        title: 'Policy Details',
-        fields: [
-          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
-          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
-          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true },
-        ]
-      },
-      {
-        title: 'Insured Details',
-        fields: [
-          { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
-          { key: 'address', label: 'Address', type: 'text', editable: true },
-          { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
-          { key: 'email', label: 'Email Address', type: 'email', editable: true },
-        ]
-      },
-      {
-        title: 'Accident Details',
-        fields: [
-          { key: 'accidentDate', label: 'Accident Date', type: 'date', editable: true },
-          { key: 'accidentTime', label: 'Accident Time', type: 'text', editable: true },
-          { key: 'accidentPlace', label: 'Accident Place', type: 'text', editable: true },
-          { key: 'incidentDescription', label: 'Incident Description', type: 'text', editable: true },
-          { key: 'particularsOfInjuries', label: 'Particulars of Injuries', type: 'text', editable: true },
-        ]
-      },
-      {
-        title: 'Doctor Details',
-        fields: [
-          { key: 'doctorName', label: 'Doctor Name', type: 'text', editable: true },
-          { key: 'doctorAddress', label: 'Doctor Address', type: 'text', editable: true },
-          { key: 'isUsualDoctor', label: 'Usual Doctor', type: 'boolean', editable: true },
-          { key: 'totalIncapacityFrom', label: 'Total Incapacity From', type: 'date', editable: true },
-          { key: 'totalIncapacityTo', label: 'Total Incapacity To', type: 'date', editable: true },
-          { key: 'partialIncapacityFrom', label: 'Partial Incapacity From', type: 'date', editable: true },
-          { key: 'partialIncapacityTo', label: 'Partial Incapacity To', type: 'date', editable: true },
-        ]
-      },
-      {
-        title: 'Other Insurance',
-        fields: [
-          { key: 'otherInsurerName', label: 'Other Insurer Name', type: 'text', editable: true },
-          { key: 'otherInsurerAddress', label: 'Other Insurer Address', type: 'text', editable: true },
-          { key: 'otherPolicyNumber', label: 'Other Policy Number', type: 'text', editable: true },
-        ]
-      },
-      {
-        title: 'Witnesses',
-        fields: [
-          { key: 'witnesses', label: 'Witnesses', type: 'array', editable: true },
-        ]
-      },
-      {
-        title: 'Declaration & Signature',
-        fields: [
-          { key: 'agreeToDataPrivacy', label: 'Data Privacy Agreement', type: 'boolean', editable: false },
-          { key: 'signature', label: 'Digital Signature', type: 'text', editable: true },
-        ]
-      },
-      {
-        title: 'System Information',
-        fields: [
-          { key: 'status', label: 'Status', type: 'text', editable: true },
-          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
-          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
-          { key: 'formType', label: 'Form Type', type: 'text', editable: false },
-        ]
-      }
-    ]
-  },
+ 'group-personal-accident-claims': {
+  title: 'Group Personal Accident Claim',
+  sections: [
+    {
+      title: 'Policy Details',
+      fields: [
+        { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+        { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
+        { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true },
+      ]
+    },
+    {
+      title: 'Insured Details',
+      fields: [
+        { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
+        { key: 'address', label: 'Address', type: 'textarea', editable: true },
+        { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
+        { key: 'email', label: 'Email Address', type: 'email', editable: true },
+      ]
+    },
+    {
+      title: 'Details of Loss',
+      fields: [
+        { key: 'accidentDate', label: 'Accident Date', type: 'date', editable: true },
+        { key: 'accidentTime', label: 'Accident Time', type: 'text', editable: true },
+        { key: 'accidentPlace', label: 'Place of Accident', type: 'text', editable: true },
+        { key: 'incidentDescription', label: 'Incident Description', type: 'textarea', editable: true },
+        { key: 'particularsOfInjuries', label: 'Particulars of Injuries', type: 'textarea', editable: true },
+      ]
+    },
+    {
+      title: 'Witness Information',
+      fields: [
+        { key: 'witnesses', label: 'Witnesses', type: 'array', editable: true },
+      ]
+    },
+    {
+      title: 'Doctor Information',
+      fields: [
+        { key: 'doctorName', label: 'Name of Doctor', type: 'text', editable: true },
+        { key: 'doctorAddress', label: 'Address of Doctor', type: 'textarea', editable: true },
+        { key: 'isUsualDoctor', label: 'Is this your usual doctor?', type: 'boolean', editable: true },
+      ]
+    },
+    {
+      title: 'Incapacity Details',
+      fields: [
+        { key: 'totalIncapacityFrom', label: 'Total Incapacity From', type: 'date', editable: true },
+        { key: 'totalIncapacityTo', label: 'Total Incapacity To', type: 'date', editable: true },
+        { key: 'partialIncapacityFrom', label: 'Partial Incapacity From', type: 'date', editable: true },
+        { key: 'partialIncapacityTo', label: 'Partial Incapacity To', type: 'date', editable: true },
+      ]
+    },
+    {
+      title: 'Other Insurers',
+      fields: [
+        { key: 'otherInsurerName', label: 'Other Insurer Name', type: 'text', editable: true },
+        { key: 'otherInsurerAddress', label: 'Other Insurer Address', type: 'textarea', editable: true },
+        { key: 'otherPolicyNumber', label: 'Other Insurer Policy Number', type: 'text', editable: true },
+      ]
+    },
+    {
+      title: 'Declaration & Signature',
+      fields: [
+        { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: true },
+        { key: 'declarationTrue', label: 'Agree that Statements are True', type: 'boolean', editable: true },
+        { key: 'signature', label: 'Digital Signature', type: 'text', editable: true },
+        { key: 'signatureDate', label: 'Signature Date', type: 'date', editable: false },
+      ]
+    },
+    {
+      title: 'System Information',
+      fields: [
+        { key: 'status', label: 'Status', type: 'text', editable: true },
+        { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+        { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+        { key: 'formType', label: 'Form Type', type: 'text', editable: false },
+      ]
+    }
+  ]
+},
 
   // CDD FORMS
   'individual-kyc': {
