@@ -232,8 +232,7 @@ export const FORM_MAPPINGS: FormMapping = {
         {
           key: 'rentPaymentFrequency',
           label: 'Frequency of Rent Payment',
-          type: 'select',
-          options: ['yearly', 'half-yearly', 'biannually', 'other'],
+          type: 'text',
           editable: true
         },
         {
@@ -292,8 +291,8 @@ export const FORM_MAPPINGS: FormMapping = {
 }
 
 
-  'motor-claims': {
-    title: 'Motor Claim',
+ 'motor-claims': {
+  title: 'Motor Claim',
     sections: [
       {
         title: 'Policy Details',
