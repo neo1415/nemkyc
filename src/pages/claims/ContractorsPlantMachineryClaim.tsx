@@ -37,72 +37,65 @@ const contractorsSchema = yup.object().shape({
   email: yup.string().email('Invalid email').required('Email is required'),
   
   // Plant/Machinery Details
-  plantItems: yup.array().of(yup.object().shape({
+  plantMachineryItems: yup.array().of(yup.object().shape({
     itemNumber: yup.string().required('Item number is required'),
-    yearOfManufacture: yup.string().required('Year of manufacture is required'),
+    yearOfManufacture: yup.number().required('Year of manufacture is required'),
     make: yup.string().required('Make is required'),
     registrationNumber: yup.string(),
-    dateOfPurchase: yup.date().required('Date of purchase is required'),
+    dateOfPurchase: yup.string().required('Date of purchase is required'),
     costPrice: yup.number().required('Cost price is required'),
-    depreciation: yup.number(),
+    deductionForAge: yup.number(),
     sumClaimed: yup.number().required('Sum claimed is required'),
-    valueType: yup.string().oneOf(['Repairs', 'Present Value']).required('Value type is required')
+    claimType: yup.string().oneOf(['presentValue', 'repairs']).required('Claim type is required')
   })).min(1, 'At least one plant/machinery item is required'),
   
   // Loss/Damage Details
-  lossDateTime: yup.string().required('Loss date/time is required'),
-  lastIntact: yup.string().required('When last intact is required'),
-  incidentLocation: yup.string().required('Location of incident is required'),
-  damageDescription: yup.string().required('Damage description is required'),
-  inspectionLocation: yup.string().required('Inspection location is required'),
-  circumstances: yup.string().required('Circumstances are required'),
-  suspicionInfo: yup.string(),
-  
-  // Witnesses
-  witnesses: yup.array().of(yup.object().shape({
-    name: yup.string().required('Witness name is required'),
-    address: yup.string().required('Witness address is required'),
-    phone: yup.string().required('Witness phone is required')
-  })),
+  dateOfLoss: yup.string().required('Date of loss is required'),
+  timeOfLoss: yup.string().required('Time of loss is required'),
+  lastSeenIntact: yup.string(),
+  whereDidLossOccur: yup.string().required('Where did loss occur is required'),
+  partsDamaged: yup.string().required('Parts damaged is required'),
+  whereCanBeInspected: yup.string().required('Where can be inspected is required'),
+  fullAccountCircumstances: yup.string().required('Full account of circumstances is required'),
+  suspicionInformation: yup.string(),
   
   // Theft/Third Party
-  policeNotified: yup.string().oneOf(['yes', 'no']).required('Police notification status is required'),
+  policeInformed: yup.boolean().required('Police informed status is required'),
   policeStation: yup.string(),
-  otherActions: yup.string(),
-  soleOwner: yup.string().oneOf(['yes', 'no']).required('Sole owner status is required'),
-  soleOwnerDetails: yup.string(),
-  otherInsurance: yup.string().oneOf(['yes', 'no']).required('Other insurance status is required'),
+  otherRecoveryActions: yup.string(),
+  isSoleOwner: yup.boolean().required('Sole owner status is required'),
+  ownershipDetails: yup.string(),
+  hasOtherInsurance: yup.boolean().required('Other insurance status is required'),
   otherInsuranceDetails: yup.string(),
-  thirdPartyInvolved: yup.string().oneOf(['yes', 'no']).required('Third party involvement is required'),
+  thirdPartyInvolved: yup.boolean().required('Third party involvement is required'),
   thirdPartyName: yup.string(),
   thirdPartyAddress: yup.string(),
   thirdPartyInsurer: yup.string(),
   
-  declarationAccepted: yup.boolean().oneOf([true], 'Declaration required'),
-  signature: yup.string().required('Signature required'),
-  signatureDate: yup.date().required('Signature date required')
+  agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to data privacy'),
+  signature: yup.string().required('Signature required')
 });
 
 type ContractorsData = yup.InferType<typeof contractorsSchema>;
 
 const defaultValues: Partial<ContractorsData> = {
-  signatureDate: new Date(),
-  policeNotified: 'no',
-  soleOwner: 'yes',
-  otherInsurance: 'no',
-  thirdPartyInvolved: 'no',
-  plantItems: [{
+  policeInformed: false,
+  isSoleOwner: true,
+  hasOtherInsurance: false,
+  thirdPartyInvolved: false,
+  plantMachineryItems: [{
     itemNumber: '',
-    yearOfManufacture: '',
+    yearOfManufacture: new Date().getFullYear(),
     make: '',
     registrationNumber: '',
-    dateOfPurchase: new Date(),
+    dateOfPurchase: '',
     costPrice: 0,
-    depreciation: 0,
+    deductionForAge: 0,
     sumClaimed: 0,
-    valueType: 'Repairs'
+    claimType: 'repairs'
   }],
-  witnesses: []
+  agreeToDataPrivacy: false,
+  signature: ''
 };
 
 const ContractorsPlantMachineryClaim: React.FC = () => {
@@ -149,11 +142,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
   const { saveDraft, clearDraft } = useFormDraft('contractors-claim', formMethods);
   const { fields: plantFields, append: appendPlant, remove: removePlant } = useFieldArray({
     control: formMethods.control,
-    name: 'plantItems'
-  });
-  const { fields: witnessFields, append: appendWitness, remove: removeWitness } = useFieldArray({
-    control: formMethods.control,
-    name: 'witnesses'
+    name: 'plantMachineryItems'
   });
   
   const watchedValues = watch();
@@ -401,45 +390,45 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label>Item Number *</Label>
-                    <Input {...formMethods.register(`plantItems.${index}.itemNumber`)} />
+                    <Input {...formMethods.register(`plantMachineryItems.${index}.itemNumber`)} />
                   </div>
                   <div>
                     <Label>Year of Manufacture *</Label>
-                    <Input {...formMethods.register(`plantItems.${index}.yearOfManufacture`)} />
+                    <Input type="number" {...formMethods.register(`plantMachineryItems.${index}.yearOfManufacture`)} />
                   </div>
                   <div>
                     <Label>Make *</Label>
-                    <Input {...formMethods.register(`plantItems.${index}.make`)} />
+                    <Input {...formMethods.register(`plantMachineryItems.${index}.make`)} />
                   </div>
                   <div>
                     <Label>Registration Number</Label>
-                    <Input {...formMethods.register(`plantItems.${index}.registrationNumber`)} />
+                    <Input {...formMethods.register(`plantMachineryItems.${index}.registrationNumber`)} />
                   </div>
                   <div>
                     <Label>Date of Purchase *</Label>
-                    <Input type="date" {...formMethods.register(`plantItems.${index}.dateOfPurchase`)} />
+                    <Input type="date" {...formMethods.register(`plantMachineryItems.${index}.dateOfPurchase`)} />
                   </div>
                   <div>
                     <Label>Cost Price *</Label>
-                    <Input type="number" step="0.01" {...formMethods.register(`plantItems.${index}.costPrice`)} />
+                    <Input type="number" step="0.01" {...formMethods.register(`plantMachineryItems.${index}.costPrice`)} />
                   </div>
                   <div>
-                    <Label>Depreciation</Label>
-                    <Input type="number" step="0.01" {...formMethods.register(`plantItems.${index}.depreciation`)} />
+                    <Label>Deduction for Age</Label>
+                    <Input type="number" step="0.01" {...formMethods.register(`plantMachineryItems.${index}.deductionForAge`)} />
                   </div>
                   <div>
                     <Label>Sum Claimed *</Label>
-                    <Input type="number" step="0.01" {...formMethods.register(`plantItems.${index}.sumClaimed`)} />
+                    <Input type="number" step="0.01" {...formMethods.register(`plantMachineryItems.${index}.sumClaimed`)} />
                   </div>
                   <div>
-                    <Label>Value Type *</Label>
-                    <Select onValueChange={(value: 'Repairs' | 'Present Value') => setValue(`plantItems.${index}.valueType`, value)}>
+                    <Label>Claim Type *</Label>
+                    <Select onValueChange={(value: 'presentValue' | 'repairs') => setValue(`plantMachineryItems.${index}.claimType`, value)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select value type" />
+                        <SelectValue placeholder="Select claim type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Repairs">Repairs</SelectItem>
-                        <SelectItem value="Present Value">Present Value</SelectItem>
+                        <SelectItem value="repairs">Repairs</SelectItem>
+                        <SelectItem value="presentValue">Present Value</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -451,14 +440,14 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
               variant="outline"
               onClick={() => appendPlant({
                 itemNumber: '',
-                yearOfManufacture: '',
+                yearOfManufacture: new Date().getFullYear(),
                 make: '',
                 registrationNumber: '',
-                dateOfPurchase: new Date(),
+                dateOfPurchase: '',
                 costPrice: 0,
-                depreciation: 0,
+                deductionForAge: 0,
                 sumClaimed: 0,
-                valueType: 'Repairs'
+                claimType: 'repairs'
               })}
             >
               Add Another Item
@@ -473,80 +462,40 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
       component: (
         <FormSection title="Loss/Damage Information" description="Provide details about the loss or damage">
           <div className="space-y-4">
-            <div>
-              <Label>Loss Date/Time *</Label>
-              <Input type="datetime-local" {...formMethods.register('lossDateTime')} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Date of Loss *</Label>
+                <Input type="date" {...formMethods.register('dateOfLoss')} />
+              </div>
+              <div>
+                <Label>Time of Loss *</Label>
+                <Input type="time" {...formMethods.register('timeOfLoss')} />
+              </div>
             </div>
             <div>
-              <Label>When was it last seen intact? *</Label>
-              <Textarea {...formMethods.register('lastIntact')} rows={3} />
+              <Label>When was it last seen intact?</Label>
+              <Textarea {...formMethods.register('lastSeenIntact')} rows={2} />
             </div>
             <div>
-              <Label>Location of Incident *</Label>
-              <Textarea {...formMethods.register('incidentLocation')} rows={3} />
+              <Label>Where did the loss occur? *</Label>
+              <Textarea {...formMethods.register('whereDidLossOccur')} rows={3} />
             </div>
             <div>
-              <Label>Description of Damage *</Label>
-              <Textarea {...formMethods.register('damageDescription')} rows={4} />
+              <Label>What parts were damaged? *</Label>
+              <Textarea {...formMethods.register('partsDamaged')} rows={3} />
             </div>
             <div>
               <Label>Where can it be inspected? *</Label>
-              <Textarea {...formMethods.register('inspectionLocation')} rows={3} />
+              <Textarea {...formMethods.register('whereCanBeInspected')} rows={3} />
             </div>
             <div>
-              <Label>Circumstances *</Label>
-              <Textarea {...formMethods.register('circumstances')} rows={4} />
+              <Label>Give a full account of the circumstances *</Label>
+              <Textarea {...formMethods.register('fullAccountCircumstances')} rows={4} />
             </div>
             <div>
               <Label>Any suspicion or other information</Label>
-              <Textarea {...formMethods.register('suspicionInfo')} rows={3} />
+              <Textarea {...formMethods.register('suspicionInformation')} rows={3} />
             </div>
-          </div>
-        </FormSection>
-      )
-    },
-    {
-      id: 'witnesses',
-      title: 'Witnesses',
-      component: (
-        <FormSection title="Witness Information" description="Provide details of any witnesses">
-          <div className="space-y-6">
-            {witnessFields.map((field, index) => (
-              <Card key={field.id} className="p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="text-lg font-semibold">Witness {index + 1}</h4>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeWitness(index)}
-                  >
-                    Remove
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Name *</Label>
-                    <Input {...formMethods.register(`witnesses.${index}.name`)} />
-                  </div>
-                  <div>
-                    <Label>Phone *</Label>
-                    <Input {...formMethods.register(`witnesses.${index}.phone`)} />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label>Address *</Label>
-                    <Textarea {...formMethods.register(`witnesses.${index}.address`)} rows={3} />
-                  </div>
-                </div>
-              </Card>
-            ))}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => appendWitness({ name: '', address: '', phone: '' })}
-            >
-              Add Witness
-            </Button>
           </div>
         </FormSection>
       )
@@ -560,8 +509,8 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
             <div>
               <Label>Have police been informed? *</Label>
               <RadioGroup
-                value={watchedValues.policeNotified}
-                onValueChange={(value: 'yes' | 'no') => setValue('policeNotified', value)}
+                value={watchedValues.policeInformed ? 'yes' : 'no'}
+                onValueChange={(value: 'yes' | 'no') => setValue('policeInformed', value === 'yes')}
                 className="flex space-x-4 mt-2"
               >
                 <div className="flex items-center space-x-2">
@@ -575,7 +524,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
               </RadioGroup>
             </div>
             
-            {watchedValues.policeNotified === 'yes' && (
+            {watchedValues.policeInformed && (
               <div>
                 <Label>Police Station & Details</Label>
                 <Textarea {...formMethods.register('policeStation')} rows={3} />
@@ -583,15 +532,15 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
             )}
             
             <div>
-              <Label>Other actions taken</Label>
-              <Textarea {...formMethods.register('otherActions')} rows={3} />
+              <Label>Other recovery actions taken</Label>
+              <Textarea {...formMethods.register('otherRecoveryActions')} rows={3} />
             </div>
             
             <div>
               <Label>Are you the sole owner? *</Label>
               <RadioGroup
-                value={watchedValues.soleOwner}
-                onValueChange={(value: 'yes' | 'no') => setValue('soleOwner', value)}
+                value={watchedValues.isSoleOwner ? 'yes' : 'no'}
+                onValueChange={(value: 'yes' | 'no') => setValue('isSoleOwner', value === 'yes')}
                 className="flex space-x-4 mt-2"
               >
                 <div className="flex items-center space-x-2">
@@ -605,18 +554,18 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
               </RadioGroup>
             </div>
             
-            {watchedValues.soleOwner === 'no' && (
+            {!watchedValues.isSoleOwner && (
               <div>
-                <Label>Please provide details</Label>
-                <Textarea {...formMethods.register('soleOwnerDetails')} rows={3} />
+                <Label>Please provide ownership details</Label>
+                <Textarea {...formMethods.register('ownershipDetails')} rows={3} />
               </div>
             )}
             
             <div>
-              <Label>Any other insurance on this property? *</Label>
+              <Label>Do you have other insurance on this property? *</Label>
               <RadioGroup
-                value={watchedValues.otherInsurance}
-                onValueChange={(value: 'yes' | 'no') => setValue('otherInsurance', value)}
+                value={watchedValues.hasOtherInsurance ? 'yes' : 'no'}
+                onValueChange={(value: 'yes' | 'no') => setValue('hasOtherInsurance', value === 'yes')}
                 className="flex space-x-4 mt-2"
               >
                 <div className="flex items-center space-x-2">
@@ -630,9 +579,9 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
               </RadioGroup>
             </div>
             
-            {watchedValues.otherInsurance === 'yes' && (
+            {watchedValues.hasOtherInsurance && (
               <div>
-                <Label>Please provide details</Label>
+                <Label>Please provide other insurance details</Label>
                 <Textarea {...formMethods.register('otherInsuranceDetails')} rows={3} />
               </div>
             )}
@@ -640,8 +589,8 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
             <div>
               <Label>Is a third party involved? *</Label>
               <RadioGroup
-                value={watchedValues.thirdPartyInvolved}
-                onValueChange={(value: 'yes' | 'no') => setValue('thirdPartyInvolved', value)}
+                value={watchedValues.thirdPartyInvolved ? 'yes' : 'no'}
+                onValueChange={(value: 'yes' | 'no') => setValue('thirdPartyInvolved', value === 'yes')}
                 className="flex space-x-4 mt-2"
               >
                 <div className="flex items-center space-x-2">
@@ -655,7 +604,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
               </RadioGroup>
             </div>
             
-            {watchedValues.thirdPartyInvolved === 'yes' && (
+            {watchedValues.thirdPartyInvolved && (
               <div className="space-y-4">
                 <div>
                   <Label>Third Party Name</Label>
@@ -703,45 +652,30 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="declaration"
-                  checked={watchedValues.declarationAccepted}
-                  onCheckedChange={(checked: boolean) => setValue('declarationAccepted', checked)}
+                  checked={watchedValues.agreeToDataPrivacy}
+                  onCheckedChange={(checked: boolean) => setValue('agreeToDataPrivacy', checked)}
                 />
                 <Label htmlFor="declaration" className="text-sm">
                   I agree to the data privacy policy and declaration above *
                 </Label>
               </div>
-              {formMethods.formState.errors.declarationAccepted && (
+              {formMethods.formState.errors.agreeToDataPrivacy && (
                 <p className="text-sm text-red-600">
-                  {formMethods.formState.errors.declarationAccepted.message}
+                  {formMethods.formState.errors.agreeToDataPrivacy.message}
                 </p>
               )}
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="signature">Digital Signature *</Label>
-                  <Input
-                    {...formMethods.register('signature')}
-                    placeholder="Type your full name as signature"
-                  />
-                  {formMethods.formState.errors.signature && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {formMethods.formState.errors.signature.message}
-                    </p>
-                  )}
-                </div>
-                
-                <div>
-                  <Label htmlFor="signatureDate">Date *</Label>
-                  <Input
-                    type="date"
-                    {...formMethods.register('signatureDate')}
-                  />
-                  {formMethods.formState.errors.signatureDate && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {formMethods.formState.errors.signatureDate.message}
-                    </p>
-                  )}
-                </div>
+              <div>
+                <Label htmlFor="signature">Digital Signature *</Label>
+                <Input
+                  {...formMethods.register('signature')}
+                  placeholder="Type your full name as signature"
+                />
+                {formMethods.formState.errors.signature && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {formMethods.formState.errors.signature.message}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -813,7 +747,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
               
               <div>
                 <h3 className="font-semibold">Plant/Machinery Details</h3>
-                <p>Items: {watchedValues.plantItems?.length || 0} item(s)</p>
+                <p>Items: {watchedValues.plantMachineryItems?.length || 0} item(s)</p>
               </div>
               
               <div className="flex space-x-4">
