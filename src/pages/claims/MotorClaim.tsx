@@ -126,8 +126,8 @@ const motorClaimSchema = yup.object().shape({
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
   declarationTrue: yup.boolean().oneOf([true], "You must agree that statements are true"),
-  declarationAdditionalInfo: yup.boolean().oneOf([true], "You must agree to provide additional information"),
-  declarationDocuments: yup.boolean().oneOf([true], "You must agree to submit documents"),
+  agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to data privacy'),
+  declarationTrue: yup.boolean().oneOf([true], 'You must confirm the declaration is true'),
   signature: yup.string().required("Signature is required")
 });
 
@@ -196,8 +196,6 @@ interface MotorClaimData {
   // Declaration
   agreeToDataPrivacy: boolean;
   declarationTrue: boolean;
-  declarationAdditionalInfo: boolean;
-  declarationDocuments: boolean;
   signature: string;
 }
 
@@ -240,8 +238,6 @@ const defaultValues: Partial<MotorClaimData> = {
   otherVehicleInjuryDamage: '',
   agreeToDataPrivacy: false,
   declarationTrue: false,
-  declarationAdditionalInfo: false,
-  declarationDocuments: false,
   signature: ''
 };
 
@@ -1321,78 +1317,61 @@ const MotorClaim: React.FC = () => {
         </TooltipProvider>
       )
     },
-    {
+   {
       id: 'declaration',
-      title: 'Declaration',
+      title: 'Declaration & Signature',
       component: (
-        <TooltipProvider>
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="agreeToDataPrivacy"
-                  checked={watchedValues.agreeToDataPrivacy || false}
-                  onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
-                />
-                <Label htmlFor="agreeToDataPrivacy" className="text-sm leading-relaxed">
-                  I agree to the processing of my personal data in accordance with the data privacy policy
-                </Label>
-              </div>
-              
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="declarationTrue"
-                  checked={watchedValues.declarationTrue || false}
-                  onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
-                />
-                <Label htmlFor="declarationTrue" className="text-sm leading-relaxed">
-                  I declare that all the statements made in this claim are true to the best of my knowledge
-                </Label>
-              </div>
-              
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="declarationAdditionalInfo"
-                  checked={watchedValues.declarationAdditionalInfo || false}
-                  onCheckedChange={(checked) => formMethods.setValue('declarationAdditionalInfo', !!checked)}
-                />
-                <Label htmlFor="declarationAdditionalInfo" className="text-sm leading-relaxed">
-                  I agree to provide any additional information that may be required
-                </Label>
-              </div>
-              
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="declarationDocuments"
-                  checked={watchedValues.declarationDocuments || false}
-                  onCheckedChange={(checked) => formMethods.setValue('declarationDocuments', !!checked)}
-                />
-                <Label htmlFor="declarationDocuments" className="text-sm leading-relaxed">
-                  I agree to submit all necessary supporting documents
-                </Label>
-              </div>
+        <div className="space-y-6">
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">Data Privacy</h3>
+            <div className="text-sm space-y-2">
+              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
             </div>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="signature" className="flex items-center gap-1">
-                    Signature *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input
-                    id="signature"
-                    {...formMethods.register('signature')}
-                    placeholder="Type your full name as signature"
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Type your full name as your digital signature</p>
-              </TooltipContent>
-            </Tooltip>
           </div>
-        </TooltipProvider>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="agreeToDataPrivacy"
+              checked={watchedValues.agreeToDataPrivacy || false}
+              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
+            />
+            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
+          </div>
+          
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">Declaration</h3>
+            <div className="text-sm space-y-2">
+              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="declarationTrue"
+              checked={watchedValues.declarationTrue || false}
+              onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
+            />
+            <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
+          </div>
+          
+          <div>
+            <Label htmlFor="signature">Signature of policyholder (digital signature) *</Label>
+            <Input
+              id="signature"
+              {...formMethods.register('signature')}
+              placeholder="Type your full name as signature"
+            />
+          </div>
+          
+          <div>
+            <Label>Date</Label>
+            <Input value={new Date().toISOString().split('T')[0]} disabled />
+          </div>
+        </div>
       )
     }
   ];
