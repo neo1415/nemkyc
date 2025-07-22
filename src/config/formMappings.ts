@@ -982,6 +982,15 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'itemsLost', label: 'Items Lost/Damaged', type: 'array', editable: true },
         ]
       },
+       {
+        title: 'File Uploads',
+        fields: [
+          { key: 'fireBrigadeReport', label: 'Fire Brigade Report *', type: 'file', editable: true },
+          { key: 'picturesOfLoss', label: 'Pictures of Loss *', type: 'array', editable: true },
+          { key: 'policeReport', label: 'Police Report *', type: 'file', editable: true },
+          { key: 'additionalDocuments', label: 'Additional Documents', type: 'array', editable: true },
+        ]
+      },
       {
         title: 'Declaration & Signature',
         fields: [
@@ -995,6 +1004,7 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'status', label: 'Status', type: 'text', editable: true },
           { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'date', editable: false },
           { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
           { key: 'formType', label: 'Form Type', type: 'text', editable: false },
         ]
@@ -1002,8 +1012,8 @@ export const FORM_MAPPINGS: FormMapping = {
     ]
   },
 
-  'money-insurance-claims': {
-    title: 'Money Insurance Claim',
+   'money-claims': {
+    title: 'Money Claim',
     sections: [
       {
         title: 'Policy Details',
@@ -1019,28 +1029,122 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
           { key: 'address', label: 'Address', type: 'textarea', editable: true },
           { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
-          { key: 'email', label: 'Email Address', type: 'email', editable: true },
+          { key: 'email', label: 'Email', type: 'email', editable: true },
         ]
       },
       {
-        title: 'Loss Details',
+        title: 'Details of Loss',
         fields: [
-          { key: 'lossDate', label: 'Date of Loss', type: 'date', editable: true },
-          { key: 'lossTime', label: 'Time of Loss', type: 'text', editable: true },
-          { key: 'lossLocation', label: 'Loss Location', type: 'textarea', editable: true },
-          { key: 'howItHappened', label: 'How It Happened', type: 'textarea', editable: true },
-          { key: 'policeNotified', label: 'Police Notified', type: 'text', editable: true },
-          { key: 'policeStation', label: 'Police Station', type: 'text', editable: true },
-          { key: 'lossAmount', label: 'Loss Amount', type: 'currency', editable: true },
-          { key: 'lossDescription', label: 'Loss Description', type: 'textarea', editable: true },
+          { key: 'lossDate', label: 'Date', type: 'date', editable: true },
+          { key: 'lossTime', label: 'Time', type: 'text', editable: true },
+          { key: 'lossLocation', label: 'Where did it happen?', type: 'textarea', editable: true },
+          {
+            key: 'moneyLocation',
+            label: 'Was the money in transit or locked in a safe?',
+            type: 'radio',
+            editable: true,
+            options: [
+              { value: 'transit', label: 'In Transit' },
+              { value: 'safe', label: 'Locked in Safe' }
+            ]
+          },
+        ]
+      },
+      {
+        title: 'If loss was in transit',
+        fields: [
+          { key: 'discovererName', label: 'Name of person who discovered loss', type: 'text', editable: true },
+          { key: 'discovererPosition', label: 'Position', type: 'text', editable: true },
+          { key: 'discovererSalary', label: 'Salary (₦)', type: 'currency', editable: true },
+          {
+            key: 'policeEscort',
+            label: 'Was there a police escort?',
+            type: 'radio',
+            editable: true,
+            options: [
+              { value: 'yes', label: 'Yes' },
+              { value: 'no', label: 'No' }
+            ]
+          },
+          { key: 'amountAtStart', label: 'How much was in employee\'s possession at journey start? (₦)', type: 'currency', editable: true },
+          { key: 'disbursements', label: 'What disbursements were made by him during journey? (₦)', type: 'currency', editable: true },
+          {
+            key: 'doubtIntegrity',
+            label: 'Any reason to doubt integrity of employee?',
+            type: 'radio',
+            editable: true,
+            options: [
+              { value: 'yes', label: 'Yes' },
+              { value: 'no', label: 'No' }
+            ]
+          },
+          { key: 'integrityExplanation', label: 'Explanation', type: 'textarea', editable: true, conditional: { dependsOn: 'doubtIntegrity', value: 'yes' } },
+        ],
+        conditional: { dependsOn: 'moneyLocation', value: 'transit' } // Apply this section if moneyLocation is 'transit'
+      },
+      {
+        title: 'If loss was in safe',
+        fields: [
+          { key: 'discovererName', label: 'Name of person who discovered loss', type: 'text', editable: true },
+          {
+            key: 'safeType',
+            label: 'Was the safe bricked into wall or standing free?',
+            type: 'select',
+            editable: true,
+            options: [
+              { value: 'bricked', label: 'Bricked into wall' },
+              { value: 'standing', label: 'Standing free' }
+            ]
+          },
+          {
+            key: 'keyholders',
+            label: 'Names, positions, salaries of employees in charge of keys',
+            type: 'array',
+            editable: true,
+            // For nested objects in an array, you'd typically define a sub-schema or handle it in the UI logic.
+            // Here, we just mark it as 'array' and assume the UI knows how to render the sub-fields.
+            // If you need more structured sub-fields in the mapping itself, we can define a 'subFields' property.
+          },
+        ],
+        conditional: { dependsOn: 'moneyLocation', value: 'safe' } // Apply this section if moneyLocation is 'safe'
+      },
+      {
+        title: 'General Information',
+        fields: [
+          { key: 'howItHappened', label: 'How did it happen?', type: 'textarea', editable: true },
+          {
+            key: 'policeNotified',
+            label: 'Have police been notified?',
+            type: 'radio',
+            editable: true,
+            options: [
+              { value: 'yes', label: 'Yes' },
+              { value: 'no', label: 'No' }
+            ]
+          },
+          { key: 'policeStation', label: 'Police Station', type: 'text', editable: true, conditional: { dependsOn: 'policeNotified', value: 'yes' } },
+          {
+            key: 'previousLoss',
+            label: 'Previous loss under the policy?',
+            type: 'radio',
+            editable: true,
+            options: [
+              { value: 'yes', label: 'Yes' },
+              { value: 'no', label: 'No' }
+            ]
+          },
+          { key: 'previousLossDetails', label: 'Details of previous loss', type: 'textarea', editable: true, conditional: { dependsOn: 'previousLoss', value: 'yes' } },
+          { key: 'lossAmount', label: 'What is the amount of loss? (₦)', type: 'currency', editable: true },
+          { key: 'lossDescription', label: 'What did it consist of?', type: 'textarea', editable: true },
         ]
       },
       {
         title: 'Declaration & Signature',
         fields: [
-          { key: 'declarationAccepted', label: 'Declaration Accepted', type: 'boolean', editable: false },
-          { key: 'signature', label: 'Digital Signature', type: 'text', editable: true },
-          { key: 'signatureDate', label: 'Signature Date', type: 'date', editable: true },
+          { key: 'agreeToDataPrivacy', label: 'I agree to the data privacy terms', type: 'boolean', editable: false },
+          { key: 'declarationTrue', label: 'I agree that statements are true', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature of policyholder (digital signature)', type: 'text', editable: true },
+          { key: 'signatureDate', label: 'Date', type: 'date', editable: false }, // Assuming current date, not editable
         ]
       },
       {
@@ -1054,6 +1158,7 @@ export const FORM_MAPPINGS: FormMapping = {
       }
     ]
   },
+};
 
   // Contractors Plant & Machinery Claims
   'contractors-claims': {
