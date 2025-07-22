@@ -92,8 +92,6 @@ const publicLiabilitySchema = yup.object().shape({
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to data privacy'),
   declarationTrue: yup.boolean().oneOf([true], 'You must confirm the declaration is true'),
-  declarationAdditionalInfo: yup.boolean().oneOf([true], 'You must agree to provide additional information'),
-  declarationDocuments: yup.boolean().oneOf([true], 'You must agree to submit requested documents'),
   signature: yup.string().required('Signature is required'),
 });
 
@@ -134,8 +132,6 @@ interface PublicLiabilityClaimData {
   noticeForm?: string;
   agreeToDataPrivacy: boolean;
   declarationTrue: boolean;
-  declarationAdditionalInfo: boolean;
-  declarationDocuments: boolean;
   signature: string;
 }
 
@@ -166,8 +162,6 @@ const defaultValues: Partial<PublicLiabilityClaimData> = {
   noticeForm: '',
   agreeToDataPrivacy: false,
   declarationTrue: false,
-  declarationAdditionalInfo: false,
-  declarationDocuments: false,
   signature: ''
 };
 
@@ -653,9 +647,9 @@ const PublicLiabilityClaimForm: React.FC = () => {
         </div>
       )
     },
-    {
-      id: 'privacy',
-      title: 'Data Privacy',
+  {
+      id: 'declaration',
+      title: 'Declaration & Signature',
       component: (
         <div className="space-y-6">
           <div className="bg-gray-50 p-4 rounded-lg">
@@ -675,14 +669,7 @@ const PublicLiabilityClaimForm: React.FC = () => {
             />
             <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
           </div>
-        </div>
-      )
-    },
-    {
-      id: 'declaration',
-      title: 'Declaration & Signature',
-      component: (
-        <div className="space-y-6">
+          
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="font-semibold mb-2">Declaration</h3>
             <div className="text-sm space-y-2">
@@ -692,33 +679,13 @@ const PublicLiabilityClaimForm: React.FC = () => {
             </div>
           </div>
           
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="declarationTrue"
-                checked={watchedValues.declarationTrue || false}
-                onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
-              />
-              <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="declarationAdditionalInfo"
-                checked={watchedValues.declarationAdditionalInfo || false}
-                onCheckedChange={(checked) => formMethods.setValue('declarationAdditionalInfo', !!checked)}
-              />
-              <Label htmlFor="declarationAdditionalInfo">I agree to provide more info *</Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="declarationDocuments"
-                checked={watchedValues.declarationDocuments || false}
-                onCheckedChange={(checked) => formMethods.setValue('declarationDocuments', !!checked)}
-              />
-              <Label htmlFor="declarationDocuments">I agree on documents requested *</Label>
-            </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="declarationTrue"
+              checked={watchedValues.declarationTrue || false}
+              onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
+            />
+            <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
           </div>
           
           <div>
