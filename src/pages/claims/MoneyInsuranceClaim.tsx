@@ -55,9 +55,9 @@ const moneyInsuranceSchema = yup.object().shape({
   previousLossDetails: yup.string(),
   lossAmount: yup.number().min(0, 'Loss amount must be positive').required('Loss amount is required'),
   lossDescription: yup.string().required('Loss description is required'),
-  declarationAccepted: yup.boolean().oneOf([true], 'Declaration required'),
-  signature: yup.string().required('Signature required'),
-  signatureDate: yup.date().required('Signature date required')
+  agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to data privacy'),
+  declarationTrue: yup.boolean().oneOf([true], 'You must confirm the declaration is true'),
+  signature: yup.string().required('Signature is required'),
 });
 
 type MoneyInsuranceData = yup.InferType<typeof moneyInsuranceSchema>;
@@ -652,77 +652,61 @@ const MoneyInsuranceClaim: React.FC = () => {
         </FormSection>
       )
     },
-    {
+      {
       id: 'declaration',
-      title: 'Declaration',
+      title: 'Declaration & Signature',
       component: (
-        <FormSection title="Data Privacy & Declaration">
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Data Privacy</h3>
-              <div className="text-sm text-gray-600 space-y-2">
-                <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-                <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Declaration</h3>
-              <div className="text-sm text-gray-600 space-y-2">
-                <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-                <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-                <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="declaration"
-                  checked={watchedValues.declarationAccepted}
-                  onCheckedChange={(checked: boolean) => setValue('declarationAccepted', checked)}
-                />
-                <Label htmlFor="declaration" className="text-sm">
-                  I agree to the data privacy policy and declaration above *
-                </Label>
-              </div>
-              {formMethods.formState.errors.declarationAccepted && (
-                <p className="text-sm text-red-600">
-                  {formMethods.formState.errors.declarationAccepted.message}
-                </p>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="signature">Digital Signature *</Label>
-                  <Input
-                    {...formMethods.register('signature')}
-                    placeholder="Type your full name as signature"
-                  />
-                  {formMethods.formState.errors.signature && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {formMethods.formState.errors.signature.message}
-                    </p>
-                  )}
-                </div>
-                
-                <div>
-                  <Label htmlFor="signatureDate">Date *</Label>
-                  <Input
-                    type="date"
-                    {...formMethods.register('signatureDate')}
-                  />
-                  {formMethods.formState.errors.signatureDate && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {formMethods.formState.errors.signatureDate.message}
-                    </p>
-                  )}
-                </div>
-              </div>
+        <div className="space-y-6">
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">Data Privacy</h3>
+            <div className="text-sm space-y-2">
+              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
             </div>
           </div>
-        </FormSection>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="agreeToDataPrivacy"
+              checked={watchedValues.agreeToDataPrivacy || false}
+              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
+            />
+            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
+          </div>
+          
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">Declaration</h3>
+            <div className="text-sm space-y-2">
+              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="declarationTrue"
+              checked={watchedValues.declarationTrue || false}
+              onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
+            />
+            <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
+          </div>
+          
+          <div>
+            <Label htmlFor="signature">Signature of policyholder (digital signature) *</Label>
+            <Input
+              id="signature"
+              {...formMethods.register('signature')}
+              placeholder="Type your full name as signature"
+            />
+          </div>
+          
+          <div>
+            <Label>Date</Label>
+            <Input value={new Date().toISOString().split('T')[0]} disabled />
+          </div>
+        </div>
       )
     }
   ];
