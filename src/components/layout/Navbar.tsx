@@ -102,7 +102,7 @@ const Navbar: React.FC = () => {
   ];
 
   return (
-    <nav className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-background shadow-lg border-b border-border sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Logo */}
@@ -134,7 +134,7 @@ const Navbar: React.FC = () => {
                     </Link>
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <div className="w-64 p-3 bg-white">
+                    <div className="w-64 p-3 bg-background">
                       <div className="grid gap-1">
                         {kycForms.map((form) => (
                           <NavigationMenuLink key={form.path} asChild>
@@ -165,7 +165,7 @@ const Navbar: React.FC = () => {
                     </Link>
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <div className="w-64 p-3 bg-white">
+                    <div className="w-64 p-3 bg-background">
                       <div className="grid gap-1">
                         {cddForms.map((form) => (
                           <NavigationMenuLink key={form.path} asChild>
@@ -209,7 +209,7 @@ const Navbar: React.FC = () => {
                     </Link>
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <div className="w-64 p-3 bg-white max-h-96 overflow-y-auto">
+                    <div className="w-64 p-3 bg-background max-h-96 overflow-y-auto">
                       <div className="grid gap-1">
                         {claimsForms.map((form) => (
                           <NavigationMenuLink key={form.path} asChild>
@@ -245,7 +245,7 @@ const Navbar: React.FC = () => {
                      <ChevronDown className="h-4 w-4" />
                    </Button>
                  </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-48 bg-white z-50 shadow-lg border" align="end">
+                <DropdownMenuContent className="w-48 bg-background z-50 shadow-lg border" align="end">
                    <DropdownMenuItem asChild>
                      <button onClick={handleDashboardClick} className="flex items-center space-x-2 w-full cursor-pointer">
                        <LayoutDashboard className="h-4 w-4" />
