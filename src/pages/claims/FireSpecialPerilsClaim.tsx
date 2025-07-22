@@ -80,8 +80,8 @@ interface FireSpecialPerilsClaimData {
   
   // Declaration
   agreeToDataPrivacy: boolean;
+  declarationTrue: boolean;
   signature: string;
-  signatureDate: string;
 }
 
 const schema = yup.object().shape({
@@ -129,9 +129,9 @@ const schema = yup.object().shape({
       netAmountClaimed: yup.number().min(0, 'Net amount must be positive'),
     })
   ).min(1, 'At least one item must be added'),
-  agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to the data privacy notice'),
+  agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to data privacy'),
+  declarationTrue: yup.boolean().oneOf([true], 'You must confirm the declaration is true'),
   signature: yup.string().required('Signature is required'),
-  signatureDate: yup.string(),
 });
 
 const FireSpecialPerilsClaim: React.FC = () => {
@@ -193,9 +193,9 @@ const FireSpecialPerilsClaim: React.FC = () => {
         valueOfSalvage: 0, 
         netAmountClaimed: 0 
       }],
-      agreeToDataPrivacy: false,
-      signature: '',
-      signatureDate: new Date().toISOString().split('T')[0],
+  agreeToDataPrivacy: false,
+  declarationTrue: false,
+  signature: ''
     },
   });
 
@@ -732,7 +732,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
         <FormSection title="Other Insurance Information" description="Details about any other insurance policies">
           <div className="space-y-4">
             <div>
-              <Label>Any other policy on the property? *</Label>
+              <Label>At the time of occurrence, were there any other existing insurance covers on the said Property with any other Insurer, whether effected by the Claimant or by any other person ? *</Label>
               <div className="flex items-center space-x-4 mt-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -785,7 +785,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
         <FormSection title="Valuation Information" description="Property valuation and previous claim details">
           <div className="space-y-4">
             <div>
-              <Label htmlFor="premisesContentsValue">Value of Premises Contents (₦) *</Label>
+              <Label htmlFor="premisesContentsValue">At the time of Occurrence, what amount would you value the total contents of the Premises? (₦) *</Label>
               <Input
                 id="premisesContentsValue"
                 type="number"
@@ -799,7 +799,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
             </div>
 
             <div>
-              <Label>Previous claim under similar policy? *</Label>
+              <Label>) Have you previously claimed against any insurer in respect of risks covered by this policy? *</Label>
               <div className="flex items-center space-x-4 mt-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -823,7 +823,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
             {watchedValues.hasPreviousClaim === true && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="previousClaimDate">Date of Previous Claim *</Label>
+                  <Label htmlFor="previousClaimDate">Date of Loss *</Label>
                   <Input
                     id="previousClaimDate"
                     type="date"
@@ -946,79 +946,62 @@ const FireSpecialPerilsClaim: React.FC = () => {
       ),
     },
     {
-      id: "data-privacy",
-      title: "Data Privacy & Declaration",
+      id: 'declaration',
+      title: 'Declaration & Signature',
       component: (
-        <FormSection title="Data Privacy Notice & Declaration" description="Please read and agree to the terms below">
-          <div className="space-y-6">
-            <Card className="p-6">
-              <CardHeader>
-                <CardTitle className="text-lg">Data Privacy</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-sm space-y-2">
-                  <p><strong>i.</strong> Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-                  <p><strong>ii.</strong> Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-                  <p><strong>iii.</strong> Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="p-6">
-              <CardHeader>
-                <CardTitle className="text-lg">Declaration</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-sm space-y-2">
-                  <p><strong>1.</strong> I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-                  <p><strong>2.</strong> I/We agree to provide additional information to NEM Insurance, if required.</p>
-                  <p><strong>3.</strong> I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="agreeToDataPrivacy"
-                  checked={watchedValues.agreeToDataPrivacy}
-                  onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
-                />
-                <Label htmlFor="agreeToDataPrivacy" className="text-sm">
-                  I agree to the data privacy notice and declaration above *
-                </Label>
-              </div>
-              {formMethods.formState.errors.agreeToDataPrivacy && (
-                <p className="text-sm text-red-600">{formMethods.formState.errors.agreeToDataPrivacy.message}</p>
-              )}
-
-              <div>
-                <Label htmlFor="signature">Digital Signature *</Label>
-                <Input
-                  id="signature"
-                  {...formMethods.register('signature')}
-                  placeholder="Type your full name as digital signature"
-                />
-                {formMethods.formState.errors.signature && (
-                  <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.signature.message}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="signatureDate">Date</Label>
-                <Input
-                  id="signatureDate"
-                  type="date"
-                  {...formMethods.register('signatureDate')}
-                  value={watchedValues.signatureDate}
-                  readOnly
-                />
-              </div>
+        <div className="space-y-6">
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">Data Privacy</h3>
+            <div className="text-sm space-y-2">
+              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
             </div>
           </div>
-        </FormSection>
-      ),
-    },
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="agreeToDataPrivacy"
+              checked={watchedValues.agreeToDataPrivacy || false}
+              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
+            />
+            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
+          </div>
+          
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">Declaration</h3>
+            <div className="text-sm space-y-2">
+              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="declarationTrue"
+              checked={watchedValues.declarationTrue || false}
+              onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
+            />
+            <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
+          </div>
+          
+          <div>
+            <Label htmlFor="signature">Signature of policyholder (digital signature) *</Label>
+            <Input
+              id="signature"
+              {...formMethods.register('signature')}
+              placeholder="Type your full name as signature"
+            />
+          </div>
+          
+          <div>
+            <Label>Date</Label>
+            <Input value={new Date().toISOString().split('T')[0]} disabled />
+          </div>
+        </div>
+      )
+    }
   ];
 
   if (showSuccess) {
