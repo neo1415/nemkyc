@@ -97,6 +97,7 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'status', label: 'Status', type: 'text', editable: true },
           { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'date', editable: false },
           { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
           { key: 'formType', label: 'Form Type', type: 'text', editable: false },
         ]
@@ -137,24 +138,32 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'weightUnits', label: 'Weight Units', type: 'text', editable: true },
           { key: 'totalValue', label: 'Total Value', type: 'currency', editable: true },
           { key: 'howGoodsPacked', label: 'How Goods Packed', type: 'text', editable: true },
-          { key: 'circumstancesOfLoss', label: 'Circumstances of Loss', type: 'textarea', editable: true },
         ]
       },
       {
-        title: 'Transport Details',
+        title: 'Paerticulars of Goods',
         fields: [
+          { key: 'goodsItems', label: 'Goods Items', type: 'array', editable: true },
+          { key: 'totalValue', label: 'Total Value', type: 'text', editable: false },
+        ]
+      },
+      {
+        title: 'Circumstances',
+        fields: [
+          { key: 'circumstancesOfLoss', label: 'Circumstances of Loss', type: 'textarea', editable: true },
           { key: 'otherVehicleInvolved', label: 'Other Vehicle Involved', type: 'boolean', editable: true },
+          { key: 'otherVehicleOwnerName', label: 'Other Vehicle Owners Name', type: 'text', editable: true, conditional: { dependsOn: 'otherVehicleInvolved', value: 'true' } },
+          { key: 'otherVehicleOwnerAddress', label: 'Other Vehicle Owners Address', type: 'text', editable: true, conditional: { dependsOn: 'otherVehicleInvolved', value: 'true' } },
+        ]
+      },
+   {
+        title: 'Dispatch Details',
+        fields: [
           { key: 'dispatchAddress', label: 'Dispatch Address', type: 'text', editable: true },
           { key: 'dispatchDate', label: 'Dispatch Date', type: 'date', editable: true },
           { key: 'consigneeName', label: 'Consignee Name', type: 'text', editable: true },
           { key: 'consigneeAddress', label: 'Consignee Address', type: 'text', editable: true },
           { key: 'vehicleRegistration', label: 'Vehicle Registration', type: 'text', editable: true },
-        ]
-      },
-      {
-        title: 'Goods Items',
-        fields: [
-          { key: 'goodsItems', label: 'Goods Items', type: 'array', editable: true },
         ]
       },
       {
@@ -188,73 +197,100 @@ export const FORM_MAPPINGS: FormMapping = {
     ]
   },
 
-  'rent-assurance-claims': {
-    title: 'Rent Assurance Claim',
-    sections: [
-      {
-        title: 'Policy Details',
-        fields: [
-          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
-          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
-          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true },
-        ]
-      },
-      {
-        title: 'Insured Details',
-        fields: [
-          { key: 'nameOfInsured', label: 'Name of Insured (Tenant)', type: 'text', editable: true },
-          { key: 'address', label: 'Address', type: 'textarea', editable: true },
-          { key: 'age', label: 'Age', type: 'number', editable: true },
-          { key: 'email', label: 'Email', type: 'email', editable: true },
-          { key: 'phone', label: 'Phone', type: 'text', editable: true },
-          { key: 'nameOfLandlord', label: 'Name of Landlord', type: 'text', editable: true },
-          { key: 'addressOfLandlord', label: 'Address of Landlord', type: 'textarea', editable: true },
-          { key: 'livingAtPremisesFrom', label: 'Living at Premises From', type: 'date', editable: true },
-          { key: 'livingAtPremisesTo', label: 'Living at Premises To', type: 'date', editable: true },
-        ]
-      },
-      {
-        title: 'Claim Information',
-        fields: [
-          { key: 'periodOfDefaultFrom', label: 'Period of Default From', type: 'date', editable: true },
-          { key: 'periodOfDefaultTo', label: 'Period of Default To', type: 'date', editable: true },
-          { key: 'amountDefaulted', label: 'Amount Defaulted', type: 'currency', editable: true },
-          { key: 'rentDueDate', label: 'Rent Due Date', type: 'date', editable: true },
-          { key: 'rentPaymentFrequency', label: 'Frequency of Rent Payment', type: 'text', editable: true },
-          { key: 'rentPaymentFrequencyOther', label: 'Other Frequency', type: 'text', editable: true, conditional: { dependsOn: 'rentPaymentFrequency', value: 'other' } },
-          { key: 'causeOfInabilityToPay', label: 'Cause of Inability to Pay', type: 'textarea', editable: true },
-        ]
-      },
-      {
-        title: 'Beneficiary Details',
-        fields: [
-          { key: 'nameOfBeneficiary', label: 'Name of Beneficiary', type: 'text', editable: true },
-          { key: 'beneficiaryAge', label: 'Beneficiary Age', type: 'number', editable: true },
-          { key: 'beneficiaryAddress', label: 'Beneficiary Address', type: 'textarea', editable: true },
-          { key: 'beneficiaryEmail', label: 'Beneficiary Email', type: 'email', editable: true },
-          { key: 'beneficiaryPhone', label: 'Beneficiary Phone', type: 'text', editable: true },
-          { key: 'beneficiaryOccupation', label: 'Beneficiary Occupation', type: 'text', editable: true },
-        ]
-      },
-      {
-        title: 'Declaration & Signature',
-        fields: [
-          { key: 'writtenDeclaration', label: 'Written Declaration', type: 'textarea', editable: true },
-          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
-          { key: 'signature', label: 'Signature', type: 'text', editable: true },
-        ]
-      },
-      {
-        title: 'System Information',
-        fields: [
-          { key: 'status', label: 'Status', type: 'text', editable: true },
-          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
-          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
-          { key: 'formType', label: 'Form Type', type: 'text', editable: false },
-        ]
-      }
-    ]
-  },
+ 'rent-assurance-claims': {
+  title: 'Rent Assurance Claim',
+  sections: [
+    {
+      title: 'Policy Details',
+      fields: [
+        { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+        { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
+        { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true }
+      ]
+    },
+    {
+      title: 'Insured Details',
+      fields: [
+        { key: 'nameOfInsured', label: 'Name of Insured (Tenant)', type: 'text', editable: true },
+        { key: 'address', label: 'Address', type: 'textarea', editable: true },
+        { key: 'age', label: 'Age', type: 'number', editable: true },
+        { key: 'email', label: 'Email', type: 'email', editable: true },
+        { key: 'phone', label: 'Phone', type: 'text', editable: true },
+        { key: 'nameOfLandlord', label: 'Name of Landlord', type: 'text', editable: true },
+        { key: 'addressOfLandlord', label: 'Address of Landlord', type: 'textarea', editable: true },
+        { key: 'livingAtPremisesFrom', label: 'Living at Premises From', type: 'date', editable: true },
+        { key: 'livingAtPremisesTo', label: 'Living at Premises To', type: 'date', editable: true }
+      ]
+    },
+    {
+      title: 'Claim Information',
+      fields: [
+        { key: 'periodOfDefaultFrom', label: 'Period of Default From', type: 'date', editable: true },
+        { key: 'periodOfDefaultTo', label: 'Period of Default To', type: 'date', editable: true },
+        { key: 'amountDefaulted', label: 'Amount Defaulted (₦)', type: 'currency', editable: true },
+        { key: 'rentDueDate', label: 'Rent Due Date', type: 'date', editable: true },
+        {
+          key: 'rentPaymentFrequency',
+          label: 'Frequency of Rent Payment',
+          type: 'select',
+          options: ['yearly', 'half-yearly', 'biannually', 'other'],
+          editable: true
+        },
+        {
+          key: 'rentPaymentFrequencyOther',
+          label: 'Specify Other Frequency',
+          type: 'text',
+          editable: true,
+          conditional: { dependsOn: 'rentPaymentFrequency', value: 'other' }
+        },
+        { key: 'causeOfInabilityToPay', label: 'Cause of Inability to Pay', type: 'textarea', editable: true }
+      ]
+    },
+    {
+      title: 'Beneficiary Details',
+      fields: [
+        { key: 'nameOfBeneficiary', label: 'Name of Beneficiary (Landlord)', type: 'text', editable: true },
+        { key: 'beneficiaryAge', label: 'Age', type: 'number', editable: true },
+        { key: 'beneficiaryOccupation', label: 'Occupation', type: 'text', editable: true },
+        { key: 'beneficiaryAddress', label: 'Address', type: 'textarea', editable: true },
+        { key: 'beneficiaryEmail', label: 'Email', type: 'email', editable: true },
+        { key: 'beneficiaryPhone', label: 'Phone', type: 'text', editable: true }
+      ]
+    },
+    {
+      title: 'File Uploads',
+      fields: [
+        { key: 'rentAgreement', label: 'Rent Agreement', type: 'file', editable: true },
+        { key: 'demandNote', label: 'Demand Note', type: 'file', editable: true },
+        { key: 'quitNotice', label: 'Quit Notice', type: 'file', editable: true }
+      ]
+    },
+    {
+      title: 'Data Privacy',
+      fields: [
+        { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'checkbox', editable: false }
+      ]
+    },
+    {
+      title: 'Declaration & Signature',
+      fields: [
+        { key: 'writtenDeclaration', label: 'Written Declaration', type: 'textarea', editable: false },
+        { key: 'signature', label: 'Digital Signature', type: 'text', editable: false }
+      ]
+    },
+    {
+      title: 'System Information',
+      fields: [
+        { key: 'status', label: 'Status', type: 'text', editable: true },
+        { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+        { key: 'submittedBy', label: 'Submitted By', type: 'date', editable: false },
+        { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+        { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+      ]
+    }
+  ]
+}
+
 
   'motor-claims': {
     title: 'Motor Claim',
