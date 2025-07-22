@@ -39,12 +39,32 @@ const goodsInTransitClaimSchema = yup.object().shape({
   address: yup.string().required("Address is required"),
   phone: yup.string().required("Phone number is required"),
   email: yup.string().email("Valid email is required").required("Email is required"),
+  businessType: yup.string(),
 
   // Loss Details
   dateOfLoss: yup.date().required("Date of loss is required"),
   timeOfLoss: yup.string().required("Time of loss is required"),
   placeOfOccurrence: yup.string().required("Place of occurrence is required"),
   descriptionOfGoods: yup.string().required("Description of goods is required"),
+  numberOfPackages: yup.number().required("Number of packages is required").min(1),
+  totalWeight: yup.number().required("Total weight is required").min(0),
+  totalValue: yup.number().required("Total value is required").min(0),
+  goodsPackaging: yup.string().required("Goods packaging description is required"),
+
+  // Circumstances
+  lossCircumstances: yup.string().required("Loss circumstances are required"),
+  otherVehicleInvolved: yup.boolean(),
+  ownerNameAddress: yup.string().when('otherVehicleInvolved', {
+    is: true,
+    then: (schema) => schema.required("Owner name and address is required"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  witnessNameAddress: yup.string(),
+  policeStationAdvised: yup.string(),
+  dateReportedToPolice: yup.date().nullable(),
+  dispatchAddress: yup.string().required("Dispatch address is required"),
+  dispatchDate: yup.date().required("Dispatch date is required"),
+  consigneeNameAddress: yup.string().required("Consignee name and address is required"),
 
   // Goods Items
   goodsItems: yup.array().of(
@@ -55,9 +75,51 @@ const goodsInTransitClaimSchema = yup.object().shape({
     })
   ),
 
+  // Inspection
+  inspectionAddress: yup.string().required("Inspection address is required"),
+
+  // If owner of goods
+  isOwnerOfGoods: yup.boolean(),
+  howAndByWhomWereGoodsTransported: yup.string().when('isOwnerOfGoods', {
+    is: true,
+    then: (schema) => schema.required("Transportation details are required"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  nameAddressOfinsurerOfTransporter: yup.string().when('isOwnerOfGoods', {
+    is: true,
+    then: (schema) => schema.required("Transporter insurer details are required"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+
+  // If claiming as carrier
+  goodsOwnerNameAddress: yup.string().when('isOwnerOfGoods', {
+    is: false,
+    then: (schema) => schema.required("Goods owner details are required"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  goodsOwnerInsurer: yup.string().when('isOwnerOfGoods', {
+    is: false,
+    then: (schema) => schema.required("Goods owner insurer details are required"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+
+  // Vehicle/Transport
+  goodsSoundOnReceipt: yup.boolean().required("Please confirm if goods were sound on receipt"),
+  checkedByDriver: yup.boolean().required("Please confirm if goods were checked by driver"),
+  vehicleRegistrationNumber: yup.string().required("Vehicle registration number is required"),
+  loadedByYouOrStaff: yup.boolean().required("Please confirm who loaded the goods"),
+  receiptGiven: yup.boolean().required("Please confirm if receipt was given"),
+  claimMadeAgainstYou: yup.boolean().required("Please confirm if claim was made against you"),
+  claimDateReceived: yup.date().when('claimMadeAgainstYou', {
+    is: true,
+    then: (schema) => schema.required("Claim date is required"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+
   // Declaration
-  agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  signature: yup.string().required("Signature is required")
+  declarationAgreed: yup.boolean().oneOf([true], "You must agree to the declaration"),
+  signatureOfPolicyholder: yup.string().required("Signature is required"),
+  dateSigned: yup.date().required("Date signed is required")
 });
 
 interface GoodsItem {
@@ -88,32 +150,48 @@ interface GoodsInTransitClaimData {
   totalWeight: number;
   weightUnits: string;
   totalValue: number;
-  howGoodsPacked: string;
-  circumstancesOfLoss?: string;
+  goodsPackaging: string;
 
-  // Transport Details
+  // Circumstances
+  lossCircumstances: string;
   otherVehicleInvolved: boolean;
-  dispatchAddress?: string;
-  dispatchDate?: string;
-  consigneeName?: string;
-  consigneeAddress?: string;
-  vehicleRegistration?: string;
+  ownerNameAddress?: string;
+  witnessNameAddress?: string;
+  policeStationAdvised?: string;
+  dateReportedToPolice?: Date;
+  dispatchAddress: string;
+  dispatchDate: Date;
+  consigneeNameAddress: string;
 
   // Goods Items
   goodsItems: GoodsItem[];
 
-  // Additional Details
-  inspectionAddress?: string;
+  // Inspection
+  inspectionAddress: string;
+
+  // If owner of goods
   isOwnerOfGoods: boolean;
-  goodsInSoundCondition: boolean;
+  howAndByWhomWereGoodsTransported?: string;
+  nameAddressOfinsurerOfTransporter?: string;
+
+  // If claiming as carrier
+  goodsOwnerNameAddress?: string;
+  goodsOwnerInsurer?: string;
+
+  // Vehicle/Transport
+  goodsSoundOnReceipt: boolean;
   checkedByDriver: boolean;
-  staffLoadedUnloaded: boolean;
+  vehicleRegistrationNumber: string;
+  loadedByYouOrStaff: boolean;
   receiptGiven: boolean;
+  carriageConditionDocument?: File;
   claimMadeAgainstYou: boolean;
+  claimDateReceived?: Date;
 
   // Declaration
-  agreeToDataPrivacy: boolean;
-  signature: string;
+  declarationAgreed: boolean;
+  signatureOfPolicyholder: string;
+  dateSigned: Date;
 }
 
 const defaultValues: Partial<GoodsInTransitClaimData> = {
@@ -130,24 +208,30 @@ const defaultValues: Partial<GoodsInTransitClaimData> = {
   totalWeight: 0,
   weightUnits: 'kg',
   totalValue: 0,
-  howGoodsPacked: '',
-  circumstancesOfLoss: '',
+  goodsPackaging: '',
+  lossCircumstances: '',
   otherVehicleInvolved: false,
+  ownerNameAddress: '',
+  witnessNameAddress: '',
+  policeStationAdvised: '',
   dispatchAddress: '',
-  dispatchDate: '',
-  consigneeName: '',
-  consigneeAddress: '',
+  consigneeNameAddress: '',
   goodsItems: [],
   inspectionAddress: '',
   isOwnerOfGoods: true,
-  goodsInSoundCondition: true,
+  howAndByWhomWereGoodsTransported: '',
+  nameAddressOfinsurerOfTransporter: '',
+  goodsOwnerNameAddress: '',
+  goodsOwnerInsurer: '',
+  goodsSoundOnReceipt: true,
   checkedByDriver: true,
-  vehicleRegistration: '',
-  staffLoadedUnloaded: true,
+  vehicleRegistrationNumber: '',
+  loadedByYouOrStaff: true,
   receiptGiven: true,
   claimMadeAgainstYou: false,
-  agreeToDataPrivacy: false,
-  signature: ''
+  declarationAgreed: false,
+  signatureOfPolicyholder: '',
+  dateSigned: new Date()
 };
 
 const GoodsInTransitClaim: React.FC = () => {
@@ -550,10 +634,30 @@ const GoodsInTransitClaim: React.FC = () => {
           
           <FormField
             control={formMethods.control}
-            name="howGoodsPacked"
+            name="totalValue"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>How Goods Were Packed *</FormLabel>
+                <FormLabel>Total Value (₦) *</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="Enter total value"
+                    {...field}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={formMethods.control}
+            name="goodsPackaging"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Goods Packaging *</FormLabel>
                 <FormControl>
                   <Textarea placeholder="Describe packaging method" rows={2} {...field} />
                 </FormControl>
@@ -683,12 +787,12 @@ const GoodsInTransitClaim: React.FC = () => {
         <div className="space-y-6">
           <FormField
             control={formMethods.control}
-            name="circumstancesOfLoss"
+            name="lossCircumstances"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Circumstances of Loss or Damage *</FormLabel>
+                <FormLabel>Loss Circumstances *</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Provide detailed circumstances" rows={4} {...field} />
+                  <Textarea placeholder="Provide detailed circumstances of loss" rows={4} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -707,51 +811,70 @@ const GoodsInTransitClaim: React.FC = () => {
                   />
                 </FormControl>
                 <div className="space-y-1 leading-none">
-                  <FormLabel>Another vehicle was involved</FormLabel>
+                  <FormLabel>Other Vehicle Involved</FormLabel>
                 </div>
               </FormItem>
             )}
           />
 
           {watchedValues.otherVehicleInvolved && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6">
-              <FormField
-                control={formMethods.control}
-                name="otherVehicleOwnerName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name of Owner</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter owner's name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={formMethods.control}
-                name="otherVehicleOwnerAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address of Owner</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter owner's address" rows={2} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={formMethods.control}
+              name="ownerNameAddress"
+              render={({ field }) => (
+                <FormItem className="ml-6">
+                  <FormLabel>Owner Name & Address *</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Enter owner's name and address" rows={3} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           )}
-        </div>
-      )
-    },
-    {
-      id: 'dispatch-details',
-      title: 'Dispatch Details',
-      component: (
-        <div className="space-y-6">
+          
+          <FormField
+            control={formMethods.control}
+            name="witnessNameAddress"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Witness Name & Address</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Enter witness name and address" rows={3} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={formMethods.control}
+            name="policeStationAdvised"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Police Station Advised</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter police station name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={formMethods.control}
+            name="dateReportedToPolice"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Date Reported to Police</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
           <FormField
             control={formMethods.control}
             name="dispatchAddress"
@@ -782,26 +905,12 @@ const GoodsInTransitClaim: React.FC = () => {
           
           <FormField
             control={formMethods.control}
-            name="consigneeName"
+            name="consigneeNameAddress"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Consignee Name *</FormLabel>
+                <FormLabel>Consignee Name & Address *</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter consignee name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={formMethods.control}
-            name="consigneeAddress"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Consignee Address *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Enter consignee address" rows={3} {...field} />
+                  <Textarea placeholder="Enter consignee name and address" rows={3} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -811,13 +920,287 @@ const GoodsInTransitClaim: React.FC = () => {
       )
     },
     {
-      id: 'declaration',
-      title: 'Declaration',
+      id: 'inspection',
+      title: 'Where Inspected',
       component: (
         <div className="space-y-6">
           <FormField
             control={formMethods.control}
-            name="agreeToDataPrivacy"
+            name="inspectionAddress"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Inspection Address *</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Enter inspection address" rows={3} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      )
+    },
+    {
+      id: 'owner-details',
+      title: 'If You Are Owner of Goods',
+      component: (
+        <div className="space-y-6">
+          <FormField
+            control={formMethods.control}
+            name="isOwnerOfGoods"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>I am the owner of the goods</FormLabel>
+                </div>
+              </FormItem>
+            )}
+          />
+          
+          {watchedValues.isOwnerOfGoods && (
+            <>
+              <FormField
+                control={formMethods.control}
+                name="howAndByWhomWereGoodsTransported"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>How and By Whom Were Goods Transported *</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Describe transportation method and provider" rows={3} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={formMethods.control}
+                name="nameAddressOfinsurerOfTransporter"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name & Address of Insurer of Transporter *</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Enter transporter's insurer details" rows={3} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
+        </div>
+      )
+    },
+    {
+      id: 'carrier-details',
+      title: 'If You Are Claiming As Carrier',
+      component: (
+        <div className="space-y-6">
+          {!watchedValues.isOwnerOfGoods && (
+            <>
+              <FormField
+                control={formMethods.control}
+                name="goodsOwnerNameAddress"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Goods Owner Name & Address *</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Enter goods owner name and address" rows={3} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={formMethods.control}
+                name="goodsOwnerInsurer"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Goods Owner Insurer *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter goods owner insurer details" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
+        </div>
+      )
+    },
+    {
+      id: 'vehicle-transport',
+      title: 'Vehicle / Transport',
+      component: (
+        <div className="space-y-6">
+          <FormField
+            control={formMethods.control}
+            name="goodsSoundOnReceipt"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Goods Sound on Receipt *</FormLabel>
+                </div>
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={formMethods.control}
+            name="checkedByDriver"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Checked by Driver *</FormLabel>
+                </div>
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={formMethods.control}
+            name="vehicleRegistrationNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Vehicle Registration Number *</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter vehicle registration number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={formMethods.control}
+            name="loadedByYouOrStaff"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Loaded by You or Staff *</FormLabel>
+                </div>
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={formMethods.control}
+            name="receiptGiven"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Receipt Given *</FormLabel>
+                </div>
+              </FormItem>
+            )}
+          />
+          
+          <div className="space-y-2">
+            <Label>Carriage Condition Document (max 3MB)</Label>
+            <FileUpload
+              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, carriageConditionDocument: file }))}
+              maxSize={3 * 1024 * 1024}
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            />
+          </div>
+          
+          <FormField
+            control={formMethods.control}
+            name="claimMadeAgainstYou"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Claim Made Against You *</FormLabel>
+                </div>
+              </FormItem>
+            )}
+          />
+          
+          {watchedValues.claimMadeAgainstYou && (
+            <FormField
+              control={formMethods.control}
+              name="claimDateReceived"
+              render={({ field }) => (
+                <FormItem className="ml-6">
+                  <FormLabel>Claim Date Received *</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+        </div>
+      )
+    },
+    {
+      id: 'declaration',
+      title: 'Data Privacy and Declaration',
+      component: (
+        <div className="space-y-6">
+          <div className="p-4 border rounded-lg bg-gray-50">
+            <h4 className="font-semibold mb-2">Data Privacy Notice</h4>
+            <p className="text-sm text-gray-700 mb-4">
+              We collect and process your personal data in accordance with applicable data protection laws. 
+              Your information will be used to process your insurance claim and may be shared with relevant 
+              third parties including adjusters, investigators, and other insurers as necessary for claim processing. 
+              You have rights regarding your personal data including access, correction, and deletion subject to 
+              legal and contractual requirements.
+            </p>
+          </div>
+          
+          <div className="p-4 border rounded-lg bg-gray-50">
+            <h4 className="font-semibold mb-2">Declaration</h4>
+            <div className="text-sm text-gray-700 space-y-2">
+              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+              <p>2. I/We agree that this declaration shall form the basis of the contract between me/us and the Company.</p>
+              <p>3. I/We undertake to inform the Company of any other insurance covering the same risk.</p>
+              <p>4. I/We authorize the Company to obtain any information from any person, organization or entity that the Company deems necessary to evaluate this claim.</p>
+            </div>
+          </div>
+          
+          <FormField
+            control={formMethods.control}
+            name="declarationAgreed"
             render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                 <FormControl>
@@ -828,7 +1211,7 @@ const GoodsInTransitClaim: React.FC = () => {
                 </FormControl>
                 <div className="space-y-1 leading-none">
                   <FormLabel>
-                    I agree to the data privacy notice and declaration *
+                    I agree to the data privacy notice and declaration above *
                   </FormLabel>
                 </div>
               </FormItem>
@@ -837,12 +1220,30 @@ const GoodsInTransitClaim: React.FC = () => {
           
           <FormField
             control={formMethods.control}
-            name="signature"
+            name="signatureOfPolicyholder"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Digital Signature *</FormLabel>
+                <FormLabel>Signature of Policyholder *</FormLabel>
                 <FormControl>
-                  <Input placeholder="Type your full name as signature" {...field} />
+                  <Input placeholder="Type your full name as digital signature" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={formMethods.control}
+            name="dateSigned"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Date Signed *</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="date" 
+                    {...field}
+                    value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
