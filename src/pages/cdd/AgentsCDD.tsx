@@ -518,65 +518,6 @@ const AgentsCDD: React.FC = () => {
             </Label>
           </div>
           
-          <div className="space-y-4">
-            <div>
-              <Label>Agent License *</Label>
-              <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, agentLicense: file }));
-                  toast({ title: "File selected for upload" });
-                }}
-                currentFile={uploadedFiles.agentLicense}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { agentLicense, ...rest } = prev;
-                    return rest;
-                  });
-                }}
-              />
-            </div>
-            
-            <div>
-              <Label>Valid Means of Identification *</Label>
-              <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, validMeansOfId: file }));
-                  toast({ title: "File selected for upload" });
-                }}
-                currentFile={uploadedFiles.validMeansOfId}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { validMeansOfId, ...rest } = prev;
-                    return rest;
-                  });
-                }}
-              />
-            </div>
-            
-            <div>
-              <Label>Utility Bill *</Label>
-              <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, utilityBill: file }));
-                  toast({ title: "File selected for upload" });
-                }}
-                currentFile={uploadedFiles.utilityBill}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { utilityBill, ...rest } = prev;
-                    return rest;
-                  });
-                }}
-              />
-            </div>
-          </div>
-
           <div>
             <Label htmlFor="signature">Digital Signature *</Label>
             <Input
@@ -612,7 +553,10 @@ const AgentsCDD: React.FC = () => {
 
         <MultiStepForm
           steps={steps}
-          onSubmit={handleSubmit}
+          onSubmit={() => {
+                const isValid = formMethods.trigger();
+                if (isValid) setShowSummary(true);
+              }}
           isSubmitting={isSubmitting}
           submitButtonText="Submit CDD Form"
           formMethods={formMethods}
