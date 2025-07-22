@@ -156,6 +156,12 @@ const AgentsCDD: React.FC = () => {
     }
   }, []);
 
+  const handleReview = (data: any) => {
+    console.log('✅ handleReview was called! This means validation passed.');
+    console.log('Form Data:', data);
+    setShowSummary(true);
+  };
+  
   const handleSubmit = async (data: any) => {
     // Upload files to Firebase Storage first
     const fileUploadPromises: Array<Promise<[string, string]>> = [];
@@ -553,19 +559,7 @@ const AgentsCDD: React.FC = () => {
 
        <MultiStepForm
           steps={steps}
-          onSubmit={async () => { // Make the function async
-    const isValid = await formMethods.trigger(); // Await the validation result
-    if (isValid) {
-      setShowSummary(true); // This will now only run if validation passes
-    } else {
-      // Optional: Show an error message so you know validation failed.
-      toast({
-        title: "Incomplete Form",
-        description: "Please fill out all required fields in the final step.",
-        variant: "destructive",
-      });
-    }
-  }}
+        onSubmit={handleReview} 
           isSubmitting={isSubmitting}
           submitButtonText="Submit CDD Form"
           formMethods={formMethods}
