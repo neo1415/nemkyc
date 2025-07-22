@@ -557,7 +557,7 @@ const BurglaryClaimForm: React.FC = () => {
             </div>
             
             <div>
-              <Label htmlFor="howEntryEffected">How entry was effected *</Label>
+              <Label htmlFor="howEntryEffected"Give full details of how entry was affected *</Label>
               <Textarea
                 id="howEntryEffected"
                 {...formMethods.register('howEntryEffected')}
@@ -741,7 +741,7 @@ const BurglaryClaimForm: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="totalContentsValue">Value of total contents *</Label>
+                <Label htmlFor="totalContentsValue">At the time of loss, what amount would you value the total contents of your premises? *</Label>
                 <Input
                   id="totalContentsValue"
                   type="number"
@@ -815,6 +815,7 @@ const BurglaryClaimForm: React.FC = () => {
       title: 'Property Details',
       component: (
         <div className="space-y-4">
+          <h3>PLEASE COMPLETE WITH FULLEST PARTICULARS</h3>
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium">Property Items</h3>
             <Button
@@ -857,14 +858,14 @@ const BurglaryClaimForm: React.FC = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor={`propertyItems.${index}.costPrice`}>Cost Price *</Label>
+                  <Label htmlFor={`propertyItems.${index}.costPrice`}>Cost Price of Property or Articles Stolen (  (₦)*</Label>
                   <Input
                     type="number"
                     {...formMethods.register(`propertyItems.${index}.costPrice`)}
                   />
                 </div>
                 <div>
-                  <Label>Date of Purchase *</Label>
+              
                   <DatePickerField
                     name={`propertyItems.${index}.dateOfPurchase`}
                     label="Date of Purchase"
@@ -874,14 +875,14 @@ const BurglaryClaimForm: React.FC = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor={`propertyItems.${index}.estimatedValue`}>Estimated value at time of loss *</Label>
+                  <Label htmlFor={`propertyItems.${index}.estimatedValue`}>Estimated value at time of loss (V) *</Label>
                   <Input
                     type="number"
                     {...formMethods.register(`propertyItems.${index}.estimatedValue`)}
                   />
                 </div>
                 <div>
-                  <Label htmlFor={`propertyItems.${index}.netAmountClaimed`}>Net amount claimed *</Label>
+                  <Label htmlFor={`propertyItems.${index}.netAmountClaimed`}>Net amount claimed (V) *</Label>
                   <Input
                     type="number"
                     {...formMethods.register(`propertyItems.${index}.netAmountClaimed`)}
