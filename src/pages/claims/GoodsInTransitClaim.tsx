@@ -54,17 +54,24 @@ const goodsInTransitClaimSchema = yup.object().shape({
   // Circumstances
   lossCircumstances: yup.string().required("Loss circumstances are required"),
   otherVehicleInvolved: yup.boolean(),
-  ownerNameAddress: yup.string().when('otherVehicleInvolved', {
+  ownerName: yup.string().when('otherVehicleInvolved', {
     is: true,
-    then: (schema) => schema.required("Owner name and address is required"),
+    then: (schema) => schema.required("Owner name is required"),
     otherwise: (schema) => schema.notRequired()
   }),
-  witnessNameAddress: yup.string(),
+  ownerAddress: yup.string().when('otherVehicleInvolved', {
+    is: true,
+    then: (schema) => schema.required("Owner address is required"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  witnessName: yup.string(),
+  witnessAddress: yup.string(),
   policeStationAdvised: yup.string(),
   dateReportedToPolice: yup.date().nullable(),
   dispatchAddress: yup.string().required("Dispatch address is required"),
   dispatchDate: yup.date().required("Dispatch date is required"),
-  consigneeNameAddress: yup.string().required("Consignee name and address is required"),
+  consigneeName: yup.string().required("Consignee name is required"),
+  consigneeAddress: yup.string().required("Consignee address is required"),
 
   // Goods Items
   goodsItems: yup.array().of(
@@ -85,16 +92,26 @@ const goodsInTransitClaimSchema = yup.object().shape({
     then: (schema) => schema.required("Transportation details are required"),
     otherwise: (schema) => schema.notRequired()
   }),
-  nameAddressOfinsurerOfTransporter: yup.string().when('isOwnerOfGoods', {
+  transporterInsurerName: yup.string().when('isOwnerOfGoods', {
     is: true,
-    then: (schema) => schema.required("Transporter insurer details are required"),
+    then: (schema) => schema.required("Transporter insurer name is required"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  transporterInsurerAddress: yup.string().when('isOwnerOfGoods', {
+    is: true,
+    then: (schema) => schema.required("Transporter insurer address is required"),
     otherwise: (schema) => schema.notRequired()
   }),
 
   // If claiming as carrier
-  goodsOwnerNameAddress: yup.string().when('isOwnerOfGoods', {
+  goodsOwnerName: yup.string().when('isOwnerOfGoods', {
     is: false,
-    then: (schema) => schema.required("Goods owner details are required"),
+    then: (schema) => schema.required("Goods owner name is required"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  goodsOwnerAddress: yup.string().when('isOwnerOfGoods', {
+    is: false,
+    then: (schema) => schema.required("Goods owner address is required"),
     otherwise: (schema) => schema.notRequired()
   }),
   goodsOwnerInsurer: yup.string().when('isOwnerOfGoods', {
@@ -108,7 +125,11 @@ const goodsInTransitClaimSchema = yup.object().shape({
   checkedByDriver: yup.boolean().required("Please confirm if goods were checked by driver"),
   vehicleRegistrationNumber: yup.string().required("Vehicle registration number is required"),
   loadedByYouOrStaff: yup.boolean().required("Please confirm who loaded the goods"),
-  receiptGiven: yup.boolean().required("Please confirm if receipt was given"),
+  receiptGiven: yup.boolean().when('loadedByYouOrStaff', {
+    is: true,
+    then: (schema) => schema.required("Please confirm if receipt was given"),
+    otherwise: (schema) => schema.notRequired()
+  }),
   claimMadeAgainstYou: yup.boolean().required("Please confirm if claim was made against you"),
   claimDateReceived: yup.date().when('claimMadeAgainstYou', {
     is: true,
@@ -155,13 +176,16 @@ interface GoodsInTransitClaimData {
   // Circumstances
   lossCircumstances: string;
   otherVehicleInvolved: boolean;
-  ownerNameAddress?: string;
-  witnessNameAddress?: string;
+  ownerName?: string;
+  ownerAddress?: string;
+  witnessName?: string;
+  witnessAddress?: string;
   policeStationAdvised?: string;
   dateReportedToPolice?: Date;
   dispatchAddress: string;
   dispatchDate: Date;
-  consigneeNameAddress: string;
+  consigneeName: string;
+  consigneeAddress: string;
 
   // Goods Items
   goodsItems: GoodsItem[];
@@ -172,10 +196,12 @@ interface GoodsInTransitClaimData {
   // If owner of goods
   isOwnerOfGoods: boolean;
   howAndByWhomWereGoodsTransported?: string;
-  nameAddressOfinsurerOfTransporter?: string;
+  transporterInsurerName?: string;
+  transporterInsurerAddress?: string;
 
   // If claiming as carrier
-  goodsOwnerNameAddress?: string;
+  goodsOwnerName?: string;
+  goodsOwnerAddress?: string;
   goodsOwnerInsurer?: string;
 
   // Vehicle/Transport
@@ -211,23 +237,28 @@ const defaultValues: Partial<GoodsInTransitClaimData> = {
   goodsPackaging: '',
   lossCircumstances: '',
   otherVehicleInvolved: false,
-  ownerNameAddress: '',
-  witnessNameAddress: '',
+  ownerName: '',
+  ownerAddress: '',
+  witnessName: '',
+  witnessAddress: '',
   policeStationAdvised: '',
   dispatchAddress: '',
-  consigneeNameAddress: '',
+  consigneeName: '',
+  consigneeAddress: '',
   goodsItems: [],
   inspectionAddress: '',
-  isOwnerOfGoods: true,
+  isOwnerOfGoods: false,
   howAndByWhomWereGoodsTransported: '',
-  nameAddressOfinsurerOfTransporter: '',
-  goodsOwnerNameAddress: '',
+  transporterInsurerName: '',
+  transporterInsurerAddress: '',
+  goodsOwnerName: '',
+  goodsOwnerAddress: '',
   goodsOwnerInsurer: '',
-  goodsSoundOnReceipt: true,
-  checkedByDriver: true,
+  goodsSoundOnReceipt: false,
+  checkedByDriver: false,
   vehicleRegistrationNumber: '',
-  loadedByYouOrStaff: true,
-  receiptGiven: true,
+  loadedByYouOrStaff: false,
+  receiptGiven: false,
   claimMadeAgainstYou: false,
   declarationAgreed: false,
   signatureOfPolicyholder: '',
@@ -290,7 +321,6 @@ const GoodsInTransitClaim: React.FC = () => {
   }, [formMethods, saveDraft]);
 
   // Calculate total value from goods items in real-time
-  // Old calculation logic: const total = watchedValues.goodsItems?.reduce((sum, item) => sum + (item.value || 0), 0) || 0;
   useEffect(() => {
     const subscription = formMethods.watch((data) => {
       const total = data.goodsItems?.reduce((sum, item) => 
@@ -384,48 +414,84 @@ const GoodsInTransitClaim: React.FC = () => {
       title: 'Policy Details',
       component: (
         <div className="space-y-6">
-          <FormField
-            control={formMethods.control}
-            name="policyNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Policy Number *</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter policy number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="policyNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Policy Number *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter policy number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Enter your insurance policy number as shown on your policy document</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={formMethods.control}
-              name="periodOfCoverFrom"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Period of Cover From *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="periodOfCoverFrom"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Period of Cover From *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>The start date of your insurance policy coverage period</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             
-            <FormField
-              control={formMethods.control}
-              name="periodOfCoverTo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Period of Cover To *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="periodOfCoverTo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Period of Cover To *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>The end date of your insurance policy coverage period</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       )
@@ -435,81 +501,141 @@ const GoodsInTransitClaim: React.FC = () => {
       title: 'Insured Details',
       component: (
         <div className="space-y-6">
-          <FormField
-            control={formMethods.control}
-            name="companyName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Company Name *</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter company name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="companyName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Company Name *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter company name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Enter the full legal name of your company as shown on the insurance policy</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
-          <FormField
-            control={formMethods.control}
-            name="address"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Address *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Enter full address" rows={3} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Address *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter full address" rows={3} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Enter your complete business address including street, city, state, and postal code</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={formMethods.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone *</FormLabel>
-                  <FormControl>
-                    <PhoneInput
-                      value={field.value || ''}
-                      onChange={field.onChange}
-                      placeholder="Enter phone number"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Phone *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                        <FormControl>
+                          <PhoneInput
+                            value={field.value || ''}
+                            onChange={field.onChange}
+                            placeholder="Enter phone number"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter your primary business phone number where we can reach you regarding this claim</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             
-            <FormField
-              control={formMethods.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email *</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="Enter email address" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Email *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="Enter email address" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter your business email address for claim correspondence and updates</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           
-          <FormField
-            control={formMethods.control}
-            name="businessType"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Business Type</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter type of business" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="businessType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Business Type
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter type of business" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Describe the nature of your business (e.g., manufacturing, retail, logistics, etc.)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       )
     },
@@ -519,152 +645,248 @@ const GoodsInTransitClaim: React.FC = () => {
       component: (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={formMethods.control}
-              name="dateOfLoss"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date of Loss *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="dateOfLoss"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Date of Loss *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter the exact date when the loss or damage to your goods occurred</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             
-            <FormField
-              control={formMethods.control}
-              name="timeOfLoss"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Time of Loss *</FormLabel>
-                  <FormControl>
-                    <Input type="time" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="timeOfLoss"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Time of Loss *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                        <FormControl>
+                          <Input type="time" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter the approximate time when the loss occurred (24-hour format)</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           
-          <FormField
-            control={formMethods.control}
-            name="placeOfOccurrence"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Place of Occurrence *</FormLabel>
-                <FormControl>
-                  <Input placeholder="Where did the loss occur?" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="placeOfOccurrence"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Place of Occurrence *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Where did the loss occur?" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Specify the exact location where the loss or damage occurred (city, state, landmark, etc.)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
-          <FormField
-            control={formMethods.control}
-            name="descriptionOfGoods"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description of Goods Concerned *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Describe the goods involved" rows={3} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="descriptionOfGoods"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Description of Goods Concerned *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Describe the goods involved" rows={3} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Provide a detailed description of the goods that were lost or damaged, including type, model, brand, etc.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={formMethods.control}
-              name="numberOfPackages"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Number of Packages *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Enter number"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="numberOfPackages"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Number of Packages *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Enter number"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter the total number of packages, boxes, containers, or units that were being transported</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             
-            <FormField
-              control={formMethods.control}
-              name="totalWeight"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Total Weight *</FormLabel>
-                  <FormControl>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Enter weight"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                      <Select 
-                        value={watchedValues.weightUnits} 
-                        onValueChange={(value) => formMethods.setValue('weightUnits', value)}
-                      >
-                        <SelectTrigger className="w-24">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="kg">kg</SelectItem>
-                          <SelectItem value="lbs">lbs</SelectItem>
-                          <SelectItem value="tons">tons</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="totalWeight"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Total Weight *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                        <FormControl>
+                          <div className="flex gap-2">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Enter weight"
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                            <Select 
+                              value={watchedValues.weightUnits} 
+                              onValueChange={(value) => formMethods.setValue('weightUnits', value)}
+                            >
+                              <SelectTrigger className="w-24">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="kg">kg</SelectItem>
+                                <SelectItem value="lbs">lbs</SelectItem>
+                                <SelectItem value="tons">tons</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter the total weight of all goods being transported and select the appropriate unit</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           
-          <FormField
-            control={formMethods.control}
-            name="totalValue"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Total Value (₦) *</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="Enter total value"
-                    {...field}
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="totalValue"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Total Value (₦) *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Enter total value"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Enter the total monetary value of all goods being transported in Nigerian Naira</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
-          <FormField
-            control={formMethods.control}
-            name="goodsPackaging"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Goods Packaging *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Describe packaging method" rows={2} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="goodsPackaging"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Goods Packaging *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Describe packaging method" rows={2} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Describe how the goods were packaged (e.g., cardboard boxes, wooden crates, plastic wrap, etc.)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       )
     },
@@ -720,7 +942,7 @@ const GoodsInTransitClaim: React.FC = () => {
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Enter the quantity of this item</p>
+                      <p>Enter the quantity of this specific item</p>
                     </TooltipContent>
                   </Tooltip>
                   
@@ -740,7 +962,7 @@ const GoodsInTransitClaim: React.FC = () => {
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Enter a detailed description of the item</p>
+                      <p>Enter a detailed description of this specific item including brand, model, specifications</p>
                     </TooltipContent>
                   </Tooltip>
                   
@@ -763,7 +985,7 @@ const GoodsInTransitClaim: React.FC = () => {
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Enter the monetary value of the item</p>
+                      <p>Enter the monetary value of this specific item in Nigerian Naira</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -785,137 +1007,323 @@ const GoodsInTransitClaim: React.FC = () => {
       title: 'Circumstances',
       component: (
         <div className="space-y-6">
-          <FormField
-            control={formMethods.control}
-            name="lossCircumstances"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Loss Circumstances *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Provide detailed circumstances of loss" rows={4} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="lossCircumstances"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Loss Circumstances *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Provide detailed circumstances of loss" rows={4} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Provide a detailed explanation of how the loss occurred, including all relevant circumstances and events</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
-          <FormField
-            control={formMethods.control}
-            name="otherVehicleInvolved"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Other Vehicle Involved</FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="otherVehicleInvolved"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="flex items-center gap-1">
+                          Other Vehicle Involved
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Check this box if another vehicle was involved in the incident that caused the loss</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           {watchedValues.otherVehicleInvolved && (
-            <FormField
-              control={formMethods.control}
-              name="ownerNameAddress"
-              render={({ field }) => (
-                <FormItem className="ml-6">
-                  <FormLabel>Owner Name & Address *</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Enter owner's name and address" rows={3} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="ml-6 space-y-4">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <FormField
+                      control={formMethods.control}
+                      name="ownerName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-1">
+                            Owner Name *
+                            <Info className="h-3 w-3" />
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter owner's name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter the name of the owner of the other vehicle involved in the incident</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <FormField
+                      control={formMethods.control}
+                      name="ownerAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-1">
+                            Owner Address *
+                            <Info className="h-3 w-3" />
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Enter owner's address" rows={3} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter the full address of the owner of the other vehicle</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           )}
           
-          <FormField
-            control={formMethods.control}
-            name="witnessNameAddress"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Witness Name & Address</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Enter witness name and address" rows={3} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="space-y-4">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="witnessName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Witness Name
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter witness name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter the name of any witness to the incident</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="witnessAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Witness Address
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Enter witness address" rows={3} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter the full address of the witness</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           
-          <FormField
-            control={formMethods.control}
-            name="policeStationAdvised"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Police Station Advised</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter police station name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="policeStationAdvised"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Police Station Advised
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter police station name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Enter the name of the police station that was notified about the incident</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
-          <FormField
-            control={formMethods.control}
-            name="dateReportedToPolice"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Date Reported to Police</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="dateReportedToPolice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Date Reported to Police
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Enter the date when the incident was reported to the police</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
-          <FormField
-            control={formMethods.control}
-            name="dispatchAddress"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Dispatch Address *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Enter dispatch address" rows={3} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="dispatchAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Dispatch Address *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter dispatch address" rows={3} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Enter the address from where the goods were dispatched or picked up</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
-          <FormField
-            control={formMethods.control}
-            name="dispatchDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Dispatch Date *</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="dispatchDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Dispatch Date *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Enter the date when the goods were dispatched or picked up for transport</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
-          <FormField
-            control={formMethods.control}
-            name="consigneeNameAddress"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Consignee Name & Address *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Enter consignee name and address" rows={3} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="space-y-4">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="consigneeName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Consignee Name *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter consignee name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter the name of the person or company who was to receive the goods</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="consigneeAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Consignee Address *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Enter consignee address" rows={3} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter the full address where the goods were to be delivered</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       )
     },
@@ -924,19 +1332,31 @@ const GoodsInTransitClaim: React.FC = () => {
       title: 'Where Inspected',
       component: (
         <div className="space-y-6">
-          <FormField
-            control={formMethods.control}
-            name="inspectionAddress"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Inspection Address *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Enter inspection address" rows={3} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="inspectionAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Inspection Address *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter inspection address" rows={3} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Enter the address where the damaged goods can be inspected by our claims assessor</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       )
     },
@@ -945,54 +1365,112 @@ const GoodsInTransitClaim: React.FC = () => {
       title: 'If You Are Owner of Goods',
       component: (
         <div className="space-y-6">
-          <FormField
-            control={formMethods.control}
-            name="isOwnerOfGoods"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>I am the owner of the goods</FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="isOwnerOfGoods"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="flex items-center gap-1">
+                          I am the owner of the goods
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Check this box if you are the legal owner of the goods that were lost or damaged</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           {watchedValues.isOwnerOfGoods && (
-            <>
-              <FormField
-                control={formMethods.control}
-                name="howAndByWhomWereGoodsTransported"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>How and By Whom Were Goods Transported *</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Describe transportation method and provider" rows={3} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={formMethods.control}
-                name="nameAddressOfinsurerOfTransporter"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name & Address of Insurer of Transporter *</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter transporter's insurer details" rows={3} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </>
+            <div className="space-y-4">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <FormField
+                      control={formMethods.control}
+                      name="howAndByWhomWereGoodsTransported"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-1">
+                            How and By Whom Were Goods Transported *
+                            <Info className="h-3 w-3" />
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Describe transportation method and provider" rows={3} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Describe the transportation method used and provide details about the transport company or carrier</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <FormField
+                      control={formMethods.control}
+                      name="transporterInsurerName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-1">
+                            Transporter Insurer Name *
+                            <Info className="h-3 w-3" />
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter transporter's insurer name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter the name of the insurance company that covers the transporter</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <FormField
+                      control={formMethods.control}
+                      name="transporterInsurerAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-1">
+                            Transporter Insurer Address *
+                            <Info className="h-3 w-3" />
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Enter transporter's insurer address" rows={3} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter the full address of the insurance company that covers the transporter</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           )}
         </div>
       )
@@ -1003,35 +1481,81 @@ const GoodsInTransitClaim: React.FC = () => {
       component: (
         <div className="space-y-6">
           {!watchedValues.isOwnerOfGoods && (
-            <>
-              <FormField
-                control={formMethods.control}
-                name="goodsOwnerNameAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Goods Owner Name & Address *</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter goods owner name and address" rows={3} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={formMethods.control}
-                name="goodsOwnerInsurer"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Goods Owner Insurer *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter goods owner insurer details" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </>
+            <TooltipProvider>
+              <div className="space-y-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <FormField
+                      control={formMethods.control}
+                      name="goodsOwnerName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-1">
+                            Goods Owner Name *
+                            <Info className="h-3 w-3" />
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter goods owner name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter the name of the person or company who owns the goods</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <FormField
+                      control={formMethods.control}
+                      name="goodsOwnerAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-1">
+                            Goods Owner Address *
+                            <Info className="h-3 w-3" />
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Enter goods owner address" rows={3} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter the full address of the goods owner</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <FormField
+                      control={formMethods.control}
+                      name="goodsOwnerInsurer"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-1">
+                            Goods Owner Insurer *
+                            <Info className="h-3 w-3" />
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter goods owner insurer details" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter the name of the insurance company that covers the goods owner</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
           )}
         </div>
       )
@@ -1041,133 +1565,231 @@ const GoodsInTransitClaim: React.FC = () => {
       title: 'Vehicle / Transport',
       component: (
         <div className="space-y-6">
-          <FormField
-            control={formMethods.control}
-            name="goodsSoundOnReceipt"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="goodsSoundOnReceipt"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="flex items-center gap-1">
+                          Goods Sound on Receipt *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Confirm whether the goods were in good condition when they were received for transport</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="checkedByDriver"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="flex items-center gap-1">
+                          Checked by Driver *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Confirm whether the driver checked the goods before transport</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="vehicleRegistrationNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Vehicle Registration Number *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter vehicle registration number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Enter the registration/license plate number of the vehicle used for transport</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="loadedByYouOrStaff"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="flex items-center gap-1">
+                          Loaded by You or Staff *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Confirm whether you or your staff loaded the goods onto the transport vehicle</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          {watchedValues.loadedByYouOrStaff && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="receiptGiven"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 ml-6">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel className="flex items-center gap-1">
+                            Receipt Given *
+                            <Info className="h-3 w-3" />
+                          </FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
                   />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Goods Sound on Receipt *</FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Confirm if a receipt was given when the goods were loaded by you or your staff</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           
-          <FormField
-            control={formMethods.control}
-            name="checkedByDriver"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1">
+                    What condition or carriage do you use (Please attach a specimen-copy) *
+                    <Info className="h-3 w-3" />
+                  </Label>
+                  <FileUpload
+                    onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, carriageConditionDocument: file }))}
+                    maxSize={3 * 1024 * 1024}
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                   />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Checked by Driver *</FormLabel>
                 </div>
-              </FormItem>
-            )}
-          />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Upload a document showing the terms and conditions of carriage. This should be a specimen copy of your standard carriage conditions. Maximum file size: 3MB</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
-          <FormField
-            control={formMethods.control}
-            name="vehicleRegistrationNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Vehicle Registration Number *</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter vehicle registration number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={formMethods.control}
-            name="loadedByYouOrStaff"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Loaded by You or Staff *</FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={formMethods.control}
-            name="receiptGiven"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Receipt Given *</FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
-          
-          <div className="space-y-2">
-            <Label>Carriage Condition Document (max 3MB)</Label>
-            <FileUpload
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, carriageConditionDocument: file }))}
-              maxSize={3 * 1024 * 1024}
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-            />
-          </div>
-          
-          <FormField
-            control={formMethods.control}
-            name="claimMadeAgainstYou"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Claim Made Against You *</FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="claimMadeAgainstYou"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="flex items-center gap-1">
+                          Claim Made Against You *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Confirm if any claim has been made against you regarding this loss</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           {watchedValues.claimMadeAgainstYou && (
-            <FormField
-              control={formMethods.control}
-              name="claimDateReceived"
-              render={({ field }) => (
-                <FormItem className="ml-6">
-                  <FormLabel>Claim Date Received *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="claimDateReceived"
+                    render={({ field }) => (
+                      <FormItem className="ml-6">
+                        <FormLabel className="flex items-center gap-1">
+                          Claim Date Received *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter the date when you received the claim made against you</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
         </div>
       )
@@ -1198,57 +1820,91 @@ const GoodsInTransitClaim: React.FC = () => {
             </div>
           </div>
           
-          <FormField
-            control={formMethods.control}
-            name="declarationAgreed"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    I agree to the data privacy notice and declaration above *
-                  </FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="declarationAgreed"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="flex items-center gap-1">
+                          I agree to the data privacy notice and declaration above *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>You must agree to the data privacy notice and declaration to proceed with your claim</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
-          <FormField
-            control={formMethods.control}
-            name="signatureOfPolicyholder"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Signature of Policyholder *</FormLabel>
-                <FormControl>
-                  <Input placeholder="Type your full name as digital signature" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="signatureOfPolicyholder"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Signature of Policyholder *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Type your full name as digital signature" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Type your full legal name as it appears on your identification document to serve as your digital signature</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
-          <FormField
-            control={formMethods.control}
-            name="dateSigned"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Date Signed *</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="date" 
-                    {...field}
-                    value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="dateSigned"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Date Signed *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field}
+                          value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>The date when you are signing this claim form (defaults to today's date)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       )
     }
