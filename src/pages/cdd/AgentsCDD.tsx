@@ -553,10 +553,19 @@ const AgentsCDD: React.FC = () => {
 
        <MultiStepForm
           steps={steps}
-          onSubmit={() => {
-                const isValid = formMethods.trigger();
-                if (isValid) setShowSummary(true);
-              }}
+          onSubmit={async () => { // Make the function async
+    const isValid = await formMethods.trigger(); // Await the validation result
+    if (isValid) {
+      setShowSummary(true); // This will now only run if validation passes
+    } else {
+      // Optional: Show an error message so you know validation failed.
+      toast({
+        title: "Incomplete Form",
+        description: "Please fill out all required fields in the final step.",
+        variant: "destructive",
+      });
+    }
+  }}
           isSubmitting={isSubmitting}
           submitButtonText="Submit CDD Form"
           formMethods={formMethods}
