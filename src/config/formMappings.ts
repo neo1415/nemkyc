@@ -1158,10 +1158,12 @@ export const FORM_MAPPINGS: FormMapping = {
       }
     ]
   },
-};
 
   // Contractors Plant & Machinery Claims
-'contractors-claims': {
+  'contractors-plant-machinery-claims': {
+
+  // Contractors Plant & Machinery Claims
+'contractors-plant-machinery-claims': {
   title: 'Contractors Plant & Machinery Claim',
   sections: [
     {
@@ -1237,7 +1239,7 @@ export const FORM_MAPPINGS: FormMapping = {
       ]
     }
   ]
-}
+},
 
   // Fidelity Guarantee Claims
  'fidelityGuaranteeClaims': {
