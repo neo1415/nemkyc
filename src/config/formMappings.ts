@@ -619,7 +619,7 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'numberOfChildren', label: 'Number of Children', type: 'number', editable: true },
           { key: 'agesOfChildren', label: 'Ages of Children', type: 'text', editable: true },
           { key: 'previousAccidents', label: 'Previous Accidents', type: 'text', editable: true },
-          { key: 'previousAccidentsDetails', label: 'Previous Accidents Details', type: 'text', editable: true },
+          { key: 'previousAccidentsDetails', label: 'Previous Accidents Details', type: 'text', editable: true, conditional: { dependsOn: 'previousAccidents', value: 'yes' } },
         ]
       },
       {
@@ -736,12 +736,13 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'averageMonthlyEarnings', label: 'Average Monthly Earnings', type: 'currency', editable: true },
           { key: 'occupation', label: 'Occupation', type: 'text', editable: true },
           { key: 'dateOfEmployment', label: 'Date of Employment', type: 'date', editable: true },
+          { key: 'durationEmployed', label: 'Employment Duration', type: 'text', editable: true },
           { key: 'notDirectlyEmployed', label: 'Not Directly Employed', type: 'boolean', editable: true },
-          { key: 'employerName', label: 'Employer Name', type: 'text', editable: true },
-          { key: 'employerAddress', label: 'Employer Address', type: 'textarea', editable: true },
+          { key: 'employerName', label: 'Employer Name', type: 'text', editable: true, conditional: { dependsOn: 'notDirectlyEmployed', value: 'true' }},
+          { key: 'employerAddress', label: 'Employer Address', type: 'textarea', editable: true, conditional: { dependsOn: 'notDirectlyEmployed', value: 'true' } },
           { key: 'maritalStatus', label: 'Marital Status', type: 'text', editable: true },
           { key: 'previousAccidents', label: 'Previous Accidents', type: 'text', editable: true },
-          { key: 'previousAccidentsDetails', label: 'Previous Accidents Details', type: 'textarea', editable: true },
+          { key: 'previousAccidentsDetails', label: 'Previous Accidents Details', type: 'textarea', editable: true, conditional: { dependsOn: 'previousAccidents', value: 'yes' } },
         ]
       },
       {
@@ -767,12 +768,13 @@ export const FORM_MAPPINGS: FormMapping = {
         title: 'Medical Details',
         fields: [
           { key: 'receivingTreatment', label: 'Receiving Treatment', type: 'text', editable: true },
-          { key: 'hospitalName', label: 'Hospital Name', type: 'text', editable: true },
-          { key: 'hospitalAddress', label: 'Hospital Address', type: 'textarea', editable: true },
+          { key: 'hospitalName', label: 'Hospital Name', type: 'text', editable: true, conditional: { dependsOn: 'receivingTreatment', value: 'yes' } },
+          { key: 'hospitalAddress', label: 'Hospital Address', type: 'textarea', editable: true, conditional: { dependsOn: 'receivingTreatment', value: 'yes' } },
           { key: 'stillInHospital', label: 'Still in Hospital', type: 'text', editable: true },
-          { key: 'dischargeDate', label: 'Discharge Date', type: 'date', editable: true },
+          { key: 'dischargeDate', label: 'Discharge Date', type: 'date', editable: true, conditional: { dependsOn: 'stillInHospital', value: 'no' } },
           { key: 'ableToDoduties', label: 'Able to Do Duties', type: 'text', editable: true },
-          { key: 'dutiesDetails', label: 'Duties Details', type: 'textarea', editable: true },
+          { key: 'dutiesDetails', label: 'Duties Details', type: 'textarea', editable: true, conditional: { dependsOn: 'ableToDoDuties', value: 'yes' } },
+          { key: 'dateNatureResumedWork', label: 'Date and Nature of Resumed Work', type: 'text', editable: true },
           { key: 'doctorName', label: 'Doctor Name', type: 'text', editable: true },
         ]
       },
@@ -855,7 +857,7 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'premisesTelephone', label: 'Premises Telephone', type: 'text', editable: true },
           { key: 'dateOfTheft', label: 'Date of Theft', type: 'date', editable: true },
           { key: 'timeOfTheft', label: 'Time of Theft', type: 'text', editable: true },
-          { key: 'howEntryEffected', label: 'How Entry Was Effected', type: 'textarea', editable: true },
+          { key: 'howEntryEffected', label: 'Give full details of how entry was affected', type: 'textarea', editable: true },
           { key: 'roomsEntered', label: 'Rooms Entered', type: 'textarea', editable: true },
           { key: 'premisesOccupied', label: 'Premises Occupied', type: 'boolean', editable: true },
           { key: 'lastOccupiedDate', label: 'Last Occupied Date', type: 'text', editable: true },
@@ -895,6 +897,7 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'status', label: 'Status', type: 'text', editable: true },
           { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy, label: 'Submitted By', type: 'date', editable: false },
           { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
           { key: 'formType', label: 'Form Type', type: 'text', editable: false },
         ]
