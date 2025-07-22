@@ -48,7 +48,7 @@ This application is a highly professional, production-grade insurance form suite
 ✅ For list of items with amounts/descriptions/totals, use an interactive table with “Add Row.”  
 ✅ For fixed series rows (like months 1–12), build them statically.
 
----
+
 
 ## 📌 FILE UPLOADS
 
