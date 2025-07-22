@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { CheckCircle2, Loader2, Trash2, Plus } from 'lucide-react';
+import FileUpload from '@/components/common/FileUpload';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
@@ -77,6 +78,10 @@ interface FireSpecialPerilsClaimData {
     valueOfSalvage: number;
     netAmountClaimed: number;
   }>;
+  
+  // File Uploads
+  picturesOfLoss: File[];
+  additionalDocuments: File[];
   
   // Declaration
   agreeToDataPrivacy: boolean;
@@ -194,9 +199,11 @@ const FireSpecialPerilsClaim: React.FC = () => {
         valueOfSalvage: 0, 
         netAmountClaimed: 0 
       }],
-  agreeToDataPrivacy: false,
-  declarationTrue: false,
-  signature: ''
+      picturesOfLoss: [],
+      additionalDocuments: [],
+      agreeToDataPrivacy: false,
+      declarationTrue: false,
+      signature: ''
     },
   });
 
@@ -953,6 +960,145 @@ const FireSpecialPerilsClaim: React.FC = () => {
               <Plus className="h-4 w-4 mr-2" />
               Add Another Item
             </Button>
+          </div>
+        </FormSection>
+      ),
+    },
+    {
+      id: 'file-uploads',
+      title: 'File Uploads',
+      component: (
+        <FormSection title="Required Documents" description="Upload the required supporting documents">
+          <div className="space-y-6">
+            <FileUpload
+              label="Fire Brigade Report *"
+              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, fireBrigadeReport: file }))}
+              currentFile={uploadedFiles.fireBrigadeReport}
+              accept=".pdf,.jpg,.jpeg,.png"
+              maxSize={5}
+            />
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium">Pictures of Loss *</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const currentPictures = watchedValues.picturesOfLoss || [];
+                    formMethods.setValue('picturesOfLoss', [...currentPictures, null]);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add More Pictures
+                </Button>
+              </div>
+              
+              {(watchedValues.picturesOfLoss?.length > 0 ? watchedValues.picturesOfLoss : [null]).map((_, index) => (
+                <div key={`picture-${index}`} className="flex items-start gap-4">
+                  <div className="flex-1">
+                    <FileUpload
+                      label={`Picture ${index + 1}`}
+                      onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, [`pictureOfLoss${index + 1}`]: file }))}
+                      currentFile={uploadedFiles[`pictureOfLoss${index + 1}`]}
+                      accept=".jpg,.jpeg,.png"
+                      maxSize={5}
+                    />
+                  </div>
+                  {(watchedValues.picturesOfLoss?.length > 1) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const currentPictures = watchedValues.picturesOfLoss || [];
+                        const updatedPictures = currentPictures.filter((_, i) => i !== index);
+                        formMethods.setValue('picturesOfLoss', updatedPictures);
+                        
+                        // Remove from uploaded files
+                        setUploadedFiles(prev => {
+                          const updated = { ...prev };
+                          delete updated[`pictureOfLoss${index + 1}`];
+                          return updated;
+                        });
+                      }}
+                      className="mt-8"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <FileUpload
+              label="Police Report *"
+              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, policeReport: file }))}
+              currentFile={uploadedFiles.policeReport}
+              accept=".pdf,.jpg,.jpeg,.png"
+              maxSize={5}
+            />
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium">Additional Documents</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const currentDocs = watchedValues.additionalDocuments || [];
+                    formMethods.setValue('additionalDocuments', [...currentDocs, null]);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Document
+                </Button>
+              </div>
+              
+              {(watchedValues.additionalDocuments?.length > 0) && 
+                watchedValues.additionalDocuments.map((_, index) => (
+                  <div key={`additional-${index}`} className="flex items-start gap-4">
+                    <div className="flex-1">
+                      <FileUpload
+                        label={`Additional Document ${index + 1}`}
+                        onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, [`additionalDocument${index + 1}`]: file }))}
+                        currentFile={uploadedFiles[`additionalDocument${index + 1}`]}
+                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                        maxSize={5}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const currentDocs = watchedValues.additionalDocuments || [];
+                        const updatedDocs = currentDocs.filter((_, i) => i !== index);
+                        formMethods.setValue('additionalDocuments', updatedDocs);
+                        
+                        // Remove from uploaded files
+                        setUploadedFiles(prev => {
+                          const updated = { ...prev };
+                          delete updated[`additionalDocument${index + 1}`];
+                          return updated;
+                        });
+                      }}
+                      className="mt-8"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))
+              }
+            </div>
+            
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm font-medium text-blue-800">
+                For claims status enquiries, call 01 448 9570
+              </p>
+            </div>
           </div>
         </FormSection>
       ),
