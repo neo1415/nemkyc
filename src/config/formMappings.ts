@@ -2260,7 +2260,7 @@ export const FORM_MAPPINGS: FormMapping = {
     {
       title: 'Company Information',
       fields: [
-        { key: 'nemBranchOffice', label: 'NEM Branch Office', type: 'text', editable: true },
+        { key: 'branchOffice', label: 'NEM Branch Office', type: 'text', editable: true },
         { key: 'insured', label: 'Insured', type: 'text', editable: true },
         { key: 'officeAddress', label: 'Office Address', type: 'textarea', editable: true },
         { 
@@ -2278,12 +2278,12 @@ export const FORM_MAPPINGS: FormMapping = {
         { key: 'website', label: 'Website', type: 'url', editable: true },
         { key: 'incorporationNumber', label: 'Incorporation Number', type: 'text', editable: true },
         { key: 'incorporationState', label: 'Incorporation State', type: 'text', editable: true },
-        { key: 'incorporationDate', label: 'Date of Incorporation/Registration', type: 'date', editable: true },
-        { key: 'bvn', label: 'BVN', type: 'text', editable: true },
-        { key: 'contactPersonMobile', label: 'Contact Person Mobile Number', type: 'text', editable: true },
-        { key: 'taxId', label: 'Tax Identification Number', type: 'text', editable: true },
+        { key: 'dateOfIncorporationRegistration', label: 'Date of Incorporation/Registration', type: 'date', editable: true },
+        { key: 'BVNNumber', label: 'BVN', type: 'text', editable: true },
+        { key: 'contactPersonNo', label: 'Contact Person Mobile Number', type: 'text', editable: true },
+        { key: 'taxIdNo', label: 'Tax Identification Number', type: 'text', editable: true },
         { key: 'email', label: 'Email Address', type: 'email', editable: true },
-        { key: 'businessType', label: 'Business Type/Occupation', type: 'text', editable: true },
+        { key: 'natureOfBusiness', label: 'Business Type/Occupation', type: 'text', editable: true },
         { 
           key: 'estimatedTurnover', 
           label: 'Estimated Turnover', 
@@ -2386,7 +2386,7 @@ export const FORM_MAPPINGS: FormMapping = {
         { key: 'dateOfBirth', label: 'Date of Birth', type: 'date', editable: true },
         { key: 'mothersMaidenName', label: 'Mother\'s Maiden Name', type: 'text', editable: true },
         { key: 'employersName', label: 'Employer\'s Name', type: 'text', editable: true },
-        { key: 'employersTelephone', label: 'Employer\'s Telephone', type: 'text', editable: true },
+        { key: 'employersTelephoneNumber', label: 'Employer\'s Telephone', type: 'text', editable: true },
         { key: 'employersAddress', label: 'Employer\'s Address', type: 'textarea', editable: true },
         { key: 'city', label: 'City', type: 'text', editable: true },
         { key: 'state', label: 'State', type: 'text', editable: true },
@@ -2403,12 +2403,12 @@ export const FORM_MAPPINGS: FormMapping = {
           ]
         },
         { key: 'residentialAddress', label: 'Residential Address', type: 'textarea', editable: true },
-        { key: 'mobileNumber', label: 'Mobile Number', type: 'text', editable: true },
+        { key: 'GSMNo', label: 'Mobile Number', type: 'text', editable: true },
         { key: 'email', label: 'Email', type: 'email', editable: true },
-        { key: 'taxId', label: 'Tax Identification Number', type: 'text', editable: true },
-        { key: 'bvn', label: 'BVN', type: 'text', editable: true },
+        { key: 'taxIDNo', label: 'Tax Identification Number', type: 'text', editable: true },
+        { key: 'BVN', label: 'BVN', type: 'text', editable: true },
         { 
-          key: 'idType', 
+          key: 'identificationType',
           label: 'ID Type', 
           type: 'select', 
           editable: true,
@@ -2420,12 +2420,12 @@ export const FORM_MAPPINGS: FormMapping = {
             { value: 'NIN', label: 'NIN' },
           ]
         },
-        { key: 'identificationNumber', label: 'Identification Number', type: 'text', editable: true },
+        { key: 'idNumber', label: 'Identification Number', type: 'text', editable: true },
         { key: 'issuingCountry', label: 'Issuing Country', type: 'text', editable: true },
         { key: 'issuedDate', label: 'Issued Date', type: 'date', editable: true },
         { key: 'expiryDate', label: 'Expiry Date', type: 'date', editable: true },
         { 
-          key: 'incomeSource', 
+          key: 'sourceOfIncome', 
           label: 'Source of Income', 
           type: 'select', 
           editable: true,
@@ -2436,11 +2436,11 @@ export const FORM_MAPPINGS: FormMapping = {
           ]
         },
         { 
-          key: 'incomeSourceOther', 
+          key: 'sourceOfIncomeOther', 
           label: 'Please specify other income source', 
           type: 'text', 
           editable: true,
-          conditional: { dependsOn: 'incomeSource', value: 'Other' }
+          conditional: { dependsOn: 'sourceOfIncome', value: 'Other' }
         },
         { 
           key: 'annualIncomeRange', 

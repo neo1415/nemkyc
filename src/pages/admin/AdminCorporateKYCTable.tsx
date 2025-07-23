@@ -65,10 +65,15 @@ const AdminCorporateKYCTable: React.FC = () => {
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const data = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as CorporateCDDData[];
+      const data = querySnapshot.docs.map(doc => {
+        const docData = doc.data();
+        return {
+          id: doc.id,
+          ...docData,
+          // Handle createdAt fallback
+          createdAt: docData.createdAt || docData.submittedAt || docData.timestamp
+        };
+      }) as CorporateCDDData[];
       setRows(data);
       setLoading(false);
     });
@@ -79,12 +84,12 @@ const AdminCorporateKYCTable: React.FC = () => {
   // Filter data based on search and status
   const filteredRows = rows.filter(row => {
     const matchesSearch = 
-      row.companyName?.toLowerCase().includes(searchText.toLowerCase()) ||
+      row.insured?.toLowerCase().includes(searchText.toLowerCase()) ||
       row.email?.toLowerCase().includes(searchText.toLowerCase()) ||
-      row.telephone?.includes(searchText) ||
+      row.contactPersonNo?.includes(searchText) ||
       row.incorporationNumber?.includes(searchText) ||
-      row.taxId?.includes(searchText) ||
-      row.businessNature?.toLowerCase().includes(searchText.toLowerCase());
+      row.taxIdNo?.includes(searchText) ||
+      row.natureOfBusiness?.toLowerCase().includes(searchText.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || row.status === statusFilter;
     
@@ -92,7 +97,7 @@ const AdminCorporateKYCTable: React.FC = () => {
   });
 
   const handleView = (id: string) => {
-    navigate(`/admin/form/corporate-kyc/${id}`);
+    navigate(`/admin/form/corporate-kyc-form/${id}`);
   };
 
   const handleDelete = async (id: string) => {
@@ -172,7 +177,7 @@ const AdminCorporateKYCTable: React.FC = () => {
       valueFormatter: (params: any) => formatDate(params.value)
     },
     {
-      field: 'companyName',
+      field: 'insured',
       headerName: 'Company Name',
       width: 200
     },
@@ -182,7 +187,7 @@ const AdminCorporateKYCTable: React.FC = () => {
       width: 200
     },
     {
-      field: 'telephone',
+      field: 'contactPersonNo',
       headerName: 'Telephone',
       width: 130
     },
@@ -197,12 +202,12 @@ const AdminCorporateKYCTable: React.FC = () => {
       width: 100
     },
     {
-      field: 'businessNature',
+      field: 'natureOfBusiness',
       headerName: 'Business Nature',
       width: 150
     },
     {
-      field: 'taxId',
+      field: 'taxIdNo',
       headerName: 'Tax ID',
       width: 120
     }
