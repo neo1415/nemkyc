@@ -637,45 +637,51 @@ const CorporateCDD: React.FC = () => {
       id: 'uploads',
       title: 'Uploads',
       component: (
-         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <h4 className="font-medium mb-2">Upload CAC Certificater</h4>
-          <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, cacCertificate: file }));
-                  toast({ title: "File selected for upload" });
-                }}
-                currentFile={uploadedFiles.cacCertificate}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { cacCertificate, ...rest } = prev;
-                    return rest;
-                  });
-                }}
-              />
-               </div>
+      <div className="space-y-4">
+  {/* Upload CAC Certificate */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-2">
+      <h4 className="font-medium">Upload CAC Certificate</h4>
+      <FileUpload
+        accept="application/pdf,image/*"
+        maxSize={3 * 1024 * 1024}
+        onFileSelect={(file) => {
+          setUploadedFiles(prev => ({ ...prev, cacCertificate: file }));
+          toast({ title: "File selected for upload" });
+        }}
+        currentFile={uploadedFiles.cacCertificate}
+        onFileRemove={() => {
+          setUploadedFiles(prev => {
+            const { cacCertificate, ...rest } = prev;
+            return rest;
+          });
+        }}
+      />
+    </div>
+  </div>
 
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <h4 className="font-medium mb-2">Upload Means of Identification</h4>
-           <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, identification: file }));
-                  toast({ title: "File selected for upload" });
-                }}
-                currentFile={uploadedFiles.identification}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { identification, ...rest } = prev;
-                    return rest;
-                  });
-                }}
-              />
-            </div>  
-        </div>
+  {/* Upload Means of Identification */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-2">
+      <h4 className="font-medium">Upload Means of Identification</h4>
+      <FileUpload
+        accept="application/pdf,image/*"
+        maxSize={3 * 1024 * 1024}
+        onFileSelect={(file) => {
+          setUploadedFiles(prev => ({ ...prev, identification: file }));
+          toast({ title: "File selected for upload" });
+        }}
+        currentFile={uploadedFiles.identification}
+        onFileRemove={() => {
+          setUploadedFiles(prev => {
+            const { identification, ...rest } = prev;
+            return rest;
+          });
+        }}
+      />
+    </div>
+  </div>
+</div>
       )
     },
     {
