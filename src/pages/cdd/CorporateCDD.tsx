@@ -29,21 +29,21 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 const corporateCDDSchema = yup.object().shape({
   // Company Info
   companyName: yup.string().min(3).max(50).required("Company name is required"),
-  registeredAddress: yup.string().min(3).max(60).required("Registered address is required"),
+  registeredCompanyAddress: yup.string().min(3).max(60).required("Registered address is required"),
   incorporationNumber: yup.string().min(7).max(15).required("Incorporation number is required"),
   incorporationState: yup.string().min(3).max(50).required("Incorporation state is required"),
-  dateOfIncorporation: yup.date().required("Date of incorporation is required"),
+  dateOfIncorporationRegistration: yup.date().required("Date of incorporation is required"),
   natureOfBusiness: yup.string().min(3).max(60).required("Nature of business is required"),
-  companyType: yup.string().required("Company type is required"),
-  companyTypeOther: yup.string().when('companyType', {
+  companyLegalForm: yup.string().required("Company type is required"),
+  companyLegalFormOther: yup.string().when('companyType', {
     is: 'Other',
     then: (schema) => schema.required("Please specify other company type"),
     otherwise: (schema) => schema.notRequired()
   }),
   email: yup.string().email("Valid email is required").min(5).max(50).required("Email is required"),
   website: yup.string().required("Website is required"),
-  taxId: yup.string().min(6).max(15),
-  telephone: yup.string().min(5).max(11).required("Telephone number is required"),
+  taxIdentificationNumber: yup.string().min(6).max(15),
+ telephoneNumber: yup.string().min(5).max(11).required("Telephone number is required"),
 
   // Directors
   directors: yup.array().of(
