@@ -40,14 +40,14 @@ const individualKYCSchema = yup.object().shape({
   country: yup.string().required("Country is required"),
   nationality: yup.string().required("Nationality is required"),
   residentialAddress: yup.string().required("Residential address is required"),
-  mobileNumber: yup.string().required("Mobile number is required"),
-  email: yup.string().email("Valid email is required").required("Email is required"),
-  bvn: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
-  idType: yup.string().required("ID type is required"),
-  identificationNumber: yup.string().required("Identification number is required"),
+  GSMNo: yup.string().required("Mobile number is required"),
+  emailAddress: yup.string().email("Valid email is required").required("Email is required"),
+  BVN: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+  identificationType: yup.string().required("ID type is required"),
+  idNumber: yup.string().required("Identification number is required"),
   issuingCountry: yup.string().required("Issuing country is required"),
   issuedDate: yup.date().required("Issued date is required"),
-  incomeSource: yup.string().required("Income source is required"),
+  sourceOfIncome: yup.string().required("Income source is required"),
   annualIncomeRange: yup.string().required("Annual income range is required"),
   premiumPaymentSource: yup.string().required("Premium payment source is required"),
   localBankName: yup.string().required("Bank name is required"),
@@ -70,24 +70,24 @@ const defaultValues = {
   dateOfBirth: '',
   mothersMaidenName: '',
   employersName: '',
-  employersTelephone: '',
+  employersTelephoneNumber: '',
   employersAddress: '',
   city: '',
   state: '',
   country: '',
   nationality: '',
   residentialAddress: '',
-  mobileNumber: '',
+  GSMNo: '',
   email: '',
-  taxId: '',
-  bvn: '',
-  idType: '',
-  identificationNumber: '',
+  taxIDNo: '',
+  BVN: '',
+  identificationType: '',
+  idNumber: '',
   issuingCountry: '',
   issuedDate: '',
   expiryDate: '',
-  incomeSource: '',
-  incomeSourceOther: '',
+  sourceOfIncome: '',
+  sourceOfIncomeOther: '',
   annualIncomeRange: '',
   premiumPaymentSource: '',
   premiumPaymentSourceOther: '',
@@ -316,10 +316,10 @@ const IndividualKYC: React.FC = () => {
               />
             </div>
             <div>
-              <Label htmlFor="employersTelephone">Employer's Telephone</Label>
+              <Label htmlFor="employersTelephoneNumber">Employer's Telephone</Label>
               <Input
-                id="employersTelephone"
-                {...formMethods.register('employersTelephone')}
+                id="employersTelephoneNumber"
+                {...formMethods.register('employersTelephoneNumber')}
               />
             </div>
           </div>
@@ -383,10 +383,10 @@ const IndividualKYC: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="mobileNumber">Mobile Number *</Label>
+              <Label htmlFor="GSMNo">Mobile Number *</Label>
               <Input
-                id="mobileNumber"
-                {...formMethods.register('mobileNumber')}
+                id="GSMNo"
+                {...formMethods.register('GSMNo')}
               />
             </div>
             <div>
@@ -401,18 +401,18 @@ const IndividualKYC: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="taxId">Tax Identification Number</Label>
+              <Label htmlFor="taxIDNo">Tax Identification Number</Label>
               <Input
-                id="taxId"
-                {...formMethods.register('taxId')}
+                id="taxIDNo"
+                {...formMethods.register('taxIDNo')}
               />
             </div>
             <div>
-              <Label htmlFor="bvn">BVN *</Label>
+              <Label htmlFor="BVN">BVN *</Label>
               <Input
-                id="bvn"
+                id="BVN"
                 maxLength={11}
-                {...formMethods.register('bvn')}
+                {...formMethods.register('BVN')}
               />
             </div>
           </div>
@@ -420,8 +420,8 @@ const IndividualKYC: React.FC = () => {
           <div>
             <Label>ID Type *</Label>
             <Select
-              value={formMethods.watch('idType')}
-              onValueChange={(value) => formMethods.setValue('idType', value)}
+              value={formMethods.watch('identificationType')}
+              onValueChange={(value) => formMethods.setValue('identificationType', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Choose ID Type" />
@@ -438,10 +438,10 @@ const IndividualKYC: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="identificationNumber">Identification Number *</Label>
+              <Label htmlFor="idNumber">Identification Number *</Label>
               <Input
-                id="identificationNumber"
-                {...formMethods.register('identificationNumber')}
+                id="idNumber"
+                {...formMethods.register('idNumber')}
               />
             </div>
             <div>
@@ -467,8 +467,8 @@ const IndividualKYC: React.FC = () => {
           <div>
             <Label>Source of Income *</Label>
             <Select
-              value={formMethods.watch('incomeSource')}
-              onValueChange={(value) => formMethods.setValue('incomeSource', value)}
+              value={formMethods.watch('sourceOfIncome')}
+              onValueChange={(value) => formMethods.setValue('sourceOfIncome', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Choose Income Source" />
@@ -481,12 +481,12 @@ const IndividualKYC: React.FC = () => {
             </Select>
           </div>
 
-          {formMethods.watch('incomeSource') === 'Other' && (
+          {formMethods.watch('sourceOfIncome') === 'Other' && (
             <div>
-              <Label htmlFor="incomeSourceOther">Please specify other income source *</Label>
+              <Label htmlFor="sourceOfIncomeOther">Please specify other income source *</Label>
               <Input
-                id="incomeSourceOther"
-                {...formMethods.register('incomeSourceOther')}
+                id="sourceOfIncomeOther"
+                {...formMethods.register('sourceOfIncomeOther')}
               />
             </div>
           )}
@@ -623,15 +623,15 @@ const IndividualKYC: React.FC = () => {
               onFileSelect={(file) => {
                 setUploadedFiles(prev => ({
                   ...prev,
-                  identificationDocument: file
+                  identification: file
                 }));
               }}
               maxSize={3}
             />
-            {uploadedFiles.identificationDocument && (
+            {uploadedFiles.identification && (
               <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
                 <Check className="h-4 w-4" />
-                {uploadedFiles.identificationDocument.name}
+                {uploadedFiles.identification.name}
               </div>
             )}
           </div>
