@@ -2176,7 +2176,7 @@ export const FORM_MAPPINGS: FormMapping = {
   },
 
 'brokers-kyc': {
-    title: 'Brokers KYC Form',
+    title: 'Brokers CDD Form',
     sections: [
       {
         title: 'Company Information',
@@ -2349,7 +2349,7 @@ export const FORM_MAPPINGS: FormMapping = {
   ]
 },
 
-'individual-kyc-form': {
+'Individual-kyc-form': {
   title: 'Individual KYC Form',
   sections: [
     {
