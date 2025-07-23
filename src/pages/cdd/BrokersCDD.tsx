@@ -808,31 +808,36 @@ const BrokersCDD: React.FC = () => {
         </div>
       )
     },
-    {
+   {
       id: 'declaration',
-      title: 'Declaration',
+      title: 'Data Privacy & Declaration',
       component: (
         <div className="space-y-6">
-          <div className="border rounded-lg p-6 bg-muted/50">
-            <h3 className="text-lg font-semibold mb-4">Data Privacy and Consent</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              I hereby agree to the processing of my personal data by NEM Insurance in accordance with the Data Protection Act. 
-              I understand that my information will be used for the purpose of customer due diligence and policy administration.
-            </p>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="agreeToDataPrivacy"
-                checked={watchedValues.agreeToDataPrivacy || false}
-                onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked as boolean)}
-              />
-              <label
-                htmlFor="agreeToDataPrivacy"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                I agree to the data privacy policy *
-              </label>
+          <div className="p-4 bg-muted rounded-lg">
+            <h3 className="font-medium mb-2">Data Privacy</h3>
+            <div className="text-sm text-muted-foreground space-y-2">
+              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
             </div>
+            
+            <h3 className="font-medium mb-2 mt-4">Declaration</h3>
+            <div className="text-sm text-muted-foreground space-y-2">
+              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-2">
+            <Checkbox
+              id="agreeToDataPrivacy"
+              checked={watchedValues.agreeToDataPrivacy}
+              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked === true)}
+            />
+            <Label htmlFor="agreeToDataPrivacy" className="text-sm">
+              I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge *
+            </Label>
           </div>
           
           <div>
