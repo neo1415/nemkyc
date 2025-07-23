@@ -101,7 +101,7 @@ const FormViewer: React.FC = () => {
     }
   };
 
-  const shouldShowField = (field: FormField, formData: any) => {
+  const shouldShowField = (field: FormField, watchedValues: any) => {
     if (!field.conditional) {
       // Check if this is a flat director field and we have a directors array
       const flatDirectorFieldPatterns = [
@@ -115,14 +115,14 @@ const FormViewer: React.FC = () => {
       ];
       
       // If we have a directors array and this field is a flat director field, don't show it
-      if (formData.directors && Array.isArray(formData.directors) && flatDirectorFieldPatterns.includes(field.key)) {
+      if (watchedValues.directors && Array.isArray(watchedValues.directors) && flatDirectorFieldPatterns.includes(field.key)) {
         return false;
       }
       
       return true;
     }
     
-    const dependentValue = formData[field.conditional.dependsOn];
+    const dependentValue = watchedValues[field.conditional.dependsOn];
     return dependentValue === field.conditional.value;
   };
 

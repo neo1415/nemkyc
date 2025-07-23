@@ -148,6 +148,7 @@ const CorporateKYC: React.FC = () => {
     control: formMethods.control,
     name: 'directors'
   });
+  const watchedValues = formMethods.watch();
 
   // Check for pending submission when component mounts
   useEffect(() => {
