@@ -1895,117 +1895,97 @@ export const FORM_MAPPINGS: FormMapping = {
     ]
   },
 
-  'corporate-kyc': {
-    title: 'Corporate CDD Form',
-    sections: [
-      {
-        title: 'Company Information',
-        fields: [
-          { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
-          { key: 'registeredAddress', label: 'Registered Company Address', type: 'textarea', editable: true },
-          { key: 'incorporationNumber', label: 'Incorporation Number', type: 'text', editable: true },
-          { key: 'incorporationState', label: 'Incorporation State', type: 'text', editable: true },
-          { key: 'dateOfIncorporation', label: 'Date of Incorporation/Registration', type: 'date', editable: true },
-          { key: 'natureOfBusiness', label: 'Nature of Business', type: 'textarea', editable: true },
-          { key: 'companyType', label: 'Company Type', type: 'text', editable: true },
-          { key: 'companyTypeOther', label: 'Company Type (Other)', type: 'text', editable: true, conditional: { dependsOn: 'companyType', value: 'Other' } },
-          { key: 'email', label: 'Email Address', type: 'email', editable: true },
-          { key: 'website', label: 'Website', type: 'text', editable: true },
-          { key: 'taxId', label: 'Tax Identification Number', type: 'text', editable: true },
-          { key: 'telephone', label: 'Telephone Number', type: 'text', editable: true }
-        ]
-      },
-      {
-        title: 'Directors Information',
-        fields: [
-          { key: 'directors', label: 'Directors', type: 'array', editable: false },
-          // Individual director fields for flat structure compatibility
-          { key: 'firstName', label: 'Director 1 First Name', type: 'text', editable: true },
-          { key: 'middleName', label: 'Director 1 Middle Name', type: 'text', editable: true },
-          { key: 'lastName', label: 'Director 1 Last Name', type: 'text', editable: true },
-          { key: 'email', label: 'Director 1 Email', type: 'email', editable: true },
-          { key: 'phoneNumber', label: 'Director 1 Phone Number', type: 'text', editable: true },
-          { key: 'dob', label: 'Director 1 Date of Birth', type: 'date', editable: true },
-          { key: 'nationality', label: 'Director 1 Nationality', type: 'text', editable: true },
-          { key: 'occupation', label: 'Director 1 Occupation', type: 'text', editable: true },
-          { key: 'residentialAddress', label: 'Director 1 Residential Address', type: 'textarea', editable: true },
-          { key: 'idType', label: 'Director 1 ID Type', type: 'text', editable: true },
-          { key: 'idNumber', label: 'Director 1 ID Number', type: 'text', editable: true },
-          { key: 'issuedDate', label: 'Director 1 ID Issued Date', type: 'date', editable: true },
-          { key: 'expiryDate', label: 'Director 1 ID Expiry Date', type: 'date', editable: true },
-          { key: 'issuingBody', label: 'Director 1 ID Issuing Body', type: 'text', editable: true },
-          { key: 'placeOfBirth', label: 'Director 1 Place of Birth', type: 'text', editable: true },
-          { key: 'employersName', label: 'Director 1 Employers Name', type: 'text', editable: true },
-          { key: 'employersPhoneNumber', label: 'Director 1 Employers Phone Number', type: 'text', editable: true },
-          { key: 'sourceOfIncome', label: 'Director 1 Source of Income', type: 'text', editable: true },
-          { key: 'taxIDNumber', label: 'Director 1 Tax ID Number', type: 'text', editable: true },
-          { key: 'BVNNumber', label: 'Director 1 BVN Number', type: 'text', editable: true },
-          // Director 2 fields
-          { key: 'firstName2', label: 'Director 2 First Name', type: 'text', editable: true },
-          { key: 'middleName2', label: 'Director 2 Middle Name', type: 'text', editable: true },
-          { key: 'lastName2', label: 'Director 2 Last Name', type: 'text', editable: true },
-          { key: 'email2', label: 'Director 2 Email', type: 'email', editable: true },
-          { key: 'phoneNumber2', label: 'Director 2 Phone Number', type: 'text', editable: true },
-          { key: 'dob2', label: 'Director 2 Date of Birth', type: 'date', editable: true },
-          { key: 'nationality2', label: 'Director 2 Nationality', type: 'text', editable: true },
-          { key: 'occupation2', label: 'Director 2 Occupation', type: 'text', editable: true },
-          { key: 'residentialAddress2', label: 'Director 2 Residential Address', type: 'textarea', editable: true },
-          { key: 'idType2', label: 'Director 2 ID Type', type: 'text', editable: true },
-          { key: 'idNumber2', label: 'Director 2 ID Number', type: 'text', editable: true },
-          { key: 'issuedDate2', label: 'Director 2 ID Issued Date', type: 'date', editable: true },
-          { key: 'expiryDate2', label: 'Director 2 ID Expiry Date', type: 'date', editable: true },
-          { key: 'issuingBody2', label: 'Director 2 ID Issuing Body', type: 'text', editable: true },
-          { key: 'placeOfBirth2', label: 'Director 2 Place of Birth', type: 'text', editable: true },
-          { key: 'employersName2', label: 'Director 2 Employers Name', type: 'text', editable: true },
-          { key: 'employersPhoneNumber2', label: 'Director 2 Employers Phone Number', type: 'text', editable: true },
-          { key: 'sourceOfIncome2', label: 'Director 2 Source of Income', type: 'text', editable: true },
-          { key: 'taxIDNumber2', label: 'Director 2 Tax ID Number', type: 'text', editable: true },
-          { key: 'BVNNumber2', label: 'Director 2 BVN Number', type: 'text', editable: true }
-        ]
-      },
-      {
-        title: 'Account Details',
-        fields: [
-          { key: 'bankName', label: 'Bank Name', type: 'text', editable: true },
-          { key: 'accountNumber', label: 'Account Number', type: 'text', editable: true },
-          { key: 'bankBranch', label: 'Bank Branch', type: 'text', editable: true },
-          { key: 'accountOpeningDate', label: 'Account Opening Date', type: 'date', editable: true },
-          { key: 'foreignBankName', label: 'Foreign Bank Name', type: 'text', editable: true },
-          { key: 'foreignAccountNumber', label: 'Foreign Account Number', type: 'text', editable: true },
-          { key: 'foreignBankBranch', label: 'Foreign Bank Branch', type: 'text', editable: true },
-          { key: 'foreignAccountOpeningDate', label: 'Foreign Account Opening Date', type: 'date', editable: true }
-        ]
-      },
-      {
-        title: 'File Uploads',
-        fields: [
-          { key: 'cac', label: 'Certificate of Incorporation', type: 'file', editable: false },
-          { key: 'identification', label: 'Identification Document', type: 'file', editable: false },
-          { key: 'certificateOfIncorporationUrl', label: 'Certificate of Incorporation', type: 'file', editable: false },
-          { key: 'memorandumOfAssociationUrl', label: 'Memorandum of Association', type: 'file', editable: false },
-          { key: 'articlesOfAssociationUrl', label: 'Articles of Association', type: 'file', editable: false },
-          { key: 'directorsResolutionUrl', label: 'Directors Resolution', type: 'file', editable: false }
-        ]
-      },
-      {
-        title: 'Declaration',
-        fields: [
-          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: true },
-          { key: 'signature', label: 'Signature', type: 'text', editable: true }
-        ]
-      },
-      {
-        title: 'System Information',
-        fields: [
-          { key: 'status', label: 'Status', type: 'text', editable: true },
-          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
-          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
-          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
-        ]
-      }
-    ]
-  },
-
+'corporate-kyc': {
+  title: 'Corporate CDD Form',
+  sections: [
+    {
+      title: 'Company Info',
+      fields: [
+        { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
+        { key: 'registeredAddress', label: 'Registered Company Address', type: 'textarea', editable: true },
+        { key: 'incorporationNumber', label: 'Incorporation Number', type: 'text', editable: true },
+        { key: 'incorporationState', label: 'Incorporation State', type: 'text', editable: true },
+        { key: 'dateOfIncorporation', label: 'Date of Incorporation/Registration', type: 'date', editable: true },
+        { key: 'natureOfBusiness', label: 'Nature of Business', type: 'textarea', editable: true },
+        { 
+          key: 'companyType', 
+          label: 'Company Type', 
+          type: 'select', 
+          editable: true,
+          options: [
+            { value: 'Sole Proprietor', label: 'Sole Proprietor' },
+            { value: 'Unlimited Liability Company', label: 'Unlimited Liability Company' },
+            { value: 'Limited Liability Company', label: 'Limited Liability Company' },
+            { value: 'Public Limited Company', label: 'Public Limited Company' },
+            { value: 'Joint Venture', label: 'Joint Venture' },
+            { value: 'Other', label: 'Other' },
+          ]
+        },
+        { 
+          key: 'companyTypeOther', 
+          label: 'Please specify', 
+          type: 'text', 
+          editable: true, 
+          conditional: { dependsOn: 'companyType', value: 'Other' } 
+        },
+        { key: 'email', label: 'Email Address', type: 'email', editable: true },
+        { key: 'website', label: 'Website', type: 'url', editable: true },
+        { key: 'taxId', label: 'Tax Identification Number', type: 'text', editable: true },
+        { key: 'telephone', label: 'Telephone Number', type: 'text', editable: true }
+      ]
+    },
+    {
+      title: 'Directors Info',
+      fields: [
+        // The 'directors' field is an array of objects. 
+        // The UI should dynamically render the sub-fields for each director.
+        { key: 'directors', label: 'Directors', type: 'array', editable: true }
+      ]
+    },
+    {
+      title: 'Local Account Details',
+      fields: [
+        { key: 'bankName', label: 'Bank Name', type: 'text', editable: true },
+        { key: 'accountNumber', label: 'Account Number', type: 'text', editable: true },
+        { key: 'bankBranch', label: 'Bank Branch', type: 'text', editable: true },
+        { key: 'accountOpeningDate', label: 'Account Opening Date', type: 'date', editable: true },
+      ]
+    },
+    {
+      title: 'Foreign Account Details (Optional)',
+      fields: [
+        { key: 'foreignBankName', label: 'Bank Name', type: 'text', editable: true },
+        { key: 'foreignAccountNumber', label: 'Account Number', type: 'text', editable: true },
+        { key: 'foreignBankBranch', label: 'Bank Branch', type: 'text', editable: true },
+        { key: 'foreignAccountOpeningDate', label: 'Account Opening Date', type: 'date', editable: true }
+      ]
+    },
+    {
+      title: 'Uploads',
+      fields: [
+        { key: 'cacCertificate', label: 'CAC Certificate', type: 'file', editable: true },
+        { key: 'identification', label: 'Means of Identification (Directors)', type: 'file', editable: true }
+      ]
+    },
+    {
+      title: 'Data Privacy & Declaration',
+      fields: [
+        { key: 'agreeToDataPrivacy', label: 'I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge', type: 'boolean', editable: true },
+        { key: 'signature', label: 'Digital Signature', type: 'text', editable: true }
+      ]
+    },
+    {
+      title: 'System Information',
+      fields: [
+        { key: 'status', label: 'Status', type: 'text', editable: true },
+        { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+        { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+        { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+      ]
+    }
+  ]
+},
+  
  'partners-kyc': {
     title: 'Partners CDD Form',
     sections: [
