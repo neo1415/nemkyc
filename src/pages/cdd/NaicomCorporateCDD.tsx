@@ -638,65 +638,67 @@ const NaicomCorporateCDD: React.FC = () => {
       id: 'uploads',
       title: 'Uploads',
       component: (
-<div className="space-y-4">
-  {/* CAC Certificate */}
-  <div className="space-y-2">
-    <h4 className="font-medium">Upload CAC Certificate</h4>
-    <FileUpload
-      accept="application/pdf,image/*"
-      maxSize={3 * 1024 * 1024}
-      onFileSelect={(file) => {
-        setUploadedFiles(prev => ({ ...prev, cacCertificate: file }));
-        toast({ title: "File selected for upload" });
-      }}
-      currentFile={uploadedFiles.cacCertificate}
-      onFileRemove={() => {
-        setUploadedFiles(prev => {
-          const { cacCertificate, ...rest } = prev;
-          return rest;
-        });
-      }}
-    />
-  </div>
+<div className="flex justify-center">
+  <div className="space-y-4 w-full max-w-md">
+    {/* CAC Certificate */}
+    <div className="space-y-2">
+      <h4 className="font-medium text-center">Upload CAC Certificate</h4>
+      <FileUpload
+        accept="application/pdf,image/*"
+        maxSize={3 * 1024 * 1024}
+        onFileSelect={(file) => {
+          setUploadedFiles(prev => ({ ...prev, cacCertificate: file }));
+          toast({ title: "File selected for upload" });
+        }}
+        currentFile={uploadedFiles.cacCertificate}
+        onFileRemove={() => {
+          setUploadedFiles(prev => {
+            const { cacCertificate, ...rest } = prev;
+            return rest;
+          });
+        }}
+      />
+    </div>
 
-  {/* Means of Identification */}
-  <div className="space-y-2">
-    <h4 className="font-medium">Upload Means of Identification</h4>
-    <FileUpload
-      accept="application/pdf,image/*"
-      maxSize={3 * 1024 * 1024}
-      onFileSelect={(file) => {
-        setUploadedFiles(prev => ({ ...prev, identification: file }));
-        toast({ title: "File selected for upload" });
-      }}
-      currentFile={uploadedFiles.identification}
-      onFileRemove={() => {
-        setUploadedFiles(prev => {
-          const { identification, ...rest } = prev;
-          return rest;
-        });
-      }}
-    />
-  </div>
+    {/* Means of Identification */}
+    <div className="space-y-2">
+      <h4 className="font-medium text-center">Upload Means of Identification</h4>
+      <FileUpload
+        accept="application/pdf,image/*"
+        maxSize={3 * 1024 * 1024}
+        onFileSelect={(file) => {
+          setUploadedFiles(prev => ({ ...prev, identification: file }));
+          toast({ title: "File selected for upload" });
+        }}
+        currentFile={uploadedFiles.identification}
+        onFileRemove={() => {
+          setUploadedFiles(prev => {
+            const { identification, ...rest } = prev;
+            return rest;
+          });
+        }}
+      />
+    </div>
 
-  {/* NAICOM License */}
-  <div className="space-y-2">
-    <h4 className="font-medium">Upload NAICOM License</h4>
-    <FileUpload
-      accept="application/pdf,image/*"
-      maxSize={3 * 1024 * 1024}
-      onFileSelect={(file) => {
-        setUploadedFiles(prev => ({ ...prev, naicomLicense: file }));
-        toast({ title: "File selected for upload" });
-      }}
-      currentFile={uploadedFiles.naicomLicense}
-      onFileRemove={() => {
-        setUploadedFiles(prev => {
-          const { naicomLicense, ...rest } = prev;
-          return rest;
-        });
-      }}
-    />
+    {/* NAICOM License */}
+    <div className="space-y-2">
+      <h4 className="font-medium text-center">Upload NAICOM License</h4>
+      <FileUpload
+        accept="application/pdf,image/*"
+        maxSize={3 * 1024 * 1024}
+        onFileSelect={(file) => {
+          setUploadedFiles(prev => ({ ...prev, naicomLicense: file }));
+          toast({ title: "File selected for upload" });
+        }}
+        currentFile={uploadedFiles.naicomLicense}
+        onFileRemove={() => {
+          setUploadedFiles(prev => {
+            const { naicomLicense, ...rest } = prev;
+            return rest;
+          });
+        }}
+      />
+    </div>
   </div>
 </div>
 
