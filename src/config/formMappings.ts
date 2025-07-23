@@ -1843,7 +1843,7 @@ export const FORM_MAPPINGS: FormMapping = {
             label: 'Please specify', 
             type: 'text', 
             editable: true, 
-            conditional: { dependsOn: 'companyType', value: 'Other' } 
+            conditional: { dependsOn: 'companyLegalForm', value: 'Other' } 
           },
           { key: 'email', label: 'Email Address', type: 'email', editable: true },
           { key: 'website', label: 'Website', type: 'text', editable: true },
@@ -1929,11 +1929,11 @@ export const FORM_MAPPINGS: FormMapping = {
           ]
         },
         { 
-          key: 'companyTypeOther', 
+          key: 'companyLegalFormOther', 
           label: 'Please specify', 
           type: 'text', 
           editable: true, 
-          conditional: { dependsOn: 'companyType', value: 'Other' } 
+          conditional: { dependsOn: 'companyLegalForm', value: 'Other' } 
         },
         { key: 'email', label: 'Email Address', type: 'email', editable: true },
         { key: 'website', label: 'Website', type: 'text', editable: true },
