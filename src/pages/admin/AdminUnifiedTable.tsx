@@ -139,6 +139,8 @@ const fetchForms = async () => {
         id: doc.id,
         ...data,
         timestamp: data.timestamp || data.submittedAt || data.createdAt || new Date(),
+        // Handle createdAt fallback for table display
+        createdAt: data.createdAt || data.submittedAt || data.timestamp,
         status: data.status || (isClaim ? 'processing' : 'pending')
       };
     });
@@ -229,8 +231,8 @@ const fetchForms = async () => {
         }
         return 'partners-cdd';
       },
-      'individual-kyc-form': 'individual-kyc',
-      'corporate-kyc-form': 'corporate-kyc',
+      'Individual-kyc-form': 'Individual-kyc-form',
+      'corporate-kyc-form': 'corporate-kyc-form',
       'motor-claims': 'motor-claims',
       'fire-claims': 'fire-special-perils-claims',
       'professional-indemnity': 'professional-indemnity-claims',
