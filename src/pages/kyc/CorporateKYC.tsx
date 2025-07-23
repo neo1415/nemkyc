@@ -26,7 +26,7 @@ import SuccessModal from '@/components/common/SuccessModal';
 // Form validation schema
 const corporateKYCSchema = yup.object().shape({
   // Company Info
-  nemBranchOffice: yup.string().required("NEM Branch Office is required"),
+  branchOffice: yup.string().required("Branch Office is required"),
   insured: yup.string().required("Insured field is required"),
   officeAddress: yup.string().required("Office address is required"),
   ownershipOfCompany: yup.string().required("Ownership of company is required"),
@@ -34,12 +34,12 @@ const corporateKYCSchema = yup.object().shape({
   website: yup.string().required("Website is required"),
   incorporationNumber: yup.string().required("Incorporation number is required"),
   incorporationState: yup.string().required("Incorporation state is required"),
-  incorporationDate: yup.date().required("Date of incorporation is required"),
-  bvn: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
-  contactPersonMobile: yup.string().required("Contact person mobile is required"),
-  taxId: yup.string(),
+ dateOfIncorporationRegistration: yup.date().required("Date of incorporation is required"),
+  BVNNumber: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+  contactPersonNo: yup.string().required("Contact person mobile is required"),
+  taxIdNo: yup.string(),
   email: yup.string().email("Valid email is required").required("Email is required"),
-  businessType: yup.string().required("Business type is required"),
+  natureOfBusiness: yup.string().required("Business type is required"),
   estimatedTurnover: yup.string().required("Estimated turnover is required"),
   premiumPaymentSource: yup.string().required("Premium payment source is required"),
   premiumPaymentSourceOther: yup.string(),
@@ -49,29 +49,29 @@ const corporateKYCSchema = yup.object().shape({
     firstName: yup.string().required("First name is required"),
     middleName: yup.string(),
     lastName: yup.string().required("Last name is required"),
-    dateOfBirth: yup.date().required("Date of birth is required"),
+    dob: yup.date().required("Date of birth is required"),
     placeOfBirth: yup.string().required("Place of birth is required"),
     nationality: yup.string().required("Nationality is required"),
     country: yup.string().required("Country is required"),
     occupation: yup.string().required("Occupation is required"),
     email: yup.string().email("Valid email is required").required("Email is required"),
     phoneNumber: yup.string().required("Phone number is required"),
-    bvn: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+    BVNNumber: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
     employersName: yup.string(),
-    employersPhone: yup.string(),
+    employersPhoneNumber: yup.string(),
     residentialAddress: yup.string().required("Residential address is required"),
     taxIdNumber: yup.string(),
     idType: yup.string().required("ID type is required"),
-    identificationNumber: yup.string().required("Identification number is required"),
+    idNumber: yup.string().required("Identification number is required"),
     issuingBody: yup.string().required("Issuing body is required"),
     issuedDate: yup.date().required("Issued date is required"),
     expiryDate: yup.date(),
-    incomeSource: yup.string().required("Income source is required"),
-    incomeSourceOther: yup.string()
+    sourceOfIncome: yup.string().required("Income source is required"),
+    sourceOfIncomeOther: yup.string()
   })).min(1, "At least one director is required"),
 
   // Verification
-  verificationDocumentType: yup.string().required("Verification document type is required"),
+  companyNameVerificationDoc: yup.string().required("Verification document type is required"),
 
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
@@ -79,7 +79,7 @@ const corporateKYCSchema = yup.object().shape({
 });
 
 const defaultValues = {
-  nemBranchOffice: '',
+  branchOffice: '',
   insured: '',
   officeAddress: '',
   ownershipOfCompany: '',
@@ -87,12 +87,12 @@ const defaultValues = {
   website: '',
   incorporationNumber: '',
   incorporationState: '',
-  incorporationDate: '',
-  bvn: '',
-  contactPersonMobile: '',
-  taxId: '',
+  dateOfIncorporationRegistration: '',
+  BVNNumber: '',
+  contactPersonNo: '',
+  taxIdNo: '',
   email: '',
-  businessType: '',
+  natureOfBusiness: '',
   estimatedTurnover: '',
   premiumPaymentSource: '',
   premiumPaymentSourceOther: '',
@@ -100,27 +100,27 @@ const defaultValues = {
     firstName: '',
     middleName: '',
     lastName: '',
-    dateOfBirth: '',
+    dob: '',
     placeOfBirth: '',
     nationality: '',
     country: '',
     occupation: '',
     email: '',
     phoneNumber: '',
-    bvn: '',
+    BVNumber: '',
     employersName: '',
-    employersPhone: '',
+    employersPhoneNumber: '',
     residentialAddress: '',
     taxIdNumber: '',
     idType: '',
-    identificationNumber: '',
+    idNumber: '',
     issuingBody: '',
     issuedDate: '',
     expiryDate: '',
-    incomeSource: '',
-    incomeSourceOther: ''
+    sourcesOfIncome: '',
+    sourceOfIncomeOther: ''
   }],
-  verificationDocumentType: '',
+   companyNameVerificationDoc: '',
   agreeToDataPrivacy: false,
   signature: ''
 };
@@ -248,10 +248,10 @@ const CorporateKYC: React.FC = () => {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="nemBranchOffice">NEM Branch Office *</Label>
+              <Label htmlFor="branchOffice">NEM Branch Office *</Label>
               <Input
-                id="nemBranchOffice"
-                {...formMethods.register('nemBranchOffice')}
+                id="branchOffice"
+                {...formMethods.register('branchOffice')}
               />
             </div>
             <div>
@@ -323,34 +323,34 @@ const CorporateKYC: React.FC = () => {
           </div>
 
           <DatePickerField
-            name="incorporationDate"
+            name="dateOfIncorporationRegistration"
             label="Date of Incorporation/Registration *"
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="bvn">BVN *</Label>
+              <Label htmlFor="BVNNumber">BVN *</Label>
               <Input
-                id="bvn"
+                id="BVNNumber"
                 maxLength={11}
-                {...formMethods.register('bvn')}
+                {...formMethods.register('BVNNumber')}
               />
             </div>
             <div>
-              <Label htmlFor="contactPersonMobile">Contact Person Mobile Number *</Label>
+              <Label htmlFor="contactPersonNo">Contact Person Mobile Number *</Label>
               <Input
-                id="contactPersonMobile"
-                {...formMethods.register('contactPersonMobile')}
+                id="contactPersonNo"
+                {...formMethods.register('contactPersonNo')}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="taxId">Tax Identification Number</Label>
+              <Label htmlFor="taxIdNo">Tax Identification Number</Label>
               <Input
-                id="taxId"
-                {...formMethods.register('taxId')}
+                id="taxIdNo"
+                {...formMethods.register('taxIdNo')}
               />
             </div>
             <div>
@@ -364,10 +364,10 @@ const CorporateKYC: React.FC = () => {
           </div>
 
           <div>
-            <Label htmlFor="businessType">Business Type/Occupation *</Label>
+            <Label htmlFor="natureOfBusiness">Business Type/Occupation *</Label>
             <Input
-              id="businessType"
-              {...formMethods.register('businessType')}
+              id="natureOfBusiness"
+              {...formMethods.register('natureOfBusiness')}
             />
           </div>
 
@@ -466,7 +466,7 @@ const CorporateKYC: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <DatePickerField
-                  name={`directors.${index}.dateOfBirth`}
+                  name={`directors.${index}.dob`}
                   label="Date of Birth *"
                 />
                 <div>
@@ -522,11 +522,11 @@ const CorporateKYC: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor={`directors.${index}.bvn`}>BVN *</Label>
+                  <Label htmlFor={`directors.${index}.BVNNumber`}>BVN *</Label>
                   <Input
-                    id={`directors.${index}.bvn`}
+                    id={`directors.${index}.BVnNumber`}
                     maxLength={11}
-                    {...formMethods.register(`directors.${index}.bvn`)}
+                    {...formMethods.register(`directors.${index}.BVNNumber`)}
                   />
                 </div>
               </div>
@@ -540,10 +540,10 @@ const CorporateKYC: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor={`directors.${index}.employersPhone`}>Employer Phone</Label>
+                  <Label htmlFor={`directors.${index}.employersPhoneNumber`}>Employer Phone</Label>
                   <Input
-                    id={`directors.${index}.employersPhone`}
-                    {...formMethods.register(`directors.${index}.employersPhone`)}
+                    id={`directors.${index}.employersPhoneNumber`}
+                    {...formMethods.register(`directors.${index}.employersPhoneNumber`)}
                   />
                 </div>
               </div>
@@ -585,10 +585,10 @@ const CorporateKYC: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <Label htmlFor={`directors.${index}.identificationNumber`}>Identification Number *</Label>
+                  <Label htmlFor={`directors.${index}.idNumber`}>Identification Number *</Label>
                   <Input
-                    id={`directors.${index}.identificationNumber`}
-                    {...formMethods.register(`directors.${index}.identificationNumber`)}
+                    id={`directors.${index}.idNumber`}
+                    {...formMethods.register(`directors.${index}.idNumber`)}
                   />
                 </div>
                 <div>
@@ -614,8 +614,8 @@ const CorporateKYC: React.FC = () => {
               <div>
                 <Label>Source of Income *</Label>
                 <Select
-                  value={formMethods.watch(`directors.${index}.incomeSource`)}
-                  onValueChange={(value) => formMethods.setValue(`directors.${index}.incomeSource`, value)}
+                  value={formMethods.watch(`directors.${index}.sourceOfIncome`)}
+                  onValueChange={(value) => formMethods.setValue(`directors.${index}.sourceOfIncome`, value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select Source of Income" />
@@ -629,12 +629,12 @@ const CorporateKYC: React.FC = () => {
                 </Select>
               </div>
 
-              {formMethods.watch(`directors.${index}.incomeSource`) === 'Other' && (
+              {formMethods.watch(`directors.${index}.sourceOfIncome`) === 'Other' && (
                 <div className="mt-4">
-                  <Label htmlFor={`directors.${index}.incomeSourceOther`}>Please specify *</Label>
+                  <Label htmlFor={`directors.${index}.sourceOfIncomeOther`}>Please specify *</Label>
                   <Input
-                    id={`directors.${index}.incomeSourceOther`}
-                    {...formMethods.register(`directors.${index}.incomeSourceOther`)}
+                    id={`directors.${index}.sourecOfIncomeOther`}
+                    {...formMethods.register(`directors.${index}.sourceOfIncomeOther`)}
                   />
                 </div>
               )}
@@ -648,25 +648,25 @@ const CorporateKYC: React.FC = () => {
               firstName: '',
               middleName: '',
               lastName: '',
-              dateOfBirth: '',
+              dob: '',
               placeOfBirth: '',
               nationality: '',
               country: '',
               occupation: '',
               email: '',
               phoneNumber: '',
-              bvn: '',
+              BVNNumber: '',
               employersName: '',
-              employersPhone: '',
+              employersPhoneNumber: '',
               residentialAddress: '',
               taxIdNumber: '',
               idType: '',
-              identificationNumber: '',
+              idNumber: '',
               issuingBody: '',
               issuedDate: '',
               expiryDate: '',
-              incomeSource: '',
-              incomeSourceOther: ''
+              sourcOfIncome: '',
+              sourcOfIncomeOther: ''
             })}
             className="w-full"
           >
@@ -684,8 +684,8 @@ const CorporateKYC: React.FC = () => {
           <div>
             <Label>Company Name Verification Document *</Label>
             <Select
-              value={formMethods.watch('verificationDocumentType')}
-              onValueChange={(value) => formMethods.setValue('verificationDocumentType', value)}
+              value={formMethods.watch('companyNameVerificationDoc')}
+              onValueChange={(value) => formMethods.setValue('companyNameVerificationDoc', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Verification Document" />
@@ -711,10 +711,10 @@ const CorporateKYC: React.FC = () => {
               }}
               maxSize={3 * 1024 * 1024}
             />
-            {uploadedFiles.verificationDocument && (
+            {uploadedFiles.verificationDoc && (
               <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
                 <Check className="h-4 w-4" />
-                {uploadedFiles.verificationDocument.name}
+                {uploadedFiles.verificationDoc.name}
               </div>
             )}
           </div>
