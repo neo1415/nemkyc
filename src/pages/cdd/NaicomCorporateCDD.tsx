@@ -29,21 +29,21 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 const naicomCorporateCDDSchema = yup.object().shape({
   // Company Details
   companyName: yup.string().min(3).max(50).required("Company name is required"),
-  registeredAddress: yup.string().min(3).max(60).required("Registered address is required"),
+  registeredCompanyAddress: yup.string().min(3).max(60).required("Registered address is required"),
   incorporationNumber: yup.string().min(7).max(15).required("Incorporation number is required"),
   incorporationState: yup.string().min(3).max(50).required("Incorporation state is required"),
-  dateOfIncorporation: yup.date().required("Date of incorporation is required"),
+  dateOfIncorporationRegistration: yup.date().required("Date of incorporation is required"),
   natureOfBusiness: yup.string().min(3).max(60).required("Nature of business is required"),
-  companyType: yup.string().required("Company type is required"),
-  companyTypeOther: yup.string().when('companyType', {
+  companyLegalForm: yup.string().required("Company type is required"),
+  companyLegalFormOther: yup.string().when('companyType', {
     is: 'Other',
     then: (schema) => schema.required("Please specify other company type"),
     otherwise: (schema) => schema.notRequired()
   }),
   email: yup.string().email("Valid email is required").min(5).max(50).required("Email is required"),
   website: yup.string().required("Website is required"),
-  taxId: yup.string().min(6).max(15).required("Tax ID is required"),
-  telephone: yup.string().min(5).max(11).required("Telephone number is required"),
+  taxIdentificationNumber yup.string().min(6).max(15).required("Tax ID is required"),
+  telephoneNumber: yup.string().min(5).max(11).required("Telephone number is required"),
 
   // Directors
   directors: yup.array().of(
@@ -135,17 +135,17 @@ const NaicomCorporateCDD: React.FC = () => {
     resolver: yupResolver(naicomCorporateCDDSchema),
     defaultValues: {
       companyName: '',
-      registeredAddress: '',
+      registeredCompanyAddress: '',
       incorporationNumber: '',
       incorporationState: '',
-      dateOfIncorporation: '',
+      dateOfIncorporationRegistration: '',
       natureOfBusiness: '',
-      companyType: '',
-      companyTypeOther: '',
+      companyLegalForm: '',
+      companyLegalFormOther: '',
       email: '',
       website: '',
-      taxId: '',
-      telephone: '',
+      taxIdentificationNumber: '',
+      telephoneNumber: '',
       directors: [defaultDirector],
       bankName: '',
       accountNumber: '',
@@ -277,10 +277,10 @@ const NaicomCorporateCDD: React.FC = () => {
           </div>
           
           <div>
-            <Label htmlFor="registeredAddress">Registered Company Address *</Label>
+            <Label htmlFor="registeredCompanyAddress">Registered Company Address *</Label>
             <Textarea
-              id="registeredAddress"
-              {...formMethods.register('registeredAddress')}
+              id="registeredCompanyAddress"
+              {...formMethods.register('registeredCompanyAddress')}
             />
           </div>
           
@@ -303,7 +303,7 @@ const NaicomCorporateCDD: React.FC = () => {
           
           <div>
             <DatePickerField
-              name="dateOfIncorporation"
+              name="dateOfIncorporationRegistration"
               label="Date of Incorporation/Registration *"
             />
           </div>
@@ -319,8 +319,8 @@ const NaicomCorporateCDD: React.FC = () => {
           <div>
             <Label>Company Type *</Label>
             <Select
-              value={watchedValues.companyType || ''}
-              onValueChange={(value) => formMethods.setValue('companyType', value)}
+              value={watchedValues.companyLegalForm || ''}
+              onValueChange={(value) => formMethods.setValue('companyLegalForm', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Choose Company Type" />
@@ -336,10 +336,10 @@ const NaicomCorporateCDD: React.FC = () => {
             </Select>
           </div>
 
-          {watchedValues.companyType === 'Other' && (
+          {watchedValues.companyLegalForm === 'Other' && (
             <div>
-              <Label htmlFor="companyTypeOther">Please specify *</Label>
-              <Input id="companyTypeOther" {...formMethods.register('companyTypeOther')} />
+              <Label htmlFor="companyLegalFormOther">Please specify *</Label>
+              <Input id="companyLegalFormOther" {...formMethods.register('companyLegalFormOther')} />
             </div>
           )}
           
@@ -363,17 +363,17 @@ const NaicomCorporateCDD: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="taxId">Tax Identification Number *</Label>
+              <Label htmlFor="taxIdentificationNumber">Tax Identification Number *</Label>
               <Input
-                id="taxId"
-                {...formMethods.register('taxId')}
+                id="taxIdentificationNumber"
+                {...formMethods.register('taxIdentificationNumber')}
               />
             </div>
             <div>
-              <Label htmlFor="telephone">Telephone Number *</Label>
+              <Label htmlFor="telephoneNumber">Telephone Number *</Label>
               <Input
-                id="telephone"
-                {...formMethods.register('telephone')}
+                id="telephoneNumber"
+                {...formMethods.register('telephoneNumber')}
               />
             </div>
           </div>
