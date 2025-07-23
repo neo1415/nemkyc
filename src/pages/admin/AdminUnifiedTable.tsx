@@ -212,8 +212,51 @@ const fetchForms = async () => {
     return data[field];
   };
 
+  // Collection to form mapping (handles overlapping collections)
+  const getFormMappingKey = (collectionName: string, formData?: FormData): string => {
+    const collectionMappings: Record<string, string | ((data: FormData) => string)> = {
+      'corporate-kyc': (data: FormData) => {
+        // Check if it's NAICOM corporate form based on certain fields
+        if (data.naicomField || data.typeOfEntity === 'naicom') {
+          return 'naicom-corporate-cdd';
+        }
+        return 'corporate-kyc';
+      },
+      'partners-kyc': (data: FormData) => {
+        // Check if it's NAICOM partners form
+        if (data.naicomField || data.typeOfEntity === 'naicom') {
+          return 'naicom-partners-cdd';
+        }
+        return 'partners-cdd';
+      },
+      'individual-kyc-form': 'individual-kyc',
+      'corporate-kyc-form': 'corporate-kyc',
+      'motor-claims': 'motor-claims',
+      'fire-claims': 'fire-special-perils-claims',
+      'professional-indemnity': 'professional-indemnity-claims',
+      'burglary-claims': 'burglary-claims',
+      'all-risk-claims': 'all-risk-claims',
+      'goods-in-transit-claims': 'goods-in-transit-claims',
+      'money-insurance-claims': 'money-insurance-claims',
+      'public-liability-claims': 'public-liability-claims',
+      'employers-liability-claims': 'employers-liability-claims',
+      'group-personal-accident-claims': 'group-personal-accident-claims',
+      'fidelity-guarantee-claims': 'fidelity-guarantee-claims',
+      'rent-assurance-claims': 'rent-assurance-claims',
+      'contractors-plant-machinery-claims': 'contractors-plant-machinery-claims',
+      'combined-gpa-employers-liability-claims': 'combined-gpa-employers-liability-claims'
+    };
+
+    const mappingKey = collectionMappings[collectionName];
+    if (typeof mappingKey === 'function' && formData) {
+      return mappingKey(formData);
+    }
+    return (typeof mappingKey === 'string' ? mappingKey : collectionName);
+  };
+
   const organizeFieldsWithMapping = (data: FormData) => {
-    const mapping = FORM_MAPPINGS[collectionName];
+    const mappingKey = getFormMappingKey(collectionName, data);
+    const mapping = FORM_MAPPINGS[mappingKey];
     if (!mapping) return data;
 
     const organizedData = { ...data };
@@ -262,21 +305,30 @@ const fetchForms = async () => {
   const exportToCSV = () => {
     if (forms.length === 0) return;
 
-    const mapping = FORM_MAPPINGS[collectionName];
+    const mappingKey = getFormMappingKey(collectionName, forms[0]);
+    const mapping = FORM_MAPPINGS[mappingKey];
     const headers: string[] = [];
     const rows: string[][] = [];
+
+    // Exclude system fields from CSV
+    const excludedFields = ['id', 'timestamp', 'createdAt', 'updatedAt', 'submittedAt', 'formType'];
 
     // Get headers from form mapping if available
     if (mapping) {
       mapping.sections.forEach(section => {
+        // Skip system information sections
+        if (section.title.toLowerCase().includes('system')) return;
+        
         section.fields.forEach(field => {
+          if (excludedFields.includes(field.key)) return;
+          
           if (field.type === 'array' && field.key === 'directors') {
             // Add director fields
             ['firstName', 'lastName', 'email', 'phoneNumber'].forEach(dirField => {
               headers.push(`Director 1 ${dirField.charAt(0).toUpperCase() + dirField.slice(1)}`);
               headers.push(`Director 2 ${dirField.charAt(0).toUpperCase() + dirField.slice(1)}`);
             });
-          } else {
+          } else if (field.type !== 'file') {
             headers.push(field.label);
           }
         });
@@ -284,7 +336,7 @@ const fetchForms = async () => {
     } else {
       // Fallback to dynamic headers
       Object.keys(forms[0]).forEach(key => {
-        if (key !== 'id' && key !== 'timestamp') {
+        if (!excludedFields.includes(key)) {
           headers.push(key.charAt(0).toUpperCase() + key.slice(1));
         }
       });
@@ -297,24 +349,29 @@ const fetchForms = async () => {
       
       if (mapping) {
         mapping.sections.forEach(section => {
+          // Skip system information sections
+          if (section.title.toLowerCase().includes('system')) return;
+          
           section.fields.forEach(field => {
+            if (excludedFields.includes(field.key) || field.type === 'file') return;
+            
             if (field.type === 'array' && field.key === 'directors') {
               ['firstName', 'lastName', 'email', 'phoneNumber'].forEach(dirField => {
-                const director1 = organizedForm.directors?.[0]?.[dirField] || '';
-                const director2 = organizedForm.directors?.[1]?.[dirField] || '';
+                const director1 = organizedForm.directors?.[0]?.[dirField] || 'N/A';
+                const director2 = organizedForm.directors?.[1]?.[dirField] || 'N/A';
                 row.push(String(director1));
                 row.push(String(director2));
               });
             } else {
               const value = organizedForm[field.key];
-              row.push(Array.isArray(value) ? value.length.toString() : String(value || ''));
+              row.push(Array.isArray(value) ? value.length.toString() : String(value || 'N/A'));
             }
           });
         });
       } else {
         Object.keys(forms[0]).forEach(key => {
-          if (key !== 'id' && key !== 'timestamp') {
-            row.push(String(organizedForm[key] || ''));
+          if (!excludedFields.includes(key)) {
+            row.push(String(organizedForm[key] || 'N/A'));
           }
         });
       }
@@ -400,11 +457,17 @@ const fetchForms = async () => {
     });
 
     // Use form mappings if available
-    const mapping = FORM_MAPPINGS[collectionName];
+    const mappingKey = getFormMappingKey(collectionName, sampleData);
+    const mapping = FORM_MAPPINGS[mappingKey];
     if (mapping) {
       mapping.sections.forEach(section => {
+        // Skip system information sections in admin table
+        if (section.title.toLowerCase().includes('system')) return;
+        
         section.fields.forEach(field => {
           if (excludeFields.includes(field.key) || priorityFields.includes(field.key)) return;
+          // Skip file fields in table view
+          if (field.type === 'file') return;
 
           if (field.type === 'array' && field.key === 'directors') {
             dynamicColumns.push({
@@ -423,13 +486,6 @@ const fetchForms = async () => {
               width: 130,
               valueFormatter: (params) => formatDate(params),
             });
-          } else if (field.type === 'file') {
-            dynamicColumns.push({
-              field: field.key,
-              headerName: field.label,
-              width: 150,
-              valueFormatter: (params) => params ? 'File Available' : 'No File',
-            });
           } else {
             dynamicColumns.push({
               field: field.key,
@@ -440,7 +496,7 @@ const fetchForms = async () => {
                 if (typeof value === 'string' && value.length > 50) {
                   return value.substring(0, 50) + '...';
                 }
-                return value || '';
+                return value || 'N/A';
               },
             });
           }
