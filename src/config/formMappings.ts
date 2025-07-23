@@ -2241,7 +2241,272 @@ export const FORM_MAPPINGS: FormMapping = {
       }
     ]
   },
-  'money-insurance-claims': {
+
+  //kyc forms 
+
+'corporate-kyc-form': {
+  title: 'Corporate KYC Form',
+  sections: [
+    {
+      title: 'Company Information',
+      fields: [
+        { key: 'nemBranchOffice', label: 'NEM Branch Office', type: 'text', editable: true },
+        { key: 'insured', label: 'Insured', type: 'text', editable: true },
+        { key: 'officeAddress', label: 'Office Address', type: 'textarea', editable: true },
+        { 
+          key: 'ownershipOfCompany', 
+          label: 'Ownership of Company', 
+          type: 'select', 
+          editable: true,
+          options: [
+            { value: 'Nigerian', label: 'Nigerian' },
+            { value: 'Foreign', label: 'Foreign' },
+            { value: 'Both', label: 'Both' },
+          ]
+        },
+        { key: 'contactPerson', label: 'Contact Person', type: 'text', editable: true },
+        { key: 'website', label: 'Website', type: 'url', editable: true },
+        { key: 'incorporationNumber', label: 'Incorporation Number', type: 'text', editable: true },
+        { key: 'incorporationState', label: 'Incorporation State', type: 'text', editable: true },
+        { key: 'incorporationDate', label: 'Date of Incorporation/Registration', type: 'date', editable: true },
+        { key: 'bvn', label: 'BVN', type: 'text', editable: true },
+        { key: 'contactPersonMobile', label: 'Contact Person Mobile Number', type: 'text', editable: true },
+        { key: 'taxId', label: 'Tax Identification Number', type: 'text', editable: true },
+        { key: 'email', label: 'Email Address', type: 'email', editable: true },
+        { key: 'businessType', label: 'Business Type/Occupation', type: 'text', editable: true },
+        { 
+          key: 'estimatedTurnover', 
+          label: 'Estimated Turnover', 
+          type: 'select', 
+          editable: true,
+          options: [
+            { value: 'Less Than 10 Million', label: 'Less Than 10 Million' },
+            { value: '11 Million - 50 Million', label: '11 Million - 50 Million' },
+            { value: '51 Million - 200 Million', label: '51 Million - 200 Million' },
+            { value: 'More Than 200 Million', label: 'More Than 200 Million' },
+          ]
+        },
+        { 
+          key: 'premiumPaymentSource', 
+          label: 'Premium Payment Source', 
+          type: 'select', 
+          editable: true,
+          options: [
+            { value: 'Salary or Business Income', label: 'Salary or Business Income' },
+            { value: 'Investments or Dividends', label: 'Investments or Dividends' },
+            { value: 'Other', label: 'Other' },
+          ]
+        },
+        { 
+          key: 'premiumPaymentSourceOther', 
+          label: 'Please specify other income source', 
+          type: 'text', 
+          editable: true, 
+          conditional: { dependsOn: 'premiumPaymentSource', value: 'Other' } 
+        }
+      ]
+    },
+    {
+      title: 'Director Information',
+      fields: [
+        { key: 'directors', label: 'Directors', type: 'array', editable: true }
+      ]
+    },
+    {
+      title: 'Verification Upload',
+      fields: [
+        { 
+          key: 'verificationDocumentType', 
+          label: 'Company Name Verification Document', 
+          type: 'select', 
+          editable: true,
+          options: [
+            { value: 'Certificate of Incorporation or Business Registration', label: 'Certificate of Incorporation or Business Registration' },
+            { value: 'CAC Status Report', label: 'CAC Status Report' },
+            { value: 'Board Resolution', label: 'Board Resolution' },
+            { value: 'Power of Attorney', label: 'Power of Attorney' },
+          ]
+        },
+        { key: 'verificationDocument', label: 'Upload Your Verification Document', type: 'file', editable: true }
+      ]
+    },
+    {
+      title: 'Data Privacy & Declaration',
+      fields: [
+        { key: 'agreeToDataPrivacy', label: 'I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge', type: 'boolean', editable: true },
+        { key: 'signature', label: 'Digital Signature', type: 'text', editable: true }
+      ]
+    },
+    {
+      title: 'System Information',
+      fields: [
+        { key: 'status', label: 'Status', type: 'text', editable: true },
+        { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+        { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+        { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+      ]
+    }
+  ]
+},
+
+'individual-kyc-form': {
+  title: 'Individual KYC Form',
+  sections: [
+    {
+      title: 'Personal Information',
+      fields: [
+        { key: 'officeLocation', label: 'Office Location', type: 'text', editable: true },
+        { key: 'title', label: 'Title', type: 'text', editable: true },
+        { key: 'firstName', label: 'First Name', type: 'text', editable: true },
+        { key: 'middleName', label: 'Middle Name', type: 'text', editable: true },
+        { key: 'lastName', label: 'Last Name', type: 'text', editable: true },
+        { key: 'contactAddress', label: 'Contact Address', type: 'textarea', editable: true },
+        { key: 'occupation', label: 'Occupation', type: 'text', editable: true },
+        { 
+          key: 'gender', 
+          label: 'Gender', 
+          type: 'select', 
+          editable: true,
+          options: [
+            { value: 'Male', label: 'Male' },
+            { value: 'Female', label: 'Female' },
+          ]
+        },
+        { key: 'dateOfBirth', label: 'Date of Birth', type: 'date', editable: true },
+        { key: 'mothersMaidenName', label: 'Mother\'s Maiden Name', type: 'text', editable: true },
+        { key: 'employersName', label: 'Employer\'s Name', type: 'text', editable: true },
+        { key: 'employersTelephone', label: 'Employer\'s Telephone', type: 'text', editable: true },
+        { key: 'employersAddress', label: 'Employer\'s Address', type: 'textarea', editable: true },
+        { key: 'city', label: 'City', type: 'text', editable: true },
+        { key: 'state', label: 'State', type: 'text', editable: true },
+        { key: 'country', label: 'Country', type: 'text', editable: true },
+        { 
+          key: 'nationality', 
+          label: 'Nationality', 
+          type: 'select', 
+          editable: true,
+          options: [
+            { value: 'Nigerian', label: 'Nigerian' },
+            { value: 'Foreign', label: 'Foreign' },
+            { value: 'Both', label: 'Both' },
+          ]
+        },
+        { key: 'residentialAddress', label: 'Residential Address', type: 'textarea', editable: true },
+        { key: 'mobileNumber', label: 'Mobile Number', type: 'text', editable: true },
+        { key: 'email', label: 'Email', type: 'email', editable: true },
+        { key: 'taxId', label: 'Tax Identification Number', type: 'text', editable: true },
+        { key: 'bvn', label: 'BVN', type: 'text', editable: true },
+        { 
+          key: 'idType', 
+          label: 'ID Type', 
+          type: 'select', 
+          editable: true,
+          options: [
+            { value: 'International Passport', label: 'International Passport' },
+            { value: 'NIMC', label: 'NIMC' },
+            { value: 'Drivers Licence', label: 'Drivers Licence' },
+            { value: 'Voters Card', label: 'Voters Card' },
+            { value: 'NIN', label: 'NIN' },
+          ]
+        },
+        { key: 'identificationNumber', label: 'Identification Number', type: 'text', editable: true },
+        { key: 'issuingCountry', label: 'Issuing Country', type: 'text', editable: true },
+        { key: 'issuedDate', label: 'Issued Date', type: 'date', editable: true },
+        { key: 'expiryDate', label: 'Expiry Date', type: 'date', editable: true },
+        { 
+          key: 'incomeSource', 
+          label: 'Source of Income', 
+          type: 'select', 
+          editable: true,
+          options: [
+            { value: 'Salary or Business Income', label: 'Salary or Business Income' },
+            { value: 'Investments or Dividends', label: 'Investments or Dividends' },
+            { value: 'Other', label: 'Other (please specify)' },
+          ]
+        },
+        { 
+          key: 'incomeSourceOther', 
+          label: 'Please specify other income source', 
+          type: 'text', 
+          editable: true,
+          conditional: { dependsOn: 'incomeSource', value: 'Other' }
+        },
+        { 
+          key: 'annualIncomeRange', 
+          label: 'Annual Income Range', 
+          type: 'select', 
+          editable: true,
+          options: [
+            { value: 'Less Than 1 Million', label: 'Less Than 1 Million' },
+            { value: '1 Million - 4 Million', label: '1 Million - 4 Million' },
+            { value: '4.1 Million - 10 Million', label: '4.1 Million - 10 Million' },
+            { value: 'More Than 10 Million', label: 'More Than 10 Million' },
+          ]
+        },
+        { 
+          key: 'premiumPaymentSource', 
+          label: 'Premium Payment Source', 
+          type: 'select', 
+          editable: true,
+          options: [
+            { value: 'Salary or Business Income', label: 'Salary or Business Income' },
+            { value: 'Investments or Dividends', label: 'Investments or Dividends' },
+            { value: 'Other', label: 'Other (please specify)' },
+          ]
+        },
+        { 
+          key: 'premiumPaymentSourceOther', 
+          label: 'Please specify other payment source', 
+          type: 'text', 
+          editable: true,
+          conditional: { dependsOn: 'premiumPaymentSource', value: 'Other' }
+        }
+      ]
+    },
+    {
+      title: 'Local Account Details',
+      fields: [
+        { key: 'localBankName', label: 'Bank Name', type: 'text', editable: true },
+        { key: 'localAccountNumber', label: 'Account Number', type: 'text', editable: true },
+        { key: 'localBankBranch', label: 'Bank Branch', type: 'text', editable: true },
+        { key: 'localAccountOpeningDate', label: 'Account Opening Date', type: 'date', editable: true },
+      ]
+    },
+    {
+      title: 'Foreign Account Details (Optional)',
+      fields: [
+        { key: 'foreignBankName', label: 'Bank Name', type: 'text', editable: true },
+        { key: 'foreignAccountNumber', label: 'Account Number', type: 'text', editable: true },
+        { key: 'foreignBankBranch', label: 'Bank Branch', type: 'text', editable: true },
+        { key: 'foreignAccountOpeningDate', label: 'Account Opening Date', type: 'date', editable: true }
+      ]
+    },
+    {
+      title: 'Upload Documents',
+      fields: [
+        { key: 'identificationDocument', label: 'Upload Means of Identification', type: 'file', editable: true }
+      ]
+    },
+    {
+      title: 'Data Privacy & Declaration',
+      fields: [
+        { key: 'agreeToDataPrivacy', label: 'I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge', type: 'boolean', editable: true },
+        { key: 'signature', label: 'Digital Signature', type: 'text', editable: true }
+      ]
+    },
+    {
+      title: 'System Information',
+      fields: [
+        { key: 'status', label: 'Status', type: 'text', editable: true },
+        { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+        { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+        { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+      ]
+    }
+  ]
+},
+  
+'money-insurance-claims': {
     title: 'Money Insurance Claim',
     sections: [
       {
