@@ -73,7 +73,8 @@ const FormViewer: React.FC = () => {
         setStatus(data.status || 'processing');
         
         // Organize fields using form mapping
-        const mapping = FORM_MAPPINGS[collection];
+        const mappingKey = getFormMappingKey(collection, data);
+        const mapping = FORM_MAPPINGS[mappingKey];
         if (mapping) {
           const organized = organizeFieldsWithMapping(data, mapping);
           setOrganizedFields(organized);
@@ -99,6 +100,48 @@ const FormViewer: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Collection to form mapping (same as AdminUnifiedTable)
+  const getFormMappingKey = (collectionName: string, formData?: any): string => {
+    const collectionMappings: Record<string, string | ((data: any) => string)> = {
+      'corporate-kyc': (data: any) => {
+        // Check if it's NAICOM corporate form based on certain fields
+        if (data.naicomField || data.typeOfEntity === 'naicom') {
+          return 'naicom-corporate-cdd';
+        }
+        return 'corporate-kyc';
+      },
+      'partners-kyc': (data: any) => {
+        // Check if it's NAICOM partners form
+        if (data.naicomField || data.typeOfEntity === 'naicom') {
+          return 'naicom-partners-cdd';
+        }
+        return 'partners-cdd';
+      },
+      'individual-kyc-form': 'individual-kyc',
+      'corporate-kyc-form': 'corporate-kyc',
+      'motor-claims': 'motor-claims',
+      'fire-claims': 'fire-special-perils-claims',
+      'professional-indemnity': 'professional-indemnity-claims',
+      'burglary-claims': 'burglary-claims',
+      'all-risk-claims': 'all-risk-claims',
+      'goods-in-transit-claims': 'goods-in-transit-claims',
+      'money-insurance-claims': 'money-insurance-claims',
+      'public-liability-claims': 'public-liability-claims',
+      'employers-liability-claims': 'employers-liability-claims',
+      'group-personal-accident-claims': 'group-personal-accident-claims',
+      'fidelity-guarantee-claims': 'fidelity-guarantee-claims',
+      'rent-assurance-claims': 'rent-assurance-claims',
+      'contractors-plant-machinery-claims': 'contractors-plant-machinery-claims',
+      'combined-gpa-employers-liability-claims': 'combined-gpa-employers-liability-claims'
+    };
+
+    const mappingKey = collectionMappings[collectionName];
+    if (typeof mappingKey === 'function') {
+      return mappingKey(formData || {});
+    }
+    return mappingKey || collectionName;
   };
 
   const shouldShowField = (field: FormField, watchedValues: any) => {
@@ -200,8 +243,8 @@ const FormViewer: React.FC = () => {
       const sectionFields: FormFieldWithValue[] = [];
       
       section.fields.forEach((field: FormField) => {
-        // Skip system/technical fields in FormViewer
-        const excludedFields = ['formId', 'id', 'collection', 'timestamp', 'createdAt', 'updatedAt', 'submittedAt'];
+        // Skip system/technical fields and file uploads in FormViewer
+        const excludedFields = ['formId', 'id', 'collection', 'timestamp'];
         if (excludedFields.includes(field.key)) {
           return;
         }
@@ -233,18 +276,20 @@ const FormViewer: React.FC = () => {
             }
           }
           
-          // Always show all fields defined in formMappings, even if empty
+          // Always show all fields defined in formMappings, even if empty (use N/A for empty)
           sectionFields.push({
             ...field,
-            value: value,
+            value: value !== undefined && value !== null && value !== '' ? value : 'N/A',
             section: section.title,
             editable: field.editable !== false
           });
         }
       });
       
-      // Always show sections, even if they have no data
-      organized[section.title] = sectionFields;
+      // Only show sections that have fields (after filtering)
+      if (sectionFields.length > 0) {
+        organized[section.title] = sectionFields;
+      }
     });
     
     return organized;
@@ -447,7 +492,8 @@ const FormViewer: React.FC = () => {
     
     setIsGeneratingPDF(true);
     try {
-      const mapping = FORM_MAPPINGS[collection];
+      const mappingKey = getFormMappingKey(collection, formData);
+      const mapping = FORM_MAPPINGS[mappingKey];
       const formTitle = mapping?.title || collection.replace(/[-_]/g, ' ').toUpperCase();
       
       // Filter out file URLs and prepare clean data for PDF
