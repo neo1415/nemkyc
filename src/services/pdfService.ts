@@ -13,7 +13,11 @@ export interface PDFOptions {
 
 // System fields to exclude from PDF
 const EXCLUDED_FIELDS = [
-  'formId', 'id', 'collection', 'timestamp', 'createdAt', 'updatedAt', 'submittedAt',
+  'formId', 'id', 'collection', 'timestamp', 'createdAt', 'updatedAt', 'submittedAt'
+];
+
+// File upload fields to exclude from PDF
+const FILE_FIELDS = [
   'identificationUrl', 'cacCertificateUrl', 'memoOfAssociationUrl', 
   'articlesOfAssociationUrl', 'certificateOfIncorporationUrl', 'taxClearanceUrl',
   'auditedAccountsUrl', 'boardResolutionUrl', 'signatureCardUrl'
@@ -66,33 +70,28 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
   let yPosition = options.subtitle ? 65 : 55;
   pdf.setFontSize(10);
   
-  // Use mapping if available, otherwise fallback to original logic
+  // Use mapping if available for structured PDF generation
   if (options.mapping) {
     options.mapping.sections.forEach((section: any) => {
+      // Skip system information sections in PDF
+      if (section.title && section.title.toLowerCase().includes('system')) {
+        return;
+      }
+      
       // Section header
       pdf.setFontSize(12);
       pdf.setFont(undefined, 'bold');
       pdf.setTextColor(139, 69, 19);
-      const sectionName = String(section.name || section.title || 'Section');
+      const sectionName = String(section.title || section.name || 'Section');
       pdf.text(sectionName, 15, yPosition);
       yPosition += 10;
       
       pdf.setFontSize(10);
       pdf.setTextColor(0, 0, 0);
       
-      // Special handling for Declaration section
-      if (sectionName.toLowerCase().includes('declaration') && options.data.declaration) {
-        pdf.setFont(undefined, 'normal');
-        const declarationText = String(options.data.declaration);
-        const maxWidth = 170;
-        const textLines = pdf.splitTextToSize(declarationText, maxWidth);
-        pdf.text(textLines, 15, yPosition);
-        yPosition += textLines.length * 5 + 10;
-      }
-      
       section.fields.forEach((field: any) => {
-        // Skip excluded fields
-        if (EXCLUDED_FIELDS.includes(field.key)) {
+        // Skip excluded fields and file fields
+        if (EXCLUDED_FIELDS.includes(field.key) || FILE_FIELDS.includes(field.key) || field.type === 'file') {
           return;
         }
         
@@ -117,7 +116,7 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
                 pdf.text(`${dirLabel}:`, 15, yPosition);
                 pdf.setFont(undefined, 'normal');
                 
-                const displayValue = dirValue ? String(dirValue) : '';
+                const displayValue = dirValue ? String(dirValue) : 'N/A';
                 const maxWidth = 130;
                 const textLines = pdf.splitTextToSize(displayValue, maxWidth);
                 pdf.text(textLines, 70, yPosition);
@@ -130,16 +129,43 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
               });
               yPosition += 5;
             });
+          } else {
+            // Show N/A for empty directors array
+            pdf.setFont(undefined, 'bold');
+            pdf.text('Directors:', 15, yPosition);
+            pdf.setFont(undefined, 'normal');
+            pdf.text('N/A', 70, yPosition);
+            yPosition += 6;
           }
-        } else {
-          // Handle regular fields - show all fields with empty values as blank
+        } else if (field.type === 'array') {
+          // Handle other arrays
           pdf.setFont(undefined, 'bold');
           const fieldLabel = String(field.label || field.key || 'Field');
           pdf.text(`${fieldLabel}:`, 15, yPosition);
           pdf.setFont(undefined, 'normal');
           
-          // Sanitize and format value - use blank for empty values
-          let displayValue = '';
+          if (Array.isArray(value) && value.length > 0) {
+            yPosition += 6;
+            value.forEach((item: any, index: number) => {
+              const itemText = typeof item === 'object' ? JSON.stringify(item) : String(item);
+              const maxWidth = 130;
+              const textLines = pdf.splitTextToSize(`${index + 1}. ${itemText}`, maxWidth);
+              pdf.text(textLines, 20, yPosition);
+              yPosition += textLines.length * 5;
+            });
+          } else {
+            pdf.text('N/A', 70, yPosition);
+            yPosition += 6;
+          }
+        } else {
+          // Handle regular fields - show all fields, use N/A for empty values
+          pdf.setFont(undefined, 'bold');
+          const fieldLabel = String(field.label || field.key || 'Field');
+          pdf.text(`${fieldLabel}:`, 15, yPosition);
+          pdf.setFont(undefined, 'normal');
+          
+          // Format value - use N/A for empty values
+          let displayValue = 'N/A';
           if (value !== null && value !== undefined && value !== '') {
             if (field.key.toLowerCase().includes('date') && value instanceof Date) {
               displayValue = value.toLocaleDateString();
@@ -151,9 +177,6 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
               }
             } else if (typeof value === 'boolean') {
               displayValue = value ? 'Yes' : 'No';
-            } else if (field.type === 'file' && typeof value === 'string') {
-              // Skip file fields entirely in PDF
-              return;
             } else {
               displayValue = String(value);
             }
@@ -163,11 +186,11 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
           const textLines = pdf.splitTextToSize(displayValue, maxWidth);
           pdf.text(textLines, 70, yPosition);
           yPosition += Math.max(textLines.length * 5, 6);
-          
-          if (yPosition > 270) {
-            pdf.addPage();
-            yPosition = 20;
-          }
+        }
+        
+        if (yPosition > 270) {
+          pdf.addPage();
+          yPosition = 20;
         }
       });
       yPosition += 10;
