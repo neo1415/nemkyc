@@ -30,11 +30,11 @@ const individualCDDSchema = yup.object().shape({
   lastName: yup.string().required("Last name is required"),
   contactAddress: yup.string().required("Contact address is required"),
   gender: yup.string().required("Gender is required"),
-  residenceCountry: yup.string().required("Residence country is required"),
+  country: yup.string().required("Residence country is required"),
   dateOfBirth: yup.date().required("Date of birth is required"),
   placeOfBirth: yup.string().required("Place of birth is required"),
-  email: yup.string().email("Valid email is required").required("Email is required"),
-  mobileNumber: yup.string().required("Mobile number is required"),
+  emailAddress: yup.string().email("Valid email is required").required("Email is required"),
+  GSMno: yup.string().required("Mobile number is required"),
   residentialAddress: yup.string().required("Residential address is required"),
   nationality: yup.string().required("Nationality is required"),
   occupation: yup.string().required("Occupation is required"),
@@ -43,13 +43,13 @@ const individualCDDSchema = yup.object().shape({
   // Additional Info
   businessType: yup.string().required("Business type is required"),
   businessTypeOther: yup.string(),
-  employerEmail: yup.string().email("Valid email is required").required("Employer email is required"),
-  employerName: yup.string(),
-  employerTelephone: yup.string(),
-  employerAddress: yup.string(),
-  taxId: yup.string(),
-  bvn: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
-  idType: yup.string().required("ID type is required"),
+  employersEmail: yup.string().email("Valid email is required").required("Employer email is required"),
+  employersName: yup.string(),
+  employersTelephoneNumber: yup.string(),
+  employersAddress: yup.string(),
+  taxIdentificationNumber: yup.string(),
+  BVNNumber: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+  identificationType: yup.string().required("ID type is required"),
   identificationNumber: yup.string().required("Identification number is required"),
   issuingCountry: yup.string().required("Issuing country is required"),
   issuedDate: yup.date().required("Issued date is required"),
@@ -71,24 +71,24 @@ const defaultValues = {
   lastName: '',
   contactAddress: '',
   gender: '',
-  residenceCountry: '',
+  country: '',
   dateOfBirth: '',
   placeOfBirth: '',
-  email: '',
-  mobileNumber: '',
+  emailAddress: '',
+  GSMno: '',
   residentialAddress: '',
   nationality: '',
   occupation: '',
   position: '',
   businessType: '',
   businessTypeOther: '',
-  employerEmail: '',
-  employerName: '',
-  employerTelephone: '',
-  employerAddress: '',
-  taxId: '',
-  bvn: '',
-  idType: '',
+  employersEmail: '',
+  employersName: '',
+  employersTelephoneNumber: '',
+  employersAddress: '',
+  taxIdentificationNumber: '',
+  BVNNumber: '',
+  identificationType: '',
   identificationNumber: '',
   issuingCountry: '',
   issuedDate: '',
@@ -254,10 +254,10 @@ const IndividualCDD: React.FC = () => {
               </Select>
             </div>
             <div>
-              <Label htmlFor="residenceCountry">Residence Country *</Label>
+              <Label htmlFor="country">Residence Country *</Label>
               <Input
-                id="residenceCountry"
-                {...formMethods.register('residenceCountry')}
+                id="country"
+                {...formMethods.register('country')}
               />
             </div>
           </div>
@@ -280,18 +280,18 @@ const IndividualCDD: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="emailAddress">Email *</Label>
               <Input
-                id="email"
+                id="emailAddress"
                 type="email"
-                {...formMethods.register('email')}
+                {...formMethods.register('emailAddress')}
               />
             </div>
             <div>
-              <Label htmlFor="mobileNumber">Mobile Number *</Label>
+              <Label htmlFor="GSMno">Mobile Number *</Label>
               <Input
-                id="mobileNumber"
-                {...formMethods.register('mobileNumber')}
+                id="GSMno"
+                {...formMethods.register('GSMno')}
               />
             </div>
           </div>
@@ -367,61 +367,61 @@ const IndividualCDD: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="employerEmail">Employer's Email *</Label>
+              <Label htmlFor="employersEmail">Employer's Email *</Label>
               <Input
-                id="employerEmail"
+                id="employersEmail"
                 type="email"
-                {...formMethods.register('employerEmail')}
+                {...formMethods.register('employersEmail')}
               />
             </div>
             <div>
-              <Label htmlFor="employerName">Employer's Name</Label>
+              <Label htmlFor="employersName">Employer's Name</Label>
               <Input
-                id="employerName"
-                {...formMethods.register('employerName')}
+                id="employersName"
+                {...formMethods.register('employersName')}
               />
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="employerTelephone">Employer's Telephone Number</Label>
+              <Label htmlFor="employersTelephoneNumber">Employer's Telephone Number</Label>
               <Input
-                id="employerTelephone"
-                {...formMethods.register('employerTelephone')}
+                id="employersTelephoneNumber"
+                {...formMethods.register('employersTelephoneNumber')}
               />
             </div>
             <div>
-              <Label htmlFor="taxId">Tax Identification Number</Label>
+              <Label htmlFor="taxIdentificationNumber">Tax Identification Number</Label>
               <Input
-                id="taxId"
-                {...formMethods.register('taxId')}
+                id="taxIdentificationNumber"
+                {...formMethods.register('taxIdentificationNumber')}
               />
             </div>
           </div>
           
           <div>
-            <Label htmlFor="employerAddress">Employer's Address</Label>
+            <Label htmlFor="employersAddress">Employer's Address</Label>
             <Textarea
-              id="employerAddress"
-              {...formMethods.register('employerAddress')}
+              id="employersAddress"
+              {...formMethods.register('employersAddress')}
             />
           </div>
           
           <div>
-            <Label htmlFor="bvn">BVN *</Label>
+            <Label htmlFor="BVN">BVN *</Label>
             <Input
-              id="bvn"
+              id="BVN"
               maxLength={11}
-              {...formMethods.register('bvn')}
+              {...formMethods.register('BVN')}
             />
           </div>
           
           <div>
             <Label>ID Type *</Label>
             <Select
-              value={watchedValues.idType || ''}
-              onValueChange={(value) => formMethods.setValue('idType', value)}
+              value={watchedValues.identificationType || ''}
+              onValueChange={(value) => formMethods.setValue('identificationType', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Choose ID Type" />
@@ -527,32 +527,13 @@ const IndividualCDD: React.FC = () => {
                 accept="application/pdf,image/*"
                 maxSize={3 * 1024 * 1024}
                 onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, validMeansOfId: file }));
+                  setUploadedFiles(prev => ({ ...prev, identification: file }));
                   toast({ title: "File selected for upload" });
                 }}
-                currentFile={uploadedFiles.validMeansOfId}
+                currentFile={uploadedFiles.identification}
                 onFileRemove={() => {
                   setUploadedFiles(prev => {
-                    const { validMeansOfId, ...rest } = prev;
-                    return rest;
-                  });
-                }}
-              />
-            </div>
-            
-            <div>
-              <Label>Utility Bill *</Label>
-              <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, utilityBill: file }));
-                  toast({ title: "File selected for upload" });
-                }}
-                currentFile={uploadedFiles.utilityBill}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { utilityBill, ...rest } = prev;
+                    const { identification, ...rest } = prev;
                     return rest;
                   });
                 }}
