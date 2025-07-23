@@ -906,7 +906,7 @@ export const FORM_MAPPINGS: FormMapping = {
     ]
   },
 
-  'fireSpecialPerilsClaims': {
+  'fire-special-perils-claims': {
     title: 'Fire and Special Perils Claim',
     sections: [
       {
