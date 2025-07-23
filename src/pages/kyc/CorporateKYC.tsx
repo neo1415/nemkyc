@@ -725,55 +725,41 @@ const CorporateKYC: React.FC = () => {
       title: 'Data Privacy & Declaration',
       component: (
         <div className="space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Data Privacy</h3>
-            <div className="space-y-2 text-sm">
+          <div className="p-4 bg-muted rounded-lg">
+            <h3 className="font-medium mb-2">Data Privacy</h3>
+            <div className="text-sm text-muted-foreground space-y-2">
               <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
               <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
               <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
             </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Declaration</h3>
-            <div className="space-y-2 text-sm">
+            
+            <h3 className="font-medium mb-2 mt-4">Declaration</h3>
+            <div className="text-sm text-muted-foreground space-y-2">
               <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
               <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
               <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
             </div>
           </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="agreeToDataPrivacy"
-                checked={formMethods.watch('agreeToDataPrivacy')}
-                onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked)}
-              />
-              <Label htmlFor="agreeToDataPrivacy" className="text-sm">
-                I agree to the data privacy policy and declaration above *
-              </Label>
-            </div>
-
-            <div>
-              <Label htmlFor="signature">Digital Signature *</Label>
-              <Textarea
-                id="signature"
-                placeholder="Type your full name as digital signature"
-                {...formMethods.register('signature')}
-              />
-            </div>
-
-            <div>
-              <Label>Date</Label>
-              <Input
-                value={new Date().toLocaleDateString()}
-                disabled
-                className="bg-gray-50"
-              />
-            </div>
+          
+          <div className="flex items-start space-x-2">
+            <Checkbox
+              id="agreeToDataPrivacy"
+              checked={watchedValues.agreeToDataPrivacy}
+              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked === true)}
+            />
+            <Label htmlFor="agreeToDataPrivacy" className="text-sm">
+              I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge *
+            </Label>
           </div>
-
+          
+          <div>
+            <Label htmlFor="signature">Digital Signature *</Label>
+            <Input
+              id="signature"
+              placeholder="Type your full name as signature"
+              {...formMethods.register('signature')}
+            />
+          </div>
           {formMethods.watch('agreeToDataPrivacy') && (
             <Button
               type="button"
