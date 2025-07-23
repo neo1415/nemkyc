@@ -4,8 +4,9 @@
 export interface FormField {
   key: string;
   label: string;
-  type: 'text' | 'date' | 'email' | 'url' | 'array' | 'object' | 'boolean' | 'number' | 'currency' | 'textarea' | 'file';
+  type: 'text' | 'date' | 'email' | 'url' | 'array' | 'object' | 'boolean' | 'number' | 'currency' | 'textarea' | 'file' | 'radio' | 'select';
   editable?: boolean;
+  options?: Array<{ value: string; label: string }>;
   conditional?: {
     dependsOn: string;
     value: string;
@@ -1079,8 +1080,7 @@ export const FORM_MAPPINGS: FormMapping = {
             ]
           },
           { key: 'integrityExplanation', label: 'Explanation', type: 'textarea', editable: true, conditional: { dependsOn: 'doubtIntegrity', value: 'yes' } },
-        ],
-        conditional: { dependsOn: 'moneyLocation', value: 'transit' } // Apply this section if moneyLocation is 'transit'
+        ]
       },
       {
         title: 'If loss was in safe',
@@ -1105,8 +1105,7 @@ export const FORM_MAPPINGS: FormMapping = {
             // Here, we just mark it as 'array' and assume the UI knows how to render the sub-fields.
             // If you need more structured sub-fields in the mapping itself, we can define a 'subFields' property.
           },
-        ],
-        conditional: { dependsOn: 'moneyLocation', value: 'safe' } // Apply this section if moneyLocation is 'safe'
+        ]
       },
       {
         title: 'General Information',
@@ -1158,10 +1157,8 @@ export const FORM_MAPPINGS: FormMapping = {
       }
     ]
   },
-};
 
-  // Contractors Plant & Machinery Claims
-'contractors-claims': {
+  'contractors-claims': {
   title: 'Contractors Plant & Machinery Claim',
   sections: [
     {
@@ -1237,10 +1234,9 @@ export const FORM_MAPPINGS: FormMapping = {
       ]
     }
   ]
-}
+  },
 
-  // Fidelity Guarantee Claims
- 'fidelityGuaranteeClaims': {
+  'fidelityGuaranteeClaims': {
   title: 'Fidelity Guarantee Claim',
   sections: [
     {
@@ -2125,6 +2121,120 @@ export const FORM_MAPPINGS: FormMapping = {
         title: 'Declaration',
         fields: [
           { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: true },
+          { key: 'signature', label: 'Signature', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'money-insurance-claims': {
+    title: 'Money Insurance Claim',
+    sections: [
+      {
+        title: 'Policy Details',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
+          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Company Details',
+        fields: [
+          { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
+          { key: 'address', label: 'Address', type: 'textarea', editable: true },
+          { key: 'phone', label: 'Phone', type: 'text', editable: true },
+          { key: 'email', label: 'Email', type: 'email', editable: true }
+        ]
+      },
+      {
+        title: 'Loss Details',
+        fields: [
+          { key: 'lossDate', label: 'Loss Date', type: 'date', editable: true },
+          { key: 'lossTime', label: 'Loss Time', type: 'text', editable: true },
+          { key: 'lossLocation', label: 'Loss Location', type: 'text', editable: true },
+          { key: 'lossAmount', label: 'Loss Amount', type: 'currency', editable: true },
+          { key: 'lossDescription', label: 'Loss Description', type: 'textarea', editable: true },
+          { key: 'policeNotified', label: 'Police Notified', type: 'text', editable: true },
+          { key: 'policeStationDetails', label: 'Police Station Details', type: 'text', editable: true },
+          { key: 'previousLoss', label: 'Previous Loss', type: 'text', editable: true },
+          { key: 'previousLossDetails', label: 'Previous Loss Details', type: 'textarea', editable: true }
+        ]
+      },
+      {
+        title: 'Keyholders',
+        fields: [
+          { key: 'keyholders', label: 'Keyholders', type: 'array', editable: true }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'contractors-plant-machinery-claims': {
+    title: 'Contractors Plant & Machinery Claim',
+    sections: [
+      {
+        title: 'Policy Details',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
+          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Insured Details',
+        fields: [
+          { key: 'nameOfInsured', label: 'Name of Insured', type: 'text', editable: true },
+          { key: 'address', label: 'Address', type: 'textarea', editable: true },
+          { key: 'phone', label: 'Phone', type: 'text', editable: true },
+          { key: 'email', label: 'Email', type: 'email', editable: true }
+        ]
+      },
+      {
+        title: 'Incident Details',
+        fields: [
+          { key: 'dateOfIncident', label: 'Date of Incident', type: 'date', editable: true },
+          { key: 'timeOfIncident', label: 'Time of Incident', type: 'text', editable: true },
+          { key: 'placeOfIncident', label: 'Place of Incident', type: 'text', editable: true },
+          { key: 'circumstancesOfLoss', label: 'Circumstances of Loss', type: 'textarea', editable: true }
+        ]
+      },
+      {
+        title: 'Plant/Machinery Details',
+        fields: [
+          { key: 'plantMachineryDetails', label: 'Plant/Machinery Details', type: 'array', editable: true }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
           { key: 'signature', label: 'Signature', type: 'text', editable: true }
         ]
       },
