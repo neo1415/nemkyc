@@ -638,6 +638,8 @@ const CorporateCDD: React.FC = () => {
       title: 'Uploads',
       component: (
          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <h4 className="font-medium mb-2">Upload CAC Certificater</h4>
           <FileUpload
                 accept="application/pdf,image/*"
                 maxSize={3 * 1024 * 1024}
@@ -653,7 +655,10 @@ const CorporateCDD: React.FC = () => {
                   });
                 }}
               />
-          
+               </div>
+
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <h4 className="font-medium mb-2">Upload Means of Identification</h4>
            <FileUpload
                 accept="application/pdf,image/*"
                 maxSize={3 * 1024 * 1024}
@@ -669,6 +674,7 @@ const CorporateCDD: React.FC = () => {
                   });
                 }}
               />
+            </div>  
         </div>
       )
     },
