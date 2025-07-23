@@ -135,17 +135,17 @@ const CorporateCDD: React.FC = () => {
     resolver: yupResolver(corporateCDDSchema),
     defaultValues: {
       companyName: '',
-      registeredAddress: '',
+      registeredCompanyAddress: '',
       incorporationNumber: '',
       incorporationState: '',
-      dateOfIncorporation: '',
+      dateOfIncorporationRegistration: '',
       natureOfBusiness: '',
-      companyType: '',
-      companyTypeOther: '',
+      companyLegalForm: '',
+      companyLegalFormOther: '',
       email: '',
       website: '',
-      taxId: '',
-      telephone: '',
+      taxIdentificationNumber: '',
+      telephoneNumber: '',
       directors: [defaultDirector],
       bankName: '',
       accountNumber: '',
@@ -277,10 +277,10 @@ const CorporateCDD: React.FC = () => {
           </div>
           
           <div>
-            <Label htmlFor="registeredAddress">Registered Company Address *</Label>
+            <Label htmlFor="registeredCompanyAddress">Registered Company Address *</Label>
             <Textarea
-              id="registeredAddress"
-              {...formMethods.register('registeredAddress')}
+              id="registeredCompanyAddress"
+              {...formMethods.register('registeredCompanyAddress')}
             />
           </div>
           
@@ -303,7 +303,7 @@ const CorporateCDD: React.FC = () => {
           
           <div>
             <DatePickerField
-              name="dateOfIncorporation"
+              name="dateOfIncorporationRegistration"
               label="Date of Incorporation/Registration *"
             />
           </div>
@@ -319,8 +319,8 @@ const CorporateCDD: React.FC = () => {
           <div>
             <Label>Company Type *</Label>
             <Select
-              value={watchedValues.companyType || ''}
-              onValueChange={(value) => formMethods.setValue('companyType', value)}
+              value={watchedValues.companyLegalForm || ''}
+              onValueChange={(value) => formMethods.setValue('companyLegalForm', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Choose Company Type" />
@@ -336,10 +336,10 @@ const CorporateCDD: React.FC = () => {
             </Select>
           </div>
 
-          {watchedValues.companyType === 'Other' && (
+          {watchedValues.companyLegalForm === 'Other' && (
             <div>
-              <Label htmlFor="companyTypeOther">Please specify *</Label>
-              <Input id="companyTypeOther" {...formMethods.register('companyTypeOther')} />
+              <Label htmlFor="companyLegalFormOther">Please specify *</Label>
+              <Input id="companyLegalFormOther" {...formMethods.register('companyLegalFormOther')} />
             </div>
           )}
           
@@ -363,17 +363,17 @@ const CorporateCDD: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="taxId">Tax Identification Number</Label>
+              <Label htmlFor="taxIdentificationNumber">Tax Identification Number</Label>
               <Input
-                id="taxId"
-                {...formMethods.register('taxId')}
+                id="taxIdentificationNumber"
+                {...formMethods.register('taxIdentificationNumber')}
               />
             </div>
             <div>
-              <Label htmlFor="telephone">Telephone Number *</Label>
+              <Label htmlFor="telephoneNumber">Telephone Number *</Label>
               <Input
-                id="telephone"
-                {...formMethods.register('telephone')}
+                id="telephoneNumber"
+                {...formMethods.register('telephoneNumber')}
               />
             </div>
           </div>
