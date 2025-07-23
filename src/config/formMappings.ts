@@ -2516,8 +2516,9 @@ export const FORM_MAPPINGS: FormMapping = {
       ]
     }
   ]
-},
-  
+}
+};
+
 // 'money-insurance-claims': {
 //     title: 'Money Insurance Claim',
 //     sections: [
