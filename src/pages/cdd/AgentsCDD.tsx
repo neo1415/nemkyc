@@ -156,12 +156,42 @@ const AgentsCDD: React.FC = () => {
     }
   }, []);
 
-  const handleReview = (data: any) => {
-    console.log('✅ handleReview was called! This means validation passed.');
-    console.log('Form Data:', data);
-    setShowSummary(true);
+  const handleReview = async (data: any) => {
+    console.log('✅ handleReview was called! Starting validation...');
+    
+    try {
+      // Validate the entire form using the schema
+      await agentsCDDSchema.validate(data, { abortEarly: false });
+      
+      // If validation passes, show the summary
+      console.log('✅ Validation passed! Showing summary.');
+      console.log('Form Data:', data);
+      setShowSummary(true);
+      
+    } catch (validationError) {
+      // If validation fails, show errors
+      console.log('❌ Validation failed:', validationError);
+      
+      if (validationError.inner) {
+        // Set field-specific errors
+        validationError.inner.forEach((error) => {
+          if (error.path) {
+            formMethods.setError(error.path, {
+              type: 'validation',
+              message: error.message
+            });
+          }
+        });
+      }
+      
+      // Show a toast notification about validation errors
+      toast({
+        title: "Form Validation Failed",
+        description: "Please check and fix the errors in the form before submitting.",
+        variant: "destructive"
+      });
+    }
   };
-  
   const handleSubmit = async (data: any) => {
     // Upload files to Firebase Storage first
     const fileUploadPromises: Array<Promise<[string, string]>> = [];
