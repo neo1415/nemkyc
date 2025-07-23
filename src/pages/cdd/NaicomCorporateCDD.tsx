@@ -42,7 +42,7 @@ const naicomCorporateCDDSchema = yup.object().shape({
   }),
   email: yup.string().email("Valid email is required").min(5).max(50).required("Email is required"),
   website: yup.string().required("Website is required"),
-  taxIdentificationNumber yup.string().min(6).max(15).required("Tax ID is required"),
+  taxIdentificationNumber: yup.string().min(6).max(15).required("Tax ID is required"),
   telephoneNumber: yup.string().min(5).max(11).required("Telephone number is required"),
 
   // Directors
