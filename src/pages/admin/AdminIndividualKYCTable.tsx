@@ -68,10 +68,15 @@ const AdminIndividualKYCTable: React.FC = () => {
   );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const data = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as KYCData[];
+      const data = querySnapshot.docs.map(doc => {
+        const docData = doc.data();
+        return {
+          id: doc.id,
+          ...docData,
+          // Handle createdAt fallback
+          createdAt: docData.createdAt || docData.submittedAt || docData.timestamp
+        };
+      }) as KYCData[];
       setRows(data);
       setLoading(false);
     });
@@ -85,8 +90,8 @@ const AdminIndividualKYCTable: React.FC = () => {
       row.firstName?.toLowerCase().includes(searchText.toLowerCase()) ||
       row.lastName?.toLowerCase().includes(searchText.toLowerCase()) ||
       row.email?.toLowerCase().includes(searchText.toLowerCase()) ||
-      row.mobileNumber?.includes(searchText) ||
-      row.bvn?.includes(searchText);
+      row.GSMNo?.includes(searchText) ||
+      row.BVN?.includes(searchText);
     
     const matchesStatus = statusFilter === 'all' || row.status === statusFilter;
     
@@ -94,13 +99,13 @@ const AdminIndividualKYCTable: React.FC = () => {
   });
 
   const handleView = (id: string) => {
-    navigate(`/admin/form/individual-kyc/${id}`);
+    navigate(`/admin/form/Individual-kyc-form/${id}`);
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this KYC record?')) {
       try {
-        await deleteDoc(doc(db, 'individual-kyc', id));
+        await deleteDoc(doc(db, 'Individual-kyc-form', id));
         toast({ title: 'KYC record deleted successfully' });
       } catch (error) {
         console.error('Error deleting record:', error);
@@ -189,12 +194,12 @@ const AdminIndividualKYCTable: React.FC = () => {
       width: 200
     },
     {
-      field: 'mobileNumber',
+      field: 'GSMNo',
       headerName: 'Mobile',
       width: 130
     },
     {
-      field: 'bvn',
+      field: 'BVN',
       headerName: 'BVN',
       width: 120
     },
