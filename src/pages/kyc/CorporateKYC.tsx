@@ -136,6 +136,7 @@ const corporateKYCSchema = yup.object().shape({
 
   // Verification
   companyNameVerificationDoc: yup.string().required("Verification document type is required"),
+  verificationDocument: yup.mixed().required("Verification document upload is required"),
 
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
@@ -435,7 +436,7 @@ const CorporateKYC: React.FC = () => {
       'estimatedTurnover', 'premiumPaymentSource', 'premiumPaymentSourceOther'
     ],
     1: ['directors'],
-    2: ['companyNameVerificationDoc'],
+    2: ['companyNameVerificationDoc', 'verificationDocument'],
     3: ['agreeToDataPrivacy', 'signature']
   };
 
@@ -828,14 +829,21 @@ const CorporateKYC: React.FC = () => {
                   ...prev,
                   verificationDocument: file
                 }));
+                formMethods.setValue('verificationDocument', file);
+                if (formMethods.formState.errors.verificationDocument) {
+                  formMethods.clearErrors('verificationDocument');
+                }
               }}
               maxSize={3 * 1024 * 1024}
             />
-            {uploadedFiles.verificationDoc && (
+            {uploadedFiles.verificationDocument && (
               <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
                 <Check className="h-4 w-4" />
-                {uploadedFiles.verificationDoc.name}
+                {uploadedFiles.verificationDocument.name}
               </div>
+            )}
+            {formMethods.formState.errors.verificationDocument && (
+              <p className="text-sm text-destructive">{formMethods.formState.errors.verificationDocument.message?.toString()}</p>
             )}
           </div>
         </div>
@@ -866,7 +874,12 @@ const CorporateKYC: React.FC = () => {
             <Checkbox
               id="agreeToDataPrivacy"
               checked={watchedValues.agreeToDataPrivacy}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked === true)}
+              onCheckedChange={(checked) => {
+                formMethods.setValue('agreeToDataPrivacy', checked === true);
+                if (formMethods.formState.errors.agreeToDataPrivacy) {
+                  formMethods.clearErrors('agreeToDataPrivacy');
+                }
+              }}
               className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
             />
             <Label htmlFor="agreeToDataPrivacy" className="text-sm">
@@ -883,15 +896,6 @@ const CorporateKYC: React.FC = () => {
             required={true}
             placeholder="Type your full name as signature"
           />
-          {formMethods.watch('agreeToDataPrivacy') && (
-            <Button
-              type="button"
-              onClick={() => setShowSummary(true)}
-              className="w-full"
-            >
-              Submit Corporate KYC Form
-            </Button>
-          )}
         </div>
       )
     }
