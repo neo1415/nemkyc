@@ -218,104 +218,7 @@ const defaultValues = {
   signature: ''
 };
 
-const BrokersCDD: React.FC = () => {
-  const [showSummary, setShowSummary] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
-  
-  const {
-    handleSubmitWithAuth,
-    showSuccess,
-    setShowSuccess,
-    isSubmitting
-  } = useAuthRequiredSubmit();
-
-  const formMethods = useForm<any>({
-    resolver: yupResolver(brokersCDDSchema),
-    defaultValues,
-    mode: 'onChange'
-  });
-
-  const { saveDraft, clearDraft } = useFormDraft('brokers-cdd', formMethods);
-  const { fields, append, remove } = useFieldArray({
-    control: formMethods.control,
-    name: 'directors'
-  });
-
-  const watchedValues = formMethods.watch();
-
-  // Step field mappings for validation
-  const stepFieldMappings = {
-    0: ['companyName', 'registeredAddress', 'city', 'state', 'country', 'email', 'website', 'contactPersonName', 'contactPersonNumber', 'taxId', 'vatRegistrationNumber', 'incorporationNumber', 'incorporationDate', 'incorporationState', 'businessNature', 'bvn'],
-    1: ['directors'],
-    2: ['localAccountNumber', 'localBankName', 'localBankBranch', 'localAccountOpeningDate', 'certificateOfIncorporation', 'director1Id', 'director2Id'],
-    3: ['agreeToDataPrivacy', 'signature']
-  };
-
-  // Auto-save draft
-  React.useEffect(() => {
-    const subscription = formMethods.watch((data) => {
-      saveDraft(data);
-    });
-    return () => subscription.unsubscribe();
-  }, [formMethods, saveDraft]);
-
-  // Post-auth loading effect
-  useEffect(() => {
-    const submissionInProgress = sessionStorage.getItem('submissionInProgress');
-    if (submissionInProgress) {
-      setShowSummary(false);
-    }
-  }, []);
-
-  // Data sanitization (remove undefined values)
-  const sanitizeData = (data: any) => {
-    const sanitized: any = {};
-    Object.keys(data).forEach(key => {
-      if (data[key] !== undefined) {
-        sanitized[key] = data[key];
-      }
-    });
-    return sanitized;
-  };
-
-  const handleSubmit = async (data: any) => {
-    console.log('Form data before sanitization:', data);
-    
-    const sanitizedData = sanitizeData(data);
-    console.log('Sanitized data:', sanitizedData);
-
-    // Handle file uploads
-    const fileUploadPromises: Array<Promise<[string, string]>> = [];
-    
-    for (const [key, file] of Object.entries(uploadedFiles)) {
-      if (file) {
-        fileUploadPromises.push(
-          uploadFile(file, `brokers-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
-        );
-      }
-    }
-
-    const fileResults = await Promise.all(fileUploadPromises);
-    const fileUrls = Object.fromEntries(fileResults);
-
-    const finalData = {
-      ...sanitizedData,
-      ...fileUrls,
-      status: 'processing',
-      formType: 'Brokers-CDD'
-    };
-
-    await handleSubmitWithAuth(finalData, 'Brokers-CDD');
-    clearDraft();
-    setShowSummary(false);
-  };
-
-  const onFinalSubmit = (data: any) => {
-    setShowSummary(true);
-  };
-
-// ========== FORM COMPONENTS (MOVED OUTSIDE TO PREVENT FOCUS LOSS) ==========
+// ========== FORM COMPONENTS (OUTSIDE MAIN COMPONENT) ==========
 const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
   const { register, formState: { errors }, clearErrors } = useFormContext();
   const error = get(errors, name);
@@ -467,6 +370,103 @@ const FormDatePicker = ({ name, label, required = false }: any) => {
     </div>
   );
 };
+
+const BrokersCDD: React.FC = () => {
+  const [showSummary, setShowSummary] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
+  
+  const {
+    handleSubmitWithAuth,
+    showSuccess,
+    setShowSuccess,
+    isSubmitting
+  } = useAuthRequiredSubmit();
+
+  const formMethods = useForm<any>({
+    resolver: yupResolver(brokersCDDSchema),
+    defaultValues,
+    mode: 'onChange'
+  });
+
+  const { saveDraft, clearDraft } = useFormDraft('brokers-cdd', formMethods);
+  const { fields, append, remove } = useFieldArray({
+    control: formMethods.control,
+    name: 'directors'
+  });
+
+  const watchedValues = formMethods.watch();
+
+  // Step field mappings for validation
+  const stepFieldMappings = {
+    0: ['companyName', 'registeredAddress', 'city', 'state', 'country', 'email', 'website', 'contactPersonName', 'contactPersonNumber', 'taxId', 'vatRegistrationNumber', 'incorporationNumber', 'incorporationDate', 'incorporationState', 'businessNature', 'bvn'],
+    1: ['directors'],
+    2: ['localAccountNumber', 'localBankName', 'localBankBranch', 'localAccountOpeningDate', 'certificateOfIncorporation', 'director1Id', 'director2Id'],
+    3: ['agreeToDataPrivacy', 'signature']
+  };
+
+  // Auto-save draft
+  React.useEffect(() => {
+    const subscription = formMethods.watch((data) => {
+      saveDraft(data);
+    });
+    return () => subscription.unsubscribe();
+  }, [formMethods, saveDraft]);
+
+  // Post-auth loading effect
+  useEffect(() => {
+    const submissionInProgress = sessionStorage.getItem('submissionInProgress');
+    if (submissionInProgress) {
+      setShowSummary(false);
+    }
+  }, []);
+
+  // Data sanitization (remove undefined values)
+  const sanitizeData = (data: any) => {
+    const sanitized: any = {};
+    Object.keys(data).forEach(key => {
+      if (data[key] !== undefined) {
+        sanitized[key] = data[key];
+      }
+    });
+    return sanitized;
+  };
+
+  const handleSubmit = async (data: any) => {
+    console.log('Form data before sanitization:', data);
+    
+    const sanitizedData = sanitizeData(data);
+    console.log('Sanitized data:', sanitizedData);
+
+    // Handle file uploads
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
+        fileUploadPromises.push(
+          uploadFile(file, `brokers-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
+        );
+      }
+    }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...sanitizedData,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Brokers-CDD'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Brokers-CDD');
+    clearDraft();
+    setShowSummary(false);
+  };
+
+  const onFinalSubmit = (data: any) => {
+    setShowSummary(true);
+  };
 
   const steps = [
     {
