@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { FormField, PhoneField, NumericField, FormTextarea, FormSelect, DateField } from '@/components/form/FormFieldControllers';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -14,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Calendar as ReactCalendar } from '@/components/ui/calendar';
 import { CalendarIcon, Plus, Trash2, Check, Loader2, FileText } from 'lucide-react';
-import { format, subYears } from 'date-fns';
+import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
@@ -23,69 +22,52 @@ import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
-import { Form, FormControl, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 // Form validation schema
 const corporateKYCSchema = yup.object().shape({
   // Company Info
-  branchOffice: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Branch Office is required"),
-  insured: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Insured field is required"),
-  officeAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Office address is required"),
+  branchOffice: yup.string().required("Branch Office is required"),
+  insured: yup.string().required("Insured field is required"),
+  officeAddress: yup.string().required("Office address is required"),
   ownershipOfCompany: yup.string().required("Ownership of company is required"),
-  contactPerson: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Contact person is required"),
-  website: yup.string().url("Please enter a valid URL").min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Website is required"),
-  incorporationNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Incorporation number is required"),
-  incorporationState: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Incorporation state is required"),
-  dateOfIncorporationRegistration: yup.date().max(new Date(), "Date must be in the past").required("Date of incorporation is required"),
-  BVN: yup.string().matches(/^\d{11}$/, "BVN must be exactly 11 digits").required("BVN is required"),
-  contactPersonNo: yup.string().matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters").required("Contact person mobile is required"),
-  taxIdNo: yup.string().nullable().transform((value) => value || null),
-  email: yup.string().email("Valid email is required").max(100, "Maximum 100 characters").required("Email is required"),
-  natureOfBusiness: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Business type is required"),
+  contactPerson: yup.string().required("Contact person is required"),
+  website: yup.string().required("Website is required"),
+  incorporationNumber: yup.string().required("Incorporation number is required"),
+  incorporationState: yup.string().required("Incorporation state is required"),
+ dateOfIncorporationRegistration: yup.date().required("Date of incorporation is required"),
+  BVNNumber: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+  contactPersonNo: yup.string().required("Contact person mobile is required"),
+  taxIdNo: yup.string(),
+  email: yup.string().email("Valid email is required").required("Email is required"),
+  natureOfBusiness: yup.string().required("Business type is required"),
   estimatedTurnover: yup.string().required("Estimated turnover is required"),
   premiumPaymentSource: yup.string().required("Premium payment source is required"),
-  premiumPaymentSourceOther: yup.string().when('premiumPaymentSource', {
-    is: 'Other',
-    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other payment source"),
-    otherwise: (schema) => schema.notRequired()
-  }),
+  premiumPaymentSourceOther: yup.string(),
 
   // Directors
   directors: yup.array().of(yup.object().shape({
-    firstName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("First name is required"),
-    middleName: yup.string().nullable().transform((value) => value || null),
-    lastName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Last name is required"),
-    dob: yup.date().max(subYears(new Date(), 18), "Must be at least 18 years old").required("Date of birth is required"),
-    placeOfBirth: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Place of birth is required"),
+    firstName: yup.string().required("First name is required"),
+    middleName: yup.string(),
+    lastName: yup.string().required("Last name is required"),
+    dob: yup.date().required("Date of birth is required"),
+    placeOfBirth: yup.string().required("Place of birth is required"),
     nationality: yup.string().required("Nationality is required"),
-    country: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Country is required"),
-    occupation: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Occupation is required"),
-    email: yup.string().email("Valid email is required").max(100, "Maximum 100 characters").required("Email is required"),
-    phoneNumber: yup.string().matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters").required("Phone number is required"),
-    BVN: yup.string().matches(/^\d{11}$/, "BVN must be exactly 11 digits").required("BVN is required"),
-    employersName: yup.string().nullable().transform((value) => value || null),
-    employersPhoneNumber: yup.string().nullable().transform((value) => value || null).when('employersName', {
-      is: (value: string | null) => value && value.length > 0,
-      then: (schema) => schema.matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters"),
-      otherwise: (schema) => schema.nullable()
-    }),
-    residentialAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Residential address is required"),
-    taxIdNumber: yup.string().nullable().transform((value) => value || null),
+    country: yup.string().required("Country is required"),
+    occupation: yup.string().required("Occupation is required"),
+    email: yup.string().email("Valid email is required").required("Email is required"),
+    phoneNumber: yup.string().required("Phone number is required"),
+    BVNNumber: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+    employersName: yup.string(),
+    employersPhoneNumber: yup.string(),
+    residentialAddress: yup.string().required("Residential address is required"),
+    taxIdNumber: yup.string(),
     idType: yup.string().required("ID type is required"),
-    idNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Identification number is required"),
-    issuingBody: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Issuing body is required"),
-    issuedDate: yup.date().max(new Date(), "Date must be in the past").required("Issued date is required"),
-    expiryDate: yup.date().nullable().transform((value) => value || null).when('idType', {
-      is: (value: string) => value && value !== 'NIN',
-      then: (schema) => schema.min(new Date(), "Expiry date must be in the future"),
-      otherwise: (schema) => schema.nullable()
-    }),
+    idNumber: yup.string().required("Identification number is required"),
+    issuingBody: yup.string().required("Issuing body is required"),
+    issuedDate: yup.date().required("Issued date is required"),
+    expiryDate: yup.date(),
     sourceOfIncome: yup.string().required("Income source is required"),
-    sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
-      is: 'Other',
-      then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other income source"),
-      otherwise: (schema) => schema.notRequired()
-    })
+    sourceOfIncomeOther: yup.string()
   })).min(1, "At least one director is required"),
 
   // Verification
@@ -93,7 +75,7 @@ const corporateKYCSchema = yup.object().shape({
 
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  signature: yup.string().min(2, "Minimum 2 characters").required("Signature is required")
+  signature: yup.string().required("Signature is required")
 });
 
 const defaultValues = {
@@ -106,7 +88,7 @@ const defaultValues = {
   incorporationNumber: '',
   incorporationState: '',
   dateOfIncorporationRegistration: '',
-  BVN: '',
+  BVNNumber: '',
   contactPersonNo: '',
   taxIdNo: '',
   email: '',
@@ -125,7 +107,7 @@ const defaultValues = {
     occupation: '',
     email: '',
     phoneNumber: '',
-    BVN: '',
+    BVNumber: '',
     employersName: '',
     employersPhoneNumber: '',
     residentialAddress: '',
@@ -135,10 +117,10 @@ const defaultValues = {
     issuingBody: '',
     issuedDate: '',
     expiryDate: '',
-    sourceOfIncome: '',
+    sourcesOfIncome: '',
     sourceOfIncomeOther: ''
   }],
-  companyNameVerificationDoc: '',
+   companyNameVerificationDoc: '',
   agreeToDataPrivacy: false,
   signature: ''
 };
@@ -160,38 +142,6 @@ const CorporateKYC: React.FC = () => {
     defaultValues,
     mode: 'onChange'
   });
-
-  // Step validation function
-  const validateCurrentStep = async (stepId: string): Promise<boolean> => {
-    const stepFields = getStepFields(stepId);
-    const result = await formMethods.trigger(stepFields);
-    return result;
-  };
-
-  // Get fields for each step
-  const getStepFields = (stepId: string): string[] => {
-    switch (stepId) {
-      case 'company':
-        return ['branchOffice', 'insured', 'officeAddress', 'ownershipOfCompany', 'contactPerson', 'website', 
-                'incorporationNumber', 'incorporationState', 'dateOfIncorporationRegistration', 'BVN', 
-                'contactPersonNo', 'email', 'natureOfBusiness', 'estimatedTurnover', 
-                'premiumPaymentSource', 'premiumPaymentSourceOther'];
-      case 'directors':
-        return ['directors'];
-      case 'verification':
-        return ['companyNameVerificationDoc'];
-      case 'declaration':
-        return ['agreeToDataPrivacy', 'signature'];
-      default:
-        return [];
-    }
-  };
-
-  // Enhanced form methods with validation
-  const enhancedFormMethods = {
-    ...formMethods,
-    validateCurrentStep
-  };
 
   const { saveDraft, clearDraft } = useFormDraft('corporateKYC', formMethods);
   const { fields, append, remove } = useFieldArray({
@@ -258,22 +208,18 @@ const CorporateKYC: React.FC = () => {
     setShowSummary(true);
   };
 
-  const DatePickerField = ({ name, label, required = false }: { name: string; label: string; required?: boolean }) => {
-    const error = formMethods.formState.errors[name];
+  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
     const value = formMethods.watch(name);
     return (
       <div className="space-y-2">
-        <Label>
-          {label} {required && <span className="text-red-500">*</span>}
-        </Label>
+        <Label>{label}</Label>
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               className={cn(
                 "w-full justify-start text-left font-normal",
-                !value && "text-muted-foreground",
-                error && "border-red-500"
+                !value && "text-muted-foreground"
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -290,9 +236,6 @@ const CorporateKYC: React.FC = () => {
             />
           </PopoverContent>
         </Popover>
-        {error && (
-          <p className="text-sm text-red-500">{error.message as string}</p>
-        )}
       </div>
     );
   };
@@ -301,42 +244,49 @@ const CorporateKYC: React.FC = () => {
     {
       id: 'company',
       title: 'Company Information',
-      isValid: true, // Will be dynamically calculated
       component: (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField 
-              name="branchOffice" 
-              label="NEM Branch Office" 
-              required 
-              placeholder="Enter branch office"
-            />
-            <FormField 
-              name="insured" 
-              label="Insured" 
-              required 
-              placeholder="Enter insured name"
+            <div>
+              <Label htmlFor="branchOffice">NEM Branch Office *</Label>
+              <Input
+                id="branchOffice"
+                {...formMethods.register('branchOffice')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="insured">Insured *</Label>
+              <Input
+                id="insured"
+                {...formMethods.register('insured')}
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="officeAddress">Office Address *</Label>
+            <Textarea
+              id="officeAddress"
+              {...formMethods.register('officeAddress')}
             />
           </div>
 
-          <FormTextarea
-            name="officeAddress"
-            label="Office Address"
-            required
-            placeholder="Enter office address"
-          />
-
-          <FormSelect
-            name="ownershipOfCompany"
-            label="Ownership of Company"
-            required
-            placeholder="Select Ownership Of Company"
-            options={[
-              { value: "Nigerian", label: "Nigerian" },
-              { value: "Foreign", label: "Foreign" },
-              { value: "Both", label: "Both" }
-            ]}
-          />
+          <div>
+            <Label>Ownership of Company *</Label>
+            <Select
+              value={formMethods.watch('ownershipOfCompany')}
+              onValueChange={(value) => formMethods.setValue('ownershipOfCompany', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Ownership Of Company" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Nigerian">Nigerian</SelectItem>
+                <SelectItem value="Foreign">Foreign</SelectItem>
+                <SelectItem value="Both">Both</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -379,20 +329,12 @@ const CorporateKYC: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="BVN">
-                BVN <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="BVNNumber">BVN *</Label>
               <Input
-                id="BVN"
+                id="BVNNumber"
                 maxLength={11}
-                {...formMethods.register('BVN')}
-                className={formMethods.formState.errors.BVN ? "border-red-500" : ""}
+                {...formMethods.register('BVNNumber')}
               />
-              {formMethods.formState.errors.BVN && (
-                <p className="text-sm text-red-500 mt-1">
-                  {formMethods.formState.errors.BVN.message as string}
-                </p>
-              )}
             </div>
             <div>
               <Label htmlFor="contactPersonNo">Contact Person Mobile Number *</Label>
@@ -819,6 +761,15 @@ const CorporateKYC: React.FC = () => {
               {...formMethods.register('signature')}
             />
           </div>
+          {formMethods.watch('agreeToDataPrivacy') && (
+            <Button
+              type="button"
+              onClick={() => setShowSummary(true)}
+              className="w-full"
+            >
+              Submit Corporate KYC Form
+            </Button>
+          )}
         </div>
       )
     }
@@ -851,7 +802,7 @@ const CorporateKYC: React.FC = () => {
           <MultiStepForm
             steps={steps}
             onSubmit={onFinalSubmit}
-            formMethods={enhancedFormMethods}
+            formMethods={formMethods}
             submitButtonText="Submit KYC Form"
           />
         </CardContent>
