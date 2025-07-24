@@ -188,6 +188,143 @@ const defaultValues = {
   signature: ''
 };
 
+// Reusable form components (moved outside component to prevent re-creation)
+const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
+  const { register, formState: { errors }, clearErrors } = useFormContext();
+  const error = errors[name];
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type={type}
+        maxLength={maxLength}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
+  const { register, watch, formState: { errors }, clearErrors } = useFormContext();
+  const currentValue = watch(name) || '';
+  const error = errors[name];
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Textarea
+        id={name}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      <div className="flex justify-between">
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
+        <span className="text-sm text-muted-foreground ml-auto">
+          {currentValue.length}/{maxLength}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const FormSelect = ({ name, label, required = false, options, placeholder, ...props }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = errors[name];
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(newValue) => {
+          setValue(name, newValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        {...props}
+      >
+        <SelectTrigger className={error ? 'border-destructive' : ''}>
+          <SelectValue placeholder={placeholder || `Select ${label}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option: any) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormDatePicker = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = errors[name];
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type="date"
+        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
+        onChange={(e) => {
+          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+          setValue(name, dateValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        className={error ? 'border-destructive' : ''}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
 const CorporateKYC: React.FC = () => {
   const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
@@ -299,147 +436,6 @@ const CorporateKYC: React.FC = () => {
     1: ['directors'],
     2: ['companyNameVerificationDoc'],
     3: ['agreeToDataPrivacy', 'signature']
-  };
-
-  // Validation function for current step (removed as MultiStepForm handles this internally)
-  
-  // Get step fields function (removed as not needed)
-
-  // Reusable form components
-  const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
-    const { register, formState: { errors }, clearErrors } = useFormContext();
-    const error = errors[name];
-    
-    return (
-      <div className="space-y-2">
-        <Label htmlFor={name}>
-          {label}
-          {required && <span className="required-asterisk">*</span>}
-        </Label>
-        <Input
-          id={name}
-          type={type}
-          maxLength={maxLength}
-          {...register(name, {
-            onChange: () => {
-              if (error) {
-                clearErrors(name);
-              }
-            }
-          })}
-          className={error ? 'border-destructive' : ''}
-          {...props}
-        />
-        {error && (
-          <p className="text-sm text-destructive">{error.message?.toString()}</p>
-        )}
-      </div>
-    );
-  };
-
-  const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
-    const { register, watch, formState: { errors }, clearErrors } = useFormContext();
-    const currentValue = watch(name) || '';
-    const error = errors[name];
-    
-    return (
-      <div className="space-y-2">
-        <Label htmlFor={name}>
-          {label}
-          {required && <span className="required-asterisk">*</span>}
-        </Label>
-        <Textarea
-          id={name}
-          {...register(name, {
-            onChange: () => {
-              if (error) {
-                clearErrors(name);
-              }
-            }
-          })}
-          className={error ? 'border-destructive' : ''}
-          {...props}
-        />
-        <div className="flex justify-between">
-          {error && (
-            <p className="text-sm text-destructive">{error.message?.toString()}</p>
-          )}
-          <span className="text-sm text-muted-foreground ml-auto">
-            {currentValue.length}/{maxLength}
-          </span>
-        </div>
-      </div>
-    );
-  };
-
-  const FormSelect = ({ name, label, required = false, options, placeholder, ...props }: any) => {
-    const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-    const value = watch(name);
-    const error = errors[name];
-    
-    return (
-      <div className="space-y-2">
-        <Label htmlFor={name}>
-          {label}
-          {required && <span className="required-asterisk">*</span>}
-        </Label>
-        <Select
-          value={value}
-          onValueChange={(newValue) => {
-            setValue(name, newValue);
-            if (error) {
-              clearErrors(name);
-            }
-          }}
-          {...props}
-        >
-          <SelectTrigger className={error ? 'border-destructive' : ''}>
-            <SelectValue placeholder={placeholder || `Select ${label}`} />
-          </SelectTrigger>
-          <SelectContent>
-            {options.map((option: any) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {error && (
-          <p className="text-sm text-destructive">{error.message?.toString()}</p>
-        )}
-      </div>
-    );
-  };
-
-  const FormDatePicker = ({ name, label, required = false }: any) => {
-    const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-    const value = watch(name);
-    const error = errors[name];
-    
-    return (
-      <div className="space-y-2">
-        <Label htmlFor={name}>
-          {label}
-          {required && <span className="required-asterisk">*</span>}
-        </Label>
-        <Input
-          id={name}
-          type="date"
-          value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
-          onChange={(e) => {
-            const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-            setValue(name, dateValue);
-            if (error) {
-              clearErrors(name);
-            }
-          }}
-          className={error ? 'border-destructive' : ''}
-        />
-        {error && (
-          <p className="text-sm text-destructive">{error.message?.toString()}</p>
-        )}
-      </div>
-    );
   };
 
   const steps = [
