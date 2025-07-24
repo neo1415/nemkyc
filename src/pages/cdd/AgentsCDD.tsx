@@ -1,113 +1,78 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { debounce } from 'lodash';
-import { useForm, FormProvider } from 'react-hook-form';
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Calendar as ReactCalendar } from '@/components/ui/calendar';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
-import { FormField, PhoneField, NumericField, FormTextarea, FormSelect, DateField } from '@/components/form/FormFieldControllers';
-import { subYears } from 'date-fns';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 
-// Move schema outside component to prevent recreation
 const agentsCDDSchema = yup.object().shape({
-  // Personal Info - based on required fields marked with * in the form
-  firstName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("First name is required"),
-  middleName: yup.string().max(100, "Maximum 100 characters"),
-  lastName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Last name is required"),
-  residentialAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Residential address is required"),
+  // Personal Info
+  firstName: yup.string().required("First name is required"),
+  middleName: yup.string(),
+  lastName: yup.string().required("Last name is required"),
+  residentialAddress: yup.string().required("Residential address is required"),
   gender: yup.string().required("Gender is required"),
-  position: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Position/Role is required"),
-  dateOfBirth: yup.date()
-    .max(subYears(new Date(), 18), "Must be at least 18 years old")
-    .required("Date of birth is required")
-    .typeError("Please select a valid date"),
-  placeOfBirth: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Place of birth is required"),
+  position: yup.string().required("Position/Role is required"),
+  dateOfBirth: yup.date().required("Date of birth is required"),
+  placeOfBirth: yup.string().required("Place of birth is required"),
   otherSourceOfIncome: yup.string().required("Other source of income is required"),
-  otherSourceOfIncomeOther: yup.string().when('otherSourceOfIncome', {
-    is: 'Other',
-    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other income source"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  nationality: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Nationality is required"),
-  phoneNumber: yup.string()
-    .matches(/^[0-9+\-\(\)\s]+$/, "Only numbers and +, -, (, ), space allowed")
-    .max(15, "Maximum 15 characters")
-    .required("Phone number is required"),
-  bvn: yup.string()
-    .matches(/^[0-9]+$/, "Only numbers allowed")
-    .length(11, "BVN must be exactly 11 digits")
-    .required("BVN is required"),
-  taxIdNumber: yup.string().max(100, "Maximum 100 characters"),
-  occupation: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Occupation is required"),
+  otherSourceOfIncomeOther: yup.string(),
+  nationality: yup.string().required("Nationality is required"),
+  phoneNumber: yup.string().required("Phone number is required"),
+  bvn: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+  taxIdNumber: yup.string(),
+  occupation: yup.string().required("Occupation is required"),
   email: yup.string().email("Valid email is required").required("Email is required"),
   validMeansOfId: yup.string().required("Valid means of ID is required"),
-  identificationNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Identification number is required"),
-  issuedDate: yup.date()
-    .max(new Date(), "Issue date cannot be in the future")
-    .required("Issued date is required")
-    .typeError("Please select a valid date"),
-  expiryDate: yup.date()
-    .min(new Date(), "Expiry date must be in the future")
-    .nullable()
-    .typeError("Please select a valid date"),
-  issuingBody: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Issuing body is required"),
+  identificationNumber: yup.string().required("Identification number is required"),
+  issuedDate: yup.date().required("Issued date is required"),
+  expiryDate: yup.date(),
+  issuingBody: yup.string().required("Issuing body is required"),
   
-  // Additional Info  
-  agentName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Agent name is required"),
-  agentsOfficeAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Agents office address is required"),
-  naicomLicenseNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("NAICOM license number is required"),
-  licenseIssuedDate: yup.date()
-    .max(new Date(), "License issue date cannot be in the future")
-    .required("License issued date is required")
-    .typeError("Please select a valid date"),
-  licenseExpiryDate: yup.date()
-    .min(new Date(), "License expiry date must be in the future")
-    .required("License expiry date is required")
-    .typeError("Please select a valid date"),
+  // Additional Info
+  agentName: yup.string().required("Agent name is required"),
+  agentsOfficeAddress: yup.string().required("Agents office address is required"),
+  naicomLicenseNumber: yup.string().required("NAICOM license number is required"),
+  licenseIssuedDate: yup.date().required("License issued date is required"),
+  licenseExpiryDate: yup.date().required("License expiry date is required"),
   emailAddress: yup.string().email("Valid email is required").required("Email address is required"),
-  website: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Website is required"),
-  mobileNumber: yup.string()
-    .matches(/^[0-9+\-\(\)\s]+$/, "Only numbers and +, -, (, ), space allowed")
-    .max(15, "Maximum 15 characters")
-    .required("Mobile number is required"),
-  taxIdentificationNumber: yup.string().max(100, "Maximum 100 characters"),
-  arianMembershipNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("ARIAN membership number is required"),
-  listOfAgentsApprovedPrincipals: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("List of agents approved principals is required"),
+  website: yup.string().required("Website is required"),
+  mobileNumber: yup.string().required("Mobile number is required"),
+  taxIdentificationNumber: yup.string(),
+  arianMembershipNumber: yup.string().required("ARIAN membership number is required"),
+  listOfAgentsApprovedPrincipals: yup.string().required("List of agents approved principals is required"),
   
   // Financial Info
-  localAccountNumber: yup.string()
-    .matches(/^[0-9]+$/, "Only numbers allowed")
-    .max(10, "Maximum 10 digits")
-    .required("Account number is required"),
-  localBankName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Bank name is required"),
-  localBankBranch: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Bank branch is required"),
-  localAccountOpeningDate: yup.date()
-    .max(new Date(), "Account opening date cannot be in the future")
-    .required("Account opening date is required")
-    .typeError("Please select a valid date"),
-  foreignAccountNumber: yup.string()
-    .matches(/^[0-9]*$/, "Only numbers allowed")
-    .max(10, "Maximum 10 digits"),
-  foreignBankName: yup.string().max(100, "Maximum 100 characters"),
-  foreignBankBranch: yup.string().max(100, "Maximum 100 characters"),
-  foreignAccountOpeningDate: yup.date()
-    .max(new Date(), "Account opening date cannot be in the future")
-    .nullable()
-    .typeError("Please select a valid date"),
+  localAccountNumber: yup.string().required("Account number is required"),
+  localBankName: yup.string().required("Bank name is required"),
+  localBankBranch: yup.string().required("Bank branch is required"),
+  localAccountOpeningDate: yup.date().required("Account opening date is required"),
+  foreignAccountNumber: yup.string(),
+  foreignBankName: yup.string(),
+  foreignBankBranch: yup.string(),
+  foreignAccountOpeningDate: yup.date(),
   
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  signature: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Digital signature is required")
+  signature: yup.string().required("Digital signature is required")
 });
 
 const defaultValues = {
@@ -155,320 +120,286 @@ const defaultValues = {
   signature: ''
 };
 
-// Memoized step fields getter
-const getStepFields = (stepId: string): string[] => {
-  switch (stepId) {
-    case 'personal':
-      return ['firstName', 'lastName', 'residentialAddress', 'gender', 'position', 'dateOfBirth', 
-              'placeOfBirth', 'otherSourceOfIncome', 'otherSourceOfIncomeOther', 'nationality', 
-              'phoneNumber', 'bvn', 'occupation', 'email', 'validMeansOfId', 'identificationNumber', 
-              'issuedDate', 'expiryDate', 'issuingBody'];
-    case 'additional':
-      return ['agentName', 'agentsOfficeAddress', 'naicomLicenseNumber', 'licenseIssuedDate', 
-              'licenseExpiryDate', 'emailAddress', 'website', 'mobileNumber', 'arianMembershipNumber', 
-              'listOfAgentsApprovedPrincipals'];
-    case 'financial':
-      return ['localAccountNumber', 'localBankName', 'localBankBranch', 'localAccountOpeningDate'];
-    case 'uploads':
-      return [];
-    case 'declaration':
-      return ['agreeToDataPrivacy', 'signature'];
-    default:
-      return [];
-  }
-};
-
 const AgentsCDD: React.FC = () => {
-  const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
-  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const [summaryData, setSummaryData] = useState<any>({});
   
-  const { 
-    handleSubmitWithAuth, 
-    showSuccess: authShowSuccess, 
-    setShowSuccess: setAuthShowSuccess,
-    isSubmitting: authSubmitting
+  const {
+    handleSubmitWithAuth,
+    showSuccess,
+    setShowSuccess,
+    isSubmitting
   } = useAuthRequiredSubmit();
 
-  // Initialize form with optimized settings
   const formMethods = useForm<any>({
     resolver: yupResolver(agentsCDDSchema),
     defaultValues,
-    mode: 'onBlur', // Only validate on blur, not on change
-    reValidateMode: 'onBlur', // Only revalidate on blur
-    shouldFocusError: false, // Prevent automatic focus changes
+    mode: 'onChange'
   });
 
   const { saveDraft, clearDraft } = useFormDraft('agents-cdd', formMethods);
+  const watchedValues = formMethods.watch();
 
-  // Debounced auto-save with longer delay
-  const debouncedSaveDraft = useCallback(
-    debounce((data: any) => {
-      saveDraft(data);
-    }, 2000), // Increased debounce delay to 2 seconds
-    [saveDraft]
-  );
-
-  // Optimized auto-save effect
-  useEffect(() => {
+  // Auto-save draft
+  React.useEffect(() => {
     const subscription = formMethods.watch((data) => {
-      debouncedSaveDraft(data);
+      saveDraft(data);
     });
-    
-    return () => {
-      subscription.unsubscribe();
-      debouncedSaveDraft.cancel();
-    };
-  }, [formMethods, debouncedSaveDraft]);
+    return () => subscription.unsubscribe();
+  }, [formMethods, saveDraft]);
 
-  // Step validation function - memoized
-  const validateCurrentStep = useCallback(async (stepId: string): Promise<boolean> => {
-    const stepFields = getStepFields(stepId);
-    const result = await formMethods.trigger(stepFields);
-    return result;
-  }, [formMethods]);
-
-  // Enhanced form methods with validation - memoized
-  const enhancedFormMethods = useMemo(() => ({
-    ...formMethods,
-    validateCurrentStep
-  }), [formMethods, validateCurrentStep]);
-
-  // Check for pending submission when component mounts
+  // Post-auth loading effect
   useEffect(() => {
-    const checkPendingSubmission = () => {
-      const hasPending = sessionStorage.getItem('pendingSubmission');
-      if (hasPending) {
-        setShowPostAuthLoading(true);
-        setTimeout(() => setShowPostAuthLoading(false), 5000);
-      }
-    };
-    checkPendingSubmission();
+    const submissionInProgress = sessionStorage.getItem('submissionInProgress');
+    if (submissionInProgress) {
+      setShowSummary(false);
+    }
   }, []);
 
-  // Hide post-auth loading when success modal shows
-  useEffect(() => {
-    if (authShowSuccess) {
-      setShowPostAuthLoading(false);
+  const handleReview = async (data: any) => {
+    console.log('✅ handleReview was called! Starting validation...');
+    
+    try {
+      // Validate the entire form using the schema
+      await agentsCDDSchema.validate(data, { abortEarly: false });
+      
+      // If validation passes, show the summary
+      console.log('✅ Validation passed! Showing summary.');
+      console.log('Form Data:', data);
+      setShowSummary(true);
+      
+    } catch (validationError) {
+      // If validation fails, show errors
+      console.log('❌ Validation failed:', validationError);
+      
+      if (validationError.inner) {
+        // Set field-specific errors
+        validationError.inner.forEach((error) => {
+          if (error.path) {
+            formMethods.setError(error.path, {
+              type: 'validation',
+              message: error.message
+            });
+          }
+        });
+      }
+      
+      // Show a toast notification about validation errors
+      toast({
+        title: "Form Validation Failed",
+        description: "Please check and fix the errors in the form before submitting.",
+        variant: "destructive"
+      });
     }
-  }, [authShowSuccess]);
-
+  };
   const handleSubmit = async (data: any) => {
-    // Prepare file upload data
+    // Upload files to Firebase Storage first
     const fileUploadPromises: Array<Promise<[string, string]>> = [];
     
-    for (const [key, file] of Object.entries(uploadedFiles)) {
-      if (file) {
-        fileUploadPromises.push(
-          uploadFile(file, `agents-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
-        );
-      }
-    }
-
-    const fileResults = await Promise.all(fileUploadPromises);
-    const fileUrls = Object.fromEntries(fileResults);
-
-    // Sanitize data - remove undefined values to prevent Firebase errors
-    const sanitizeData = (obj: any): any => {
-      const cleaned: any = {};
-      for (const [key, value] of Object.entries(obj)) {
-        if (value !== undefined) {
-          cleaned[key] = value;
-        }
-      }
-      return cleaned;
-    };
-
-    const finalData = sanitizeData({
+    Object.entries(uploadedFiles).forEach(([key, file]) => {
+      fileUploadPromises.push(
+        uploadFile(file, 'agents-cdd').then(url => [key + 'Url', url])
+      );
+    });
+    
+    const uploadedUrls = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(uploadedUrls);
+    
+    // Prepare final data with file URLs
+    const finalData = {
       ...data,
       ...fileUrls,
       status: 'processing',
-      formType: 'Agents CDD'
-    });
+      formType: 'Agents-CDD'
+    };
 
-    console.log('Sanitized final data:', finalData);
-    await handleSubmitWithAuth(finalData, 'Agents CDD');
+    await handleSubmitWithAuth(finalData, 'Agents-CDD');
     clearDraft();
     setShowSummary(false);
   };
 
   const onFinalSubmit = (data: any) => {
-    setSummaryData(data); // Set summary data once instead of watching
     setShowSummary(true);
   };
 
-  // Memoized steps to prevent recreation
-  const steps = useMemo(() => [
+  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
+    const value = formMethods.watch(name);
+    return (
+      <div className="space-y-2">
+        <Label>{label}</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !value && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <ReactCalendar
+              mode="single"
+              selected={value ? new Date(value) : undefined}
+              onSelect={(date) => formMethods.setValue(name, date)}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
+  };
+
+  const steps = [
     {
       id: 'personal',
-      title: 'Personal Information',
+      title: 'Personal Info',
       component: (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField
-              name="firstName"
-              label="First Name"
-              required
-              placeholder="Enter first name"
-            />
-            <FormField
-              name="middleName"
-              label="Middle Name"
-              placeholder="Enter middle name"
-            />
-            <FormField
-              name="lastName"
-              label="Last Name"
-              required
-              placeholder="Enter last name"
-            />
+            <div>
+              <Label htmlFor="firstName">First Name *</Label>
+              <Input id="firstName" {...formMethods.register('firstName')} />
+            </div>
+            <div>
+              <Label htmlFor="middleName">Middle Name</Label>
+              <Input id="middleName" {...formMethods.register('middleName')} />
+            </div>
+            <div>
+              <Label htmlFor="lastName">Last Name *</Label>
+              <Input id="lastName" {...formMethods.register('lastName')} />
+            </div>
           </div>
           
-          <FormTextarea
-            name="residentialAddress"
-            label="Residential Address"
-            required
-            placeholder="Enter residential address"
-          />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormSelect
-              name="gender"
-              label="Gender"
-              required
-              placeholder="Select Gender"
-              options={[
-                { value: "Male", label: "Male" },
-                { value: "Female", label: "Female" }
-              ]}
-            />
-            <FormField
-              name="position"
-              label="Position/Role"
-              required
-              placeholder="Enter position/role"
-            />
+          <div>
+            <Label htmlFor="residentialAddress">Residential Address *</Label>
+            <Textarea id="residentialAddress" {...formMethods.register('residentialAddress')} />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DateField
-              name="dateOfBirth"
-              label="Date of Birth"
-              required
-              minAge={18}
-            />
-            <FormField
-              name="placeOfBirth"
-              label="Place of Birth"
-              required
-              placeholder="Enter place of birth"
-            />
+            <div>
+              <Label>Gender *</Label>
+              <Select
+                value={watchedValues.gender || ''}
+                onValueChange={(value) => formMethods.setValue('gender', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="position">Position/Role *</Label>
+              <Input id="position" {...formMethods.register('position')} />
+            </div>
           </div>
           
-          <FormSelect
-            name="otherSourceOfIncome"
-            label="Other Source of Income"
-            required
-            placeholder="Select income source"
-            options={[
-              { value: "Salary or Business Income", label: "Salary or Business Income" },
-              { value: "Investments or Dividends", label: "Investments or Dividends" },
-              { value: "Other", label: "Other (please specify)" }
-            ]}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <DatePickerField name="dateOfBirth" label="Date of Birth *" />
+            </div>
+            <div>
+              <Label htmlFor="placeOfBirth">Place of Birth *</Label>
+              <Input id="placeOfBirth" {...formMethods.register('placeOfBirth')} />
+            </div>
+          </div>
           
-          {formMethods.watch('otherSourceOfIncome') === 'Other' && (
-            <FormField
-              name="otherSourceOfIncomeOther"
-              label="Please specify income source"
-              required
-              placeholder="Please specify your income source"
-            />
+          <div>
+            <Label>Other Source of Income *</Label>
+            <Select
+              value={watchedValues.otherSourceOfIncome || ''}
+              onValueChange={(value) => formMethods.setValue('otherSourceOfIncome', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose Income Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="salary">Salary or Business Income</SelectItem>
+                <SelectItem value="investments">Investments or Dividends</SelectItem>
+                <SelectItem value="other">Other (please specify)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {watchedValues.otherSourceOfIncome === 'other' && (
+            <div>
+              <Label htmlFor="otherSourceOfIncomeOther">Please specify income source *</Label>
+              <Input id="otherSourceOfIncomeOther" {...formMethods.register('otherSourceOfIncomeOther')} />
+            </div>
           )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              name="nationality"
-              label="Nationality"
-              required
-              placeholder="Enter nationality"
-            />
-            <PhoneField
-              name="phoneNumber"
-              label="Phone Number"
-              required
-              placeholder="Enter phone number"
-            />
+            <div>
+              <Label htmlFor="nationality">Nationality *</Label>
+              <Input id="nationality" {...formMethods.register('nationality')} />
+            </div>
+            <div>
+              <Label htmlFor="phoneNumber">Phone Number *</Label>
+              <Input id="phoneNumber" {...formMethods.register('phoneNumber')} />
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <NumericField
-              name="bvn"
-              label="BVN"
-              required
-              maxLength={11}
-              placeholder="Enter BVN"
-            />
-            <FormField
-              name="taxIdNumber"
-              label="Tax ID Number"
-              placeholder="Enter tax ID (optional)"
-            />
-            <FormField
-              name="occupation"
-              label="Occupation"
-              required
-              placeholder="Enter occupation"
-            />
+            <div>
+              <Label htmlFor="bvn">BVN *</Label>
+              <Input id="bvn" maxLength={11} {...formMethods.register('bvn')} />
+            </div>
+            <div>
+              <Label htmlFor="taxIdNumber">Tax ID Number</Label>
+              <Input id="taxIdNumber" {...formMethods.register('taxIdNumber')} />
+            </div>
+            <div>
+              <Label htmlFor="occupation">Occupation *</Label>
+              <Input id="occupation" {...formMethods.register('occupation')} />
+            </div>
           </div>
           
-          <FormField
-            name="email"
-            label="Email"
-            type="email"
-            required
-            placeholder="Enter email address"
-          />
+          <div>
+            <Label htmlFor="email">Email *</Label>
+            <Input id="email" type="email" {...formMethods.register('email')} />
+          </div>
           
-          <FormSelect
-            name="validMeansOfId"
-            label="Valid Means of ID"
-            required
-            placeholder="Select ID type"
-            options={[
-              { value: "International Passport", label: "International Passport" },
-              { value: "NIMC", label: "NIMC" },
-              { value: "Drivers Licence", label: "Drivers Licence" },
-              { value: "Voters Card", label: "Voters Card" }
-            ]}
-          />
+          <div>
+            <Label>Valid Means of ID *</Label>
+            <Select
+              value={watchedValues.validMeansOfId || ''}
+              onValueChange={(value) => formMethods.setValue('validMeansOfId', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose Identification Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="passport">International Passport</SelectItem>
+                <SelectItem value="nimc">NIMC</SelectItem>
+                <SelectItem value="driversLicense">Drivers Licence</SelectItem>
+                <SelectItem value="votersCard">Voters Card</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <FormField
-              name="identificationNumber"
-              label="Identification Number"
-              required
-              placeholder="Enter ID number"
-            />
-            <DateField
-              name="issuedDate"
-              label="Issued Date"
-              required
-              disableFuture
-            />
-            <DateField
-              name="expiryDate"
-              label="Expiry Date"
-              disablePast
-            />
-            <FormField
-              name="issuingBody"
-              label="Issuing Body"
-              required
-              placeholder="Enter issuing body"
-            />
+            <div>
+              <Label htmlFor="identificationNumber">Identification Number *</Label>
+              <Input id="identificationNumber" {...formMethods.register('identificationNumber')} />
+            </div>
+            <div>
+              <DatePickerField name="issuedDate" label="Issued Date *" />
+            </div>
+            <div>
+              <DatePickerField name="expiryDate" label="Expiry Date" />
+            </div>
+            <div>
+              <Label htmlFor="issuingBody">Issuing Body *</Label>
+              <Input id="issuingBody" {...formMethods.register('issuingBody')} />
+            </div>
           </div>
         </div>
       )
@@ -479,84 +410,60 @@ const AgentsCDD: React.FC = () => {
       component: (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              name="agentName"
-              label="Agent Name"
-              required
-              placeholder="Enter agent name"
-            />
-            <FormField
-              name="naicomLicenseNumber"
-              label="NAICOM License Number (RIA)"
-              required
-              placeholder="Enter NAICOM license number"
-            />
+            <div>
+              <Label htmlFor="agentName">Agent Name *</Label>
+              <Input id="agentName" {...formMethods.register('agentName')} />
+            </div>
+            <div>
+              <Label htmlFor="naicomLicenseNumber">NAICOM License Number (RIA) *</Label>
+              <Input id="naicomLicenseNumber" {...formMethods.register('naicomLicenseNumber')} />
+            </div>
           </div>
           
-          <FormTextarea
-            name="agentsOfficeAddress"
-            label="Agents Office Address"
-            required
-            placeholder="Enter agents office address"
-          />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DateField
-              name="licenseIssuedDate"
-              label="License Issued Date"
-              required
-              disableFuture
-            />
-            <DateField
-              name="licenseExpiryDate"
-              label="License Expiry Date"
-              required
-              disablePast
-            />
+          <div>
+            <Label htmlFor="agentsOfficeAddress">Agents Office Address *</Label>
+            <Textarea id="agentsOfficeAddress" {...formMethods.register('agentsOfficeAddress')} />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              name="emailAddress"
-              label="Email Address"
-              type="email"
-              required
-              placeholder="Enter email address"
-            />
-            <FormField
-              name="website"
-              label="Website"
-              required
-              placeholder="Enter website URL"
-            />
+            <div>
+              <DatePickerField name="licenseIssuedDate" label="License Issued Date *" />
+            </div>
+            <div>
+              <DatePickerField name="licenseExpiryDate" label="License Expiry Date *" />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="emailAddress">Email Address *</Label>
+              <Input id="emailAddress" type="email" {...formMethods.register('emailAddress')} />
+            </div>
+            <div>
+              <Label htmlFor="website">Website *</Label>
+              <Input id="website" {...formMethods.register('website')} />
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <PhoneField
-              name="mobileNumber"
-              label="Mobile Number"
-              required
-              placeholder="Enter mobile number"
-            />
-            <FormField
-              name="taxIdentificationNumber"
-              label="Tax Identification Number"
-              placeholder="Enter tax ID (optional)"
-            />
-            <FormField
-              name="arianMembershipNumber"
-              label="ARIAN Membership Number"
-              required
-              placeholder="Enter ARIAN number"
-            />
+            <div>
+              <Label htmlFor="mobileNumber">Mobile Number *</Label>
+              <Input id="mobileNumber" {...formMethods.register('mobileNumber')} />
+            </div>
+            <div>
+              <Label htmlFor="taxIdentificationNumber">Tax Identification Number</Label>
+              <Input id="taxIdentificationNumber" {...formMethods.register('taxIdentificationNumber')} />
+            </div>
+            <div>
+              <Label htmlFor="arianMembershipNumber">ARIAN Membership Number *</Label>
+              <Input id="arianMembershipNumber" {...formMethods.register('arianMembershipNumber')} />
+            </div>
           </div>
           
-          <FormTextarea
-            name="listOfAgentsApprovedPrincipals"
-            label="List of Agents Approved Principals (Insurers)"
-            required
-            placeholder="Enter list of approved principals"
-          />
+          <div>
+            <Label htmlFor="listOfAgentsApprovedPrincipals">List of Agents Approved Principals (Insurers) *</Label>
+            <Textarea id="listOfAgentsApprovedPrincipals" {...formMethods.register('listOfAgentsApprovedPrincipals')} />
+          </div>
         </div>
       )
     },
@@ -568,96 +475,49 @@ const AgentsCDD: React.FC = () => {
           <div>
             <h3 className="text-lg font-medium mb-4">Local Account Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <NumericField
-                name="localAccountNumber"
-                label="Account Number"
-                required
-                maxLength={10}
-                placeholder="Enter account number"
-              />
-              <FormField
-                name="localBankName"
-                label="Bank Name"
-                required
-                placeholder="Enter bank name"
-              />
+              <div>
+                <Label htmlFor="localAccountNumber">Account Number *</Label>
+                <Input id="localAccountNumber" {...formMethods.register('localAccountNumber')} />
+              </div>
+              <div>
+                <Label htmlFor="localBankName">Bank Name *</Label>
+                <Input id="localBankName" {...formMethods.register('localBankName')} />
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <FormField
-                name="localBankBranch"
-                label="Bank Branch"
-                required
-                placeholder="Enter bank branch"
-              />
-              <DateField
-                name="localAccountOpeningDate"
-                label="Account Opening Date"
-                required
-                disableFuture
-              />
+              <div>
+                <Label htmlFor="localBankBranch">Bank Branch *</Label>
+                <Input id="localBankBranch" {...formMethods.register('localBankBranch')} />
+              </div>
+              <div>
+                <DatePickerField name="localAccountOpeningDate" label="Account Opening Date *" />
+              </div>
             </div>
           </div>
           
           <div>
             <h3 className="text-lg font-medium mb-4">Foreign Account Details (Optional)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <NumericField
-                name="foreignAccountNumber"
-                label="Account Number"
-                maxLength={10}
-                placeholder="Enter account number (optional)"
-              />
-              <FormField
-                name="foreignBankName"
-                label="Bank Name"
-                placeholder="Enter bank name (optional)"
-              />
+              <div>
+                <Label htmlFor="foreignAccountNumber">Account Number</Label>
+                <Input id="foreignAccountNumber" {...formMethods.register('foreignAccountNumber')} />
+              </div>
+              <div>
+                <Label htmlFor="foreignBankName">Bank Name</Label>
+                <Input id="foreignBankName" {...formMethods.register('foreignBankName')} />
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <FormField
-                name="foreignBankBranch"
-                label="Bank Branch"
-                placeholder="Enter bank branch (optional)"
-              />
-              <DateField
-                name="foreignAccountOpeningDate"
-                label="Account Opening Date"
-                disableFuture
-              />
+              <div>
+                <Label htmlFor="foreignBankBranch">Bank Branch</Label>
+                <Input id="foreignBankBranch" {...formMethods.register('foreignBankBranch')} />
+              </div>
+              <div>
+                <DatePickerField name="foreignAccountOpeningDate" label="Account Opening Date" />
+              </div>
             </div>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'uploads',
-      title: 'File Uploads',
-      component: (
-        <div className="space-y-6">
-          <h3 className="text-lg font-medium mb-4">Required Documents</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FileUpload
-              label="Valid Means of Identification"
-              required
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, identification: file }))}
-              onFileRemove={() => setUploadedFiles(prev => { const updated = { ...prev }; delete updated.identification; return updated; })}
-              currentFile={uploadedFiles.identification}
-              accept="image/jpeg,image/png,application/pdf"
-              maxSize={3 * 1024 * 1024}
-            />
-            
-            <FileUpload
-              label="Passport Photograph"
-              required
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, passport: file }))}
-              onFileRemove={() => setUploadedFiles(prev => { const updated = { ...prev }; delete updated.passport; return updated; })}
-              currentFile={uploadedFiles.passport}
-              accept="image/jpeg,image/png"
-              maxSize={3 * 1024 * 1024}
-            />
           </div>
         </div>
       )
@@ -686,7 +546,7 @@ const AgentsCDD: React.FC = () => {
           <div className="flex items-start space-x-2">
             <Checkbox
               id="agreeToDataPrivacy"
-              checked={formMethods.watch('agreeToDataPrivacy')}
+              checked={watchedValues.agreeToDataPrivacy}
               onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked === true)}
             />
             <Label htmlFor="agreeToDataPrivacy" className="text-sm">
@@ -694,116 +554,30 @@ const AgentsCDD: React.FC = () => {
             </Label>
           </div>
           
-          <FormField
-            name="signature"
-            label="Digital Signature"
-            placeholder="Type your full name as signature"
-            required
-          />
+          <div>
+            <Label htmlFor="signature">Digital Signature *</Label>
+            <Input
+              id="signature"
+              placeholder="Type your full name as signature"
+              {...formMethods.register('signature')}
+            />
+          </div>
+          
+          <div className="text-center pt-4">
+            <Button
+              type="button"
+              onClick={() => {
+                const isValid = formMethods.trigger();
+                if (isValid) setShowSummary(true);
+              }}
+            >
+              Review & Submit
+            </Button>
+          </div>
         </div>
       )
     }
-  ], [formMethods, uploadedFiles]);
-
-  // Memoized summary component
-  const SummaryContent = useMemo(() => {
-    if (!showSummary || !summaryData) return null;
-
-    return (
-      <div className="space-y-6">
-        {/* Personal Information */}
-        <div className="border rounded-lg p-4">
-          <h3 className="font-semibold text-lg mb-4">Personal Information</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div><strong>Name:</strong> {summaryData.firstName} {summaryData.middleName} {summaryData.lastName}</div>
-            <div><strong>Email:</strong> {summaryData.email}</div>
-            <div><strong>Phone:</strong> {summaryData.phoneNumber}</div>
-            <div><strong>Gender:</strong> {summaryData.gender}</div>
-            <div><strong>Position:</strong> {summaryData.position}</div>
-            <div><strong>Nationality:</strong> {summaryData.nationality}</div>
-            <div><strong>Occupation:</strong> {summaryData.occupation}</div>
-            <div><strong>BVN:</strong> {summaryData.bvn}</div>
-            <div><strong>Date of Birth:</strong> {summaryData.dateOfBirth ? new Date(summaryData.dateOfBirth).toLocaleDateString() : 'Not set'}</div>
-            <div><strong>Place of Birth:</strong> {summaryData.placeOfBirth}</div>
-            <div><strong>ID Type:</strong> {summaryData.validMeansOfId}</div>
-            <div><strong>ID Number:</strong> {summaryData.identificationNumber}</div>
-            <div className="col-span-2"><strong>Address:</strong> {summaryData.residentialAddress}</div>
-          </div>
-        </div>
-
-        {/* Agent Information */}
-        <div className="border rounded-lg p-4">
-          <h3 className="font-semibold text-lg mb-4">Agent Information</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div><strong>Agent Name:</strong> {summaryData.agentName}</div>
-            <div><strong>NAICOM License:</strong> {summaryData.naicomLicenseNumber}</div>
-            <div><strong>Email Address:</strong> {summaryData.emailAddress}</div>
-            <div><strong>Website:</strong> {summaryData.website}</div>
-            <div><strong>Mobile:</strong> {summaryData.mobileNumber}</div>
-            <div><strong>ARIAN Number:</strong> {summaryData.arianMembershipNumber}</div>
-            <div className="col-span-2"><strong>Office Address:</strong> {summaryData.agentsOfficeAddress}</div>
-            <div className="col-span-2"><strong>Approved Principals:</strong> {summaryData.listOfAgentsApprovedPrincipals}</div>
-          </div>
-        </div>
-
-        {/* Account Details */}
-        <div className="border rounded-lg p-4">
-          <h3 className="font-semibold text-lg mb-4">Account Details</h3>
-          <div className="space-y-4">
-            <div>
-              <h4 className="font-medium mb-2">Local Account</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>Account Number:</strong> {summaryData.localAccountNumber}</div>
-                <div><strong>Bank Name:</strong> {summaryData.localBankName}</div>
-                <div><strong>Bank Branch:</strong> {summaryData.localBankBranch}</div>
-                <div><strong>Opening Date:</strong> {summaryData.localAccountOpeningDate ? new Date(summaryData.localAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
-              </div>
-            </div>
-            {(summaryData.foreignAccountNumber || summaryData.foreignBankName) && (
-              <div>
-                <h4 className="font-medium mb-2">Foreign Account</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><strong>Account Number:</strong> {summaryData.foreignAccountNumber}</div>
-                  <div><strong>Bank Name:</strong> {summaryData.foreignBankName}</div>
-                  <div><strong>Bank Branch:</strong> {summaryData.foreignBankBranch}</div>
-                  <div><strong>Opening Date:</strong> {summaryData.foreignAccountOpeningDate ? new Date(summaryData.foreignAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Uploaded Documents */}
-        <div className="border rounded-lg p-4">
-          <h3 className="font-semibold text-lg mb-4">Uploaded Documents</h3>
-          <div className="grid grid-cols-1 gap-2 text-sm">
-            {Object.entries(uploadedFiles).map(([key, file]) => (
-              <div key={key} className="flex justify-between items-center py-2 border-b">
-                <span className="font-medium">
-                  {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
-                </span>
-                <span className="text-green-600">
-                  {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                </span>
-              </div>
-            ))}
-            {Object.keys(uploadedFiles).length === 0 && (
-              <p className="text-muted-foreground">No documents uploaded yet</p>
-            )}
-          </div>
-        </div>
-
-        {/* Declaration */}
-        <div className="border rounded-lg p-4">
-          <h3 className="font-semibold text-lg mb-4">Declaration</h3>
-          <div className="text-sm">
-            <div><strong>Data Privacy Agreement:</strong> {summaryData.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</div>
-            <div><strong>Digital Signature:</strong> {summaryData.signature}</div>
-          </div>
-        </div>
-      </div>
-    );
-  }, [summaryData, uploadedFiles, showSummary]);
+  ];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -813,63 +587,142 @@ const AgentsCDD: React.FC = () => {
           <p className="text-gray-600">Customer Due Diligence form for Agents</p>
         </div>
 
-        <FormProvider {...formMethods}>
-          <MultiStepForm
-            steps={steps}
-            onSubmit={onFinalSubmit} 
-            isSubmitting={authSubmitting}
-            submitButtonText="Submit CDD Form"
-            formMethods={enhancedFormMethods}
-          />
-        </FormProvider>
-
+       <MultiStepForm
+          steps={steps}
+        onSubmit={handleReview} 
+          isSubmitting={isSubmitting}
+          submitButtonText="Submit CDD Form"
+          formMethods={formMethods}
+        />
         {/* Summary Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Review Your Agents CDD Form</DialogTitle>
             </DialogHeader>
-            {SummaryContent}
-            
-            <div className="flex gap-4 pt-4 border-t">
-              <Button
-                variant="outline"
-                onClick={() => setShowSummary(false)}
-              >
-                Edit Details
-              </Button>
-              <Button
-                onClick={() => handleSubmit(summaryData)}
-                disabled={authSubmitting}
-                className="bg-primary text-primary-foreground"
-              >
-                {authSubmitting ? 'Submitting...' : 'Confirm & Submit'}
-              </Button>
+            <div className="space-y-6">
+              {/* Personal Information */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Personal Information</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><strong>Name:</strong> {watchedValues.firstName} {watchedValues.middleName} {watchedValues.lastName}</div>
+                  <div><strong>Email:</strong> {watchedValues.email}</div>
+                  <div><strong>Phone:</strong> {watchedValues.phoneNumber}</div>
+                  <div><strong>Gender:</strong> {watchedValues.gender}</div>
+                  <div><strong>Position:</strong> {watchedValues.position}</div>
+                  <div><strong>Nationality:</strong> {watchedValues.nationality}</div>
+                  <div><strong>Occupation:</strong> {watchedValues.occupation}</div>
+                  <div><strong>BVN:</strong> {watchedValues.bvn}</div>
+                  <div><strong>Date of Birth:</strong> {watchedValues.dateOfBirth ? new Date(watchedValues.dateOfBirth).toLocaleDateString() : 'Not set'}</div>
+                  <div><strong>Place of Birth:</strong> {watchedValues.placeOfBirth}</div>
+                  <div><strong>ID Type:</strong> {watchedValues.validMeansOfId}</div>
+                  <div><strong>ID Number:</strong> {watchedValues.identificationNumber}</div>
+                  <div className="col-span-2"><strong>Address:</strong> {watchedValues.residentialAddress}</div>
+                </div>
+              </div>
+
+              {/* Agent Information */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Agent Information</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><strong>Agent Name:</strong> {watchedValues.agentName}</div>
+                  <div><strong>NAICOM License:</strong> {watchedValues.naicomLicenseNumber}</div>
+                  <div><strong>Email Address:</strong> {watchedValues.emailAddress}</div>
+                  <div><strong>Website:</strong> {watchedValues.website}</div>
+                  <div><strong>Mobile:</strong> {watchedValues.mobileNumber}</div>
+                  <div><strong>ARIAN Number:</strong> {watchedValues.arianMembershipNumber}</div>
+                  <div className="col-span-2"><strong>Office Address:</strong> {watchedValues.agentsOfficeAddress}</div>
+                  <div className="col-span-2"><strong>Approved Principals:</strong> {watchedValues.listOfAgentsApprovedPrincipals}</div>
+                </div>
+              </div>
+
+              {/* Account Details */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Account Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Local Account</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div><strong>Account Number:</strong> {watchedValues.localAccountNumber}</div>
+                      <div><strong>Bank Name:</strong> {watchedValues.localBankName}</div>
+                      <div><strong>Bank Branch:</strong> {watchedValues.localBankBranch}</div>
+                      <div><strong>Opening Date:</strong> {watchedValues.localAccountOpeningDate ? new Date(watchedValues.localAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
+                    </div>
+                  </div>
+                  {(watchedValues.foreignAccountNumber || watchedValues.foreignBankName) && (
+                    <div>
+                      <h4 className="font-medium mb-2">Foreign Account</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div><strong>Account Number:</strong> {watchedValues.foreignAccountNumber}</div>
+                        <div><strong>Bank Name:</strong> {watchedValues.foreignBankName}</div>
+                        <div><strong>Bank Branch:</strong> {watchedValues.foreignBankBranch}</div>
+                        <div><strong>Opening Date:</strong> {watchedValues.foreignAccountOpeningDate ? new Date(watchedValues.foreignAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Uploaded Documents */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Uploaded Documents</h3>
+                <div className="grid grid-cols-1 gap-2 text-sm">
+                  {Object.entries(uploadedFiles).map(([key, file]) => (
+                    <div key={key} className="flex justify-between items-center py-2 border-b">
+                      <span className="font-medium">
+                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
+                      </span>
+                      <span className="text-green-600">
+                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                      </span>
+                    </div>
+                  ))}
+                  {Object.keys(uploadedFiles).length === 0 && (
+                    <p className="text-muted-foreground">No documents uploaded yet</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Declaration */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-4">Declaration</h3>
+                <div className="text-sm">
+                  <div><strong>Data Privacy Agreement:</strong> {watchedValues.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</div>
+                  <div><strong>Digital Signature:</strong> {watchedValues.signature}</div>
+                </div>
+              </div>
+              
+              <div className="flex gap-4 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSummary(false)}
+                >
+                  Edit Details
+                </Button>
+                <Button
+                  onClick={() => {
+                    const formData = formMethods.getValues();
+                    handleSubmit(formData);
+                  }}
+                  disabled={isSubmitting}
+                  className="bg-primary text-primary-foreground"
+                >
+                  {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
 
         {/* Success Modal */}
         <SuccessModal
-          isOpen={authShowSuccess}
-          onClose={() => setAuthShowSuccess()}
+          isOpen={showSuccess}
+          onClose={() => setShowSuccess()}
           title="Form Submitted Successfully!"
           message="Your Agents CDD form has been submitted and is being processed."
-          isLoading={authSubmitting}
+          isLoading={isSubmitting}
           loadingMessage="Submitting your form..."
         />
-
-        {/* Post Auth Loading */}
-        {showPostAuthLoading && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                <span>Processing your submission...</span>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

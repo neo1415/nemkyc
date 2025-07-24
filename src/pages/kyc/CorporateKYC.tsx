@@ -28,54 +28,62 @@ import { Form, FormControl, FormItem, FormLabel, FormMessage } from '@/component
 // Form validation schema
 const corporateKYCSchema = yup.object().shape({
   // Company Info
-  branchOffice: yup.string().required("Branch Office is required"),
-  insured: yup.string().required("Insured field is required"),
-  officeAddress: yup.string().required("Office address is required"),
+  branchOffice: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Branch Office is required"),
+  insured: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Insured field is required"),
+  officeAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Office address is required"),
   ownershipOfCompany: yup.string().required("Ownership of company is required"),
-  contactPerson: yup.string().required("Contact person is required"),
-  website: yup.string().required("Website is required"),
-  incorporationNumber: yup.string().required("Incorporation number is required"),
-  incorporationState: yup.string().required("Incorporation state is required"),
-  dateOfIncorporationRegistration: yup.date().required("Date of incorporation is required").typeError("Please select a valid date"),
-  BVN: yup.string().required("BVN is required"),
-  contactPersonNo: yup.string().required("Contact person mobile is required"),
-  taxIdNo: yup.string(),
-  email: yup.string().email("Valid email is required").required("Email is required"),
-  natureOfBusiness: yup.string().required("Business type is required"),
+  contactPerson: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Contact person is required"),
+  website: yup.string().url("Please enter a valid URL").min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Website is required"),
+  incorporationNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Incorporation number is required"),
+  incorporationState: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Incorporation state is required"),
+  dateOfIncorporationRegistration: yup.date().max(new Date(), "Date must be in the past").required("Date of incorporation is required"),
+  BVN: yup.string().matches(/^\d{11}$/, "BVN must be exactly 11 digits").required("BVN is required"),
+  contactPersonNo: yup.string().matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters").required("Contact person mobile is required"),
+  taxIdNo: yup.string().nullable().transform((value) => value || null),
+  email: yup.string().email("Valid email is required").max(100, "Maximum 100 characters").required("Email is required"),
+  natureOfBusiness: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Business type is required"),
   estimatedTurnover: yup.string().required("Estimated turnover is required"),
   premiumPaymentSource: yup.string().required("Premium payment source is required"),
   premiumPaymentSourceOther: yup.string().when('premiumPaymentSource', {
     is: 'Other',
-    then: (schema) => schema.required("Please specify other payment source"),
+    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other payment source"),
     otherwise: (schema) => schema.notRequired()
   }),
 
   // Directors
   directors: yup.array().of(yup.object().shape({
-    firstName: yup.string().required("First name is required"),
-    middleName: yup.string(),
-    lastName: yup.string().required("Last name is required"),
-    dob: yup.date().required("Date of birth is required").typeError("Please select a valid date"),
-    placeOfBirth: yup.string().required("Place of birth is required"),
+    firstName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("First name is required"),
+    middleName: yup.string().nullable().transform((value) => value || null),
+    lastName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Last name is required"),
+    dob: yup.date().max(subYears(new Date(), 18), "Must be at least 18 years old").required("Date of birth is required"),
+    placeOfBirth: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Place of birth is required"),
     nationality: yup.string().required("Nationality is required"),
-    country: yup.string().required("Country is required"),
-    occupation: yup.string().required("Occupation is required"),
-    email: yup.string().email("Valid email is required").required("Email is required"),
-    phoneNumber: yup.string().required("Phone number is required"),
-    BVN: yup.string().required("BVN is required"),
-    employersName: yup.string(),
-    employersPhoneNumber: yup.string(),
-    residentialAddress: yup.string().required("Residential address is required"),
-    taxIdNumber: yup.string(),
+    country: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Country is required"),
+    occupation: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Occupation is required"),
+    email: yup.string().email("Valid email is required").max(100, "Maximum 100 characters").required("Email is required"),
+    phoneNumber: yup.string().matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters").required("Phone number is required"),
+    BVN: yup.string().matches(/^\d{11}$/, "BVN must be exactly 11 digits").required("BVN is required"),
+    employersName: yup.string().nullable().transform((value) => value || null),
+    employersPhoneNumber: yup.string().nullable().transform((value) => value || null).when('employersName', {
+      is: (value: string | null) => value && value.length > 0,
+      then: (schema) => schema.matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters"),
+      otherwise: (schema) => schema.nullable()
+    }),
+    residentialAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Residential address is required"),
+    taxIdNumber: yup.string().nullable().transform((value) => value || null),
     idType: yup.string().required("ID type is required"),
-    idNumber: yup.string().required("Identification number is required"),
-    issuingBody: yup.string().required("Issuing body is required"),
-    issuedDate: yup.date().required("Issued date is required").typeError("Please select a valid date"),
-    expiryDate: yup.date().nullable().typeError("Please select a valid date"),
+    idNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Identification number is required"),
+    issuingBody: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Issuing body is required"),
+    issuedDate: yup.date().max(new Date(), "Date must be in the past").required("Issued date is required"),
+    expiryDate: yup.date().nullable().transform((value) => value || null).when('idType', {
+      is: (value: string) => value && value !== 'NIN',
+      then: (schema) => schema.min(new Date(), "Expiry date must be in the future"),
+      otherwise: (schema) => schema.nullable()
+    }),
     sourceOfIncome: yup.string().required("Income source is required"),
     sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
       is: 'Other',
-      then: (schema) => schema.required("Please specify other income source"),
+      then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other income source"),
       otherwise: (schema) => schema.notRequired()
     })
   })).min(1, "At least one director is required"),
@@ -85,7 +93,7 @@ const corporateKYCSchema = yup.object().shape({
 
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  signature: yup.string().required("Signature is required")
+  signature: yup.string().min(2, "Minimum 2 characters").required("Signature is required")
 });
 
 const defaultValues = {
@@ -234,23 +242,12 @@ const CorporateKYC: React.FC = () => {
     const fileResults = await Promise.all(fileUploadPromises);
     const fileUrls = Object.fromEntries(fileResults);
 
-    // Sanitize data - remove undefined values to prevent Firebase errors
-    const sanitizeData = (obj: any): any => {
-      const cleaned: any = {};
-      for (const [key, value] of Object.entries(obj)) {
-        if (value !== undefined && value !== null && value !== '') {
-          cleaned[key] = value;
-        }
-      }
-      return cleaned;
-    };
-
-    const finalData = sanitizeData({
+    const finalData = {
       ...data,
       ...fileUrls,
       status: 'processing',
       formType: 'Corporate KYC'
-    });
+    };
 
     await handleSubmitWithAuth(finalData, 'Corporate KYC');
     clearDraft();
