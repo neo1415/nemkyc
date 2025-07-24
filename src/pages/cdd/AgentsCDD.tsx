@@ -289,7 +289,7 @@ useEffect(() => {
     setShowSummary(true);
   };
 
-
+const watchedValues = formMethods.watch();
 
   const steps = [
     {
