@@ -735,4 +735,173 @@ For fields using direct register (like digital signature):
 
 ---
 
+## Step 9: Field-Specific Validation Rules
+
+**Purpose**: Implement business-specific validation rules for different field types to ensure data quality and compliance.
+
+### Age and Date Validations
+
+**Date of Birth (18+ years minimum)**:
+```jsx
+dateOfBirth: yup.date()
+  .typeError("Please enter a valid date")
+  .required("Date of birth is required")
+  .max(new Date(new Date().setFullYear(new Date().getFullYear() - 18)), "You must be at least 18 years old"),
+```
+
+**Issue Date (Cannot be in future)**:
+```jsx
+issuedDate: yup.date()
+  .typeError("Please enter a valid date")
+  .required("Issue date is required")
+  .max(new Date(), "Issue date cannot be in the future"),
+```
+
+**Expiry Date (Cannot be in past/present)**:
+```jsx
+expiryDate: yup.date()
+  .nullable()
+  .typeError("Please enter a valid date")
+  .min(new Date(), "Expiry date cannot be in the past"),
+```
+
+**Account Opening Date (Cannot be in future)**:
+```jsx
+localAccountOpeningDate: yup.date()
+  .typeError("Please enter a valid date")
+  .required("Account opening date is required")
+  .max(new Date(), "Account opening date cannot be in the future"),
+```
+
+### Number and Format Validations
+
+**BVN (Numbers only, exactly 11 digits)**:
+```jsx
+BVN: yup.string()
+  .required("BVN is required")
+  .matches(/^[0-9]+$/, "BVN can only contain numbers")
+  .length(11, "BVN must be exactly 11 digits"),
+```
+
+**Phone Number (Numbers + special chars, max 15)**:
+```jsx
+GSMNo: yup.string()
+  .required("Mobile number is required")
+  .matches(/^[0-9+\-()]+$/, "Phone number can only contain numbers and +, -, (, ) characters")
+  .max(15, "Phone number cannot exceed 15 characters"),
+```
+
+**Local Account Number (Numbers only, max 10 digits)**:
+```jsx
+localAccountNumber: yup.string()
+  .required("Account number is required")
+  .matches(/^[0-9]+$/, "Account number can only contain numbers")
+  .max(10, "Account number cannot exceed 10 digits"),
+```
+
+### File Upload Validation
+
+**Enhanced FileUpload Component**:
+```jsx
+const handleFileSelect = (files: FileList | null) => {
+  if (!files || files.length === 0) return;
+  
+  const file = files[0];
+  
+  // Validate file type first
+  const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'application/pdf'];
+  if (!allowedTypes.includes(file.type)) {
+    alert('Only PNG, JPG, JPEG, or PDF files are allowed');
+    return;
+  }
+  
+  // Validate file size
+  if (file.size > maxSize * 1024 * 1024) {
+    alert(`File size must be less than ${maxSize}MB`);
+    return;
+  }
+  
+  onFileSelect(file);
+};
+```
+
+**File Type Validation in Schema**:
+```jsx
+identificationFile: yup.mixed().required("Identification document is required").test(
+  'fileType',
+  'Only PNG, JPG, JPEG, or PDF files are allowed',
+  (value: any) => {
+    if (!value) return false;
+    const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'application/pdf'];
+    return allowedTypes.includes(value?.type);
+  }
+),
+```
+
+### Implementation Examples
+
+**Date Input with Validation**:
+```jsx
+<FormDatePicker
+  name="dateOfBirth"
+  label="Date of Birth"
+  required
+  placeholder="Select your date of birth"
+/>
+```
+
+**BVN Input**:
+```jsx
+<FormField
+  name="BVN"
+  label="Bank Verification Number (BVN)"
+  required
+  maxLength={11}
+  placeholder="Enter 11-digit BVN"
+/>
+```
+
+**Phone Number Input**:
+```jsx
+<FormField
+  name="GSMNo"
+  label="Mobile Number"
+  required
+  maxLength={15}
+  placeholder="Enter mobile number"
+/>
+```
+
+**Account Number Input**:
+```jsx
+<FormField
+  name="localAccountNumber"
+  label="Account Number"
+  required
+  maxLength={10}
+  placeholder="Enter account number"
+/>
+```
+
+### Performance Considerations
+
+- ✅ Validation only triggers when users interact with fields
+- ✅ Non-required fields don't block form progression
+- ✅ Client-side validation for immediate feedback
+- ✅ Regex patterns are optimized for performance
+- ❌ Avoid complex validation logic in render cycles
+- ❌ Don't validate empty optional fields
+
+### Checklist
+- [ ] Add age validation for date of birth (18+ years)
+- [ ] Implement BVN validation (numbers only, 11 digits)
+- [ ] Add phone number validation (numbers + special chars, max 15)
+- [ ] Implement date validations (future/past restrictions)
+- [ ] Add account number validation (numbers only, max 10 digits)
+- [ ] Enhance file upload validation (type and size)
+- [ ] Test all validation rules work correctly
+- [ ] Verify non-required fields don't block progression
+
+---
+
 ## 🔍 Step 10: Testing Checklist
