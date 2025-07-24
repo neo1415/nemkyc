@@ -241,6 +241,12 @@ const CorporateKYC: React.FC = () => {
   }, [formMethods, saveDraft]);
 
   const handleSubmit = async (data: any) => {
+    console.log('Form data before sanitization:', data);
+    
+    // Sanitize data to remove undefined values
+    const sanitizedData = sanitizeData(data);
+    console.log('Sanitized data:', sanitizedData);
+
     // Prepare file upload data
     const fileUploadPromises: Array<Promise<[string, string]>> = [];
     
@@ -256,7 +262,7 @@ const CorporateKYC: React.FC = () => {
     const fileUrls = Object.fromEntries(fileResults);
 
     const finalData = {
-      ...data,
+      ...sanitizedData,
       ...fileUrls,
       status: 'processing',
       formType: 'Corporate KYC'
@@ -270,6 +276,34 @@ const CorporateKYC: React.FC = () => {
   const onFinalSubmit = (data: any) => {
     setShowSummary(true);
   };
+
+  // Data sanitization function
+  const sanitizeData = (data: any) => {
+    const sanitized: any = {};
+    Object.keys(data).forEach(key => {
+      if (data[key] !== undefined) {
+        sanitized[key] = data[key];
+      }
+    });
+    return sanitized;
+  };
+
+  // Step field mappings - define which fields belong to each step
+  const stepFieldMappings = {
+    0: [
+      'branchOffice', 'insured', 'officeAddress', 'ownershipOfCompany', 'contactPerson', 
+      'website', 'incorporationNumber', 'incorporationState', 'dateOfIncorporationRegistration',
+      'BVNNumber', 'contactPersonNo', 'taxIdNo', 'email', 'natureOfBusiness', 
+      'estimatedTurnover', 'premiumPaymentSource', 'premiumPaymentSourceOther'
+    ],
+    1: ['directors'],
+    2: ['companyNameVerificationDoc'],
+    3: ['agreeToDataPrivacy', 'signature']
+  };
+
+  // Validation function for current step (removed as MultiStepForm handles this internally)
+  
+  // Get step fields function (removed as not needed)
 
   // Reusable form components
   const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
@@ -977,6 +1011,7 @@ const CorporateKYC: React.FC = () => {
               onSubmit={onFinalSubmit}
               formMethods={formMethods}
               submitButtonText="Submit KYC Form"
+              stepFieldMappings={stepFieldMappings}
             />
           </CardContent>
         </Card>
