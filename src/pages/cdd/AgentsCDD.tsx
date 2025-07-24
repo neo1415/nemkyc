@@ -169,7 +169,7 @@ const AgentsCDD: React.FC = () => {
   const formMethods = useForm<any>({
     resolver: yupResolver(agentsCDDSchema),
     defaultValues,
-    mode: 'onChange'
+    mode: 'onBlur'
   });
 
   // Step validation function
@@ -230,12 +230,19 @@ const AgentsCDD: React.FC = () => {
   }, [authShowSuccess]);
 
   // Auto-save draft
-  useEffect(() => {
-    const subscription = formMethods.watch((data) => {
-      saveDraft(data);
-    });
-    return () => subscription.unsubscribe();
-  }, [formMethods, saveDraft]);
+useEffect(() => {
+  const debounceSave = setTimeout(() => {
+    // Get current form values and save them
+    saveDraft(formMethods.getValues());
+  }, 1000); // Wait 1 second after the user stops typing
+
+  const subscription = formMethods.watch();
+  
+  return () => {
+    clearTimeout(debounceSave);
+    subscription.unsubscribe();
+  }
+}, [formMethods, saveDraft, formMethods.watch]); // Dependency array updated
 
   const handleSubmit = async (data: any) => {
     // Prepare file upload data
@@ -282,7 +289,7 @@ const AgentsCDD: React.FC = () => {
     setShowSummary(true);
   };
 
-  const watchedValues = formMethods.watch();
+
 
   const steps = [
     {
