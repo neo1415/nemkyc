@@ -131,7 +131,7 @@ const getFirestoreCollection = (formType: string): string => {
   if (formTypeLower.includes('combined')) return 'combined-gpa-employers-liability-claims';
   
   // KYC forms
-  if (formTypeLower.includes('individual') && formTypeLower.includes('kyc')) return 'individualKYC';
+  if (formTypeLower.includes('individual') && formTypeLower.includes('kyc')) return 'Individual-kyc-form';
   if (formTypeLower.includes('corporate') && formTypeLower.includes('kyc')) return 'corporateKYC';
   
   // CDD forms
