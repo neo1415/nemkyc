@@ -153,10 +153,10 @@ const brokersCDDSchema = yup.object().shape({
     })
     .typeError('Please select a valid date'),
   
-  // File uploads
-  certificateOfIncorporation: yup.mixed().required("Certificate of incorporation is required"),
-  director1Id: yup.mixed().required("Director 1 ID is required"),
-  director2Id: yup.mixed().required("Director 2 ID is required"),
+  // File uploads - using string validation like Corporate KYC
+  certificateOfIncorporation: yup.string().required("Certificate of incorporation is required"),
+  director1Id: yup.string().required("Director 1 ID is required"),
+  director2Id: yup.string().required("Director 2 ID is required"),
   
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
@@ -914,7 +914,7 @@ const BrokersCDD: React.FC = () => {
                     ...prev,
                     certificateOfIncorporation: file
                   }));
-                  formMethods.setValue('certificateOfIncorporation', file, { shouldValidate: true });
+                  formMethods.setValue('certificateOfIncorporation', file.name);
                   if (formMethods.formState.errors.certificateOfIncorporation) {
                     formMethods.clearErrors('certificateOfIncorporation');
                   }
@@ -943,7 +943,7 @@ const BrokersCDD: React.FC = () => {
                     ...prev,
                     director1Id: file
                   }));
-                  formMethods.setValue('director1Id', file, { shouldValidate: true });
+                  formMethods.setValue('director1Id', file.name);
                   if (formMethods.formState.errors.director1Id) {
                     formMethods.clearErrors('director1Id');
                   }
@@ -972,7 +972,7 @@ const BrokersCDD: React.FC = () => {
                     ...prev,
                     director2Id: file
                   }));
-                  formMethods.setValue('director2Id', file, { shouldValidate: true });
+                  formMethods.setValue('director2Id', file.name);
                   if (formMethods.formState.errors.director2Id) {
                     formMethods.clearErrors('director2Id');
                   }
