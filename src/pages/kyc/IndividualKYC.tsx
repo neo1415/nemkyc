@@ -246,13 +246,27 @@ const IndividualKYC: React.FC = () => {
     const fileResults = await Promise.all(fileUploadPromises);
     const fileUrls = Object.fromEntries(fileResults);
 
-    const finalData = {
+    // Sanitize data - remove undefined values to prevent Firebase errors
+    const sanitizeData = (obj: any): any => {
+      const cleaned: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        if (value !== undefined) {
+          // Keep non-undefined values
+          cleaned[key] = value;
+        }
+        // Skip undefined values entirely - Firebase doesn't accept them
+      }
+      return cleaned;
+    };
+
+    const finalData = sanitizeData({
       ...data,
       ...fileUrls,
       status: 'processing',
       formType: 'Individual KYC'
-    };
+    });
 
+    console.log('Sanitized final data:', finalData);
     await handleSubmitWithAuth(finalData, 'Individual KYC');
     clearDraft();
     setShowSummary(false);
