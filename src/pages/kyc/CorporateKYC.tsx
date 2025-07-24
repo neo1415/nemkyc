@@ -38,11 +38,7 @@ const corporateKYCSchema = yup.object().shape({
   dateOfIncorporationRegistration: yup.date().max(new Date(), "Date must be in the past").required("Date of incorporation is required"),
   BVN: yup.string().matches(/^\d{11}$/, "BVN must be exactly 11 digits").required("BVN is required"),
   contactPersonNo: yup.string().matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters").required("Contact person mobile is required"),
-  taxIdNo: yup.string().when('taxIdNo', {
-    is: (value: string) => value && value.length > 0,
-    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
-    otherwise: (schema) => schema
-  }),
+  taxIdNo: yup.string().nullable().transform((value) => value || null),
   email: yup.string().email("Valid email is required").max(100, "Maximum 100 characters").required("Email is required"),
   natureOfBusiness: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Business type is required"),
   estimatedTurnover: yup.string().required("Estimated turnover is required"),
@@ -50,17 +46,13 @@ const corporateKYCSchema = yup.object().shape({
   premiumPaymentSourceOther: yup.string().when('premiumPaymentSource', {
     is: 'Other',
     then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other payment source"),
-    otherwise: (schema) => schema
+    otherwise: (schema) => schema.notRequired()
   }),
 
   // Directors
   directors: yup.array().of(yup.object().shape({
     firstName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("First name is required"),
-    middleName: yup.string().when('middleName', {
-      is: (value: string) => value && value.length > 0,
-      then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
-      otherwise: (schema) => schema
-    }),
+    middleName: yup.string().nullable().transform((value) => value || null),
     lastName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Last name is required"),
     dob: yup.date().max(subYears(new Date(), 18), "Must be at least 18 years old").required("Date of birth is required"),
     placeOfBirth: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Place of birth is required"),
@@ -70,36 +62,28 @@ const corporateKYCSchema = yup.object().shape({
     email: yup.string().email("Valid email is required").max(100, "Maximum 100 characters").required("Email is required"),
     phoneNumber: yup.string().matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters").required("Phone number is required"),
     BVN: yup.string().matches(/^\d{11}$/, "BVN must be exactly 11 digits").required("BVN is required"),
-    employersName: yup.string().when('employersName', {
-      is: (value: string) => value && value.length > 0,
-      then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
-      otherwise: (schema) => schema
-    }),
-    employersPhoneNumber: yup.string().when('employersPhoneNumber', {
-      is: (value: string) => value && value.length > 0,
+    employersName: yup.string().nullable().transform((value) => value || null),
+    employersPhoneNumber: yup.string().nullable().transform((value) => value || null).when('employersName', {
+      is: (value: string | null) => value && value.length > 0,
       then: (schema) => schema.matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters"),
-      otherwise: (schema) => schema
+      otherwise: (schema) => schema.nullable()
     }),
     residentialAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Residential address is required"),
-    taxIdNumber: yup.string().when('taxIdNumber', {
-      is: (value: string) => value && value.length > 0,
-      then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
-      otherwise: (schema) => schema
-    }),
+    taxIdNumber: yup.string().nullable().transform((value) => value || null),
     idType: yup.string().required("ID type is required"),
     idNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Identification number is required"),
     issuingBody: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Issuing body is required"),
     issuedDate: yup.date().max(new Date(), "Date must be in the past").required("Issued date is required"),
-    expiryDate: yup.date().when('expiryDate', {
-      is: (value: Date) => value,
+    expiryDate: yup.date().nullable().transform((value) => value || null).when('idType', {
+      is: (value: string) => value && value !== 'NIN',
       then: (schema) => schema.min(new Date(), "Expiry date must be in the future"),
-      otherwise: (schema) => schema
+      otherwise: (schema) => schema.nullable()
     }),
     sourceOfIncome: yup.string().required("Income source is required"),
     sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
       is: 'Other',
       then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other income source"),
-      otherwise: (schema) => schema
+      otherwise: (schema) => schema.notRequired()
     })
   })).min(1, "At least one director is required"),
 
