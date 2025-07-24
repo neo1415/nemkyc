@@ -126,7 +126,10 @@ const brokersCDDSchema = yup.object().shape({
   })).min(1, "At least one director is required"),
   
   // Account Details
-  localAccountNumber: yup.string().required("Account number is required"),
+  localAccountNumber: yup.string()
+    .required("Account number is required")
+    .matches(/^\d+$/, "Account number must contain only numbers")
+    .max(10, "Account number cannot exceed 10 digits"),
   localBankName: yup.string().required("Bank name is required"),
   localBankBranch: yup.string().required("Bank branch is required"),
   localAccountOpeningDate: yup.date()
