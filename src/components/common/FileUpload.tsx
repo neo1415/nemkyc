@@ -19,7 +19,7 @@ interface FileUploadProps {
 const FileUpload: React.FC<FileUploadProps> = ({
   onFileSelect,
   onFileRemove,
-  accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png',
+  accept = '.pdf,.jpg,.jpeg,.png',
   maxSize = 10,
   currentFile,
   label,
@@ -33,6 +33,13 @@ const FileUpload: React.FC<FileUploadProps> = ({
     if (!files || files.length === 0) return;
     
     const file = files[0];
+    
+    // Validate file type
+    const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Only PNG, JPG, JPEG, or PDF files are allowed');
+      return;
+    }
     
     // Validate file size
     if (file.size > maxSize * 1024 * 1024) {
@@ -124,7 +131,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                   or drag and drop your file here
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
-                  Max size: {maxSize}MB. Supported: PDF, DOC, DOCX, JPG, PNG
+                  Max size: {maxSize}MB. Supported: PDF, JPG, JPEG, PNG
                 </p>
               </div>
             </div>

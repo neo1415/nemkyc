@@ -33,21 +33,36 @@ const individualKYCSchema = yup.object().shape({
   contactAddress: yup.string().required("Contact address is required"),
   occupation: yup.string().required("Occupation is required"),
   gender: yup.string().required("Gender is required"),
-  dateOfBirth: yup.date().typeError("Please enter a valid date").required("Date of birth is required"),
+  dateOfBirth: yup.date()
+    .typeError("Please enter a valid date")
+    .required("Date of birth is required")
+    .max(new Date(new Date().setFullYear(new Date().getFullYear() - 18)), "You must be at least 18 years old"),
   mothersMaidenName: yup.string().required("Mother's maiden name is required"),
   city: yup.string().required("City is required"),
   state: yup.string().required("State is required"),
   country: yup.string().required("Country is required"),
   nationality: yup.string().required("Nationality is required"),
   residentialAddress: yup.string().required("Residential address is required"),
-  GSMNo: yup.string().required("Mobile number is required"),
+  GSMNo: yup.string()
+    .required("Mobile number is required")
+    .matches(/^[0-9+\-()]+$/, "Phone number can only contain numbers and +, -, (, ) characters")
+    .max(15, "Phone number cannot exceed 15 characters"),
   email: yup.string().email("Please enter a valid email address").required("Email is required"),
-  BVN: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+  BVN: yup.string()
+    .required("BVN is required")
+    .matches(/^[0-9]+$/, "BVN can only contain numbers")
+    .length(11, "BVN must be exactly 11 digits"),
   identificationType: yup.string().required("ID type is required"),
   idNumber: yup.string().required("Identification number is required"),
   issuingCountry: yup.string().required("Issuing country is required"),
-  issuedDate: yup.date().typeError("Please enter a valid date").required("Issue date is required"),
-  expiryDate: yup.date().nullable().typeError("Please enter a valid date"),
+  issuedDate: yup.date()
+    .typeError("Please enter a valid date")
+    .required("Issue date is required")
+    .max(new Date(), "Issue date cannot be in the future"),
+  expiryDate: yup.date()
+    .nullable()
+    .typeError("Please enter a valid date")
+    .min(new Date(), "Expiry date cannot be in the past"),
   sourceOfIncome: yup.string().required("Income source is required"),
   sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
     is: 'Other',
@@ -62,9 +77,15 @@ const individualKYCSchema = yup.object().shape({
     otherwise: (schema) => schema.nullable()
   }),
   localBankName: yup.string().required("Bank name is required"),
-  localAccountNumber: yup.string().required("Account number is required"),
+  localAccountNumber: yup.string()
+    .required("Account number is required")
+    .matches(/^[0-9]+$/, "Account number can only contain numbers")
+    .max(10, "Account number cannot exceed 10 digits"),
   localBankBranch: yup.string().required("Bank branch is required"),
-  localAccountOpeningDate: yup.date().typeError("Please enter a valid date").required("Account opening date is required"),
+  localAccountOpeningDate: yup.date()
+    .typeError("Please enter a valid date")
+    .required("Account opening date is required")
+    .max(new Date(), "Account opening date cannot be in the future"),
   foreignBankName: yup.string().nullable(),
   foreignAccountNumber: yup.string().nullable(),
   foreignBankBranch: yup.string().nullable(),
@@ -74,7 +95,7 @@ const individualKYCSchema = yup.object().shape({
       return null;
     }
     return value;
-  }),
+  }).max(new Date(), "Account opening date cannot be in the future"),
   // File validation
   identificationFile: yup.mixed().required("Identification document is required").test(
     'fileType',
