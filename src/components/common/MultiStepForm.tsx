@@ -4,6 +4,7 @@ import { FormProvider } from 'react-hook-form';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface Step {
   id: string;
@@ -28,6 +29,7 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
   formMethods
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const { toast } = useToast();
 
   const nextStep = async () => {
     // Validate current step before proceeding
@@ -38,6 +40,14 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
       const errors = formMethods.formState.errors;
       if (!isValid && Object.keys(errors).length > 0) {
         console.log(`Validation failed for step "${steps[currentStep].id}". Errors:`, errors);
+        
+        // Show toast notification for validation errors
+        toast({
+          title: "Please fill all fields correctly",
+          description: "Some required fields are missing or contain invalid data.",
+          variant: "destructive"
+        });
+        
         return; // Don't proceed if validation fails
       }
     }
