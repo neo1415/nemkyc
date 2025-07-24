@@ -29,7 +29,15 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
 
-  const nextStep = () => {
+  const nextStep = async () => {
+    // Validate current step before proceeding
+    if (formMethods.validateCurrentStep) {
+      const isValid = await formMethods.validateCurrentStep(steps[currentStep].id);
+      if (!isValid) {
+        return; // Don't proceed if validation fails
+      }
+    }
+    
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
