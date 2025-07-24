@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useToast } from '@/hooks/use-toast';
@@ -34,40 +34,103 @@ const corporateKYCSchema = yup.object().shape({
   website: yup.string().required("Website is required"),
   incorporationNumber: yup.string().required("Incorporation number is required"),
   incorporationState: yup.string().required("Incorporation state is required"),
- dateOfIncorporationRegistration: yup.date().required("Date of incorporation is required"),
-  BVNNumber: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
-  contactPersonNo: yup.string().required("Contact person mobile is required"),
-  taxIdNo: yup.string(),
-  email: yup.string().email("Valid email is required").required("Email is required"),
+  dateOfIncorporationRegistration: yup.date()
+    .required("Date of incorporation is required")
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
+  BVNNumber: yup.string()
+    .required("BVN is required")
+    .matches(/^\d+$/, "BVN must contain only numbers")
+    .length(11, "BVN must be exactly 11 digits"),
+  contactPersonNo: yup.string()
+    .required("Contact person mobile is required")
+    .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
+    .max(15, "Phone number cannot exceed 15 characters"),
+  taxIdNo: yup.string()
+    .matches(/^\d*$/, "Tax ID must contain only numbers")
+    .max(10, "Tax ID cannot exceed 10 digits"),
+  email: yup.string()
+    .required("Email is required")
+    .email("Please enter a valid email")
+    .typeError("Please enter a valid email"),
   natureOfBusiness: yup.string().required("Business type is required"),
   estimatedTurnover: yup.string().required("Estimated turnover is required"),
   premiumPaymentSource: yup.string().required("Premium payment source is required"),
-  premiumPaymentSourceOther: yup.string(),
+  premiumPaymentSourceOther: yup.string().when('premiumPaymentSource', {
+    is: 'Other',
+    then: (schema) => schema.required('Please specify other income source'),
+    otherwise: (schema) => schema.notRequired()
+  }),
 
   // Directors
   directors: yup.array().of(yup.object().shape({
     firstName: yup.string().required("First name is required"),
     middleName: yup.string(),
     lastName: yup.string().required("Last name is required"),
-    dob: yup.date().required("Date of birth is required"),
+    dob: yup.date()
+      .required("Date of birth is required")
+      .test('age', 'Director must be at least 18 years old', function(value) {
+        if (!value) return false;
+        const today = new Date();
+        const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+        return value <= eighteenYearsAgo;
+      })
+      .typeError('Please select a valid date'),
     placeOfBirth: yup.string().required("Place of birth is required"),
     nationality: yup.string().required("Nationality is required"),
     country: yup.string().required("Country is required"),
     occupation: yup.string().required("Occupation is required"),
-    email: yup.string().email("Valid email is required").required("Email is required"),
-    phoneNumber: yup.string().required("Phone number is required"),
-    BVNNumber: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+    email: yup.string()
+      .required("Email is required")
+      .email("Please enter a valid email")
+      .typeError("Please enter a valid email"),
+    phoneNumber: yup.string()
+      .required("Phone number is required")
+      .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
+      .max(15, "Phone number cannot exceed 15 characters"),
+    BVNNumber: yup.string()
+      .required("BVN is required")
+      .matches(/^\d+$/, "BVN must contain only numbers")
+      .length(11, "BVN must be exactly 11 digits"),
     employersName: yup.string(),
-    employersPhoneNumber: yup.string(),
+    employersPhoneNumber: yup.string()
+      .matches(/^[\d\s+\-()]*$/, "Invalid phone number format")
+      .max(15, "Phone number cannot exceed 15 characters"),
     residentialAddress: yup.string().required("Residential address is required"),
-    taxIdNumber: yup.string(),
+    taxIdNumber: yup.string()
+      .matches(/^\d*$/, "Tax ID must contain only numbers")
+      .max(10, "Tax ID cannot exceed 10 digits"),
     idType: yup.string().required("ID type is required"),
     idNumber: yup.string().required("Identification number is required"),
     issuingBody: yup.string().required("Issuing body is required"),
-    issuedDate: yup.date().required("Issued date is required"),
-    expiryDate: yup.date(),
+    issuedDate: yup.date()
+      .required("Issued date is required")
+      .test('not-future', 'Issued date cannot be in the future', function(value) {
+        if (!value) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return value <= today;
+      })
+      .typeError('Please select a valid date'),
+    expiryDate: yup.date()
+      .test('not-past', 'Expiry date cannot be in the past or present', function(value) {
+        if (!value) return true; // Optional field
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        return value > today;
+      })
+      .typeError('Please select a valid date'),
     sourceOfIncome: yup.string().required("Income source is required"),
-    sourceOfIncomeOther: yup.string()
+    sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
+      is: 'Other',
+      then: (schema) => schema.required('Please specify income source'),
+      otherwise: (schema) => schema.notRequired()
+    })
   })).min(1, "At least one director is required"),
 
   // Verification
@@ -87,7 +150,7 @@ const defaultValues = {
   website: '',
   incorporationNumber: '',
   incorporationState: '',
-  dateOfIncorporationRegistration: '',
+  dateOfIncorporationRegistration: undefined,
   BVNNumber: '',
   contactPersonNo: '',
   taxIdNo: '',
@@ -100,14 +163,14 @@ const defaultValues = {
     firstName: '',
     middleName: '',
     lastName: '',
-    dob: '',
+    dob: undefined,
     placeOfBirth: '',
     nationality: '',
     country: '',
     occupation: '',
     email: '',
     phoneNumber: '',
-    BVNumber: '',
+    BVNNumber: '',
     employersName: '',
     employersPhoneNumber: '',
     residentialAddress: '',
@@ -115,12 +178,12 @@ const defaultValues = {
     idType: '',
     idNumber: '',
     issuingBody: '',
-    issuedDate: '',
-    expiryDate: '',
-    sourcesOfIncome: '',
+    issuedDate: undefined,
+    expiryDate: undefined,
+    sourceOfIncome: '',
     sourceOfIncomeOther: ''
   }],
-   companyNameVerificationDoc: '',
+  companyNameVerificationDoc: '',
   agreeToDataPrivacy: false,
   signature: ''
 };
@@ -208,34 +271,139 @@ const CorporateKYC: React.FC = () => {
     setShowSummary(true);
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
+  // Reusable form components
+  const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
+    const { register, formState: { errors }, clearErrors } = useFormContext();
+    const error = errors[name];
+    
     return (
       <div className="space-y-2">
-        <Label>{label}</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !value && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <ReactCalendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={(date) => formMethods.setValue(name, date)}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
+        <Label htmlFor={name}>
+          {label}
+          {required && <span className="required-asterisk">*</span>}
+        </Label>
+        <Input
+          id={name}
+          type={type}
+          maxLength={maxLength}
+          {...register(name, {
+            onChange: () => {
+              if (error) {
+                clearErrors(name);
+              }
+            }
+          })}
+          className={error ? 'border-destructive' : ''}
+          {...props}
+        />
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
+      </div>
+    );
+  };
+
+  const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
+    const { register, watch, formState: { errors }, clearErrors } = useFormContext();
+    const currentValue = watch(name) || '';
+    const error = errors[name];
+    
+    return (
+      <div className="space-y-2">
+        <Label htmlFor={name}>
+          {label}
+          {required && <span className="required-asterisk">*</span>}
+        </Label>
+        <Textarea
+          id={name}
+          {...register(name, {
+            onChange: () => {
+              if (error) {
+                clearErrors(name);
+              }
+            }
+          })}
+          className={error ? 'border-destructive' : ''}
+          {...props}
+        />
+        <div className="flex justify-between">
+          {error && (
+            <p className="text-sm text-destructive">{error.message?.toString()}</p>
+          )}
+          <span className="text-sm text-muted-foreground ml-auto">
+            {currentValue.length}/{maxLength}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  const FormSelect = ({ name, label, required = false, options, placeholder, ...props }: any) => {
+    const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+    const value = watch(name);
+    const error = errors[name];
+    
+    return (
+      <div className="space-y-2">
+        <Label htmlFor={name}>
+          {label}
+          {required && <span className="required-asterisk">*</span>}
+        </Label>
+        <Select
+          value={value}
+          onValueChange={(newValue) => {
+            setValue(name, newValue);
+            if (error) {
+              clearErrors(name);
+            }
+          }}
+          {...props}
+        >
+          <SelectTrigger className={error ? 'border-destructive' : ''}>
+            <SelectValue placeholder={placeholder || `Select ${label}`} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option: any) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
+      </div>
+    );
+  };
+
+  const FormDatePicker = ({ name, label, required = false }: any) => {
+    const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+    const value = watch(name);
+    const error = errors[name];
+    
+    return (
+      <div className="space-y-2">
+        <Label htmlFor={name}>
+          {label}
+          {required && <span className="required-asterisk">*</span>}
+        </Label>
+        <Input
+          id={name}
+          type="date"
+          value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
+          onChange={(e) => {
+            const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+            setValue(name, dateValue);
+            if (error) {
+              clearErrors(name);
+            }
+          }}
+          className={error ? 'border-destructive' : ''}
+        />
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
       </div>
     );
   };
@@ -322,9 +490,10 @@ const CorporateKYC: React.FC = () => {
             </div>
           </div>
 
-          <DatePickerField
+          <FormDatePicker
             name="dateOfIncorporationRegistration"
-            label="Date of Incorporation/Registration *"
+            label="Date of Incorporation/Registration"
+            required={true}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -465,9 +634,10 @@ const CorporateKYC: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <DatePickerField
+                <FormDatePicker
                   name={`directors.${index}.dob`}
-                  label="Date of Birth *"
+                  label="Date of Birth"
+                  required={true}
                 />
                 <div>
                   <Label htmlFor={`directors.${index}.placeOfBirth`}>Place of Birth *</Label>
@@ -601,13 +771,15 @@ const CorporateKYC: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <DatePickerField
+                <FormDatePicker
                   name={`directors.${index}.issuedDate`}
-                  label="Issued Date *"
+                  label="Issued Date"
+                  required={true}
                 />
-                <DatePickerField
+                <FormDatePicker
                   name={`directors.${index}.expiryDate`}
                   label="Expiry Date"
+                  required={false}
                 />
               </div>
 
@@ -776,37 +948,38 @@ const CorporateKYC: React.FC = () => {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Post-auth loading overlay */}
-      {showPostAuthLoading && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-lg font-semibold">Completing your submission...</p>
-            <p className="text-sm text-muted-foreground">Please wait while we process your KYC form.</p>
+    <FormProvider {...formMethods}>
+      <div className="container mx-auto px-4 py-8">
+        {/* Post-auth loading overlay */}
+        {showPostAuthLoading && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-lg font-semibold">Completing your submission...</p>
+              <p className="text-sm text-muted-foreground">Please wait while we process your KYC form.</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <Card className="max-w-6xl mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-6 w-6" />
-            Corporate KYC Form
-          </CardTitle>
-          <CardDescription>
-            Know Your Customer - Please provide accurate information for regulatory compliance
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <MultiStepForm
-            steps={steps}
-            onSubmit={onFinalSubmit}
-            formMethods={formMethods}
-            submitButtonText="Submit KYC Form"
-          />
-        </CardContent>
-      </Card>
+        <Card className="max-w-6xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-6 w-6" />
+              Corporate KYC Form
+            </CardTitle>
+            <CardDescription>
+              Know Your Customer - Please provide accurate information for regulatory compliance
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MultiStepForm
+              steps={steps}
+              onSubmit={onFinalSubmit}
+              formMethods={formMethods}
+              submitButtonText="Submit KYC Form"
+            />
+          </CardContent>
+        </Card>
 
       {/* Summary Dialog */}
       <Dialog open={showSummary} onOpenChange={setShowSummary}>
@@ -866,7 +1039,8 @@ const CorporateKYC: React.FC = () => {
         message="Your Corporate KYC form has been submitted successfully. You will receive a confirmation email shortly."
         formType="Corporate KYC"
       />
-    </div>
+      </div>
+    </FormProvider>
   );
 };
 
