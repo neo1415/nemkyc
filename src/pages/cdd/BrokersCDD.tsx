@@ -325,9 +325,31 @@ const FormSelect = ({ name, label, required = false, options, placeholder, ...pr
 };
 
 const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const { setValue, watch, formState: { errors }, clearErrors, trigger } = useFormContext();
   const value = watch(name);
   const error = get(errors, name);
+  
+  const formatDateForInput = (date: any) => {
+    if (!date) return '';
+    if (typeof date === 'string') {
+      // If it's already a string, try to parse it and format
+      const parsedDate = new Date(date);
+      return !isNaN(parsedDate.getTime()) ? parsedDate.toISOString().split('T')[0] : '';
+    }
+    if (date instanceof Date && !isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+    return '';
+  };
+  
+  const handleDateChange = async (dateValue: Date | undefined) => {
+    setValue(name, dateValue, { shouldValidate: true });
+    if (error) {
+      clearErrors(name);
+    }
+    // Trigger validation for this field
+    await trigger(name);
+  };
   
   return (
     <div className="space-y-2">
@@ -339,13 +361,10 @@ const FormDatePicker = ({ name, label, required = false }: any) => {
         <Input
           id={name}
           type="date"
-          value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
-          onChange={(e) => {
-            const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-            setValue(name, dateValue);
-            if (error) {
-              clearErrors(name);
-            }
+          value={formatDateForInput(value)}
+          onChange={async (e) => {
+            const dateValue = e.target.value ? new Date(e.target.value + 'T00:00:00') : undefined;
+            await handleDateChange(dateValue);
           }}
           className={error ? 'border-destructive' : ''}
         />
@@ -364,12 +383,7 @@ const FormDatePicker = ({ name, label, required = false }: any) => {
             <ReactCalendar
               mode="single"
               selected={value ? new Date(value) : undefined}
-              onSelect={(date) => {
-                setValue(name, date);
-                if (error) {
-                  clearErrors(name);
-                }
-              }}
+              onSelect={handleDateChange}
               initialFocus
               className="pointer-events-auto"
             />
