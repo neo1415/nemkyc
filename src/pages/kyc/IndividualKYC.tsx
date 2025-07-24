@@ -180,15 +180,13 @@ const IndividualKYC: React.FC = () => {
     switch (stepId) {
       case 'personal':
         return ['officeLocation', 'title', 'firstName', 'middleName', 'lastName', 'contactAddress', 
-                'occupation', 'gender', 'dateOfBirth', 'mothersMaidenName', 'employersName', 
-                'employersTelephoneNumber', 'employersAddress', 'city', 'state', 'country', 
-                'nationality', 'residentialAddress', 'GSMNo', 'email', 'taxIDNo', 'BVN', 
+                'occupation', 'gender', 'dateOfBirth', 'mothersMaidenName', 'city', 'state', 'country', 
+                'nationality', 'residentialAddress', 'GSMNo', 'email', 'BVN', 
                 'identificationType', 'idNumber', 'issuingCountry', 'issuedDate', 'expiryDate', 
                 'sourceOfIncome', 'sourceOfIncomeOther', 'annualIncomeRange', 'premiumPaymentSource', 
                 'premiumPaymentSourceOther'];
       case 'accounts':
-        return ['localBankName', 'localAccountNumber', 'localBankBranch', 'localAccountOpeningDate',
-                'foreignBankName', 'foreignAccountNumber', 'foreignBankBranch', 'foreignAccountOpeningDate'];
+        return ['localBankName', 'localAccountNumber', 'localBankBranch', 'localAccountOpeningDate'];
       case 'upload':
         return ['identification'];
       case 'declaration':
@@ -646,13 +644,14 @@ const IndividualKYC: React.FC = () => {
           <div>
             <Label>Upload Means of Identification <span className="text-red-500">*</span></Label>
             <FileUpload
-              accept="image/*,.pdf"
+              accept=".jpg,.jpeg,.png,.pdf"
               onFileSelect={(file) => {
                 setUploadedFiles(prev => ({
                   ...prev,
                   identification: file
                 }));
                 formMethods.setValue('identification', file);
+                formMethods.clearErrors('identification');
               }}
               maxSize={3}
             />
@@ -738,15 +737,6 @@ const IndividualKYC: React.FC = () => {
             </div>
           </div>
 
-          {formMethods.watch('agreeToDataPrivacy') && (
-            <Button
-              type="button"
-              onClick={() => setShowSummary(true)}
-              className="w-full"
-            >
-              Submit Individual KYC Form
-            </Button>
-          )}
         </div>
       )
     }
