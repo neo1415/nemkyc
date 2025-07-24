@@ -22,87 +22,40 @@ import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
-import { FormField, PhoneField, NumericField, FormTextarea, FormSelect, DateField } from '@/components/form/FormFieldControllers';
-
-import { subYears } from 'date-fns';
 
 // Form validation schema
 const individualKYCSchema = yup.object().shape({
-  officeLocation: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Office location is required"),
-  title: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Title is required"),
-  firstName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("First name is required"),
-  middleName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Middle name is required"),
-  lastName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Last name is required"),
-  contactAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Contact address is required"),
-  occupation: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Occupation is required"),
+  officeLocation: yup.string().required("Office location is required"),
+  title: yup.string().required("Title is required"),
+  firstName: yup.string().required("First name is required"),
+  middleName: yup.string().required("Middle name is required"),
+  lastName: yup.string().required("Last name is required"),
+  contactAddress: yup.string().required("Contact address is required"),
+  occupation: yup.string().required("Occupation is required"),
   gender: yup.string().required("Gender is required"),
-  dateOfBirth: yup.date().max(subYears(new Date(), 18), "Must be at least 18 years old").required("Date of birth is required"),
-  mothersMaidenName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Mother's maiden name is required"),
-  employersName: yup.string().nullable().transform((value) => value || null),
-  employersTelephoneNumber: yup.string().nullable().transform((value) => value || null).when('employersName', {
-    is: (value: string | null) => value && value.length > 0,
-    then: (schema) => schema.matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters"),
-    otherwise: (schema) => schema.nullable()
-  }),
-  employersAddress: yup.string().nullable().transform((value) => value || null).when('employersName', {
-    is: (value: string | null) => value && value.length > 0,
-    then: (schema) => schema.min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters"),
-    otherwise: (schema) => schema.nullable()
-  }),
-  city: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("City is required"),
-  state: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("State is required"),
-  country: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Country is required"),
+  dateOfBirth: yup.date().required("Date of birth is required"),
+  mothersMaidenName: yup.string().required("Mother's maiden name is required"),
+  city: yup.string().required("City is required"),
+  state: yup.string().required("State is required"),
+  country: yup.string().required("Country is required"),
   nationality: yup.string().required("Nationality is required"),
-  residentialAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Residential address is required"),
-  GSMNo: yup.string().matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters").required("Mobile number is required"),
-  email: yup.string().email("Valid email is required").max(100, "Maximum 100 characters").required("Email is required"),
-  taxIDNo: yup.string().nullable().transform((value) => value || null),
-  BVN: yup.string().matches(/^\d{11}$/, "BVN must be exactly 11 digits").required("BVN is required"),
+  residentialAddress: yup.string().required("Residential address is required"),
+  GSMNo: yup.string().required("Mobile number is required"),
+  emailAddress: yup.string().email("Valid email is required").required("Email is required"),
+  BVN: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
   identificationType: yup.string().required("ID type is required"),
-  idNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Identification number is required"),
-  issuingCountry: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Issuing country is required"),
-  issuedDate: yup.date().max(new Date(), "Date must be in the past").required("Issued date is required"),
-  expiryDate: yup.date().nullable().transform((value) => value || null).when('identificationType', {
-    is: (value: string) => value && value !== 'NIN',
-    then: (schema) => schema.min(new Date(), "Expiry date must be in the future"),
-    otherwise: (schema) => schema.nullable()
-  }),
+  idNumber: yup.string().required("Identification number is required"),
+  issuingCountry: yup.string().required("Issuing country is required"),
+  issuedDate: yup.date().required("Issued date is required"),
   sourceOfIncome: yup.string().required("Income source is required"),
-  sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
-    is: 'Other',
-    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other income source"),
-    otherwise: (schema) => schema.notRequired()
-  }),
   annualIncomeRange: yup.string().required("Annual income range is required"),
   premiumPaymentSource: yup.string().required("Premium payment source is required"),
-  premiumPaymentSourceOther: yup.string().when('premiumPaymentSource', {
-    is: 'Other',
-    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other payment source"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  localBankName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Bank name is required"),
-  localAccountNumber: yup.string().matches(/^\d{1,10}$/, "Account number must be 1-10 digits only").required("Account number is required"),
-  localBankBranch: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Bank branch is required"),
-  localAccountOpeningDate: yup.date().max(new Date(), "Date must be in the past").required("Account opening date is required"),
-  foreignBankName: yup.string().nullable().transform((value) => value || null),
-  foreignAccountNumber: yup.string().nullable().transform((value) => value || null).when('foreignBankName', {
-    is: (value: string | null) => value && value.length > 0,
-    then: (schema) => schema.matches(/^\d{1,10}$/, "Account number must be 1-10 digits only"),
-    otherwise: (schema) => schema.nullable()
-  }),
-  foreignBankBranch: yup.string().nullable().transform((value) => value || null).when('foreignBankName', {
-    is: (value: string | null) => value && value.length > 0,
-    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
-    otherwise: (schema) => schema.nullable()
-  }),
-  foreignAccountOpeningDate: yup.date().nullable().transform((value) => value || null).when('foreignBankName', {
-    is: (value: string | null) => value && value.length > 0,
-    then: (schema) => schema.max(new Date(), "Date must be in the past"),
-    otherwise: (schema) => schema.nullable()
-  }),
+  localBankName: yup.string().required("Bank name is required"),
+  localAccountNumber: yup.string().required("Account number is required"),
+  localBankBranch: yup.string().required("Bank branch is required"),
+  localAccountOpeningDate: yup.date().required("Account opening date is required"),
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  signature: yup.string().min(2, "Minimum 2 characters").required("Signature is required"),
-  identification: yup.mixed().required("Identification document is required")
+  signature: yup.string().required("Signature is required")
 });
 
 const defaultValues = {
@@ -168,40 +121,6 @@ const IndividualKYC: React.FC = () => {
     mode: 'onChange'
   });
 
-  // Step validation function
-  const validateCurrentStep = async (stepId: string): Promise<boolean> => {
-    const stepFields = getStepFields(stepId);
-    const result = await formMethods.trigger(stepFields);
-    return result;
-  };
-
-  // Get fields for each step
-  const getStepFields = (stepId: string): string[] => {
-    switch (stepId) {
-      case 'personal':
-        return ['officeLocation', 'title', 'firstName', 'middleName', 'lastName', 'contactAddress', 
-                'occupation', 'gender', 'dateOfBirth', 'mothersMaidenName', 'city', 'state', 'country', 
-                'nationality', 'residentialAddress', 'GSMNo', 'email', 'BVN', 
-                'identificationType', 'idNumber', 'issuingCountry', 'issuedDate', 'expiryDate', 
-                'sourceOfIncome', 'sourceOfIncomeOther', 'annualIncomeRange', 'premiumPaymentSource', 
-                'premiumPaymentSourceOther'];
-      case 'accounts':
-        return ['localBankName', 'localAccountNumber', 'localBankBranch', 'localAccountOpeningDate'];
-      case 'upload':
-        return ['identification'];
-      case 'declaration':
-        return ['agreeToDataPrivacy', 'signature'];
-      default:
-        return [];
-    }
-  };
-
-  // Enhanced form methods with validation
-  const enhancedFormMethods = {
-    ...formMethods,
-    validateCurrentStep
-  };
-
   const { saveDraft, clearDraft } = useFormDraft('individualKYC', formMethods);
 
   // Check for pending submission when component mounts
@@ -246,27 +165,13 @@ const IndividualKYC: React.FC = () => {
     const fileResults = await Promise.all(fileUploadPromises);
     const fileUrls = Object.fromEntries(fileResults);
 
-    // Sanitize data - remove undefined values to prevent Firebase errors
-    const sanitizeData = (obj: any): any => {
-      const cleaned: any = {};
-      for (const [key, value] of Object.entries(obj)) {
-        if (value !== undefined) {
-          // Keep non-undefined values
-          cleaned[key] = value;
-        }
-        // Skip undefined values entirely - Firebase doesn't accept them
-      }
-      return cleaned;
-    };
-
-    const finalData = sanitizeData({
+    const finalData = {
       ...data,
       ...fileUrls,
       status: 'processing',
       formType: 'Individual KYC'
-    });
+    };
 
-    console.log('Sanitized final data:', finalData);
     await handleSubmitWithAuth(finalData, 'Individual KYC');
     clearDraft();
     setShowSummary(false);
@@ -315,268 +220,320 @@ const IndividualKYC: React.FC = () => {
       component: (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField 
-              name="officeLocation" 
-              label="Office Location" 
-              required 
-              placeholder="Enter office location"
-            />
-            <FormField 
-              name="title" 
-              label="Title" 
-              required 
-              placeholder="Enter title"
-            />
+            <div>
+              <Label htmlFor="officeLocation">Office Location *</Label>
+              <Input
+                id="officeLocation"
+                {...formMethods.register('officeLocation')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="title">Title *</Label>
+              <Input
+                id="title"
+                {...formMethods.register('title')}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField 
-              name="firstName" 
-              label="First Name" 
-              required 
-              placeholder="Enter first name"
-            />
-            <FormField 
-              name="middleName" 
-              label="Middle Name" 
-              required 
-              placeholder="Enter middle name"
-            />
-            <FormField 
-              name="lastName" 
-              label="Last Name" 
-              required 
-              placeholder="Enter last name"
-            />
+            <div>
+              <Label htmlFor="firstName">First Name *</Label>
+              <Input
+                id="firstName"
+                {...formMethods.register('firstName')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="middleName">Middle Name *</Label>
+              <Input
+                id="middleName"
+                {...formMethods.register('middleName')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="lastName">Last Name *</Label>
+              <Input
+                id="lastName"
+                {...formMethods.register('lastName')}
+              />
+            </div>
           </div>
 
-          <FormTextarea
-            name="contactAddress"
-            label="Contact Address"
-            required
-            placeholder="Enter contact address"
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField 
-              name="occupation" 
-              label="Occupation" 
-              required 
-              placeholder="Enter occupation"
-            />
-            <FormSelect
-              name="gender"
-              label="Gender"
-              required
-              placeholder="Select Gender"
-              options={[
-                { value: "Male", label: "Male" },
-                { value: "Female", label: "Female" }
-              ]}
+          <div>
+            <Label htmlFor="contactAddress">Contact Address *</Label>
+            <Textarea
+              id="contactAddress"
+              {...formMethods.register('contactAddress')}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DateField
+            <div>
+              <Label htmlFor="occupation">Occupation *</Label>
+              <Input
+                id="occupation"
+                {...formMethods.register('occupation')}
+              />
+            </div>
+            <div>
+              <Label>Gender *</Label>
+              <Select
+                value={formMethods.watch('gender')}
+                onValueChange={(value) => formMethods.setValue('gender', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <DatePickerField
               name="dateOfBirth"
-              label="Date of Birth"
-              required
-              minAge={18}
+              label="Date of Birth *"
             />
-            <FormField 
-              name="mothersMaidenName" 
-              label="Mother's Maiden Name" 
-              required 
-              placeholder="Enter mother's maiden name"
-            />
+            <div>
+              <Label htmlFor="mothersMaidenName">Mother's Maiden Name *</Label>
+              <Input
+                id="mothersMaidenName"
+                {...formMethods.register('mothersMaidenName')}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField 
-              name="employersName" 
-              label="Employer's Name" 
-              placeholder="Enter employer's name (optional)"
-            />
-            <PhoneField 
-              name="employersTelephoneNumber" 
-              label="Employer's Telephone" 
-              placeholder="Enter employer's phone number"
-            />
+            <div>
+              <Label htmlFor="employersName">Employer's Name</Label>
+              <Input
+                id="employersName"
+                {...formMethods.register('employersName')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="employersTelephoneNumber">Employer's Telephone</Label>
+              <Input
+                id="employersTelephoneNumber"
+                {...formMethods.register('employersTelephoneNumber')}
+              />
+            </div>
           </div>
 
-          <FormTextarea
-            name="employersAddress"
-            label="Employer's Address"
-            placeholder="Enter employer's address (optional)"
-          />
+          <div>
+            <Label htmlFor="employersAddress">Employer's Address</Label>
+            <Textarea
+              id="employersAddress"
+              {...formMethods.register('employersAddress')}
+            />
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField 
-              name="city" 
-              label="City" 
-              required 
-              placeholder="Enter city"
-            />
-            <FormField 
-              name="state" 
-              label="State" 
-              required 
-              placeholder="Enter state"
-            />
-            <FormField 
-              name="country" 
-              label="Country" 
-              required 
-              placeholder="Enter country"
-            />
+            <div>
+              <Label htmlFor="city">City *</Label>
+              <Input
+                id="city"
+                {...formMethods.register('city')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="state">State *</Label>
+              <Input
+                id="state"
+                {...formMethods.register('state')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="country">Country *</Label>
+              <Input
+                id="country"
+                {...formMethods.register('country')}
+              />
+            </div>
           </div>
 
-          <FormSelect
-            name="nationality"
-            label="Nationality"
-            required
-            placeholder="Select Nationality"
-            options={[
-              { value: "Nigerian", label: "Nigerian" },
-              { value: "Foreign", label: "Foreign" },
-              { value: "Both", label: "Both" }
-            ]}
-          />
+          <div>
+            <Label>Nationality *</Label>
+            <Select
+              value={formMethods.watch('nationality')}
+              onValueChange={(value) => formMethods.setValue('nationality', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Nationality" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Nigerian">Nigerian</SelectItem>
+                <SelectItem value="Foreign">Foreign</SelectItem>
+                <SelectItem value="Both">Both</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <FormTextarea
-            name="residentialAddress"
-            label="Residential Address"
-            required
-            placeholder="Enter residential address"
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <PhoneField 
-              name="GSMNo" 
-              label="Mobile Number" 
-              required 
-              placeholder="Enter mobile number"
-            />
-            <FormField 
-              name="email" 
-              label="Email" 
-              required 
-              type="email"
-              placeholder="Enter email address"
+          <div>
+            <Label htmlFor="residentialAddress">Residential Address *</Label>
+            <Textarea
+              id="residentialAddress"
+              {...formMethods.register('residentialAddress')}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField 
-              name="taxIDNo" 
-              label="Tax Identification Number" 
-              placeholder="Enter tax ID (optional)"
-            />
-            <NumericField 
-              name="BVN" 
-              label="BVN" 
-              required 
-              maxLength={11}
-              placeholder="Enter 11-digit BVN"
-            />
-          </div>
-
-          <FormSelect
-            name="identificationType"
-            label="ID Type"
-            required
-            placeholder="Choose ID Type"
-            options={[
-              { value: "International Passport", label: "International Passport" },
-              { value: "NIMC", label: "NIMC" },
-              { value: "Drivers Licence", label: "Drivers Licence" },
-              { value: "Voters Card", label: "Voters Card" },
-              { value: "NIN", label: "NIN" }
-            ]}
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField 
-              name="idNumber" 
-              label="Identification Number" 
-              required 
-              placeholder="Enter identification number"
-            />
-            <FormField 
-              name="issuingCountry" 
-              label="Issuing Country" 
-              required 
-              placeholder="Enter issuing country"
-            />
+            <div>
+              <Label htmlFor="GSMNo">Mobile Number *</Label>
+              <Input
+                id="GSMNo"
+                {...formMethods.register('GSMNo')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                {...formMethods.register('email')}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DateField
+            <div>
+              <Label htmlFor="taxIDNo">Tax Identification Number</Label>
+              <Input
+                id="taxIDNo"
+                {...formMethods.register('taxIDNo')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="BVN">BVN *</Label>
+              <Input
+                id="BVN"
+                maxLength={11}
+                {...formMethods.register('BVN')}
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label>ID Type *</Label>
+            <Select
+              value={formMethods.watch('identificationType')}
+              onValueChange={(value) => formMethods.setValue('identificationType', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose ID Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="International Passport">International Passport</SelectItem>
+                <SelectItem value="NIMC">NIMC</SelectItem>
+                <SelectItem value="Drivers Licence">Drivers Licence</SelectItem>
+                <SelectItem value="Voters Card">Voters Card</SelectItem>
+                <SelectItem value="NIN">NIN</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="idNumber">Identification Number *</Label>
+              <Input
+                id="idNumber"
+                {...formMethods.register('idNumber')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="issuingCountry">Issuing Country *</Label>
+              <Input
+                id="issuingCountry"
+                {...formMethods.register('issuingCountry')}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <DatePickerField
               name="issuedDate"
-              label="Issued Date"
-              required
-              disableFuture
+              label="Issued Date *"
             />
-            <DateField
+            <DatePickerField
               name="expiryDate"
               label="Expiry Date"
-              disablePast
             />
           </div>
 
-          <FormSelect
-            name="sourceOfIncome"
-            label="Source of Income"
-            required
-            placeholder="Choose Income Source"
-            options={[
-              { value: "Salary or Business Income", label: "Salary or Business Income" },
-              { value: "Investments or Dividends", label: "Investments or Dividends" },
-              { value: "Other", label: "Other (please specify)" }
-            ]}
-          />
+          <div>
+            <Label>Source of Income *</Label>
+            <Select
+              value={formMethods.watch('sourceOfIncome')}
+              onValueChange={(value) => formMethods.setValue('sourceOfIncome', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose Income Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Salary or Business Income">Salary or Business Income</SelectItem>
+                <SelectItem value="Investments or Dividends">Investments or Dividends</SelectItem>
+                <SelectItem value="Other">Other (please specify)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {formMethods.watch('sourceOfIncome') === 'Other' && (
-            <FormField 
-              name="sourceOfIncomeOther" 
-              label="Please specify other income source" 
-              required 
-              placeholder="Specify other income source"
-            />
+            <div>
+              <Label htmlFor="sourceOfIncomeOther">Please specify other income source *</Label>
+              <Input
+                id="sourceOfIncomeOther"
+                {...formMethods.register('sourceOfIncomeOther')}
+              />
+            </div>
           )}
 
-          <FormSelect
-            name="annualIncomeRange"
-            label="Annual Income Range"
-            required
-            placeholder="Annual Income Range"
-            options={[
-              { value: "Less Than 1 Million", label: "Less Than 1 Million" },
-              { value: "1 Million - 4 Million", label: "1 Million - 4 Million" },
-              { value: "4.1 Million - 10 Million", label: "4.1 Million - 10 Million" },
-              { value: "More Than 10 Million", label: "More Than 10 Million" }
-            ]}
-          />
+          <div>
+            <Label>Annual Income Range *</Label>
+            <Select
+              value={formMethods.watch('annualIncomeRange')}
+              onValueChange={(value) => formMethods.setValue('annualIncomeRange', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Annual Income Range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Less Than 1 Million">Less Than 1 Million</SelectItem>
+                <SelectItem value="1 Million - 4 Million">1 Million - 4 Million</SelectItem>
+                <SelectItem value="4.1 Million - 10 Million">4.1 Million - 10 Million</SelectItem>
+                <SelectItem value="More Than 10 Million">More Than 10 Million</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <FormSelect
-            name="premiumPaymentSource"
-            label="Premium Payment Source"
-            required
-            placeholder="Choose Payment Source"
-            options={[
-              { value: "Salary or Business Income", label: "Salary or Business Income" },
-              { value: "Investments or Dividends", label: "Investments or Dividends" },
-              { value: "Other", label: "Other (please specify)" }
-            ]}
-          />
+          <div>
+            <Label>Premium Payment Source *</Label>
+            <Select
+              value={formMethods.watch('premiumPaymentSource')}
+              onValueChange={(value) => formMethods.setValue('premiumPaymentSource', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose Income Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Salary or Business Income">Salary or Business Income</SelectItem>
+                <SelectItem value="Investments or Dividends">Investments or Dividends</SelectItem>
+                <SelectItem value="Other">Other (please specify)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {formMethods.watch('premiumPaymentSource') === 'Other' && (
-            <FormField 
-              name="premiumPaymentSourceOther" 
-              label="Please specify other payment source" 
-              required 
-              placeholder="Specify other payment source"
-            />
+            <div>
+              <Label htmlFor="premiumPaymentSourceOther">Please specify other payment source *</Label>
+              <Input
+                id="premiumPaymentSourceOther"
+                {...formMethods.register('premiumPaymentSourceOther')}
+              />
+            </div>
           )}
         </div>
       )
@@ -589,32 +546,32 @@ const IndividualKYC: React.FC = () => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Local Account Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField 
-                name="localBankName" 
-                label="Bank Name" 
-                required 
-                placeholder="Enter bank name"
-              />
-              <NumericField 
-                name="localAccountNumber" 
-                label="Account Number" 
-                required 
-                maxLength={10}
-                placeholder="Enter 10-digit account number"
-              />
+              <div>
+                <Label htmlFor="localBankName">Bank Name *</Label>
+                <Input
+                  id="localBankName"
+                  {...formMethods.register('localBankName')}
+                />
+              </div>
+              <div>
+                <Label htmlFor="localAccountNumber">Account Number *</Label>
+                <Input
+                  id="localAccountNumber"
+                  {...formMethods.register('localAccountNumber')}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField 
-                name="localBankBranch" 
-                label="Bank Branch" 
-                required 
-                placeholder="Enter bank branch"
-              />
-              <DateField
+              <div>
+                <Label htmlFor="localBankBranch">Bank Branch *</Label>
+                <Input
+                  id="localBankBranch"
+                  {...formMethods.register('localBankBranch')}
+                />
+              </div>
+              <DatePickerField
                 name="localAccountOpeningDate"
-                label="Account Opening Date"
-                required
-                disableFuture
+                label="Account Opening Date *"
               />
             </div>
           </div>
@@ -622,28 +579,32 @@ const IndividualKYC: React.FC = () => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Foreign Account Details (Optional)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField 
-                name="foreignBankName" 
-                label="Bank Name" 
-                placeholder="Enter foreign bank name (optional)"
-              />
-              <NumericField 
-                name="foreignAccountNumber" 
-                label="Account Number" 
-                maxLength={10}
-                placeholder="Enter account number (optional)"
-              />
+              <div>
+                <Label htmlFor="foreignBankName">Bank Name</Label>
+                <Input
+                  id="foreignBankName"
+                  {...formMethods.register('foreignBankName')}
+                />
+              </div>
+              <div>
+                <Label htmlFor="foreignAccountNumber">Account Number</Label>
+                <Input
+                  id="foreignAccountNumber"
+                  {...formMethods.register('foreignAccountNumber')}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField 
-                name="foreignBankBranch" 
-                label="Bank Branch" 
-                placeholder="Enter bank branch (optional)"
-              />
-              <DateField
+              <div>
+                <Label htmlFor="foreignBankBranch">Bank Branch</Label>
+                <Input
+                  id="foreignBankBranch"
+                  {...formMethods.register('foreignBankBranch')}
+                />
+              </div>
+              <DatePickerField
                 name="foreignAccountOpeningDate"
                 label="Account Opening Date"
-                disableFuture
               />
             </div>
           </div>
@@ -656,16 +617,14 @@ const IndividualKYC: React.FC = () => {
       component: (
         <div className="space-y-4">
           <div>
-            <Label>Upload Means of Identification <span className="text-red-500">*</span></Label>
+            <Label>Upload Means of Identification *</Label>
             <FileUpload
-              accept=".jpg,.jpeg,.png,.pdf"
+              accept="image/*,.pdf"
               onFileSelect={(file) => {
                 setUploadedFiles(prev => ({
                   ...prev,
                   identification: file
                 }));
-                formMethods.setValue('identification', file);
-                formMethods.clearErrors('identification');
               }}
               maxSize={3}
             />
@@ -674,11 +633,6 @@ const IndividualKYC: React.FC = () => {
                 <Check className="h-4 w-4" />
                 {uploadedFiles.identification.name}
               </div>
-            )}
-            {formMethods.formState.errors.identification && (
-              <p className="text-sm text-red-500 mt-1">
-                {formMethods.formState.errors.identification.message as string}
-              </p>
             )}
           </div>
         </div>
@@ -708,37 +662,24 @@ const IndividualKYC: React.FC = () => {
           </div>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="agreeToDataPrivacy"
-                  checked={formMethods.watch('agreeToDataPrivacy')}
-                  onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked)}
-                />
-                <Label htmlFor="agreeToDataPrivacy" className="text-sm">
-                  I agree to the data privacy policy and declaration above <span className="text-red-500">*</span>
-                </Label>
-              </div>
-              {formMethods.formState.errors.agreeToDataPrivacy && (
-                <p className="text-sm text-red-500">
-                  {formMethods.formState.errors.agreeToDataPrivacy.message as string}
-                </p>
-              )}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="agreeToDataPrivacy"
+                checked={formMethods.watch('agreeToDataPrivacy')}
+                onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked)}
+              />
+              <Label htmlFor="agreeToDataPrivacy" className="text-sm">
+                I agree to the data privacy policy and declaration above *
+              </Label>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="signature">Digital Signature <span className="text-red-500">*</span></Label>
+            <div>
+              <Label htmlFor="signature">Digital Signature *</Label>
               <Textarea
                 id="signature"
                 placeholder="Type your full name as digital signature"
                 {...formMethods.register('signature')}
-                className={formMethods.formState.errors.signature ? "border-red-500" : ""}
               />
-              {formMethods.formState.errors.signature && (
-                <p className="text-sm text-red-500">
-                  {formMethods.formState.errors.signature.message as string}
-                </p>
-              )}
             </div>
 
             <div>
@@ -751,6 +692,15 @@ const IndividualKYC: React.FC = () => {
             </div>
           </div>
 
+          {formMethods.watch('agreeToDataPrivacy') && (
+            <Button
+              type="button"
+              onClick={() => setShowSummary(true)}
+              className="w-full"
+            >
+              Submit Individual KYC Form
+            </Button>
+          )}
         </div>
       )
     }
@@ -782,7 +732,7 @@ const IndividualKYC: React.FC = () => {
           <MultiStepForm
             steps={steps}
             onSubmit={onFinalSubmit}
-            formMethods={enhancedFormMethods}
+            formMethods={formMethods}
             submitButtonText="Submit KYC Form"
           />
         </CardContent>
