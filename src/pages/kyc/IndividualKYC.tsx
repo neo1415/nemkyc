@@ -33,7 +33,7 @@ const individualKYCSchema = yup.object().shape({
   contactAddress: yup.string().required("Contact address is required"),
   occupation: yup.string().required("Occupation is required"),
   gender: yup.string().required("Gender is required"),
-  dateOfBirth: yup.date().required("Date of birth is required"),
+  dateOfBirth: yup.date().typeError("Please enter a valid date").required("Date of birth is required"),
   mothersMaidenName: yup.string().required("Mother's maiden name is required"),
   city: yup.string().required("City is required"),
   state: yup.string().required("State is required"),
@@ -41,13 +41,13 @@ const individualKYCSchema = yup.object().shape({
   nationality: yup.string().required("Nationality is required"),
   residentialAddress: yup.string().required("Residential address is required"),
   GSMNo: yup.string().required("Mobile number is required"),
-  email: yup.string().email("Valid email is required").required("Email is required"),
+  email: yup.string().email("Please enter a valid email address").required("Email is required"),
   BVN: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
   identificationType: yup.string().required("ID type is required"),
   idNumber: yup.string().required("Identification number is required"),
   issuingCountry: yup.string().required("Issuing country is required"),
-  issuedDate: yup.date().required("Issued date is required"),
-  expiryDate: yup.date().nullable(),
+  issuedDate: yup.date().typeError("Please enter a valid date").required("Issue date is required"),
+  expiryDate: yup.date().nullable().typeError("Please enter a valid date"),
   sourceOfIncome: yup.string().required("Income source is required"),
   sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
     is: 'Other',
@@ -64,13 +64,29 @@ const individualKYCSchema = yup.object().shape({
   localBankName: yup.string().required("Bank name is required"),
   localAccountNumber: yup.string().required("Account number is required"),
   localBankBranch: yup.string().required("Bank branch is required"),
-  localAccountOpeningDate: yup.date().required("Account opening date is required"),
+  localAccountOpeningDate: yup.date().typeError("Please enter a valid date").required("Account opening date is required"),
   foreignBankName: yup.string().nullable(),
   foreignAccountNumber: yup.string().nullable(),
   foreignBankBranch: yup.string().nullable(),
-  foreignAccountOpeningDate: yup.date().nullable(),
-  agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  signature: yup.string().required("Signature is required")
+  foreignAccountOpeningDate: yup.date().nullable().typeError("Please enter a valid date").transform((value, originalValue) => {
+    // Handle empty string case for optional date field
+    if (originalValue === '' || originalValue === null || originalValue === undefined) {
+      return null;
+    }
+    return value;
+  }),
+  // File validation
+  identificationFile: yup.mixed().required("Identification document is required").test(
+    'fileType',
+    'Only PNG, JPG, JPEG, or PDF files are allowed',
+    (value: any) => {
+      if (!value) return false;
+      const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'application/pdf'];
+      return allowedTypes.includes(value?.type);
+    }
+  ),
+  agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to the data privacy policy and declaration"),
+  signature: yup.string().required("Digital signature is required")
 });
 
 const defaultValues = {
@@ -114,6 +130,7 @@ const defaultValues = {
   foreignAccountNumber: '',
   foreignBankBranch: '',
   foreignAccountOpeningDate: '',
+  identificationFile: null,
   agreeToDataPrivacy: false,
   signature: ''
 };
@@ -197,7 +214,7 @@ const FormSelect = ({ name, label, required = false, placeholder, children, ...p
 };
 
 const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors } } = useFormContext();
+  const { setValue, watch, formState: { errors }, register } = useFormContext();
   const value = watch(name);
   const error = errors[name];
   
@@ -207,30 +224,34 @@ const FormDatePicker = ({ name, label, required = false }: any) => {
         {label}
         {required && <span className="required-asterisk">*</span>}
       </Label>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              "w-full justify-start text-left font-normal",
-              !value && "text-muted-foreground",
-              error && "border-destructive"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0">
-          <ReactCalendar
-            mode="single"
-            selected={value ? new Date(value) : undefined}
-            onSelect={(date) => setValue(name, date)}
-            initialFocus
-            className="pointer-events-auto"
-          />
-        </PopoverContent>
-      </Popover>
+      <div className="flex gap-2">
+        <Input
+          type="date"
+          {...register(name)}
+          className={cn("flex-1", error && "border-destructive")}
+        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className={cn(error && "border-destructive")}
+            >
+              <CalendarIcon className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <ReactCalendar
+              mode="single"
+              selected={value ? new Date(value) : undefined}
+              onSelect={(date) => setValue(name, date)}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
       {error && (
         <p className="text-sm text-destructive">{error.message?.toString()}</p>
       )}
@@ -502,27 +523,41 @@ const IndividualKYC: React.FC = () => {
       id: 'upload',
       title: 'Upload Documents',
       component: (
-        <div className="space-y-4">
-          <div>
-            <Label>Upload Means of Identification <span className="required-asterisk">*</span></Label>
-            <FileUpload
-              accept="image/*,.pdf"
-              onFileSelect={(file) => {
-                setUploadedFiles(prev => ({
-                  ...prev,
-                  identification: file
-                }));
-              }}
-              maxSize={3}
-            />
-            {uploadedFiles.identification && (
-              <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                <Check className="h-4 w-4" />
-                {uploadedFiles.identification.name}
-              </div>
-            )}
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <div>
+              <Label>Upload Means of Identification <span className="required-asterisk">*</span></Label>
+              <FileUpload
+                accept=".png,.jpg,.jpeg,.pdf"
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    identification: file
+                  }));
+                  formMethods.setValue('identificationFile', file);
+                  formMethods.trigger('identificationFile');
+                }}
+                onFileRemove={() => {
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    identification: null
+                  }));
+                  formMethods.setValue('identificationFile', null);
+                  formMethods.trigger('identificationFile');
+                }}
+                currentFile={uploadedFiles.identification}
+                maxSize={3}
+                error={formMethods.formState.errors.identificationFile?.message?.toString()}
+              />
+              {uploadedFiles.identification && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.identification.name}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </FormProvider>
       )
     },
     {
@@ -550,15 +585,24 @@ const IndividualKYC: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="agreeToDataPrivacy"
-                  checked={formMethods.watch('agreeToDataPrivacy')}
-                  onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked)}
-                />
-                <Label htmlFor="agreeToDataPrivacy" className="text-sm">
-                  I agree to the data privacy policy and declaration above <span className="required-asterisk">*</span>
-                </Label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="agreeToDataPrivacy"
+                    checked={formMethods.watch('agreeToDataPrivacy')}
+                    onCheckedChange={(checked) => {
+                      formMethods.setValue('agreeToDataPrivacy', checked);
+                      formMethods.trigger('agreeToDataPrivacy');
+                    }}
+                    className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
+                  />
+                  <Label htmlFor="agreeToDataPrivacy" className="text-sm">
+                    I agree to the data privacy policy and declaration above <span className="required-asterisk">*</span>
+                  </Label>
+                </div>
+                {formMethods.formState.errors.agreeToDataPrivacy && (
+                  <p className="text-sm text-destructive">{formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -595,7 +639,7 @@ const IndividualKYC: React.FC = () => {
   const stepFieldMappings = {
     0: ['officeLocation', 'title', 'firstName', 'middleName', 'lastName', 'contactAddress', 'occupation', 'gender', 'dateOfBirth', 'mothersMaidenName', 'city', 'state', 'country', 'nationality', 'residentialAddress', 'GSMNo', 'email', 'BVN', 'identificationType', 'idNumber', 'issuingCountry', 'issuedDate', 'sourceOfIncome', 'sourceOfIncomeOther', 'annualIncomeRange', 'premiumPaymentSource', 'premiumPaymentSourceOther'],
     1: ['localBankName', 'localAccountNumber', 'localBankBranch', 'localAccountOpeningDate'],
-    2: [], // File upload step - no form fields to validate
+    2: ['identificationFile'], // File upload validation
     3: ['agreeToDataPrivacy', 'signature']
   };
 
