@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FormField, PhoneField, NumericField, FormTextarea, FormSelect, DateField } from '@/components/form/FormFieldControllers';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -22,7 +23,7 @@ import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 // Form validation schema
 const corporateKYCSchema = yup.object().shape({

@@ -33,7 +33,11 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
     // Validate current step before proceeding
     if (formMethods.validateCurrentStep) {
       const isValid = await formMethods.validateCurrentStep(steps[currentStep].id);
-      if (!isValid) {
+      
+      // Log validation errors to console for debugging
+      const errors = formMethods.formState.errors;
+      if (!isValid && Object.keys(errors).length > 0) {
+        console.log(`Validation failed for step "${steps[currentStep].id}". Errors:`, errors);
         return; // Don't proceed if validation fails
       }
     }
