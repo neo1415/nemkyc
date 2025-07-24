@@ -591,6 +591,14 @@ const IndividualKYC: React.FC = () => {
     }
   ];
 
+  // Define field mappings for each step
+  const stepFieldMappings = {
+    0: ['officeLocation', 'title', 'firstName', 'middleName', 'lastName', 'contactAddress', 'occupation', 'gender', 'dateOfBirth', 'mothersMaidenName', 'city', 'state', 'country', 'nationality', 'residentialAddress', 'GSMNo', 'email', 'BVN', 'identificationType', 'idNumber', 'issuingCountry', 'issuedDate', 'sourceOfIncome', 'sourceOfIncomeOther', 'annualIncomeRange', 'premiumPaymentSource', 'premiumPaymentSourceOther'],
+    1: ['localBankName', 'localAccountNumber', 'localBankBranch', 'localAccountOpeningDate'],
+    2: [], // File upload step - no form fields to validate
+    3: ['agreeToDataPrivacy', 'signature']
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Post-auth loading overlay */}
@@ -619,6 +627,7 @@ const IndividualKYC: React.FC = () => {
             onSubmit={onFinalSubmit}
             formMethods={formMethods}
             submitButtonText="Submit KYC Form"
+            stepFieldMappings={stepFieldMappings}
           />
         </CardContent>
       </Card>
