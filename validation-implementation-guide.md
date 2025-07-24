@@ -467,4 +467,272 @@ return (
 - [ ] File upload validation implemented
 - [ ] Testing completed for all scenarios
 
-This guide ensures 100% replication of the Individual KYC validation patterns on any form.
+---
+
+## 📝 Step 8: Add Real-Time Error Clearing
+
+**Problem**: Form errors remain visible even after user starts typing/fixing the field until they click "Next" again.
+
+**Solution**: Add `clearErrors` to form field components for immediate error removal when user interacts with fields.
+
+### 8.1 Update FormField Component
+
+```typescript
+const FormField = ({ name, label, required = false, type = "text", ...props }: any) => {
+  const { register, formState: { errors }, clearErrors } = useFormContext();
+  const error = errors[name];
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type={type}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={cn(error && "border-destructive")}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+```
+
+### 8.2 Update FormTextarea Component
+
+```typescript
+const FormTextarea = ({ name, label, required = false, ...props }: any) => {
+  const { register, formState: { errors }, clearErrors } = useFormContext();
+  const error = errors[name];
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Textarea
+        id={name}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={cn(error && "border-destructive")}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+```
+
+### 8.3 Update FormSelect Component
+
+```typescript
+const FormSelect = ({ name, label, required = false, placeholder, children, ...props }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = errors[name];
+  
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(val) => {
+          setValue(name, val);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        {...props}
+      >
+        <SelectTrigger className={cn(error && "border-destructive")}>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {children}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+```
+
+### 8.4 Update FormDatePicker Component
+
+```typescript
+const FormDatePicker = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors }, register, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = errors[name];
+  
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <div className="flex gap-2">
+        <Input
+          type="date"
+          {...register(name, {
+            onChange: () => {
+              if (error) {
+                clearErrors(name);
+              }
+            }
+          })}
+          className={cn("flex-1", error && "border-destructive")}
+        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className={cn(error && "border-destructive")}
+            >
+              <CalendarIcon className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <ReactCalendar
+              mode="single"
+              selected={value ? new Date(value) : undefined}
+              onSelect={(date) => {
+                setValue(name, date);
+                if (error) {
+                  clearErrors(name);
+                }
+              }}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+```
+
+### 8.5 Update Checkbox Fields
+
+For checkbox fields like privacy agreement:
+
+```typescript
+<Checkbox
+  id="agreeToDataPrivacy"
+  checked={formMethods.watch('agreeToDataPrivacy')}
+  onCheckedChange={(checked) => {
+    formMethods.setValue('agreeToDataPrivacy', checked);
+    if (formMethods.formState.errors.agreeToDataPrivacy) {
+      formMethods.clearErrors('agreeToDataPrivacy');
+    }
+  }}
+  className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
+/>
+```
+
+### 8.6 Update Direct Register Fields
+
+For fields using direct register (like digital signature):
+
+```typescript
+<Textarea
+  id="signature"
+  placeholder="Type your full name as digital signature"
+  {...formMethods.register('signature', {
+    onChange: () => {
+      if (formMethods.formState.errors.signature) {
+        formMethods.clearErrors('signature');
+      }
+    }
+  })}
+  className={cn(formMethods.formState.errors.signature && "border-destructive")}
+/>
+```
+
+### Performance Considerations
+
+✅ **Optimized**: Only calls `clearErrors` when there's actually an error present
+✅ **Efficient**: Uses react-hook-form's built-in `clearErrors` function
+✅ **Fast**: Avoids re-triggering full form validation, just removes specific errors
+✅ **No Memory Issues**: No additional watchers or subscriptions that could cause performance problems
+
+### Result
+
+- Errors disappear immediately when users start fixing fields
+- No performance degradation or memory leaks
+- Instant visual feedback improves user experience
+- Maintains all existing validation functionality
+
+---
+
+## 📝 Step 9: Replace Form Fields
+
+**Find and replace patterns:**
+
+```typescript
+// OLD: Basic input
+<input 
+  type="text" 
+  name="firstName"
+  className="..."
+/>
+
+// NEW: FormField component
+<FormField 
+  name="firstName"
+  label="First Name"
+  required={true}
+/>
+
+// OLD: Basic select
+<select name="gender">
+  <option value="">Select Gender</option>
+  <option value="male">Male</option>
+  <option value="female">Female</option>
+</select>
+
+// NEW: FormSelect component
+<FormSelect 
+  name="gender"
+  label="Gender"
+  required={true}
+  options={[
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' }
+  ]}
+/>
+```
+
+---
+
+## 🔍 Step 10: Testing Checklist
