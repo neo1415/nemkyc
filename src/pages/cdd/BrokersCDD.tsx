@@ -153,10 +153,10 @@ const brokersCDDSchema = yup.object().shape({
     })
     .typeError('Please select a valid date'),
   
-  // File uploads - using string validation like Corporate KYC
-  certificateOfIncorporation: yup.string().required("Certificate of incorporation is required"),
-  director1Id: yup.string().required("Director 1 ID is required"),
-  director2Id: yup.string().required("Director 2 ID is required"),
+  // File uploads
+  certificateOfIncorporation: yup.mixed().required("Certificate of incorporation is required"),
+  director1Id: yup.mixed().required("Director 1 ID is required"),
+  director2Id: yup.mixed(), // Not required
   
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
@@ -450,7 +450,7 @@ const BrokersCDD: React.FC = () => {
       `directors.${index}.issuedDate`,
       `directors.${index}.incomeSource`
     ]),
-    2: ['localAccountNumber', 'localBankName', 'localBankBranch', 'localAccountOpeningDate', 'certificateOfIncorporation', 'director1Id', 'director2Id'],
+    2: ['localAccountNumber', 'localBankName', 'localBankBranch', 'localAccountOpeningDate', 'certificateOfIncorporation', 'director1Id'],
     3: ['agreeToDataPrivacy', 'signature']
   };
 
@@ -914,7 +914,7 @@ const BrokersCDD: React.FC = () => {
                     ...prev,
                     certificateOfIncorporation: file
                   }));
-                  formMethods.setValue('certificateOfIncorporation', file.name);
+                  formMethods.setValue('certificateOfIncorporation', file);
                   if (formMethods.formState.errors.certificateOfIncorporation) {
                     formMethods.clearErrors('certificateOfIncorporation');
                   }
@@ -943,7 +943,7 @@ const BrokersCDD: React.FC = () => {
                     ...prev,
                     director1Id: file
                   }));
-                  formMethods.setValue('director1Id', file.name);
+                  formMethods.setValue('director1Id', file);
                   if (formMethods.formState.errors.director1Id) {
                     formMethods.clearErrors('director1Id');
                   }
@@ -964,7 +964,7 @@ const BrokersCDD: React.FC = () => {
             </div>
             
             <div>
-              <Label>Director 2 ID <span className="required-asterisk">*</span></Label>
+              <Label>Director 2 ID (Optional)</Label>
               <FileUpload
                 accept=".png,.jpg,.jpeg,.pdf"
                 onFileSelect={(file) => {
@@ -972,7 +972,7 @@ const BrokersCDD: React.FC = () => {
                     ...prev,
                     director2Id: file
                   }));
-                  formMethods.setValue('director2Id', file.name);
+                  formMethods.setValue('director2Id', file);
                   if (formMethods.formState.errors.director2Id) {
                     formMethods.clearErrors('director2Id');
                   }
