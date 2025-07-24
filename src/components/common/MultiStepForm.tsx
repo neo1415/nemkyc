@@ -18,6 +18,7 @@ interface MultiStepFormProps {
   isSubmitting?: boolean;
   submitButtonText?: string;
   formMethods: any; // react-hook-form methods
+  stepFieldMappings?: Record<number, string[]>; // Optional field mappings for step validation
 }
 
 const MultiStepForm: React.FC<MultiStepFormProps> = ({
@@ -25,27 +26,46 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
   onSubmit,
   isSubmitting = false,
   submitButtonText = "Submit",
-  formMethods
+  formMethods,
+  stepFieldMappings
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
 
   const nextStep = async () => {
-    // Get the current step's field names for validation
-    const currentStepFields = getCurrentStepFields(currentStep);
-    
-    // Only validate current step fields
-    const isValid = await formMethods.trigger(currentStepFields);
-    
-    if (!isValid) {
-      // Use toast if available
-      if (typeof window !== 'undefined' && (window as any).toast) {
-        (window as any).toast({
-          title: "Validation Error",
-          description: "Please fill all required fields before proceeding",
-          variant: "destructive"
-        });
+    // If step field mappings are provided, validate only current step fields
+    if (stepFieldMappings) {
+      const currentStepFields = stepFieldMappings[currentStep] || [];
+      
+      if (currentStepFields.length > 0) {
+        const isValid = await formMethods.trigger(currentStepFields);
+        
+        if (!isValid) {
+          // Use toast if available
+          if (typeof window !== 'undefined' && (window as any).toast) {
+            (window as any).toast({
+              title: "Validation Error",
+              description: "Please fill all required fields before proceeding",
+              variant: "destructive"
+            });
+          }
+          return;
+        }
       }
-      return;
+    } else {
+      // Fallback: validate all fields if no step mappings provided
+      const isValid = await formMethods.trigger();
+      
+      if (!isValid) {
+        // Use toast if available
+        if (typeof window !== 'undefined' && (window as any).toast) {
+          (window as any).toast({
+            title: "Validation Error",
+            description: "Please fill all required fields before proceeding",
+            variant: "destructive"
+          });
+        }
+        return;
+      }
     }
     
     if (currentStep < steps.length - 1) {
@@ -53,18 +73,6 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
     }
   };
 
-  // Helper function to get field names for the current step
-  const getCurrentStepFields = (stepIndex: number) => {
-    // Define field mappings for each step
-    const stepFieldMappings: Record<number, string[]> = {
-      0: ['officeLocation', 'title', 'firstName', 'middleName', 'lastName', 'contactAddress', 'occupation', 'gender', 'dateOfBirth', 'mothersMaidenName', 'city', 'state', 'country', 'nationality', 'residentialAddress', 'GSMNo', 'email', 'BVN', 'identificationType', 'idNumber', 'issuingCountry', 'issuedDate', 'sourceOfIncome', 'sourceOfIncomeOther', 'annualIncomeRange', 'premiumPaymentSource', 'premiumPaymentSourceOther'],
-      1: ['localBankName', 'localAccountNumber', 'localBankBranch', 'localAccountOpeningDate'],
-      2: [], // File upload step - no form fields to validate
-      3: ['agreeToDataPrivacy', 'signature']
-    };
-    
-    return stepFieldMappings[stepIndex] || [];
-  };
 
   const prevStep = () => {
     if (currentStep > 0) {
