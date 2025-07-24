@@ -1,25 +1,112 @@
-# Form Validation Implementation Guide
-*Step-by-step guide to implement Individual KYC-style validation on any form*
+# COMPREHENSIVE Form Validation Implementation Guide
+*Complete step-by-step guide to implement Individual KYC-style validation on any form*
 
-## 🎯 Pre-Implementation Checklist
+## 🎯 CRITICAL MISTAKES TO AVOID (Based on Corporate KYC Issues)
 
-### Required Dependencies
-- [ ] `react-hook-form` installed
-- [ ] `yup` validation library installed  
-- [ ] `@hookform/resolvers` installed
-- [ ] Toast system available (`useToast` hook)
+### ❌ FOCUS LOSS PROBLEM
+**NEVER define form components inside the main component** - causes re-creation on every render
+```typescript
+// ❌ WRONG - Components defined inside main component
+const MyForm = () => {
+  const FormField = ({ name, label }) => { ... } // BAD - recreated every render
+  return <FormField name="test" />
+}
 
-### Files You'll Need to Modify
-- [ ] Target form file (e.g., `CorporateKYC.tsx`)
-- [ ] `src/index.css` (for red asterisk styling)
-- [ ] `src/components/common/MultiStepForm.tsx` (if not already updated)
+// ✅ CORRECT - Components defined outside main component  
+const FormField = ({ name, label }) => { ... } // GOOD - stable reference
+const MyForm = () => {
+  return <FormField name="test" />
+}
+```
+
+### ❌ NESTED VALIDATION ERRORS
+**ALWAYS use lodash.get for nested field errors** (directors, arrays, etc.)
+```typescript
+// ❌ WRONG - Direct error access fails for nested fields
+const error = errors[name]; // Fails for directors.0.firstName
+
+// ✅ CORRECT - Use lodash.get for all field errors
+import { get } from 'lodash';
+const error = get(errors, name); // Works for all field paths
+```
+
+### ❌ CHECKBOX ERROR CLEARING
+**ALWAYS add clearErrors to checkbox onChange**
+```typescript
+// ❌ WRONG - Error stays after checking
+<Checkbox
+  checked={value}
+  onCheckedChange={(checked) => setValue(name, checked)}
+/>
+
+// ✅ CORRECT - Error clears immediately when checked  
+<Checkbox
+  checked={value}
+  onCheckedChange={(checked) => {
+    setValue(name, checked);
+    if (error) clearErrors(name);
+  }}
+/>
+```
+
+### ❌ FILE UPLOAD VALIDATION MISSING
+**ALWAYS add file upload to validation schema AND form handling**
+```typescript
+// ❌ WRONG - Missing file validation in schema
+companyNameVerificationDoc: yup.string().required("Document type required"),
+
+// ✅ CORRECT - Include file validation
+companyNameVerificationDoc: yup.string().required("Document type required"),
+verificationDocument: yup.mixed().required("Document upload required"),
+```
+
+### ❌ DUPLICATE SUBMIT BUTTONS
+**NEVER add extra submit buttons** - MultiStepForm handles submission
+```typescript
+// ❌ WRONG - Extra submit button in step
+{someCondition && (
+  <Button onClick={() => setShowSummary(true)}>
+    Submit Form
+  </Button>
+)}
+
+// ✅ CORRECT - Let MultiStepForm handle submission
+// No extra buttons needed
+```
 
 ---
 
-## 📝 Step 1: Add Red Asterisk CSS (if not exists)
+## 📝 STEP 1: Setup Dependencies & Imports
+
+### Required Dependencies
+```bash
+npm install react-hook-form yup @hookform/resolvers lodash
+npm install --save-dev @types/lodash
+```
+
+### Essential Imports Template
+```typescript
+import React, { useState, useEffect } from 'react';
+import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+import { get } from 'lodash'; // CRITICAL for nested errors
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import MultiStepForm from '@/components/common/MultiStepForm';
+import { useFormDraft } from '@/hooks/useFormDraft';
+import FileUpload from '@/components/common/FileUpload';
+import { uploadFile } from '@/services/fileService';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import SuccessModal from '@/components/common/SuccessModal';
+// UI components...
+```
+
+---
+
+## 📝 STEP 2: CSS for Red Asterisks
 
 **File**: `src/index.css`
-
 ```css
 .required-asterisk {
   color: hsl(var(--destructive));
@@ -29,458 +116,15 @@
 
 ---
 
-## 📝 Step 2: Create Form Component Structure
+## 📝 STEP 3: Form Components (OUTSIDE Main Component)
 
-### A. Import Required Dependencies
-
-**Copy this exact import block:**
-```typescript
-import React, { useMemo } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import { useToast } from '@/hooks/use-toast';
-import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
-import MultiStepForm from '@/components/common/MultiStepForm';
-// ... other imports
-```
-
-### B. Move Validation Schema Outside Component
-
-**Template Pattern:**
-```typescript
-// OUTSIDE the component - prevents re-renders
-const [FORM_NAME]Schema = yup.object().shape({
-  // Step 1 fields
-  fieldName: yup.string()
-    .required('This field is required')
-    .min(2, 'Must be at least 2 characters')
-    .max(100, 'Must be less than 100 characters'),
-  
-  // Email pattern
-  email: yup.string()
-    .required('Email is required')
-    .email('Please enter a valid email')
-    .typeError('Please enter a valid email'),
-  
-  // Phone pattern
-  phone: yup.string()
-    .required('Phone number is required')
-    .matches(/^[\\d\\s+\\-()]+$/, 'Invalid phone number format')
-    .max(15, 'Phone number too long'),
-  
-  // Date of birth pattern (18+ years)
-  dateOfBirth: yup.date()
-    .required('Date of birth is required')
-    .test('age', 'You must be at least 18 years old', function(value) {
-      if (!value) return false;
-      const today = new Date();
-      const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
-      return value <= eighteenYearsAgo;
-    })
-    .typeError('Please select a valid date'),
-  
-  // Optional date pattern (for fields like foreign account date)
-  optionalDate: yup.date()
-    .transform((value, originalValue) => {
-      return originalValue === '' ? undefined : value;
-    })
-    .typeError('Please select a valid date')
-    .nullable()
-    .notRequired(),
-  
-  // File upload pattern
-  identificationFile: yup.mixed()
-    .required('This document is required')
-    .test('fileType', 'Please upload a PNG, JPG, JPEG, or PDF file', (value) => {
-      if (!value || !value[0]) return false;
-      const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'application/pdf'];
-      return allowedTypes.includes(value[0].type);
-    })
-    .test('fileSize', 'File size must be less than 3MB', (value) => {
-      if (!value || !value[0]) return false;
-      return value[0].size <= 3 * 1024 * 1024;
-    }),
-  
-  // Checkbox pattern
-  agreement: yup.boolean()
-    .required('You must agree to continue')
-    .oneOf([true], 'You must agree to continue'),
-  
-  // Conditional "Other" field pattern
-  occupation: yup.string().required('Occupation is required'),
-  occupationOther: yup.string().when('occupation', {
-    is: 'Other',
-    then: (schema) => schema.required('Please specify your occupation'),
-    otherwise: (schema) => schema.notRequired()
-  })
-});
-```
-
----
-
-## 📝 Step 3: Create Reusable Form Field Components
-
-**Copy these exact component patterns into your form:**
+**CRITICAL: Define these OUTSIDE your main form component to prevent focus loss**
 
 ```typescript
-// Text Input Component
-const FormField = ({ name, label, required = false, type = "text", ...props }) => {
-  const { register, formState: { errors } } = useFormContext();
-  
-  return (
-    <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </label>
-      <input
-        type={type}
-        {...register(name)}
-        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
-          errors[name] ? 'border-red-500' : 'border-gray-300'
-        }`}
-        {...props}
-      />
-      {errors[name] && (
-        <p className="text-sm text-red-600">{errors[name]?.message}</p>
-      )}
-    </div>
-  );
-};
-
-// Textarea Component
-const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }) => {
-  const { register, watch, formState: { errors } } = useFormContext();
-  const currentValue = watch(name) || '';
-  
-  return (
-    <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </label>
-      <textarea
-        {...register(name)}
-        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
-          errors[name] ? 'border-red-500' : 'border-gray-300'
-        }`}
-        {...props}
-      />
-      <div className="flex justify-between">
-        {errors[name] && (
-          <p className="text-sm text-red-600">{errors[name]?.message}</p>
-        )}
-        <span className="text-sm text-gray-500 ml-auto">
-          {currentValue.length}/{maxLength}
-        </span>
-      </div>
-    </div>
-  );
-};
-
-// Select Component
-const FormSelect = ({ name, label, required = false, options, ...props }) => {
-  const { register, formState: { errors } } = useFormContext();
-  
-  return (
-    <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </label>
-      <select
-        {...register(name)}
-        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
-          errors[name] ? 'border-red-500' : 'border-gray-300'
-        }`}
-        {...props}
-      >
-        <option value="">Select {label}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {errors[name] && (
-        <p className="text-sm text-red-600">{errors[name]?.message}</p>
-      )}
-    </div>
-  );
-};
-
-// Date Picker Component
-const FormDatePicker = ({ name, label, required = false, ...props }) => {
-  const { register, formState: { errors } } = useFormContext();
-  
-  return (
-    <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </label>
-      <input
-        type="date"
-        {...register(name)}
-        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
-          errors[name] ? 'border-red-500' : 'border-gray-300'
-        }`}
-        {...props}
-      />
-      {errors[name] && (
-        <p className="text-sm text-red-600">{errors[name]?.message}</p>
-      )}
-    </div>
-  );
-};
-```
-
----
-
-## 📝 Step 4: Setup Form Hook and Default Values
-
-```typescript
-const [FormName] = () => {
-  const { toast } = useToast();
-  
-  // Default values - include ALL form fields with appropriate defaults
-  const defaultValues = useMemo(() => ({
-    // Text fields
-    firstName: '',
-    lastName: '',
-    email: '',
-    
-    // Optional fields that might be undefined
-    foreignAccountOpeningDate: undefined,
-    
-    // File fields
-    identificationFile: null,
-    
-    // Checkboxes
-    privacyAgreement: false,
-    
-    // Add all your fields here with appropriate defaults
-  }), []);
-
-  const formMethods = useForm({
-    resolver: yupResolver([FORM_NAME]Schema),
-    defaultValues,
-    mode: 'onChange', // Real-time validation
-  });
-};
-```
-
----
-
-## 📝 Step 5: Create Step Field Mappings
-
-**Critical: Map each step to its exact field names**
-
-```typescript
-// Define which fields belong to each step (use exact field names from your form)
-const stepFieldMappings = {
-  0: ['field1', 'field2', 'field3'], // Step 1 fields
-  1: ['field4', 'field5'],           // Step 2 fields
-  2: ['field6', 'field7', 'field8'], // Step 3 fields
-  3: ['identificationFile'],         // File upload step
-  4: ['privacyAgreement', 'terms']   // Final step
-};
-
-// Validation functions for MultiStepForm
-const validateCurrentStep = async (stepIndex, formMethods) => {
-  const fieldsToValidate = stepFieldMappings[stepIndex] || [];
-  if (fieldsToValidate.length === 0) return true;
-  
-  const result = await formMethods.trigger(fieldsToValidate);
-  
-  if (!result) {
-    const errors = formMethods.formState.errors;
-    console.log(`Validation failed for step "${stepIndex}". Errors:`, JSON.stringify(errors, null, 2));
-  }
-  
-  return result;
-};
-
-const getStepFields = (stepIndex) => {
-  return stepFieldMappings[stepIndex] || [];
-};
-```
-
----
-
-## 📝 Step 6: Data Sanitization Function
-
-```typescript
-// Remove undefined values before Firebase submission
-const sanitizeData = (data) => {
-  const sanitized = {};
-  Object.keys(data).forEach(key => {
-    if (data[key] !== undefined) {
-      sanitized[key] = data[key];
-    }
-  });
-  return sanitized;
-};
-```
-
----
-
-## 📝 Step 7: Submit Handler
-
-```typescript
-const { handleSubmitWithAuth } = useAuthRequiredSubmit();
-
-const handleSubmit = async (data) => {
-  try {
-    console.log('Form data before sanitization:', data);
-    
-    // Sanitize data to remove undefined values
-    const sanitizedData = sanitizeData(data);
-    console.log('Sanitized data:', sanitizedData);
-    
-    await handleSubmitWithAuth(async () => {
-      // Your Firebase submission logic here
-      await submitFormWithNotifications(
-        sanitizedData,
-        'your-collection-name',
-        'Form submitted successfully!',
-        'Error submitting form:'
-      );
-    });
-  } catch (error) {
-    console.error('Error submitting form:', error);
-    toast({
-      title: "Error",
-      description: "Failed to submit form. Please try again.",
-      variant: "destructive",
-    });
-  }
-};
-```
-
----
-
-## 📝 Step 8: Form JSX Structure
-
-```typescript
-return (
-  <div className="min-h-screen bg-gray-50 py-8">
-    <div className="max-w-4xl mx-auto px-4">
-      <FormProvider {...formMethods}>
-        <MultiStepForm
-          steps={steps}
-          onSubmit={handleSubmit}
-          isSubmitting={false}
-          submitButtonText="Submit Form"
-          formMethods={formMethods}
-          stepFieldMappings={stepFieldMappings}
-          validateCurrentStep={validateCurrentStep}
-          getStepFields={getStepFields}
-        />
-      </FormProvider>
-    </div>
-  </div>
-);
-```
-
----
-
-## 📝 Step 9: Replace Form Fields
-
-**Find and replace patterns:**
-
-```typescript
-// OLD: Basic input
-<input 
-  type="text" 
-  name="firstName"
-  className="..."
-/>
-
-// NEW: FormField component
-<FormField 
-  name="firstName"
-  label="First Name"
-  required={true}
-/>
-
-// OLD: Basic select
-<select name="gender">
-  <option value="">Select Gender</option>
-  <option value="male">Male</option>
-  <option value="female">Female</option>
-</select>
-
-// NEW: FormSelect component
-<FormSelect 
-  name="gender"
-  label="Gender"
-  required={true}
-  options={[
-    { value: 'male', label: 'Male' },
-    { value: 'female', label: 'Female' }
-  ]}
-/>
-```
-
----
-
-## 🔍 Step 10: Testing Checklist
-
-**Test each step systematically:**
-
-- [ ] **Red Asterisks**: All required fields show red asterisk
-- [ ] **Field Validation**: Error messages appear below each field
-- [ ] **Step Progression**: Cannot proceed with invalid fields in current step
-- [ ] **Toast Notifications**: Red toast appears when validation fails
-- [ ] **File Upload**: Only accepts PNG/JPG/JPEG/PDF, max 3MB
-- [ ] **Date Fields**: Manual input and validation works
-- [ ] **Optional Fields**: Don't block progression when empty
-- [ ] **Conditional Fields**: "Other" specifications work correctly
-- [ ] **Final Submission**: Data sanitization prevents Firebase errors
-
----
-
-## 🚨 Common Gotchas to Avoid
-
-1. **Field Name Mismatches**: Ensure schema field names exactly match form field names
-2. **Step Mapping Errors**: Double-check stepFieldMappings contains correct field names
-3. **Default Values**: Include ALL fields in defaultValues, even optional ones
-4. **Schema Outside Component**: Move validation schema outside to prevent re-renders
-5. **Optional Date Handling**: Use transform function for optional date fields
-6. **File Validation**: Don't forget file type and size restrictions
-7. **Conditional Validation**: Handle "Other" option fields properly
-
----
-
-## 📋 Final Implementation Checklist
-
-- [ ] All form fields replaced with FormField components
-- [ ] Validation schema created and moved outside component
-- [ ] Step field mappings defined correctly
-- [ ] Default values include all fields
-- [ ] Data sanitization function implemented
-- [ ] FormProvider wraps the form
-- [ ] MultiStepForm receives all required props
-- [ ] Toast notifications working
-- [ ] File upload validation implemented
-- [ ] Testing completed for all scenarios
-
----
-
-## 📝 Step 8: Add Real-Time Error Clearing
-
-**Problem**: Form errors remain visible even after user starts typing/fixing the field until they click "Next" again.
-
-**Solution**: Add `clearErrors` to form field components for immediate error removal when user interacts with fields.
-
-### 8.1 Update FormField Component
-
-```typescript
-const FormField = ({ name, label, required = false, type = "text", ...props }: any) => {
+// ========== BASIC FORM FIELD ==========
+const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
   const { register, formState: { errors }, clearErrors } = useFormContext();
-  const error = errors[name];
+  const error = get(errors, name); // CRITICAL: Use lodash.get
   
   return (
     <div className="space-y-2">
@@ -491,6 +135,7 @@ const FormField = ({ name, label, required = false, type = "text", ...props }: a
       <Input
         id={name}
         type={type}
+        maxLength={maxLength}
         {...register(name, {
           onChange: () => {
             if (error) {
@@ -498,7 +143,7 @@ const FormField = ({ name, label, required = false, type = "text", ...props }: a
             }
           }
         })}
-        className={cn(error && "border-destructive")}
+        className={error ? 'border-destructive' : ''}
         {...props}
       />
       {error && (
@@ -507,14 +152,12 @@ const FormField = ({ name, label, required = false, type = "text", ...props }: a
     </div>
   );
 };
-```
 
-### 8.2 Update FormTextarea Component
-
-```typescript
-const FormTextarea = ({ name, label, required = false, ...props }: any) => {
-  const { register, formState: { errors }, clearErrors } = useFormContext();
-  const error = errors[name];
+// ========== TEXTAREA FIELD ==========
+const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
+  const { register, watch, formState: { errors }, clearErrors } = useFormContext();
+  const currentValue = watch(name) || '';
+  const error = get(errors, name); // CRITICAL: Use lodash.get
   
   return (
     <div className="space-y-2">
@@ -531,8 +174,85 @@ const FormTextarea = ({ name, label, required = false, ...props }: any) => {
             }
           }
         })}
-        className={cn(error && "border-destructive")}
+        className={error ? 'border-destructive' : ''}
         {...props}
+      />
+      <div className="flex justify-between">
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
+        <span className="text-sm text-muted-foreground ml-auto">
+          {currentValue.length}/{maxLength}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// ========== SELECT FIELD ==========
+const FormSelect = ({ name, label, required = false, options, placeholder, ...props }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name); // CRITICAL: Use lodash.get
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(newValue) => {
+          setValue(name, newValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        {...props}
+      >
+        <SelectTrigger className={error ? 'border-destructive' : ''}>
+          <SelectValue placeholder={placeholder || `Select ${label}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option: any) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+// ========== DATE PICKER FIELD ==========
+const FormDatePicker = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name); // CRITICAL: Use lodash.get
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type="date"
+        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
+        onChange={(e) => {
+          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+          setValue(name, dateValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        className={error ? 'border-destructive' : ''}
       />
       {error && (
         <p className="text-sm text-destructive">{error.message?.toString()}</p>
@@ -542,366 +262,425 @@ const FormTextarea = ({ name, label, required = false, ...props }: any) => {
 };
 ```
 
-### 8.3 Update FormSelect Component
+---
+
+## 📝 STEP 4: Validation Schema Patterns
+
+**CRITICAL: Define schema OUTSIDE component to prevent re-renders**
 
 ```typescript
-const FormSelect = ({ name, label, required = false, placeholder, children, ...props }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = errors[name];
+// Common validation patterns
+const formSchema = yup.object().shape({
+  // ========== BASIC REQUIRED TEXT ==========
+  firstName: yup.string().required("First name is required"),
   
-  return (
-    <div className="space-y-2">
-      <Label>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <Select
-        value={value}
-        onValueChange={(val) => {
-          setValue(name, val);
-          if (error) {
-            clearErrors(name);
-          }
-        }}
-        {...props}
-      >
-        <SelectTrigger className={cn(error && "border-destructive")}>
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {children}
-        </SelectContent>
-      </Select>
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
-```
-
-### 8.4 Update FormDatePicker Component
-
-```typescript
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, register, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = errors[name];
+  // ========== EMAIL VALIDATION ==========
+  email: yup.string()
+    .required("Email is required")
+    .email("Please enter a valid email")
+    .typeError("Please enter a valid email"),
   
-  return (
-    <div className="space-y-2">
-      <Label>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <div className="flex gap-2">
-        <Input
-          type="date"
-          {...register(name, {
-            onChange: () => {
-              if (error) {
-                clearErrors(name);
-              }
-            }
-          })}
-          className={cn("flex-1", error && "border-destructive")}
-        />
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className={cn(error && "border-destructive")}
-            >
-              <CalendarIcon className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <ReactCalendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={(date) => {
-                setValue(name, date);
-                if (error) {
-                  clearErrors(name);
-                }
-              }}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
+  // ========== PHONE VALIDATION ==========
+  phoneNumber: yup.string()
+    .required("Phone number is required")
+    .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
+    .max(15, "Phone number cannot exceed 15 characters"),
+  
+  // ========== BVN VALIDATION ==========
+  BVNNumber: yup.string()
+    .required("BVN is required")
+    .matches(/^\d+$/, "BVN must contain only numbers")
+    .length(11, "BVN must be exactly 11 digits"),
+  
+  // ========== DATE VALIDATION (18+ years) ==========
+  dateOfBirth: yup.date()
+    .required("Date of birth is required")
+    .test('age', 'Must be at least 18 years old', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+      return value <= eighteenYearsAgo;
+    })
+    .typeError('Please select a valid date'),
+  
+  // ========== DATE VALIDATION (Not Future) ==========
+  issuedDate: yup.date()
+    .required("Issued date is required")
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
+  
+  // ========== DATE VALIDATION (Not Past) ==========
+  expiryDate: yup.date()
+    .test('not-past', 'Expiry date cannot be in the past', function(value) {
+      if (!value) return true; // Optional field
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      return value > today;
+    })
+    .typeError('Please select a valid date'),
+  
+  // ========== CONDITIONAL "OTHER" FIELD ==========
+  sourceOfIncome: yup.string().required("Income source is required"),
+  sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
+    is: 'Other',
+    then: (schema) => schema.required('Please specify income source'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  
+  // ========== ARRAY VALIDATION (Directors) ==========
+  directors: yup.array().of(yup.object().shape({
+    firstName: yup.string().required("First name is required"),
+    lastName: yup.string().required("Last name is required"),
+    // ... other director fields
+  })).min(1, "At least one director is required"),
+  
+  // ========== FILE UPLOAD VALIDATION ==========
+  verificationDocument: yup.mixed().required("Document upload is required"),
+  
+  // ========== CHECKBOX VALIDATION ==========
+  agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
+});
 ```
 
-### 8.5 Update Checkbox Fields
+---
 
-For checkbox fields like privacy agreement:
+## 📝 STEP 5: Form Setup & State Management
 
 ```typescript
-<Checkbox
-  id="agreeToDataPrivacy"
-  checked={formMethods.watch('agreeToDataPrivacy')}
-  onCheckedChange={(checked) => {
-    formMethods.setValue('agreeToDataPrivacy', checked);
-    if (formMethods.formState.errors.agreeToDataPrivacy) {
-      formMethods.clearErrors('agreeToDataPrivacy');
-    }
-  }}
-  className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
-/>
+const MyForm: React.FC = () => {
+  const { toast } = useToast();
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [showSummary, setShowSummary] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
+  
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
+  } = useAuthRequiredSubmit();
+
+  // CRITICAL: Include ALL fields with appropriate defaults
+  const defaultValues = {
+    // Text fields
+    firstName: '',
+    lastName: '',
+    email: '',
+    
+    // Date fields (undefined for date inputs)
+    dateOfBirth: undefined,
+    issuedDate: undefined,
+    expiryDate: undefined,
+    
+    // Arrays (at least one empty object)
+    directors: [{
+      firstName: '',
+      lastName: '',
+      // ... all director fields
+    }],
+    
+    // File fields
+    verificationDocument: '',
+    
+    // Checkboxes
+    agreeToDataPrivacy: false,
+  };
+
+  const formMethods = useForm<any>({
+    resolver: yupResolver(formSchema),
+    defaultValues,
+    mode: 'onChange' // Real-time validation
+  });
+
+  // For dynamic arrays (directors, etc.)
+  const { fields, append, remove } = useFieldArray({
+    control: formMethods.control,
+    name: 'directors'
+  });
+
+  const { saveDraft, clearDraft } = useFormDraft('formName', formMethods);
 ```
 
-### 8.6 Update Direct Register Fields
+---
 
-For fields using direct register (like digital signature):
+## 📝 STEP 6: Step Field Mappings & Submission
 
 ```typescript
-<Textarea
-  id="signature"
-  placeholder="Type your full name as digital signature"
-  {...formMethods.register('signature', {
-    onChange: () => {
-      if (formMethods.formState.errors.signature) {
-        formMethods.clearErrors('signature');
+  // CRITICAL: Map exact field names to steps
+  const stepFieldMappings = {
+    0: ['firstName', 'lastName', 'email'], // Step 1 fields
+    1: ['directors'], // Step 2 fields (array)
+    2: ['verificationDocument'], // Step 3 fields
+    3: ['agreeToDataPrivacy', 'signature'] // Final step
+  };
+
+  // Data sanitization (remove undefined values)
+  const sanitizeData = (data: any) => {
+    const sanitized: any = {};
+    Object.keys(data).forEach(key => {
+      if (data[key] !== undefined) {
+        sanitized[key] = data[key];
+      }
+    });
+    return sanitized;
+  };
+
+  const handleSubmit = async (data: any) => {
+    console.log('Form data before sanitization:', data);
+    
+    const sanitizedData = sanitizeData(data);
+    console.log('Sanitized data:', sanitizedData);
+
+    // Handle file uploads
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
+        fileUploadPromises.push(
+          uploadFile(file, `form-name/${Date.now()}-${file.name}`).then(url => [key, url])
+        );
       }
     }
-  })}
-  className={cn(formMethods.formState.errors.signature && "border-destructive")}
-/>
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...sanitizedData,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Form Name'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Form Name');
+    clearDraft();
+    setShowSummary(false);
+  };
+
+  const onFinalSubmit = (data: any) => {
+    setShowSummary(true);
+  };
 ```
-
-### Performance Considerations
-
-✅ **Optimized**: Only calls `clearErrors` when there's actually an error present
-✅ **Efficient**: Uses react-hook-form's built-in `clearErrors` function
-✅ **Fast**: Avoids re-triggering full form validation, just removes specific errors
-✅ **No Memory Issues**: No additional watchers or subscriptions that could cause performance problems
-
-### Result
-
-- Errors disappear immediately when users start fixing fields
-- No performance degradation or memory leaks
-- Instant visual feedback improves user experience
-- Maintains all existing validation functionality
 
 ---
 
-## 📝 Step 9: Replace Form Fields
-
-**Find and replace patterns:**
+## 📝 STEP 7: File Upload Implementation
 
 ```typescript
-// OLD: Basic input
-<input 
-  type="text" 
-  name="firstName"
-  className="..."
-/>
-
-// NEW: FormField component
-<FormField 
-  name="firstName"
-  label="First Name"
-  required={true}
-/>
-
-// OLD: Basic select
-<select name="gender">
-  <option value="">Select Gender</option>
-  <option value="male">Male</option>
-  <option value="female">Female</option>
-</select>
-
-// NEW: FormSelect component
-<FormSelect 
-  name="gender"
-  label="Gender"
-  required={true}
-  options={[
-    { value: 'male', label: 'Male' },
-    { value: 'female', label: 'Female' }
-  ]}
-/>
+// CRITICAL: Include file validation in schema AND form handling
+<div>
+  <Label>Upload Document <span className="required-asterisk">*</span></Label>
+  <FileUpload
+    accept=".png,.jpg,.jpeg,.pdf"
+    onFileSelect={(file) => {
+      setUploadedFiles(prev => ({
+        ...prev,
+        verificationDocument: file
+      }));
+      formMethods.setValue('verificationDocument', file);
+      if (formMethods.formState.errors.verificationDocument) {
+        formMethods.clearErrors('verificationDocument');
+      }
+    }}
+    maxSize={3 * 1024 * 1024}
+  />
+  {uploadedFiles.verificationDocument && (
+    <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+      <Check className="h-4 w-4" />
+      {uploadedFiles.verificationDocument.name}
+    </div>
+  )}
+  {formMethods.formState.errors.verificationDocument && (
+    <p className="text-sm text-destructive">
+      {formMethods.formState.errors.verificationDocument.message?.toString()}
+    </p>
+  )}
+</div>
 ```
 
 ---
 
-## Step 9: Field-Specific Validation Rules
+## 📝 STEP 8: Checkbox with Error Clearing
 
-**Purpose**: Implement business-specific validation rules for different field types to ensure data quality and compliance.
-
-### Age and Date Validations
-
-**Date of Birth (18+ years minimum)**:
-```jsx
-dateOfBirth: yup.date()
-  .typeError("Please enter a valid date")
-  .required("Date of birth is required")
-  .max(new Date(new Date().setFullYear(new Date().getFullYear() - 18)), "You must be at least 18 years old"),
+```typescript
+// CRITICAL: Add clearErrors to checkbox
+<div className="flex items-start space-x-2">
+  <Checkbox
+    id="agreeToDataPrivacy"
+    checked={formMethods.watch('agreeToDataPrivacy')}
+    onCheckedChange={(checked) => {
+      formMethods.setValue('agreeToDataPrivacy', checked === true);
+      if (formMethods.formState.errors.agreeToDataPrivacy) {
+        formMethods.clearErrors('agreeToDataPrivacy');
+      }
+    }}
+    className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
+  />
+  <Label htmlFor="agreeToDataPrivacy" className="text-sm">
+    I agree to terms <span className="required-asterisk">*</span>
+  </Label>
+</div>
+{formMethods.formState.errors.agreeToDataPrivacy && (
+  <p className="text-sm text-destructive">
+    {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
+  </p>
+)}
 ```
-
-**Issue Date (Cannot be in future)**:
-```jsx
-issuedDate: yup.date()
-  .typeError("Please enter a valid date")
-  .required("Issue date is required")
-  .max(new Date(), "Issue date cannot be in the future"),
-```
-
-**Expiry Date (Cannot be in past/present)**:
-```jsx
-expiryDate: yup.date()
-  .nullable()
-  .typeError("Please enter a valid date")
-  .min(new Date(), "Expiry date cannot be in the past"),
-```
-
-**Account Opening Date (Cannot be in future)**:
-```jsx
-localAccountOpeningDate: yup.date()
-  .typeError("Please enter a valid date")
-  .required("Account opening date is required")
-  .max(new Date(), "Account opening date cannot be in the future"),
-```
-
-### Number and Format Validations
-
-**BVN (Numbers only, exactly 11 digits)**:
-```jsx
-BVN: yup.string()
-  .required("BVN is required")
-  .matches(/^[0-9]+$/, "BVN can only contain numbers")
-  .length(11, "BVN must be exactly 11 digits"),
-```
-
-**Phone Number (Numbers + special chars, max 15)**:
-```jsx
-GSMNo: yup.string()
-  .required("Mobile number is required")
-  .matches(/^[0-9+\-()]+$/, "Phone number can only contain numbers and +, -, (, ) characters")
-  .max(15, "Phone number cannot exceed 15 characters"),
-```
-
-**Local Account Number (Numbers only, max 10 digits)**:
-```jsx
-localAccountNumber: yup.string()
-  .required("Account number is required")
-  .matches(/^[0-9]+$/, "Account number can only contain numbers")
-  .max(10, "Account number cannot exceed 10 digits"),
-```
-
-### File Upload Validation
-
-**Enhanced FileUpload Component**:
-```jsx
-const handleFileSelect = (files: FileList | null) => {
-  if (!files || files.length === 0) return;
-  
-  const file = files[0];
-  
-  // Validate file type first
-  const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'application/pdf'];
-  if (!allowedTypes.includes(file.type)) {
-    alert('Only PNG, JPG, JPEG, or PDF files are allowed');
-    return;
-  }
-  
-  // Validate file size
-  if (file.size > maxSize * 1024 * 1024) {
-    alert(`File size must be less than ${maxSize}MB`);
-    return;
-  }
-  
-  onFileSelect(file);
-};
-```
-
-**File Type Validation in Schema**:
-```jsx
-identificationFile: yup.mixed().required("Identification document is required").test(
-  'fileType',
-  'Only PNG, JPG, JPEG, or PDF files are allowed',
-  (value: any) => {
-    if (!value) return false;
-    const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'application/pdf'];
-    return allowedTypes.includes(value?.type);
-  }
-),
-```
-
-### Implementation Examples
-
-**Date Input with Validation**:
-```jsx
-<FormDatePicker
-  name="dateOfBirth"
-  label="Date of Birth"
-  required
-  placeholder="Select your date of birth"
-/>
-```
-
-**BVN Input**:
-```jsx
-<FormField
-  name="BVN"
-  label="Bank Verification Number (BVN)"
-  required
-  maxLength={11}
-  placeholder="Enter 11-digit BVN"
-/>
-```
-
-**Phone Number Input**:
-```jsx
-<FormField
-  name="GSMNo"
-  label="Mobile Number"
-  required
-  maxLength={15}
-  placeholder="Enter mobile number"
-/>
-```
-
-**Account Number Input**:
-```jsx
-<FormField
-  name="localAccountNumber"
-  label="Account Number"
-  required
-  maxLength={10}
-  placeholder="Enter account number"
-/>
-```
-
-### Performance Considerations
-
-- ✅ Validation only triggers when users interact with fields
-- ✅ Non-required fields don't block form progression
-- ✅ Client-side validation for immediate feedback
-- ✅ Regex patterns are optimized for performance
-- ❌ Avoid complex validation logic in render cycles
-- ❌ Don't validate empty optional fields
-
-### Checklist
-- [ ] Add age validation for date of birth (18+ years)
-- [ ] Implement BVN validation (numbers only, 11 digits)
-- [ ] Add phone number validation (numbers + special chars, max 15)
-- [ ] Implement date validations (future/past restrictions)
-- [ ] Add account number validation (numbers only, max 10 digits)
-- [ ] Enhance file upload validation (type and size)
-- [ ] Test all validation rules work correctly
-- [ ] Verify non-required fields don't block progression
 
 ---
 
-## 🔍 Step 10: Testing Checklist
+## 📝 STEP 9: Dynamic Arrays (Directors, etc.)
+
+```typescript
+// For each director
+{fields.map((director, index) => (
+  <Card key={director.id} className="p-4">
+    <div className="flex justify-between items-center mb-4">
+      <h3 className="text-lg font-medium">Director {index + 1}</h3>
+      {fields.length > 1 && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => remove(index)}
+        >
+          <Trash2 className="h-4 w-4 mr-1" />
+          Remove
+        </Button>
+      )}
+    </div>
+    
+    {/* Use nested field names */}
+    <FormField
+      name={`directors.${index}.firstName`}
+      label="First Name"
+      required={true}
+    />
+    <FormField
+      name={`directors.${index}.lastName`}
+      label="Last Name"
+      required={true}
+    />
+    {/* ... other director fields */}
+  </Card>
+))}
+
+{/* Add another director button */}
+<Button
+  type="button"
+  variant="outline"
+  onClick={() => append({
+    firstName: '',
+    lastName: '',
+    // ... all director fields with empty defaults
+  })}
+  className="w-full"
+>
+  <Plus className="h-4 w-4 mr-2" />
+  Add Another Director
+</Button>
+```
+
+---
+
+## 📝 STEP 10: Final Form Structure
+
+```typescript
+return (
+  <FormProvider {...formMethods}>
+    <div className="container mx-auto px-4 py-8">
+      {/* Loading overlay */}
+      {showPostAuthLoading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-lg font-semibold">Completing your submission...</p>
+          </div>
+        </div>
+      )}
+
+      <Card className="max-w-6xl mx-auto">
+        <CardHeader>
+          <CardTitle>Form Title</CardTitle>
+          <CardDescription>Form description</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <MultiStepForm
+            steps={steps}
+            onSubmit={onFinalSubmit}
+            formMethods={formMethods}
+            submitButtonText="Submit Form"
+            stepFieldMappings={stepFieldMappings}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Summary Dialog */}
+      <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        {/* ... summary content */}
+      </Dialog>
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={authShowSuccess}
+        onClose={() => setAuthShowSuccess()}
+        title="Form Submitted Successfully!"
+        message="Your form has been submitted successfully."
+        formType="Form Name"
+      />
+    </div>
+  </FormProvider>
+);
+```
+
+---
+
+## 🔍 CRITICAL TESTING CHECKLIST
+
+### ✅ Field Validation
+- [ ] All required fields show red asterisks
+- [ ] Error messages appear below each field
+- [ ] Errors clear immediately when user starts typing/selecting
+- [ ] Nested fields (directors) show errors correctly
+
+### ✅ Focus & Interaction
+- [ ] No focus loss when typing in any field
+- [ ] Date pickers work without focus issues
+- [ ] Dropdowns work without focus issues
+- [ ] Checkboxes work without focus issues
+
+### ✅ File Upload
+- [ ] File upload validation prevents form submission if missing
+- [ ] File errors display below upload component
+- [ ] File errors clear when file is selected
+
+### ✅ Step Navigation
+- [ ] Cannot proceed with validation errors
+- [ ] Step field mappings include all necessary fields
+- [ ] Arrays (directors) validate correctly
+
+### ✅ Final Submission
+- [ ] No duplicate submit buttons
+- [ ] Data sanitization removes undefined values
+- [ ] File uploads work correctly
+- [ ] Success modal appears after submission
+
+---
+
+## 🚨 FINAL REMINDERS
+
+1. **ALWAYS define form components OUTSIDE main component**
+2. **ALWAYS use lodash.get for error access**  
+3. **ALWAYS add clearErrors to all interactive elements**
+4. **ALWAYS include file uploads in validation schema**
+5. **NEVER add extra submit buttons - let MultiStepForm handle it**
+6. **ALWAYS test nested field validation (directors, arrays)**
+7. **ALWAYS include all fields in defaultValues**
+8. **ALWAYS sanitize data before submission**
+
+Following this guide exactly will ensure forms work perfectly like Individual KYC without the issues found in Corporate KYC.
