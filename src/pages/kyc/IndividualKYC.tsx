@@ -137,7 +137,7 @@ const defaultValues = {
 
 // Form field components with validation
 const FormField = ({ name, label, required = false, type = "text", ...props }: any) => {
-  const { register, formState: { errors } } = useFormContext();
+  const { register, formState: { errors }, clearErrors } = useFormContext();
   const error = errors[name];
   
   return (
@@ -149,7 +149,13 @@ const FormField = ({ name, label, required = false, type = "text", ...props }: a
       <Input
         id={name}
         type={type}
-        {...register(name)}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
         className={cn(error && "border-destructive")}
         {...props}
       />
@@ -161,7 +167,7 @@ const FormField = ({ name, label, required = false, type = "text", ...props }: a
 };
 
 const FormTextarea = ({ name, label, required = false, ...props }: any) => {
-  const { register, formState: { errors } } = useFormContext();
+  const { register, formState: { errors }, clearErrors } = useFormContext();
   const error = errors[name];
   
   return (
@@ -172,7 +178,13 @@ const FormTextarea = ({ name, label, required = false, ...props }: any) => {
       </Label>
       <Textarea
         id={name}
-        {...register(name)}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
         className={cn(error && "border-destructive")}
         {...props}
       />
@@ -184,7 +196,7 @@ const FormTextarea = ({ name, label, required = false, ...props }: any) => {
 };
 
 const FormSelect = ({ name, label, required = false, placeholder, children, ...props }: any) => {
-  const { setValue, watch, formState: { errors } } = useFormContext();
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
   const value = watch(name);
   const error = errors[name];
   
@@ -196,7 +208,12 @@ const FormSelect = ({ name, label, required = false, placeholder, children, ...p
       </Label>
       <Select
         value={value}
-        onValueChange={(val) => setValue(name, val)}
+        onValueChange={(val) => {
+          setValue(name, val);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
         {...props}
       >
         <SelectTrigger className={cn(error && "border-destructive")}>
@@ -214,7 +231,7 @@ const FormSelect = ({ name, label, required = false, placeholder, children, ...p
 };
 
 const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, register } = useFormContext();
+  const { setValue, watch, formState: { errors }, register, clearErrors } = useFormContext();
   const value = watch(name);
   const error = errors[name];
   
@@ -227,7 +244,13 @@ const FormDatePicker = ({ name, label, required = false }: any) => {
       <div className="flex gap-2">
         <Input
           type="date"
-          {...register(name)}
+          {...register(name, {
+            onChange: () => {
+              if (error) {
+                clearErrors(name);
+              }
+            }
+          })}
           className={cn("flex-1", error && "border-destructive")}
         />
         <Popover>
@@ -245,7 +268,12 @@ const FormDatePicker = ({ name, label, required = false }: any) => {
             <ReactCalendar
               mode="single"
               selected={value ? new Date(value) : undefined}
-              onSelect={(date) => setValue(name, date)}
+              onSelect={(date) => {
+                setValue(name, date);
+                if (error) {
+                  clearErrors(name);
+                }
+              }}
               initialFocus
               className="pointer-events-auto"
             />
@@ -592,7 +620,9 @@ const IndividualKYC: React.FC = () => {
                     checked={formMethods.watch('agreeToDataPrivacy')}
                     onCheckedChange={(checked) => {
                       formMethods.setValue('agreeToDataPrivacy', checked);
-                      formMethods.trigger('agreeToDataPrivacy');
+                      if (formMethods.formState.errors.agreeToDataPrivacy) {
+                        formMethods.clearErrors('agreeToDataPrivacy');
+                      }
                     }}
                     className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
                   />
@@ -612,7 +642,13 @@ const IndividualKYC: React.FC = () => {
                 <Textarea
                   id="signature"
                   placeholder="Type your full name as digital signature"
-                  {...formMethods.register('signature')}
+                  {...formMethods.register('signature', {
+                    onChange: () => {
+                      if (formMethods.formState.errors.signature) {
+                        formMethods.clearErrors('signature');
+                      }
+                    }
+                  })}
                   className={cn(formMethods.formState.errors.signature && "border-destructive")}
                 />
                 {formMethods.formState.errors.signature && (
