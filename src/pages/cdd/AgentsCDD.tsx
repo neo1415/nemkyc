@@ -17,7 +17,7 @@ import SuccessModal from '@/components/common/SuccessModal';
 import { FormField, PhoneField, NumericField, FormTextarea, FormSelect, DateField } from '@/components/form/FormFieldControllers';
 import { subYears } from 'date-fns';
 
-// Form validation schema - moved outside component to prevent re-creation
+// Move schema outside component to prevent recreation
 const agentsCDDSchema = yup.object().shape({
   // Personal Info - based on required fields marked with * in the form
   firstName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("First name is required"),
@@ -154,11 +154,36 @@ const defaultValues = {
   signature: ''
 };
 
+// Memoized step fields getter
+const getStepFields = (stepId: string): string[] => {
+  switch (stepId) {
+    case 'personal':
+      return ['firstName', 'lastName', 'residentialAddress', 'gender', 'position', 'dateOfBirth', 
+              'placeOfBirth', 'otherSourceOfIncome', 'otherSourceOfIncomeOther', 'nationality', 
+              'phoneNumber', 'bvn', 'occupation', 'email', 'validMeansOfId', 'identificationNumber', 
+              'issuedDate', 'expiryDate', 'issuingBody'];
+    case 'additional':
+      return ['agentName', 'agentsOfficeAddress', 'naicomLicenseNumber', 'licenseIssuedDate', 
+              'licenseExpiryDate', 'emailAddress', 'website', 'mobileNumber', 'arianMembershipNumber', 
+              'listOfAgentsApprovedPrincipals'];
+    case 'financial':
+      return ['localAccountNumber', 'localBankName', 'localBankBranch', 'localAccountOpeningDate'];
+    case 'uploads':
+      return [];
+    case 'declaration':
+      return ['agreeToDataPrivacy', 'signature'];
+    default:
+      return [];
+  }
+};
+
 const AgentsCDD: React.FC = () => {
   const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
   const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [summaryData, setSummaryData] = useState<any>({});
+  
   const { 
     handleSubmitWithAuth, 
     showSuccess: authShowSuccess, 
@@ -166,49 +191,49 @@ const AgentsCDD: React.FC = () => {
     isSubmitting: authSubmitting
   } = useAuthRequiredSubmit();
 
+  // Initialize form with optimized settings
   const formMethods = useForm<any>({
     resolver: yupResolver(agentsCDDSchema),
     defaultValues,
-    mode: 'onBlur'
+    mode: 'onBlur', // Only validate on blur, not on change
+    reValidateMode: 'onBlur', // Only revalidate on blur
+    shouldFocusError: false, // Prevent automatic focus changes
   });
 
-  // Step validation function
-  const validateCurrentStep = async (stepId: string): Promise<boolean> => {
+  const { saveDraft, clearDraft } = useFormDraft('agents-cdd', formMethods);
+
+  // Debounced auto-save with longer delay
+  const debouncedSaveDraft = useCallback(
+    debounce((data: any) => {
+      saveDraft(data);
+    }, 2000), // Increased debounce delay to 2 seconds
+    [saveDraft]
+  );
+
+  // Optimized auto-save effect
+  useEffect(() => {
+    const subscription = formMethods.watch((data) => {
+      debouncedSaveDraft(data);
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+      debouncedSaveDraft.cancel();
+    };
+  }, [formMethods, debouncedSaveDraft]);
+
+  // Step validation function - memoized
+  const validateCurrentStep = useCallback(async (stepId: string): Promise<boolean> => {
     const stepFields = getStepFields(stepId);
     const result = await formMethods.trigger(stepFields);
     return result;
-  };
+  }, [formMethods]);
 
-  // Get fields for each step
-  const getStepFields = (stepId: string): string[] => {
-    switch (stepId) {
-      case 'personal':
-        return ['firstName', 'lastName', 'residentialAddress', 'gender', 'position', 'dateOfBirth', 
-                'placeOfBirth', 'otherSourceOfIncome', 'otherSourceOfIncomeOther', 'nationality', 
-                'phoneNumber', 'bvn', 'occupation', 'email', 'validMeansOfId', 'identificationNumber', 
-                'issuedDate', 'expiryDate', 'issuingBody'];
-      case 'additional':
-        return ['agentName', 'agentsOfficeAddress', 'naicomLicenseNumber', 'licenseIssuedDate', 
-                'licenseExpiryDate', 'emailAddress', 'website', 'mobileNumber', 'arianMembershipNumber', 
-                'listOfAgentsApprovedPrincipals'];
-      case 'financial':
-        return ['localAccountNumber', 'localBankName', 'localBankBranch', 'localAccountOpeningDate'];
-      case 'uploads':
-        return [];
-      case 'declaration':
-        return ['agreeToDataPrivacy', 'signature'];
-      default:
-        return [];
-    }
-  };
-
-  // Enhanced form methods with validation
-  const enhancedFormMethods = {
+  // Enhanced form methods with validation - memoized
+  const enhancedFormMethods = useMemo(() => ({
     ...formMethods,
     validateCurrentStep
-  };
-
-  const { saveDraft, clearDraft } = useFormDraft('agents-cdd', formMethods);
+  }), [formMethods, validateCurrentStep]);
 
   // Check for pending submission when component mounts
   useEffect(() => {
@@ -228,19 +253,6 @@ const AgentsCDD: React.FC = () => {
       setShowPostAuthLoading(false);
     }
   }, [authShowSuccess]);
-
-  // Auto-save draft
-useEffect(() => {
-  const subscription = formMethods.watch((data) => {
-    const debounceSave = setTimeout(() => {
-      saveDraft(data);
-    }, 1000);
-    
-    return () => clearTimeout(debounceSave);
-  });
-  
-  return () => subscription.unsubscribe();
-}, [formMethods, saveDraft]);
 
   const handleSubmit = async (data: any) => {
     // Prepare file upload data
@@ -262,10 +274,8 @@ useEffect(() => {
       const cleaned: any = {};
       for (const [key, value] of Object.entries(obj)) {
         if (value !== undefined) {
-          // Keep non-undefined values
           cleaned[key] = value;
         }
-        // Skip undefined values entirely - Firebase doesn't accept them
       }
       return cleaned;
     };
@@ -284,13 +294,12 @@ useEffect(() => {
   };
 
   const onFinalSubmit = (data: any) => {
+    setSummaryData(data); // Set summary data once instead of watching
     setShowSummary(true);
   };
 
-  // Watch form values for summary
-  const watchedValues = formMethods.watch();
-
-  const steps = [
+  // Memoized steps to prevent recreation
+  const steps = useMemo(() => [
     {
       id: 'personal',
       title: 'Personal Information',
@@ -693,7 +702,107 @@ useEffect(() => {
         </div>
       )
     }
-  ];
+  ], [formMethods, uploadedFiles]);
+
+  // Memoized summary component
+  const SummaryContent = useMemo(() => {
+    if (!showSummary || !summaryData) return null;
+
+    return (
+      <div className="space-y-6">
+        {/* Personal Information */}
+        <div className="border rounded-lg p-4">
+          <h3 className="font-semibold text-lg mb-4">Personal Information</h3>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div><strong>Name:</strong> {summaryData.firstName} {summaryData.middleName} {summaryData.lastName}</div>
+            <div><strong>Email:</strong> {summaryData.email}</div>
+            <div><strong>Phone:</strong> {summaryData.phoneNumber}</div>
+            <div><strong>Gender:</strong> {summaryData.gender}</div>
+            <div><strong>Position:</strong> {summaryData.position}</div>
+            <div><strong>Nationality:</strong> {summaryData.nationality}</div>
+            <div><strong>Occupation:</strong> {summaryData.occupation}</div>
+            <div><strong>BVN:</strong> {summaryData.bvn}</div>
+            <div><strong>Date of Birth:</strong> {summaryData.dateOfBirth ? new Date(summaryData.dateOfBirth).toLocaleDateString() : 'Not set'}</div>
+            <div><strong>Place of Birth:</strong> {summaryData.placeOfBirth}</div>
+            <div><strong>ID Type:</strong> {summaryData.validMeansOfId}</div>
+            <div><strong>ID Number:</strong> {summaryData.identificationNumber}</div>
+            <div className="col-span-2"><strong>Address:</strong> {summaryData.residentialAddress}</div>
+          </div>
+        </div>
+
+        {/* Agent Information */}
+        <div className="border rounded-lg p-4">
+          <h3 className="font-semibold text-lg mb-4">Agent Information</h3>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div><strong>Agent Name:</strong> {summaryData.agentName}</div>
+            <div><strong>NAICOM License:</strong> {summaryData.naicomLicenseNumber}</div>
+            <div><strong>Email Address:</strong> {summaryData.emailAddress}</div>
+            <div><strong>Website:</strong> {summaryData.website}</div>
+            <div><strong>Mobile:</strong> {summaryData.mobileNumber}</div>
+            <div><strong>ARIAN Number:</strong> {summaryData.arianMembershipNumber}</div>
+            <div className="col-span-2"><strong>Office Address:</strong> {summaryData.agentsOfficeAddress}</div>
+            <div className="col-span-2"><strong>Approved Principals:</strong> {summaryData.listOfAgentsApprovedPrincipals}</div>
+          </div>
+        </div>
+
+        {/* Account Details */}
+        <div className="border rounded-lg p-4">
+          <h3 className="font-semibold text-lg mb-4">Account Details</h3>
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-medium mb-2">Local Account</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Account Number:</strong> {summaryData.localAccountNumber}</div>
+                <div><strong>Bank Name:</strong> {summaryData.localBankName}</div>
+                <div><strong>Bank Branch:</strong> {summaryData.localBankBranch}</div>
+                <div><strong>Opening Date:</strong> {summaryData.localAccountOpeningDate ? new Date(summaryData.localAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
+              </div>
+            </div>
+            {(summaryData.foreignAccountNumber || summaryData.foreignBankName) && (
+              <div>
+                <h4 className="font-medium mb-2">Foreign Account</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><strong>Account Number:</strong> {summaryData.foreignAccountNumber}</div>
+                  <div><strong>Bank Name:</strong> {summaryData.foreignBankName}</div>
+                  <div><strong>Bank Branch:</strong> {summaryData.foreignBankBranch}</div>
+                  <div><strong>Opening Date:</strong> {summaryData.foreignAccountOpeningDate ? new Date(summaryData.foreignAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Uploaded Documents */}
+        <div className="border rounded-lg p-4">
+          <h3 className="font-semibold text-lg mb-4">Uploaded Documents</h3>
+          <div className="grid grid-cols-1 gap-2 text-sm">
+            {Object.entries(uploadedFiles).map(([key, file]) => (
+              <div key={key} className="flex justify-between items-center py-2 border-b">
+                <span className="font-medium">
+                  {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
+                </span>
+                <span className="text-green-600">
+                  {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                </span>
+              </div>
+            ))}
+            {Object.keys(uploadedFiles).length === 0 && (
+              <p className="text-muted-foreground">No documents uploaded yet</p>
+            )}
+          </div>
+        </div>
+
+        {/* Declaration */}
+        <div className="border rounded-lg p-4">
+          <h3 className="font-semibold text-lg mb-4">Declaration</h3>
+          <div className="text-sm">
+            <div><strong>Data Privacy Agreement:</strong> {summaryData.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</div>
+            <div><strong>Digital Signature:</strong> {summaryData.signature}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }, [summaryData, uploadedFiles, showSummary]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -719,116 +828,22 @@ useEffect(() => {
             <DialogHeader>
               <DialogTitle>Review Your Agents CDD Form</DialogTitle>
             </DialogHeader>
-            <div className="space-y-6">
-              {/* Personal Information */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Personal Information</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><strong>Name:</strong> {watchedValues.firstName} {watchedValues.middleName} {watchedValues.lastName}</div>
-                  <div><strong>Email:</strong> {watchedValues.email}</div>
-                  <div><strong>Phone:</strong> {watchedValues.phoneNumber}</div>
-                  <div><strong>Gender:</strong> {watchedValues.gender}</div>
-                  <div><strong>Position:</strong> {watchedValues.position}</div>
-                  <div><strong>Nationality:</strong> {watchedValues.nationality}</div>
-                  <div><strong>Occupation:</strong> {watchedValues.occupation}</div>
-                  <div><strong>BVN:</strong> {watchedValues.bvn}</div>
-                  <div><strong>Date of Birth:</strong> {watchedValues.dateOfBirth ? new Date(watchedValues.dateOfBirth).toLocaleDateString() : 'Not set'}</div>
-                  <div><strong>Place of Birth:</strong> {watchedValues.placeOfBirth}</div>
-                  <div><strong>ID Type:</strong> {watchedValues.validMeansOfId}</div>
-                  <div><strong>ID Number:</strong> {watchedValues.identificationNumber}</div>
-                  <div className="col-span-2"><strong>Address:</strong> {watchedValues.residentialAddress}</div>
-                </div>
-              </div>
-
-              {/* Agent Information */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Agent Information</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><strong>Agent Name:</strong> {watchedValues.agentName}</div>
-                  <div><strong>NAICOM License:</strong> {watchedValues.naicomLicenseNumber}</div>
-                  <div><strong>Email Address:</strong> {watchedValues.emailAddress}</div>
-                  <div><strong>Website:</strong> {watchedValues.website}</div>
-                  <div><strong>Mobile:</strong> {watchedValues.mobileNumber}</div>
-                  <div><strong>ARIAN Number:</strong> {watchedValues.arianMembershipNumber}</div>
-                  <div className="col-span-2"><strong>Office Address:</strong> {watchedValues.agentsOfficeAddress}</div>
-                  <div className="col-span-2"><strong>Approved Principals:</strong> {watchedValues.listOfAgentsApprovedPrincipals}</div>
-                </div>
-              </div>
-
-              {/* Account Details */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Account Details</h3>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium mb-2">Local Account</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div><strong>Account Number:</strong> {watchedValues.localAccountNumber}</div>
-                      <div><strong>Bank Name:</strong> {watchedValues.localBankName}</div>
-                      <div><strong>Bank Branch:</strong> {watchedValues.localBankBranch}</div>
-                      <div><strong>Opening Date:</strong> {watchedValues.localAccountOpeningDate ? new Date(watchedValues.localAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
-                    </div>
-                  </div>
-                  {(watchedValues.foreignAccountNumber || watchedValues.foreignBankName) && (
-                    <div>
-                      <h4 className="font-medium mb-2">Foreign Account</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div><strong>Account Number:</strong> {watchedValues.foreignAccountNumber}</div>
-                        <div><strong>Bank Name:</strong> {watchedValues.foreignBankName}</div>
-                        <div><strong>Bank Branch:</strong> {watchedValues.foreignBankBranch}</div>
-                        <div><strong>Opening Date:</strong> {watchedValues.foreignAccountOpeningDate ? new Date(watchedValues.foreignAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Uploaded Documents */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Uploaded Documents</h3>
-                <div className="grid grid-cols-1 gap-2 text-sm">
-                  {Object.entries(uploadedFiles).map(([key, file]) => (
-                    <div key={key} className="flex justify-between items-center py-2 border-b">
-                      <span className="font-medium">
-                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
-                      </span>
-                      <span className="text-green-600">
-                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                      </span>
-                    </div>
-                  ))}
-                  {Object.keys(uploadedFiles).length === 0 && (
-                    <p className="text-muted-foreground">No documents uploaded yet</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Declaration */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Declaration</h3>
-                <div className="text-sm">
-                  <div><strong>Data Privacy Agreement:</strong> {watchedValues.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</div>
-                  <div><strong>Digital Signature:</strong> {watchedValues.signature}</div>
-                </div>
-              </div>
-              
-              <div className="flex gap-4 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowSummary(false)}
-                >
-                  Edit Details
-                </Button>
-                <Button
-                  onClick={() => {
-                    const formData = formMethods.getValues();
-                    handleSubmit(formData);
-                  }}
-                  disabled={authSubmitting}
-                  className="bg-primary text-primary-foreground"
-                >
-                  {authSubmitting ? 'Submitting...' : 'Confirm & Submit'}
-                </Button>
-              </div>
+            {SummaryContent}
+            
+            <div className="flex gap-4 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setShowSummary(false)}
+              >
+                Edit Details
+              </Button>
+              <Button
+                onClick={() => handleSubmit(summaryData)}
+                disabled={authSubmitting}
+                className="bg-primary text-primary-foreground"
+              >
+                {authSubmitting ? 'Submitting...' : 'Confirm & Submit'}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -842,6 +857,18 @@ useEffect(() => {
           isLoading={authSubmitting}
           loadingMessage="Submitting your form..."
         />
+
+        {/* Post Auth Loading */}
+        {showPostAuthLoading && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                <span>Processing your submission...</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
