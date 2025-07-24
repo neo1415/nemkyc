@@ -30,8 +30,11 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
 
   const nextStep = async () => {
-    // Trigger validation for current step
-    const isValid = await formMethods.trigger();
+    // Get the current step's field names for validation
+    const currentStepFields = getCurrentStepFields(currentStep);
+    
+    // Only validate current step fields
+    const isValid = await formMethods.trigger(currentStepFields);
     
     if (!isValid) {
       // Use toast if available
@@ -48,6 +51,19 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
+  };
+
+  // Helper function to get field names for the current step
+  const getCurrentStepFields = (stepIndex: number) => {
+    // Define field mappings for each step
+    const stepFieldMappings: Record<number, string[]> = {
+      0: ['officeLocation', 'title', 'firstName', 'middleName', 'lastName', 'contactAddress', 'occupation', 'gender', 'dateOfBirth', 'mothersMaidenName', 'city', 'state', 'country', 'nationality', 'residentialAddress', 'GSMNo', 'email', 'BVN', 'identificationType', 'idNumber', 'issuingCountry', 'issuedDate', 'sourceOfIncome', 'sourceOfIncomeOther', 'annualIncomeRange', 'premiumPaymentSource', 'premiumPaymentSourceOther'],
+      1: ['localBankName', 'localAccountNumber', 'localBankBranch', 'localAccountOpeningDate'],
+      2: [], // File upload step - no form fields to validate
+      3: ['agreeToDataPrivacy', 'signature']
+    };
+    
+    return stepFieldMappings[stepIndex] || [];
   };
 
   const prevStep = () => {

@@ -41,19 +41,34 @@ const individualKYCSchema = yup.object().shape({
   nationality: yup.string().required("Nationality is required"),
   residentialAddress: yup.string().required("Residential address is required"),
   GSMNo: yup.string().required("Mobile number is required"),
-  emailAddress: yup.string().email("Valid email is required").required("Email is required"),
+  email: yup.string().email("Valid email is required").required("Email is required"),
   BVN: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
   identificationType: yup.string().required("ID type is required"),
   idNumber: yup.string().required("Identification number is required"),
   issuingCountry: yup.string().required("Issuing country is required"),
   issuedDate: yup.date().required("Issued date is required"),
+  expiryDate: yup.date().nullable(),
   sourceOfIncome: yup.string().required("Income source is required"),
+  sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
+    is: 'Other',
+    then: (schema) => schema.required("Please specify income source"),
+    otherwise: (schema) => schema.nullable()
+  }),
   annualIncomeRange: yup.string().required("Annual income range is required"),
   premiumPaymentSource: yup.string().required("Premium payment source is required"),
+  premiumPaymentSourceOther: yup.string().when('premiumPaymentSource', {
+    is: 'Other',
+    then: (schema) => schema.required("Please specify payment source"),
+    otherwise: (schema) => schema.nullable()
+  }),
   localBankName: yup.string().required("Bank name is required"),
   localAccountNumber: yup.string().required("Account number is required"),
   localBankBranch: yup.string().required("Bank branch is required"),
   localAccountOpeningDate: yup.date().required("Account opening date is required"),
+  foreignBankName: yup.string().nullable(),
+  foreignAccountNumber: yup.string().nullable(),
+  foreignBankBranch: yup.string().nullable(),
+  foreignAccountOpeningDate: yup.date().nullable(),
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
   signature: yup.string().required("Signature is required")
 });
