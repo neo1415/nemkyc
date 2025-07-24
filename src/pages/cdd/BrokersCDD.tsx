@@ -335,35 +335,47 @@ const FormDatePicker = ({ name, label, required = false }: any) => {
         {label}
         {required && <span className="required-asterisk">*</span>}
       </Label>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              "w-full justify-start text-left font-normal",
-              !value && "text-muted-foreground",
-              error && "border-destructive"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0">
-          <ReactCalendar
-            mode="single"
-            selected={value ? new Date(value) : undefined}
-            onSelect={(date) => {
-              setValue(name, date);
-              if (error) {
-                clearErrors(name);
-              }
-            }}
-            initialFocus
-            className="pointer-events-auto"
-          />
-        </PopoverContent>
-      </Popover>
+      <div className="relative">
+        <Input
+          id={name}
+          type="date"
+          value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
+          onChange={(e) => {
+            const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+            setValue(name, dateValue);
+            if (error) {
+              clearErrors(name);
+            }
+          }}
+          className={error ? 'border-destructive' : ''}
+        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+              type="button"
+            >
+              <CalendarIcon className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <ReactCalendar
+              mode="single"
+              selected={value ? new Date(value) : undefined}
+              onSelect={(date) => {
+                setValue(name, date);
+                if (error) {
+                  clearErrors(name);
+                }
+              }}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
       {error && (
         <p className="text-sm text-destructive">{error.message?.toString()}</p>
       )}
