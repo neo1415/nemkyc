@@ -23,39 +23,96 @@ import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
 
+import { subYears } from 'date-fns';
+
 // Form validation schema
 const individualKYCSchema = yup.object().shape({
-  officeLocation: yup.string().required("Office location is required"),
-  title: yup.string().required("Title is required"),
-  firstName: yup.string().required("First name is required"),
-  middleName: yup.string().required("Middle name is required"),
-  lastName: yup.string().required("Last name is required"),
-  contactAddress: yup.string().required("Contact address is required"),
-  occupation: yup.string().required("Occupation is required"),
+  officeLocation: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Office location is required"),
+  title: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Title is required"),
+  firstName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("First name is required"),
+  middleName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Middle name is required"),
+  lastName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Last name is required"),
+  contactAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Contact address is required"),
+  occupation: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Occupation is required"),
   gender: yup.string().required("Gender is required"),
-  dateOfBirth: yup.date().required("Date of birth is required"),
-  mothersMaidenName: yup.string().required("Mother's maiden name is required"),
-  city: yup.string().required("City is required"),
-  state: yup.string().required("State is required"),
-  country: yup.string().required("Country is required"),
+  dateOfBirth: yup.date().max(subYears(new Date(), 18), "Must be at least 18 years old").required("Date of birth is required"),
+  mothersMaidenName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Mother's maiden name is required"),
+  employersName: yup.string().when('employersName', {
+    is: (value: string) => value && value.length > 0,
+    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
+    otherwise: (schema) => schema
+  }),
+  employersTelephoneNumber: yup.string().when('employersTelephoneNumber', {
+    is: (value: string) => value && value.length > 0,
+    then: (schema) => schema.matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters"),
+    otherwise: (schema) => schema
+  }),
+  employersAddress: yup.string().when('employersAddress', {
+    is: (value: string) => value && value.length > 0,
+    then: (schema) => schema.min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters"),
+    otherwise: (schema) => schema
+  }),
+  city: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("City is required"),
+  state: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("State is required"),
+  country: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Country is required"),
   nationality: yup.string().required("Nationality is required"),
-  residentialAddress: yup.string().required("Residential address is required"),
-  GSMNo: yup.string().required("Mobile number is required"),
-  emailAddress: yup.string().email("Valid email is required").required("Email is required"),
-  BVN: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+  residentialAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Residential address is required"),
+  GSMNo: yup.string().matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters").required("Mobile number is required"),
+  email: yup.string().email("Valid email is required").max(100, "Maximum 100 characters").required("Email is required"),
+  taxIDNo: yup.string().when('taxIDNo', {
+    is: (value: string) => value && value.length > 0,
+    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
+    otherwise: (schema) => schema
+  }),
+  BVN: yup.string().matches(/^\d{11}$/, "BVN must be exactly 11 digits").required("BVN is required"),
   identificationType: yup.string().required("ID type is required"),
-  idNumber: yup.string().required("Identification number is required"),
-  issuingCountry: yup.string().required("Issuing country is required"),
-  issuedDate: yup.date().required("Issued date is required"),
+  idNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Identification number is required"),
+  issuingCountry: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Issuing country is required"),
+  issuedDate: yup.date().max(new Date(), "Date must be in the past").required("Issued date is required"),
+  expiryDate: yup.date().when('expiryDate', {
+    is: (value: Date) => value,
+    then: (schema) => schema.min(new Date(), "Expiry date must be in the future"),
+    otherwise: (schema) => schema
+  }),
   sourceOfIncome: yup.string().required("Income source is required"),
+  sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
+    is: 'Other',
+    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other income source"),
+    otherwise: (schema) => schema
+  }),
   annualIncomeRange: yup.string().required("Annual income range is required"),
   premiumPaymentSource: yup.string().required("Premium payment source is required"),
-  localBankName: yup.string().required("Bank name is required"),
-  localAccountNumber: yup.string().required("Account number is required"),
-  localBankBranch: yup.string().required("Bank branch is required"),
-  localAccountOpeningDate: yup.date().required("Account opening date is required"),
+  premiumPaymentSourceOther: yup.string().when('premiumPaymentSource', {
+    is: 'Other',
+    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other payment source"),
+    otherwise: (schema) => schema
+  }),
+  localBankName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Bank name is required"),
+  localAccountNumber: yup.string().matches(/^\d{1,10}$/, "Account number must be 1-10 digits only").required("Account number is required"),
+  localBankBranch: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Bank branch is required"),
+  localAccountOpeningDate: yup.date().max(new Date(), "Date must be in the past").required("Account opening date is required"),
+  foreignBankName: yup.string().when('foreignBankName', {
+    is: (value: string) => value && value.length > 0,
+    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
+    otherwise: (schema) => schema
+  }),
+  foreignAccountNumber: yup.string().when('foreignAccountNumber', {
+    is: (value: string) => value && value.length > 0,
+    then: (schema) => schema.matches(/^\d{1,10}$/, "Account number must be 1-10 digits only"),
+    otherwise: (schema) => schema
+  }),
+  foreignBankBranch: yup.string().when('foreignBankBranch', {
+    is: (value: string) => value && value.length > 0,
+    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
+    otherwise: (schema) => schema
+  }),
+  foreignAccountOpeningDate: yup.date().when('foreignAccountOpeningDate', {
+    is: (value: Date) => value,
+    then: (schema) => schema.max(new Date(), "Date must be in the past"),
+    otherwise: (schema) => schema
+  }),
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  signature: yup.string().required("Signature is required")
+  signature: yup.string().min(2, "Minimum 2 characters").required("Signature is required")
 });
 
 const defaultValues = {
@@ -120,6 +177,42 @@ const IndividualKYC: React.FC = () => {
     defaultValues,
     mode: 'onChange'
   });
+
+  // Step validation function
+  const validateCurrentStep = async (stepId: string): Promise<boolean> => {
+    const stepFields = getStepFields(stepId);
+    const result = await formMethods.trigger(stepFields);
+    return result;
+  };
+
+  // Get fields for each step
+  const getStepFields = (stepId: string): string[] => {
+    switch (stepId) {
+      case 'personal':
+        return ['officeLocation', 'title', 'firstName', 'middleName', 'lastName', 'contactAddress', 
+                'occupation', 'gender', 'dateOfBirth', 'mothersMaidenName', 'employersName', 
+                'employersTelephoneNumber', 'employersAddress', 'city', 'state', 'country', 
+                'nationality', 'residentialAddress', 'GSMNo', 'email', 'taxIDNo', 'BVN', 
+                'identificationType', 'idNumber', 'issuingCountry', 'issuedDate', 'expiryDate', 
+                'sourceOfIncome', 'sourceOfIncomeOther', 'annualIncomeRange', 'premiumPaymentSource', 
+                'premiumPaymentSourceOther'];
+      case 'accounts':
+        return ['localBankName', 'localAccountNumber', 'localBankBranch', 'localAccountOpeningDate',
+                'foreignBankName', 'foreignAccountNumber', 'foreignBankBranch', 'foreignAccountOpeningDate'];
+      case 'upload':
+        return [];
+      case 'declaration':
+        return ['agreeToDataPrivacy', 'signature'];
+      default:
+        return [];
+    }
+  };
+
+  // Enhanced form methods with validation
+  const enhancedFormMethods = {
+    ...formMethods,
+    validateCurrentStep
+  };
 
   const { saveDraft, clearDraft } = useFormDraft('individualKYC', formMethods);
 
@@ -732,7 +825,7 @@ const IndividualKYC: React.FC = () => {
           <MultiStepForm
             steps={steps}
             onSubmit={onFinalSubmit}
-            formMethods={formMethods}
+            formMethods={enhancedFormMethods}
             submitButtonText="Submit KYC Form"
           />
         </CardContent>
