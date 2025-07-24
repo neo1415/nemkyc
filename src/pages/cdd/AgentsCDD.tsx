@@ -231,18 +231,16 @@ const AgentsCDD: React.FC = () => {
 
   // Auto-save draft
 useEffect(() => {
-  const debounceSave = setTimeout(() => {
-    // Get current form values and save them
-    saveDraft(formMethods.getValues());
-  }, 1000); // Wait 1 second after the user stops typing
-
-  const subscription = formMethods.watch();
+  const subscription = formMethods.watch((data) => {
+    const debounceSave = setTimeout(() => {
+      saveDraft(data);
+    }, 1000);
+    
+    return () => clearTimeout(debounceSave);
+  });
   
-  return () => {
-    clearTimeout(debounceSave);
-    subscription.unsubscribe();
-  }
-}, [formMethods, saveDraft, formMethods.watch]); // Dependency array updated
+  return () => subscription.unsubscribe();
+}, [formMethods, saveDraft]);
 
   const handleSubmit = async (data: any) => {
     // Prepare file upload data
@@ -289,7 +287,8 @@ useEffect(() => {
     setShowSummary(true);
   };
 
-const watchedValues = formMethods.watch();
+  // Watch form values for summary
+  const watchedValues = formMethods.watch();
 
   const steps = [
     {
