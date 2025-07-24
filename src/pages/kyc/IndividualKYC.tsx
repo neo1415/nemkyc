@@ -37,20 +37,20 @@ const individualKYCSchema = yup.object().shape({
   gender: yup.string().required("Gender is required"),
   dateOfBirth: yup.date().max(subYears(new Date(), 18), "Must be at least 18 years old").required("Date of birth is required"),
   mothersMaidenName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Mother's maiden name is required"),
-  employersName: yup.string().when('employersName', {
-    is: (value: string) => value && value.length > 0,
+  employersName: yup.string().nullable().transform((value) => value || null).when('employersName', {
+    is: (value: string | null) => value && value.length > 0,
     then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
-    otherwise: (schema) => schema
+    otherwise: (schema) => schema.nullable()
   }),
-  employersTelephoneNumber: yup.string().when('employersTelephoneNumber', {
-    is: (value: string) => value && value.length > 0,
+  employersTelephoneNumber: yup.string().nullable().transform((value) => value || null).when('employersTelephoneNumber', {
+    is: (value: string | null) => value && value.length > 0,
     then: (schema) => schema.matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters"),
-    otherwise: (schema) => schema
+    otherwise: (schema) => schema.nullable()
   }),
-  employersAddress: yup.string().when('employersAddress', {
-    is: (value: string) => value && value.length > 0,
+  employersAddress: yup.string().nullable().transform((value) => value || null).when('employersAddress', {
+    is: (value: string | null) => value && value.length > 0,
     then: (schema) => schema.min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters"),
-    otherwise: (schema) => schema
+    otherwise: (schema) => schema.nullable()
   }),
   city: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("City is required"),
   state: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("State is required"),
@@ -59,57 +59,53 @@ const individualKYCSchema = yup.object().shape({
   residentialAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Residential address is required"),
   GSMNo: yup.string().matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters").required("Mobile number is required"),
   email: yup.string().email("Valid email is required").max(100, "Maximum 100 characters").required("Email is required"),
-  taxIDNo: yup.string().when('taxIDNo', {
-    is: (value: string) => value && value.length > 0,
+  taxIDNo: yup.string().nullable().transform((value) => value || null).when('taxIDNo', {
+    is: (value: string | null) => value && value.length > 0,
     then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
-    otherwise: (schema) => schema
+    otherwise: (schema) => schema.nullable()
   }),
   BVN: yup.string().matches(/^\d{11}$/, "BVN must be exactly 11 digits").required("BVN is required"),
   identificationType: yup.string().required("ID type is required"),
   idNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Identification number is required"),
   issuingCountry: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Issuing country is required"),
   issuedDate: yup.date().max(new Date(), "Date must be in the past").required("Issued date is required"),
-  expiryDate: yup.date().when('expiryDate', {
-    is: (value: Date) => value,
+  expiryDate: yup.date().nullable().transform((value) => value || null).when('expiryDate', {
+    is: (value: Date | null) => value instanceof Date,
     then: (schema) => schema.min(new Date(), "Expiry date must be in the future"),
-    otherwise: (schema) => schema
+    otherwise: (schema) => schema.nullable()
   }),
   sourceOfIncome: yup.string().required("Income source is required"),
   sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
     is: 'Other',
     then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other income source"),
-    otherwise: (schema) => schema
+    otherwise: (schema) => schema.notRequired()
   }),
   annualIncomeRange: yup.string().required("Annual income range is required"),
   premiumPaymentSource: yup.string().required("Premium payment source is required"),
   premiumPaymentSourceOther: yup.string().when('premiumPaymentSource', {
     is: 'Other',
     then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other payment source"),
-    otherwise: (schema) => schema
+    otherwise: (schema) => schema.notRequired()
   }),
   localBankName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Bank name is required"),
   localAccountNumber: yup.string().matches(/^\d{1,10}$/, "Account number must be 1-10 digits only").required("Account number is required"),
   localBankBranch: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Bank branch is required"),
   localAccountOpeningDate: yup.date().max(new Date(), "Date must be in the past").required("Account opening date is required"),
-  foreignBankName: yup.string().when('foreignBankName', {
-    is: (value: string) => value && value.length > 0,
-    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
-    otherwise: (schema) => schema
-  }),
-  foreignAccountNumber: yup.string().when('foreignAccountNumber', {
-    is: (value: string) => value && value.length > 0,
+  foreignBankName: yup.string().nullable().transform((value) => value || null),
+  foreignAccountNumber: yup.string().nullable().transform((value) => value || null).when('foreignBankName', {
+    is: (value: string | null) => value && value.length > 0,
     then: (schema) => schema.matches(/^\d{1,10}$/, "Account number must be 1-10 digits only"),
-    otherwise: (schema) => schema
+    otherwise: (schema) => schema.nullable()
   }),
-  foreignBankBranch: yup.string().when('foreignBankBranch', {
-    is: (value: string) => value && value.length > 0,
+  foreignBankBranch: yup.string().nullable().transform((value) => value || null).when('foreignBankName', {
+    is: (value: string | null) => value && value.length > 0,
     then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
-    otherwise: (schema) => schema
+    otherwise: (schema) => schema.nullable()
   }),
-  foreignAccountOpeningDate: yup.date().when('foreignAccountOpeningDate', {
-    is: (value: Date) => value,
+  foreignAccountOpeningDate: yup.date().nullable().transform((value) => value || null).when('foreignBankName', {
+    is: (value: string | null) => value && value.length > 0,
     then: (schema) => schema.max(new Date(), "Date must be in the past"),
-    otherwise: (schema) => schema
+    otherwise: (schema) => schema.nullable()
   }),
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
   signature: yup.string().min(2, "Minimum 2 characters").required("Signature is required")
