@@ -449,79 +449,60 @@ const CorporateKYC: React.FC = () => {
       component: (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="branchOffice">NEM Branch Office *</Label>
-              <Input
-                id="branchOffice"
-                {...formMethods.register('branchOffice')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="insured">Insured *</Label>
-              <Input
-                id="insured"
-                {...formMethods.register('insured')}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="officeAddress">Office Address *</Label>
-            <Textarea
-              id="officeAddress"
-              {...formMethods.register('officeAddress')}
+            <FormField
+              name="branchOffice"
+              label="NEM Branch Office"
+              required={true}
+            />
+            <FormField
+              name="insured"
+              label="Insured"
+              required={true}
             />
           </div>
 
-          <div>
-            <Label>Ownership of Company *</Label>
-            <Select
-              value={formMethods.watch('ownershipOfCompany')}
-              onValueChange={(value) => formMethods.setValue('ownershipOfCompany', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Ownership Of Company" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Nigerian">Nigerian</SelectItem>
-                <SelectItem value="Foreign">Foreign</SelectItem>
-                <SelectItem value="Both">Both</SelectItem>
-              </SelectContent>
-            </Select>
+          <FormTextarea
+            name="officeAddress"
+            label="Office Address"
+            required={true}
+          />
+
+          <FormSelect
+            name="ownershipOfCompany"
+            label="Ownership of Company"
+            required={true}
+            placeholder="Select Ownership Of Company"
+            options={[
+              { value: "Nigerian", label: "Nigerian" },
+              { value: "Foreign", label: "Foreign" },
+              { value: "Both", label: "Both" }
+            ]}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              name="contactPerson"
+              label="Contact Person"
+              required={true}
+            />
+            <FormField
+              name="website"
+              label="Website"
+              required={true}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="contactPerson">Contact Person *</Label>
-              <Input
-                id="contactPerson"
-                {...formMethods.register('contactPerson')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="website">Website *</Label>
-              <Input
-                id="website"
-                {...formMethods.register('website')}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="incorporationNumber">Incorporation Number *</Label>
-              <Input
-                id="incorporationNumber"
-                {...formMethods.register('incorporationNumber')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="incorporationState">Incorporation State *</Label>
-              <Input
-                id="incorporationState"
-                {...formMethods.register('incorporationState')}
-              />
-            </div>
+            <FormField
+              name="incorporationNumber"
+              label="Incorporation Number"
+              required={true}
+            />
+            <FormField
+              name="incorporationState"
+              label="Incorporation State"
+              required={true}
+            />
           </div>
 
           <FormDatePicker
@@ -531,92 +512,72 @@ const CorporateKYC: React.FC = () => {
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="BVNNumber">BVN *</Label>
-              <Input
-                id="BVNNumber"
-                maxLength={11}
-                {...formMethods.register('BVNNumber')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="contactPersonNo">Contact Person Mobile Number *</Label>
-              <Input
-                id="contactPersonNo"
-                {...formMethods.register('contactPersonNo')}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="taxIdNo">Tax Identification Number</Label>
-              <Input
-                id="taxIdNo"
-                {...formMethods.register('taxIdNo')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                {...formMethods.register('email')}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="natureOfBusiness">Business Type/Occupation *</Label>
-            <Input
-              id="natureOfBusiness"
-              {...formMethods.register('natureOfBusiness')}
+            <FormField
+              name="BVNNumber"
+              label="BVN"
+              required={true}
+              maxLength={11}
+            />
+            <FormField
+              name="contactPersonNo"
+              label="Contact Person Mobile Number"
+              required={true}
+              maxLength={15}
             />
           </div>
 
-          <div>
-            <Label>Estimated Turnover *</Label>
-            <Select
-              value={formMethods.watch('estimatedTurnover')}
-              onValueChange={(value) => formMethods.setValue('estimatedTurnover', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Annual Income Range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Less Than 10 Million">Less Than 10 Million</SelectItem>
-                <SelectItem value="11 Million - 50 Million">11 Million - 50 Million</SelectItem>
-                <SelectItem value="51 Million - 200 Million">51 Million - 200 Million</SelectItem>
-                <SelectItem value="More Than 200 Million">More Than 200 Million</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              name="taxIdNo"
+              label="Tax Identification Number"
+              required={false}
+              maxLength={10}
+            />
+            <FormField
+              name="email"
+              label="Email Address"
+              required={true}
+              type="email"
+            />
           </div>
 
-          <div>
-            <Label>Premium Payment Source *</Label>
-            <Select
-              value={formMethods.watch('premiumPaymentSource')}
-              onValueChange={(value) => formMethods.setValue('premiumPaymentSource', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose Income Source" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Salary or Business Income">Salary or Business Income</SelectItem>
-                <SelectItem value="Investments or Dividends">Investments or Dividends</SelectItem>
-                <SelectItem value="Other">Other (please specify)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormField
+            name="natureOfBusiness"
+            label="Business Type/Occupation"
+            required={true}
+          />
+
+          <FormSelect
+            name="estimatedTurnover"
+            label="Estimated Turnover"
+            required={true}
+            placeholder="Annual Income Range"
+            options={[
+              { value: "Less Than 10 Million", label: "Less Than 10 Million" },
+              { value: "11 Million - 50 Million", label: "11 Million - 50 Million" },
+              { value: "51 Million - 200 Million", label: "51 Million - 200 Million" },
+              { value: "More Than 200 Million", label: "More Than 200 Million" }
+            ]}
+          />
+
+          <FormSelect
+            name="premiumPaymentSource"
+            label="Premium Payment Source"
+            required={true}
+            placeholder="Choose Income Source"
+            options={[
+              { value: "Salary or Business Income", label: "Salary or Business Income" },
+              { value: "Investments or Dividends", label: "Investments or Dividends" },
+              { value: "Other", label: "Other (please specify)" }
+            ]}
+          />
 
           {formMethods.watch('premiumPaymentSource') === 'Other' && (
-            <div>
-              <Label htmlFor="premiumPaymentSourceOther">Please specify other income source *</Label>
-              <Input
-                id="premiumPaymentSourceOther"
-                {...formMethods.register('premiumPaymentSourceOther')}
-              />
-            </div>
+            <FormField
+              name="premiumPaymentSourceOther"
+              label="Please specify other income source"
+              required={true}
+            />
           )}
         </div>
       )
@@ -644,27 +605,21 @@ const CorporateKYC: React.FC = () => {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <Label htmlFor={`directors.${index}.firstName`}>First Name *</Label>
-                  <Input
-                    id={`directors.${index}.firstName`}
-                    {...formMethods.register(`directors.${index}.firstName`)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`directors.${index}.middleName`}>Middle Name</Label>
-                  <Input
-                    id={`directors.${index}.middleName`}
-                    {...formMethods.register(`directors.${index}.middleName`)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`directors.${index}.lastName`}>Last Name *</Label>
-                  <Input
-                    id={`directors.${index}.lastName`}
-                    {...formMethods.register(`directors.${index}.lastName`)}
-                  />
-                </div>
+                <FormField
+                  name={`directors.${index}.firstName`}
+                  label="First Name"
+                  required={true}
+                />
+                <FormField
+                  name={`directors.${index}.middleName`}
+                  label="Middle Name"
+                  required={false}
+                />
+                <FormField
+                  name={`directors.${index}.lastName`}
+                  label="Last Name"
+                  required={true}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -673,135 +628,107 @@ const CorporateKYC: React.FC = () => {
                   label="Date of Birth"
                   required={true}
                 />
-                <div>
-                  <Label htmlFor={`directors.${index}.placeOfBirth`}>Place of Birth *</Label>
-                  <Input
-                    id={`directors.${index}.placeOfBirth`}
-                    {...formMethods.register(`directors.${index}.placeOfBirth`)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <Label htmlFor={`directors.${index}.nationality`}>Nationality *</Label>
-                  <Input
-                    id={`directors.${index}.nationality`}
-                    {...formMethods.register(`directors.${index}.nationality`)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`directors.${index}.country`}>Country *</Label>
-                  <Input
-                    id={`directors.${index}.country`}
-                    {...formMethods.register(`directors.${index}.country`)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <Label htmlFor={`directors.${index}.occupation`}>Occupation *</Label>
-                  <Input
-                    id={`directors.${index}.occupation`}
-                    {...formMethods.register(`directors.${index}.occupation`)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`directors.${index}.email`}>Email *</Label>
-                  <Input
-                    id={`directors.${index}.email`}
-                    type="email"
-                    {...formMethods.register(`directors.${index}.email`)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <Label htmlFor={`directors.${index}.phoneNumber`}>Phone Number *</Label>
-                  <Input
-                    id={`directors.${index}.phoneNumber`}
-                    {...formMethods.register(`directors.${index}.phoneNumber`)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`directors.${index}.BVNNumber`}>BVN *</Label>
-                  <Input
-                    id={`directors.${index}.BVnNumber`}
-                    maxLength={11}
-                    {...formMethods.register(`directors.${index}.BVNNumber`)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <Label htmlFor={`directors.${index}.employersName`}>Employer Name</Label>
-                  <Input
-                    id={`directors.${index}.employersName`}
-                    {...formMethods.register(`directors.${index}.employersName`)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`directors.${index}.employersPhoneNumber`}>Employer Phone</Label>
-                  <Input
-                    id={`directors.${index}.employersPhoneNumber`}
-                    {...formMethods.register(`directors.${index}.employersPhoneNumber`)}
-                  />
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <Label htmlFor={`directors.${index}.residentialAddress`}>Residential Address *</Label>
-                <Textarea
-                  id={`directors.${index}.residentialAddress`}
-                  {...formMethods.register(`directors.${index}.residentialAddress`)}
+                <FormField
+                  name={`directors.${index}.placeOfBirth`}
+                  label="Place of Birth"
+                  required={true}
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <Label htmlFor={`directors.${index}.taxIdNumber`}>Tax ID Number</Label>
-                  <Input
-                    id={`directors.${index}.taxIdNumber`}
-                    {...formMethods.register(`directors.${index}.taxIdNumber`)}
-                  />
-                </div>
-                <div>
-                  <Label>ID Type *</Label>
-                  <Select
-                    value={formMethods.watch(`directors.${index}.idType`)}
-                    onValueChange={(value) => formMethods.setValue(`directors.${index}.idType`, value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select ID Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="National ID">National ID</SelectItem>
-                      <SelectItem value="Driver's License">Driver's License</SelectItem>
-                      <SelectItem value="International Passport">International Passport</SelectItem>
-                      <SelectItem value="Voters Card">Voters Card</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <FormField
+                  name={`directors.${index}.nationality`}
+                  label="Nationality"
+                  required={true}
+                />
+                <FormField
+                  name={`directors.${index}.country`}
+                  label="Country"
+                  required={true}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <Label htmlFor={`directors.${index}.idNumber`}>Identification Number *</Label>
-                  <Input
-                    id={`directors.${index}.idNumber`}
-                    {...formMethods.register(`directors.${index}.idNumber`)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`directors.${index}.issuingBody`}>Issuing Body *</Label>
-                  <Input
-                    id={`directors.${index}.issuingBody`}
-                    {...formMethods.register(`directors.${index}.issuingBody`)}
-                  />
-                </div>
+                <FormField
+                  name={`directors.${index}.occupation`}
+                  label="Occupation"
+                  required={true}
+                />
+                <FormField
+                  name={`directors.${index}.email`}
+                  label="Email"
+                  required={true}
+                  type="email"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <FormField
+                  name={`directors.${index}.phoneNumber`}
+                  label="Phone Number"
+                  required={true}
+                  maxLength={15}
+                />
+                <FormField
+                  name={`directors.${index}.BVNNumber`}
+                  label="BVN"
+                  required={true}
+                  maxLength={11}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <FormField
+                  name={`directors.${index}.employersName`}
+                  label="Employer Name"
+                  required={false}
+                />
+                <FormField
+                  name={`directors.${index}.employersPhoneNumber`}
+                  label="Employer Phone"
+                  required={false}
+                  maxLength={15}
+                />
+              </div>
+
+              <FormTextarea
+                name={`directors.${index}.residentialAddress`}
+                label="Residential Address"
+                required={true}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <FormField
+                  name={`directors.${index}.taxIdNumber`}
+                  label="Tax ID Number"
+                  required={false}
+                  maxLength={10}
+                />
+                <FormSelect
+                  name={`directors.${index}.idType`}
+                  label="ID Type"
+                  required={true}
+                  placeholder="Select ID Type"
+                  options={[
+                    { value: "National ID", label: "National ID" },
+                    { value: "Driver's License", label: "Driver's License" },
+                    { value: "International Passport", label: "International Passport" },
+                    { value: "Voters Card", label: "Voters Card" }
+                  ]}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <FormField
+                  name={`directors.${index}.idNumber`}
+                  label="Identification Number"
+                  required={true}
+                />
+                <FormField
+                  name={`directors.${index}.issuingBody`}
+                  label="Issuing Body"
+                  required={true}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -817,30 +744,25 @@ const CorporateKYC: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <Label>Source of Income *</Label>
-                <Select
-                  value={formMethods.watch(`directors.${index}.sourceOfIncome`)}
-                  onValueChange={(value) => formMethods.setValue(`directors.${index}.sourceOfIncome`, value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Source of Income" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Salary">Salary</SelectItem>
-                    <SelectItem value="Business Income">Business Income</SelectItem>
-                    <SelectItem value="Investment">Investment</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <FormSelect
+                name={`directors.${index}.sourceOfIncome`}
+                label="Source of Income"
+                required={true}
+                placeholder="Select Source of Income"
+                options={[
+                  { value: "Salary", label: "Salary" },
+                  { value: "Business Income", label: "Business Income" },
+                  { value: "Investment", label: "Investment" },
+                  { value: "Other", label: "Other" }
+                ]}
+              />
 
               {formMethods.watch(`directors.${index}.sourceOfIncome`) === 'Other' && (
                 <div className="mt-4">
-                  <Label htmlFor={`directors.${index}.sourceOfIncomeOther`}>Please specify *</Label>
-                  <Input
-                    id={`directors.${index}.sourecOfIncomeOther`}
-                    {...formMethods.register(`directors.${index}.sourceOfIncomeOther`)}
+                  <FormField
+                    name={`directors.${index}.sourceOfIncomeOther`}
+                    label="Please specify"
+                    required={true}
                   />
                 </div>
               )}
@@ -887,28 +809,23 @@ const CorporateKYC: React.FC = () => {
       title: 'Account Details & Verification Upload',
       component: (
         <div className="space-y-4">
-          <div>
-            <Label>Company Name Verification Document *</Label>
-            <Select
-              value={formMethods.watch('companyNameVerificationDoc')}
-              onValueChange={(value) => formMethods.setValue('companyNameVerificationDoc', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Verification Document" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Certificate of Incorporation or Business Registration">Certificate of Incorporation or Business Registration</SelectItem>
-                <SelectItem value="CAC Status Report">CAC Status Report</SelectItem>
-                <SelectItem value="Board Resolution">Board Resolution</SelectItem>
-                <SelectItem value="Power of Attorney">Power of Attorney</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormSelect
+            name="companyNameVerificationDoc"
+            label="Company Name Verification Document"
+            required={true}
+            placeholder="Verification Document"
+            options={[
+              { value: "Certificate of Incorporation or Business Registration", label: "Certificate of Incorporation or Business Registration" },
+              { value: "CAC Status Report", label: "CAC Status Report" },
+              { value: "Board Resolution", label: "Board Resolution" },
+              { value: "Power of Attorney", label: "Power of Attorney" }
+            ]}
+          />
 
           <div>
-            <Label>Upload Your Verification Document *</Label>
+            <Label>Upload Your Verification Document <span className="required-asterisk">*</span></Label>
             <FileUpload
-              accept="image/*,.pdf"
+              accept=".png,.jpg,.jpeg,.pdf"
               onFileSelect={(file) => {
                 setUploadedFiles(prev => ({
                   ...prev,
@@ -953,20 +870,22 @@ const CorporateKYC: React.FC = () => {
               id="agreeToDataPrivacy"
               checked={watchedValues.agreeToDataPrivacy}
               onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked === true)}
+              className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
             />
             <Label htmlFor="agreeToDataPrivacy" className="text-sm">
-              I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge *
+              I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge <span className="required-asterisk">*</span>
             </Label>
           </div>
+          {formMethods.formState.errors.agreeToDataPrivacy && (
+            <p className="text-sm text-destructive">{formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}</p>
+          )}
           
-          <div>
-            <Label htmlFor="signature">Digital Signature *</Label>
-            <Input
-              id="signature"
-              placeholder="Type your full name as signature"
-              {...formMethods.register('signature')}
-            />
-          </div>
+          <FormField
+            name="signature"
+            label="Digital Signature"
+            required={true}
+            placeholder="Type your full name as signature"
+          />
           {formMethods.watch('agreeToDataPrivacy') && (
             <Button
               type="button"
