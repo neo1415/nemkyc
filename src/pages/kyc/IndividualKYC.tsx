@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useToast } from '@/hooks/use-toast';
@@ -103,8 +103,133 @@ const defaultValues = {
   signature: ''
 };
 
+// Form field components with validation
+const FormField = ({ name, label, required = false, type = "text", ...props }: any) => {
+  const { register, formState: { errors } } = useFormContext();
+  const error = errors[name];
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type={type}
+        {...register(name)}
+        className={cn(error && "border-destructive")}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormTextarea = ({ name, label, required = false, ...props }: any) => {
+  const { register, formState: { errors } } = useFormContext();
+  const error = errors[name];
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Textarea
+        id={name}
+        {...register(name)}
+        className={cn(error && "border-destructive")}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormSelect = ({ name, label, required = false, placeholder, children, ...props }: any) => {
+  const { setValue, watch, formState: { errors } } = useFormContext();
+  const value = watch(name);
+  const error = errors[name];
+  
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(val) => setValue(name, val)}
+        {...props}
+      >
+        <SelectTrigger className={cn(error && "border-destructive")}>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {children}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormDatePicker = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors } } = useFormContext();
+  const value = watch(name);
+  const error = errors[name];
+  
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-full justify-start text-left font-normal",
+              !value && "text-muted-foreground",
+              error && "border-destructive"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0">
+          <ReactCalendar
+            mode="single"
+            selected={value ? new Date(value) : undefined}
+            onSelect={(date) => setValue(name, date)}
+            initialFocus
+            className="pointer-events-auto"
+          />
+        </PopoverContent>
+      </Popover>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
 const IndividualKYC: React.FC = () => {
   const { toast } = useToast();
+  
+  // Make toast available globally for MultiStepForm
+  useEffect(() => {
+    (window as any).toast = toast;
+  }, [toast]);
   const [showSummary, setShowSummary] = useState(false);
   const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
@@ -218,397 +343,144 @@ const IndividualKYC: React.FC = () => {
       id: 'personal',
       title: 'Personal Information',
       component: (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="officeLocation">Office Location *</Label>
-              <Input
-                id="officeLocation"
-                {...formMethods.register('officeLocation')}
-              />
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField name="officeLocation" label="Office Location" required />
+              <FormField name="title" label="Title" required />
             </div>
-            <div>
-              <Label htmlFor="title">Title *</Label>
-              <Input
-                id="title"
-                {...formMethods.register('title')}
-              />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField name="firstName" label="First Name" required />
+              <FormField name="middleName" label="Middle Name" required />
+              <FormField name="lastName" label="Last Name" required />
             </div>
+
+            <FormTextarea name="contactAddress" label="Contact Address" required />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField name="occupation" label="Occupation" required />
+              <FormSelect name="gender" label="Gender" required placeholder="Select Gender">
+                <SelectItem value="Male">Male</SelectItem>
+                <SelectItem value="Female">Female</SelectItem>
+              </FormSelect>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormDatePicker name="dateOfBirth" label="Date of Birth" required />
+              <FormField name="mothersMaidenName" label="Mother's Maiden Name" required />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField name="employersName" label="Employer's Name" />
+              <FormField name="employersTelephoneNumber" label="Employer's Telephone" />
+            </div>
+
+            <FormTextarea name="employersAddress" label="Employer's Address" />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField name="city" label="City" required />
+              <FormField name="state" label="State" required />
+              <FormField name="country" label="Country" required />
+            </div>
+
+            <FormSelect name="nationality" label="Nationality" required placeholder="Select Nationality">
+              <SelectItem value="Nigerian">Nigerian</SelectItem>
+              <SelectItem value="Foreign">Foreign</SelectItem>
+              <SelectItem value="Both">Both</SelectItem>
+            </FormSelect>
+
+            <FormTextarea name="residentialAddress" label="Residential Address" required />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField name="GSMNo" label="Mobile Number" required />
+              <FormField name="email" label="Email" type="email" required />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField name="taxIDNo" label="Tax Identification Number" />
+              <FormField name="BVN" label="BVN" required maxLength={11} />
+            </div>
+
+            <FormSelect name="identificationType" label="ID Type" required placeholder="Choose ID Type">
+              <SelectItem value="International Passport">International Passport</SelectItem>
+              <SelectItem value="NIMC">NIMC</SelectItem>
+              <SelectItem value="Drivers Licence">Drivers Licence</SelectItem>
+              <SelectItem value="Voters Card">Voters Card</SelectItem>
+              <SelectItem value="NIN">NIN</SelectItem>
+            </FormSelect>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField name="idNumber" label="Identification Number" required />
+              <FormField name="issuingCountry" label="Issuing Country" required />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormDatePicker name="issuedDate" label="Issued Date" required />
+              <FormDatePicker name="expiryDate" label="Expiry Date" />
+            </div>
+
+            <FormSelect name="sourceOfIncome" label="Source of Income" required placeholder="Choose Income Source">
+              <SelectItem value="Salary or Business Income">Salary or Business Income</SelectItem>
+              <SelectItem value="Investments or Dividends">Investments or Dividends</SelectItem>
+              <SelectItem value="Other">Other (please specify)</SelectItem>
+            </FormSelect>
+
+            {formMethods.watch('sourceOfIncome') === 'Other' && (
+              <FormField name="sourceOfIncomeOther" label="Please specify other income source" required />
+            )}
+
+            <FormSelect name="annualIncomeRange" label="Annual Income Range" required placeholder="Select Income Range">
+              <SelectItem value="Less Than 1 Million">Less Than 1 Million</SelectItem>
+              <SelectItem value="1 Million - 4 Million">1 Million - 4 Million</SelectItem>
+              <SelectItem value="4.1 Million - 10 Million">4.1 Million - 10 Million</SelectItem>
+              <SelectItem value="More Than 10 Million">More Than 10 Million</SelectItem>
+            </FormSelect>
+
+            <FormSelect name="premiumPaymentSource" label="Premium Payment Source" required placeholder="Choose Payment Source">
+              <SelectItem value="Salary or Business Income">Salary or Business Income</SelectItem>
+              <SelectItem value="Investments or Dividends">Investments or Dividends</SelectItem>
+              <SelectItem value="Other">Other (please specify)</SelectItem>
+            </FormSelect>
+
+            {formMethods.watch('premiumPaymentSource') === 'Other' && (
+              <FormField name="premiumPaymentSourceOther" label="Please specify other payment source" required />
+            )}
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="firstName">First Name *</Label>
-              <Input
-                id="firstName"
-                {...formMethods.register('firstName')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="middleName">Middle Name *</Label>
-              <Input
-                id="middleName"
-                {...formMethods.register('middleName')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="lastName">Last Name *</Label>
-              <Input
-                id="lastName"
-                {...formMethods.register('lastName')}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="contactAddress">Contact Address *</Label>
-            <Textarea
-              id="contactAddress"
-              {...formMethods.register('contactAddress')}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="occupation">Occupation *</Label>
-              <Input
-                id="occupation"
-                {...formMethods.register('occupation')}
-              />
-            </div>
-            <div>
-              <Label>Gender *</Label>
-              <Select
-                value={formMethods.watch('gender')}
-                onValueChange={(value) => formMethods.setValue('gender', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DatePickerField
-              name="dateOfBirth"
-              label="Date of Birth *"
-            />
-            <div>
-              <Label htmlFor="mothersMaidenName">Mother's Maiden Name *</Label>
-              <Input
-                id="mothersMaidenName"
-                {...formMethods.register('mothersMaidenName')}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="employersName">Employer's Name</Label>
-              <Input
-                id="employersName"
-                {...formMethods.register('employersName')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="employersTelephoneNumber">Employer's Telephone</Label>
-              <Input
-                id="employersTelephoneNumber"
-                {...formMethods.register('employersTelephoneNumber')}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="employersAddress">Employer's Address</Label>
-            <Textarea
-              id="employersAddress"
-              {...formMethods.register('employersAddress')}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="city">City *</Label>
-              <Input
-                id="city"
-                {...formMethods.register('city')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="state">State *</Label>
-              <Input
-                id="state"
-                {...formMethods.register('state')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="country">Country *</Label>
-              <Input
-                id="country"
-                {...formMethods.register('country')}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label>Nationality *</Label>
-            <Select
-              value={formMethods.watch('nationality')}
-              onValueChange={(value) => formMethods.setValue('nationality', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Nationality" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Nigerian">Nigerian</SelectItem>
-                <SelectItem value="Foreign">Foreign</SelectItem>
-                <SelectItem value="Both">Both</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="residentialAddress">Residential Address *</Label>
-            <Textarea
-              id="residentialAddress"
-              {...formMethods.register('residentialAddress')}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="GSMNo">Mobile Number *</Label>
-              <Input
-                id="GSMNo"
-                {...formMethods.register('GSMNo')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                {...formMethods.register('email')}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="taxIDNo">Tax Identification Number</Label>
-              <Input
-                id="taxIDNo"
-                {...formMethods.register('taxIDNo')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="BVN">BVN *</Label>
-              <Input
-                id="BVN"
-                maxLength={11}
-                {...formMethods.register('BVN')}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label>ID Type *</Label>
-            <Select
-              value={formMethods.watch('identificationType')}
-              onValueChange={(value) => formMethods.setValue('identificationType', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose ID Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="International Passport">International Passport</SelectItem>
-                <SelectItem value="NIMC">NIMC</SelectItem>
-                <SelectItem value="Drivers Licence">Drivers Licence</SelectItem>
-                <SelectItem value="Voters Card">Voters Card</SelectItem>
-                <SelectItem value="NIN">NIN</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="idNumber">Identification Number *</Label>
-              <Input
-                id="idNumber"
-                {...formMethods.register('idNumber')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="issuingCountry">Issuing Country *</Label>
-              <Input
-                id="issuingCountry"
-                {...formMethods.register('issuingCountry')}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DatePickerField
-              name="issuedDate"
-              label="Issued Date *"
-            />
-            <DatePickerField
-              name="expiryDate"
-              label="Expiry Date"
-            />
-          </div>
-
-          <div>
-            <Label>Source of Income *</Label>
-            <Select
-              value={formMethods.watch('sourceOfIncome')}
-              onValueChange={(value) => formMethods.setValue('sourceOfIncome', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose Income Source" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Salary or Business Income">Salary or Business Income</SelectItem>
-                <SelectItem value="Investments or Dividends">Investments or Dividends</SelectItem>
-                <SelectItem value="Other">Other (please specify)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {formMethods.watch('sourceOfIncome') === 'Other' && (
-            <div>
-              <Label htmlFor="sourceOfIncomeOther">Please specify other income source *</Label>
-              <Input
-                id="sourceOfIncomeOther"
-                {...formMethods.register('sourceOfIncomeOther')}
-              />
-            </div>
-          )}
-
-          <div>
-            <Label>Annual Income Range *</Label>
-            <Select
-              value={formMethods.watch('annualIncomeRange')}
-              onValueChange={(value) => formMethods.setValue('annualIncomeRange', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Annual Income Range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Less Than 1 Million">Less Than 1 Million</SelectItem>
-                <SelectItem value="1 Million - 4 Million">1 Million - 4 Million</SelectItem>
-                <SelectItem value="4.1 Million - 10 Million">4.1 Million - 10 Million</SelectItem>
-                <SelectItem value="More Than 10 Million">More Than 10 Million</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label>Premium Payment Source *</Label>
-            <Select
-              value={formMethods.watch('premiumPaymentSource')}
-              onValueChange={(value) => formMethods.setValue('premiumPaymentSource', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose Income Source" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Salary or Business Income">Salary or Business Income</SelectItem>
-                <SelectItem value="Investments or Dividends">Investments or Dividends</SelectItem>
-                <SelectItem value="Other">Other (please specify)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {formMethods.watch('premiumPaymentSource') === 'Other' && (
-            <div>
-              <Label htmlFor="premiumPaymentSourceOther">Please specify other payment source *</Label>
-              <Input
-                id="premiumPaymentSourceOther"
-                {...formMethods.register('premiumPaymentSourceOther')}
-              />
-            </div>
-          )}
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'accounts',
       title: 'Account Details',
       component: (
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Local Account Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="localBankName">Bank Name *</Label>
-                <Input
-                  id="localBankName"
-                  {...formMethods.register('localBankName')}
-                />
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Local Account Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField name="localBankName" label="Bank Name" required />
+                <FormField name="localAccountNumber" label="Account Number" required />
               </div>
-              <div>
-                <Label htmlFor="localAccountNumber">Account Number *</Label>
-                <Input
-                  id="localAccountNumber"
-                  {...formMethods.register('localAccountNumber')}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField name="localBankBranch" label="Bank Branch" required />
+                <FormDatePicker name="localAccountOpeningDate" label="Account Opening Date" required />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="localBankBranch">Bank Branch *</Label>
-                <Input
-                  id="localBankBranch"
-                  {...formMethods.register('localBankBranch')}
-                />
-              </div>
-              <DatePickerField
-                name="localAccountOpeningDate"
-                label="Account Opening Date *"
-              />
-            </div>
-          </div>
 
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Foreign Account Details (Optional)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="foreignBankName">Bank Name</Label>
-                <Input
-                  id="foreignBankName"
-                  {...formMethods.register('foreignBankName')}
-                />
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Foreign Account Details (Optional)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField name="foreignBankName" label="Bank Name" />
+                <FormField name="foreignAccountNumber" label="Account Number" />
               </div>
-              <div>
-                <Label htmlFor="foreignAccountNumber">Account Number</Label>
-                <Input
-                  id="foreignAccountNumber"
-                  {...formMethods.register('foreignAccountNumber')}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField name="foreignBankBranch" label="Bank Branch" />
+                <FormDatePicker name="foreignAccountOpeningDate" label="Account Opening Date" />
               </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="foreignBankBranch">Bank Branch</Label>
-                <Input
-                  id="foreignBankBranch"
-                  {...formMethods.register('foreignBankBranch')}
-                />
-              </div>
-              <DatePickerField
-                name="foreignAccountOpeningDate"
-                label="Account Opening Date"
-              />
             </div>
           </div>
-        </div>
+        </FormProvider>
       )
     },
     {
@@ -617,7 +489,7 @@ const IndividualKYC: React.FC = () => {
       component: (
         <div className="space-y-4">
           <div>
-            <Label>Upload Means of Identification *</Label>
+            <Label>Upload Means of Identification <span className="required-asterisk">*</span></Label>
             <FileUpload
               accept="image/*,.pdf"
               onFileSelect={(file) => {
@@ -642,66 +514,64 @@ const IndividualKYC: React.FC = () => {
       id: 'declaration',
       title: 'Data Privacy & Declaration',
       component: (
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Data Privacy</h3>
-            <div className="space-y-2 text-sm">
-              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Data Privacy</h3>
+              <div className="space-y-2 text-sm">
+                <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+                <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Declaration</h3>
+              <div className="space-y-2 text-sm">
+                <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+                <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+                <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="agreeToDataPrivacy"
+                  checked={formMethods.watch('agreeToDataPrivacy')}
+                  onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked)}
+                />
+                <Label htmlFor="agreeToDataPrivacy" className="text-sm">
+                  I agree to the data privacy policy and declaration above <span className="required-asterisk">*</span>
+                </Label>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signature">
+                  Digital Signature <span className="required-asterisk">*</span>
+                </Label>
+                <Textarea
+                  id="signature"
+                  placeholder="Type your full name as digital signature"
+                  {...formMethods.register('signature')}
+                  className={cn(formMethods.formState.errors.signature && "border-destructive")}
+                />
+                {formMethods.formState.errors.signature && (
+                  <p className="text-sm text-destructive">{formMethods.formState.errors.signature.message?.toString()}</p>
+                )}
+              </div>
+
+              <div>
+                <Label>Date</Label>
+                <Input
+                  value={new Date().toLocaleDateString()}
+                  disabled
+                  className="bg-gray-50"
+                />
+              </div>
             </div>
           </div>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Declaration</h3>
-            <div className="space-y-2 text-sm">
-              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="agreeToDataPrivacy"
-                checked={formMethods.watch('agreeToDataPrivacy')}
-                onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked)}
-              />
-              <Label htmlFor="agreeToDataPrivacy" className="text-sm">
-                I agree to the data privacy policy and declaration above *
-              </Label>
-            </div>
-
-            <div>
-              <Label htmlFor="signature">Digital Signature *</Label>
-              <Textarea
-                id="signature"
-                placeholder="Type your full name as digital signature"
-                {...formMethods.register('signature')}
-              />
-            </div>
-
-            <div>
-              <Label>Date</Label>
-              <Input
-                value={new Date().toLocaleDateString()}
-                disabled
-                className="bg-gray-50"
-              />
-            </div>
-          </div>
-
-          {formMethods.watch('agreeToDataPrivacy') && (
-            <Button
-              type="button"
-              onClick={() => setShowSummary(true)}
-              className="w-full"
-            >
-              Submit Individual KYC Form
-            </Button>
-          )}
-        </div>
+        </FormProvider>
       )
     }
   ];

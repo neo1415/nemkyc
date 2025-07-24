@@ -29,7 +29,22 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
 
-  const nextStep = () => {
+  const nextStep = async () => {
+    // Trigger validation for current step
+    const isValid = await formMethods.trigger();
+    
+    if (!isValid) {
+      // Use toast if available
+      if (typeof window !== 'undefined' && (window as any).toast) {
+        (window as any).toast({
+          title: "Validation Error",
+          description: "Please fill all required fields before proceeding",
+          variant: "destructive"
+        });
+      }
+      return;
+    }
+    
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
