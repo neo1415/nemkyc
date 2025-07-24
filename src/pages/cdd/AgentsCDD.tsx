@@ -24,60 +24,96 @@ import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
+// Move schema outside component to prevent recreation on every render
 const agentsCDDSchema = yup.object().shape({
   // Personal Info
-  firstName: yup.string().required("First name is required"),
-  middleName: yup.string(),
-  lastName: yup.string().required("Last name is required"),
-  residentialAddress: yup.string().required("Residential address is required"),
+  firstName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("First name is required"),
+  middleName: yup.string().max(100, "Maximum 100 characters"),
+  lastName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Last name is required"),
+  residentialAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Residential address is required"),
   gender: yup.string().required("Gender is required"),
-  position: yup.string().required("Position/Role is required"),
-  dateOfBirth: yup.date().required("Date of birth is required").typeError("Please select a valid date"),
-  placeOfBirth: yup.string().required("Place of birth is required"),
+  position: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Position/Role is required"),
+  dateOfBirth: yup.date()
+    .max(subYears(new Date(), 18), "Must be at least 18 years old")
+    .required("Date of birth is required")
+    .typeError("Please select a valid date"),
+  placeOfBirth: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Place of birth is required"),
   otherSourceOfIncome: yup.string().required("Other source of income is required"),
   otherSourceOfIncomeOther: yup.string().when('otherSourceOfIncome', {
     is: 'other',
-    then: (schema) => schema.required("Please specify other income source"),
+    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other income source"),
     otherwise: (schema) => schema.notRequired()
   }),
-  nationality: yup.string().required("Nationality is required"),
-  phoneNumber: yup.string().required("Phone number is required"),
-  bvn: yup.string().required("BVN is required"),
-  taxIdNumber: yup.string(),
-  occupation: yup.string().required("Occupation is required"),
+  nationality: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Nationality is required"),
+  phoneNumber: yup.string()
+    .matches(/^[0-9+\-\(\)\s]+$/, "Only numbers and +, -, (, ), space allowed")
+    .max(15, "Maximum 15 characters")
+    .required("Phone number is required"),
+  bvn: yup.string()
+    .matches(/^[0-9]+$/, "Only numbers allowed")
+    .length(11, "BVN must be exactly 11 digits")
+    .required("BVN is required"),
+  taxIdNumber: yup.string().max(100, "Maximum 100 characters"),
+  occupation: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Occupation is required"),
   email: yup.string().email("Valid email is required").required("Email is required"),
   validMeansOfId: yup.string().required("Valid means of ID is required"),
-  identificationNumber: yup.string().required("Identification number is required"),
-  issuedDate: yup.date().required("Issued date is required").typeError("Please select a valid date"),
-  expiryDate: yup.date().nullable().typeError("Please select a valid date"),
-  issuingBody: yup.string().required("Issuing body is required"),
+  identificationNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Identification number is required"),
+  issuedDate: yup.date()
+    .max(new Date(), "Issue date cannot be in the future")
+    .required("Issued date is required")
+    .typeError("Please select a valid date"),
+  expiryDate: yup.date()
+    .min(new Date(), "Expiry date must be in the future")
+    .nullable()
+    .typeError("Please select a valid date"),
+  issuingBody: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Issuing body is required"),
   
   // Additional Info  
-  agentName: yup.string().required("Agent name is required"),
-  agentsOfficeAddress: yup.string().required("Agents office address is required"),
-  naicomLicenseNumber: yup.string().required("NAICOM license number is required"),
-  licenseIssuedDate: yup.date().required("License issued date is required").typeError("Please select a valid date"),
-  licenseExpiryDate: yup.date().required("License expiry date is required").typeError("Please select a valid date"),
+  agentName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Agent name is required"),
+  agentsOfficeAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Agents office address is required"),
+  naicomLicenseNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("NAICOM license number is required"),
+  licenseIssuedDate: yup.date()
+    .max(new Date(), "License issue date cannot be in the future")
+    .required("License issued date is required")
+    .typeError("Please select a valid date"),
+  licenseExpiryDate: yup.date()
+    .min(new Date(), "License expiry date must be in the future")
+    .required("License expiry date is required")
+    .typeError("Please select a valid date"),
   emailAddress: yup.string().email("Valid email is required").required("Email address is required"),
-  website: yup.string().required("Website is required"),
-  mobileNumber: yup.string().required("Mobile number is required"),
-  taxIdentificationNumber: yup.string(),
-  arianMembershipNumber: yup.string().required("ARIAN membership number is required"),
-  listOfAgentsApprovedPrincipals: yup.string().required("List of agents approved principals is required"),
+  website: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Website is required"),
+  mobileNumber: yup.string()
+    .matches(/^[0-9+\-\(\)\s]+$/, "Only numbers and +, -, (, ), space allowed")
+    .max(15, "Maximum 15 characters")
+    .required("Mobile number is required"),
+  taxIdentificationNumber: yup.string().max(100, "Maximum 100 characters"),
+  arianMembershipNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("ARIAN membership number is required"),
+  listOfAgentsApprovedPrincipals: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("List of agents approved principals is required"),
   
   // Financial Info
-  localAccountNumber: yup.string().required("Account number is required"),
-  localBankName: yup.string().required("Bank name is required"),
-  localBankBranch: yup.string().required("Bank branch is required"),
-  localAccountOpeningDate: yup.date().required("Account opening date is required").typeError("Please select a valid date"),
-  foreignAccountNumber: yup.string(),
-  foreignBankName: yup.string(),
-  foreignBankBranch: yup.string(),
-  foreignAccountOpeningDate: yup.date().nullable().typeError("Please select a valid date"),
+  localAccountNumber: yup.string()
+    .matches(/^[0-9]+$/, "Only numbers allowed")
+    .max(10, "Maximum 10 digits")
+    .required("Account number is required"),
+  localBankName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Bank name is required"),
+  localBankBranch: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Bank branch is required"),
+  localAccountOpeningDate: yup.date()
+    .max(new Date(), "Account opening date cannot be in the future")
+    .required("Account opening date is required")
+    .typeError("Please select a valid date"),
+  foreignAccountNumber: yup.string()
+    .matches(/^[0-9]*$/, "Only numbers allowed")
+    .max(10, "Maximum 10 digits"),
+  foreignBankName: yup.string().max(100, "Maximum 100 characters"),
+  foreignBankBranch: yup.string().max(100, "Maximum 100 characters"),
+  foreignAccountOpeningDate: yup.date()
+    .max(new Date(), "Account opening date cannot be in the future")
+    .nullable()
+    .typeError("Please select a valid date"),
   
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  signature: yup.string().required("Digital signature is required")
+  signature: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Digital signature is required")
 });
 
 const defaultValues = {
