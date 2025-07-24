@@ -1,32 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { FormField, PhoneField, NumericField, FormTextarea, FormSelect, DateField } from '@/components/form/FormFieldControllers';
 import { useForm, FormProvider } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
-import { format, subYears } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
-import LoadingSpinner from '@/components/common/LoadingSpinner';
+import { FormField, PhoneField, NumericField, FormTextarea, FormSelect, DateField } from '@/components/form/FormFieldControllers';
+import { subYears } from 'date-fns';
 
-// Move schema outside component to prevent recreation on every render
+// Form validation schema - moved outside component to prevent re-creation
 const agentsCDDSchema = yup.object().shape({
-  // Personal Info
+  // Personal Info - based on required fields marked with * in the form
   firstName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("First name is required"),
   middleName: yup.string().max(100, "Maximum 100 characters"),
   lastName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Last name is required"),
@@ -40,7 +33,7 @@ const agentsCDDSchema = yup.object().shape({
   placeOfBirth: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Place of birth is required"),
   otherSourceOfIncome: yup.string().required("Other source of income is required"),
   otherSourceOfIncomeOther: yup.string().when('otherSourceOfIncome', {
-    is: 'other',
+    is: 'Other',
     then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Please specify other income source"),
     otherwise: (schema) => schema.notRequired()
   }),
@@ -162,16 +155,15 @@ const defaultValues = {
 };
 
 const AgentsCDD: React.FC = () => {
-  const [showSummary, setShowSummary] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  
   const { toast } = useToast();
-  
-  const {
-    handleSubmitWithAuth,
-    showSuccess,
-    setShowSuccess,
-    isSubmitting
+  const [showSummary, setShowSummary] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const { 
+    handleSubmitWithAuth, 
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
   } = useAuthRequiredSubmit();
 
   const formMethods = useForm<any>({
@@ -179,25 +171,6 @@ const AgentsCDD: React.FC = () => {
     defaultValues,
     mode: 'onChange'
   });
-
-  const { saveDraft, clearDraft } = useFormDraft('agents-cdd', formMethods);
-  const watchedValues = formMethods.watch();
-
-  // Auto-save draft
-  React.useEffect(() => {
-    const subscription = formMethods.watch((data) => {
-      saveDraft(data);
-    });
-    return () => subscription.unsubscribe();
-  }, [formMethods, saveDraft]);
-
-  // Post-auth loading effect
-  useEffect(() => {
-    const submissionInProgress = sessionStorage.getItem('submissionInProgress');
-    if (submissionInProgress) {
-      setShowSummary(false);
-    }
-  }, []);
 
   // Step validation function
   const validateCurrentStep = async (stepId: string): Promise<boolean> => {
@@ -232,22 +205,53 @@ const AgentsCDD: React.FC = () => {
   // Enhanced form methods with validation
   const enhancedFormMethods = {
     ...formMethods,
-    validateCurrentStep,
-    getStepFields
+    validateCurrentStep
   };
+
+  const { saveDraft, clearDraft } = useFormDraft('agents-cdd', formMethods);
+
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
+
+  // Auto-save draft
+  useEffect(() => {
+    const subscription = formMethods.watch((data) => {
+      saveDraft(data);
+    });
+    return () => subscription.unsubscribe();
+  }, [formMethods, saveDraft]);
+
   const handleSubmit = async (data: any) => {
-    // Upload files to Firebase Storage first
+    // Prepare file upload data
     const fileUploadPromises: Array<Promise<[string, string]>> = [];
     
-    Object.entries(uploadedFiles).forEach(([key, file]) => {
-      fileUploadPromises.push(
-        uploadFile(file, 'agents-cdd').then(url => [key + 'Url', url])
-      );
-    });
-    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
+        fileUploadPromises.push(
+          uploadFile(file, `agents-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
+        );
+      }
+    }
+
     const fileResults = await Promise.all(fileUploadPromises);
     const fileUrls = Object.fromEntries(fileResults);
-    
+
     // Sanitize data - remove undefined values to prevent Firebase errors
     const sanitizeData = (obj: any): any => {
       const cleaned: any = {};
@@ -265,11 +269,11 @@ const AgentsCDD: React.FC = () => {
       ...data,
       ...fileUrls,
       status: 'processing',
-      formType: 'Agents-CDD'
+      formType: 'Agents CDD'
     });
 
     console.log('Sanitized final data:', finalData);
-    await handleSubmitWithAuth(finalData, 'Agents-CDD');
+    await handleSubmitWithAuth(finalData, 'Agents CDD');
     clearDraft();
     setShowSummary(false);
   };
@@ -278,42 +282,12 @@ const AgentsCDD: React.FC = () => {
     setShowSummary(true);
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
-    return (
-      <div className="space-y-2">
-        <Label>{label}</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !value && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <ReactCalendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={(date) => formMethods.setValue(name, date)}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-    );
-  };
+  const watchedValues = formMethods.watch();
 
   const steps = [
     {
       id: 'personal',
-      title: 'Personal Info',
+      title: 'Personal Information',
       component: (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -321,15 +295,18 @@ const AgentsCDD: React.FC = () => {
               name="firstName"
               label="First Name"
               required
+              placeholder="Enter first name"
             />
             <FormField
               name="middleName"
               label="Middle Name"
+              placeholder="Enter middle name"
             />
             <FormField
               name="lastName"
               label="Last Name"
               required
+              placeholder="Enter last name"
             />
           </div>
           
@@ -337,6 +314,7 @@ const AgentsCDD: React.FC = () => {
             name="residentialAddress"
             label="Residential Address"
             required
+            placeholder="Enter residential address"
           />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -344,15 +322,17 @@ const AgentsCDD: React.FC = () => {
               name="gender"
               label="Gender"
               required
+              placeholder="Select Gender"
               options={[
-                { value: "male", label: "Male" },
-                { value: "female", label: "Female" }
+                { value: "Male", label: "Male" },
+                { value: "Female", label: "Female" }
               ]}
             />
             <FormField
               name="position"
               label="Position/Role"
               required
+              placeholder="Enter position/role"
             />
           </div>
           
@@ -367,6 +347,7 @@ const AgentsCDD: React.FC = () => {
               name="placeOfBirth"
               label="Place of Birth"
               required
+              placeholder="Enter place of birth"
             />
           </div>
           
@@ -374,18 +355,20 @@ const AgentsCDD: React.FC = () => {
             name="otherSourceOfIncome"
             label="Other Source of Income"
             required
+            placeholder="Select income source"
             options={[
-              { value: "salary", label: "Salary or Business Income" },
-              { value: "investments", label: "Investments or Dividends" },
-              { value: "other", label: "Other (please specify)" }
+              { value: "Salary or Business Income", label: "Salary or Business Income" },
+              { value: "Investments or Dividends", label: "Investments or Dividends" },
+              { value: "Other", label: "Other (please specify)" }
             ]}
           />
           
-          {watchedValues.otherSourceOfIncome === 'other' && (
+          {formMethods.watch('otherSourceOfIncome') === 'Other' && (
             <FormField
               name="otherSourceOfIncomeOther"
               label="Please specify income source"
               required
+              placeholder="Please specify your income source"
             />
           )}
           
@@ -394,11 +377,13 @@ const AgentsCDD: React.FC = () => {
               name="nationality"
               label="Nationality"
               required
+              placeholder="Enter nationality"
             />
             <PhoneField
               name="phoneNumber"
               label="Phone Number"
               required
+              placeholder="Enter phone number"
             />
           </div>
           
@@ -408,15 +393,18 @@ const AgentsCDD: React.FC = () => {
               label="BVN"
               required
               maxLength={11}
+              placeholder="Enter BVN"
             />
             <FormField
               name="taxIdNumber"
               label="Tax ID Number"
+              placeholder="Enter tax ID (optional)"
             />
             <FormField
               name="occupation"
               label="Occupation"
               required
+              placeholder="Enter occupation"
             />
           </div>
           
@@ -425,17 +413,19 @@ const AgentsCDD: React.FC = () => {
             label="Email"
             type="email"
             required
+            placeholder="Enter email address"
           />
           
           <FormSelect
             name="validMeansOfId"
             label="Valid Means of ID"
             required
+            placeholder="Select ID type"
             options={[
-              { value: "passport", label: "International Passport" },
-              { value: "nimc", label: "NIMC" },
-              { value: "driversLicense", label: "Drivers Licence" },
-              { value: "votersCard", label: "Voters Card" }
+              { value: "International Passport", label: "International Passport" },
+              { value: "NIMC", label: "NIMC" },
+              { value: "Drivers Licence", label: "Drivers Licence" },
+              { value: "Voters Card", label: "Voters Card" }
             ]}
           />
           
@@ -444,6 +434,7 @@ const AgentsCDD: React.FC = () => {
               name="identificationNumber"
               label="Identification Number"
               required
+              placeholder="Enter ID number"
             />
             <DateField
               name="issuedDate"
@@ -460,6 +451,7 @@ const AgentsCDD: React.FC = () => {
               name="issuingBody"
               label="Issuing Body"
               required
+              placeholder="Enter issuing body"
             />
           </div>
         </div>
@@ -475,11 +467,13 @@ const AgentsCDD: React.FC = () => {
               name="agentName"
               label="Agent Name"
               required
+              placeholder="Enter agent name"
             />
             <FormField
               name="naicomLicenseNumber"
               label="NAICOM License Number (RIA)"
               required
+              placeholder="Enter NAICOM license number"
             />
           </div>
           
@@ -487,6 +481,7 @@ const AgentsCDD: React.FC = () => {
             name="agentsOfficeAddress"
             label="Agents Office Address"
             required
+            placeholder="Enter agents office address"
           />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -510,11 +505,13 @@ const AgentsCDD: React.FC = () => {
               label="Email Address"
               type="email"
               required
+              placeholder="Enter email address"
             />
             <FormField
               name="website"
               label="Website"
               required
+              placeholder="Enter website URL"
             />
           </div>
           
@@ -523,15 +520,18 @@ const AgentsCDD: React.FC = () => {
               name="mobileNumber"
               label="Mobile Number"
               required
+              placeholder="Enter mobile number"
             />
             <FormField
               name="taxIdentificationNumber"
               label="Tax Identification Number"
+              placeholder="Enter tax ID (optional)"
             />
             <FormField
               name="arianMembershipNumber"
               label="ARIAN Membership Number"
               required
+              placeholder="Enter ARIAN number"
             />
           </div>
           
@@ -539,6 +539,7 @@ const AgentsCDD: React.FC = () => {
             name="listOfAgentsApprovedPrincipals"
             label="List of Agents Approved Principals (Insurers)"
             required
+            placeholder="Enter list of approved principals"
           />
         </div>
       )
@@ -556,11 +557,13 @@ const AgentsCDD: React.FC = () => {
                 label="Account Number"
                 required
                 maxLength={10}
+                placeholder="Enter account number"
               />
               <FormField
                 name="localBankName"
                 label="Bank Name"
                 required
+                placeholder="Enter bank name"
               />
             </div>
             
@@ -569,6 +572,7 @@ const AgentsCDD: React.FC = () => {
                 name="localBankBranch"
                 label="Bank Branch"
                 required
+                placeholder="Enter bank branch"
               />
               <DateField
                 name="localAccountOpeningDate"
@@ -586,10 +590,12 @@ const AgentsCDD: React.FC = () => {
                 name="foreignAccountNumber"
                 label="Account Number"
                 maxLength={10}
+                placeholder="Enter account number (optional)"
               />
               <FormField
                 name="foreignBankName"
                 label="Bank Name"
+                placeholder="Enter bank name (optional)"
               />
             </div>
             
@@ -597,6 +603,7 @@ const AgentsCDD: React.FC = () => {
               <FormField
                 name="foreignBankBranch"
                 label="Bank Branch"
+                placeholder="Enter bank branch (optional)"
               />
               <DateField
                 name="foreignAccountOpeningDate"
@@ -619,9 +626,9 @@ const AgentsCDD: React.FC = () => {
             <FileUpload
               label="Valid Means of Identification"
               required
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, validIdFile: file }))}
-              onFileRemove={() => setUploadedFiles(prev => { const updated = { ...prev }; delete updated.validIdFile; return updated; })}
-              currentFile={uploadedFiles.validIdFile}
+              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, identification: file }))}
+              onFileRemove={() => setUploadedFiles(prev => { const updated = { ...prev }; delete updated.identification; return updated; })}
+              currentFile={uploadedFiles.identification}
               accept="image/jpeg,image/png,application/pdf"
               maxSize={3 * 1024 * 1024}
             />
@@ -629,9 +636,9 @@ const AgentsCDD: React.FC = () => {
             <FileUpload
               label="Passport Photograph"
               required
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, passportFile: file }))}
-              onFileRemove={() => setUploadedFiles(prev => { const updated = { ...prev }; delete updated.passportFile; return updated; })}
-              currentFile={uploadedFiles.passportFile}
+              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, passport: file }))}
+              onFileRemove={() => setUploadedFiles(prev => { const updated = { ...prev }; delete updated.passport; return updated; })}
+              currentFile={uploadedFiles.passport}
               accept="image/jpeg,image/png"
               maxSize={3 * 1024 * 1024}
             />
@@ -663,7 +670,7 @@ const AgentsCDD: React.FC = () => {
           <div className="flex items-start space-x-2">
             <Checkbox
               id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy}
+              checked={formMethods.watch('agreeToDataPrivacy')}
               onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked === true)}
             />
             <Label htmlFor="agreeToDataPrivacy" className="text-sm">
@@ -694,11 +701,12 @@ const AgentsCDD: React.FC = () => {
           <MultiStepForm
             steps={steps}
             onSubmit={onFinalSubmit} 
-            isSubmitting={isSubmitting}
+            isSubmitting={authSubmitting}
             submitButtonText="Submit CDD Form"
             formMethods={enhancedFormMethods}
           />
         </FormProvider>
+
         {/* Summary Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -809,10 +817,10 @@ const AgentsCDD: React.FC = () => {
                     const formData = formMethods.getValues();
                     handleSubmit(formData);
                   }}
-                  disabled={isSubmitting}
+                  disabled={authSubmitting}
                   className="bg-primary text-primary-foreground"
                 >
-                  {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
+                  {authSubmitting ? 'Submitting...' : 'Confirm & Submit'}
                 </Button>
               </div>
             </div>
@@ -821,11 +829,11 @@ const AgentsCDD: React.FC = () => {
 
         {/* Success Modal */}
         <SuccessModal
-          isOpen={showSuccess}
-          onClose={() => setShowSuccess()}
+          isOpen={authShowSuccess}
+          onClose={() => setAuthShowSuccess()}
           title="Form Submitted Successfully!"
           message="Your Agents CDD form has been submitted and is being processed."
-          isLoading={isSubmitting}
+          isLoading={authSubmitting}
           loadingMessage="Submitting your form..."
         />
       </div>
