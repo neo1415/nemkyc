@@ -315,7 +315,7 @@ const BrokersCDD: React.FC = () => {
     setShowSummary(true);
   };
 
-// ========== FORM COMPONENTS (OUTSIDE MAIN COMPONENT) ==========
+// ========== FORM COMPONENTS (MOVED OUTSIDE TO PREVENT FOCUS LOSS) ==========
 const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
   const { register, formState: { errors }, clearErrors } = useFormContext();
   const error = get(errors, name);
