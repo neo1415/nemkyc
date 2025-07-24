@@ -914,7 +914,7 @@ const BrokersCDD: React.FC = () => {
                     ...prev,
                     certificateOfIncorporation: file
                   }));
-                  formMethods.setValue('certificateOfIncorporation', file);
+                  formMethods.setValue('certificateOfIncorporation', file, { shouldValidate: true });
                   if (formMethods.formState.errors.certificateOfIncorporation) {
                     formMethods.clearErrors('certificateOfIncorporation');
                   }
@@ -943,7 +943,7 @@ const BrokersCDD: React.FC = () => {
                     ...prev,
                     director1Id: file
                   }));
-                  formMethods.setValue('director1Id', file);
+                  formMethods.setValue('director1Id', file, { shouldValidate: true });
                   if (formMethods.formState.errors.director1Id) {
                     formMethods.clearErrors('director1Id');
                   }
@@ -972,7 +972,7 @@ const BrokersCDD: React.FC = () => {
                     ...prev,
                     director2Id: file
                   }));
-                  formMethods.setValue('director2Id', file);
+                  formMethods.setValue('director2Id', file, { shouldValidate: true });
                   if (formMethods.formState.errors.director2Id) {
                     formMethods.clearErrors('director2Id');
                   }
