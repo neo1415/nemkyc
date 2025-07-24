@@ -174,7 +174,7 @@ const CorporateKYC: React.FC = () => {
       case 'company':
         return ['branchOffice', 'insured', 'officeAddress', 'ownershipOfCompany', 'contactPerson', 'website', 
                 'incorporationNumber', 'incorporationState', 'dateOfIncorporationRegistration', 'BVN', 
-                'contactPersonNo', 'taxIdNo', 'email', 'natureOfBusiness', 'estimatedTurnover', 
+                'contactPersonNo', 'email', 'natureOfBusiness', 'estimatedTurnover', 
                 'premiumPaymentSource', 'premiumPaymentSourceOther'];
       case 'directors':
         return ['directors'];
@@ -305,62 +305,38 @@ const CorporateKYC: React.FC = () => {
       component: (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="branchOffice">
-                NEM Branch Office <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="branchOffice"
-                {...formMethods.register('branchOffice')}
-                className={formMethods.formState.errors.branchOffice ? "border-red-500" : ""}
-              />
-              {formMethods.formState.errors.branchOffice && (
-                <p className="text-sm text-red-500 mt-1">
-                  {formMethods.formState.errors.branchOffice.message as string}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="insured">
-                Insured <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="insured"
-                {...formMethods.register('insured')}
-                className={formMethods.formState.errors.insured ? "border-red-500" : ""}
-              />
-              {formMethods.formState.errors.insured && (
-                <p className="text-sm text-red-500 mt-1">
-                  {formMethods.formState.errors.insured.message as string}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="officeAddress">Office Address *</Label>
-            <Textarea
-              id="officeAddress"
-              {...formMethods.register('officeAddress')}
+            <FormField 
+              name="branchOffice" 
+              label="NEM Branch Office" 
+              required 
+              placeholder="Enter branch office"
+            />
+            <FormField 
+              name="insured" 
+              label="Insured" 
+              required 
+              placeholder="Enter insured name"
             />
           </div>
 
-          <div>
-            <Label>Ownership of Company *</Label>
-            <Select
-              value={formMethods.watch('ownershipOfCompany')}
-              onValueChange={(value) => formMethods.setValue('ownershipOfCompany', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Ownership Of Company" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Nigerian">Nigerian</SelectItem>
-                <SelectItem value="Foreign">Foreign</SelectItem>
-                <SelectItem value="Both">Both</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormTextarea
+            name="officeAddress"
+            label="Office Address"
+            required
+            placeholder="Enter office address"
+          />
+
+          <FormSelect
+            name="ownershipOfCompany"
+            label="Ownership of Company"
+            required
+            placeholder="Select Ownership Of Company"
+            options={[
+              { value: "Nigerian", label: "Nigerian" },
+              { value: "Foreign", label: "Foreign" },
+              { value: "Both", label: "Both" }
+            ]}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -843,15 +819,6 @@ const CorporateKYC: React.FC = () => {
               {...formMethods.register('signature')}
             />
           </div>
-          {formMethods.watch('agreeToDataPrivacy') && (
-            <Button
-              type="button"
-              onClick={() => setShowSummary(true)}
-              className="w-full"
-            >
-              Submit Corporate KYC Form
-            </Button>
-          )}
         </div>
       )
     }

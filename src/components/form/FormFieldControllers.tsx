@@ -36,9 +36,17 @@ export const FormField: React.FC<FormFieldProps> = ({
   type = "text",
   className = ""
 }) => {
-  const { register, formState: { errors, touchedFields } } = useFormContext();
+  const { register, formState: { errors, touchedFields }, clearErrors } = useFormContext();
   const error = errors[name];
   const isTouched = touchedFields[name];
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (error) {
+      clearErrors(name);
+    }
+    // Call the register's onChange
+    register(name).onChange(e);
+  };
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -50,7 +58,7 @@ export const FormField: React.FC<FormFieldProps> = ({
         id={name}
         type={type}
         placeholder={placeholder}
-        {...register(name)}
+        {...register(name, { onChange: handleChange })}
         className={error ? "border-red-500" : ""}
       />
       {error && isTouched && (
@@ -67,12 +75,15 @@ export const PhoneField: React.FC<FormFieldProps> = ({
   placeholder = "Enter phone number",
   className = ""
 }) => {
-  const { register, formState: { errors, touchedFields }, setValue, watch } = useFormContext();
+  const { register, formState: { errors, touchedFields }, setValue, watch, clearErrors } = useFormContext();
   const error = errors[name];
   const isTouched = touchedFields[name];
   const value = watch(name);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (error) {
+      clearErrors(name);
+    }
     const input = e.target.value;
     // Only allow numbers, +, -, (, ), and spaces
     const filtered = input.replace(/[^0-9+\-() ]/g, '');
@@ -111,12 +122,15 @@ export const NumericField: React.FC<FormFieldProps & { maxLength?: number }> = (
   className = "",
   maxLength
 }) => {
-  const { register, formState: { errors, touchedFields }, setValue, watch } = useFormContext();
+  const { register, formState: { errors, touchedFields }, setValue, watch, clearErrors } = useFormContext();
   const error = errors[name];
   const isTouched = touchedFields[name];
   const value = watch(name);
 
   const handleNumericChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (error) {
+      clearErrors(name);
+    }
     const input = e.target.value;
     // Only allow numbers
     const filtered = input.replace(/[^0-9]/g, '');
@@ -155,12 +169,15 @@ export const FormTextarea: React.FC<FormTextareaProps> = ({
   rows = 3,
   className = ""
 }) => {
-  const { register, formState: { errors, touchedFields }, setValue, watch } = useFormContext();
+  const { register, formState: { errors, touchedFields }, setValue, watch, clearErrors } = useFormContext();
   const error = errors[name];
   const isTouched = touchedFields[name];
   const value = watch(name);
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (error) {
+      clearErrors(name);
+    }
     const input = e.target.value;
     // Limit to 2500 characters for textareas
     const limited = input.slice(0, 2500);
@@ -200,10 +217,17 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   options,
   className = ""
 }) => {
-  const { formState: { errors, touchedFields }, setValue, watch } = useFormContext();
+  const { formState: { errors, touchedFields }, setValue, watch, clearErrors } = useFormContext();
   const error = errors[name];
   const isTouched = touchedFields[name];
   const value = watch(name);
+
+  const handleValueChange = (selectedValue: string) => {
+    if (error) {
+      clearErrors(name);
+    }
+    setValue(name, selectedValue);
+  };
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -211,11 +235,11 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </Label>
-      <Select value={value || ""} onValueChange={(value) => setValue(name, value)}>
+      <Select value={value || ""} onValueChange={handleValueChange}>
         <SelectTrigger className={error ? "border-red-500" : ""}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-white border border-gray-300 shadow-lg z-50">
           {options.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}
@@ -243,16 +267,22 @@ export const DateField: React.FC<FormFieldProps & {
   disablePast = false,
   minAge
 }) => {
-  const { formState: { errors, touchedFields }, setValue, watch } = useFormContext();
+  const { formState: { errors, touchedFields }, setValue, watch, clearErrors } = useFormContext();
   const error = errors[name];
   const isTouched = touchedFields[name];
   const value = watch(name);
 
   const handleDateSelect = (date: Date | undefined) => {
+    if (error) {
+      clearErrors(name);
+    }
     setValue(name, date);
   };
 
   const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (error) {
+      clearErrors(name);
+    }
     const inputValue = e.target.value;
     if (inputValue) {
       const date = new Date(inputValue);
