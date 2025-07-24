@@ -426,7 +426,27 @@ const BrokersCDD: React.FC = () => {
   // Step field mappings for validation
   const stepFieldMappings = {
     0: ['companyName', 'registeredAddress', 'city', 'state', 'country', 'email', 'website', 'contactPersonName', 'contactPersonNumber', 'taxId', 'vatRegistrationNumber', 'incorporationNumber', 'incorporationDate', 'incorporationState', 'businessNature', 'bvn'],
-    1: ['directors'],
+    1: fields.flatMap((_, index) => [
+      `directors.${index}.title`,
+      `directors.${index}.gender`,
+      `directors.${index}.firstName`,
+      `directors.${index}.middleName`,
+      `directors.${index}.lastName`,
+      `directors.${index}.dateOfBirth`,
+      `directors.${index}.placeOfBirth`,
+      `directors.${index}.nationality`,
+      `directors.${index}.country`,
+      `directors.${index}.occupation`,
+      `directors.${index}.email`,
+      `directors.${index}.phoneNumber`,
+      `directors.${index}.bvn`,
+      `directors.${index}.residentialAddress`,
+      `directors.${index}.idType`,
+      `directors.${index}.identificationNumber`,
+      `directors.${index}.issuingBody`,
+      `directors.${index}.issuedDate`,
+      `directors.${index}.incomeSource`
+    ]),
     2: ['localAccountNumber', 'localBankName', 'localBankBranch', 'localAccountOpeningDate', 'certificateOfIncorporation', 'director1Id', 'director2Id'],
     3: ['agreeToDataPrivacy', 'signature']
   };
