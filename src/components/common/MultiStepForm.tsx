@@ -39,7 +39,7 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
       // Log validation errors to console for debugging
       const errors = formMethods.formState.errors;
       if (!isValid && Object.keys(errors).length > 0) {
-        console.log(`Validation failed for step "${steps[currentStep].id}". Errors:`, errors);
+        console.log(`Validation failed for step "${steps[currentStep].id}". Errors:`, JSON.stringify(errors, null, 2));
         
         // Show toast notification for validation errors
         toast({
