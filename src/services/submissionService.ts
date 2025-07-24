@@ -132,7 +132,7 @@ const getFirestoreCollection = (formType: string): string => {
   
   // KYC forms
   if (formTypeLower.includes('individual') && formTypeLower.includes('kyc')) return 'Individual-kyc-form';
-  if (formTypeLower.includes('corporate') && formTypeLower.includes('kyc')) return 'Corporate-kyc-form';
+  if (formTypeLower.includes('corporate') && formTypeLower.includes('kyc')) return 'corporate-kyc-form';
   
   // CDD forms
   if (formTypeLower.includes('individual') && formTypeLower.includes('cdd')) return 'individualCDD';
