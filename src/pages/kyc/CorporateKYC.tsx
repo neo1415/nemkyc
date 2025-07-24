@@ -16,6 +16,7 @@ import { CalendarIcon, Plus, Trash2, Check, Loader2, FileText } from 'lucide-rea
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { get } from 'lodash';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
@@ -191,7 +192,7 @@ const defaultValues = {
 // Reusable form components (moved outside component to prevent re-creation)
 const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
   const { register, formState: { errors }, clearErrors } = useFormContext();
-  const error = errors[name];
+  const error = get(errors, name);
   
   return (
     <div className="space-y-2">
@@ -223,7 +224,7 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
 const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
   const { register, watch, formState: { errors }, clearErrors } = useFormContext();
   const currentValue = watch(name) || '';
-  const error = errors[name];
+  const error = get(errors, name);
   
   return (
     <div className="space-y-2">
@@ -258,7 +259,7 @@ const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...prop
 const FormSelect = ({ name, label, required = false, options, placeholder, ...props }: any) => {
   const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
   const value = watch(name);
-  const error = errors[name];
+  const error = get(errors, name);
   
   return (
     <div className="space-y-2">
@@ -297,7 +298,7 @@ const FormSelect = ({ name, label, required = false, options, placeholder, ...pr
 const FormDatePicker = ({ name, label, required = false }: any) => {
   const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
   const value = watch(name);
-  const error = errors[name];
+  const error = get(errors, name);
   
   return (
     <div className="space-y-2">
