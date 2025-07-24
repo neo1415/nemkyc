@@ -124,6 +124,12 @@ All colors MUST be HSL.
   }
 }
 
+/* Required field asterisk styling */
+.required-asterisk {
+  color: hsl(var(--destructive));
+  margin-left: 2px;
+}
+
 #lovable-badge {
     position: fixed;
     bottom: 10px;
