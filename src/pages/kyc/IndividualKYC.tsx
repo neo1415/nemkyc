@@ -37,17 +37,13 @@ const individualKYCSchema = yup.object().shape({
   gender: yup.string().required("Gender is required"),
   dateOfBirth: yup.date().max(subYears(new Date(), 18), "Must be at least 18 years old").required("Date of birth is required"),
   mothersMaidenName: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Mother's maiden name is required"),
-  employersName: yup.string().nullable().transform((value) => value || null).when('employersName', {
-    is: (value: string | null) => value && value.length > 0,
-    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
-    otherwise: (schema) => schema.nullable()
-  }),
-  employersTelephoneNumber: yup.string().nullable().transform((value) => value || null).when('employersTelephoneNumber', {
+  employersName: yup.string().nullable().transform((value) => value || null),
+  employersTelephoneNumber: yup.string().nullable().transform((value) => value || null).when('employersName', {
     is: (value: string | null) => value && value.length > 0,
     then: (schema) => schema.matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters"),
     otherwise: (schema) => schema.nullable()
   }),
-  employersAddress: yup.string().nullable().transform((value) => value || null).when('employersAddress', {
+  employersAddress: yup.string().nullable().transform((value) => value || null).when('employersName', {
     is: (value: string | null) => value && value.length > 0,
     then: (schema) => schema.min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters"),
     otherwise: (schema) => schema.nullable()
@@ -59,18 +55,14 @@ const individualKYCSchema = yup.object().shape({
   residentialAddress: yup.string().min(3, "Minimum 3 characters").max(2500, "Maximum 2500 characters").required("Residential address is required"),
   GSMNo: yup.string().matches(/^[\d\+\-\(\)\s]+$/, "Invalid phone number format").max(15, "Maximum 15 characters").required("Mobile number is required"),
   email: yup.string().email("Valid email is required").max(100, "Maximum 100 characters").required("Email is required"),
-  taxIDNo: yup.string().nullable().transform((value) => value || null).when('taxIDNo', {
-    is: (value: string | null) => value && value.length > 0,
-    then: (schema) => schema.min(2, "Minimum 2 characters").max(100, "Maximum 100 characters"),
-    otherwise: (schema) => schema.nullable()
-  }),
+  taxIDNo: yup.string().nullable().transform((value) => value || null),
   BVN: yup.string().matches(/^\d{11}$/, "BVN must be exactly 11 digits").required("BVN is required"),
   identificationType: yup.string().required("ID type is required"),
   idNumber: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Identification number is required"),
   issuingCountry: yup.string().min(2, "Minimum 2 characters").max(100, "Maximum 100 characters").required("Issuing country is required"),
   issuedDate: yup.date().max(new Date(), "Date must be in the past").required("Issued date is required"),
-  expiryDate: yup.date().nullable().transform((value) => value || null).when('expiryDate', {
-    is: (value: Date | null) => value instanceof Date,
+  expiryDate: yup.date().nullable().transform((value) => value || null).when('identificationType', {
+    is: (value: string) => value && value !== 'NIN',
     then: (schema) => schema.min(new Date(), "Expiry date must be in the future"),
     otherwise: (schema) => schema.nullable()
   }),
