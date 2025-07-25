@@ -5,7 +5,7 @@ const AdminCorporateKYCTable: React.FC = () => {
   return (
     <AdminUnifiedTable 
       collectionName="corporate-kyc-form"
-      title="Corporate CDD Management"
+      title="Corporate KYC Management"
       isClaim={false}
     />
   );
