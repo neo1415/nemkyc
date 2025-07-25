@@ -33,7 +33,7 @@ const Unauthorized: React.FC = () => {
           <Link to="/">
             <Button variant="outline" className="w-full">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Return to Home
+              Return Home
             </Button>
           </Link>
         </CardContent>
