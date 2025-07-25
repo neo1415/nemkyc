@@ -882,7 +882,7 @@ const AgentsCDD: React.FC = () => {
     return (
       <SuccessModal
         isOpen={showSuccess}
-        onClose={() => setShowSuccess(false)}
+        onClose={() => setShowSuccess()}
         title="Agents CDD Submitted Successfully!"
         message="Your Agents Customer Due Diligence form has been submitted and is being processed. You will receive a confirmation email shortly."
       />
@@ -901,8 +901,7 @@ const AgentsCDD: React.FC = () => {
             steps={steps}
             onSubmit={onFinalSubmit}
             stepFieldMappings={stepFieldMappings}
-            formTitle="Agents Customer Due Diligence (CDD)"
-            formDescription="Please fill out this form completely and accurately. All required fields must be completed."
+            formMethods={formMethods}
           />
         </FormProvider>
 
