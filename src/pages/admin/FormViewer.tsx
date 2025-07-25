@@ -119,7 +119,7 @@ const FormViewer: React.FC = () => {
         }
         return 'partners-cdd';
       },
-      'individual-kyc-form': 'individual-kyc',
+      'Individual-kyc-form': 'individual-kyc',
       'corporate-kyc-form': 'corporate-kyc',
       'motor-claims': 'motor-claims',
       'fire-claims': 'fire-special-perils-claims',
