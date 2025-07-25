@@ -470,12 +470,35 @@ const BrokersCDD: React.FC = () => {
     }
   }, []);
 
-  // Data sanitization (remove undefined values)
+  // Data sanitization (remove undefined values and serialize dates)
   const sanitizeData = (data: any) => {
     const sanitized: any = {};
     Object.keys(data).forEach(key => {
       if (data[key] !== undefined) {
-        sanitized[key] = data[key];
+        // Convert Date objects to ISO strings for serialization
+        if (data[key] instanceof Date) {
+          sanitized[key] = data[key].toISOString();
+        } else if (Array.isArray(data[key])) {
+          // Handle arrays (like directors)
+          sanitized[key] = data[key].map((item: any) => {
+            if (typeof item === 'object' && item !== null) {
+              const sanitizedItem: any = {};
+              Object.keys(item).forEach(itemKey => {
+                if (item[itemKey] !== undefined) {
+                  if (item[itemKey] instanceof Date) {
+                    sanitizedItem[itemKey] = item[itemKey].toISOString();
+                  } else {
+                    sanitizedItem[itemKey] = item[itemKey];
+                  }
+                }
+              });
+              return sanitizedItem;
+            }
+            return item;
+          });
+        } else {
+          sanitized[key] = data[key];
+        }
       }
     });
     return sanitized;
