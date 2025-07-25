@@ -1,318 +1,76 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Users, FileText, CheckCircle, Clock, TrendingUp, TrendingDown } from 'lucide-react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { Users, FileText, CheckCircle, Clock, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useAuth } from '../../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
+import { useAdminDashboardStats, useMonthlySubmissionData } from '../../hooks/useAdminDashboard';
+import { useQueryClient } from '@tanstack/react-query';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [totalSubmissions, setTotalSubmissions] = useState(0);
-  const [pendingClaims, setPendingClaims] = useState(0);
-  const [approvedClaims, setApprovedClaims] = useState(0);
-  const [kycForms, setKycForms] = useState(0);
-  const [cddForms, setCddForms] = useState(0);
-  const [claimsForms, setClaimsForms] = useState(0);
-  const [recentSubmissions, setRecentSubmissions] = useState<any[]>([]);
-  const [lineChartData, setLineChartData] = useState<Array<{ month: string; submissions: number }>>([]);
+  const queryClient = useQueryClient();
 
   // Redirect non-admin users
   if (!user || user.role === 'default') {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Helper function to get collections based on user role
-  const getCollectionsForRole = useCallback((role: string) => {
-    const collections: string[] = [];
-    
-    // KYC and CDD collections for compliance, admin, and super admin
-    if (['compliance', 'admin', 'super admin'].includes(role)) {
-      collections.push(
-        'Individual-kyc-form', 'corporate-kyc-form', // KYC
-        'agents-kyc', 'brokers-kyc', 'corporate-kyc', 'individual-kyc', 'partners-kyc' // CDD
-      );
-    }
-    
-    // Claims collections for claims, admin, and super admin
-    if (['claims', 'admin', 'super admin'].includes(role)) {
-      collections.push(
-        'motor-claims', 'burglary-claims', 'all-risk-claims', 'money-insurance-claims',
-        'fidelity-guarantee-claims', 'fire-special-perils-claims', 'goods-in-transit-claims',
-        'group-personal-accident-claims', 'employers-liability-claims', 'professional-indemnity-claims',
-        'public-liability-claims', 'rent-assurance-claims', 'contractors-claims', 'combined-gpa-employers-liability-claims'
-      );
-    }
-    
-    return collections;
-  }, []);
+  // Use React Query hooks for cached data fetching
+  const { 
+    data: stats, 
+    isLoading: statsLoading, 
+    error: statsError,
+    refetch: refetchStats 
+  } = useAdminDashboardStats(user?.role || '');
 
-  // Dynamic monthly submission data
-  const getMonthlySubmissionData = useCallback(async () => {
-    if (!user?.role) return;
+  const { 
+    data: monthlyData, 
+    isLoading: monthlyLoading,
+    error: monthlyError,
+    refetch: refetchMonthly 
+  } = useMonthlySubmissionData(user?.role || '');
 
-    try {
-      // Get last 6 months
-      const now = new Date();
-      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-      
-      const collections = getCollectionsForRole(user.role);
-      const monthlyData: { [key: string]: number } = {};
-      
-      // Initialize last 6 months with 0 submissions
-      for (let i = 5; i >= 0; i--) {
-        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const monthKey = date.toLocaleDateString('en-US', { month: 'short' });
-        monthlyData[monthKey] = 0;
-      }
+  const isLoading = statsLoading || monthlyLoading;
 
-      // Fetch data from all collections
-      for (const collectionName of collections) {
-        try {
-          const q = query(
-            collection(db, collectionName),
-            where('timestamp', '>=', sixMonthsAgo),
-            where('timestamp', '<=', now)
-          );
-          
-          const snapshot = await getDocs(q);
-          
-          snapshot.docs.forEach(doc => {
-            const data = doc.data();
-            let timestamp;
-            
-            // Handle different timestamp formats
-            if (data.timestamp?.toDate) {
-              timestamp = data.timestamp.toDate();
-            } else if (data.timestamp?.seconds) {
-              timestamp = new Date(data.timestamp.seconds * 1000);
-            } else if (data.timestamp) {
-              timestamp = new Date(data.timestamp);
-            } else {
-              return; // Skip if no valid timestamp
-            }
-            
-            const monthKey = timestamp.toLocaleDateString('en-US', { month: 'short' });
-            if (monthlyData.hasOwnProperty(monthKey)) {
-              monthlyData[monthKey]++;
-            }
-          });
-        } catch (error) {
-          console.log(`Collection ${collectionName} not found or error:`, error);
-        }
-      }
-
-      // Convert to array format for chart
-      const chartData = Object.entries(monthlyData).map(([month, submissions]) => ({
-        month,
-        submissions
-      }));
-
-      // Sort chronologically (last 6 months in order)
-      const monthOrder = [];
-      for (let i = 5; i >= 0; i--) {
-        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        monthOrder.push(date.toLocaleDateString('en-US', { month: 'short' }));
-      }
-      
-      const sortedData = monthOrder.map(month => 
-        chartData.find(item => item.month === month) || { month, submissions: 0 }
-      );
-
-      setLineChartData(sortedData);
-    } catch (error) {
-      console.error('Error fetching monthly submission data:', error);
-      setLineChartData([]);
-    }
-  }, [user?.role, getCollectionsForRole]);
-
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-
-        // Role-based data fetching
-        const canViewUsers = user?.role === 'super admin';
-        const canViewClaims = ['claims', 'admin', 'super admin'].includes(user?.role || '');
-        const canViewKYCCDD = ['compliance', 'admin', 'super admin'].includes(user?.role || '');
-
-        // Total Users from userroles collection (super admin only)
-        if (canViewUsers) {
-          const usersSnapshot = await getDocs(collection(db, 'userroles'));
-          setTotalUsers(usersSnapshot.size);
-        }
-
-        // Count all submissions except userroles
-        let totalSubs = 0;
-        let claimsCount = 0;
-
-        // Count claims collections for pending and approved (if user can view claims)
-        let pendingCount = 0;
-        let approvedCount = 0;
-        
-        if (canViewClaims) {
-          const claimsCollections = [
-            'motor-claims',
-            'burglary-claims', 
-            'all-risk-claims',
-            'money-insurance-claims',
-            'fidelity-guarantee-claims',
-            'fire-special-perils-claims',
-            'goods-in-transit-claims',
-            'group-personal-accident-claims',
-            'employers-liability-claims',
-            'professional-indemnity-claims',
-            'public-liability-claims',
-            'rent-assurance-claims',
-            'contractors-claims',
-            'combined-gpa-employers-liability-claims'
-          ];
-
-          for (const collectionName of claimsCollections) {
-            try {
-              const collectionSnapshot = await getDocs(collection(db, collectionName));
-              claimsCount += collectionSnapshot.size;
-              
-              collectionSnapshot.forEach(doc => {
-                const data = doc.data();
-                if (data.status === 'pending' || data.status === 'processing') {
-                  pendingCount++;
-                }
-                if (data.status === 'approved') {
-                  approvedCount++;
-                }
-              });
-            } catch (error) {
-              console.log(`Collection ${collectionName} not found or error:`, error);
-            }
-          }
-        }
-
-        // Count KYC Forms (if user can view KYC/CDD)
-        let kycCount = 0;
-        let cddCount = 0;
-        
-        if (canViewKYCCDD) {
-          const kycCollections = ['Individual-kyc-form', 'corporate-kyc-form'];
-          
-          for (const collectionName of kycCollections) {
-            try {
-              const collectionSnapshot = await getDocs(collection(db, collectionName));
-              kycCount += collectionSnapshot.size;
-            } catch (error) {
-              console.log(`Collection ${collectionName} not found or error:`, error);
-            }
-          }
-
-          // Count CDD Forms
-          const cddCollections = [
-            'agents-kyc',
-            'brokers-kyc', 
-            'corporate-kyc',
-            'individual-kyc',
-            'partners-kyc'
-          ];
-          
-          for (const collectionName of cddCollections) {
-            try {
-              const collectionSnapshot = await getDocs(collection(db, collectionName));
-              cddCount += collectionSnapshot.size;
-            } catch (error) {
-              console.log(`Collection ${collectionName} not found or error:`, error);
-            }
-          }
-        }
-
-        totalSubs = kycCount + cddCount + claimsCount;
-
-        setPendingClaims(pendingCount);
-        setApprovedClaims(approvedCount);
-        setKycForms(kycCount);
-        setCddForms(cddCount);
-        setClaimsForms(claimsCount);
-        setTotalSubmissions(totalSubs);
-
-        // Fetch recent submissions from accessible collections only (limit to 5)
-        const allSubmissions: any[] = [];
-        
-        // Get collections to check based on role
-        const collectionsToCheck = [];
-        if (canViewKYCCDD) {
-          collectionsToCheck.push(...['Individual-kyc-form', 'corporate-kyc-form', 'agents-kyc', 'brokers-kyc', 'corporate-kyc', 'individual-kyc', 'partners-kyc']);
-        }
-        if (canViewClaims) {
-          collectionsToCheck.push(...[
-            'motor-claims', 'burglary-claims', 'all-risk-claims', 'money-insurance-claims',
-            'fidelity-guarantee-claims', 'fire-special-perils-claims', 'goods-in-transit-claims',
-            'group-personal-accident-claims', 'employers-liability-claims', 'professional-indemnity-claims',
-            'public-liability-claims', 'rent-assurance-claims', 'contractors-claims', 'combined-gpa-employers-liability-claims'
-          ]);
-        }
-
-        for (const collectionName of collectionsToCheck) {
-          try {
-            const collectionSnapshot = await getDocs(collection(db, collectionName));
-            collectionSnapshot.forEach(doc => {
-              const data = doc.data();
-              if (data.timestamp && data.timestamp.toDate) {
-                try {
-                  allSubmissions.push({
-                    id: doc.id,
-                    collection: collectionName,
-                    formType: data.formType || collectionName,
-                    timestamp: data.timestamp.toDate(),
-                    submittedBy: data.submittedBy || data.email || 'Unknown',
-                    status: data.status || null
-                  });
-                } catch (error) {
-                  console.log(`Error processing timestamp for document ${doc.id}:`, error);
-                }
-              }
-            });
-          } catch (error) {
-            console.log(`Collection ${collectionName} not found or error:`, error);
-          }
-        }
-
-        // Sort by timestamp descending and take top 5
-        const sortedSubmissions = allSubmissions
-          .sort((a, b) => b.timestamp - a.timestamp)
-          .slice(0, 5);
-
-        setRecentSubmissions(sortedSubmissions);
-
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-    getMonthlySubmissionData();
-  }, [user, getMonthlySubmissionData]);
+  // Handle refresh button
+  const handleRefresh = () => {
+    refetchStats();
+    refetchMonthly();
+  };
 
   // Role-based chart data with colors
   const chartData = [];
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
   
-  if (['compliance', 'admin', 'super admin'].includes(user?.role || '')) {
-    chartData.push({ name: 'KYC Forms', value: kycForms, color: COLORS[0] });
-    chartData.push({ name: 'CDD Forms', value: cddForms, color: COLORS[1] });
+  if (stats && ['compliance', 'admin', 'super admin'].includes(user?.role || '')) {
+    chartData.push({ name: 'KYC Forms', value: stats.kycForms, color: COLORS[0] });
+    chartData.push({ name: 'CDD Forms', value: stats.cddForms, color: COLORS[1] });
   }
-  if (['claims', 'admin', 'super admin'].includes(user?.role || '')) {
-    chartData.push({ name: 'Claims Forms', value: claimsForms, color: COLORS[2] });
+  if (stats && ['claims', 'admin', 'super admin'].includes(user?.role || '')) {
+    chartData.push({ name: 'Claims Forms', value: stats.claimsForms, color: COLORS[2] });
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner size="lg" text="Loading dashboard..." />
+      </div>
+    );
+  }
+
+  if (statsError || monthlyError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error loading dashboard data</p>
+          <Button onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
       </div>
     );
   }
@@ -324,8 +82,19 @@ const AdminDashboard: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
           <p className="text-gray-600 mt-1">Manage all forms and user submissions</p>
         </div>
-        <div className="text-sm text-gray-500">
-          Role: {user?.role}
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+          <div className="text-sm text-gray-500">
+            Role: {user?.role}
+          </div>
         </div>
       </div>
 
@@ -338,10 +107,10 @@ const AdminDashboard: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Total Users</p>
-                  <p className="text-3xl font-bold">{totalUsers}</p>
+                  <p className="text-3xl font-bold">{stats?.totalUsers || 0}</p>
                   <div className="flex items-center mt-2">
                     <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-sm text-green-500">12% increase</span>
+                    <span className="text-sm text-green-500">System users</span>
                   </div>
                 </div>
                 <Users className="h-8 w-8 text-blue-600" />
@@ -356,10 +125,10 @@ const AdminDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total Submissions</p>
-                <p className="text-3xl font-bold">{totalSubmissions}</p>
+                <p className="text-3xl font-bold">{stats?.totalSubmissions || 0}</p>
                 <div className="flex items-center mt-2">
                   <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                  <span className="text-sm text-green-500">8% increase</span>
+                  <span className="text-sm text-green-500">All forms</span>
                 </div>
               </div>
               <FileText className="h-8 w-8 text-green-600" />
@@ -374,10 +143,10 @@ const AdminDashboard: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">KYC Forms</p>
-                  <p className="text-3xl font-bold">{kycForms}</p>
+                  <p className="text-3xl font-bold">{stats?.kycForms || 0}</p>
                   <div className="flex items-center mt-2">
                     <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-sm text-green-500">6% increase</span>
+                    <span className="text-sm text-green-500">Know Your Customer</span>
                   </div>
                 </div>
                 <FileText className="h-8 w-8 text-purple-600" />
@@ -393,10 +162,10 @@ const AdminDashboard: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">CDD Forms</p>
-                  <p className="text-3xl font-bold">{cddForms}</p>
+                  <p className="text-3xl font-bold">{stats?.cddForms || 0}</p>
                   <div className="flex items-center mt-2">
                     <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-sm text-green-500">4% increase</span>
+                    <span className="text-sm text-green-500">Customer Due Diligence</span>
                   </div>
                 </div>
                 <FileText className="h-8 w-8 text-indigo-600" />
@@ -413,10 +182,10 @@ const AdminDashboard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Pending Claims</p>
-                    <p className="text-3xl font-bold">{pendingClaims}</p>
+                    <p className="text-3xl font-bold">{stats?.pendingClaims || 0}</p>
                     <div className="flex items-center mt-2">
-                      <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
-                      <span className="text-sm text-red-500">5% decrease</span>
+                      <Clock className="h-4 w-4 text-yellow-500 mr-1" />
+                      <span className="text-sm text-yellow-500">Awaiting review</span>
                     </div>
                   </div>
                   <Clock className="h-8 w-8 text-yellow-600" />
@@ -429,10 +198,10 @@ const AdminDashboard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Approved Claims</p>
-                    <p className="text-3xl font-bold">{approvedClaims}</p>
+                    <p className="text-3xl font-bold">{stats?.approvedClaims || 0}</p>
                     <div className="flex items-center mt-2">
                       <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                      <span className="text-sm text-green-500">15% increase</span>
+                      <span className="text-sm text-green-500">Successfully processed</span>
                     </div>
                   </div>
                   <CheckCircle className="h-8 w-8 text-green-600" />
@@ -484,7 +253,7 @@ const AdminDashboard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">KYC Forms</p>
-                    <p className="text-2xl font-bold text-blue-600">{kycForms}</p>
+                    <p className="text-2xl font-bold text-blue-600">{stats?.kycForms || 0}</p>
                     <p className="text-xs text-gray-500">Individual & Corporate</p>
                   </div>
                   <FileText className="h-6 w-6 text-blue-600" />
@@ -500,7 +269,7 @@ const AdminDashboard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">CDD Forms</p>
-                    <p className="text-2xl font-bold text-green-600">{cddForms}</p>
+                    <p className="text-2xl font-bold text-green-600">{stats?.cddForms || 0}</p>
                     <p className="text-xs text-gray-500">Agents, Brokers & Partners</p>
                   </div>
                   <FileText className="h-6 w-6 text-green-600" />
@@ -516,7 +285,7 @@ const AdminDashboard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Claims Forms</p>
-                    <p className="text-2xl font-bold text-orange-600">{claimsForms}</p>
+                    <p className="text-2xl font-bold text-orange-600">{stats?.claimsForms || 0}</p>
                     <p className="text-xs text-gray-500">All insurance claims</p>
                   </div>
                   <FileText className="h-6 w-6 text-orange-600" />
@@ -534,7 +303,7 @@ const AdminDashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={lineChartData}>
+            <LineChart data={monthlyData || []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
@@ -546,14 +315,14 @@ const AdminDashboard: React.FC = () => {
       </Card>
 
       {/* Recent Submissions - Show only if user has access to any submissions */}
-      {recentSubmissions.length > 0 && (
+      {stats?.recentSubmissions && stats.recentSubmissions.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Recent Submissions</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentSubmissions.map((submission, index) => (
+              {stats.recentSubmissions.map((submission, index) => (
                 <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex-1">
                     <p className="font-medium">{submission.formType}</p>
