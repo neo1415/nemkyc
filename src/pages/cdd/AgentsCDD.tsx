@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { get } from 'lodash';
 import { toast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
+import { Calendar, CalendarIcon, Upload, Check, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -31,48 +33,128 @@ const agentsCDDSchema = yup.object().shape({
   residentialAddress: yup.string().required("Residential address is required"),
   gender: yup.string().required("Gender is required"),
   position: yup.string().required("Position/Role is required"),
-  dateOfBirth: yup.date().required("Date of birth is required"),
+  dateOfBirth: yup.date()
+    .required("Date of birth is required")
+    .test('age', 'Must be at least 18 years old', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+      return value <= eighteenYearsAgo;
+    })
+    .typeError('Please select a valid date'),
   placeOfBirth: yup.string().required("Place of birth is required"),
   otherSourceOfIncome: yup.string().required("Other source of income is required"),
-  otherSourceOfIncomeOther: yup.string(),
+  otherSourceOfIncomeOther: yup.string().when('otherSourceOfIncome', {
+    is: 'other',
+    then: (schema) => schema.required('Please specify income source'),
+    otherwise: (schema) => schema.notRequired()
+  }),
   nationality: yup.string().required("Nationality is required"),
-  phoneNumber: yup.string().required("Phone number is required"),
-  bvn: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+  phoneNumber: yup.string()
+    .required("Phone number is required")
+    .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
+    .max(15, "Phone number cannot exceed 15 characters"),
+  bvn: yup.string()
+    .required("BVN is required")
+    .matches(/^\d+$/, "BVN must contain only numbers")
+    .length(11, "BVN must be exactly 11 digits"),
   taxIdNumber: yup.string(),
   occupation: yup.string().required("Occupation is required"),
-  email: yup.string().email("Valid email is required").required("Email is required"),
+  email: yup.string()
+    .required("Email is required")
+    .email("Please enter a valid email")
+    .typeError("Please enter a valid email"),
   validMeansOfId: yup.string().required("Valid means of ID is required"),
   identificationNumber: yup.string().required("Identification number is required"),
-  issuedDate: yup.date().required("Issued date is required"),
-  expiryDate: yup.date(),
+  issuedDate: yup.date()
+    .required("Issued date is required")
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
+  expiryDate: yup.date()
+    .test('not-past', 'Expiry date cannot be in the past', function(value) {
+      if (!value) return true; // Optional field
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      return value > today;
+    })
+    .typeError('Please select a valid date'),
   issuingBody: yup.string().required("Issuing body is required"),
   
   // Additional Info
   agentName: yup.string().required("Agent name is required"),
   agentsOfficeAddress: yup.string().required("Agents office address is required"),
   naicomLicenseNumber: yup.string().required("NAICOM license number is required"),
-  licenseIssuedDate: yup.date().required("License issued date is required"),
-  licenseExpiryDate: yup.date().required("License expiry date is required"),
-  emailAddress: yup.string().email("Valid email is required").required("Email address is required"),
+  licenseIssuedDate: yup.date()
+    .required("License issued date is required")
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
+  licenseExpiryDate: yup.date()
+    .required("License expiry date is required")
+    .test('not-past', 'Expiry date cannot be in the past', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      return value > today;
+    })
+    .typeError('Please select a valid date'),
+  emailAddress: yup.string()
+    .required("Email address is required")
+    .email("Please enter a valid email")
+    .typeError("Please enter a valid email"),
   website: yup.string().required("Website is required"),
-  mobileNumber: yup.string().required("Mobile number is required"),
+  mobileNumber: yup.string()
+    .required("Mobile number is required")
+    .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
+    .max(15, "Phone number cannot exceed 15 characters"),
   taxIdentificationNumber: yup.string(),
   arianMembershipNumber: yup.string().required("ARIAN membership number is required"),
   listOfAgentsApprovedPrincipals: yup.string().required("List of agents approved principals is required"),
   
   // Financial Info
-  localAccountNumber: yup.string().required("Account number is required"),
+  localAccountNumber: yup.string()
+    .required("Account number is required")
+    .matches(/^\d+$/, "Account number must contain only numbers")
+    .max(10, "Account number cannot exceed 10 digits"),
   localBankName: yup.string().required("Bank name is required"),
   localBankBranch: yup.string().required("Bank branch is required"),
-  localAccountOpeningDate: yup.date().required("Account opening date is required"),
+  localAccountOpeningDate: yup.date()
+    .required("Account opening date is required")
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
   foreignAccountNumber: yup.string(),
   foreignBankName: yup.string(),
   foreignBankBranch: yup.string(),
-  foreignAccountOpeningDate: yup.date(),
+  foreignAccountOpeningDate: yup.date()
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return true; // Optional field
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
+  
+  // File uploads
+  agentId: yup.mixed().required("Agent ID is required"),
+  naicomCertificate: yup.mixed().required("NAICOM certificate is required"),
   
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  signature: yup.string().required("Digital signature is required")
+  signature: yup.string().required("Signature is required")
 });
 
 const defaultValues = {
@@ -82,7 +164,7 @@ const defaultValues = {
   residentialAddress: '',
   gender: '',
   position: '',
-  dateOfBirth: '',
+  dateOfBirth: undefined,
   placeOfBirth: '',
   otherSourceOfIncome: '',
   otherSourceOfIncomeOther: '',
@@ -94,14 +176,14 @@ const defaultValues = {
   email: '',
   validMeansOfId: '',
   identificationNumber: '',
-  issuedDate: '',
-  expiryDate: '',
+  issuedDate: undefined,
+  expiryDate: undefined,
   issuingBody: '',
   agentName: '',
   agentsOfficeAddress: '',
   naicomLicenseNumber: '',
-  licenseIssuedDate: '',
-  licenseExpiryDate: '',
+  licenseIssuedDate: undefined,
+  licenseExpiryDate: undefined,
   emailAddress: '',
   website: '',
   mobileNumber: '',
@@ -111,18 +193,198 @@ const defaultValues = {
   localAccountNumber: '',
   localBankName: '',
   localBankBranch: '',
-  localAccountOpeningDate: '',
+  localAccountOpeningDate: undefined,
   foreignAccountNumber: '',
   foreignBankName: '',
   foreignBankBranch: '',
-  foreignAccountOpeningDate: '',
+  foreignAccountOpeningDate: undefined,
+  agentId: '',
+  naicomCertificate: '',
   agreeToDataPrivacy: false,
   signature: ''
+};
+
+// ========== FORM COMPONENTS (OUTSIDE MAIN COMPONENT) ==========
+const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
+  const { register, formState: { errors }, clearErrors } = useFormContext();
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type={type}
+        maxLength={maxLength}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
+  const { register, watch, formState: { errors }, clearErrors } = useFormContext();
+  const currentValue = watch(name) || '';
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Textarea
+        id={name}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      <div className="flex justify-between">
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
+        <span className="text-sm text-muted-foreground ml-auto">
+          {currentValue.length}/{maxLength}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const FormSelect = ({ name, label, required = false, options, placeholder, ...props }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(newValue) => {
+          setValue(name, newValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        {...props}
+      >
+        <SelectTrigger className={error ? 'border-destructive' : ''}>
+          <SelectValue placeholder={placeholder || `Select ${label}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option: any) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormDatePicker = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors, trigger } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  const formatDateForInput = (date: any) => {
+    if (!date) return '';
+    if (typeof date === 'string') {
+      const parsedDate = new Date(date);
+      return !isNaN(parsedDate.getTime()) ? parsedDate.toISOString().split('T')[0] : '';
+    }
+    if (date instanceof Date && !isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+    return '';
+  };
+  
+  const handleDateChange = async (dateValue: Date | undefined) => {
+    setValue(name, dateValue, { shouldValidate: true });
+    if (error) {
+      clearErrors(name);
+    }
+    await trigger(name);
+  };
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <div className="relative">
+        <Input
+          id={name}
+          type="date"
+          value={formatDateForInput(value)}
+          onChange={async (e) => {
+            const dateValue = e.target.value ? new Date(e.target.value + 'T00:00:00') : undefined;
+            await handleDateChange(dateValue);
+          }}
+          className={error ? 'border-destructive' : ''}
+        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+              type="button"
+            >
+              <CalendarIcon className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <ReactCalendar
+              mode="single"
+              selected={value ? new Date(value) : undefined}
+              onSelect={handleDateChange}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
 };
 
 const AgentsCDD: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   
   const {
     handleSubmitWithAuth,
@@ -140,6 +402,14 @@ const AgentsCDD: React.FC = () => {
   const { saveDraft, clearDraft } = useFormDraft('agents-cdd', formMethods);
   const watchedValues = formMethods.watch();
 
+  // Step field mappings for validation
+  const stepFieldMappings = {
+    0: ['firstName', 'lastName', 'residentialAddress', 'gender', 'position', 'dateOfBirth', 'placeOfBirth', 'otherSourceOfIncome', 'nationality', 'phoneNumber', 'bvn', 'occupation', 'email', 'validMeansOfId', 'identificationNumber', 'issuedDate', 'issuingBody'],
+    1: ['agentName', 'agentsOfficeAddress', 'naicomLicenseNumber', 'licenseIssuedDate', 'licenseExpiryDate', 'emailAddress', 'website', 'mobileNumber', 'arianMembershipNumber', 'listOfAgentsApprovedPrincipals'],
+    2: ['localAccountNumber', 'localBankName', 'localBankBranch', 'localAccountOpeningDate', 'agentId', 'naicomCertificate'],
+    3: ['agreeToDataPrivacy', 'signature']
+  };
+
   // Auto-save draft
   React.useEffect(() => {
     const subscription = formMethods.watch((data) => {
@@ -156,58 +426,45 @@ const AgentsCDD: React.FC = () => {
     }
   }, []);
 
-  const handleReview = async (data: any) => {
-    console.log('✅ handleReview was called! Starting validation...');
-    
-    try {
-      // Validate the entire form using the schema
-      await agentsCDDSchema.validate(data, { abortEarly: false });
-      
-      // If validation passes, show the summary
-      console.log('✅ Validation passed! Showing summary.');
-      console.log('Form Data:', data);
-      setShowSummary(true);
-      
-    } catch (validationError) {
-      // If validation fails, show errors
-      console.log('❌ Validation failed:', validationError);
-      
-      if (validationError.inner) {
-        // Set field-specific errors
-        validationError.inner.forEach((error) => {
-          if (error.path) {
-            formMethods.setError(error.path, {
-              type: 'validation',
-              message: error.message
-            });
-          }
-        });
+
+  // Data sanitization (remove undefined values and serialize dates)
+  const sanitizeData = (data: any) => {
+    const sanitized: any = {};
+    Object.keys(data).forEach(key => {
+      if (data[key] !== undefined) {
+        // Convert Date objects to ISO strings for serialization
+        if (data[key] instanceof Date) {
+          sanitized[key] = data[key].toISOString();
+        } else {
+          sanitized[key] = data[key];
+        }
       }
-      
-      // Show a toast notification about validation errors
-      toast({
-        title: "Form Validation Failed",
-        description: "Please check and fix the errors in the form before submitting.",
-        variant: "destructive"
-      });
-    }
+    });
+    return sanitized;
   };
+
   const handleSubmit = async (data: any) => {
-    // Upload files to Firebase Storage first
+    console.log('Form data before sanitization:', data);
+    
+    const sanitizedData = sanitizeData(data);
+    console.log('Sanitized data:', sanitizedData);
+
+    // Handle file uploads
     const fileUploadPromises: Array<Promise<[string, string]>> = [];
     
-    Object.entries(uploadedFiles).forEach(([key, file]) => {
-      fileUploadPromises.push(
-        uploadFile(file, 'agents-cdd').then(url => [key + 'Url', url])
-      );
-    });
-    
-    const uploadedUrls = await Promise.all(fileUploadPromises);
-    const fileUrls = Object.fromEntries(uploadedUrls);
-    
-    // Prepare final data with file URLs
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
+        fileUploadPromises.push(
+          uploadFile(file, `agents-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
+        );
+      }
+    }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
     const finalData = {
-      ...data,
+      ...sanitizedData,
       ...fileUrls,
       status: 'processing',
       formType: 'Agents-CDD'
@@ -257,266 +514,317 @@ const AgentsCDD: React.FC = () => {
   const steps = [
     {
       id: 'personal',
-      title: 'Personal Info',
+      title: 'Personal Information',
       component: (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="firstName">First Name *</Label>
-              <Input id="firstName" {...formMethods.register('firstName')} />
-            </div>
-            <div>
-              <Label htmlFor="middleName">Middle Name</Label>
-              <Input id="middleName" {...formMethods.register('middleName')} />
-            </div>
-            <div>
-              <Label htmlFor="lastName">Last Name *</Label>
-              <Input id="lastName" {...formMethods.register('lastName')} />
-            </div>
+            <FormField
+              name="firstName"
+              label="First Name"
+              required={true}
+            />
+            <FormField
+              name="middleName"
+              label="Middle Name"
+            />
+            <FormField
+              name="lastName"
+              label="Last Name"
+              required={true}
+            />
           </div>
           
-          <div>
-            <Label htmlFor="residentialAddress">Residential Address *</Label>
-            <Textarea id="residentialAddress" {...formMethods.register('residentialAddress')} />
+          <FormTextarea
+            name="residentialAddress"
+            label="Residential Address"
+            required={true}
+          />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormSelect
+              name="gender"
+              label="Gender"
+              required={true}
+              options={[
+                { value: 'male', label: 'Male' },
+                { value: 'female', label: 'Female' }
+              ]}
+            />
+            <FormField
+              name="position"
+              label="Position/Role"
+              required={true}
+            />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Gender *</Label>
-              <Select
-                value={watchedValues.gender || ''}
-                onValueChange={(value) => formMethods.setValue('gender', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="position">Position/Role *</Label>
-              <Input id="position" {...formMethods.register('position')} />
-            </div>
+            <FormDatePicker name="dateOfBirth" label="Date of Birth" required={true} />
+            <FormField
+              name="placeOfBirth"
+              label="Place of Birth"
+              required={true}
+            />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <DatePickerField name="dateOfBirth" label="Date of Birth *" />
-            </div>
-            <div>
-              <Label htmlFor="placeOfBirth">Place of Birth *</Label>
-              <Input id="placeOfBirth" {...formMethods.register('placeOfBirth')} />
-            </div>
-          </div>
-          
-          <div>
-            <Label>Other Source of Income *</Label>
-            <Select
-              value={watchedValues.otherSourceOfIncome || ''}
-              onValueChange={(value) => formMethods.setValue('otherSourceOfIncome', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose Income Source" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="salary">Salary or Business Income</SelectItem>
-                <SelectItem value="investments">Investments or Dividends</SelectItem>
-                <SelectItem value="other">Other (please specify)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormSelect
+            name="otherSourceOfIncome"
+            label="Other Source of Income"
+            required={true}
+            options={[
+              { value: 'salary', label: 'Salary or Business Income' },
+              { value: 'investments', label: 'Investments or Dividends' },
+              { value: 'other', label: 'Other (please specify)' }
+            ]}
+          />
           
           {watchedValues.otherSourceOfIncome === 'other' && (
-            <div>
-              <Label htmlFor="otherSourceOfIncomeOther">Please specify income source *</Label>
-              <Input id="otherSourceOfIncomeOther" {...formMethods.register('otherSourceOfIncomeOther')} />
-            </div>
+            <FormField
+              name="otherSourceOfIncomeOther"
+              label="Please specify income source"
+              required={true}
+            />
           )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="nationality">Nationality *</Label>
-              <Input id="nationality" {...formMethods.register('nationality')} />
-            </div>
-            <div>
-              <Label htmlFor="phoneNumber">Phone Number *</Label>
-              <Input id="phoneNumber" {...formMethods.register('phoneNumber')} />
-            </div>
+            <FormField
+              name="nationality"
+              label="Nationality"
+              required={true}
+            />
+            <FormField
+              name="phoneNumber"
+              label="Phone Number"
+              required={true}
+              maxLength={15}
+            />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="bvn">BVN *</Label>
-              <Input id="bvn" maxLength={11} {...formMethods.register('bvn')} />
-            </div>
-            <div>
-              <Label htmlFor="taxIdNumber">Tax ID Number</Label>
-              <Input id="taxIdNumber" {...formMethods.register('taxIdNumber')} />
-            </div>
-            <div>
-              <Label htmlFor="occupation">Occupation *</Label>
-              <Input id="occupation" {...formMethods.register('occupation')} />
-            </div>
+            <FormField
+              name="bvn"
+              label="BVN"
+              required={true}
+              maxLength={11}
+            />
+            <FormField
+              name="taxIdNumber"
+              label="Tax ID Number"
+            />
+            <FormField
+              name="occupation"
+              label="Occupation"
+              required={true}
+            />
           </div>
           
-          <div>
-            <Label htmlFor="email">Email *</Label>
-            <Input id="email" type="email" {...formMethods.register('email')} />
-          </div>
+          <FormField
+            name="email"
+            label="Email"
+            type="email"
+            required={true}
+          />
           
-          <div>
-            <Label>Valid Means of ID *</Label>
-            <Select
-              value={watchedValues.validMeansOfId || ''}
-              onValueChange={(value) => formMethods.setValue('validMeansOfId', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose Identification Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="passport">International Passport</SelectItem>
-                <SelectItem value="nimc">NIMC</SelectItem>
-                <SelectItem value="driversLicense">Drivers Licence</SelectItem>
-                <SelectItem value="votersCard">Voters Card</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormSelect
+            name="validMeansOfId"
+            label="Valid Means of ID"
+            required={true}
+            options={[
+              { value: 'passport', label: 'International Passport' },
+              { value: 'nimc', label: 'NIMC' },
+              { value: 'driversLicense', label: 'Drivers Licence' },
+              { value: 'votersCard', label: 'Voters Card' }
+            ]}
+          />
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <Label htmlFor="identificationNumber">Identification Number *</Label>
-              <Input id="identificationNumber" {...formMethods.register('identificationNumber')} />
-            </div>
-            <div>
-              <DatePickerField name="issuedDate" label="Issued Date *" />
-            </div>
-            <div>
-              <DatePickerField name="expiryDate" label="Expiry Date" />
-            </div>
-            <div>
-              <Label htmlFor="issuingBody">Issuing Body *</Label>
-              <Input id="issuingBody" {...formMethods.register('issuingBody')} />
-            </div>
+            <FormField
+              name="identificationNumber"
+              label="Identification Number"
+              required={true}
+            />
+            <FormDatePicker name="issuedDate" label="Issued Date" required={true} />
+            <FormDatePicker name="expiryDate" label="Expiry Date" />
+            <FormField
+              name="issuingBody"
+              label="Issuing Body"
+              required={true}
+            />
           </div>
         </div>
       )
     },
     {
       id: 'additional',
-      title: 'Additional Info',
+      title: 'Additional Information',
       component: (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="agentName">Agent Name *</Label>
-              <Input id="agentName" {...formMethods.register('agentName')} />
-            </div>
-            <div>
-              <Label htmlFor="naicomLicenseNumber">NAICOM License Number (RIA) *</Label>
-              <Input id="naicomLicenseNumber" {...formMethods.register('naicomLicenseNumber')} />
-            </div>
+            <FormField
+              name="agentName"
+              label="Agent Name"
+              required={true}
+            />
+            <FormField
+              name="naicomLicenseNumber"
+              label="NAICOM License Number (RIA)"
+              required={true}
+            />
           </div>
           
-          <div>
-            <Label htmlFor="agentsOfficeAddress">Agents Office Address *</Label>
-            <Textarea id="agentsOfficeAddress" {...formMethods.register('agentsOfficeAddress')} />
+          <FormTextarea
+            name="agentsOfficeAddress"
+            label="Agents Office Address"
+            required={true}
+          />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormDatePicker name="licenseIssuedDate" label="License Issued Date" required={true} />
+            <FormDatePicker name="licenseExpiryDate" label="License Expiry Date" required={true} />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <DatePickerField name="licenseIssuedDate" label="License Issued Date *" />
-            </div>
-            <div>
-              <DatePickerField name="licenseExpiryDate" label="License Expiry Date *" />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="emailAddress">Email Address *</Label>
-              <Input id="emailAddress" type="email" {...formMethods.register('emailAddress')} />
-            </div>
-            <div>
-              <Label htmlFor="website">Website *</Label>
-              <Input id="website" {...formMethods.register('website')} />
-            </div>
+            <FormField
+              name="emailAddress"
+              label="Email Address"
+              type="email"
+              required={true}
+            />
+            <FormField
+              name="website"
+              label="Website"
+              required={true}
+            />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="mobileNumber">Mobile Number *</Label>
-              <Input id="mobileNumber" {...formMethods.register('mobileNumber')} />
-            </div>
-            <div>
-              <Label htmlFor="taxIdentificationNumber">Tax Identification Number</Label>
-              <Input id="taxIdentificationNumber" {...formMethods.register('taxIdentificationNumber')} />
-            </div>
-            <div>
-              <Label htmlFor="arianMembershipNumber">ARIAN Membership Number *</Label>
-              <Input id="arianMembershipNumber" {...formMethods.register('arianMembershipNumber')} />
-            </div>
+            <FormField
+              name="mobileNumber"
+              label="Mobile Number"
+              required={true}
+              maxLength={15}
+            />
+            <FormField
+              name="taxIdentificationNumber"
+              label="Tax Identification Number"
+            />
+            <FormField
+              name="arianMembershipNumber"
+              label="ARIAN Membership Number"
+              required={true}
+            />
           </div>
           
-          <div>
-            <Label htmlFor="listOfAgentsApprovedPrincipals">List of Agents Approved Principals (Insurers) *</Label>
-            <Textarea id="listOfAgentsApprovedPrincipals" {...formMethods.register('listOfAgentsApprovedPrincipals')} />
-          </div>
+          <FormTextarea
+            name="listOfAgentsApprovedPrincipals"
+            label="List of Agents Approved Principals"
+            required={true}
+          />
         </div>
       )
     },
     {
       id: 'financial',
-      title: 'Financial Info',
+      title: 'Financial Information',
       component: (
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-medium mb-4">Local Account Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="localAccountNumber">Account Number *</Label>
-                <Input id="localAccountNumber" {...formMethods.register('localAccountNumber')} />
-              </div>
-              <div>
-                <Label htmlFor="localBankName">Bank Name *</Label>
-                <Input id="localBankName" {...formMethods.register('localBankName')} />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <Label htmlFor="localBankBranch">Bank Branch *</Label>
-                <Input id="localBankBranch" {...formMethods.register('localBankBranch')} />
-              </div>
-              <div>
-                <DatePickerField name="localAccountOpeningDate" label="Account Opening Date *" />
-              </div>
-            </div>
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Local Bank Account Details</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              name="localAccountNumber"
+              label="Account Number"
+              required={true}
+              maxLength={10}
+            />
+            <FormField
+              name="localBankName"
+              label="Bank Name"
+              required={true}
+            />
+            <FormField
+              name="localBankBranch"
+              label="Bank Branch"
+              required={true}
+            />
           </div>
           
-          <div>
-            <h3 className="text-lg font-medium mb-4">Foreign Account Details (Optional)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="foreignAccountNumber">Account Number</Label>
-                <Input id="foreignAccountNumber" {...formMethods.register('foreignAccountNumber')} />
-              </div>
-              <div>
-                <Label htmlFor="foreignBankName">Bank Name</Label>
-                <Input id="foreignBankName" {...formMethods.register('foreignBankName')} />
-              </div>
+          <FormDatePicker name="localAccountOpeningDate" label="Account Opening Date" required={true} />
+          
+          <h3 className="text-lg font-semibold mt-6">Foreign Bank Account Details (Optional)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              name="foreignAccountNumber"
+              label="Account Number"
+            />
+            <FormField
+              name="foreignBankName"
+              label="Bank Name"
+            />
+            <FormField
+              name="foreignBankBranch"
+              label="Bank Branch"
+            />
+          </div>
+          
+          <FormDatePicker name="foreignAccountOpeningDate" label="Account Opening Date" />
+
+          <h3 className="text-lg font-semibold mt-6">Required Documents</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Upload Agent ID <span className="required-asterisk">*</span></Label>
+              <FileUpload
+                accept=".png,.jpg,.jpeg,.pdf"
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    agentId: file
+                  }));
+                  formMethods.setValue('agentId', file);
+                  if (formMethods.formState.errors.agentId) {
+                    formMethods.clearErrors('agentId');
+                  }
+                }}
+                maxSize={3 * 1024 * 1024}
+              />
+              {uploadedFiles.agentId && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.agentId.name}
+                </div>
+              )}
+              {formMethods.formState.errors.agentId && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.agentId.message?.toString()}
+                </p>
+              )}
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <Label htmlFor="foreignBankBranch">Bank Branch</Label>
-                <Input id="foreignBankBranch" {...formMethods.register('foreignBankBranch')} />
-              </div>
-              <div>
-                <DatePickerField name="foreignAccountOpeningDate" label="Account Opening Date" />
-              </div>
+
+            <div>
+              <Label>Upload NAICOM Certificate <span className="required-asterisk">*</span></Label>
+              <FileUpload
+                accept=".png,.jpg,.jpeg,.pdf"
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    naicomCertificate: file
+                  }));
+                  formMethods.setValue('naicomCertificate', file);
+                  if (formMethods.formState.errors.naicomCertificate) {
+                    formMethods.clearErrors('naicomCertificate');
+                  }
+                }}
+                maxSize={3 * 1024 * 1024}
+              />
+              {uploadedFiles.naicomCertificate && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.naicomCertificate.name}
+                </div>
+              )}
+              {formMethods.formState.errors.naicomCertificate && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.naicomCertificate.message?.toString()}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -524,205 +832,158 @@ const AgentsCDD: React.FC = () => {
     },
     {
       id: 'declaration',
-      title: 'Data Privacy & Declaration',
+      title: 'Declaration',
       component: (
         <div className="space-y-6">
-          <div className="p-4 bg-muted rounded-lg">
-            <h3 className="font-medium mb-2">Data Privacy</h3>
-            <div className="text-sm text-muted-foreground space-y-2">
-              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+          <div className="space-y-4">
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="agreeToDataPrivacy"
+                checked={watchedValues.agreeToDataPrivacy || false}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('agreeToDataPrivacy', checked);
+                  if (formMethods.formState.errors.agreeToDataPrivacy) {
+                    formMethods.clearErrors('agreeToDataPrivacy');
+                  }
+                }}
+                className={formMethods.formState.errors.agreeToDataPrivacy ? 'border-destructive' : ''}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label
+                  htmlFor="agreeToDataPrivacy"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  I agree to the data privacy policy <span className="required-asterisk">*</span>
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  By checking this box, you consent to the collection and processing of your personal data.
+                </p>
+              </div>
             </div>
-            
-            <h3 className="font-medium mb-2 mt-4">Declaration</h3>
-            <div className="text-sm text-muted-foreground space-y-2">
-              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-            </div>
+            {formMethods.formState.errors.agreeToDataPrivacy && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
+              </p>
+            )}
           </div>
-          
-          <div className="flex items-start space-x-2">
-            <Checkbox
-              id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked === true)}
-            />
-            <Label htmlFor="agreeToDataPrivacy" className="text-sm">
-              I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge *
-            </Label>
-          </div>
-          
-          <div>
-            <Label htmlFor="signature">Digital Signature *</Label>
-            <Input
-              id="signature"
-              placeholder="Type your full name as signature"
-              {...formMethods.register('signature')}
-            />
-          </div>
-          
-          <div className="text-center pt-4">
-            <Button
-              type="button"
-              onClick={() => {
-                const isValid = formMethods.trigger();
-                if (isValid) setShowSummary(true);
-              }}
-            >
-              Review & Submit
-            </Button>
-          </div>
+
+          <FormField
+            name="signature"
+            label="Digital Signature"
+            required={true}
+            placeholder="Type your full name as digital signature"
+          />
         </div>
       )
     }
   ];
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Agents CDD Form</h1>
-          <p className="text-gray-600">Customer Due Diligence form for Agents</p>
-        </div>
+  if (showSuccess) {
+    return (
+      <SuccessModal
+        isOpen={showSuccess}
+        onClose={() => setShowSuccess(false)}
+        title="Agents CDD Submitted Successfully!"
+        message="Your Agents Customer Due Diligence form has been submitted and is being processed. You will receive a confirmation email shortly."
+      />
+    );
+  }
 
-       <MultiStepForm
-          steps={steps}
-        onSubmit={handleReview} 
-          isSubmitting={isSubmitting}
-          submitButtonText="Submit CDD Form"
-          formMethods={formMethods}
-        />
-        {/* Summary Dialog */}
+  if (showPostAuthLoading) {
+    return <LoadingSpinner />;
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <div className="container mx-auto px-4 py-8">
+        <FormProvider {...formMethods}>
+          <MultiStepForm
+            steps={steps}
+            onSubmit={onFinalSubmit}
+            stepFieldMappings={stepFieldMappings}
+            formTitle="Agents Customer Due Diligence (CDD)"
+            formDescription="Please fill out this form completely and accurately. All required fields must be completed."
+          />
+        </FormProvider>
+
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Review Your Agents CDD Form</DialogTitle>
+              <DialogTitle>Review Your Submission</DialogTitle>
             </DialogHeader>
+            
             <div className="space-y-6">
-              {/* Personal Information */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Personal Information</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><strong>Name:</strong> {watchedValues.firstName} {watchedValues.middleName} {watchedValues.lastName}</div>
-                  <div><strong>Email:</strong> {watchedValues.email}</div>
-                  <div><strong>Phone:</strong> {watchedValues.phoneNumber}</div>
-                  <div><strong>Gender:</strong> {watchedValues.gender}</div>
-                  <div><strong>Position:</strong> {watchedValues.position}</div>
-                  <div><strong>Nationality:</strong> {watchedValues.nationality}</div>
-                  <div><strong>Occupation:</strong> {watchedValues.occupation}</div>
-                  <div><strong>BVN:</strong> {watchedValues.bvn}</div>
-                  <div><strong>Date of Birth:</strong> {watchedValues.dateOfBirth ? new Date(watchedValues.dateOfBirth).toLocaleDateString() : 'Not set'}</div>
-                  <div><strong>Place of Birth:</strong> {watchedValues.placeOfBirth}</div>
-                  <div><strong>ID Type:</strong> {watchedValues.validMeansOfId}</div>
-                  <div><strong>ID Number:</strong> {watchedValues.identificationNumber}</div>
-                  <div className="col-span-2"><strong>Address:</strong> {watchedValues.residentialAddress}</div>
-                </div>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Personal Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p><strong>Name:</strong> {watchedValues.firstName} {watchedValues.middleName} {watchedValues.lastName}</p>
+                  <p><strong>Address:</strong> {watchedValues.residentialAddress}</p>
+                  <p><strong>Gender:</strong> {watchedValues.gender}</p>
+                  <p><strong>Position:</strong> {watchedValues.position}</p>
+                  <p><strong>Date of Birth:</strong> {watchedValues.dateOfBirth ? format(new Date(watchedValues.dateOfBirth), 'PPP') : ''}</p>
+                  <p><strong>Place of Birth:</strong> {watchedValues.placeOfBirth}</p>
+                  <p><strong>Nationality:</strong> {watchedValues.nationality}</p>
+                  <p><strong>Phone:</strong> {watchedValues.phoneNumber}</p>
+                  <p><strong>Email:</strong> {watchedValues.email}</p>
+                  <p><strong>BVN:</strong> {watchedValues.bvn}</p>
+                  <p><strong>Occupation:</strong> {watchedValues.occupation}</p>
+                </CardContent>
+              </Card>
 
-              {/* Agent Information */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Agent Information</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><strong>Agent Name:</strong> {watchedValues.agentName}</div>
-                  <div><strong>NAICOM License:</strong> {watchedValues.naicomLicenseNumber}</div>
-                  <div><strong>Email Address:</strong> {watchedValues.emailAddress}</div>
-                  <div><strong>Website:</strong> {watchedValues.website}</div>
-                  <div><strong>Mobile:</strong> {watchedValues.mobileNumber}</div>
-                  <div><strong>ARIAN Number:</strong> {watchedValues.arianMembershipNumber}</div>
-                  <div className="col-span-2"><strong>Office Address:</strong> {watchedValues.agentsOfficeAddress}</div>
-                  <div className="col-span-2"><strong>Approved Principals:</strong> {watchedValues.listOfAgentsApprovedPrincipals}</div>
-                </div>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Additional Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p><strong>Agent Name:</strong> {watchedValues.agentName}</p>
+                  <p><strong>Office Address:</strong> {watchedValues.agentsOfficeAddress}</p>
+                  <p><strong>NAICOM License:</strong> {watchedValues.naicomLicenseNumber}</p>
+                  <p><strong>Email Address:</strong> {watchedValues.emailAddress}</p>
+                  <p><strong>Website:</strong> {watchedValues.website}</p>
+                  <p><strong>Mobile:</strong> {watchedValues.mobileNumber}</p>
+                  <p><strong>ARIAN Membership:</strong> {watchedValues.arianMembershipNumber}</p>
+                </CardContent>
+              </Card>
 
-              {/* Account Details */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Account Details</h3>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium mb-2">Local Account</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div><strong>Account Number:</strong> {watchedValues.localAccountNumber}</div>
-                      <div><strong>Bank Name:</strong> {watchedValues.localBankName}</div>
-                      <div><strong>Bank Branch:</strong> {watchedValues.localBankBranch}</div>
-                      <div><strong>Opening Date:</strong> {watchedValues.localAccountOpeningDate ? new Date(watchedValues.localAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
-                    </div>
-                  </div>
-                  {(watchedValues.foreignAccountNumber || watchedValues.foreignBankName) && (
-                    <div>
-                      <h4 className="font-medium mb-2">Foreign Account</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div><strong>Account Number:</strong> {watchedValues.foreignAccountNumber}</div>
-                        <div><strong>Bank Name:</strong> {watchedValues.foreignBankName}</div>
-                        <div><strong>Bank Branch:</strong> {watchedValues.foreignBankBranch}</div>
-                        <div><strong>Opening Date:</strong> {watchedValues.foreignAccountOpeningDate ? new Date(watchedValues.foreignAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Financial Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p><strong>Account Number:</strong> {watchedValues.localAccountNumber}</p>
+                  <p><strong>Bank Name:</strong> {watchedValues.localBankName}</p>
+                  <p><strong>Bank Branch:</strong> {watchedValues.localBankBranch}</p>
+                </CardContent>
+              </Card>
 
-              {/* Uploaded Documents */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Uploaded Documents</h3>
-                <div className="grid grid-cols-1 gap-2 text-sm">
-                  {Object.entries(uploadedFiles).map(([key, file]) => (
-                    <div key={key} className="flex justify-between items-center py-2 border-b">
-                      <span className="font-medium">
-                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
-                      </span>
-                      <span className="text-green-600">
-                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                      </span>
-                    </div>
-                  ))}
-                  {Object.keys(uploadedFiles).length === 0 && (
-                    <p className="text-muted-foreground">No documents uploaded yet</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Declaration */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Declaration</h3>
-                <div className="text-sm">
-                  <div><strong>Data Privacy Agreement:</strong> {watchedValues.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</div>
-                  <div><strong>Digital Signature:</strong> {watchedValues.signature}</div>
-                </div>
-              </div>
-              
-              <div className="flex gap-4 pt-4 border-t">
+              <div className="flex gap-4 pt-4">
                 <Button
                   variant="outline"
                   onClick={() => setShowSummary(false)}
+                  className="flex-1"
                 >
-                  Edit Details
+                  Back to Edit
                 </Button>
                 <Button
-                  onClick={() => {
-                    const formData = formMethods.getValues();
-                    handleSubmit(formData);
-                  }}
+                  onClick={() => formMethods.handleSubmit(handleSubmit)()}
                   disabled={isSubmitting}
-                  className="bg-primary text-primary-foreground"
+                  className="flex-1"
                 >
-                  {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Submit Form'
+                  )}
                 </Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
-
-        {/* Success Modal */}
-        <SuccessModal
-          isOpen={showSuccess}
-          onClose={() => setShowSuccess()}
-          title="Form Submitted Successfully!"
-          message="Your Agents CDD form has been submitted and is being processed."
-          isLoading={isSubmitting}
-          loadingMessage="Submitting your form..."
-        />
       </div>
     </div>
   );
