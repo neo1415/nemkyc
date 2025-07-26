@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { get } from 'lodash'; // CRITICAL for nested errors
 import { toast } from '@/hooks/use-toast';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { Calendar, CalendarIcon, Plus, Trash2, Edit2, Loader2 } from 'lucide-react';
+import { Calendar, CalendarIcon, Plus, Trash2, Edit2, Loader2, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -22,52 +23,294 @@ import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-// Corporate CDD Schema
+// CRITICAL: Define form components OUTSIDE main component to prevent focus loss
+const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
+  const { register, formState: { errors }, clearErrors } = useFormContext();
+  const error = get(errors, name); // CRITICAL: Use lodash.get for nested errors
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type={type}
+        maxLength={maxLength}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
+  const { register, watch, formState: { errors }, clearErrors } = useFormContext();
+  const currentValue = watch(name) || '';
+  const error = get(errors, name); // CRITICAL: Use lodash.get for nested errors
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Textarea
+        id={name}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      <div className="flex justify-between">
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
+        <span className="text-sm text-muted-foreground ml-auto">
+          {currentValue.length}/{maxLength}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const FormSelect = ({ name, label, required = false, options, placeholder, ...props }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name); // CRITICAL: Use lodash.get for nested errors
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(newValue) => {
+          setValue(name, newValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        {...props}
+      >
+        <SelectTrigger className={error ? 'border-destructive' : ''}>
+          <SelectValue placeholder={placeholder || `Select ${label}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option: any) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormDatePicker = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name); // CRITICAL: Use lodash.get for nested errors
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-full justify-start text-left font-normal",
+              !value && "text-muted-foreground",
+              error && "border-destructive"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {value ? format(typeof value === 'string' ? new Date(value) : value, "PPP") : <span>Pick a date</span>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0">
+          <ReactCalendar
+            mode="single"
+            selected={value ? (typeof value === 'string' ? new Date(value) : value) : undefined}
+            onSelect={(date) => {
+              setValue(name, date);
+              if (error) {
+                clearErrors(name);
+              }
+            }}
+            initialFocus
+            className="pointer-events-auto"
+          />
+        </PopoverContent>
+      </Popover>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+// Corporate CDD Schema with enhanced validation
 const corporateCDDSchema = yup.object().shape({
   // Company Info
-  companyName: yup.string().min(3).max(50).required("Company name is required"),
-  registeredCompanyAddress: yup.string().min(3).max(60).required("Registered address is required"),
-  incorporationNumber: yup.string().min(7).max(15).required("Incorporation number is required"),
-  incorporationState: yup.string().min(3).max(50).required("Incorporation state is required"),
-  dateOfIncorporationRegistration: yup.date().required("Date of incorporation is required"),
-  natureOfBusiness: yup.string().min(3).max(60).required("Nature of business is required"),
+  companyName: yup.string()
+    .required("Company name is required")
+    .min(2, "Company name must be at least 2 characters")
+    .max(100, "Company name cannot exceed 100 characters"),
+  registeredCompanyAddress: yup.string()
+    .required("Registered address is required")
+    .min(10, "Address must be at least 10 characters")
+    .max(500, "Address cannot exceed 500 characters"),
+  incorporationNumber: yup.string()
+    .required("Incorporation number is required")
+    .min(6, "Incorporation number must be at least 6 characters")
+    .max(20, "Incorporation number cannot exceed 20 characters"),
+  incorporationState: yup.string()
+    .required("Incorporation state is required")
+    .min(2, "State must be at least 2 characters")
+    .max(50, "State cannot exceed 50 characters"),
+  dateOfIncorporationRegistration: yup.date()
+    .required("Date of incorporation is required")
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
+  natureOfBusiness: yup.string()
+    .required("Nature of business is required")
+    .min(10, "Nature of business must be at least 10 characters")
+    .max(500, "Nature of business cannot exceed 500 characters"),
   companyLegalForm: yup.string().required("Company type is required"),
-  companyLegalFormOther: yup.string().when('companyType', {
+  companyLegalFormOther: yup.string().when('companyLegalForm', {
     is: 'Other',
     then: (schema) => schema.required("Please specify other company type"),
     otherwise: (schema) => schema.notRequired()
   }),
-  email: yup.string().email("Valid email is required").min(5).max(50).required("Email is required"),
-  website: yup.string().required("Website is required"),
-  taxIdentificationNumber: yup.string().min(6).max(15),
- telephoneNumber: yup.string().min(5).max(11).required("Telephone number is required"),
+  email: yup.string()
+    .required("Email is required")
+    .email("Please enter a valid email")
+    .typeError("Please enter a valid email"),
+  website: yup.string()
+    .required("Website is required")
+    .url("Please enter a valid website URL"),
+  taxIdentificationNumber: yup.string()
+    .matches(/^[\d\-]+$/, "Tax ID must contain only numbers and dashes")
+    .max(20, "Tax ID cannot exceed 20 characters"),
+  telephoneNumber: yup.string()
+    .required("Telephone number is required")
+    .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
+    .max(15, "Phone number cannot exceed 15 characters"),
 
-  // Directors
+  // Directors with enhanced validation
   directors: yup.array().of(
     yup.object().shape({
-      firstName: yup.string().min(3).max(30).required("First name is required"),
-      middleName: yup.string().min(3).max(30),
-      lastName: yup.string().min(3).max(30).required("Last name is required"),
-      dateOfBirth: yup.date().required("Date of birth is required"),
-      placeOfBirth: yup.string().min(3).max(30).required("Place of birth is required"),
+      firstName: yup.string()
+        .required("First name is required")
+        .min(2, "First name must be at least 2 characters")
+        .max(50, "First name cannot exceed 50 characters"),
+      middleName: yup.string()
+        .max(50, "Middle name cannot exceed 50 characters"),
+      lastName: yup.string()
+        .required("Last name is required")
+        .min(2, "Last name must be at least 2 characters")
+        .max(50, "Last name cannot exceed 50 characters"),
+      dateOfBirth: yup.date()
+        .required("Date of birth is required")
+        .test('age', 'Must be at least 18 years old', function(value) {
+          if (!value) return false;
+          const today = new Date();
+          const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+          return value <= eighteenYearsAgo;
+        })
+        .typeError('Please select a valid date'),
+      placeOfBirth: yup.string()
+        .required("Place of birth is required")
+        .min(2, "Place of birth must be at least 2 characters")
+        .max(100, "Place of birth cannot exceed 100 characters"),
       nationality: yup.string().required("Nationality is required"),
       country: yup.string().required("Country is required"),
-      occupation: yup.string().min(3).max(30).required("Occupation is required"),
-      email: yup.string().email("Valid email is required").min(6).max(30).required("Email is required"),
-      phoneNumber: yup.string().min(5).max(11).required("Phone number is required"),
-      bvn: yup.string().length(11, "BVN must be exactly 11 digits").required("BVN is required"),
-      employerName: yup.string().min(2).max(50),
-      employerPhone: yup.string().min(5).max(11),
-      residentialAddress: yup.string().required("Residential address is required"),
-      taxIdNumber: yup.string(),
+      occupation: yup.string()
+        .required("Occupation is required")
+        .min(2, "Occupation must be at least 2 characters")
+        .max(100, "Occupation cannot exceed 100 characters"),
+      email: yup.string()
+        .required("Email is required")
+        .email("Please enter a valid email")
+        .typeError("Please enter a valid email"),
+      phoneNumber: yup.string()
+        .required("Phone number is required")
+        .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
+        .max(15, "Phone number cannot exceed 15 characters"),
+      bvn: yup.string()
+        .required("BVN is required")
+        .matches(/^\d+$/, "BVN must contain only numbers")
+        .length(11, "BVN must be exactly 11 digits"),
+      employerName: yup.string()
+        .max(100, "Employer name cannot exceed 100 characters"),
+      employerPhone: yup.string()
+        .matches(/^[\d\s+\-()]*$/, "Invalid phone number format")
+        .max(15, "Phone number cannot exceed 15 characters"),
+      residentialAddress: yup.string()
+        .required("Residential address is required")
+        .min(10, "Address must be at least 10 characters")
+        .max(500, "Address cannot exceed 500 characters"),
+      taxIdNumber: yup.string()
+        .max(20, "Tax ID cannot exceed 20 characters"),
       idType: yup.string().required("ID type is required"),
-      identificationNumber: yup.string().min(1).max(20).required("Identification number is required"),
-      issuingBody: yup.string().min(1).max(50).required("Issuing body is required"),
-      issuedDate: yup.date().required("Issued date is required"),
-      expiryDate: yup.date(),
+      identificationNumber: yup.string()
+        .required("Identification number is required")
+        .min(1, "Identification number is required")
+        .max(50, "Identification number cannot exceed 50 characters"),
+      issuingBody: yup.string()
+        .required("Issuing body is required")
+        .min(2, "Issuing body must be at least 2 characters")
+        .max(100, "Issuing body cannot exceed 100 characters"),
+      issuedDate: yup.date()
+        .required("Issued date is required")
+        .test('not-future', 'Date cannot be in the future', function(value) {
+          if (!value) return false;
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          return value <= today;
+        })
+        .typeError('Please select a valid date'),
+      expiryDate: yup.date()
+        .test('not-past', 'Expiry date cannot be in the past', function(value) {
+          if (!value) return true; // Optional field
+          const today = new Date();
+          today.setHours(23, 59, 59, 999);
+          return value > today;
+        })
+        .typeError('Please select a valid date'),
       sourceOfIncome: yup.string().required("Source of income is required"),
       sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
         is: 'Other',
@@ -78,20 +321,56 @@ const corporateCDDSchema = yup.object().shape({
   ).min(1, "At least one director is required"),
 
   // Account Details
-  bankName: yup.string().min(3).max(50).required("Bank name is required"),
-  accountNumber: yup.string().min(7).max(10).required("Account number is required"),
-  bankBranch: yup.string().min(3).max(30).required("Bank branch is required"),
-  accountOpeningDate: yup.date().required("Account opening date is required"),
+  bankName: yup.string()
+    .required("Bank name is required")
+    .min(2, "Bank name must be at least 2 characters")
+    .max(100, "Bank name cannot exceed 100 characters"),
+  accountNumber: yup.string()
+    .required("Account number is required")
+    .matches(/^\d+$/, "Account number must contain only numbers")
+    .min(10, "Account number must be at least 10 digits")
+    .max(10, "Account number must be exactly 10 digits"),
+  bankBranch: yup.string()
+    .required("Bank branch is required")
+    .min(2, "Bank branch must be at least 2 characters")
+    .max(100, "Bank branch cannot exceed 100 characters"),
+  accountOpeningDate: yup.date()
+    .required("Account opening date is required")
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
 
   // Foreign Account (optional)
-  foreignBankName: yup.string(),
-  foreignAccountNumber: yup.string(),
-  foreignBankBranch: yup.string(),
-  foreignAccountOpeningDate: yup.date(),
+  foreignBankName: yup.string()
+    .max(100, "Bank name cannot exceed 100 characters"),
+  foreignAccountNumber: yup.string()
+    .matches(/^[\d\-]*$/, "Account number must contain only numbers and dashes")
+    .max(30, "Account number cannot exceed 30 characters"),
+  foreignBankBranch: yup.string()
+    .max(100, "Bank branch cannot exceed 100 characters"),
+  foreignAccountOpeningDate: yup.date()
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return true; // Optional field
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
+
+  // File uploads
+  cacCertificate: yup.mixed().required("CAC Certificate upload is required"),
+  identification: yup.mixed().required("Identification document upload is required"),
 
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
-  signature: yup.string().required("Digital signature is required")
+  signature: yup.string()
+    .required("Digital signature is required")
+    .min(3, "Signature must be at least 3 characters")
+    .max(100, "Signature cannot exceed 100 characters")
 });
 
 const CorporateCDD: React.FC = () => {
@@ -110,7 +389,7 @@ const CorporateCDD: React.FC = () => {
     firstName: '',
     middleName: '',
     lastName: '',
-    dateOfBirth: '',
+    dateOfBirth: undefined,
     placeOfBirth: '',
     nationality: '',
     country: '',
@@ -125,8 +404,8 @@ const CorporateCDD: React.FC = () => {
     idType: '',
     identificationNumber: '',
     issuingBody: '',
-    issuedDate: '',
-    expiryDate: '',
+    issuedDate: undefined,
+    expiryDate: undefined,
     sourceOfIncome: '',
     sourceOfIncomeOther: ''
   };
@@ -138,7 +417,7 @@ const CorporateCDD: React.FC = () => {
       registeredCompanyAddress: '',
       incorporationNumber: '',
       incorporationState: '',
-      dateOfIncorporationRegistration: '',
+      dateOfIncorporationRegistration: undefined,
       natureOfBusiness: '',
       companyLegalForm: '',
       companyLegalFormOther: '',
@@ -150,13 +429,15 @@ const CorporateCDD: React.FC = () => {
       bankName: '',
       accountNumber: '',
       bankBranch: '',
-      accountOpeningDate: '',
+      accountOpeningDate: undefined,
       foreignBankName: '',
       foreignAccountNumber: '',
       foreignBankBranch: '',
-      foreignAccountOpeningDate: '',
-  agreeToDataPrivacy: false,
-  signature: ''
+      foreignAccountOpeningDate: undefined,
+      cacCertificate: '',
+      identification: '',
+      agreeToDataPrivacy: false,
+      signature: ''
     },
     mode: 'onChange'
   });
@@ -198,8 +479,48 @@ const CorporateCDD: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
+  // Data sanitization (remove undefined values)
+  const sanitizeData = (data: any) => {
+    const sanitized: any = {};
+    
+    // Helper function to serialize dates properly
+    const serializeValue = (value: any): any => {
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+      if (Array.isArray(value)) {
+        return value.map(serializeValue);
+      }
+      if (value && typeof value === 'object') {
+        const serializedObj: any = {};
+        Object.keys(value).forEach(key => {
+          const serializedValue = serializeValue(value[key]);
+          if (serializedValue !== undefined) {
+            serializedObj[key] = serializedValue;
+          }
+        });
+        return serializedObj;
+      }
+      return value;
+    };
+
+    Object.keys(data).forEach(key => {
+      const serializedValue = serializeValue(data[key]);
+      if (serializedValue !== undefined) {
+        sanitized[key] = serializedValue;
+      }
+    });
+    
+    return sanitized;
+  };
+
   // Main submit handler that checks authentication
   const handleSubmit = async (data: any) => {
+    console.log('Form data before sanitization:', data);
+    
+    const sanitizedData = sanitizeData(data);
+    console.log('Sanitized data:', sanitizedData);
+
     // Prepare file upload data
     const fileUploadPromises: Array<Promise<[string, string]>> = [];
     
@@ -215,7 +536,7 @@ const CorporateCDD: React.FC = () => {
     const fileUrls = Object.fromEntries(fileResults);
 
     const finalData = {
-      ...data,
+      ...sanitizedData,
       ...fileUrls,
       status: 'processing',
       formType: 'Corporate-CDD'
@@ -230,36 +551,38 @@ const CorporateCDD: React.FC = () => {
     setShowSummary(true);
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
-    return (
-      <div className="space-y-2">
-        <Label>{label}</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !value && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <ReactCalendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={(date) => formMethods.setValue(name, date)}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-    );
+  // Company type options
+  const companyTypeOptions = [
+    { value: 'Sole Proprietor', label: 'Sole Proprietor' },
+    { value: 'Unlimited Liability Company', label: 'Unlimited Liability Company' },
+    { value: 'Limited Liability Company', label: 'Limited Liability Company' },
+    { value: 'Public Limited Company', label: 'Public Limited Company' },
+    { value: 'Joint Venture', label: 'Joint Venture' },
+    { value: 'Other', label: 'Other' }
+  ];
+
+  // ID type options
+  const idTypeOptions = [
+    { value: 'International Passport', label: 'International Passport' },
+    { value: 'NIMC', label: 'NIMC' },
+    { value: "Driver's Licence", label: "Driver's Licence" },
+    { value: 'Voters Card', label: 'Voters Card' }
+  ];
+
+  // Income source options
+  const incomeSourceOptions = [
+    { value: 'Salary or Business Income', label: 'Salary or Business Income' },
+    { value: 'Investments or Dividends', label: 'Investments or Dividends' },
+    { value: 'Other', label: 'Other' }
+  ];
+
+  // Step field mappings for validation
+  const stepFieldMappings = {
+    0: ['companyName', 'registeredCompanyAddress', 'incorporationNumber', 'incorporationState', 'dateOfIncorporationRegistration', 'natureOfBusiness', 'companyLegalForm', 'companyLegalFormOther', 'email', 'website', 'taxIdentificationNumber', 'telephoneNumber'],
+    1: ['directors'],
+    2: ['bankName', 'accountNumber', 'bankBranch', 'accountOpeningDate', 'foreignBankName', 'foreignAccountNumber', 'foreignBankBranch', 'foreignAccountOpeningDate'],
+    3: ['cacCertificate', 'identification'],
+    4: ['agreeToDataPrivacy', 'signature']
   };
 
   const steps = [
@@ -268,114 +591,93 @@ const CorporateCDD: React.FC = () => {
       title: 'Company Info',
       component: (
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="companyName">Company Name *</Label>
-            <Input
-              id="companyName"
-              {...formMethods.register('companyName')}
-            />
-          </div>
+          <FormField
+            name="companyName"
+            label="Company Name"
+            required={true}
+            maxLength={100}
+          />
           
-          <div>
-            <Label htmlFor="registeredCompanyAddress">Registered Company Address *</Label>
-            <Textarea
-              id="registeredCompanyAddress"
-              {...formMethods.register('registeredCompanyAddress')}
-            />
-          </div>
+          <FormTextarea
+            name="registeredCompanyAddress"
+            label="Registered Company Address"
+            required={true}
+            maxLength={500}
+          />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="incorporationNumber">Incorporation Number *</Label>
-              <Input
-                id="incorporationNumber"
-                {...formMethods.register('incorporationNumber')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="incorporationState">Incorporation State *</Label>
-              <Input
-                id="incorporationState"
-                {...formMethods.register('incorporationState')}
-              />
-            </div>
-          </div>
-          
-          <div>
-            <DatePickerField
-              name="dateOfIncorporationRegistration"
-              label="Date of Incorporation/Registration *"
+            <FormField
+              name="incorporationNumber"
+              label="Incorporation Number"
+              required={true}
+              maxLength={20}
+            />
+            <FormField
+              name="incorporationState"
+              label="Incorporation State"
+              required={true}
+              maxLength={50}
             />
           </div>
           
-          <div>
-            <Label htmlFor="natureOfBusiness">Nature of Business *</Label>
-            <Textarea
-              id="natureOfBusiness"
-              {...formMethods.register('natureOfBusiness')}
-            />
-          </div>
+          <FormDatePicker
+            name="dateOfIncorporationRegistration"
+            label="Date of Incorporation/Registration"
+            required={true}
+          />
           
-          <div>
-            <Label>Company Type *</Label>
-            <Select
-              value={watchedValues.companyLegalForm || ''}
-              onValueChange={(value) => formMethods.setValue('companyLegalForm', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose Company Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Sole Proprietor">Sole Proprietor</SelectItem>
-                <SelectItem value="Unlimited Liability Company">Unlimited Liability Company</SelectItem>
-                <SelectItem value="Limited Liability Company">Limited Liability Company</SelectItem>
-                <SelectItem value="Public Limited Company">Public Limited Company</SelectItem>
-                <SelectItem value="Joint Venture">Joint Venture</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormTextarea
+            name="natureOfBusiness"
+            label="Nature of Business"
+            required={true}
+            maxLength={500}
+          />
+          
+          <FormSelect
+            name="companyLegalForm"
+            label="Company Type"
+            required={true}
+            options={companyTypeOptions}
+            placeholder="Choose Company Type"
+          />
 
           {watchedValues.companyLegalForm === 'Other' && (
-            <div>
-              <Label htmlFor="companyLegalFormOther">Please specify *</Label>
-              <Input id="companyLegalFormOther" {...formMethods.register('companyLegalFormOther')} />
-            </div>
+            <FormField
+              name="companyLegalFormOther"
+              label="Please specify"
+              required={true}
+              maxLength={100}
+            />
           )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                {...formMethods.register('email')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="website">Website *</Label>
-              <Input
-                id="website"
-                {...formMethods.register('website')}
-              />
-            </div>
+            <FormField
+              name="email"
+              label="Email Address"
+              required={true}
+              type="email"
+              maxLength={100}
+            />
+            <FormField
+              name="website"
+              label="Website"
+              required={true}
+              maxLength={200}
+            />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="taxIdentificationNumber">Tax Identification Number</Label>
-              <Input
-                id="taxIdentificationNumber"
-                {...formMethods.register('taxIdentificationNumber')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="telephoneNumber">Telephone Number *</Label>
-              <Input
-                id="telephoneNumber"
-                {...formMethods.register('telephoneNumber')}
-              />
-            </div>
+            <FormField
+              name="taxIdentificationNumber"
+              label="Tax Identification Number"
+              maxLength={20}
+            />
+            <FormField
+              name="telephoneNumber"
+              label="Telephone Number"
+              required={true}
+              maxLength={15}
+            />
           </div>
         </div>
       )
@@ -401,151 +703,176 @@ const CorporateCDD: React.FC = () => {
             <Card key={field.id} className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="font-medium">Director {index + 1}</h4>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => removeDirector(index)}
-                  disabled={directorFields.length === 1}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {directorFields.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeDirector(index)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Remove
+                  </Button>
+                )}
               </div>
               
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>First Name *</Label>
-                    <Input {...formMethods.register(`directors.${index}.firstName`)} />
-                  </div>
-                  <div>
-                    <Label>Middle Name</Label>
-                    <Input {...formMethods.register(`directors.${index}.middleName`)} />
-                  </div>
-                  <div>
-                    <Label>Last Name *</Label>
-                    <Input {...formMethods.register(`directors.${index}.lastName`)} />
-                  </div>
+                  <FormField
+                    name={`directors.${index}.firstName`}
+                    label="First Name"
+                    required={true}
+                    maxLength={50}
+                  />
+                  <FormField
+                    name={`directors.${index}.middleName`}
+                    label="Middle Name"
+                    maxLength={50}
+                  />
+                  <FormField
+                    name={`directors.${index}.lastName`}
+                    label="Last Name"
+                    required={true}
+                    maxLength={50}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DatePickerField name={`directors.${index}.dateOfBirth`} label="Date of Birth *" />
-                  <div>
-                    <Label>Place of Birth *</Label>
-                    <Input {...formMethods.register(`directors.${index}.placeOfBirth`)} />
-                  </div>
+                  <FormDatePicker 
+                    name={`directors.${index}.dateOfBirth`} 
+                    label="Date of Birth" 
+                    required={true}
+                  />
+                  <FormField
+                    name={`directors.${index}.placeOfBirth`}
+                    label="Place of Birth"
+                    required={true}
+                    maxLength={100}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Nationality *</Label>
-                    <Input {...formMethods.register(`directors.${index}.nationality`)} />
-                  </div>
-                  <div>
-                    <Label>Country *</Label>
-                    <Input {...formMethods.register(`directors.${index}.country`)} />
-                  </div>
+                  <FormField
+                    name={`directors.${index}.nationality`}
+                    label="Nationality"
+                    required={true}
+                    maxLength={50}
+                  />
+                  <FormField
+                    name={`directors.${index}.country`}
+                    label="Country"
+                    required={true}
+                    maxLength={50}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Occupation *</Label>
-                    <Input {...formMethods.register(`directors.${index}.occupation`)} />
-                  </div>
-                  <div>
-                    <Label>Email *</Label>
-                    <Input type="email" {...formMethods.register(`directors.${index}.email`)} />
-                  </div>
+                  <FormField
+                    name={`directors.${index}.occupation`}
+                    label="Occupation"
+                    required={true}
+                    maxLength={100}
+                  />
+                  <FormField
+                    name={`directors.${index}.email`}
+                    label="Email"
+                    required={true}
+                    type="email"
+                    maxLength={100}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Phone Number *</Label>
-                    <Input {...formMethods.register(`directors.${index}.phoneNumber`)} />
-                  </div>
-                  <div>
-                    <Label>BVN *</Label>
-                    <Input {...formMethods.register(`directors.${index}.bvn`)} />
-                  </div>
+                  <FormField
+                    name={`directors.${index}.phoneNumber`}
+                    label="Phone Number"
+                    required={true}
+                    maxLength={15}
+                  />
+                  <FormField
+                    name={`directors.${index}.bvn`}
+                    label="BVN"
+                    required={true}
+                    maxLength={11}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Employer's Name</Label>
-                    <Input {...formMethods.register(`directors.${index}.employerName`)} />
-                  </div>
-                  <div>
-                    <Label>Employer's Phone</Label>
-                    <Input {...formMethods.register(`directors.${index}.employerPhone`)} />
-                  </div>
+                  <FormField
+                    name={`directors.${index}.employerName`}
+                    label="Employer's Name"
+                    maxLength={100}
+                  />
+                  <FormField
+                    name={`directors.${index}.employerPhone`}
+                    label="Employer's Phone"
+                    maxLength={15}
+                  />
                 </div>
 
-                <div>
-                  <Label>Residential Address *</Label>
-                  <Textarea {...formMethods.register(`directors.${index}.residentialAddress`)} />
-                </div>
+                <FormTextarea
+                  name={`directors.${index}.residentialAddress`}
+                  label="Residential Address"
+                  required={true}
+                  maxLength={500}
+                />
 
-                <div>
-                  <Label>Tax ID Number</Label>
-                  <Input {...formMethods.register(`directors.${index}.taxIdNumber`)} />
-                </div>
+                <FormField
+                  name={`directors.${index}.taxIdNumber`}
+                  label="Tax ID Number"
+                  maxLength={20}
+                />
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>ID Type *</Label>
-                    <Select
-                      value={watchedValues.directors?.[index]?.idType || ''}
-                      onValueChange={(value) => formMethods.setValue(`directors.${index}.idType`, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose Identification Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="International Passport">International Passport</SelectItem>
-                        <SelectItem value="NIMC">NIMC</SelectItem>
-                        <SelectItem value="Driver's Licence">Driver's Licence</SelectItem>
-                        <SelectItem value="Voters Card">Voters Card</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Identification Number *</Label>
-                    <Input {...formMethods.register(`directors.${index}.identificationNumber`)} />
-                  </div>
-                  <div>
-                    <Label>Issuing Body *</Label>
-                    <Input {...formMethods.register(`directors.${index}.issuingBody`)} />
-                  </div>
+                  <FormSelect
+                    name={`directors.${index}.idType`}
+                    label="ID Type"
+                    required={true}
+                    options={idTypeOptions}
+                    placeholder="Choose Identification Type"
+                  />
+                  <FormField
+                    name={`directors.${index}.identificationNumber`}
+                    label="Identification Number"
+                    required={true}
+                    maxLength={50}
+                  />
+                  <FormField
+                    name={`directors.${index}.issuingBody`}
+                    label="Issuing Body"
+                    required={true}
+                    maxLength={100}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DatePickerField name={`directors.${index}.issuedDate`} label="Issued Date *" />
-                  <DatePickerField name={`directors.${index}.expiryDate`} label="Expiry Date" />
+                  <FormDatePicker 
+                    name={`directors.${index}.issuedDate`} 
+                    label="Issued Date" 
+                    required={true}
+                  />
+                  <FormDatePicker 
+                    name={`directors.${index}.expiryDate`} 
+                    label="Expiry Date"
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Source of Income *</Label>
-                    <Select
-                      value={((formMethods.watch('directors') as any[]) || [])[index]?.sourceOfIncome || ''}
-                      onValueChange={(value) => formMethods.setValue(`directors.${index}.sourceOfIncome`, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose Income Source" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Salary or Business Income">Salary or Business Income</SelectItem>
-                        <SelectItem value="Investments or Dividends">Investments or Dividends</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <FormSelect
+                    name={`directors.${index}.sourceOfIncome`}
+                    label="Source of Income"
+                    required={true}
+                    options={incomeSourceOptions}
+                    placeholder="Choose Income Source"
+                  />
                   
                   {((formMethods.watch('directors') as any[]) || [])[index]?.sourceOfIncome === 'Other' && (
-                    <div>
-                      <Label>Please specify *</Label>
-                      <Input {...formMethods.register(`directors.${index}.sourceOfIncomeOther`)} />
-                    </div>
+                    <FormField
+                      name={`directors.${index}.sourceOfIncomeOther`}
+                      label="Please specify"
+                      required={true}
+                      maxLength={100}
+                    />
                   )}
                 </div>
               </div>
@@ -562,72 +889,60 @@ const CorporateCDD: React.FC = () => {
           <div>
             <h3 className="text-lg font-medium mb-4">Local Account Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="bankName">Bank Name *</Label>
-                <Input
-                  id="bankName"
-                  {...formMethods.register('bankName')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="accountNumber">Account Number *</Label>
-                <Input
-                  id="accountNumber"
-                  {...formMethods.register('accountNumber')}
-                />
-              </div>
+              <FormField
+                name="bankName"
+                label="Bank Name"
+                required={true}
+                maxLength={100}
+              />
+              <FormField
+                name="accountNumber"
+                label="Account Number"
+                required={true}
+                maxLength={10}
+              />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <Label htmlFor="bankBranch">Bank Branch *</Label>
-                <Input
-                  id="bankBranch"
-                  {...formMethods.register('bankBranch')}
-                />
-              </div>
-              <div>
-                <DatePickerField
-                  name="accountOpeningDate"
-                  label="Account Opening Date *"
-                />
-              </div>
+              <FormField
+                name="bankBranch"
+                label="Bank Branch"
+                required={true}
+                maxLength={100}
+              />
+              <FormDatePicker
+                name="accountOpeningDate"
+                label="Account Opening Date"
+                required={true}
+              />
             </div>
           </div>
 
           <div>
             <h3 className="text-lg font-medium mb-4">Foreign Account Details (Optional)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="foreignBankName">Bank Name</Label>
-                <Input
-                  id="foreignBankName"
-                  {...formMethods.register('foreignBankName')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="foreignAccountNumber">Account Number</Label>
-                <Input
-                  id="foreignAccountNumber"
-                  {...formMethods.register('foreignAccountNumber')}
-                />
-              </div>
+              <FormField
+                name="foreignBankName"
+                label="Bank Name"
+                maxLength={100}
+              />
+              <FormField
+                name="foreignAccountNumber"
+                label="Account Number"
+                maxLength={30}
+              />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <Label htmlFor="foreignBankBranch">Bank Branch</Label>
-                <Input
-                  id="foreignBankBranch"
-                  {...formMethods.register('foreignBankBranch')}
-                />
-              </div>
-              <div>
-                <DatePickerField
-                  name="foreignAccountOpeningDate"
-                  label="Account Opening Date"
-                />
-              </div>
+              <FormField
+                name="foreignBankBranch"
+                label="Bank Branch"
+                maxLength={100}
+              />
+              <FormDatePicker
+                name="foreignAccountOpeningDate"
+                label="Account Opening Date"
+              />
             </div>
           </div>
         </div>
@@ -635,56 +950,67 @@ const CorporateCDD: React.FC = () => {
     },
     {
       id: 'uploads',
-      title: 'Uploads',
+      title: 'Document Uploads',
       component: (
-  <div className="flex justify-center">
-  <div className="space-y-4 w-full max-w-2xl">
-    {/* Upload CAC Certificate */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="space-y-2 w-full">
-        <h4 className="font-medium text-center">Upload CAC Certificate</h4>
-        <FileUpload
-          accept="application/pdf,image/*"
-          maxSize={3 * 1024 * 1024}
-          onFileSelect={(file) => {
-            setUploadedFiles(prev => ({ ...prev, cacCertificate: file }));
-            toast({ title: "File selected for upload" });
-          }}
-          currentFile={uploadedFiles.cacCertificate}
-          onFileRemove={() => {
-            setUploadedFiles(prev => {
-              const { cacCertificate, ...rest } = prev;
-              return rest;
-            });
-          }}
-        />
-      </div>
-    </div>
+        <div className="space-y-6">
+          <div>
+            <Label>Upload CAC Certificate <span className="required-asterisk">*</span></Label>
+            <FileUpload
+              accept=".png,.jpg,.jpeg,.pdf"
+              onFileSelect={(file) => {
+                setUploadedFiles(prev => ({
+                  ...prev,
+                  cacCertificate: file
+                }));
+                formMethods.setValue('cacCertificate', file);
+                if (formMethods.formState.errors.cacCertificate) {
+                  formMethods.clearErrors('cacCertificate');
+                }
+              }}
+              maxSize={3 * 1024 * 1024}
+            />
+            {uploadedFiles.cacCertificate && (
+              <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                <Check className="h-4 w-4" />
+                {uploadedFiles.cacCertificate.name}
+              </div>
+            )}
+            {formMethods.formState.errors.cacCertificate && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.cacCertificate.message?.toString()}
+              </p>
+            )}
+          </div>
 
-    {/* Upload Means of Identification */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="space-y-2 w-full">
-        <h4 className="font-medium text-center">Upload Means of Identification</h4>
-        <FileUpload
-          accept="application/pdf,image/*"
-          maxSize={3 * 1024 * 1024}
-          onFileSelect={(file) => {
-            setUploadedFiles(prev => ({ ...prev, identification: file }));
-            toast({ title: "File selected for upload" });
-          }}
-          currentFile={uploadedFiles.identification}
-          onFileRemove={() => {
-            setUploadedFiles(prev => {
-              const { identification, ...rest } = prev;
-              return rest;
-            });
-          }}
-        />
-      </div>
-    </div>
-  </div>
-</div>
-
+          <div>
+            <Label>Upload Means of Identification <span className="required-asterisk">*</span></Label>
+            <FileUpload
+              accept=".png,.jpg,.jpeg,.pdf"
+              onFileSelect={(file) => {
+                setUploadedFiles(prev => ({
+                  ...prev,
+                  identification: file
+                }));
+                formMethods.setValue('identification', file);
+                if (formMethods.formState.errors.identification) {
+                  formMethods.clearErrors('identification');
+                }
+              }}
+              maxSize={3 * 1024 * 1024}
+            />
+            {uploadedFiles.identification && (
+              <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                <Check className="h-4 w-4" />
+                {uploadedFiles.identification.name}
+              </div>
+            )}
+            {formMethods.formState.errors.identification && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.identification.message?.toString()}
+              </p>
+            )}
+          </div>
+        </div>
       )
     },
     {
@@ -711,53 +1037,65 @@ const CorporateCDD: React.FC = () => {
           <div className="flex items-start space-x-2">
             <Checkbox
               id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked === true)}
+              checked={formMethods.watch('agreeToDataPrivacy')}
+              onCheckedChange={(checked) => {
+                formMethods.setValue('agreeToDataPrivacy', checked === true);
+                if (formMethods.formState.errors.agreeToDataPrivacy) {
+                  formMethods.clearErrors('agreeToDataPrivacy');
+                }
+              }}
+              className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
             />
             <Label htmlFor="agreeToDataPrivacy" className="text-sm">
-              I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge *
+              I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge <span className="required-asterisk">*</span>
             </Label>
           </div>
+          {formMethods.formState.errors.agreeToDataPrivacy && (
+            <p className="text-sm text-destructive">
+              {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
+            </p>
+          )}
           
-          <div>
-            <Label htmlFor="signature">Digital Signature *</Label>
-            <Input
-              id="signature"
-              placeholder="Type your full name as signature"
-              {...formMethods.register('signature')}
-            />
-          </div>
-          
-          <div className="text-center pt-4">
-            <Button
-              type="button"
-              onClick={() => {
-                const isValid = formMethods.trigger();
-                if (isValid) setShowSummary(true);
-              }}
-            >
-              Review & Submit
-            </Button>
-          </div>
+          <FormField
+            name="signature"
+            label="Digital Signature"
+            required={true}
+            placeholder="Type your full name as signature"
+            maxLength={100}
+          />
         </div>
       )
     }
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Corporate CDD Form</h1>
-          <p className="text-gray-600">Customer Due Diligence form for Corporate Entities</p>
-        </div>
+    <FormProvider {...formMethods}>
+      <div className="container mx-auto px-4 py-8">
+        {/* Loading overlay */}
+        {showPostAuthLoading && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-lg font-semibold">Completing your submission...</p>
+            </div>
+          </div>
+        )}
 
-        <MultiStepForm
-          steps={steps}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-          formMethods={formMethods}
-        />
+        <Card className="max-w-6xl mx-auto">
+          <CardHeader>
+            <CardTitle>Corporate CDD Form</CardTitle>
+            <CardDescription>Customer Due Diligence form for Corporate Entities</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MultiStepForm
+              steps={steps}
+              onSubmit={onFinalSubmit}
+              formMethods={formMethods}
+              submitButtonText="Submit Corporate CDD"
+              stepFieldMappings={stepFieldMappings}
+            />
+          </CardContent>
+        </Card>
 
         {/* Summary Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
@@ -770,8 +1108,8 @@ const CorporateCDD: React.FC = () => {
                 <div><strong>Company Name:</strong> {watchedValues.companyName}</div>
                 <div><strong>Incorporation Number:</strong> {watchedValues.incorporationNumber}</div>
                 <div><strong>Email:</strong> {watchedValues.email}</div>
-                <div><strong>Phone:</strong> {watchedValues.telephone}</div>
-                <div><strong>Company Type:</strong> {watchedValues.companyType}</div>
+                <div><strong>Phone:</strong> {watchedValues.telephoneNumber}</div>
+                <div><strong>Company Type:</strong> {watchedValues.companyLegalForm}</div>
                 <div><strong>Nature of Business:</strong> {watchedValues.natureOfBusiness}</div>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg">
@@ -805,26 +1143,16 @@ const CorporateCDD: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Success Dialog */}
-        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>CDD Form Submitted Successfully!</DialogTitle>
-            </DialogHeader>
-            <div className="text-center space-y-4">
-              <div className="text-green-600 text-6xl">✓</div>
-              <p>Your Corporate CDD form has been submitted successfully.</p>
-              <p className="text-sm text-muted-foreground">
-                You will receive a confirmation email shortly.
-              </p>
-              <Button onClick={() => setShowSuccess()}>
-                Close
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Success Modal */}
+        <SuccessModal
+          isOpen={showSuccess}
+          onClose={() => setShowSuccess()}
+          title="Corporate CDD Submitted Successfully!"
+          message="Your Corporate CDD form has been submitted successfully."
+          formType="Corporate CDD"
+        />
       </div>
-    </div>
+    </FormProvider>
   );
 };
 
