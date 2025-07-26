@@ -345,8 +345,10 @@ const naicomCorporateCDDSchema = yup.object().shape({
     })
     .typeError('Please select a valid date'),
 
-  // File uploads
-  verificationDocument: yup.mixed().required("Document upload is required"),
+  // File uploads - same as Corporate CDD plus NAICOM license
+  cacCertificate: yup.mixed().required("CAC Certificate upload is required"),
+  identification: yup.mixed().required("Identification document upload is required"),
+  naicomLicenseCertificate: yup.mixed().required("NAICOM License Certificate upload is required"),
 
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
@@ -420,7 +422,9 @@ const NaicomCorporateCDD: React.FC = () => {
     foreignAccountOpeningDate: undefined, // Date fields should be undefined
     
     // File fields
-    verificationDocument: '',
+    cacCertificate: '',
+    identification: '',
+    naicomLicenseCertificate: '',
     
     // Declaration
     agreeToDataPrivacy: false,
@@ -446,7 +450,7 @@ const NaicomCorporateCDD: React.FC = () => {
     0: ['companyName', 'registeredCompanyAddress', 'incorporationNumber', 'incorporationState', 'dateOfIncorporationRegistration', 'natureOfBusiness', 'companyLegalForm', 'companyLegalFormOther', 'email', 'website', 'taxIdentificationNumber', 'telephoneNumber'],
     1: ['directors'],
     2: ['bankName', 'accountNumber', 'bankBranch', 'accountOpeningDate', 'foreignBankName', 'foreignAccountNumber', 'foreignBankBranch', 'foreignAccountOpeningDate'],
-    3: ['verificationDocument'],
+    3: ['cacCertificate', 'identification', 'naicomLicenseCertificate'],
     4: ['agreeToDataPrivacy', 'signature']
   };
 
@@ -977,30 +981,88 @@ const NaicomCorporateCDD: React.FC = () => {
       component: (
         <div className="space-y-4">
           <div>
-            <Label>Upload Verification Document <span className="required-asterisk">*</span></Label>
+            <Label>Upload CAC Certificate <span className="required-asterisk">*</span></Label>
             <FileUpload
               accept=".png,.jpg,.jpeg,.pdf"
               onFileSelect={(file) => {
                 setUploadedFiles(prev => ({
                   ...prev,
-                  verificationDocument: file
+                  cacCertificate: file
                 }));
-                formMethods.setValue('verificationDocument', file);
-                if (formMethods.formState.errors.verificationDocument) {
-                  formMethods.clearErrors('verificationDocument');
+                formMethods.setValue('cacCertificate', file);
+                if (formMethods.formState.errors.cacCertificate) {
+                  formMethods.clearErrors('cacCertificate');
                 }
               }}
-              maxSize={3 * 1024 * 1024}
+              maxSize={10}
             />
-            {uploadedFiles.verificationDocument && (
+            {uploadedFiles.cacCertificate && (
               <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
                 <Check className="h-4 w-4" />
-                {uploadedFiles.verificationDocument.name}
+                {uploadedFiles.cacCertificate.name}
               </div>
             )}
-            {formMethods.formState.errors.verificationDocument && (
+            {formMethods.formState.errors.cacCertificate && (
               <p className="text-sm text-destructive">
-                {formMethods.formState.errors.verificationDocument.message?.toString()}
+                {formMethods.formState.errors.cacCertificate.message?.toString()}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label>Upload Means of Identification <span className="required-asterisk">*</span></Label>
+            <FileUpload
+              accept=".png,.jpg,.jpeg,.pdf"
+              onFileSelect={(file) => {
+                setUploadedFiles(prev => ({
+                  ...prev,
+                  identification: file
+                }));
+                formMethods.setValue('identification', file);
+                if (formMethods.formState.errors.identification) {
+                  formMethods.clearErrors('identification');
+                }
+              }}
+              maxSize={10}
+            />
+            {uploadedFiles.identification && (
+              <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                <Check className="h-4 w-4" />
+                {uploadedFiles.identification.name}
+              </div>
+            )}
+            {formMethods.formState.errors.identification && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.identification.message?.toString()}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label>Upload NAICOM License Certificate <span className="required-asterisk">*</span></Label>
+            <FileUpload
+              accept=".png,.jpg,.jpeg,.pdf"
+              onFileSelect={(file) => {
+                setUploadedFiles(prev => ({
+                  ...prev,
+                  naicomLicenseCertificate: file
+                }));
+                formMethods.setValue('naicomLicenseCertificate', file);
+                if (formMethods.formState.errors.naicomLicenseCertificate) {
+                  formMethods.clearErrors('naicomLicenseCertificate');
+                }
+              }}
+              maxSize={10}
+            />
+            {uploadedFiles.naicomLicenseCertificate && (
+              <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                <Check className="h-4 w-4" />
+                {uploadedFiles.naicomLicenseCertificate.name}
+              </div>
+            )}
+            {formMethods.formState.errors.naicomLicenseCertificate && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.naicomLicenseCertificate.message?.toString()}
               </p>
             )}
           </div>
@@ -1012,16 +1074,18 @@ const NaicomCorporateCDD: React.FC = () => {
       title: 'Declaration',
       component: (
         <div className="space-y-6">
-          <div>
-            <FormField
-              name="signature"
-              label="Signature"
-              required={true}
-              placeholder="Type your full name as signature"
-              maxLength={100}
-            />
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold text-lg mb-3">Declaration and Privacy Statement</h3>
+            <div className="text-sm space-y-2">
+              <p><strong>I hereby declare that:</strong></p>
+              <p>1. The information provided in this form is true, complete, and accurate to the best of my knowledge.</p>
+              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+              <p>3. I/We agree to submit all required and requested documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+              <p>4. I understand that providing false information may result in the rejection of this application or cancellation of any insurance policy issued.</p>
+              <p>5. I consent to NEM Insurance verifying the information provided through relevant authorities and databases.</p>
+            </div>
           </div>
-
+          
           <div className="flex items-start space-x-2">
             <Checkbox
               id="agreeToDataPrivacy"
@@ -1035,7 +1099,7 @@ const NaicomCorporateCDD: React.FC = () => {
               className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
             />
             <Label htmlFor="agreeToDataPrivacy" className="text-sm">
-              I hereby declare that the information provided is true and accurate. I agree to the data privacy policy and terms of service. <span className="required-asterisk">*</span>
+              I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge <span className="required-asterisk">*</span>
             </Label>
           </div>
           {formMethods.formState.errors.agreeToDataPrivacy && (
@@ -1043,6 +1107,14 @@ const NaicomCorporateCDD: React.FC = () => {
               {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
             </p>
           )}
+          
+          <FormField
+            name="signature"
+            label="Digital Signature"
+            required={true}
+            placeholder="Type your full name as signature"
+            maxLength={100}
+          />
         </div>
       )
     }
