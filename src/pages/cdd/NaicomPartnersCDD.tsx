@@ -324,6 +324,16 @@ const naicomPartnersCDDSchema = yup.object().shape({
     })
     .typeError('Please select a valid date'),
   
+  // File uploads validation
+  director1IdMeansDoc: yup.string().required("Director 1 identification document type is required"),
+  director1IdDocument: yup.mixed().required("Director 1 identification document is required"),
+  director2IdMeansDoc: yup.string().notRequired(),
+  director2IdDocument: yup.mixed().notRequired(),
+  cacStatusReportDoc: yup.mixed().required("CAC Status Report is required"),
+  vatRegistrationDoc: yup.mixed().notRequired(),
+  taxClearanceDoc: yup.mixed().notRequired(),
+  naicomLicenseDoc: yup.mixed().required("NAICOM License Certificate is required"),
+  
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
   signature: yup.string().required("Signature is required")
@@ -384,7 +394,16 @@ const defaultValues = {
   foreignBankBranch: '',
   foreignAccountOpeningDate: undefined,
   agreeToDataPrivacy: false,
-  signature: ''
+  signature: '',
+  // File upload fields
+  director1IdMeansDoc: '',
+  director1IdDocument: '',
+  director2IdMeansDoc: '',
+  director2IdDocument: '',
+  cacStatusReportDoc: '',
+  vatRegistrationDoc: '',
+  taxClearanceDoc: '',
+  naicomLicenseDoc: ''
 };
 
 const NaicomPartnersCDD: React.FC = () => {
@@ -442,7 +461,11 @@ const NaicomPartnersCDD: React.FC = () => {
       'localAccountNumber', 'localBankName', 'localBankBranch', 'localAccountOpeningDate',
       'foreignAccountNumber', 'foreignBankName', 'foreignBankBranch', 'foreignAccountOpeningDate'
     ],
-    3: ['agreeToDataPrivacy', 'signature']
+    3: [
+      'director1IdMeansDoc', 'director1IdDocument', 'director2IdMeansDoc', 'director2IdDocument',
+      'cacStatusReportDoc', 'vatRegistrationDoc', 'taxClearanceDoc', 'naicomLicenseDoc'
+    ],
+    4: ['agreeToDataPrivacy', 'signature']
   };
 
   // Data sanitization
@@ -920,6 +943,207 @@ const NaicomPartnersCDD: React.FC = () => {
               name="foreignAccountOpeningDate"
               label="Account Opening Date"
             />
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'documents',
+      title: 'Document Uploads',
+      component: (
+        <div className="space-y-6">
+          <div className="p-4 bg-muted rounded-lg">
+            <h3 className="font-medium mb-2">Required Documents</h3>
+            <p className="text-sm text-muted-foreground">
+              Please upload the following documents. Ensure all documents are clear and legible.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Director 1 ID Document */}
+            <div>
+              <h4 className="font-medium mb-3">Director 1 Identification <span className="required-asterisk">*</span></h4>
+              <FormSelect
+                name="director1IdMeansDoc"
+                label="Document Type"
+                required={true}
+                options={idTypeOptions}
+                placeholder="Select document type"
+              />
+              <div className="mt-3">
+                <Label>Upload Document <span className="required-asterisk">*</span></Label>
+                <FileUpload
+                  accept=".png,.jpg,.jpeg,.pdf"
+                  onFileSelect={(file) => {
+                    setUploadedFiles(prev => ({
+                      ...prev,
+                      director1IdDocument: file
+                    }));
+                    formMethods.setValue('director1IdDocument', file);
+                    if (formMethods.formState.errors.director1IdDocument) {
+                      formMethods.clearErrors('director1IdDocument');
+                    }
+                  }}
+                  maxSize={3}
+                  currentFile={uploadedFiles.director1IdDocument}
+                />
+                {uploadedFiles.director1IdDocument && (
+                  <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                    <Check className="h-4 w-4" />
+                    {uploadedFiles.director1IdDocument.name}
+                  </div>
+                )}
+                {formMethods.formState.errors.director1IdDocument && (
+                  <p className="text-sm text-destructive mt-1">
+                    {formMethods.formState.errors.director1IdDocument.message?.toString()}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Director 2 ID Document */}
+            <div>
+              <h4 className="font-medium mb-3">Director 2 Identification (Optional)</h4>
+              <FormSelect
+                name="director2IdMeansDoc"
+                label="Document Type"
+                options={idTypeOptions}
+                placeholder="Select document type"
+              />
+              <div className="mt-3">
+                <Label>Upload Document</Label>
+                <FileUpload
+                  accept=".png,.jpg,.jpeg,.pdf"
+                  onFileSelect={(file) => {
+                    setUploadedFiles(prev => ({
+                      ...prev,
+                      director2IdDocument: file
+                    }));
+                    formMethods.setValue('director2IdDocument', file);
+                  }}
+                  maxSize={3}
+                  currentFile={uploadedFiles.director2IdDocument}
+                />
+                {uploadedFiles.director2IdDocument && (
+                  <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                    <Check className="h-4 w-4" />
+                    {uploadedFiles.director2IdDocument.name}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* CAC Status Report */}
+            <div>
+              <h4 className="font-medium mb-3">CAC Status Report <span className="required-asterisk">*</span></h4>
+              <Label>Upload Document <span className="required-asterisk">*</span></Label>
+              <FileUpload
+                accept=".png,.jpg,.jpeg,.pdf"
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    cacStatusReportDoc: file
+                  }));
+                  formMethods.setValue('cacStatusReportDoc', file);
+                  if (formMethods.formState.errors.cacStatusReportDoc) {
+                    formMethods.clearErrors('cacStatusReportDoc');
+                  }
+                }}
+                maxSize={3}
+                currentFile={uploadedFiles.cacStatusReportDoc}
+              />
+              {uploadedFiles.cacStatusReportDoc && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.cacStatusReportDoc.name}
+                </div>
+              )}
+              {formMethods.formState.errors.cacStatusReportDoc && (
+                <p className="text-sm text-destructive mt-1">
+                  {formMethods.formState.errors.cacStatusReportDoc.message?.toString()}
+                </p>
+              )}
+            </div>
+
+            {/* VAT Registration License */}
+            <div>
+              <h4 className="font-medium mb-3">VAT Registration License (Optional)</h4>
+              <Label>Upload Document</Label>
+              <FileUpload
+                accept=".png,.jpg,.jpeg,.pdf"
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    vatRegistrationDoc: file
+                  }));
+                  formMethods.setValue('vatRegistrationDoc', file);
+                }}
+                maxSize={3}
+                currentFile={uploadedFiles.vatRegistrationDoc}
+              />
+              {uploadedFiles.vatRegistrationDoc && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.vatRegistrationDoc.name}
+                </div>
+              )}
+            </div>
+
+            {/* Tax Clearance Certificate */}
+            <div>
+              <h4 className="font-medium mb-3">Tax Clearance Certificate (Optional)</h4>
+              <Label>Upload Document</Label>
+              <FileUpload
+                accept=".png,.jpg,.jpeg,.pdf"
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    taxClearanceDoc: file
+                  }));
+                  formMethods.setValue('taxClearanceDoc', file);
+                }}
+                maxSize={3}
+                currentFile={uploadedFiles.taxClearanceDoc}
+              />
+              {uploadedFiles.taxClearanceDoc && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.taxClearanceDoc.name}
+                </div>
+              )}
+            </div>
+
+            {/* NAICOM License Certificate */}
+            <div>
+              <h4 className="font-medium mb-3">NAICOM License Certificate <span className="required-asterisk">*</span></h4>
+              <Label>Upload Document <span className="required-asterisk">*</span></Label>
+              <FileUpload
+                accept=".png,.jpg,.jpeg,.pdf"
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    naicomLicenseDoc: file
+                  }));
+                  formMethods.setValue('naicomLicenseDoc', file);
+                  if (formMethods.formState.errors.naicomLicenseDoc) {
+                    formMethods.clearErrors('naicomLicenseDoc');
+                  }
+                }}
+                maxSize={3}
+                currentFile={uploadedFiles.naicomLicenseDoc}
+              />
+              {uploadedFiles.naicomLicenseDoc && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.naicomLicenseDoc.name}
+                </div>
+              )}
+              {formMethods.formState.errors.naicomLicenseDoc && (
+                <p className="text-sm text-destructive mt-1">
+                  {formMethods.formState.errors.naicomLicenseDoc.message?.toString()}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       )
