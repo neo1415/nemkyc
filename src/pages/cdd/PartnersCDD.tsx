@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { toast } from '@/hooks/use-toast';
+import { get } from 'lodash'; // CRITICAL for nested errors
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import MultiStepForm from '@/components/common/MultiStepForm';
+import { useFormDraft } from '@/hooks/useFormDraft';
+import FileUpload from '@/components/common/FileUpload';
+import { uploadFile } from '@/services/fileService';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import SuccessModal from '@/components/common/SuccessModal';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,21 +19,147 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { Calendar, CalendarIcon, Plus, Trash2, Upload, Edit2, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import MultiStepForm from '@/components/common/MultiStepForm';
+import { Check, Plus, Trash2, Loader2 } from 'lucide-react';
 import { PartnersCDDData, Director } from '@/types';
-import { useFormDraft } from '@/hooks/useFormDraft';
-import FileUpload from '@/components/common/FileUpload';
-import { uploadFile } from '@/services/fileService';
-import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
-import SuccessModal from '@/components/common/SuccessModal';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
+// ========== FORM COMPONENTS (OUTSIDE Main Component) ==========
+const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
+  const { register, formState: { errors }, clearErrors } = useFormContext();
+  const error = get(errors, name); // CRITICAL: Use lodash.get
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type={type}
+        maxLength={maxLength}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
+  const { register, watch, formState: { errors }, clearErrors } = useFormContext();
+  const currentValue = watch(name) || '';
+  const error = get(errors, name); // CRITICAL: Use lodash.get
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Textarea
+        id={name}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      <div className="flex justify-between">
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
+        <span className="text-sm text-muted-foreground ml-auto">
+          {currentValue.length}/{maxLength}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const FormSelect = ({ name, label, required = false, options, placeholder, ...props }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name); // CRITICAL: Use lodash.get
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(newValue) => {
+          setValue(name, newValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        {...props}
+      >
+        <SelectTrigger className={error ? 'border-destructive' : ''}>
+          <SelectValue placeholder={placeholder || `Select ${label}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option: any) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormDatePicker = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name); // CRITICAL: Use lodash.get
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type="date"
+        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
+        onChange={(e) => {
+          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+          setValue(name, dateValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        className={error ? 'border-destructive' : ''}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+// ========== VALIDATION SCHEMA (OUTSIDE Main Component) ==========
 const partnersCDDSchema = yup.object().shape({
   // Company Info
   companyName: yup.string().required("Company name is required"),
@@ -33,33 +167,67 @@ const partnersCDDSchema = yup.object().shape({
   city: yup.string().required("City is required"),
   state: yup.string().required("State is required"),
   country: yup.string().required("Country is required"),
-  email: yup.string().email("Valid email is required").required("Email is required"),
+  email: yup.string()
+    .required("Email is required")
+    .email("Please enter a valid email")
+    .typeError("Please enter a valid email"),
   website: yup.string().required("Website is required"),
   contactPersonName: yup.string().required("Contact person name is required"),
-  contactPersonNumber: yup.string().required("Contact person number is required"),
+  contactPersonNumber: yup.string()
+    .required("Contact person number is required")
+    .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
+    .max(15, "Phone number cannot exceed 15 characters"),
   taxId: yup.string().required("Tax ID is required"),
   vatRegistrationNumber: yup.string().required("VAT registration number is required"),
   incorporationNumber: yup.string().required("Incorporation number is required"),
-  incorporationDate: yup.date().required("Incorporation date is required"),
+  incorporationDate: yup.date()
+    .required("Incorporation date is required")
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
   incorporationState: yup.string().required("Incorporation state is required"),
   businessNature: yup.string().required("Business nature is required"),
-  bvn: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+  bvn: yup.string()
+    .required("BVN is required")
+    .matches(/^\d+$/, "BVN must contain only numbers")
+    .length(11, "BVN must be exactly 11 digits"),
   
   // Directors
   directors: yup.array().of(yup.object().shape({
-    title: yup.string(),
-    gender: yup.string(),
+    title: yup.string().required("Title is required"),
+    gender: yup.string().required("Gender is required"),
     firstName: yup.string().required("First name is required"),
     middleName: yup.string(),
     lastName: yup.string().required("Last name is required"),
-    dateOfBirth: yup.date().required("Date of birth is required"),
+    dateOfBirth: yup.date()
+      .required("Date of birth is required")
+      .test('age', 'Must be at least 18 years old', function(value) {
+        if (!value) return false;
+        const today = new Date();
+        const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+        return value <= eighteenYearsAgo;
+      })
+      .typeError('Please select a valid date'),
     placeOfBirth: yup.string().required("Place of birth is required"),
     nationality: yup.string().required("Nationality is required"),
     country: yup.string().required("Country is required"),
     occupation: yup.string().required("Occupation is required"),
-    email: yup.string().email("Valid email is required").required("Email is required"),
-    phoneNumber: yup.string().required("Phone number is required"),
-    bvn: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+    email: yup.string()
+      .required("Email is required")
+      .email("Please enter a valid email")
+      .typeError("Please enter a valid email"),
+    phoneNumber: yup.string()
+      .required("Phone number is required")
+      .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
+      .max(15, "Phone number cannot exceed 15 characters"),
+    bvn: yup.string()
+      .required("BVN is required")
+      .matches(/^\d+$/, "BVN must contain only numbers")
+      .length(11, "BVN must be exactly 11 digits"),
     employerName: yup.string(),
     employerPhone: yup.string(),
     residentialAddress: yup.string().required("Residential address is required"),
@@ -67,27 +235,70 @@ const partnersCDDSchema = yup.object().shape({
     idType: yup.string().required("ID type is required"),
     identificationNumber: yup.string().required("Identification number is required"),
     issuingBody: yup.string().required("Issuing body is required"),
-    issuedDate: yup.date().required("Issued date is required"),
-    expiryDate: yup.date(),
+    issuedDate: yup.date()
+      .required("Issued date is required")
+      .test('not-future', 'Date cannot be in the future', function(value) {
+        if (!value) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return value <= today;
+      })
+      .typeError('Please select a valid date'),
+    expiryDate: yup.date()
+      .test('not-past', 'Expiry date cannot be in the past', function(value) {
+        if (!value) return true; // Optional field
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        return value > today;
+      })
+      .typeError('Please select a valid date'),
     incomeSource: yup.string().required("Income source is required"),
-    incomeSourceOther: yup.string()
+    incomeSourceOther: yup.string().when('incomeSource', {
+      is: 'other',
+      then: (schema) => schema.required('Please specify income source'),
+      otherwise: (schema) => schema.notRequired()
+    })
   })).min(1, "At least one director is required"),
   
   // Account Details
   localAccountNumber: yup.string().required("Account number is required"),
   localBankName: yup.string().required("Bank name is required"),
   localBankBranch: yup.string().required("Bank branch is required"),
-  localAccountOpeningDate: yup.date().required("Account opening date is required"),
+  localAccountOpeningDate: yup.date()
+    .required("Account opening date is required")
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
   foreignAccountNumber: yup.string(),
   foreignBankName: yup.string(),
   foreignBankBranch: yup.string(),
-  foreignAccountOpeningDate: yup.date(),
+  foreignAccountOpeningDate: yup.date()
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return true; // Optional field
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
+  
+  // File uploads
+  certificateOfIncorporation: yup.mixed().required("Certificate of Incorporation is required"),
+  directorId1: yup.mixed().required("Director 1 ID is required"),
+  directorId2: yup.mixed().required("Director 2 ID is required"),
+  cacStatusReport: yup.mixed().required("CAC Status Report is required"),
+  vatRegistrationLicense: yup.mixed().required("VAT Registration License is required"),
+  taxClearanceCertificate: yup.mixed().required("Tax Clearance Certificate is required"),
   
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
   signature: yup.string().required("Signature is required")
 });
 
+// ========== DEFAULT VALUES ==========
 const defaultValues: Partial<PartnersCDDData> = {
   companyName: '',
   registeredAddress: '',
@@ -101,6 +312,7 @@ const defaultValues: Partial<PartnersCDDData> = {
   taxId: '',
   vatRegistrationNumber: '',
   incorporationNumber: '',
+  incorporationDate: undefined,
   incorporationState: '',
   businessNature: '',
   bvn: '',
@@ -110,7 +322,7 @@ const defaultValues: Partial<PartnersCDDData> = {
     firstName: '',
     middleName: '',
     lastName: '',
-    dateOfBirth: '',
+    dateOfBirth: undefined,
     placeOfBirth: '',
     nationality: '',
     country: '',
@@ -125,67 +337,63 @@ const defaultValues: Partial<PartnersCDDData> = {
     idType: '',
     identificationNumber: '',
     issuingBody: '',
-    issuedDate: '',
-    expiryDate: '',
+    issuedDate: undefined,
+    expiryDate: undefined,
     incomeSource: '',
     incomeSourceOther: ''
   }],
   localAccountNumber: '',
   localBankName: '',
   localBankBranch: '',
+  localAccountOpeningDate: undefined,
   foreignAccountNumber: '',
   foreignBankName: '',
   foreignBankBranch: '',
+  foreignAccountOpeningDate: undefined,
+  certificateOfIncorporation: undefined,
+  directorId1: undefined,
+  directorId2: undefined,
+  cacStatusReport: undefined,
+  vatRegistrationLicense: undefined,
+  taxClearanceCertificate: undefined,
   agreeToDataPrivacy: false,
   signature: ''
 };
 
 const PartnersCDD: React.FC = () => {
+  const { toast } = useToast();
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
   const [showSummary, setShowSummary] = useState(false);
   const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const [editingField, setEditingField] = useState<string | null>(null);
+  
   const { 
     handleSubmitWithAuth, 
-    showSuccess, 
-    setShowSuccess,
-    isSubmitting
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
   } = useAuthRequiredSubmit();
 
   const formMethods = useForm<any>({
     resolver: yupResolver(partnersCDDSchema),
     defaultValues,
-    mode: 'onChange'
+    mode: 'onChange' // Real-time validation
   });
 
-  const { saveDraft, clearDraft } = useFormDraft('partners', formMethods);
   const { fields, append, remove } = useFieldArray({
     control: formMethods.control,
     name: 'directors'
   });
 
-  const watchedValues = formMethods.watch();
+  const { saveDraft, clearDraft } = useFormDraft('partners-cdd', formMethods);
 
-  // Check for pending submission when component mounts
-  useEffect(() => {
-    const checkPendingSubmission = () => {
-      const hasPending = sessionStorage.getItem('pendingSubmission');
-      if (hasPending) {
-        setShowPostAuthLoading(true);
-        // Hide loading after 5 seconds max (in case something goes wrong)
-        setTimeout(() => setShowPostAuthLoading(false), 5000);
-      }
-    };
-
-    checkPendingSubmission();
-  }, []);
-
-  // Hide post-auth loading when success modal shows
-  useEffect(() => {
-    if (showSuccess) {
-      setShowPostAuthLoading(false);
-    }
-  }, [showSuccess]);
+  // Step field mappings
+  const stepFieldMappings = {
+    0: ['companyName', 'registeredAddress', 'city', 'state', 'country', 'email', 'website', 'contactPersonName', 'contactPersonNumber', 'taxId', 'vatRegistrationNumber', 'incorporationNumber', 'incorporationDate', 'incorporationState', 'businessNature', 'bvn'],
+    1: ['directors'],
+    2: ['localAccountNumber', 'localBankName', 'localBankBranch', 'localAccountOpeningDate', 'foreignAccountNumber', 'foreignBankName', 'foreignBankBranch', 'foreignAccountOpeningDate'],
+    3: ['certificateOfIncorporation', 'directorId1', 'directorId2', 'cacStatusReport', 'vatRegistrationLicense', 'taxClearanceCertificate'],
+    4: ['agreeToDataPrivacy', 'signature']
+  };
 
   // Auto-save draft
   useEffect(() => {
@@ -195,9 +403,31 @@ const PartnersCDD: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
-  // Main submit handler that checks authentication
-  const handleSubmit = async (data: PartnersCDDData) => {
-    // Prepare file upload data
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
+
+  // Data sanitization
+  const sanitizeData = (data: any) => {
+    const sanitized: any = {};
+    Object.keys(data).forEach(key => {
+      if (data[key] !== undefined) {
+        sanitized[key] = data[key];
+      }
+    });
+    return sanitized;
+  };
+
+  const handleSubmit = async (data: any) => {
+    console.log('Form data before sanitization:', data);
+    
+    const sanitizedData = sanitizeData(data);
+    console.log('Sanitized data:', sanitizedData);
+
+    // Handle file uploads
     const fileUploadPromises: Array<Promise<[string, string]>> = [];
     
     for (const [key, file] of Object.entries(uploadedFiles)) {
@@ -212,7 +442,7 @@ const PartnersCDD: React.FC = () => {
     const fileUrls = Object.fromEntries(fileResults);
 
     const finalData = {
-      ...data,
+      ...sanitizedData,
       ...fileUrls,
       status: 'processing',
       formType: 'Partners CDD'
@@ -223,41 +453,35 @@ const PartnersCDD: React.FC = () => {
     setShowSummary(false);
   };
 
-  const onFinalSubmit = (data: PartnersCDDData) => {
+  const onFinalSubmit = (data: any) => {
     setShowSummary(true);
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
-    return (
-      <div className="space-y-2">
-        <Label>{label}</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !value && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <ReactCalendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={(date) => formMethods.setValue(name, date)}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-    );
-  };
+  const titleOptions = [
+    { value: 'Mr', label: 'Mr' },
+    { value: 'Mrs', label: 'Mrs' },
+    { value: 'Chief', label: 'Chief' },
+    { value: 'Dr', label: 'Dr' },
+    { value: 'Other', label: 'Other' }
+  ];
+
+  const genderOptions = [
+    { value: 'Male', label: 'Male' },
+    { value: 'Female', label: 'Female' }
+  ];
+
+  const idTypeOptions = [
+    { value: 'international-passport', label: 'International Passport' },
+    { value: 'nimc', label: 'NIMC' },
+    { value: 'drivers', label: "Driver's License" },
+    { value: 'voters', label: 'Voters Card' }
+  ];
+
+  const incomeSourceOptions = [
+    { value: 'salary', label: 'Salary or Business Income' },
+    { value: 'investments', label: 'Investments or Dividends' },
+    { value: 'other', label: 'Other (please specify)' }
+  ];
 
   const steps = [
     {
@@ -265,137 +489,109 @@ const PartnersCDD: React.FC = () => {
       title: 'Company Information',
       component: (
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="companyName">Company Name *</Label>
-            <Input
-              id="companyName"
-              {...formMethods.register('companyName')}
+          <FormField
+            name="companyName"
+            label="Company Name"
+            required={true}
+          />
+          
+          <FormTextarea
+            name="registeredAddress"
+            label="Registered Company Address"
+            required={true}
+            maxLength={500}
+          />
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              name="city"
+              label="City"
+              required={true}
+            />
+            <FormField
+              name="state"
+              label="State"
+              required={true}
+            />
+            <FormField
+              name="country"
+              label="Country"
+              required={true}
             />
           </div>
           
-          <div>
-            <Label htmlFor="registeredAddress">Registered Company Address *</Label>
-            <Textarea
-              id="registeredAddress"
-              {...formMethods.register('registeredAddress')}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              name="email"
+              label="Email Address"
+              type="email"
+              required={true}
+            />
+            <FormField
+              name="website"
+              label="Website"
+              required={true}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              name="contactPersonName"
+              label="Contact Person Name"
+              required={true}
+            />
+            <FormField
+              name="contactPersonNumber"
+              label="Contact Person Number"
+              required={true}
+              maxLength={15}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              name="taxId"
+              label="Tax Identification Number"
+              required={true}
+            />
+            <FormField
+              name="vatRegistrationNumber"
+              label="VAT Registration Number"
+              required={true}
             />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="city">City *</Label>
-              <Input
-                id="city"
-                {...formMethods.register('city')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="state">State *</Label>
-              <Input
-                id="state"
-                {...formMethods.register('state')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="country">Country *</Label>
-              <Input
-                id="country"
-                {...formMethods.register('country')}
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                {...formMethods.register('email')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="website">Website *</Label>
-              <Input
-                id="website"
-                {...formMethods.register('website')}
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="contactPersonName">Contact Person Name *</Label>
-              <Input
-                id="contactPersonName"
-                {...formMethods.register('contactPersonName')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="contactPersonNumber">Contact Person Number *</Label>
-              <Input
-                id="contactPersonNumber"
-                {...formMethods.register('contactPersonNumber')}
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="taxId">Tax Identification Number *</Label>
-              <Input
-                id="taxId"
-                {...formMethods.register('taxId')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="vatRegistrationNumber">VAT Registration Number *</Label>
-              <Input
-                id="vatRegistrationNumber"
-                {...formMethods.register('vatRegistrationNumber')}
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="incorporationNumber">Incorporation/RC Number *</Label>
-              <Input
-                id="incorporationNumber"
-                {...formMethods.register('incorporationNumber')}
-              />
-            </div>
-            <div>
-              <DatePickerField
-                name="incorporationDate"
-                label="Date of Incorporation *"
-              />
-            </div>
-            <div>
-              <Label htmlFor="incorporationState">Incorporation State *</Label>
-              <Input
-                id="incorporationState"
-                {...formMethods.register('incorporationState')}
-              />
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="businessNature">Nature of Business *</Label>
-            <Textarea
-              id="businessNature"
-              {...formMethods.register('businessNature')}
+            <FormField
+              name="incorporationNumber"
+              label="Incorporation/RC Number"
+              required={true}
+            />
+            <FormDatePicker
+              name="incorporationDate"
+              label="Date of Incorporation"
+              required={true}
+            />
+            <FormField
+              name="incorporationState"
+              label="Incorporation State"
+              required={true}
             />
           </div>
           
-          <div>
-            <Label htmlFor="bvn">BVN *</Label>
-            <Input
-              id="bvn"
-              maxLength={11}
-              {...formMethods.register('bvn')}
-            />
-          </div>
+          <FormTextarea
+            name="businessNature"
+            label="Nature of Business"
+            required={true}
+            maxLength={1000}
+          />
+          
+          <FormField
+            name="bvn"
+            label="BVN"
+            required={true}
+            maxLength={11}
+          />
         </div>
       )
     },
@@ -414,7 +610,7 @@ const PartnersCDD: React.FC = () => {
                 firstName: '',
                 middleName: '',
                 lastName: '',
-                dateOfBirth: '',
+                dateOfBirth: undefined,
                 placeOfBirth: '',
                 nationality: '',
                 country: '',
@@ -429,8 +625,8 @@ const PartnersCDD: React.FC = () => {
                 idType: '',
                 identificationNumber: '',
                 issuingBody: '',
-                issuedDate: '',
-                expiryDate: '',
+                issuedDate: undefined,
+                expiryDate: undefined,
                 incomeSource: '',
                 incomeSourceOther: ''
               })}
@@ -447,220 +643,160 @@ const PartnersCDD: React.FC = () => {
                 <h4 className="font-medium">Director {index + 1}</h4>
                 <Button
                   type="button"
-                  variant="destructive"
+                  variant="outline"
                   size="sm"
                   onClick={() => remove(index)}
                   disabled={fields.length === 1}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Remove
                 </Button>
               </div>
               
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Title *</Label>
-                    <Select
-                      value={((formMethods.watch('directors') as any[]) || [])[index]?.title || ''}
-                      onValueChange={(value) => formMethods.setValue(`directors.${index}.title`, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select title" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Mr">Mr</SelectItem>
-                        <SelectItem value="Mrs">Mrs</SelectItem>
-                        <SelectItem value="Chief">Chief</SelectItem>
-                        <SelectItem value="Dr">Dr</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label>Gender *</Label>
-                    <Select
-                      value={((formMethods.watch('directors') as any[]) || [])[index]?.gender || ''}
-                      onValueChange={(value) => formMethods.setValue(`directors.${index}.gender`, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>First Name *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.firstName`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Middle Name</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.middleName`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Last Name *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.lastName`)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Date of Birth *</Label>
-                    <Input
-                      type="date"
-                      {...formMethods.register(`directors.${index}.dateOfBirth`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Place of Birth *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.placeOfBirth`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Nationality *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.nationality`)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Country *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.country`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Occupation *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.occupation`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Email *</Label>
-                    <Input
-                      type="email"
-                      {...formMethods.register(`directors.${index}.email`)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Phone Number *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.phoneNumber`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>BVN *</Label>
-                    <Input
-                      maxLength={11}
-                      {...formMethods.register(`directors.${index}.bvn`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Employer's Name</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.employerName`)}
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <Label>Residential Address *</Label>
-                  <Textarea
-                    {...formMethods.register(`directors.${index}.residentialAddress`)}
+                  <FormSelect
+                    name={`directors.${index}.title`}
+                    label="Title"
+                    required={true}
+                    options={titleOptions}
+                    placeholder="Select title"
+                  />
+                  <FormSelect
+                    name={`directors.${index}.gender`}
+                    label="Gender"
+                    required={true}
+                    options={genderOptions}
+                    placeholder="Select gender"
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>ID Type *</Label>
-                    <Select
-                      value={formMethods.watch(`directors.${index}.idType`)}
-                      onValueChange={(value) => formMethods.setValue(`directors.${index}.idType`, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose ID Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="international-passport">International Passport</SelectItem>
-                        <SelectItem value="nimc">NIMC</SelectItem>
-                        <SelectItem value="drivers">Driver's License</SelectItem>
-                        <SelectItem value="voters">Voters Card</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Identification Number *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.identificationNumber`)}
-                    />
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    name={`directors.${index}.firstName`}
+                    label="First Name"
+                    required={true}
+                  />
+                  <FormField
+                    name={`directors.${index}.middleName`}
+                    label="Middle Name"
+                  />
+                  <FormField
+                    name={`directors.${index}.lastName`}
+                    label="Last Name"
+                    required={true}
+                  />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Issued Date *</Label>
-                    <Input
-                      type="date"
-                      {...formMethods.register(`directors.${index}.issuedDate`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Expiry Date</Label>
-                    <Input
-                      type="date"
-                      {...formMethods.register(`directors.${index}.expiryDate`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Issuing Body *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.issuingBody`)}
-                    />
-                  </div>
+                  <FormDatePicker
+                    name={`directors.${index}.dateOfBirth`}
+                    label="Date of Birth"
+                    required={true}
+                  />
+                  <FormField
+                    name={`directors.${index}.placeOfBirth`}
+                    label="Place of Birth"
+                    required={true}
+                  />
+                  <FormField
+                    name={`directors.${index}.nationality`}
+                    label="Nationality"
+                    required={true}
+                  />
                 </div>
                 
-                <div>
-                  <Label>Source of Income *</Label>
-                  <Select
-                    value={formMethods.watch(`directors.${index}.incomeSource`)}
-                    onValueChange={(value) => formMethods.setValue(`directors.${index}.incomeSource`, value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose Income Source" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="salary">Salary or Business Income</SelectItem>
-                      <SelectItem value="investments">Investments or Dividends</SelectItem>
-                      <SelectItem value="other">Other (please specify)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    name={`directors.${index}.country`}
+                    label="Country"
+                    required={true}
+                  />
+                  <FormField
+                    name={`directors.${index}.occupation`}
+                    label="Occupation"
+                    required={true}
+                  />
+                  <FormField
+                    name={`directors.${index}.email`}
+                    label="Email"
+                    type="email"
+                    required={true}
+                  />
                 </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    name={`directors.${index}.phoneNumber`}
+                    label="Phone Number"
+                    required={true}
+                    maxLength={15}
+                  />
+                  <FormField
+                    name={`directors.${index}.bvn`}
+                    label="BVN"
+                    required={true}
+                    maxLength={11}
+                  />
+                  <FormField
+                    name={`directors.${index}.employerName`}
+                    label="Employer's Name"
+                  />
+                </div>
+                
+                <FormTextarea
+                  name={`directors.${index}.residentialAddress`}
+                  label="Residential Address"
+                  required={true}
+                  maxLength={500}
+                />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormSelect
+                    name={`directors.${index}.idType`}
+                    label="ID Type"
+                    required={true}
+                    options={idTypeOptions}
+                    placeholder="Choose ID Type"
+                  />
+                  <FormField
+                    name={`directors.${index}.identificationNumber`}
+                    label="Identification Number"
+                    required={true}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormDatePicker
+                    name={`directors.${index}.issuedDate`}
+                    label="Issued Date"
+                    required={true}
+                  />
+                  <FormDatePicker
+                    name={`directors.${index}.expiryDate`}
+                    label="Expiry Date"
+                  />
+                  <FormField
+                    name={`directors.${index}.issuingBody`}
+                    label="Issuing Body"
+                    required={true}
+                  />
+                </div>
+                
+                <FormSelect
+                  name={`directors.${index}.incomeSource`}
+                  label="Source of Income"
+                  required={true}
+                  options={incomeSourceOptions}
+                  placeholder="Choose Income Source"
+                />
                 
                 {formMethods.watch(`directors.${index}.incomeSource`) === 'other' && (
-                  <div>
-                    <Label>Please specify other income source</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.incomeSourceOther`)}
-                    />
-                  </div>
+                  <FormField
+                    name={`directors.${index}.incomeSourceOther`}
+                    label="Please specify other income source"
+                    required={true}
+                  />
                 )}
               </div>
             </Card>
@@ -676,73 +812,54 @@ const PartnersCDD: React.FC = () => {
           <div>
             <h3 className="text-lg font-medium mb-4">Local Account Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="localAccountNumber">Account Number *</Label>
-                <Input
-                  id="localAccountNumber"
-                  {...formMethods.register('localAccountNumber')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="localBankName">Bank Name *</Label>
-                <Input
-                  id="localBankName"
-                  {...formMethods.register('localBankName')}
-                />
-              </div>
+              <FormField
+                name="localAccountNumber"
+                label="Account Number"
+                required={true}
+              />
+              <FormField
+                name="localBankName"
+                label="Bank Name"
+                required={true}
+              />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <Label htmlFor="localBankBranch">Bank Branch *</Label>
-                <Input
-                  id="localBankBranch"
-                  {...formMethods.register('localBankBranch')}
-                />
-              </div>
-              <div>
-                <DatePickerField
-                  name="localAccountOpeningDate"
-                  label="Account Opening Date *"
-                />
-              </div>
+              <FormField
+                name="localBankBranch"
+                label="Bank Branch"
+                required={true}
+              />
+              <FormDatePicker
+                name="localAccountOpeningDate"
+                label="Account Opening Date"
+                required={true}
+              />
             </div>
           </div>
           
           <div>
             <h3 className="text-lg font-medium mb-4">Foreign Account Details (Optional)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="foreignAccountNumber">Account Number</Label>
-                <Input
-                  id="foreignAccountNumber"
-                  {...formMethods.register('foreignAccountNumber')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="foreignBankName">Bank Name</Label>
-                <Input
-                  id="foreignBankName"
-                  {...formMethods.register('foreignBankName')}
-                />
-              </div>
+              <FormField
+                name="foreignAccountNumber"
+                label="Account Number"
+              />
+              <FormField
+                name="foreignBankName"
+                label="Bank Name"
+              />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <Label htmlFor="foreignBankBranch">Bank Branch</Label>
-                <Input
-                  id="foreignBankBranch"
-                  {...formMethods.register('foreignBankBranch')}
-                />
-              </div>
-              <div>
-                <Label>Account Opening Date</Label>
-                <Input
-                  type="date"
-                  {...formMethods.register('foreignAccountOpeningDate')}
-                />
-              </div>
+              <FormField
+                name="foreignBankBranch"
+                label="Bank Branch"
+              />
+              <FormDatePicker
+                name="foreignAccountOpeningDate"
+                label="Account Opening Date"
+              />
             </div>
           </div>
         </div>
@@ -755,123 +872,183 @@ const PartnersCDD: React.FC = () => {
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label>Certificate of Incorporation *</Label>
+              <Label>Certificate of Incorporation <span className="required-asterisk">*</span></Label>
               <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
+                accept=".png,.jpg,.jpeg,.pdf"
                 onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, certificateOfIncorporation: file }));
-                  toast({ title: "File selected for upload" });
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    certificateOfIncorporation: file
+                  }));
+                  formMethods.setValue('certificateOfIncorporation', file);
+                  if (formMethods.formState.errors.certificateOfIncorporation) {
+                    formMethods.clearErrors('certificateOfIncorporation');
+                  }
                 }}
-                currentFile={uploadedFiles.certificateOfIncorporation}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { certificateOfIncorporation, ...rest } = prev;
-                    return rest;
-                  });
-                }}
+                maxSize={3 * 1024 * 1024}
               />
+              {uploadedFiles.certificateOfIncorporation && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.certificateOfIncorporation.name}
+                </div>
+              )}
+              {formMethods.formState.errors.certificateOfIncorporation && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.certificateOfIncorporation.message?.toString()}
+                </p>
+              )}
             </div>
             
             <div>
-              <Label>Identification Means for Director 1 *</Label>
+              <Label>Identification Means for Director 1 <span className="required-asterisk">*</span></Label>
               <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
+                accept=".png,.jpg,.jpeg,.pdf"
                 onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, directorId1: file }));
-                  toast({ title: "File selected for upload" });
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    directorId1: file
+                  }));
+                  formMethods.setValue('directorId1', file);
+                  if (formMethods.formState.errors.directorId1) {
+                    formMethods.clearErrors('directorId1');
+                  }
                 }}
-                currentFile={uploadedFiles.directorId1}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { directorId1, ...rest } = prev;
-                    return rest;
-                  });
-                }}
+                maxSize={3 * 1024 * 1024}
               />
+              {uploadedFiles.directorId1 && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.directorId1.name}
+                </div>
+              )}
+              {formMethods.formState.errors.directorId1 && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.directorId1.message?.toString()}
+                </p>
+              )}
             </div>
             
             <div>
-              <Label>Identification Means for Director 2 *</Label>
+              <Label>Identification Means for Director 2 <span className="required-asterisk">*</span></Label>
               <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
+                accept=".png,.jpg,.jpeg,.pdf"
                 onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, directorId2: file }));
-                  toast({ title: "File selected for upload" });
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    directorId2: file
+                  }));
+                  formMethods.setValue('directorId2', file);
+                  if (formMethods.formState.errors.directorId2) {
+                    formMethods.clearErrors('directorId2');
+                  }
                 }}
-                currentFile={uploadedFiles.directorId2}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { directorId2, ...rest } = prev;
-                    return rest;
-                  });
-                }}
+                maxSize={3 * 1024 * 1024}
               />
+              {uploadedFiles.directorId2 && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.directorId2.name}
+                </div>
+              )}
+              {formMethods.formState.errors.directorId2 && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.directorId2.message?.toString()}
+                </p>
+              )}
             </div>
             
             <div>
-              <Label>CAC Status Report *</Label>
+              <Label>CAC Status Report <span className="required-asterisk">*</span></Label>
               <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
+                accept=".png,.jpg,.jpeg,.pdf"
                 onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, cacStatusReport: file }));
-                  toast({ title: "File selected for upload" });
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    cacStatusReport: file
+                  }));
+                  formMethods.setValue('cacStatusReport', file);
+                  if (formMethods.formState.errors.cacStatusReport) {
+                    formMethods.clearErrors('cacStatusReport');
+                  }
                 }}
-                currentFile={uploadedFiles.cacStatusReport}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { cacStatusReport, ...rest } = prev;
-                    return rest;
-                  });
-                }}
+                maxSize={3 * 1024 * 1024}
               />
+              {uploadedFiles.cacStatusReport && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.cacStatusReport.name}
+                </div>
+              )}
+              {formMethods.formState.errors.cacStatusReport && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.cacStatusReport.message?.toString()}
+                </p>
+              )}
             </div>
             
             <div>
-              <Label>VAT Registration License *</Label>
+              <Label>VAT Registration License <span className="required-asterisk">*</span></Label>
               <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
+                accept=".png,.jpg,.jpeg,.pdf"
                 onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, vatRegistrationLicense: file }));
-                  toast({ title: "File selected for upload" });
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    vatRegistrationLicense: file
+                  }));
+                  formMethods.setValue('vatRegistrationLicense', file);
+                  if (formMethods.formState.errors.vatRegistrationLicense) {
+                    formMethods.clearErrors('vatRegistrationLicense');
+                  }
                 }}
-                currentFile={uploadedFiles.vatRegistrationLicense}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { vatRegistrationLicense, ...rest } = prev;
-                    return rest;
-                  });
-                }}
+                maxSize={3 * 1024 * 1024}
               />
+              {uploadedFiles.vatRegistrationLicense && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.vatRegistrationLicense.name}
+                </div>
+              )}
+              {formMethods.formState.errors.vatRegistrationLicense && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.vatRegistrationLicense.message?.toString()}
+                </p>
+              )}
             </div>
             
             <div>
-              <Label>Tax Clearance Certificate *</Label>
+              <Label>Tax Clearance Certificate <span className="required-asterisk">*</span></Label>
               <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
+                accept=".png,.jpg,.jpeg,.pdf"
                 onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, taxClearanceCertificate: file }));
-                  toast({ title: "File selected for upload" });
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    taxClearanceCertificate: file
+                  }));
+                  formMethods.setValue('taxClearanceCertificate', file);
+                  if (formMethods.formState.errors.taxClearanceCertificate) {
+                    formMethods.clearErrors('taxClearanceCertificate');
+                  }
                 }}
-                currentFile={uploadedFiles.taxClearanceCertificate}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { taxClearanceCertificate, ...rest } = prev;
-                    return rest;
-                  });
-                }}
+                maxSize={3 * 1024 * 1024}
               />
+              {uploadedFiles.taxClearanceCertificate && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.taxClearanceCertificate.name}
+                </div>
+              )}
+              {formMethods.formState.errors.taxClearanceCertificate && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.taxClearanceCertificate.message?.toString()}
+                </p>
+              )}
             </div>
           </div>
         </div>
       )
     },
-     {
+    {
       id: 'declaration',
       title: 'Data Privacy & Declaration',
       component: (
@@ -895,53 +1072,64 @@ const PartnersCDD: React.FC = () => {
           <div className="flex items-start space-x-2">
             <Checkbox
               id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked === true)}
+              checked={formMethods.watch('agreeToDataPrivacy')}
+              onCheckedChange={(checked) => {
+                formMethods.setValue('agreeToDataPrivacy', checked === true);
+                if (formMethods.formState.errors.agreeToDataPrivacy) {
+                  formMethods.clearErrors('agreeToDataPrivacy');
+                }
+              }}
+              className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
             />
             <Label htmlFor="agreeToDataPrivacy" className="text-sm">
-              I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge *
+              I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge <span className="required-asterisk">*</span>
             </Label>
           </div>
+          {formMethods.formState.errors.agreeToDataPrivacy && (
+            <p className="text-sm text-destructive">
+              {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
+            </p>
+          )}
           
-          <div>
-            <Label htmlFor="signature">Digital Signature *</Label>
-            <Input
-              id="signature"
-              placeholder="Type your full name as signature"
-              {...formMethods.register('signature')}
-            />
-          </div>
-          
-          <div className="text-center pt-4">
-            <Button
-              type="button"
-              onClick={() => {
-                const isValid = formMethods.trigger();
-                if (isValid) setShowSummary(true);
-              }}
-            >
-              Review & Submit
-            </Button>
-          </div>
+          <FormField
+            name="signature"
+            label="Digital Signature"
+            placeholder="Type your full name as signature"
+            required={true}
+          />
         </div>
       )
     }
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Partners CDD Form</h1>
-          <p className="text-gray-600">Customer Due Diligence form for Partners</p>
-        </div>
+    <FormProvider {...formMethods}>
+      <div className="container mx-auto px-4 py-8">
+        {/* Loading overlay */}
+        {showPostAuthLoading && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-lg font-semibold">Completing your submission...</p>
+            </div>
+          </div>
+        )}
 
-        <MultiStepForm
-          steps={steps}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-          formMethods={formMethods}
-        />
+        <Card className="max-w-6xl mx-auto">
+          <CardHeader>
+            <CardTitle>Partners CDD Form</CardTitle>
+            <CardDescription>Customer Due Diligence form for Partners</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MultiStepForm
+              steps={steps}
+              onSubmit={onFinalSubmit}
+              formMethods={formMethods}
+              submitButtonText="Submit Partners CDD"
+              stepFieldMappings={stepFieldMappings}
+            />
+          </CardContent>
+        </Card>
 
         {/* Summary Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
@@ -949,145 +1137,8 @@ const PartnersCDD: React.FC = () => {
             <DialogHeader>
               <DialogTitle>Review Your Partners CDD</DialogTitle>
             </DialogHeader>
-            <div className="space-y-8">
-              {/* Company Information */}
-              <div className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-lg">Company Information</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditingField(editingField === 'company' ? null : 'company')}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                {editingField === 'company' ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Company Name</Label>
-                        <Input {...formMethods.register('companyName')} />
-                      </div>
-                      <div>
-                        <Label>Email</Label>
-                        <Input {...formMethods.register('email')} />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Address</Label>
-                      <Textarea {...formMethods.register('registeredAddress')} />
-                    </div>
-                    <Button onClick={() => setEditingField(null)} size="sm">Save</Button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><strong>Company Name:</strong> {watchedValues.companyName}</div>
-                    <div><strong>Email:</strong> {watchedValues.email}</div>
-                    <div><strong>Website:</strong> {watchedValues.website}</div>
-                    <div><strong>City:</strong> {watchedValues.city}</div>
-                    <div><strong>State:</strong> {watchedValues.state}</div>
-                    <div><strong>Country:</strong> {watchedValues.country}</div>
-                    <div><strong>Contact Person:</strong> {watchedValues.contactPersonName}</div>
-                    <div><strong>Contact Number:</strong> {watchedValues.contactPersonNumber}</div>
-                    <div><strong>Tax ID:</strong> {watchedValues.taxId}</div>
-                    <div><strong>VAT Number:</strong> {watchedValues.vatRegistrationNumber}</div>
-                    <div><strong>RC Number:</strong> {watchedValues.incorporationNumber}</div>
-                    <div><strong>Incorporation State:</strong> {watchedValues.incorporationState}</div>
-                    <div><strong>BVN:</strong> {watchedValues.bvn}</div>
-                    <div className="col-span-2"><strong>Address:</strong> {watchedValues.registeredAddress}</div>
-                    <div className="col-span-2"><strong>Business Nature:</strong> {watchedValues.businessNature}</div>
-                    <div><strong>Incorporation Date:</strong> {watchedValues.incorporationDate ? new Date(watchedValues.incorporationDate).toLocaleDateString() : 'Not set'}</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Directors */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Directors ({watchedValues.directors?.length || 0})</h3>
-                {watchedValues.directors?.map((director, index) => (
-                  <div key={index} className="border rounded p-3 mb-3 bg-gray-50">
-                    <h4 className="font-medium mb-2">Director {index + 1}</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div><strong>Title:</strong> {director.title}</div>
-                      <div><strong>Gender:</strong> {director.gender}</div>
-                      <div><strong>Full Name:</strong> {director.firstName} {director.middleName} {director.lastName}</div>
-                      <div><strong>Email:</strong> {director.email}</div>
-                      <div><strong>Phone:</strong> {director.phoneNumber}</div>
-                      <div><strong>Nationality:</strong> {director.nationality}</div>
-                      <div><strong>Occupation:</strong> {director.occupation}</div>
-                      <div><strong>BVN:</strong> {director.bvn}</div>
-                      <div><strong>Date of Birth:</strong> {director.dateOfBirth}</div>
-                      <div><strong>Place of Birth:</strong> {director.placeOfBirth}</div>
-                      <div><strong>ID Type:</strong> {director.idType}</div>
-                      <div><strong>ID Number:</strong> {director.identificationNumber}</div>
-                      <div><strong>Issuing Body:</strong> {director.issuingBody}</div>
-                      <div><strong>Income Source:</strong> {director.incomeSource}</div>
-                      <div className="col-span-2"><strong>Address:</strong> {director.residentialAddress}</div>
-                      {director.incomeSource === 'other' && director.incomeSourceOther && (
-                        <div className="col-span-2"><strong>Other Income Source:</strong> {director.incomeSourceOther}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Account Details */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Account Details</h3>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium mb-2">Local Account</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div><strong>Account Number:</strong> {watchedValues.localAccountNumber}</div>
-                      <div><strong>Bank Name:</strong> {watchedValues.localBankName}</div>
-                      <div><strong>Bank Branch:</strong> {watchedValues.localBankBranch}</div>
-                      <div><strong>Opening Date:</strong> {watchedValues.localAccountOpeningDate ? new Date(watchedValues.localAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
-                    </div>
-                  </div>
-                  {(watchedValues.foreignAccountNumber || watchedValues.foreignBankName) && (
-                    <div>
-                      <h4 className="font-medium mb-2">Foreign Account</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div><strong>Account Number:</strong> {watchedValues.foreignAccountNumber}</div>
-                        <div><strong>Bank Name:</strong> {watchedValues.foreignBankName}</div>
-                        <div><strong>Bank Branch:</strong> {watchedValues.foreignBankBranch}</div>
-                        <div><strong>Opening Date:</strong> {watchedValues.foreignAccountOpeningDate ? new Date(watchedValues.foreignAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Uploaded Documents */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Uploaded Documents</h3>
-                <div className="grid grid-cols-1 gap-2 text-sm">
-                  {Object.entries(uploadedFiles).map(([key, file]) => (
-                    <div key={key} className="flex justify-between items-center py-2 border-b">
-                      <span className="font-medium">
-                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
-                      </span>
-                      <span className="text-green-600">
-                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                      </span>
-                    </div>
-                  ))}
-                  {Object.keys(uploadedFiles).length === 0 && (
-                    <p className="text-muted-foreground">No documents uploaded yet</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Declaration */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Declaration</h3>
-                <div className="text-sm">
-                  <div><strong>Data Privacy Agreement:</strong> {watchedValues.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</div>
-                  <div><strong>Digital Signature:</strong> {watchedValues.signature}</div>
-                </div>
-              </div>
-              
+            <div className="space-y-4">
+              <p>Please review your information before submitting.</p>
               <div className="flex gap-4 pt-4 border-t">
                 <Button
                   variant="outline"
@@ -1098,38 +1149,28 @@ const PartnersCDD: React.FC = () => {
                 <Button
                   onClick={() => {
                     const formData = formMethods.getValues();
-                    handleSubmit(formData as PartnersCDDData);
+                    handleSubmit(formData);
                   }}
-                  disabled={isSubmitting}
+                  disabled={authSubmitting}
                   className="bg-primary text-primary-foreground"
                 >
-                  {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
+                  {authSubmitting ? 'Submitting...' : 'Confirm & Submit'}
                 </Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
 
-        {/* Success Dialog */}
-        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>CDD Form Submitted Successfully!</DialogTitle>
-            </DialogHeader>
-            <div className="text-center space-y-4">
-              <div className="text-green-600 text-6xl">✓</div>
-              <p>Your Partners CDD form has been submitted successfully.</p>
-              <p className="text-sm text-muted-foreground">
-                You will receive a confirmation email shortly.
-              </p>
-              <Button onClick={() => setShowSuccess()}>
-                Close
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Success Modal */}
+        <SuccessModal
+          isOpen={authShowSuccess}
+          onClose={() => setAuthShowSuccess()}
+          title="Partners CDD Submitted Successfully!"
+          message="Your Partners CDD form has been submitted successfully."
+          formType="Partners CDD"
+        />
       </div>
-    </div>
+    </FormProvider>
   );
 };
 
