@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { toast } from '@/hooks/use-toast';
+import { get } from 'lodash';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,10 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { Calendar, CalendarIcon, Plus, Trash2, Upload, Edit2, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar, CalendarIcon, Plus, Trash2, Upload, Edit2, Loader2, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { NaicomPartnersCDDData, Director } from '@/types';
@@ -23,9 +21,145 @@ import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
+// CRITICAL: Define form components OUTSIDE main component to prevent focus loss
+const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
+  const { register, formState: { errors }, clearErrors } = useFormContext();
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type={type}
+        maxLength={maxLength}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
+  const { register, watch, formState: { errors }, clearErrors } = useFormContext();
+  const currentValue = watch(name) || '';
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Textarea
+        id={name}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      <div className="flex justify-between">
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
+        <span className="text-sm text-muted-foreground ml-auto">
+          {currentValue.length}/{maxLength}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const FormSelect = ({ name, label, required = false, options, placeholder, ...props }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(newValue) => {
+          setValue(name, newValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        {...props}
+      >
+        <SelectTrigger className={error ? 'border-destructive' : ''}>
+          <SelectValue placeholder={placeholder || `Select ${label}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option: any) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormDatePicker = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type="date"
+        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
+        onChange={(e) => {
+          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+          setValue(name, dateValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        className={error ? 'border-destructive' : ''}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+// Enhanced validation schema
 const naicomPartnersCDDSchema = yup.object().shape({
   // Company Info
   companyName: yup.string().required("Company name is required"),
@@ -33,35 +167,100 @@ const naicomPartnersCDDSchema = yup.object().shape({
   city: yup.string().required("City is required"),
   state: yup.string().required("State is required"),
   country: yup.string().required("Country is required"),
-  email: yup.string().email("Valid email is required").required("Email is required"),
+  
+  email: yup.string()
+    .required("Email is required")
+    .email("Please enter a valid email")
+    .typeError("Please enter a valid email"),
+    
   website: yup.string().required("Website is required"),
   contactPersonName: yup.string().required("Contact person name is required"),
-  contactPersonNumber: yup.string().required("Contact person number is required"),
+  
+  contactPersonNumber: yup.string()
+    .required("Contact person number is required")
+    .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
+    .max(15, "Phone number cannot exceed 15 characters"),
+    
   taxId: yup.string().required("Tax ID is required"),
   vatRegistrationNumber: yup.string().required("VAT registration number is required"),
   incorporationNumber: yup.string().required("Incorporation number is required"),
-  incorporationDate: yup.date().required("Incorporation date is required"),
+  
+  incorporationDate: yup.date()
+    .required("Incorporation date is required")
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
+    
   incorporationState: yup.string().required("Incorporation state is required"),
   businessNature: yup.string().required("Business nature is required"),
-  bvn: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
-  naicomLicenseIssuingDate: yup.date().required("NAICOM license issuing date is required"),
-  naicomLicenseExpiryDate: yup.date().required("NAICOM license expiry date is required"),
   
-  // Directors
+  bvn: yup.string()
+    .required("BVN is required")
+    .matches(/^\d+$/, "BVN must contain only numbers")
+    .length(11, "BVN must be exactly 11 digits"),
+    
+  naicomLicenseIssuingDate: yup.date()
+    .required("NAICOM license issuing date is required")
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
+    
+  naicomLicenseExpiryDate: yup.date()
+    .required("NAICOM license expiry date is required")
+    .test('not-past', 'Expiry date cannot be in the past', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      return value > today;
+    })
+    .typeError('Please select a valid date'),
+  
+  // Directors validation
   directors: yup.array().of(yup.object().shape({
-    title: yup.string(),
-    gender: yup.string(),
+    title: yup.string().required("Title is required"),
+    gender: yup.string().required("Gender is required"),
     firstName: yup.string().required("First name is required"),
     middleName: yup.string(),
     lastName: yup.string().required("Last name is required"),
-    dateOfBirth: yup.date().required("Date of birth is required"),
+    
+    dateOfBirth: yup.date()
+      .required("Date of birth is required")
+      .test('age', 'Must be at least 18 years old', function(value) {
+        if (!value) return false;
+        const today = new Date();
+        const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+        return value <= eighteenYearsAgo;
+      })
+      .typeError('Please select a valid date'),
+      
     placeOfBirth: yup.string().required("Place of birth is required"),
     nationality: yup.string().required("Nationality is required"),
     country: yup.string().required("Country is required"),
     occupation: yup.string().required("Occupation is required"),
-    email: yup.string().email("Valid email is required").required("Email is required"),
-    phoneNumber: yup.string().required("Phone number is required"),
-    bvn: yup.string().min(11, "BVN must be 11 digits").max(11, "BVN must be 11 digits").required("BVN is required"),
+    
+    email: yup.string()
+      .required("Email is required")
+      .email("Please enter a valid email")
+      .typeError("Please enter a valid email"),
+      
+    phoneNumber: yup.string()
+      .required("Phone number is required")
+      .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
+      .max(15, "Phone number cannot exceed 15 characters"),
+      
+    bvn: yup.string()
+      .required("BVN is required")
+      .matches(/^\d+$/, "BVN must contain only numbers")
+      .length(11, "BVN must be exactly 11 digits"),
+      
     employerName: yup.string(),
     employerPhone: yup.string(),
     residentialAddress: yup.string().required("Residential address is required"),
@@ -69,28 +268,69 @@ const naicomPartnersCDDSchema = yup.object().shape({
     idType: yup.string().required("ID type is required"),
     identificationNumber: yup.string().required("Identification number is required"),
     issuingBody: yup.string().required("Issuing body is required"),
-    issuedDate: yup.date().required("Issued date is required"),
-    expiryDate: yup.date(),
+    
+    issuedDate: yup.date()
+      .required("Issued date is required")
+      .test('not-future', 'Date cannot be in the future', function(value) {
+        if (!value) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return value <= today;
+      })
+      .typeError('Please select a valid date'),
+      
+    expiryDate: yup.date()
+      .test('not-past', 'Expiry date cannot be in the past', function(value) {
+        if (!value) return true; // Optional field
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        return value > today;
+      })
+      .typeError('Please select a valid date'),
+      
     incomeSource: yup.string().required("Income source is required"),
-    incomeSourceOther: yup.string()
+    incomeSourceOther: yup.string().when('incomeSource', {
+      is: 'Other',
+      then: (schema) => schema.required('Please specify income source'),
+      otherwise: (schema) => schema.notRequired()
+    }),
   })).min(1, "At least one director is required"),
   
   // Account Details
   localAccountNumber: yup.string().required("Account number is required"),
   localBankName: yup.string().required("Bank name is required"),
   localBankBranch: yup.string().required("Bank branch is required"),
-  localAccountOpeningDate: yup.date().required("Account opening date is required"),
+  
+  localAccountOpeningDate: yup.date()
+    .required("Account opening date is required")
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
+    
   foreignAccountNumber: yup.string(),
   foreignBankName: yup.string(),
   foreignBankBranch: yup.string(),
-  foreignAccountOpeningDate: yup.date(),
+  
+  foreignAccountOpeningDate: yup.date()
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return true; // Optional field
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
   
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
   signature: yup.string().required("Signature is required")
 });
 
-const defaultValues: Partial<NaicomPartnersCDDData> = {
+// Default values with proper types
+const defaultValues = {
   companyName: '',
   registeredAddress: '',
   city: '',
@@ -103,16 +343,19 @@ const defaultValues: Partial<NaicomPartnersCDDData> = {
   taxId: '',
   vatRegistrationNumber: '',
   incorporationNumber: '',
+  incorporationDate: undefined,
   incorporationState: '',
   businessNature: '',
   bvn: '',
+  naicomLicenseIssuingDate: undefined,
+  naicomLicenseExpiryDate: undefined,
   directors: [{
     title: '',
     gender: '',
     firstName: '',
     middleName: '',
     lastName: '',
-    dateOfBirth: '',
+    dateOfBirth: undefined,
     placeOfBirth: '',
     nationality: '',
     country: '',
@@ -127,31 +370,34 @@ const defaultValues: Partial<NaicomPartnersCDDData> = {
     idType: '',
     identificationNumber: '',
     issuingBody: '',
-    issuedDate: '',
-    expiryDate: '',
+    issuedDate: undefined,
+    expiryDate: undefined,
     incomeSource: '',
     incomeSourceOther: ''
   }],
   localAccountNumber: '',
   localBankName: '',
   localBankBranch: '',
+  localAccountOpeningDate: undefined,
   foreignAccountNumber: '',
   foreignBankName: '',
   foreignBankBranch: '',
+  foreignAccountOpeningDate: undefined,
   agreeToDataPrivacy: false,
   signature: ''
 };
 
 const NaicomPartnersCDD: React.FC = () => {
+  const { toast } = useToast();
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
   const [showSummary, setShowSummary] = useState(false);
   const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const [editingField, setEditingField] = useState<string | null>(null);
+  
   const { 
     handleSubmitWithAuth, 
-    showSuccess, 
-    setShowSuccess,
-    isSubmitting
+    showSuccess: authShowSuccess, 
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting
   } = useAuthRequiredSubmit();
 
   const formMethods = useForm<any>({
@@ -160,34 +406,12 @@ const NaicomPartnersCDD: React.FC = () => {
     mode: 'onChange'
   });
 
-  const { saveDraft, clearDraft } = useFormDraft('naicomPartners', formMethods);
   const { fields, append, remove } = useFieldArray({
     control: formMethods.control,
     name: 'directors'
   });
 
-  const watchedValues = formMethods.watch();
-
-  // Check for pending submission when component mounts
-  useEffect(() => {
-    const checkPendingSubmission = () => {
-      const hasPending = sessionStorage.getItem('pendingSubmission');
-      if (hasPending) {
-        setShowPostAuthLoading(true);
-        // Hide loading after 5 seconds max (in case something goes wrong)
-        setTimeout(() => setShowPostAuthLoading(false), 5000);
-      }
-    };
-
-    checkPendingSubmission();
-  }, []);
-
-  // Hide post-auth loading when success modal shows
-  useEffect(() => {
-    if (showSuccess) {
-      setShowPostAuthLoading(false);
-    }
-  }, [showSuccess]);
+  const { saveDraft, clearDraft } = useFormDraft('naicomPartnersCDD', formMethods);
 
   // Auto-save draft
   useEffect(() => {
@@ -197,9 +421,48 @@ const NaicomPartnersCDD: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
-  // Main submit handler that checks authentication
-  const handleSubmit = async (data: NaicomPartnersCDDData) => {
-    // Prepare file upload data
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
+
+  // Step field mappings
+  const stepFieldMappings = {
+    0: [
+      'companyName', 'registeredAddress', 'city', 'state', 'country', 
+      'email', 'website', 'contactPersonName', 'contactPersonNumber',
+      'taxId', 'vatRegistrationNumber', 'incorporationNumber', 'incorporationDate',
+      'incorporationState', 'businessNature', 'bvn', 'naicomLicenseIssuingDate',
+      'naicomLicenseExpiryDate'
+    ],
+    1: ['directors'],
+    2: [
+      'localAccountNumber', 'localBankName', 'localBankBranch', 'localAccountOpeningDate',
+      'foreignAccountNumber', 'foreignBankName', 'foreignBankBranch', 'foreignAccountOpeningDate'
+    ],
+    3: ['agreeToDataPrivacy', 'signature']
+  };
+
+  // Data sanitization
+  const sanitizeData = (data: any) => {
+    const sanitized: any = {};
+    Object.keys(data).forEach(key => {
+      if (data[key] !== undefined) {
+        sanitized[key] = data[key];
+      }
+    });
+    return sanitized;
+  };
+
+  const handleSubmit = async (data: any) => {
+    console.log('Form data before sanitization:', data);
+    
+    const sanitizedData = sanitizeData(data);
+    console.log('Sanitized data:', sanitizedData);
+
+    // Handle file uploads
     const fileUploadPromises: Array<Promise<[string, string]>> = [];
     
     for (const [key, file] of Object.entries(uploadedFiles)) {
@@ -214,7 +477,7 @@ const NaicomPartnersCDD: React.FC = () => {
     const fileUrls = Object.fromEntries(fileResults);
 
     const finalData = {
-      ...data,
+      ...sanitizedData,
       ...fileUrls,
       status: 'processing',
       formType: 'NAICOM Partners CDD'
@@ -225,41 +488,42 @@ const NaicomPartnersCDD: React.FC = () => {
     setShowSummary(false);
   };
 
-  const onFinalSubmit = (data: NaicomPartnersCDDData) => {
+  const onFinalSubmit = (data: any) => {
     setShowSummary(true);
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
-    return (
-      <div className="space-y-2">
-        <Label>{label}</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !value && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <ReactCalendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={(date) => formMethods.setValue(name, date)}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-    );
-  };
+  // Options for select fields
+  const titleOptions = [
+    { value: 'Mr', label: 'Mr' },
+    { value: 'Mrs', label: 'Mrs' },
+    { value: 'Ms', label: 'Ms' },
+    { value: 'Dr', label: 'Dr' },
+    { value: 'Prof', label: 'Prof' },
+    { value: 'Chief', label: 'Chief' },
+    { value: 'Alhaji', label: 'Alhaji' },
+    { value: 'Alhaja', label: 'Alhaja' }
+  ];
+
+  const genderOptions = [
+    { value: 'Male', label: 'Male' },
+    { value: 'Female', label: 'Female' }
+  ];
+
+  const idTypeOptions = [
+    { value: 'National ID', label: 'National ID' },
+    { value: 'International Passport', label: 'International Passport' },
+    { value: 'Driver\'s License', label: 'Driver\'s License' },
+    { value: 'Voter\'s Card', label: 'Voter\'s Card' }
+  ];
+
+  const incomeSourceOptions = [
+    { value: 'Employment', label: 'Employment' },
+    { value: 'Business', label: 'Business' },
+    { value: 'Investment', label: 'Investment' },
+    { value: 'Inheritance', label: 'Inheritance' },
+    { value: 'Gift', label: 'Gift' },
+    { value: 'Other', label: 'Other' }
+  ];
 
   const steps = [
     {
@@ -267,151 +531,119 @@ const NaicomPartnersCDD: React.FC = () => {
       title: 'Company Information',
       component: (
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="companyName">Company Name *</Label>
-            <Input
-              id="companyName"
-              {...formMethods.register('companyName')}
+          <FormField
+            name="companyName"
+            label="Company Name"
+            required={true}
+          />
+          
+          <FormTextarea
+            name="registeredAddress"
+            label="Registered Company Address"
+            required={true}
+          />
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              name="city"
+              label="City"
+              required={true}
+            />
+            <FormField
+              name="state"
+              label="State"
+              required={true}
+            />
+            <FormField
+              name="country"
+              label="Country"
+              required={true}
             />
           </div>
           
-          <div>
-            <Label htmlFor="registeredAddress">Registered Company Address *</Label>
-            <Textarea
-              id="registeredAddress"
-              {...formMethods.register('registeredAddress')}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              name="email"
+              label="Email Address"
+              type="email"
+              required={true}
+            />
+            <FormField
+              name="website"
+              label="Website"
+              required={true}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              name="contactPersonName"
+              label="Contact Person Name"
+              required={true}
+            />
+            <FormField
+              name="contactPersonNumber"
+              label="Contact Person Number"
+              required={true}
+              maxLength={15}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              name="taxId"
+              label="Tax Identification Number"
+              required={true}
+            />
+            <FormField
+              name="vatRegistrationNumber"
+              label="VAT Registration Number"
+              required={true}
             />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="city">City *</Label>
-              <Input
-                id="city"
-                {...formMethods.register('city')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="state">State *</Label>
-              <Input
-                id="state"
-                {...formMethods.register('state')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="country">Country *</Label>
-              <Input
-                id="country"
-                {...formMethods.register('country')}
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                {...formMethods.register('email')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="website">Website *</Label>
-              <Input
-                id="website"
-                {...formMethods.register('website')}
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="contactPersonName">Contact Person Name *</Label>
-              <Input
-                id="contactPersonName"
-                {...formMethods.register('contactPersonName')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="contactPersonNumber">Contact Person Number *</Label>
-              <Input
-                id="contactPersonNumber"
-                {...formMethods.register('contactPersonNumber')}
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="taxId">Tax Identification Number *</Label>
-              <Input
-                id="taxId"
-                {...formMethods.register('taxId')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="vatRegistrationNumber">VAT Registration Number *</Label>
-              <Input
-                id="vatRegistrationNumber"
-                {...formMethods.register('vatRegistrationNumber')}
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="incorporationNumber">Incorporation/RC Number *</Label>
-              <Input
-                id="incorporationNumber"
-                {...formMethods.register('incorporationNumber')}
-              />
-            </div>
-            <div>
-              <DatePickerField
-                name="incorporationDate"
-                label="Date of Incorporation *"
-              />
-            </div>
-            <div>
-              <Label htmlFor="incorporationState">Incorporation State *</Label>
-              <Input
-                id="incorporationState"
-                {...formMethods.register('incorporationState')}
-              />
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="businessNature">Nature of Business *</Label>
-            <Textarea
-              id="businessNature"
-              {...formMethods.register('businessNature')}
+            <FormField
+              name="incorporationNumber"
+              label="Incorporation/RC Number"
+              required={true}
+            />
+            <FormDatePicker
+              name="incorporationDate"
+              label="Date of Incorporation"
+              required={true}
+            />
+            <FormField
+              name="incorporationState"
+              label="Incorporation State"
+              required={true}
             />
           </div>
           
-          <div>
-            <Label htmlFor="bvn">BVN *</Label>
-            <Input
-              id="bvn"
-              maxLength={11}
-              {...formMethods.register('bvn')}
-            />
-          </div>
+          <FormTextarea
+            name="businessNature"
+            label="Nature of Business"
+            required={true}
+          />
+          
+          <FormField
+            name="bvn"
+            label="BVN"
+            required={true}
+            maxLength={11}
+          />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <DatePickerField
-                name="naicomLicenseIssuingDate"
-                label="NAICOM License Issuing Date *"
-              />
-            </div>
-            <div>
-              <DatePickerField
-                name="naicomLicenseExpiryDate"
-                label="NAICOM License Expiry Date *"
-              />
-            </div>
+            <FormDatePicker
+              name="naicomLicenseIssuingDate"
+              label="NAICOM License Issuing Date"
+              required={true}
+            />
+            <FormDatePicker
+              name="naicomLicenseExpiryDate"
+              label="NAICOM License Expiry Date"
+              required={true}
+            />
           </div>
         </div>
       )
@@ -421,262 +653,215 @@ const NaicomPartnersCDD: React.FC = () => {
       title: 'Directors Information',
       component: (
         <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Directors</h3>
-            <Button
-              type="button"
-              onClick={() => append({
-                title: '',
-                gender: '',
-                firstName: '',
-                middleName: '',
-                lastName: '',
-                dateOfBirth: '',
-                placeOfBirth: '',
-                nationality: '',
-                country: '',
-                occupation: '',
-                email: '',
-                phoneNumber: '',
-                bvn: '',
-                employerName: '',
-                employerPhone: '',
-                residentialAddress: '',
-                taxIdNumber: '',
-                idType: '',
-                identificationNumber: '',
-                issuingBody: '',
-                issuedDate: '',
-                expiryDate: '',
-                incomeSource: '',
-                incomeSourceOther: ''
-              })}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Add Director
-            </Button>
-          </div>
-          
-          {fields.map((field, index) => (
-            <Card key={field.id} className="p-6">
+          {fields.map((director, index) => (
+            <Card key={director.id} className="p-4">
               <div className="flex justify-between items-center mb-4">
-                <h4 className="font-medium">Director {index + 1}</h4>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => remove(index)}
-                  disabled={fields.length === 1}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <h3 className="text-lg font-medium">Director {index + 1}</h3>
+                {fields.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => remove(index)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Remove
+                  </Button>
+                )}
               </div>
               
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Title *</Label>
-                    <Select
-                      value={((formMethods.watch('directors') as any[]) || [])[index]?.title || ''}
-                      onValueChange={(value) => formMethods.setValue(`directors.${index}.title`, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select title" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Mr">Mr</SelectItem>
-                        <SelectItem value="Mrs">Mrs</SelectItem>
-                        <SelectItem value="Chief">Chief</SelectItem>
-                        <SelectItem value="Dr">Dr</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label>Gender *</Label>
-                    <Select
-                      value={((formMethods.watch('directors') as any[]) || [])[index]?.gender || ''}
-                      onValueChange={(value) => formMethods.setValue(`directors.${index}.gender`, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>First Name *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.firstName`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Middle Name</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.middleName`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Last Name *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.lastName`)}
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <Label>Residential Address *</Label>
-                  <Textarea
-                    {...formMethods.register(`directors.${index}.residentialAddress`)}
+                  <FormSelect
+                    name={`directors.${index}.title`}
+                    label="Title"
+                    required={true}
+                    options={titleOptions}
+                  />
+                  <FormSelect
+                    name={`directors.${index}.gender`}
+                    label="Gender"
+                    required={true}
+                    options={genderOptions}
                   />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Date of Birth *</Label>
-                    <Input
-                      type="date"
-                      {...formMethods.register(`directors.${index}.dateOfBirth`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Place of Birth *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.placeOfBirth`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Occupation *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.occupation`)}
-                    />
-                  </div>
+                  <FormField
+                    name={`directors.${index}.firstName`}
+                    label="First Name"
+                    required={true}
+                  />
+                  <FormField
+                    name={`directors.${index}.middleName`}
+                    label="Middle Name"
+                  />
+                  <FormField
+                    name={`directors.${index}.lastName`}
+                    label="Last Name"
+                    required={true}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormDatePicker
+                    name={`directors.${index}.dateOfBirth`}
+                    label="Date of Birth"
+                    required={true}
+                  />
+                  <FormField
+                    name={`directors.${index}.placeOfBirth`}
+                    label="Place of Birth"
+                    required={true}
+                  />
+                  <FormField
+                    name={`directors.${index}.nationality`}
+                    label="Nationality"
+                    required={true}
+                  />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>BVN *</Label>
-                    <Input
-                      maxLength={11}
-                      {...formMethods.register(`directors.${index}.bvn`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Tax ID Number</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.taxIdNumber`)}
-                    />
-                  </div>
+                  <FormField
+                    name={`directors.${index}.country`}
+                    label="Country"
+                    required={true}
+                  />
+                  <FormField
+                    name={`directors.${index}.occupation`}
+                    label="Occupation"
+                    required={true}
+                  />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Nationality *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.nationality`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Phone Number *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.phoneNumber`)}
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <Label>Email *</Label>
-                  <Input
+                  <FormField
+                    name={`directors.${index}.email`}
+                    label="Email"
                     type="email"
-                    {...formMethods.register(`directors.${index}.email`)}
+                    required={true}
+                  />
+                  <FormField
+                    name={`directors.${index}.phoneNumber`}
+                    label="Phone Number"
+                    required={true}
+                    maxLength={15}
+                  />
+                </div>
+                
+                <FormField
+                  name={`directors.${index}.bvn`}
+                  label="BVN"
+                  required={true}
+                  maxLength={11}
+                />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    name={`directors.${index}.employerName`}
+                    label="Employer Name"
+                  />
+                  <FormField
+                    name={`directors.${index}.employerPhone`}
+                    label="Employer Phone"
+                  />
+                </div>
+                
+                <FormTextarea
+                  name={`directors.${index}.residentialAddress`}
+                  label="Residential Address"
+                  required={true}
+                />
+                
+                <FormField
+                  name={`directors.${index}.taxIdNumber`}
+                  label="Tax ID Number"
+                />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormSelect
+                    name={`directors.${index}.idType`}
+                    label="ID Type"
+                    required={true}
+                    options={idTypeOptions}
+                  />
+                  <FormField
+                    name={`directors.${index}.identificationNumber`}
+                    label="Identification Number"
+                    required={true}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    name={`directors.${index}.issuingBody`}
+                    label="Issuing Body"
+                    required={true}
+                  />
+                  <FormDatePicker
+                    name={`directors.${index}.issuedDate`}
+                    label="Issued Date"
+                    required={true}
+                  />
+                  <FormDatePicker
+                    name={`directors.${index}.expiryDate`}
+                    label="Expiry Date"
                   />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>ID Type *</Label>
-                    <Select
-                      value={formMethods.watch(`directors.${index}.idType`)}
-                      onValueChange={(value) => formMethods.setValue(`directors.${index}.idType`, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose Identification Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="passport">International Passport</SelectItem>
-                        <SelectItem value="nimc">NIMC</SelectItem>
-                        <SelectItem value="drivers">Drivers Licence</SelectItem>
-                        <SelectItem value="voters">Voters Card</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Identification Number *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.identificationNumber`)}
+                  <FormSelect
+                    name={`directors.${index}.incomeSource`}
+                    label="Source of Income"
+                    required={true}
+                    options={incomeSourceOptions}
+                  />
+                  {formMethods.watch(`directors.${index}.incomeSource`) === 'Other' && (
+                    <FormField
+                      name={`directors.${index}.incomeSourceOther`}
+                      label="Please Specify"
+                      required={true}
                     />
-                  </div>
+                  )}
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Issued Date *</Label>
-                    <Input
-                      type="date"
-                      {...formMethods.register(`directors.${index}.issuedDate`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Expiry Date</Label>
-                    <Input
-                      type="date"
-                      {...formMethods.register(`directors.${index}.expiryDate`)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Issuing Body *</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.issuingBody`)}
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <Label>Source of Income *</Label>
-                  <Select
-                    value={formMethods.watch(`directors.${index}.incomeSource`)}
-                    onValueChange={(value) => formMethods.setValue(`directors.${index}.incomeSource`, value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose Income Source" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="salary">Salary or Business Income</SelectItem>
-                      <SelectItem value="investments">Investments or Dividends</SelectItem>
-                      <SelectItem value="other">Other (please specify)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {formMethods.watch(`directors.${index}.incomeSource`) === 'other' && (
-                  <div>
-                    <Label>Please specify other income source</Label>
-                    <Input
-                      {...formMethods.register(`directors.${index}.incomeSourceOther`)}
-                    />
-                  </div>
-                )}
               </div>
             </Card>
           ))}
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => append({
+              title: '',
+              gender: '',
+              firstName: '',
+              middleName: '',
+              lastName: '',
+              dateOfBirth: undefined,
+              placeOfBirth: '',
+              nationality: '',
+              country: '',
+              occupation: '',
+              email: '',
+              phoneNumber: '',
+              bvn: '',
+              employerName: '',
+              employerPhone: '',
+              residentialAddress: '',
+              taxIdNumber: '',
+              idType: '',
+              identificationNumber: '',
+              issuingBody: '',
+              issuedDate: undefined,
+              expiryDate: undefined,
+              incomeSource: '',
+              incomeSourceOther: ''
+            })}
+            className="w-full"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Another Director
+          </Button>
         </div>
       )
     },
@@ -684,486 +869,196 @@ const NaicomPartnersCDD: React.FC = () => {
       id: 'accounts',
       title: 'Account Details',
       component: (
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-medium mb-4">Local Account Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="localAccountNumber">Account Number *</Label>
-                <Input
-                  id="localAccountNumber"
-                  {...formMethods.register('localAccountNumber')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="localBankName">Bank Name *</Label>
-                <Input
-                  id="localBankName"
-                  {...formMethods.register('localBankName')}
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <Label htmlFor="localBankBranch">Bank Branch *</Label>
-                <Input
-                  id="localBankBranch"
-                  {...formMethods.register('localBankBranch')}
-                />
-              </div>
-              <div>
-                <DatePickerField
-                  name="localAccountOpeningDate"
-                  label="Account Opening Date *"
-                />
-              </div>
-            </div>
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Local Account Information</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              name="localAccountNumber"
+              label="Account Number"
+              required={true}
+            />
+            <FormField
+              name="localBankName"
+              label="Bank Name"
+              required={true}
+            />
           </div>
           
-          <div>
-            <h3 className="text-lg font-medium mb-4">Foreign Account Details (Optional)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="foreignAccountNumber">Account Number</Label>
-                <Input
-                  id="foreignAccountNumber"
-                  {...formMethods.register('foreignAccountNumber')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="foreignBankName">Bank Name</Label>
-                <Input
-                  id="foreignBankName"
-                  {...formMethods.register('foreignBankName')}
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <Label htmlFor="foreignBankBranch">Bank Branch</Label>
-                <Input
-                  id="foreignBankBranch"
-                  {...formMethods.register('foreignBankBranch')}
-                />
-              </div>
-              <div>
-                <Label>Account Opening Date</Label>
-                <Input
-                  type="date"
-                  {...formMethods.register('foreignAccountOpeningDate')}
-                />
-              </div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              name="localBankBranch"
+              label="Bank Branch"
+              required={true}
+            />
+            <FormDatePicker
+              name="localAccountOpeningDate"
+              label="Account Opening Date"
+              required={true}
+            />
+          </div>
+          
+          <h3 className="text-lg font-medium mt-6">Foreign Account Information (Optional)</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              name="foreignAccountNumber"
+              label="Account Number"
+            />
+            <FormField
+              name="foreignBankName"
+              label="Bank Name"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              name="foreignBankBranch"
+              label="Bank Branch"
+            />
+            <FormDatePicker
+              name="foreignAccountOpeningDate"
+              label="Account Opening Date"
+            />
           </div>
         </div>
       )
     },
     {
-      id: 'uploads',
-      title: 'Document Uploads',
-      component: (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label>Certificate of Incorporation *</Label>
-              <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, certificateOfIncorporation: file }));
-                  toast({ title: "File selected for upload" });
-                }}
-                currentFile={uploadedFiles.certificateOfIncorporation}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { certificateOfIncorporation, ...rest } = prev;
-                    return rest;
-                  });
-                }}
-              />
-            </div>
-            
-            <div>
-              <Label>Identification Means for Director 1 *</Label>
-              <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, directorId1: file }));
-                  toast({ title: "File selected for upload" });
-                }}
-                currentFile={uploadedFiles.directorId1}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { directorId1, ...rest } = prev;
-                    return rest;
-                  });
-                }}
-              />
-            </div>
-            
-            <div>
-              <Label>Identification Means for Director 2 *</Label>
-              <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, directorId2: file }));
-                  toast({ title: "File selected for upload" });
-                }}
-                currentFile={uploadedFiles.directorId2}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { directorId2, ...rest } = prev;
-                    return rest;
-                  });
-                }}
-              />
-            </div>
-            
-            <div>
-              <Label>CAC Status Report *</Label>
-              <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, cacStatusReport: file }));
-                  toast({ title: "File selected for upload" });
-                }}
-                currentFile={uploadedFiles.cacStatusReport}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { cacStatusReport, ...rest } = prev;
-                    return rest;
-                  });
-                }}
-              />
-            </div>
-            
-            <div>
-              <Label>VAT Registration License *</Label>
-              <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, vatRegistrationLicense: file }));
-                  toast({ title: "File selected for upload" });
-                }}
-                currentFile={uploadedFiles.vatRegistrationLicense}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { vatRegistrationLicense, ...rest } = prev;
-                    return rest;
-                  });
-                }}
-              />
-            </div>
-            
-            <div>
-              <Label>Tax Clearance Certificate *</Label>
-              <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, taxClearanceCertificate: file }));
-                  toast({ title: "File selected for upload" });
-                }}
-                currentFile={uploadedFiles.taxClearanceCertificate}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { taxClearanceCertificate, ...rest } = prev;
-                    return rest;
-                  });
-                }}
-              />
-            </div>
-            
-            <div>
-              <Label>NAICOM License Certificate (Optional)</Label>
-              <FileUpload
-                accept="application/pdf,image/*"
-                maxSize={3 * 1024 * 1024}
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({ ...prev, naicomLicenseCertificate: file }));
-                  toast({ title: "File selected for upload" });
-                }}
-                currentFile={uploadedFiles.naicomLicenseCertificate}
-                onFileRemove={() => {
-                  setUploadedFiles(prev => {
-                    const { naicomLicenseCertificate, ...rest } = prev;
-                    return rest;
-                  });
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )
-    },
-   {
       id: 'declaration',
-      title: 'Data Privacy & Declaration',
+      title: 'Declaration',
       component: (
-        <div className="space-y-6">
-          <div className="p-4 bg-muted rounded-lg">
-            <h3 className="font-medium mb-2">Data Privacy</h3>
-            <div className="text-sm text-muted-foreground space-y-2">
-              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
-            </div>
-            
-            <h3 className="font-medium mb-2 mt-4">Declaration</h3>
-            <div className="text-sm text-muted-foreground space-y-2">
-              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-            </div>
-          </div>
+        <div className="space-y-4">
+          <FormField
+            name="signature"
+            label="Electronic Signature"
+            required={true}
+            placeholder="Type your full name as signature"
+          />
           
           <div className="flex items-start space-x-2">
             <Checkbox
               id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', checked === true)}
+              checked={formMethods.watch('agreeToDataPrivacy')}
+              onCheckedChange={(checked) => {
+                formMethods.setValue('agreeToDataPrivacy', checked === true);
+                if (formMethods.formState.errors.agreeToDataPrivacy) {
+                  formMethods.clearErrors('agreeToDataPrivacy');
+                }
+              }}
+              className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
             />
             <Label htmlFor="agreeToDataPrivacy" className="text-sm">
-              I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge *
+              I hereby declare that the information provided above is true and accurate to the best of my knowledge. I understand that any false information may result in the rejection of this application. I also agree to the data privacy policy.
+              <span className="required-asterisk">*</span>
             </Label>
           </div>
-          
-          <div>
-            <Label htmlFor="signature">Digital Signature *</Label>
-            <Input
-              id="signature"
-              placeholder="Type your full name as signature"
-              {...formMethods.register('signature')}
-            />
-          </div>
-          
-          <div className="text-center pt-4">
-            <Button
-              type="button"
-              onClick={() => {
-                const isValid = formMethods.trigger();
-                if (isValid) setShowSummary(true);
-              }}
-            >
-              Review & Submit
-            </Button>
-          </div>
+          {formMethods.formState.errors.agreeToDataPrivacy && (
+            <p className="text-sm text-destructive">
+              {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
+            </p>
+          )}
         </div>
       )
     }
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">NAICOM Partners CDD Form</h1>
-          <p className="text-gray-600">Customer Due Diligence form for NAICOM Partners</p>
-        </div>
+    <FormProvider {...formMethods}>
+      <div className="container mx-auto px-4 py-8">
+        {/* Loading overlay */}
+        {showPostAuthLoading && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-lg font-semibold">Completing your submission...</p>
+            </div>
+          </div>
+        )}
 
-        <MultiStepForm
-          steps={steps}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText="Submit CDD Form"
-          formMethods={formMethods}
-        />
+        <Card className="max-w-6xl mx-auto">
+          <CardHeader>
+            <CardTitle>NAICOM Partners Customer Due Diligence (CDD)</CardTitle>
+            <CardDescription>
+              Complete this form for NAICOM Partners customer due diligence requirements
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MultiStepForm
+              steps={steps}
+              onSubmit={onFinalSubmit}
+              formMethods={formMethods}
+              submitButtonText="Submit NAICOM Partners CDD"
+              stepFieldMappings={stepFieldMappings}
+            />
+          </CardContent>
+        </Card>
 
         {/* Summary Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Review Your NAICOM Partners CDD</DialogTitle>
+              <DialogTitle>Review Your NAICOM Partners CDD Submission</DialogTitle>
             </DialogHeader>
-            <div className="space-y-8">
-              {/* Company Information */}
-              <div className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-lg">Company Information</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditingField(editingField === 'company' ? null : 'company')}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
+            
+            <div className="space-y-6">
+              <div>
+                <h3 className="font-semibold mb-2">Company Information</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div><strong>Company Name:</strong> {formMethods.getValues('companyName')}</div>
+                  <div><strong>Email:</strong> {formMethods.getValues('email')}</div>
+                  <div><strong>City:</strong> {formMethods.getValues('city')}</div>
+                  <div><strong>State:</strong> {formMethods.getValues('state')}</div>
                 </div>
-                {editingField === 'company' ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Company Name</Label>
-                        <Input {...formMethods.register('companyName')} />
-                      </div>
-                      <div>
-                        <Label>Email</Label>
-                        <Input {...formMethods.register('email')} />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Address</Label>
-                      <Textarea {...formMethods.register('registeredAddress')} />
-                    </div>
-                    <Button onClick={() => setEditingField(null)} size="sm">Save</Button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><strong>Company Name:</strong> {watchedValues.companyName}</div>
-                    <div><strong>Email:</strong> {watchedValues.email}</div>
-                    <div><strong>Website:</strong> {watchedValues.website}</div>
-                    <div><strong>City:</strong> {watchedValues.city}</div>
-                    <div><strong>State:</strong> {watchedValues.state}</div>
-                    <div><strong>Country:</strong> {watchedValues.country}</div>
-                    <div><strong>Contact Person:</strong> {watchedValues.contactPersonName}</div>
-                    <div><strong>Contact Number:</strong> {watchedValues.contactPersonNumber}</div>
-                    <div><strong>Tax ID:</strong> {watchedValues.taxId}</div>
-                    <div><strong>VAT Number:</strong> {watchedValues.vatRegistrationNumber}</div>
-                    <div><strong>RC Number:</strong> {watchedValues.incorporationNumber}</div>
-                    <div><strong>Incorporation State:</strong> {watchedValues.incorporationState}</div>
-                    <div><strong>BVN:</strong> {watchedValues.bvn}</div>
-                    <div className="col-span-2"><strong>Address:</strong> {watchedValues.registeredAddress}</div>
-                    <div className="col-span-2"><strong>Business Nature:</strong> {watchedValues.businessNature}</div>
-                    <div><strong>Incorporation Date:</strong> {watchedValues.incorporationDate ? new Date(watchedValues.incorporationDate).toLocaleDateString() : 'Not set'}</div>
-                    <div><strong>NAICOM License Issuing:</strong> {watchedValues.naicomLicenseIssuingDate ? new Date(watchedValues.naicomLicenseIssuingDate).toLocaleDateString() : 'Not set'}</div>
-                    <div><strong>NAICOM License Expiry:</strong> {watchedValues.naicomLicenseExpiryDate ? new Date(watchedValues.naicomLicenseExpiryDate).toLocaleDateString() : 'Not set'}</div>
-                  </div>
-                )}
               </div>
-
-              {/* Directors */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Directors ({watchedValues.directors?.length || 0})</h3>
-                {watchedValues.directors?.map((director, index) => (
-                  <div key={index} className="border rounded p-3 mb-3 bg-gray-50">
-                    <h4 className="font-medium mb-2">Director {index + 1}</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div><strong>Title:</strong> {director.title}</div>
-                      <div><strong>Gender:</strong> {director.gender}</div>
-                      <div><strong>Full Name:</strong> {director.firstName} {director.middleName} {director.lastName}</div>
-                      <div><strong>Email:</strong> {director.email}</div>
-                      <div><strong>Phone:</strong> {director.phoneNumber}</div>
-                      <div><strong>Nationality:</strong> {director.nationality}</div>
-                      <div><strong>Occupation:</strong> {director.occupation}</div>
-                      <div><strong>BVN:</strong> {director.bvn}</div>
-                      <div><strong>Date of Birth:</strong> {director.dateOfBirth}</div>
-                      <div><strong>Place of Birth:</strong> {director.placeOfBirth}</div>
-                      <div><strong>ID Type:</strong> {director.idType}</div>
-                      <div><strong>ID Number:</strong> {director.identificationNumber}</div>
-                      <div><strong>Issuing Body:</strong> {director.issuingBody}</div>
-                      <div><strong>Income Source:</strong> {director.incomeSource}</div>
-                      <div className="col-span-2"><strong>Address:</strong> {director.residentialAddress}</div>
-                      {director.incomeSource === 'other' && director.incomeSourceOther && (
-                        <div className="col-span-2"><strong>Other Income Source:</strong> {director.incomeSourceOther}</div>
-                      )}
+              
+              <div>
+                <h3 className="font-semibold mb-2">Directors ({formMethods.getValues('directors')?.length || 0})</h3>
+                {formMethods.getValues('directors')?.map((director: any, index: number) => (
+                  <div key={index} className="mb-2 p-2 border rounded">
+                    <div className="text-sm">
+                      <strong>Director {index + 1}:</strong> {director.firstName} {director.lastName}
                     </div>
                   </div>
                 ))}
               </div>
-
-              {/* Account Details */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Account Details</h3>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium mb-2">Local Account</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div><strong>Account Number:</strong> {watchedValues.localAccountNumber}</div>
-                      <div><strong>Bank Name:</strong> {watchedValues.localBankName}</div>
-                      <div><strong>Bank Branch:</strong> {watchedValues.localBankBranch}</div>
-                      <div><strong>Opening Date:</strong> {watchedValues.localAccountOpeningDate ? new Date(watchedValues.localAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
-                    </div>
-                  </div>
-                  {(watchedValues.foreignAccountNumber || watchedValues.foreignBankName) && (
-                    <div>
-                      <h4 className="font-medium mb-2">Foreign Account</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div><strong>Account Number:</strong> {watchedValues.foreignAccountNumber}</div>
-                        <div><strong>Bank Name:</strong> {watchedValues.foreignBankName}</div>
-                        <div><strong>Bank Branch:</strong> {watchedValues.foreignBankBranch}</div>
-                        <div><strong>Opening Date:</strong> {watchedValues.foreignAccountOpeningDate ? new Date(watchedValues.foreignAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Uploaded Documents */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Uploaded Documents</h3>
-                <div className="grid grid-cols-1 gap-2 text-sm">
-                  {Object.entries(uploadedFiles).map(([key, file]) => (
-                    <div key={key} className="flex justify-between items-center py-2 border-b">
-                      <span className="font-medium">
-                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
-                      </span>
-                      <span className="text-green-600">
-                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                      </span>
-                    </div>
-                  ))}
-                  {Object.keys(uploadedFiles).length === 0 && (
-                    <p className="text-muted-foreground">No documents uploaded yet</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Declaration */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">Declaration</h3>
-                <div className="text-sm">
-                  <div><strong>Data Privacy Agreement:</strong> {watchedValues.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</div>
-                  <div><strong>Digital Signature:</strong> {watchedValues.signature}</div>
-                </div>
-              </div>
-              
-              <div className="flex gap-4 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowSummary(false)}
-                >
-                  Edit Details
-                </Button>
-                <Button
-                  onClick={() => {
-                    const formData = formMethods.getValues();
-                    handleSubmit(formData as NaicomPartnersCDDData);
-                  }}
-                  disabled={isSubmitting}
-                  className="bg-primary text-primary-foreground"
-                >
-                  {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
-                </Button>
-              </div>
             </div>
-          </DialogContent>
-        </Dialog>
 
-        {/* Success Dialog */}
-        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>CDD Form Submitted Successfully!</DialogTitle>
-            </DialogHeader>
-            <div className="text-center space-y-4">
-              <div className="text-green-600 text-6xl">✓</div>
-              <p>Your NAICOM Partners CDD form has been submitted successfully.</p>
-              <p className="text-sm text-muted-foreground">
-                You will receive a confirmation email shortly.
-              </p>
-              <Button onClick={() => setShowSuccess()}>
-                Close
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSummary(false)}>
+                Back to Edit
               </Button>
-            </div>
+              <Button
+                onClick={() => {
+                  const formData = formMethods.getValues();
+                  handleSubmit(formData);
+                }}
+                disabled={authSubmitting}
+                className="bg-primary text-primary-foreground"
+              >
+                {authSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit NAICOM Partners CDD'
+                )}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Success Modal */}
+        <SuccessModal
+          isOpen={authShowSuccess}
+          onClose={() => setAuthShowSuccess()}
+          title="NAICOM Partners CDD Submitted Successfully!"
+          message="Your NAICOM Partners CDD form has been submitted successfully. You will receive a confirmation email shortly."
+          formType="NAICOM Partners CDD"
+        />
       </div>
-    </div>
+    </FormProvider>
   );
 };
 
