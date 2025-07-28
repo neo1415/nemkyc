@@ -451,51 +451,58 @@ const fetchForms = async () => {
       }
     });
 
-    // Use form mappings if available
+    // Use form mappings if available - fields in correct order
     const mappingKey = getFormMappingKey(collectionName, sampleData);
     const mapping = FORM_MAPPINGS[mappingKey];
     if (mapping) {
-      mapping.sections.forEach(section => {
+      // Flatten all fields from all sections in the correct order
+      const allFields = mapping.sections.reduce((acc, section) => {
         // Skip system information sections in admin table
-        if (section.title.toLowerCase().includes('system')) return;
+        if (section.title.toLowerCase().includes('system')) return acc;
         
-        section.fields.forEach(field => {
-          if (excludeFields.includes(field.key) || priorityFields.includes(field.key)) return;
-          // Skip file fields in table view
-          if (field.type === 'file') return;
+        // Filter out files, excluded fields, and priority fields (already added)
+        const validFields = section.fields.filter(field => 
+          !field.type || field.type !== 'file' && 
+          !excludeFields.includes(field.key) && 
+          !priorityFields.includes(field.key)
+        );
+        
+        return acc.concat(validFields);
+      }, [] as any[]);
 
-          if (field.type === 'array' && field.key === 'directors') {
-            dynamicColumns.push({
-              field: 'directors',
-              headerName: 'Directors Count',
-              width: 130,
-              valueFormatter: (params) => {
-                const arr = params as any[];
-                return Array.isArray(arr) ? `${arr.length} director(s)` : '0 directors';
-              },
-            });
-          } else if (field.key.toLowerCase().includes('date') || field.key === 'dateOfBirth') {
-            dynamicColumns.push({
-              field: field.key,
-              headerName: field.label,
-              width: 130,
-              valueFormatter: (params) => formatDate(params),
-            });
-          } else {
-            dynamicColumns.push({
-              field: field.key,
-              headerName: field.label,
-              width: 150,
-              valueFormatter: (params) => {
-                const value = params as any;
-                if (typeof value === 'string' && value.length > 50) {
-                  return value.substring(0, 50) + '...';
-                }
-                return value || 'N/A';
-              },
-            });
-          }
-        });
+      // Create columns for each field in the order they appear in form mappings
+      allFields.forEach(field => {
+        if (field.type === 'array' && field.key === 'directors') {
+          dynamicColumns.push({
+            field: 'directors',
+            headerName: 'Directors Count',
+            width: 130,
+            valueFormatter: (params) => {
+              const arr = params as any[];
+              return Array.isArray(arr) ? `${arr.length} director(s)` : '0 directors';
+            },
+          });
+        } else if (field.key.toLowerCase().includes('date') || field.key === 'dateOfBirth' || field.key === 'dob') {
+          dynamicColumns.push({
+            field: field.key,
+            headerName: field.label,
+            width: 130,
+            valueFormatter: (params) => formatDate(params),
+          });
+        } else {
+          dynamicColumns.push({
+            field: field.key,
+            headerName: field.label,
+            width: 150,
+            valueFormatter: (params) => {
+              const value = params as any;
+              if (typeof value === 'string' && value.length > 50) {
+                return value.substring(0, 50) + '...';
+              }
+              return value || 'N/A';
+            },
+          });
+        }
       });
     } else {
       // Fallback to dynamic generation
