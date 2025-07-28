@@ -232,11 +232,13 @@ const FormViewer: React.FC = () => {
       }
     }
     
-    mapping.sections.forEach((section: any) => {
+    // Process sections in the exact order they appear in form mappings
+    mapping.sections.forEach((section: any, sectionIndex: number) => {
       const sectionFields: FormFieldWithValue[] = [];
       
-      section.fields.forEach((field: FormField) => {
-        // Skip system/technical fields and file uploads in FormViewer
+      // Process fields in the exact order they appear in the section
+      section.fields.forEach((field: FormField, fieldIndex: number) => {
+        // Skip system/technical fields in FormViewer
         const excludedFields = ['formId', 'id', 'collection', 'timestamp'];
         if (excludedFields.includes(field.key)) {
           return;
