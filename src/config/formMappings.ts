@@ -1705,111 +1705,90 @@ export const FORM_MAPPINGS: FormMapping = {
   },
 
   // === CORPORATE CDD ===
-// 'corporate-cdd': {
-//     title: 'Corporate Customer Due Diligence (CDD)',
-//     sections: [
-//       {
-//         title: 'Company Information',
-//         fields: [
-//           { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
-//           { key: 'registeredCompanyAddress', label: 'Registered Company Address', type: 'textarea', editable: true },
-//           { key: 'incorporationNumber', label: 'Incorporation Number', type: 'text', editable: true },
-//           { key: 'incorporationState', label: 'Incorporation State', type: 'text', editable: true },
-//           { key: 'dateOfIncorporationRegistration', label: 'Date of Incorporation/Registration', type: 'date', editable: true },
-//           { key: 'natureOfBusiness', label: 'Nature of Business', type: 'textarea', editable: true },
-//           { 
-//             key: 'companyLegalForm', 
-//             label: 'Company Legal Form/Type', 
-//             type: 'select', 
-//             editable: true,
-//             options: [
-//                 { value: 'limited_liability', label: 'Limited Liability Company' },
-//                 { value: 'public_limited', label: 'Public Limited Company' },
-//                 { value: 'partnership', label: 'Partnership' },
-//                 { value: 'sole_proprietorship', label: 'Sole Proprietorship' },
-//                 { value: 'other', label: 'Other' },
-//             ]
-//           },
-//           { 
-//             key: 'companyLegalFormOther', 
-//             label: 'Other Company Type (Please specify)', 
-//             type: 'text', 
-//             editable: true, 
-//             conditional: { dependsOn: 'companyLegalForm', value: 'other' } 
-//           },
-//           { key: 'email', label: 'Email Address', type: 'email', editable: true },
-//           { key: 'website', label: 'Website', type: 'url', editable: true },
-//           { key: 'taxIdentificationNumber', label: 'Tax Identification Number', type: 'text', editable: true },
-//           { key: 'telephoneNumber', label: 'Telephone Number', type: 'text', editable: true }
-//         ]
-//       },
-//       {
-//         title: 'Directors Information',
-//         fields: [
-//           // This 'array' type is for modern forms that submit a nested array of director objects.
-//           { key: 'directors', label: 'Directors', type: 'array', editable: true },
-          
-//           // The fields below are for compatibility with older forms that may have submitted flat data.
-//           { key: 'director1Name', label: 'Director 1 Name', type: 'text', editable: true },
-//           { key: 'director1Address', label: 'Director 1 Address', type: 'textarea', editable: true },
-//           { key: 'director1Phone', label: 'Director 1 Phone', type: 'text', editable: true },
-//           { key: 'director1Email', label: 'Director 1 Email', type: 'email', editable: true },
-//           { key: 'director1DateOfBirth', label: 'Director 1 Date of Birth', type: 'date', editable: true },
-//           { key: 'director1Nationality', label: 'Director 1 Nationality', type: 'text', editable: true },
-//           { key: 'director1IdType', label: 'Director 1 ID Type', type: 'text', editable: true },
-//           { key: 'director1IdNumber', label: 'Director 1 ID Number', type: 'text', editable: true },
-          
-//           { key: 'director2Name', label: 'Director 2 Name', type: 'text', editable: true },
-//           { key: 'director2Address', label: 'Director 2 Address', type: 'textarea', editable: true },
-//           { key: 'director2Phone', label: 'Director 2 Phone', type: 'text', editable: true },
-//           { key: 'director2Email', label: 'Director 2 Email', type: 'email', editable: true },
-//           { key: 'director2DateOfBirth', label: 'Director 2 Date of Birth', type: 'date', editable: true },
-//           { key: 'director2Nationality', label: 'Director 2 Nationality', type: 'text', editable: true },
-//           { key: 'director2IdType', label: 'Director 2 ID Type', type: 'text', editable: true },
-//           { key: 'director2IdNumber', label: 'Director 2 ID Number', type: 'text', editable: true }
-//         ]
-//       },
-//       {
-//         title: 'Bank Account Details',
-//         fields: [
-//           { key: 'bankName', label: 'Bank Name', type: 'text', editable: true },
-//           { key: 'accountNumber', label: 'Account Number', type: 'text', editable: true },
-//           { key: 'bankBranch', label: 'Bank Branch', type: 'text', editable: true },
-//           { key: 'accountOpeningDate', label: 'Account Opening Date', type: 'date', editable: true },
-//           { key: 'foreignBankName', label: 'Foreign Bank Name', type: 'text', editable: true },
-//           { key: 'foreignAccountNumber', label: 'Foreign Account Number', type: 'text', editable: true },
-//           { key: 'foreignBankBranch', label: 'Foreign Bank Branch', type: 'text', editable: true },
-//           { key: 'foreignAccountOpeningDate', label: 'Foreign Account Opening Date', type: 'date', editable: true }
-//         ]
-//       },
-//       {
-//         title: 'Document Uploads',
-//         fields: [
-//           { key: 'cacCertificate', label: 'CAC Certificate', type: 'file', editable: true },
-//           { key: 'proofOfAddress', label: 'Proof of Address', type: 'file', editable: true },
-//           { key: 'idOfDirectors', label: 'Form of ID for at least 2 Directors', type: 'file', editable: true },
-//           { key: 'otherDocs', label: 'Other Documents', type: 'file', editable: true }
-//         ]
-//       },
-//       {
-//         title: 'Data Privacy & Declaration',
-//         fields: [
-//           { key: 'agreeToDataPrivacy', label: 'I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge', type: 'boolean', editable: true },
-//           { key: 'signature', label: 'Digital Signature', type: 'text', editable: true }
-//         ]
-//       },
-//       {
-//         title: 'System Information',
-//         fields: [
-//           { key: 'status', label: 'Status', type: 'text', editable: true },
-//           { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
-//           { key: 'submittedBy', label: 'Submitted By', type: 'date', editable: false },
-//           { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
-//           { key: 'formType', label: 'Form Type', type: 'text', editable: false }
-//         ]
-//       }
-//     ]
-//   },
+  'corporate-cdd': {
+    title: 'Corporate Customer Due Diligence (CDD)',
+    sections: [
+      {
+        title: 'Company Info',
+        fields: [
+          { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
+          { key: 'registeredCompanyAddress', label: 'Registered Company Address', type: 'textarea', editable: true },
+          { key: 'incorporationNumber', label: 'Incorporation Number', type: 'text', editable: true },
+          { key: 'incorporationState', label: 'Incorporation State', type: 'text', editable: true },
+          { key: 'dateOfIncorporationRegistration', label: 'Date of Incorporation/Registration', type: 'date', editable: true },
+          { key: 'natureOfBusiness', label: 'Nature of Business', type: 'textarea', editable: true },
+          { 
+            key: 'companyLegalForm', 
+            label: 'Company Type', 
+            type: 'select', 
+            editable: true,
+            options: [
+              { value: 'Sole Proprietor', label: 'Sole Proprietor' },
+              { value: 'Unlimited Liability Company', label: 'Unlimited Liability Company' },
+              { value: 'Limited Liability Company', label: 'Limited Liability Company' },
+              { value: 'Public Limited Company', label: 'Public Limited Company' },
+              { value: 'Joint Venture', label: 'Joint Venture' },
+              { value: 'Other', label: 'Other' }
+            ]
+          },
+          { 
+            key: 'companyLegalFormOther', 
+            label: 'Please specify', 
+            type: 'text', 
+            editable: true, 
+            conditional: { dependsOn: 'companyLegalForm', value: 'Other' } 
+          },
+          { key: 'emailAddress', label: 'Email Address', type: 'email', editable: true },
+          { key: 'website', label: 'Website', type: 'text', editable: true },
+          { key: 'taxIdentificationNumber', label: 'Tax Identification Number', type: 'text', editable: true },
+          { key: 'telephoneNumber', label: 'Telephone Number', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Directors Info',
+        fields: [
+          { key: 'directors', label: 'Directors', type: 'array', editable: true }
+        ]
+      },
+      {
+        title: 'Account details',
+        fields: [
+          { key: 'bankName', label: 'Bank Name', type: 'text', editable: true },
+          { key: 'accountNumber', label: 'Account Number', type: 'text', editable: true },
+          { key: 'bankBranch', label: 'Bank Branch', type: 'text', editable: true },
+          { key: 'accountOpeningDate', label: 'Account Opening Date', type: 'date', editable: true },
+          { key: 'bankName2', label: 'Foreign Bank Name', type: 'text', editable: true },
+          { key: 'accountNumber2', label: 'Foreign Account Number', type: 'text', editable: true },
+          { key: 'bankBranch2', label: 'Foreign Bank Branch', type: 'text', editable: true },
+          { key: 'accountOpeningDate2', label: 'Foreign Account Opening Date', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'uploads',
+        fields: [
+          { key: 'cac', label: 'Upload Your CAC Certificate', type: 'file', editable: true },
+          { key: 'identification', label: 'Upload Means of Identification', type: 'file', editable: true }
+        ]
+      },
+      {
+        title: 'Data Privacy & Declaration',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge', type: 'boolean', editable: true },
+          { key: 'signature', label: 'Digital Signature', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'date', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
 
   // === NAICOM CORPORATE CDD ===
   'naicom-corporate-kyc': {
