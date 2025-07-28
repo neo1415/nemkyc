@@ -2340,7 +2340,7 @@ export const FORM_MAPPINGS: FormMapping = {
 },
 
 'Individual-kyc-form': {
-  title: 'Individual KYC Form',
+  title: 'Individual-kyc-form',
   sections: [
     {
       title: 'Personal Information',
