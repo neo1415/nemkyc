@@ -229,6 +229,16 @@ const CorporateCDDTable: React.FC = () => {
 
   const columns: GridColDef[] = [
     {
+      field: 'timestamp',
+      headerName: 'Submitted',
+      width: 160,
+      renderCell: (params) => (
+        <div className="text-sm">
+          {formatDate(params.value)}
+        </div>
+      )
+    },
+    {
       field: 'companyName',
       headerName: 'Company Name',
       width: 200,
@@ -241,6 +251,16 @@ const CorporateCDDTable: React.FC = () => {
     {
       field: 'emailAddress',
       headerName: 'Email',
+      width: 200,
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    {
+      field: 'companyAddress',
+      headerName: 'Company Address',
       width: 200,
       renderCell: (params) => (
         <div className="truncate">
@@ -269,12 +289,136 @@ const CorporateCDDTable: React.FC = () => {
       )
     },
     {
-      field: 'directors',
-      headerName: 'Directors Count',
+      field: 'city',
+      headerName: 'City',
       width: 120,
-      renderCell: (params) => {
-        const count = Array.isArray(params.value) ? params.value.length : 0;
-        return <span>{count}</span>;
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    {
+      field: 'state',
+      headerName: 'State',
+      width: 120,
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    {
+      field: 'country',
+      headerName: 'Country',
+      width: 120,
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    {
+      field: 'natureOfBusiness',
+      headerName: 'Business Nature',
+      width: 150,
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    {
+      field: 'taxIdentificationNumber',
+      headerName: 'Tax ID',
+      width: 130,
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    {
+      field: 'website',
+      headerName: 'Website',
+      width: 180,
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    // Directors columns
+    {
+      field: 'director1Name',
+      headerName: 'Director 1 Name',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return `${directors[0].firstName || ''} ${directors[0].lastName || ''}`.trim() || 'N/A';
+        }
+        return 'N/A';
+      }
+    },
+    {
+      field: 'director1Email',
+      headerName: 'Director 1 Email',
+      width: 180,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].email || 'N/A';
+        }
+        return 'N/A';
+      }
+    },
+    {
+      field: 'director1Phone',
+      headerName: 'Director 1 Phone',
+      width: 140,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].phoneNumber || 'N/A';
+        }
+        return 'N/A';
+      }
+    },
+    {
+      field: 'director2Name',
+      headerName: 'Director 2 Name',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return `${directors[1].firstName || ''} ${directors[1].lastName || ''}`.trim() || 'N/A';
+        }
+        return 'N/A';
+      }
+    },
+    {
+      field: 'director2Email',
+      headerName: 'Director 2 Email',
+      width: 180,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].email || 'N/A';
+        }
+        return 'N/A';
+      }
+    },
+    {
+      field: 'director2Phone',
+      headerName: 'Director 2 Phone',
+      width: 140,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].phoneNumber || 'N/A';
+        }
+        return 'N/A';
       }
     },
     {
@@ -287,16 +431,6 @@ const CorporateCDDTable: React.FC = () => {
           color={getStatusColor(params.value)}
           size="small"
         />
-      )
-    },
-    {
-      field: 'timestamp',
-      headerName: 'Submitted',
-      width: 160,
-      renderCell: (params) => (
-        <div className="text-sm">
-          {formatDate(params.value)}
-        </div>
       )
     },
     {
