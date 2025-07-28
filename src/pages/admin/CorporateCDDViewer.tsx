@@ -1,0 +1,652 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '@/firebase/config';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { ArrowLeft, Edit2, Save, X, Download, FileText } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import jsPDF from 'jspdf';
+
+interface FormData {
+  id: string;
+  [key: string]: any;
+}
+
+interface Director {
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  dob?: any;
+  placeOfBirth?: string;
+  nationality?: string;
+  country?: string;
+  occupation?: string;
+  email?: string;
+  phoneNumber?: string;
+  BVNNumber?: string;
+  employersName?: string;
+  employersPhoneNumber?: string;
+  residentialAddress?: string;
+  taxIDNumber?: string;
+  idType?: string;
+  idNumber?: string;
+  issuingBody?: string;
+  issuedDate?: any;
+  expiryDate?: any;
+  sourceOfIncome?: string;
+  sourceOfIncomeOther?: string;
+}
+
+const CorporateCDDViewer: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
+  const [formData, setFormData] = useState<FormData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [newStatus, setNewStatus] = useState('');
+
+  useEffect(() => {
+    if (!user || !isAdmin()) {
+      navigate('/unauthorized');
+      return;
+    }
+    
+    fetchFormData();
+  }, [user, isAdmin, navigate, id]);
+
+  const fetchFormData = async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      const docRef = doc(db, 'corporate-kyc', id);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        setFormData({ id: docSnap.id, ...docSnap.data() });
+      } else {
+        toast({
+          title: "Error",
+          description: "Form data not found",
+          variant: "destructive"
+        });
+        navigate('/admin');
+      }
+    } catch (error) {
+      console.error('Error fetching form data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch form data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (fieldName: string, currentValue: string) => {
+    setEditingField(fieldName);
+    setEditValue(currentValue || '');
+  };
+
+  const handleSave = async (fieldName: string) => {
+    if (!id || !formData) return;
+    
+    try {
+      setIsUpdating(true);
+      const docRef = doc(db, 'corporate-kyc', id);
+      await updateDoc(docRef, {
+        [fieldName]: editValue,
+        updatedAt: new Date()
+      });
+      
+      setFormData(prev => prev ? { ...prev, [fieldName]: editValue } : null);
+      setEditingField(null);
+      
+      toast({
+        title: "Success",
+        description: "Field updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating field:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update field",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditingField(null);
+    setEditValue('');
+  };
+
+  const handleStatusUpdate = async () => {
+    if (!id || !newStatus) return;
+    
+    try {
+      setIsUpdating(true);
+      const docRef = doc(db, 'corporate-kyc', id);
+      await updateDoc(docRef, {
+        status: newStatus,
+        updatedAt: new Date()
+      });
+      
+      setFormData(prev => prev ? { ...prev, status: newStatus } : null);
+      setShowStatusDialog(false);
+      
+      toast({
+        title: "Success",
+        description: "Status updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update status",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const generatePDF = () => {
+    if (!formData) return;
+    
+    const pdf = new jsPDF();
+    const pageHeight = pdf.internal.pageSize.height;
+    let yPosition = 20;
+    
+    // Title
+    pdf.setFontSize(16);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Corporate CDD Form', 20, yPosition);
+    yPosition += 15;
+    
+    // Form ID and Date
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(`Form ID: ${formData.id}`, 20, yPosition);
+    yPosition += 10;
+    
+    if (formData.timestamp) {
+      const submissionDate = formData.timestamp.toDate ? formData.timestamp.toDate() : new Date(formData.timestamp);
+      pdf.text(`Submitted: ${format(submissionDate, 'PPpp')}`, 20, yPosition);
+      yPosition += 15;
+    }
+    
+    // Company Details Section
+    pdf.setFontSize(12);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Company Details', 20, yPosition);
+    yPosition += 10;
+    
+    const companyFields = [
+      { label: 'Company Name', value: formData.companyName },
+      { label: 'Registered Address', value: formData.registeredCompanyAddress },
+      { label: 'Incorporation Number', value: formData.incorporationNumber },
+      { label: 'Incorporation State', value: formData.incorporationState },
+      { label: 'Date of Incorporation', value: formData.dateOfIncorporationRegistration },
+      { label: 'Nature of Business', value: formData.natureOfBusiness },
+      { label: 'Company Type', value: formData.companyLegalForm },
+      { label: 'Email', value: formData.emailAddress },
+      { label: 'Website', value: formData.website },
+      { label: 'Tax ID', value: formData.taxIdentificationNumber },
+      { label: 'Telephone', value: formData.telephoneNumber }
+    ];
+    
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, 'normal');
+    
+    companyFields.forEach(field => {
+      if (field.value) {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+        pdf.text(`${field.label}: ${field.value}`, 20, yPosition);
+        yPosition += 8;
+      }
+    });
+    
+    // Directors Section
+    if (formData.directors && Array.isArray(formData.directors)) {
+      yPosition += 10;
+      pdf.setFontSize(12);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Directors Information', 20, yPosition);
+      yPosition += 10;
+      
+      formData.directors.forEach((director: Director, index: number) => {
+        if (yPosition > pageHeight - 40) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+        
+        pdf.setFontSize(11);
+        pdf.setFont(undefined, 'bold');
+        pdf.text(`Director ${index + 1}`, 20, yPosition);
+        yPosition += 8;
+        
+        pdf.setFontSize(10);
+        pdf.setFont(undefined, 'normal');
+        
+        const directorFields = [
+          { label: 'Name', value: `${director.firstName || ''} ${director.middleName || ''} ${director.lastName || ''}`.trim() },
+          { label: 'Date of Birth', value: director.dob },
+          { label: 'Place of Birth', value: director.placeOfBirth },
+          { label: 'Nationality', value: director.nationality },
+          { label: 'Country', value: director.country },
+          { label: 'Occupation', value: director.occupation },
+          { label: 'Email', value: director.email },
+          { label: 'Phone', value: director.phoneNumber },
+          { label: 'BVN', value: director.BVNNumber },
+          { label: 'Address', value: director.residentialAddress },
+          { label: 'ID Type', value: director.idType },
+          { label: 'ID Number', value: director.idNumber }
+        ];
+        
+        directorFields.forEach(field => {
+          if (field.value) {
+            if (yPosition > pageHeight - 20) {
+              pdf.addPage();
+              yPosition = 20;
+            }
+            pdf.text(`${field.label}: ${field.value}`, 25, yPosition);
+            yPosition += 6;
+          }
+        });
+        
+        yPosition += 5;
+      });
+    }
+    
+    // Account Details
+    yPosition += 10;
+    if (yPosition > pageHeight - 40) {
+      pdf.addPage();
+      yPosition = 20;
+    }
+    
+    pdf.setFontSize(12);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Account Details', 20, yPosition);
+    yPosition += 10;
+    
+    const accountFields = [
+      { label: 'Bank Name', value: formData.bankName },
+      { label: 'Account Number', value: formData.accountNumber },
+      { label: 'Bank Branch', value: formData.bankBranch },
+      { label: 'Account Opening Date', value: formData.accountOpeningDate }
+    ];
+    
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, 'normal');
+    
+    accountFields.forEach(field => {
+      if (field.value) {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+        pdf.text(`${field.label}: ${field.value}`, 20, yPosition);
+        yPosition += 8;
+      }
+    });
+    
+    // Save PDF
+    pdf.save(`Corporate_CDD_${formData.id}.pdf`);
+    
+    toast({
+      title: "Success",
+      description: "PDF generated successfully"
+    });
+  };
+
+  const formatDate = (date: any) => {
+    if (!date) return 'N/A';
+    try {
+      const dateObj = date.toDate ? date.toDate() : new Date(date);
+      return format(dateObj, 'PPP');
+    } catch {
+      return 'Invalid date';
+    }
+  };
+
+  const renderEditableField = (fieldName: string, label: string, value: any, type: 'text' | 'textarea' = 'text') => {
+    const isEditing = editingField === fieldName;
+    const displayValue = value || 'N/A';
+    
+    return (
+      <div className="grid grid-cols-4 items-start gap-4 py-2">
+        <Label className="font-medium text-muted-foreground">{label}:</Label>
+        <div className="col-span-2">
+          {isEditing ? (
+            type === 'textarea' ? (
+              <Textarea
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                className="min-h-[80px]"
+              />
+            ) : (
+              <Input
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+              />
+            )
+          ) : (
+            <span className="text-sm">{displayValue}</span>
+          )}
+        </div>
+        <div className="flex gap-2">
+          {isEditing ? (
+            <>
+              <Button
+                size="sm"
+                onClick={() => handleSave(fieldName)}
+                disabled={isUpdating}
+              >
+                {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isUpdating}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleEdit(fieldName, value)}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!formData) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-center text-muted-foreground">Form data not found</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate('/admin')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Admin
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Corporate CDD Form</h1>
+            <p className="text-muted-foreground">Form ID: {formData.id}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant={formData.status === 'approved' ? 'default' : formData.status === 'rejected' ? 'destructive' : 'secondary'}>
+            {formData.status || 'pending'}
+          </Badge>
+          <Button onClick={() => setShowStatusDialog(true)} variant="outline">
+            Update Status
+          </Button>
+          <Button onClick={generatePDF} variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
+        </div>
+      </div>
+
+      {/* System Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            System Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="font-medium text-muted-foreground">Submission Date:</Label>
+              <p className="text-sm">
+                {formData.timestamp ? formatDate(formData.timestamp) : 'N/A'}
+              </p>
+            </div>
+            <div>
+              <Label className="font-medium text-muted-foreground">Last Updated:</Label>
+              <p className="text-sm">
+                {formData.updatedAt ? formatDate(formData.updatedAt) : 'N/A'}
+              </p>
+            </div>
+            <div>
+              <Label className="font-medium text-muted-foreground">Form Type:</Label>
+              <p className="text-sm">{formData.isNaicom ? 'NAICOM Corporate CDD' : 'Corporate CDD'}</p>
+            </div>
+            <div>
+              <Label className="font-medium text-muted-foreground">Status:</Label>
+              <p className="text-sm">
+                <Badge variant={formData.status === 'approved' ? 'default' : formData.status === 'rejected' ? 'destructive' : 'secondary'}>
+                  {formData.status || 'pending'}
+                </Badge>
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Company Details */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Company Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {renderEditableField('companyName', 'Company Name', formData.companyName)}
+          {renderEditableField('registeredCompanyAddress', 'Registered Address', formData.registeredCompanyAddress, 'textarea')}
+          {renderEditableField('incorporationNumber', 'Incorporation Number', formData.incorporationNumber)}
+          {renderEditableField('incorporationState', 'Incorporation State', formData.incorporationState)}
+          <div className="grid grid-cols-4 items-start gap-4 py-2">
+            <Label className="font-medium text-muted-foreground">Date of Incorporation:</Label>
+            <div className="col-span-3">
+              <span className="text-sm">{formatDate(formData.dateOfIncorporationRegistration)}</span>
+            </div>
+          </div>
+          {renderEditableField('natureOfBusiness', 'Nature of Business', formData.natureOfBusiness, 'textarea')}
+          {renderEditableField('companyLegalForm', 'Company Type', formData.companyLegalForm)}
+          {renderEditableField('emailAddress', 'Email Address', formData.emailAddress)}
+          {renderEditableField('website', 'Website', formData.website)}
+          {renderEditableField('taxIdentificationNumber', 'Tax ID Number', formData.taxIdentificationNumber)}
+          {renderEditableField('telephoneNumber', 'Telephone Number', formData.telephoneNumber)}
+        </CardContent>
+      </Card>
+
+      {/* Directors Information */}
+      {formData.directors && Array.isArray(formData.directors) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Directors Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {formData.directors.map((director: Director, index: number) => (
+              <div key={index} className="border rounded-lg p-4 space-y-4">
+                <h4 className="font-semibold">Director {index + 1}</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="font-medium text-muted-foreground">Full Name:</Label>
+                    <p className="text-sm">{`${director.firstName || ''} ${director.middleName || ''} ${director.lastName || ''}`.trim() || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium text-muted-foreground">Date of Birth:</Label>
+                    <p className="text-sm">{formatDate(director.dob)}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium text-muted-foreground">Place of Birth:</Label>
+                    <p className="text-sm">{director.placeOfBirth || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium text-muted-foreground">Nationality:</Label>
+                    <p className="text-sm">{director.nationality || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium text-muted-foreground">Country:</Label>
+                    <p className="text-sm">{director.country || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium text-muted-foreground">Occupation:</Label>
+                    <p className="text-sm">{director.occupation || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium text-muted-foreground">Email:</Label>
+                    <p className="text-sm">{director.email || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium text-muted-foreground">Phone Number:</Label>
+                    <p className="text-sm">{director.phoneNumber || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium text-muted-foreground">BVN:</Label>
+                    <p className="text-sm">{director.BVNNumber || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium text-muted-foreground">ID Type:</Label>
+                    <p className="text-sm">{director.idType || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium text-muted-foreground">ID Number:</Label>
+                    <p className="text-sm">{director.idNumber || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium text-muted-foreground">Source of Income:</Label>
+                    <p className="text-sm">{director.sourceOfIncome || 'N/A'}</p>
+                  </div>
+                </div>
+                <div>
+                  <Label className="font-medium text-muted-foreground">Residential Address:</Label>
+                  <p className="text-sm">{director.residentialAddress || 'N/A'}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Account Details */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Account Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-4">
+            <h4 className="font-semibold">Local Account Details</h4>
+            {renderEditableField('bankName', 'Bank Name', formData.bankName)}
+            {renderEditableField('accountNumber', 'Account Number', formData.accountNumber)}
+            {renderEditableField('bankBranch', 'Bank Branch', formData.bankBranch)}
+            <div className="grid grid-cols-4 items-start gap-4 py-2">
+              <Label className="font-medium text-muted-foreground">Account Opening Date:</Label>
+              <div className="col-span-3">
+                <span className="text-sm">{formatDate(formData.accountOpeningDate)}</span>
+              </div>
+            </div>
+          </div>
+          
+          {(formData.bankName2 || formData.accountNumber2) && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <h4 className="font-semibold">Foreign Account Details</h4>
+                {renderEditableField('bankName2', 'Bank Name', formData.bankName2)}
+                {renderEditableField('accountNumber2', 'Account Number', formData.accountNumber2)}
+                {renderEditableField('bankBranch2', 'Bank Branch', formData.bankBranch2)}
+                <div className="grid grid-cols-4 items-start gap-4 py-2">
+                  <Label className="font-medium text-muted-foreground">Account Opening Date:</Label>
+                  <div className="col-span-3">
+                    <span className="text-sm">{formatDate(formData.accountOpeningDate2)}</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Status Update Dialog */}
+      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Form Status</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>New Status</Label>
+              <Select value={newStatus} onValueChange={setNewStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowStatusDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleStatusUpdate} disabled={!newStatus || isUpdating}>
+              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Update Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default CorporateCDDViewer;
