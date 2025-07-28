@@ -288,10 +288,10 @@ const partnersCDDSchema = yup.object().shape({
   // File uploads
   certificateOfIncorporation: yup.mixed().required("Certificate of Incorporation is required"),
   directorId1: yup.mixed().required("Director 1 ID is required"),
-  directorId2: yup.mixed().required("Director 2 ID is required"),
+  directorId2: yup.mixed(),
   cacStatusReport: yup.mixed().required("CAC Status Report is required"),
-  vatRegistrationLicense: yup.mixed().required("VAT Registration License is required"),
-  taxClearanceCertificate: yup.mixed().required("Tax Clearance Certificate is required"),
+  vatRegistrationLicense: yup.mixed(),
+  taxClearanceCertificate: yup.mixed(),
   
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
@@ -930,7 +930,7 @@ const PartnersCDD: React.FC = () => {
             </div>
             
             <div>
-              <Label>Identification Means for Director 2 <span className="required-asterisk">*</span></Label>
+              <Label>Identification Means for Director 2 (Optional)</Label>
               <FileUpload
                 accept=".png,.jpg,.jpeg,.pdf"
                 onFileSelect={(file) => {
@@ -988,7 +988,7 @@ const PartnersCDD: React.FC = () => {
             </div>
             
             <div>
-              <Label>VAT Registration License <span className="required-asterisk">*</span></Label>
+              <Label>VAT Registration License (Optional)</Label>
               <FileUpload
                 accept=".png,.jpg,.jpeg,.pdf"
                 onFileSelect={(file) => {
@@ -1017,7 +1017,7 @@ const PartnersCDD: React.FC = () => {
             </div>
             
             <div>
-              <Label>Tax Clearance Certificate <span className="required-asterisk">*</span></Label>
+              <Label>Tax Clearance Certificate (Optional)</Label>
               <FileUpload
                 accept=".png,.jpg,.jpeg,.pdf"
                 onFileSelect={(file) => {
