@@ -1400,104 +1400,65 @@ export const FORM_MAPPINGS: FormMapping = {
 },
 
   // CDD FORMS
-'individual-kyc': {
-    title: 'Individual CDD Form',
+'individual-cdd': {
+    title: 'Individual CDD',
     sections: [
       {
-        title: 'Personal Information',
+        title: 'Personal Info',
         fields: [
           { key: 'title', label: 'Title', type: 'text', editable: true },
           { key: 'firstName', label: 'First Name', type: 'text', editable: true },
           { key: 'lastName', label: 'Last Name', type: 'text', editable: true },
-          { key: 'contactAddress', label: 'Contact Address', type: 'textarea', editable: true },
-          {
-            key: 'gender',
-            label: 'Gender',
-            type: 'select',
-            editable: true,
-            options: [
-              { value: 'male', label: 'Male' },
-              { value: 'female', label: 'Female' }
-            ]
-          },
-          { key: 'residenceCountry', label: 'Residence Country', type: 'text', editable: true },
+          { key: 'contactAddress', label: 'Contact Address', type: 'text', editable: true },
+          { key: 'gender', label: 'Gender', type: 'select', editable: true },
+          { key: 'country', label: 'Residence Country', type: 'text', editable: true },
           { key: 'dateOfBirth', label: 'Date Of Birth', type: 'date', editable: true },
           { key: 'placeOfBirth', label: 'Place of Birth', type: 'text', editable: true },
-          { key: 'email', label: 'Email', type: 'email', editable: true },
-          { key: 'mobileNumber', label: 'Mobile Number', type: 'text', editable: true },
-          { key: 'residentialAddress', label: 'Residential Address', type: 'textarea', editable: true },
+          { key: 'emailAddress', label: 'Email', type: 'email', editable: true },
+          { key: 'GSMno', label: 'Mobile Number', type: 'number', editable: true },
+          { key: 'residentialAddress', label: 'Residential Address', type: 'text', editable: true },
           { key: 'nationality', label: 'Nationality', type: 'text', editable: true },
           { key: 'occupation', label: 'Occupation', type: 'text', editable: true },
-          { key: 'position', label: 'Position', type: 'text', editable: true }
+          { key: 'position', label: 'Position', type: 'text', editable: true },
         ]
       },
       {
-        title: 'Additional Information',
+        title: 'Additional Info',
         fields: [
-          {
-            key: 'businessType',
-            label: 'Business Type',
-            type: 'select',
-            editable: true,
-            options: [
-              { value: 'soleProprietor', label: 'Sole Proprietor' },
-              { value: 'limitedLiability', label: 'Limited Liability Company' },
-              { value: 'publicLimited', label: 'Public Limited Company' },
-              { value: 'jointVenture', label: 'Joint Venture' },
-              { value: 'other', label: 'Other (please specify)' }
-            ]
-          },
-          {
-            key: 'businessTypeOther',
-            label: 'Please specify business type',
-            type: 'text',
-            editable: true,
-            conditional: { dependsOn: 'businessType', value: 'other' }
-          },
-          { key: 'employerEmail', label: "Employer's Email", type: 'email', editable: true },
-          { key: 'employerName', label: "Employer's Name", type: 'text', editable: true },
-          { key: 'employerTelephone', label: "Employer's Telephone Number", type: 'text', editable: true },
-          { key: 'taxId', label: 'Tax Identification Number', type: 'text', editable: true },
-          { key: 'employerAddress', label: "Employer's Address", type: 'textarea', editable: true },
-          { key: 'bvn', label: 'BVN', type: 'text', editable: true },
-          {
-            key: 'idType',
-            label: 'ID Type',
-            type: 'select',
-            editable: true,
-            options: [
-              { value: 'passport', label: 'International Passport' },
-              { value: 'nimc', label: 'NIMC' },
-              { value: 'driversLicense', label: 'Drivers Licence' },
-              { value: 'votersCard', label: 'Voters Card' },
-              { value: 'nin', label: 'NIN' }
-            ]
-          },
+          { key: 'businessType', label: 'Business Type', type: 'select', editable: true },
+          { key: 'employersEmail', label: 'Employer\'s Email', type: 'email', editable: true },
+          { key: 'employersName', label: 'Employer\'s Name', type: 'text', editable: true },
+          { key: 'employersTelephoneNumber', label: 'Employer\'s Telephone Number', type: 'number', editable: true },
+          { key: 'employersAddress', label: 'Employer\'s Address', type: 'text', editable: true },
+          { key: 'taxidentificationNumber', label: 'Tax Identification Number', type: 'text', editable: true },
+          { key: 'BVNNumber', label: 'BVN', type: 'number', editable: true },
+          { key: 'identificationType', label: 'ID Type', type: 'select', editable: true },
           { key: 'identificationNumber', label: 'Identification Number', type: 'text', editable: true },
           { key: 'issuingCountry', label: 'Issuing Country', type: 'text', editable: true },
           { key: 'issuedDate', label: 'Issued Date', type: 'date', editable: true },
-          { key: 'expiryDate', label: 'Expiry Date', type: 'date', editable: true }
+          { key: 'expiryDate', label: 'Expiry Date', type: 'date', editable: true },
         ]
       },
       {
-        title: 'Account Details & Files',
+        title: 'Account Details & Uploads',
         fields: [
-          {
-            key: 'annualIncomeRange',
-            label: 'Annual Income Range',
-            type: 'select',
-            editable: true,
-            options: [
-              { value: 'lessThan1M', label: 'Less Than 1 Million' },
-              { value: '1M-4M', label: '1 Million - 4 Million' },
-              { value: '4.1M-10M', label: '4.1 Million - 10 Million' },
-              { value: 'moreThan10M', label: 'More Than 10 Million' }
-            ]
-          },
-          {
-            key: 'premiumPaymentSource',
-            label: 'Premium Payment Source',
-            type: 'select',
+          { key: 'annualIncomeRange', label: 'Annual Income Range', type: 'select', editable: true },
+          { key: 'premiumPaymentSource', label: 'Premium Payment Source', type: 'select', editable: true },
+          { key: 'identification', label: 'Upload Means of Identification', type: 'file', editable: false },
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false },
+        ]
+      }
+    ]
+  },
             editable: true,
             options: [
               { value: 'salary', label: 'Salary or Business Income' },
@@ -1791,81 +1752,70 @@ export const FORM_MAPPINGS: FormMapping = {
   },
 
   // === NAICOM CORPORATE CDD ===
-  'naicom-corporate-kyc': {
-    title: 'NAICOM Corporate CDD',
+  'naicom-corporate-cdd': {
+    title: 'NAICOM Company CDD',
     sections: [
       {
         title: 'Company Details',
         fields: [
-        { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
-        { key: 'registeredCompanyAddress', label: 'Registered Company Address', type: 'textarea', editable: true },
-        { key: 'incorporationNumber', label: 'Incorporation Number', type: 'text', editable: true },
-        { key: 'incorporationState', label: 'Incorporation State', type: 'text', editable: true },
-        { key: 'dateOfIncorporationRegistration', label: 'Date of Incorporation/Registration', type: 'date', editable: true },
-        { key: 'natureOfBusiness', label: 'Nature of Business', type: 'textarea', editable: true },
-          { 
-            key: 'companyLegalForm', 
-            label: 'Company Type', 
-            type: 'select', 
-            editable: true,
-            options: [
-              { value: 'Sole Proprietor', label: 'Sole Proprietor' },
-              { value: 'Unlimited Liability Company', label: 'Unlimited Liability Company' },
-              { value: 'Limited Liability Company', label: 'Limited Liability Company' },
-              { value: 'Public Limited Company', label: 'Public Limited Company' },
-              { value: 'Joint Venture', label: 'Joint Venture' },
-              { value: 'Other', label: 'Other' }
-            ]
-          },
-          { 
-            key: 'companyLegalFormOther', 
-            label: 'Please specify', 
-            type: 'text', 
-            editable: true, 
-            conditional: { dependsOn: 'companyLegalForm', value: 'Other' } 
-          },
-          { key: 'email', label: 'Email Address', type: 'email', editable: true },
+          { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
+          { key: 'registeredCompanyAddress', label: 'Registered Company Address', type: 'text', editable: true },
+          { key: 'incorporationNumber', label: 'Incorporation Number', type: 'text', editable: true },
+          { key: 'incorporationState', label: 'Incorporation State', type: 'text', editable: true },
+          { key: 'dateOfIncorporationRegistration', label: 'Date Of Incorporation/Registration', type: 'date', editable: true },
+          { key: 'natureOfBusiness', label: 'Nature of Business', type: 'text', editable: true },
+          { key: 'companyLegalForm', label: 'Company Type', type: 'select', editable: true },
+          { key: 'emailAddress', label: 'Email Address', type: 'email', editable: true },
           { key: 'website', label: 'Website', type: 'text', editable: true },
           { key: 'taxIdentificationNumber', label: 'Tax Identification Number', type: 'text', editable: true },
-          { key: 'telephoneNumber', label: 'Telephone Number', type: 'text', editable: true }
+          { key: 'telephoneNumber', label: 'Telephone Number', type: 'number', editable: true },
         ]
       },
       {
         title: 'Director Info',
         fields: [
-          // The form uses a dynamic array for directors. 
-          // The viewer should be configured to render objects from this array.
-          { key: 'directors', label: 'Directors', type: 'array', editable: true },
+          { key: 'firstName', label: 'First Name', type: 'text', editable: true },
+          { key: 'middleName', label: 'Middle Name', type: 'text', editable: true },
+          { key: 'lastName', label: 'Last Name', type: 'text', editable: true },
+          { key: 'dob', label: 'Date of Birth', type: 'date', editable: true },
+          { key: 'placeOfBirth', label: 'Place of Birth', type: 'text', editable: true },
+          { key: 'nationality', label: 'Nationality', type: 'text', editable: true },
+          { key: 'country', label: 'Country', type: 'text', editable: true },
+          { key: 'occupation', label: 'Occupation', type: 'text', editable: true },
+          { key: 'email', label: 'Email', type: 'email', editable: true },
+          { key: 'phoneNumber', label: 'Phone Number', type: 'number', editable: true },
+          { key: 'BVNNumber', label: 'BVN', type: 'number', editable: true },
+          { key: 'employersName', label: 'Employers Name', type: 'text', editable: true },
+          { key: 'employersPhoneNumber', label: 'Employers Phone Number', type: 'number', editable: true },
+          { key: 'residentialAddress', label: 'Residential Address', type: 'text', editable: true },
+          { key: 'taxIDNumber', label: 'Tax ID Number', type: 'text', editable: true },
+          { key: 'idType', label: 'ID Type', type: 'select', editable: true },
+          { key: 'idNumber', label: 'Identification Number', type: 'text', editable: true },
+          { key: 'issuingBody', label: 'Issuing Body', type: 'text', editable: true },
+          { key: 'issuedDate', label: 'Issued Date', type: 'date', editable: true },
+          { key: 'expiryDate', label: 'Expiry Date', type: 'date', editable: true },
+          { key: 'sourceOfIncome', label: 'Source of Income', type: 'select', editable: true },
         ]
       },
       {
         title: 'Account Details',
         fields: [
-          // Local Account
           { key: 'bankName', label: 'Bank Name', type: 'text', editable: true },
-          { key: 'accountNumber', label: 'Account Number', type: 'text', editable: true },
+          { key: 'accountNumber', label: 'Account Number', type: 'number', editable: true },
           { key: 'bankBranch', label: 'Bank Branch', type: 'text', editable: true },
           { key: 'accountOpeningDate', label: 'Account Opening Date', type: 'date', editable: true },
-          // Foreign Account
-          { key: 'foreignBankName', label: 'Foreign Bank Name', type: 'text', editable: true },
-          { key: 'foreignAccountNumber', label: 'Foreign Account Number', type: 'text', editable: true },
-          { key: 'foreignBankBranch', label: 'Foreign Bank Branch', type: 'text', editable: true },
-          { key: 'foreignAccountOpeningDate', label: 'Foreign Account Opening Date', type: 'date', editable: true }
+          { key: 'bankName2', label: 'Bank Name', type: 'text', editable: true },
+          { key: 'accountNumber2', label: 'Account Number', type: 'number', editable: true },
+          { key: 'bankBranch2', label: 'Bank Branch', type: 'text', editable: true },
+          { key: 'accountOpeningDate2', label: 'Account Opening Date', type: 'date', editable: true },
         ]
       },
       {
         title: 'Uploads',
         fields: [
-          { key: 'cacCertificate', label: 'CAC Certificate Upload', type: 'file', editable: true },
-          { key: 'identification', label: 'Identification Document Upload', type: 'file', editable: true },
-          { key: 'naicomLicense', label: 'NAICOM License Upload', type: 'file', editable: true }
-        ]
-      },
-      {
-        title: 'Data Privacy & Declaration',
-        fields: [
-          { key: 'agreeToDataPrivacy', label: 'I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge', type: 'boolean', editable: true },
-          { key: 'signature', label: 'Digital Signature', type: 'text', editable: true }
+          { key: 'cac', label: 'Upload Your CAC Certificate', type: 'file', editable: false },
+          { key: 'identification', label: 'Upload Means of Identification', type: 'file', editable: false },
+          { key: 'cacForm', label: 'NAICOM License Certificate', type: 'file', editable: false },
         ]
       },
       {
@@ -1873,9 +1823,9 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'status', label: 'Status', type: 'text', editable: true },
           { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
-         { key: 'submittedBy', label: 'Submitted By', type: 'date', editable: false },
-          { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
-          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false },
         ]
       }
     ]
