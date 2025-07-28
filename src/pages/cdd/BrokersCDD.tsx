@@ -28,25 +28,26 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 const brokersCDDSchema = yup.object().shape({
   // Company Info
   companyName: yup.string().required("Company name is required"),
-  registeredAddress: yup.string().required("Registered address is required"),
+  companyAddress: yup.string().required("Company address is required"),
   city: yup.string().required("City is required"),
   state: yup.string().required("State is required"),
   country: yup.string().required("Country is required"),
-  email: yup.string()
+  emailAddress: yup.string()
     .required("Email is required")
     .email("Please enter a valid email")
     .typeError("Please enter a valid email"),
   website: yup.string().required("Website is required"),
-  contactPersonName: yup.string().required("Contact person name is required"),
-  contactPersonNumber: yup.string()
-    .required("Contact person number is required")
-    .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
-    .max(15, "Phone number cannot exceed 15 characters"),
-  taxId: yup.string().required("Tax ID is required"),
-  vatRegistrationNumber: yup.string().required("VAT registration number is required"),
   incorporationNumber: yup.string().required("Incorporation number is required"),
-  incorporationDate: yup.date()
-    .required("Incorporation date is required")
+  registrationNumber: yup.string().required("Registration number is required"),
+  incorporationState: yup.string().required("Incorporation state is required"),
+  companyLegalForm: yup.string().required("Company legal form is required"),
+  companyLegalFormOther: yup.string().when('companyLegalForm', {
+    is: 'other',
+    then: (schema) => schema.required('Please specify company type'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  dateOfIncorporationRegistration: yup.date()
+    .required("Date of incorporation/registration is required")
     .test('not-future', 'Date cannot be in the future', function(value) {
       if (!value) return false;
       const today = new Date();
@@ -54,21 +55,21 @@ const brokersCDDSchema = yup.object().shape({
       return value <= today;
     })
     .typeError('Please select a valid date'),
-  incorporationState: yup.string().required("Incorporation state is required"),
-  businessNature: yup.string().required("Business nature is required"),
-  bvn: yup.string()
-    .required("BVN is required")
-    .matches(/^\d+$/, "BVN must contain only numbers")
-    .length(11, "BVN must be exactly 11 digits"),
+  natureOfBusiness: yup.string().required("Nature of business is required"),
+  taxIdentificationNumber: yup.string().required("Tax identification number is required"),
+  telephoneNumber: yup.string()
+    .required("Telephone number is required")
+    .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
+    .max(15, "Phone number cannot exceed 15 characters"),
   
   // Directors
   directors: yup.array().of(yup.object().shape({
-    title: yup.string(),
-    gender: yup.string(),
+    title: yup.string().required("Title is required"),
+    gender: yup.string().required("Gender is required"),
     firstName: yup.string().required("First name is required"),
     middleName: yup.string(),
     lastName: yup.string().required("Last name is required"),
-    dateOfBirth: yup.date()
+    dob: yup.date()
       .required("Date of birth is required")
       .test('age', 'Must be at least 18 years old', function(value) {
         if (!value) return false;
@@ -79,7 +80,7 @@ const brokersCDDSchema = yup.object().shape({
       .typeError('Please select a valid date'),
     placeOfBirth: yup.string().required("Place of birth is required"),
     nationality: yup.string().required("Nationality is required"),
-    country: yup.string().required("Country is required"),
+    residenceCountry: yup.string().required("Residence country is required"),
     occupation: yup.string().required("Occupation is required"),
     email: yup.string()
       .required("Email is required")
@@ -89,17 +90,18 @@ const brokersCDDSchema = yup.object().shape({
       .required("Phone number is required")
       .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
       .max(15, "Phone number cannot exceed 15 characters"),
-    bvn: yup.string()
+    BVNNumber: yup.string()
       .required("BVN is required")
       .matches(/^\d+$/, "BVN must contain only numbers")
       .length(11, "BVN must be exactly 11 digits"),
-    employerName: yup.string(),
-    employerPhone: yup.string(),
-    residentialAddress: yup.string().required("Residential address is required"),
-    taxIdNumber: yup.string(),
+    employersName: yup.string().required("Employer's name is required"),
+    address: yup.string().required("Address is required"),
+    taxIDNumber: yup.string(),
+    intPassNo: yup.string(),
+    passIssuedCountry: yup.string(),
     idType: yup.string().required("ID type is required"),
-    identificationNumber: yup.string().required("Identification number is required"),
-    issuingBody: yup.string().required("Issuing body is required"),
+    idNumber: yup.string().required("Identification number is required"),
+    issuedBy: yup.string().required("Issued by is required"),
     issuedDate: yup.date()
       .required("Issued date is required")
       .test('not-future', 'Date cannot be in the future', function(value) {
@@ -117,8 +119,8 @@ const brokersCDDSchema = yup.object().shape({
         return value > today;
       })
       .typeError('Please select a valid date'),
-    incomeSource: yup.string().required("Income source is required"),
-    incomeSourceOther: yup.string().when('incomeSource', {
+    sourceOfIncome: yup.string().required("Source of income is required"),
+    sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
       is: 'other',
       then: (schema) => schema.required('Please specify income source'),
       otherwise: (schema) => schema.notRequired()
@@ -126,13 +128,13 @@ const brokersCDDSchema = yup.object().shape({
   })).min(1, "At least one director is required"),
   
   // Account Details
-  localAccountNumber: yup.string()
-    .required("Account number is required")
+  localBankName: yup.string().required("Local bank name is required"),
+  bankBranch: yup.string().required("Bank branch is required"),
+  currentAccountNumber: yup.string()
+    .required("Current account number is required")
     .matches(/^\d+$/, "Account number must contain only numbers")
     .max(10, "Account number cannot exceed 10 digits"),
-  localBankName: yup.string().required("Bank name is required"),
-  localBankBranch: yup.string().required("Bank branch is required"),
-  localAccountOpeningDate: yup.date()
+  accountOpeningDate: yup.date()
     .required("Account opening date is required")
     .test('not-future', 'Date cannot be in the future', function(value) {
       if (!value) return false;
@@ -141,10 +143,11 @@ const brokersCDDSchema = yup.object().shape({
       return value <= today;
     })
     .typeError('Please select a valid date'),
-  foreignAccountNumber: yup.string(),
-  foreignBankName: yup.string(),
-  foreignBankBranch: yup.string(),
-  foreignAccountOpeningDate: yup.date()
+  domAccountNumber2: yup.string(),
+  foreignBankName2: yup.string(),
+  bankBranchName2: yup.string(),
+  currency: yup.string(),
+  accountOpeningDate2: yup.date()
     .test('not-future', 'Date cannot be in the future', function(value) {
       if (!value) return true; // Optional field
       const today = new Date();
@@ -154,9 +157,10 @@ const brokersCDDSchema = yup.object().shape({
     .typeError('Please select a valid date'),
   
   // File uploads
-  certificateOfIncorporation: yup.mixed().required("Certificate of incorporation is required"),
-  director1Id: yup.mixed().required("Director 1 ID is required"),
-  director2Id: yup.mixed(), // Not required
+  Incorporation: yup.mixed().required("Certificate of incorporation is required"),
+  identification: yup.mixed().required("Director 1 identification is required"),
+  identification2: yup.mixed(), // Not required
+  NAICOMForm: yup.mixed(), // Not required
   
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
@@ -165,58 +169,61 @@ const brokersCDDSchema = yup.object().shape({
 
 const defaultValues = {
   companyName: '',
-  registeredAddress: '',
+  companyAddress: '',
   city: '',
   state: '',
   country: '',
-  email: '',
+  emailAddress: '',
   website: '',
-  contactPersonName: '',
-  contactPersonNumber: '',
-  taxId: '',
-  vatRegistrationNumber: '',
   incorporationNumber: '',
-  incorporationDate: undefined,
+  registrationNumber: '',
   incorporationState: '',
-  businessNature: '',
-  bvn: '',
+  companyLegalForm: '',
+  companyLegalFormOther: '',
+  dateOfIncorporationRegistration: undefined,
+  natureOfBusiness: '',
+  taxIdentificationNumber: '',
+  telephoneNumber: '',
   directors: [{
     title: '',
     gender: '',
     firstName: '',
     middleName: '',
     lastName: '',
-    dateOfBirth: undefined,
+    dob: undefined,
     placeOfBirth: '',
     nationality: '',
-    country: '',
+    residenceCountry: '',
     occupation: '',
     email: '',
     phoneNumber: '',
-    bvn: '',
-    employerName: '',
-    employerPhone: '',
-    residentialAddress: '',
-    taxIdNumber: '',
+    BVNNumber: '',
+    employersName: '',
+    address: '',
+    taxIDNumber: '',
+    intPassNo: '',
+    passIssuedCountry: '',
     idType: '',
-    identificationNumber: '',
-    issuingBody: '',
+    idNumber: '',
+    issuedBy: '',
     issuedDate: undefined,
     expiryDate: undefined,
-    incomeSource: '',
-    incomeSourceOther: ''
+    sourceOfIncome: '',
+    sourceOfIncomeOther: ''
   }],
-  localAccountNumber: '',
   localBankName: '',
-  localBankBranch: '',
-  localAccountOpeningDate: undefined,
-  foreignAccountNumber: '',
-  foreignBankName: '',
-  foreignBankBranch: '',
-  foreignAccountOpeningDate: undefined,
-  certificateOfIncorporation: '',
-  director1Id: '',
-  director2Id: '',
+  bankBranch: '',
+  currentAccountNumber: '',
+  accountOpeningDate: undefined,
+  domAccountNumber2: '',
+  foreignBankName2: '',
+  bankBranchName2: '',
+  currency: '',
+  accountOpeningDate2: undefined,
+  Incorporation: '',
+  identification: '',
+  identification2: '',
+  NAICOMForm: '',
   agreeToDataPrivacy: false,
   signature: ''
 };
@@ -428,29 +435,30 @@ const BrokersCDD: React.FC = () => {
 
   // Step field mappings for validation
   const stepFieldMappings = {
-    0: ['companyName', 'registeredAddress', 'city', 'state', 'country', 'email', 'website', 'contactPersonName', 'contactPersonNumber', 'taxId', 'vatRegistrationNumber', 'incorporationNumber', 'incorporationDate', 'incorporationState', 'businessNature', 'bvn'],
+    0: ['companyName', 'companyAddress', 'city', 'state', 'country', 'emailAddress', 'website', 'incorporationNumber', 'registrationNumber', 'incorporationState', 'companyLegalForm', 'dateOfIncorporationRegistration', 'natureOfBusiness', 'taxIdentificationNumber', 'telephoneNumber'],
     1: fields.flatMap((_, index) => [
       `directors.${index}.title`,
       `directors.${index}.gender`,
       `directors.${index}.firstName`,
       `directors.${index}.middleName`,
       `directors.${index}.lastName`,
-      `directors.${index}.dateOfBirth`,
+      `directors.${index}.dob`,
       `directors.${index}.placeOfBirth`,
       `directors.${index}.nationality`,
-      `directors.${index}.country`,
+      `directors.${index}.residenceCountry`,
       `directors.${index}.occupation`,
       `directors.${index}.email`,
       `directors.${index}.phoneNumber`,
-      `directors.${index}.bvn`,
-      `directors.${index}.residentialAddress`,
+      `directors.${index}.BVNNumber`,
+      `directors.${index}.employersName`,
+      `directors.${index}.address`,
       `directors.${index}.idType`,
-      `directors.${index}.identificationNumber`,
-      `directors.${index}.issuingBody`,
+      `directors.${index}.idNumber`,
+      `directors.${index}.issuedBy`,
       `directors.${index}.issuedDate`,
-      `directors.${index}.incomeSource`
+      `directors.${index}.sourceOfIncome`
     ]),
-    2: ['localAccountNumber', 'localBankName', 'localBankBranch', 'localAccountOpeningDate', 'certificateOfIncorporation', 'director1Id'],
+    2: ['localBankName', 'bankBranch', 'currentAccountNumber', 'accountOpeningDate', 'Incorporation', 'identification'],
     3: ['agreeToDataPrivacy', 'signature']
   };
 
@@ -553,8 +561,8 @@ const BrokersCDD: React.FC = () => {
           />
           
           <FormTextarea
-            name="registeredAddress"
-            label="Registered Company Address"
+            name="companyAddress"
+            label="Company Address"
             required={true}
           />
           
@@ -576,9 +584,56 @@ const BrokersCDD: React.FC = () => {
             />
           </div>
           
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              name="incorporationNumber"
+              label="Incorporation/RC Number"
+              required={true}
+            />
+            <FormField
+              name="registrationNumber"
+              label="Registration Number"
+              required={true}
+            />
+            <FormField
+              name="incorporationState"
+              label="Incorporation State"
+              required={true}
+            />
+          </div>
+
+          <FormSelect
+            name="companyLegalForm"
+            label="Company Type"
+            required={true}
+            options={[
+              { value: 'sole-proprietor', label: 'Sole Proprietor' },
+              { value: 'unlimited-liability', label: 'Unlimited Liability Company' },
+              { value: 'limited-liability', label: 'Limited Liability Company' },
+              { value: 'public-limited', label: 'Public Limited Company' },
+              { value: 'joint-venture', label: 'Joint Venture' },
+              { value: 'other', label: 'Other(please specify)' }
+            ]}
+            placeholder="Choose Company Type"
+          />
+          
+          {watchedValues.companyLegalForm === 'other' && (
+            <FormField
+              name="companyLegalFormOther"
+              label="Please specify company type"
+              required={true}
+            />
+          )}
+          
+          <FormDatePicker
+            name="dateOfIncorporationRegistration"
+            label="Date Of Incorporation/Registration"
+            required={true}
+          />
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
-              name="email"
+              name="emailAddress"
               label="Email Address"
               type="email"
               required={true}
@@ -590,63 +645,25 @@ const BrokersCDD: React.FC = () => {
             />
           </div>
           
+          <FormTextarea
+            name="natureOfBusiness"
+            label="Business Type/Occupation"
+            required={true}
+          />
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
-              name="contactPersonName"
-              label="Contact Person Name"
+              name="taxIdentificationNumber"
+              label="Tax Number"
               required={true}
             />
             <FormField
-              name="contactPersonNumber"
-              label="Contact Person Number"
+              name="telephoneNumber"
+              label="Telephone Number"
               maxLength={15}
               required={true}
             />
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              name="taxId"
-              label="Tax Identification Number"
-              required={true}
-            />
-            <FormField
-              name="vatRegistrationNumber"
-              label="VAT Registration Number"
-              required={true}
-            />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField
-              name="incorporationNumber"
-              label="Incorporation/RC Number"
-              required={true}
-            />
-            <FormDatePicker
-              name="incorporationDate"
-              label="Date of Incorporation"
-              required={true}
-            />
-            <FormField
-              name="incorporationState"
-              label="Incorporation State"
-              required={true}
-            />
-          </div>
-          
-          <FormTextarea
-            name="businessNature"
-            label="Nature of Business"
-            required={true}
-          />
-          
-          <FormField
-            name="bvn"
-            label="BVN"
-            maxLength={11}
-            required={true}
-          />
         </div>
       )
     },
@@ -665,25 +682,26 @@ const BrokersCDD: React.FC = () => {
                 firstName: '',
                 middleName: '',
                 lastName: '',
-                dateOfBirth: '',
+                dob: '',
                 placeOfBirth: '',
                 nationality: '',
-                country: '',
+                residenceCountry: '',
                 occupation: '',
                 email: '',
                 phoneNumber: '',
-                bvn: '',
-                employerName: '',
-                employerPhone: '',
-                residentialAddress: '',
-                taxIdNumber: '',
+                BVNNumber: '',
+                employersName: '',
+                address: '',
+                taxIDNumber: '',
+                intPassNo: '',
+                passIssuedCountry: '',
                 idType: '',
-                identificationNumber: '',
-                issuingBody: '',
+                idNumber: '',
+                issuedBy: '',
                 issuedDate: '',
                 expiryDate: '',
-                incomeSource: '',
-                incomeSourceOther: ''
+                sourceOfIncome: '',
+                sourceOfIncomeOther: ''
               })}
               className="flex items-center gap-2"
             >
@@ -712,6 +730,7 @@ const BrokersCDD: React.FC = () => {
                   <FormSelect
                     name={`directors.${index}.title`}
                     label="Title"
+                    required={true}
                     options={[
                       { value: 'Mr', label: 'Mr' },
                       { value: 'Mrs', label: 'Mrs' },
@@ -725,6 +744,7 @@ const BrokersCDD: React.FC = () => {
                   <FormSelect
                     name={`directors.${index}.gender`}
                     label="Gender"
+                    required={true}
                     options={[
                       { value: 'male', label: 'Male' },
                       { value: 'female', label: 'Female' }
@@ -752,7 +772,7 @@ const BrokersCDD: React.FC = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormDatePicker
-                    name={`directors.${index}.dateOfBirth`}
+                    name={`directors.${index}.dob`}
                     label="Date of Birth"
                     required={true}
                   />
@@ -770,8 +790,8 @@ const BrokersCDD: React.FC = () => {
                     required={true}
                   />
                   <FormField
-                    name={`directors.${index}.country`}
-                    label="Country"
+                    name={`directors.${index}.residenceCountry`}
+                    label="Residence Country"
                     required={true}
                   />
                 </div>
@@ -798,16 +818,37 @@ const BrokersCDD: React.FC = () => {
                     required={true}
                   />
                   <FormField
-                    name={`directors.${index}.bvn`}
+                    name={`directors.${index}.BVNNumber`}
                     label="BVN"
                     maxLength={11}
                     required={true}
                   />
                 </div>
                 
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    name={`directors.${index}.employersName`}
+                    label="Employer's Name"
+                    required={true}
+                  />
+                  <FormField
+                    name={`directors.${index}.taxIDNumber`}
+                    label="Tax ID Number"
+                  />
+                  <FormField
+                    name={`directors.${index}.intPassNo`}
+                    label="International Passport Number"
+                  />
+                </div>
+                
+                <FormField
+                  name={`directors.${index}.passIssuedCountry`}
+                  label="Passport Issued Country"
+                />
+                
                 <FormTextarea
-                  name={`directors.${index}.residentialAddress`}
-                  label="Residential Address"
+                  name={`directors.${index}.address`}
+                  label="Address"
                   required={true}
                 />
                 
@@ -816,24 +857,23 @@ const BrokersCDD: React.FC = () => {
                   label="ID Type"
                   required={true}
                   options={[
-                    { value: 'passport', label: 'International Passport' },
+                    { value: 'passport', label: 'International passport' },
                     { value: 'nimc', label: 'NIMC' },
-                    { value: 'driversLicense', label: 'Drivers Licence' },
-                    { value: 'votersCard', label: 'Voters Card' },
-                    { value: 'nin', label: 'NIN' }
+                    { value: 'driversLicense', label: 'Drivers licence' },
+                    { value: 'votersCard', label: 'Voters Card' }
                   ]}
-                  placeholder="Select ID type"
+                  placeholder="Choose Identification Type"
                 />
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField
-                    name={`directors.${index}.identificationNumber`}
+                    name={`directors.${index}.idNumber`}
                     label="Identification Number"
                     required={true}
                   />
                   <FormField
-                    name={`directors.${index}.issuingBody`}
-                    label="Issuing Body"
+                    name={`directors.${index}.issuedBy`}
+                    label="Issued By (Issuing Country)"
                     required={true}
                   />
                   <FormDatePicker
@@ -843,21 +883,26 @@ const BrokersCDD: React.FC = () => {
                   />
                 </div>
                 
-                <FormSelect
-                  name={`directors.${index}.incomeSource`}
-                  label="Income Source"
-                  required={true}
-                  options={[
-                    { value: 'salary', label: 'Salary or Business Income' },
-                    { value: 'investments', label: 'Investments or Dividends' },
-                    { value: 'other', label: 'Other (please specify)' }
-                  ]}
-                  placeholder="Select income source"
+                <FormDatePicker
+                  name={`directors.${index}.expiryDate`}
+                  label="Expiry Date"
                 />
                 
-                {((formMethods.watch('directors') as any[]) || [])[index]?.incomeSource === 'other' && (
+                <FormSelect
+                  name={`directors.${index}.sourceOfIncome`}
+                  label="Source of Income"
+                  required={true}
+                  options={[
+                    { value: 'salary', label: 'Salary Or Business Income' },
+                    { value: 'investments', label: 'Investments Or Dividends' },
+                    { value: 'other', label: 'Other(please specify)' }
+                  ]}
+                  placeholder="Choose Income Source"
+                />
+                
+                {((formMethods.watch('directors') as any[]) || [])[index]?.sourceOfIncome === 'other' && (
                   <FormField
-                    name={`directors.${index}.incomeSourceOther`}
+                    name={`directors.${index}.sourceOfIncomeOther`}
                     label="Please specify income source"
                     required={true}
                   />
@@ -875,27 +920,27 @@ const BrokersCDD: React.FC = () => {
         <div className="space-y-6">
           <div>
             <h3 className="text-lg font-medium mb-4">Local Account Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
-                name="localAccountNumber"
-                label="Account Number"
+                name="localBankName"
+                label="Local Bank Name"
                 required={true}
               />
               <FormField
-                name="localBankName"
-                label="Bank Name"
+                name="bankBranch"
+                label="Bank Branch"
+                required={true}
+              />
+              <FormField
+                name="currentAccountNumber"
+                label="Current Account Number"
                 required={true}
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <FormField
-                name="localBankBranch"
-                label="Bank Branch"
-                required={true}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mt-4">
               <FormDatePicker
-                name="localAccountOpeningDate"
+                name="accountOpeningDate"
                 label="Account Opening Date"
                 required={true}
               />
@@ -903,25 +948,29 @@ const BrokersCDD: React.FC = () => {
           </div>
           
           <div>
-            <h3 className="text-lg font-medium mb-4">Foreign Account Details (Optional)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <h3 className="text-lg font-medium mb-4">Domicilliary Account Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <FormField
-                name="foreignAccountNumber"
-                label="Account Number"
+                name="domAccountNumber2"
+                label="Domicilliary Account Number"
               />
               <FormField
-                name="foreignBankName"
-                label="Bank Name"
+                name="foreignBankName2"
+                label="Foreign Bank Name"
+              />
+              <FormField
+                name="bankBranchName2"
+                label="Bank Branch Name"
+              />
+              <FormField
+                name="currency"
+                label="Currency"
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <FormField
-                name="foreignBankBranch"
-                label="Bank Branch"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mt-4">
               <FormDatePicker
-                name="foreignAccountOpeningDate"
+                name="accountOpeningDate2"
                 label="Account Opening Date"
               />
             </div>
@@ -935,102 +984,103 @@ const BrokersCDD: React.FC = () => {
                 onFileSelect={(file) => {
                   setUploadedFiles(prev => ({
                     ...prev,
-                    certificateOfIncorporation: file
+                    Incorporation: file
                   }));
-                  formMethods.setValue('certificateOfIncorporation', file);
-                  if (formMethods.formState.errors.certificateOfIncorporation) {
-                    formMethods.clearErrors('certificateOfIncorporation');
+                  formMethods.setValue('Incorporation', file);
+                  if (formMethods.formState.errors.Incorporation) {
+                    formMethods.clearErrors('Incorporation');
                   }
                 }}
                 maxSize={3 * 1024 * 1024}
               />
-              {uploadedFiles.certificateOfIncorporation && (
+              {uploadedFiles.Incorporation && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
                   <Check className="h-4 w-4" />
-                  {uploadedFiles.certificateOfIncorporation.name}
+                  {uploadedFiles.Incorporation.name}
                 </div>
               )}
-              {formMethods.formState.errors.certificateOfIncorporation && (
+              {formMethods.formState.errors.Incorporation && (
                 <p className="text-sm text-destructive">
-                  {formMethods.formState.errors.certificateOfIncorporation.message?.toString()}
+                  {formMethods.formState.errors.Incorporation.message?.toString()}
                 </p>
               )}
             </div>
             
             <div>
-              <Label>Director 1 ID <span className="required-asterisk">*</span></Label>
+              <Label>Identification Means for Director 1 <span className="required-asterisk">*</span></Label>
               <FileUpload
                 accept=".png,.jpg,.jpeg,.pdf"
                 onFileSelect={(file) => {
                   setUploadedFiles(prev => ({
                     ...prev,
-                    director1Id: file
+                    identification: file
                   }));
-                  formMethods.setValue('director1Id', file);
-                  if (formMethods.formState.errors.director1Id) {
-                    formMethods.clearErrors('director1Id');
+                  formMethods.setValue('identification', file);
+                  if (formMethods.formState.errors.identification) {
+                    formMethods.clearErrors('identification');
                   }
                 }}
                 maxSize={3 * 1024 * 1024}
               />
-              {uploadedFiles.director1Id && (
+              {uploadedFiles.identification && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
                   <Check className="h-4 w-4" />
-                  {uploadedFiles.director1Id.name}
+                  {uploadedFiles.identification.name}
                 </div>
               )}
-              {formMethods.formState.errors.director1Id && (
+              {formMethods.formState.errors.identification && (
                 <p className="text-sm text-destructive">
-                  {formMethods.formState.errors.director1Id.message?.toString()}
+                  {formMethods.formState.errors.identification.message?.toString()}
                 </p>
               )}
             </div>
             
             <div>
-              <Label>Director 2 ID (Optional)</Label>
+              <Label>Identification Means for Director 2 <span className="required-asterisk">*</span></Label>
               <FileUpload
                 accept=".png,.jpg,.jpeg,.pdf"
                 onFileSelect={(file) => {
                   setUploadedFiles(prev => ({
                     ...prev,
-                    director2Id: file
+                    identification2: file
                   }));
-                  formMethods.setValue('director2Id', file);
-                  if (formMethods.formState.errors.director2Id) {
-                    formMethods.clearErrors('director2Id');
+                  formMethods.setValue('identification2', file);
+                  if (formMethods.formState.errors.identification2) {
+                    formMethods.clearErrors('identification2');
                   }
                 }}
                 maxSize={3 * 1024 * 1024}
               />
-              {uploadedFiles.director2Id && (
+              {uploadedFiles.identification2 && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
                   <Check className="h-4 w-4" />
-                  {uploadedFiles.director2Id.name}
+                  {uploadedFiles.identification2.name}
                 </div>
               )}
-              {formMethods.formState.errors.director2Id && (
+              {formMethods.formState.errors.identification2 && (
                 <p className="text-sm text-destructive">
-                  {formMethods.formState.errors.director2Id.message?.toString()}
+                  {formMethods.formState.errors.identification2.message?.toString()}
                 </p>
               )}
             </div>
             
             <div>
-              <Label>NAICOM License (Optional)</Label>
+              <Label>NAICOM License Certificate</Label>
               <FileUpload
                 accept=".png,.jpg,.jpeg,.pdf"
                 onFileSelect={(file) => {
                   setUploadedFiles(prev => ({
                     ...prev,
-                    naicomLicense: file
+                    NAICOMForm: file
                   }));
+                  formMethods.setValue('NAICOMForm', file);
                 }}
                 maxSize={3 * 1024 * 1024}
               />
-              {uploadedFiles.naicomLicense && (
+              {uploadedFiles.NAICOMForm && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
                   <Check className="h-4 w-4" />
-                  {uploadedFiles.naicomLicense.name}
+                  {uploadedFiles.NAICOMForm.name}
                 </div>
               )}
             </div>
