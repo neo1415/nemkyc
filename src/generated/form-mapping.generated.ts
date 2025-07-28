@@ -289,22 +289,57 @@ export const FORM_MAPPINGS = {
     "title": "Corporate K Y C",
     "sections": [
       {
-        "title": "General Information",
+        "title": "Company Info",
         "fields": [
-          { "key": "nemBranchOffice", "label": "Nem Branch Office", "type": "text", "editable": true },
+          { "key": "branchOffice", "label": "NEM Branch Office", "type": "text", "editable": true },
           { "key": "insured", "label": "Insured", "type": "text", "editable": true },
-          { "key": "officeAddress", "label": "Office Address", "type": "textarea", "editable": true },
+          { "key": "officeAddress", "label": "Office Address", "type": "text", "editable": true },
+          { "key": "ownershipOfCompany", "label": "Ownership of Company", "type": "select", "editable": true },
           { "key": "contactPerson", "label": "Contact Person", "type": "text", "editable": true },
-          { "key": "website", "label": "Website", "type": "url", "editable": true },
+          { "key": "website", "label": "Website", "type": "text", "editable": true },
           { "key": "incorporationNumber", "label": "Incorporation Number", "type": "text", "editable": true },
           { "key": "incorporationState", "label": "Incorporation State", "type": "text", "editable": true },
-          { "key": "bvn", "label": "Bvn", "type": "text", "editable": true },
-          { "key": "contactPersonMobile", "label": "Contact Person Mobile", "type": "text", "editable": true },
-          { "key": "taxId", "label": "Tax Id", "type": "text", "editable": true },
+          { "key": "dateOfIncorporationRegistration", "label": "Date of Incorporation/Registration", "type": "date", "editable": true },
+          { "key": "BVNNumber", "label": "BVN", "type": "number", "editable": true },
+          { "key": "contactPersonNo", "label": "Contact Person Mobile Number", "type": "number", "editable": true },
+          { "key": "taxIDNo", "label": "Tax Identification Number", "type": "text", "editable": true },
+          { "key": "emailAddress", "label": "Email Address", "type": "email", "editable": true },
+          { "key": "natureOfBusiness", "label": "Business Type/Occupation", "type": "text", "editable": true },
+          { "key": "estimatedTurnover", "label": "Estimated Turnover", "type": "select", "editable": true },
+          { "key": "premiumPaymentSource", "label": "Premium Payment Source", "type": "select", "editable": true }
+        ]
+      },
+      {
+        "title": "Director Info", 
+        "fields": [
+          { "key": "firstName", "label": "First Name", "type": "text", "editable": true },
+          { "key": "middleName", "label": "Middle Name", "type": "text", "editable": true },
+          { "key": "lastName", "label": "Last Name", "type": "text", "editable": true },
+          { "key": "dob", "label": "Date of Birth", "type": "date", "editable": true },
+          { "key": "placeOfBirth", "label": "Place Of Birth", "type": "text", "editable": true },
+          { "key": "nationality", "label": "Nationality", "type": "text", "editable": true },
+          { "key": "country", "label": "Country", "type": "text", "editable": true },
+          { "key": "occupation", "label": "Occupation", "type": "text", "editable": true },
           { "key": "email", "label": "Email", "type": "email", "editable": true },
-          { "key": "businessType", "label": "Business Type", "type": "textarea", "editable": true },
-          { "key": "premiumPaymentSourceOther", "label": "Premium Payment Source Other", "type": "text", "editable": true },
-          { "key": "signature", "label": "Signature", "type": "text", "editable": true }
+          { "key": "phoneNumber", "label": "Phone Number", "type": "number", "editable": true },
+          { "key": "BVNNumber", "label": "BVN", "type": "number", "editable": true },
+          { "key": "employersName", "label": "Employers Name", "type": "text", "editable": true },
+          { "key": "employersPhoneNumber", "label": "Employers Phone Number", "type": "number", "editable": true },
+          { "key": "residentialAddress", "label": "Residential Address", "type": "text", "editable": true },
+          { "key": "taxIDNumber", "label": "Tax ID Number", "type": "text", "editable": true },
+          { "key": "idType", "label": "ID Type", "type": "select", "editable": true },
+          { "key": "idNumber", "label": "Identification Number", "type": "text", "editable": true },
+          { "key": "issuingBody", "label": "Issuing Body", "type": "text", "editable": true },
+          { "key": "issuedDate", "label": "Issued Date", "type": "date", "editable": true },
+          { "key": "expiryDate", "label": "Expiry Date", "type": "date", "editable": true },
+          { "key": "sourceOfIncome", "label": "Source of Income", "type": "select", "editable": true }
+        ]
+      },
+      {
+        "title": "Account Details & Verification Upload",
+        "fields": [
+          { "key": "companyNameVerificationDoc", "label": "Company Name Verification Document", "type": "select", "editable": true },
+          { "key": "verificationDoc", "label": "Upload Your Verification Document", "type": "file", "editable": true }
         ]
       }
     ]
