@@ -348,38 +348,56 @@ export const FORM_MAPPINGS = {
     "title": "Individual K Y C",
     "sections": [
       {
-        "title": "General Information",
+        "title": "Personal Info",
         "fields": [
           { "key": "officeLocation", "label": "Office Location", "type": "text", "editable": true },
           { "key": "title", "label": "Title", "type": "text", "editable": true },
           { "key": "firstName", "label": "First Name", "type": "text", "editable": true },
           { "key": "middleName", "label": "Middle Name", "type": "text", "editable": true },
           { "key": "lastName", "label": "Last Name", "type": "text", "editable": true },
-          { "key": "contactAddress", "label": "Contact Address", "type": "textarea", "editable": true },
+          { "key": "contactAddress", "label": "Contact Address", "type": "text", "editable": true },
           { "key": "occupation", "label": "Occupation", "type": "text", "editable": true },
-          { "key": "mothersMaidenName", "label": "Mothers Maiden Name", "type": "text", "editable": true },
-          { "key": "employersName", "label": "Employers Name", "type": "text", "editable": true },
-          { "key": "employersTelephone", "label": "Employers Telephone", "type": "text", "editable": true },
-          { "key": "employersAddress", "label": "Employers Address", "type": "textarea", "editable": true },
+          { "key": "gender", "label": "Gender", "type": "select", "editable": true },
+          { "key": "dateOfBirth", "label": "Date Of Birth", "type": "date", "editable": true },
+          { "key": "mothersMaidenName", "label": "Mothers maiden Name", "type": "text", "editable": true },
+          { "key": "employersName", "label": "Employer's Name", "type": "text", "editable": true },
+          { "key": "employersTelephoneNumber", "label": "Employer's Telephone Number", "type": "number", "editable": true },
+          { "key": "employersAddress", "label": "Employer's Address", "type": "text", "editable": true },
           { "key": "city", "label": "City", "type": "text", "editable": true },
           { "key": "state", "label": "State", "type": "text", "editable": true },
           { "key": "country", "label": "Country", "type": "text", "editable": true },
-          { "key": "residentialAddress", "label": "Residential Address", "type": "textarea", "editable": true },
-          { "key": "mobileNumber", "label": "Mobile Number", "type": "text", "editable": true },
-          { "key": "email", "label": "Email", "type": "email", "editable": true },
-          { "key": "taxId", "label": "Tax Id", "type": "text", "editable": true },
-          { "key": "bvn", "label": "Bvn", "type": "text", "editable": true },
-          { "key": "identificationNumber", "label": "Identification Number", "type": "text", "editable": true },
-          { "key": "issuingCountry", "label": "Issuing Country", "type": "text", "editable": true },
-          { "key": "incomeSourceOther", "label": "Income Source Other", "type": "text", "editable": true },
-          { "key": "premiumPaymentSourceOther", "label": "Premium Payment Source Other", "type": "text", "editable": true },
-          { "key": "localBankName", "label": "Local Bank Name", "type": "text", "editable": true },
-          { "key": "localAccountNumber", "label": "Local Account Number", "type": "text", "editable": true },
-          { "key": "localBankBranch", "label": "Local Bank Branch", "type": "text", "editable": true },
-          { "key": "foreignBankName", "label": "Foreign Bank Name", "type": "text", "editable": true },
-          { "key": "foreignAccountNumber", "label": "Foreign Account Number", "type": "text", "editable": true },
-          { "key": "foreignBankBranch", "label": "Foreign Bank Branch", "type": "text", "editable": true },
-          { "key": "signature", "label": "Signature", "type": "text", "editable": true }
+          { "key": "nationality", "label": "Nationality", "type": "select", "editable": true },
+          { "key": "residentialAddress", "label": "Residential Address", "type": "text", "editable": true },
+          { "key": "GSMno", "label": "Mobile Number", "type": "number", "editable": true },
+          { "key": "emailAddress", "label": "Email", "type": "email", "editable": true },
+          { "key": "taxIDNo", "label": "Tax Identification Number", "type": "text", "editable": true },
+          { "key": "BVN", "label": "BVN", "type": "text", "editable": true },
+          { "key": "identificationType", "label": "ID Type", "type": "select", "editable": true },
+          { "key": "idNumber", "label": "Identification Number", "type": "text", "editable": true },
+          { "key": "issuedDate", "label": "Issued Date", "type": "date", "editable": true },
+          { "key": "expiryDate", "label": "Expiry Date", "type": "date", "editable": true },
+          { "key": "sourceOfIncome", "label": "Source of Income", "type": "select", "editable": true },
+          { "key": "annualIncomeRange", "label": "Annual Income Range", "type": "select", "editable": true },
+          { "key": "premiumPaymentSource", "label": "Premium Payment Source", "type": "select", "editable": true }
+        ]
+      },
+      {
+        "title": "Account Details",
+        "fields": [
+          { "key": "bankName", "label": "Bank Name", "type": "text", "editable": true },
+          { "key": "accountNumber", "label": "Account Number", "type": "number", "editable": true },
+          { "key": "bankBranch", "label": "Bank Branch", "type": "text", "editable": true },
+          { "key": "accountOpeningDate", "label": "Account Opening Date", "type": "date", "editable": true },
+          { "key": "bankName2", "label": "Bank Name", "type": "text", "editable": true },
+          { "key": "accountNumber2", "label": "Account Number", "type": "number", "editable": true },
+          { "key": "bankBranch2", "label": "Bank Branch", "type": "text", "editable": true },
+          { "key": "accountOpeningDate2", "label": "Account Opening Date", "type": "date", "editable": true }
+        ]
+      },
+      {
+        "title": "Upload",
+        "fields": [
+          { "key": "identification", "label": "Upload Means of Identification", "type": "file", "editable": true }
         ]
       }
     ]

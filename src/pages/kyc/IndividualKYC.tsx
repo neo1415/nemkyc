@@ -43,11 +43,11 @@ const individualKYCSchema = yup.object().shape({
   country: yup.string().required("Country is required"),
   nationality: yup.string().required("Nationality is required"),
   residentialAddress: yup.string().required("Residential address is required"),
-  GSMNo: yup.string()
+  GSMno: yup.string()
     .required("Mobile number is required")
     .matches(/^[0-9+\-()]+$/, "Phone number can only contain numbers and +, -, (, ) characters")
     .max(15, "Phone number cannot exceed 15 characters"),
-  email: yup.string().email("Please enter a valid email address").required("Email is required"),
+  emailAddress: yup.string().email("Please enter a valid email address").required("Email is required"),
   BVN: yup.string()
     .required("BVN is required")
     .matches(/^[0-9]+$/, "BVN can only contain numbers")
@@ -76,20 +76,20 @@ const individualKYCSchema = yup.object().shape({
     then: (schema) => schema.required("Please specify payment source"),
     otherwise: (schema) => schema.nullable()
   }),
-  localBankName: yup.string().required("Bank name is required"),
-  localAccountNumber: yup.string()
+  bankName: yup.string().required("Bank name is required"),
+  accountNumber: yup.string()
     .required("Account number is required")
     .matches(/^[0-9]+$/, "Account number can only contain numbers")
     .max(10, "Account number cannot exceed 10 digits"),
-  localBankBranch: yup.string().required("Bank branch is required"),
-  localAccountOpeningDate: yup.date()
+  bankBranch: yup.string().required("Bank branch is required"),
+  accountOpeningDate: yup.date()
     .typeError("Please enter a valid date")
     .required("Account opening date is required")
     .max(new Date(), "Account opening date cannot be in the future"),
-  foreignBankName: yup.string().nullable(),
-  foreignAccountNumber: yup.string().nullable(),
-  foreignBankBranch: yup.string().nullable(),
-  foreignAccountOpeningDate: yup.date().nullable().typeError("Please enter a valid date").transform((value, originalValue) => {
+  bankName2: yup.string().nullable(),
+  accountNumber2: yup.string().nullable(),
+  bankBranch2: yup.string().nullable(),
+  accountOpeningDate2: yup.date().nullable().typeError("Please enter a valid date").transform((value, originalValue) => {
     // Handle empty string case for optional date field
     if (originalValue === '' || originalValue === null || originalValue === undefined) {
       return null;
@@ -97,7 +97,7 @@ const individualKYCSchema = yup.object().shape({
     return value;
   }).max(new Date(), "Account opening date cannot be in the future"),
   // File validation
-  identificationFile: yup.mixed().required("Identification document is required").test(
+  identification: yup.mixed().required("Identification document is required").test(
     'fileType',
     'Only PNG, JPG, JPEG, or PDF files are allowed',
     (value: any) => {
@@ -129,8 +129,8 @@ const defaultValues = {
   country: '',
   nationality: '',
   residentialAddress: '',
-  GSMNo: '',
-  email: '',
+  GSMno: '',
+  emailAddress: '',
   taxIDNo: '',
   BVN: '',
   identificationType: '',
@@ -143,15 +143,15 @@ const defaultValues = {
   annualIncomeRange: '',
   premiumPaymentSource: '',
   premiumPaymentSourceOther: '',
-  localBankName: '',
-  localAccountNumber: '',
-  localBankBranch: '',
-  localAccountOpeningDate: '',
-  foreignBankName: '',
-  foreignAccountNumber: '',
-  foreignBankBranch: '',
-  foreignAccountOpeningDate: '',
-  identificationFile: null,
+  bankName: '',
+  accountNumber: '',
+  bankBranch: '',
+  accountOpeningDate: '',
+  bankName2: '',
+  accountNumber2: '',
+  bankBranch2: '',
+  accountOpeningDate2: '',
+  identification: null,
   agreeToDataPrivacy: false,
   signature: ''
 };
@@ -478,8 +478,8 @@ const IndividualKYC: React.FC = () => {
             <FormTextarea name="residentialAddress" label="Residential Address" required />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField name="GSMNo" label="Mobile Number" required />
-              <FormField name="email" label="Email" type="email" required />
+              <FormField name="GSMno" label="Mobile Number" required />
+              <FormField name="emailAddress" label="Email" type="email" required />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -544,24 +544,24 @@ const IndividualKYC: React.FC = () => {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Local Account Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField name="localBankName" label="Bank Name" required />
-                <FormField name="localAccountNumber" label="Account Number" required />
+                <FormField name="bankName" label="Bank Name" required />
+                <FormField name="accountNumber" label="Account Number" required />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField name="localBankBranch" label="Bank Branch" required />
-                <FormDatePicker name="localAccountOpeningDate" label="Account Opening Date" required />
+                <FormField name="bankBranch" label="Bank Branch" required />
+                <FormDatePicker name="accountOpeningDate" label="Account Opening Date" required />
               </div>
             </div>
 
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Foreign Account Details (Optional)</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField name="foreignBankName" label="Bank Name" />
-                <FormField name="foreignAccountNumber" label="Account Number" />
+                <FormField name="bankName2" label="Bank Name" />
+                <FormField name="accountNumber2" label="Account Number" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField name="foreignBankBranch" label="Bank Branch" />
-                <FormDatePicker name="foreignAccountOpeningDate" label="Account Opening Date" />
+                <FormField name="bankBranch2" label="Bank Branch" />
+                <FormDatePicker name="accountOpeningDate2" label="Account Opening Date" />
               </div>
             </div>
           </div>
@@ -583,20 +583,20 @@ const IndividualKYC: React.FC = () => {
                     ...prev,
                     identification: file
                   }));
-                  formMethods.setValue('identificationFile', file);
-                  formMethods.trigger('identificationFile');
+                  formMethods.setValue('identification', file);
+                  formMethods.trigger('identification');
                 }}
                 onFileRemove={() => {
                   setUploadedFiles(prev => ({
                     ...prev,
                     identification: null
                   }));
-                  formMethods.setValue('identificationFile', null);
-                  formMethods.trigger('identificationFile');
+                  formMethods.setValue('identification', null);
+                  formMethods.trigger('identification');
                 }}
                 currentFile={uploadedFiles.identification}
                 maxSize={3}
-                error={formMethods.formState.errors.identificationFile?.message?.toString()}
+                error={formMethods.formState.errors.identification?.message?.toString()}
               />
               {uploadedFiles.identification && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
@@ -694,9 +694,9 @@ const IndividualKYC: React.FC = () => {
 
   // Define field mappings for each step
   const stepFieldMappings = {
-    0: ['officeLocation', 'title', 'firstName', 'middleName', 'lastName', 'contactAddress', 'occupation', 'gender', 'dateOfBirth', 'mothersMaidenName', 'city', 'state', 'country', 'nationality', 'residentialAddress', 'GSMNo', 'email', 'BVN', 'identificationType', 'idNumber', 'issuingCountry', 'issuedDate', 'sourceOfIncome', 'sourceOfIncomeOther', 'annualIncomeRange', 'premiumPaymentSource', 'premiumPaymentSourceOther'],
-    1: ['localBankName', 'localAccountNumber', 'localBankBranch', 'localAccountOpeningDate'],
-    2: ['identificationFile'], // File upload validation
+    0: ['officeLocation', 'title', 'firstName', 'middleName', 'lastName', 'contactAddress', 'occupation', 'gender', 'dateOfBirth', 'mothersMaidenName', 'city', 'state', 'country', 'nationality', 'residentialAddress', 'GSMno', 'emailAddress', 'BVN', 'identificationType', 'idNumber', 'issuingCountry', 'issuedDate', 'sourceOfIncome', 'sourceOfIncomeOther', 'annualIncomeRange', 'premiumPaymentSource', 'premiumPaymentSourceOther'],
+    1: ['bankName', 'accountNumber', 'bankBranch', 'accountOpeningDate'],
+    2: ['identification'], // File upload validation
     3: ['agreeToDataPrivacy', 'signature']
   };
 
