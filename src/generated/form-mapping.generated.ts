@@ -2,45 +2,60 @@
 
 export const FORM_MAPPINGS = {
   'agents-c-d-d': {
-    "title": "Agents C D D",
+    "title": "Agents CDD",
     "sections": [
       {
-        "title": "General Information",
+        "title": "Personal Info",
         "fields": [
           { "key": "firstName", "label": "First Name", "type": "text", "editable": true },
           { "key": "middleName", "label": "Middle Name", "type": "text", "editable": true },
           { "key": "lastName", "label": "Last Name", "type": "text", "editable": true },
-          { "key": "residentialAddress", "label": "Residential Address", "type": "textarea", "editable": true },
-          { "key": "position", "label": "Position", "type": "text", "editable": true },
-          { "key": "placeOfBirth", "label": "Place Of Birth", "type": "text", "editable": true },
-          { "key": "otherSourceOfIncomeOther", "label": "Other Source Of Income Other", "type": "text", "editable": true },
+          { "key": "residentialAddress", "label": "Residential Address", "type": "text", "editable": true },
+          { "key": "gender", "label": "Gender", "type": "select", "editable": true },
+          { "key": "position", "label": "Position/Role", "type": "text", "editable": true },
+          { "key": "dateOfBirth", "label": "Date of Birth", "type": "date", "editable": true },
+          { "key": "placeOfBirth", "label": "Place of Birth", "type": "text", "editable": true },
+          { "key": "sourceOfIncome", "label": "Other Source of Income", "type": "select", "editable": true },
           { "key": "nationality", "label": "Nationality", "type": "text", "editable": true },
-          { "key": "phoneNumber", "label": "Phone Number", "type": "text", "editable": true },
-          { "key": "bvn", "label": "Bvn", "type": "text", "editable": true },
-          { "key": "taxIdNumber", "label": "Tax Id Number", "type": "text", "editable": true },
+          { "key": "GSMno", "label": "Phone Number", "type": "number", "editable": true },
+          { "key": "BVNNumber", "label": "BVN", "type": "number", "editable": true },
+          { "key": "taxIDNumber", "label": "Tax ID Number", "type": "text", "editable": true },
           { "key": "occupation", "label": "Occupation", "type": "text", "editable": true },
-          { "key": "email", "label": "Email", "type": "email", "editable": true },
-          { "key": "identificationNumber", "label": "Identification Number", "type": "text", "editable": true },
-          { "key": "issuingBody", "label": "Issuing Body", "type": "text", "editable": true },
-          { "key": "agentName", "label": "Agent Name", "type": "text", "editable": true },
-          { "key": "naicomLicenseNumber", "label": "Naicom License Number", "type": "text", "editable": true },
-          { "key": "agentsOfficeAddress", "label": "Agents Office Address", "type": "textarea", "editable": true },
-          { "key": "emailAddress", "label": "Email Address", "type": "email", "editable": true },
-          { "key": "website", "label": "Website", "type": "url", "editable": true },
-          { "key": "mobileNumber", "label": "Mobile Number", "type": "text", "editable": true },
-          { "key": "taxIdentificationNumber", "label": "Tax Identification Number", "type": "text", "editable": true },
-          { "key": "arianMembershipNumber", "label": "Arian Membership Number", "type": "text", "editable": true },
-          { "key": "listOfAgentsApprovedPrincipals", "label": "List Of Agents Approved Principals", "type": "textarea", "editable": true },
-          { "key": "localAccountNumber", "label": "Local Account Number", "type": "text", "editable": true },
-          { "key": "localBankName", "label": "Local Bank Name", "type": "text", "editable": true },
-          { "key": "localBankBranch", "label": "Local Bank Branch", "type": "text", "editable": true },
-          { "key": "foreignAccountNumber", "label": "Foreign Account Number", "type": "text", "editable": true },
-          { "key": "foreignBankName", "label": "Foreign Bank Name", "type": "text", "editable": true },
-          { "key": "foreignBankBranch", "label": "Foreign Bank Branch", "type": "text", "editable": true },
-          { "key": "signature", "label": "Signature", "type": "text", "editable": true },
-          { "key": "identification", "label": "Identification", "type": "file", "editable": true },
-          { "key": "certificate", "label": "Certificate", "type": "file", "editable": true },
-          { "key": "naicomLicense", "label": "Naicom License", "type": "file", "editable": true }
+          { "key": "emailAddress", "label": "Email", "type": "email", "editable": true },
+          { "key": "idType", "label": "Valid means of ID", "type": "select", "editable": true },
+          { "key": "idNumber", "label": "Identification Number", "type": "text", "editable": true },
+          { "key": "issuedDate", "label": "Issued Date", "type": "date", "editable": true },
+          { "key": "expiryDate", "label": "Expiry Date", "type": "date", "editable": true },
+          { "key": "issuingBody", "label": "Issuing Body", "type": "text", "editable": true }
+        ]
+      },
+      {
+        "title": "Additional Info",
+        "fields": [
+          { "key": "agentsName", "label": "Agent Name", "type": "text", "editable": true },
+          { "key": "agentsAddress", "label": "Agents Office Address", "type": "text", "editable": true },
+          { "key": "naicomNo", "label": "Naicom Lisence Number (RIA)", "type": "text", "editable": true },
+          { "key": "lisenceIssuedDate", "label": "Lisence Issued Date", "type": "date", "editable": true },
+          { "key": "lisenceExpiryDate", "label": "Lisence Expiry Date", "type": "date", "editable": true },
+          { "key": "agentsEmail", "label": "Email Address", "type": "email", "editable": true },
+          { "key": "website", "label": "Website", "type": "text", "editable": true },
+          { "key": "mobileNo", "label": "Mobile Number", "type": "number", "editable": true },
+          { "key": "taxIDNo", "label": "Tax Identification Number", "type": "text", "editable": true },
+          { "key": "arian", "label": "ARIAN Membership Number", "type": "text", "editable": true },
+          { "key": "listOfAgents", "label": "List of Agents Approved Principals (Insurers)", "type": "text", "editable": true }
+        ]
+      },
+      {
+        "title": "Financial Info",
+        "fields": [
+          { "key": "accountNumber", "label": "Account Number", "type": "number", "editable": true },
+          { "key": "bankName", "label": "Bank Name", "type": "text", "editable": true },
+          { "key": "bankBranch", "label": "Bank Branch", "type": "text", "editable": true },
+          { "key": "accountOpeningDate", "label": "Account Opening Date", "type": "date", "editable": true },
+          { "key": "accountNumber2", "label": "Account Number", "type": "number", "editable": true },
+          { "key": "bankName2", "label": "Bank Name", "type": "text", "editable": true },
+          { "key": "bankBranch2", "label": "Bank Branch", "type": "text", "editable": true },
+          { "key": "accountOpeningDate2", "label": "Account Opening Date", "type": "date", "editable": true }
         ]
       }
     ]
