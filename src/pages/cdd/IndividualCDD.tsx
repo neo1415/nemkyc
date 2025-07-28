@@ -204,7 +204,7 @@ const individualCDDSchema = yup.object().shape({
   employersName: yup.string(),
   employersTelephoneNumber: yup.string(),
   employersAddress: yup.string(),
-  taxIdentificationNumber: yup.string(),
+  taxidentificationNumber: yup.string(),
   BVNNumber: yup.string()
     .required("BVN is required")
     .matches(/^\d+$/, "BVN must contain only numbers")
@@ -268,7 +268,7 @@ const defaultValues = {
   employersName: '',
   employersTelephoneNumber: '',
   employersAddress: '',
-  taxIdentificationNumber: '',
+  taxidentificationNumber: '',
   BVNNumber: '',
   identificationType: '',
   identificationNumber: '',
@@ -377,7 +377,7 @@ const IndividualCDD: React.FC = () => {
   // Step field mappings for validation
   const stepFieldMappings = {
     0: ['title', 'firstName', 'lastName', 'contactAddress', 'gender', 'country', 'dateOfBirth', 'placeOfBirth', 'emailAddress', 'GSMno', 'residentialAddress', 'nationality', 'occupation', 'position'],
-    1: ['businessType', 'businessTypeOther', 'employersEmail', 'employersName', 'employersTelephoneNumber', 'employersAddress', 'taxIdentificationNumber', 'BVNNumber', 'identificationType', 'identificationNumber', 'issuingCountry', 'issuedDate', 'expiryDate'],
+    1: ['businessType', 'businessTypeOther', 'employersEmail', 'employersName', 'employersTelephoneNumber', 'employersAddress', 'taxidentificationNumber', 'BVNNumber', 'identificationType', 'identificationNumber', 'issuingCountry', 'issuedDate', 'expiryDate'],
     2: ['annualIncomeRange', 'premiumPaymentSource', 'premiumPaymentSourceOther', 'identification'],
     3: ['agreeToDataPrivacy', 'signature']
   };
@@ -462,7 +462,7 @@ const IndividualCDD: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField name="employersTelephoneNumber" label="Employer's Telephone Number" />
-            <FormField name="taxIdentificationNumber" label="Tax Identification Number" />
+            <FormField name="taxidentificationNumber" label="Tax Identification Number" />
           </div>
           
           <FormTextarea name="employersAddress" label="Employer's Address" />
