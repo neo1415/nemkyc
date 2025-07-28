@@ -74,7 +74,7 @@ This application is a highly professional, production-grade insurance form suite
 
 
 
-## 📌 SUMMARY MODAL
+##📌 SUMMARY MODAL
 
 ✅ After the user signs/date-stamps and checks declaration:  
 - Show a **summary-dialog** with all entries  
