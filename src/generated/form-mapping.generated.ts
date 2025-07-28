@@ -107,25 +107,47 @@ export const FORM_MAPPINGS = {
     "title": "Individual C D D",
     "sections": [
       {
-        "title": "General Information",
+        "title": "Personal Info",
         "fields": [
+          { "key": "title", "label": "Title", "type": "text", "editable": true },
           { "key": "firstName", "label": "First Name", "type": "text", "editable": true },
-          { "key": "middleName", "label": "Middle Name", "type": "text", "editable": true },
           { "key": "lastName", "label": "Last Name", "type": "text", "editable": true },
-          { "key": "residentialAddress", "label": "Residential Address", "type": "textarea", "editable": true },
-          { "key": "position", "label": "Position", "type": "text", "editable": true },
-          { "key": "placeOfBirth", "label": "Place Of Birth", "type": "text", "editable": true },
-          { "key": "otherSourceOfIncomeOther", "label": "Other Source Of Income Other", "type": "text", "editable": true },
+          { "key": "contactAddress", "label": "Contact Address", "type": "text", "editable": true },
+          { "key": "gender", "label": "Gender", "type": "select", "editable": true },
+          { "key": "country", "label": "Residence Country", "type": "text", "editable": true },
+          { "key": "dateOfBirth", "label": "Date Of Birth", "type": "date", "editable": true },
+          { "key": "placeOfBirth", "label": "Place of Birth", "type": "text", "editable": true },
+          { "key": "emailAddress", "label": "Email", "type": "email", "editable": true },
+          { "key": "GSMno", "label": "Mobile Number", "type": "number", "editable": true },
+          { "key": "residentialAddress", "label": "Residential Address", "type": "text", "editable": true },
           { "key": "nationality", "label": "Nationality", "type": "text", "editable": true },
-          { "key": "phoneNumber", "label": "Phone Number", "type": "text", "editable": true },
-          { "key": "bvn", "label": "Bvn", "type": "text", "editable": true },
-          { "key": "taxIdNumber", "label": "Tax Id Number", "type": "text", "editable": true },
           { "key": "occupation", "label": "Occupation", "type": "text", "editable": true },
-          { "key": "email", "label": "Email", "type": "email", "editable": true },
+          { "key": "position", "label": "Position", "type": "text", "editable": true }
+        ]
+      },
+      {
+        "title": "Additional Info",
+        "fields": [
+          { "key": "businessType", "label": "Business Type", "type": "select", "editable": true },
+          { "key": "employersEmail", "label": "Employer's Email", "type": "email", "editable": true },
+          { "key": "employersName", "label": "Employer's Name", "type": "text", "editable": true },
+          { "key": "employersTelephoneNumber", "label": "Employer's Telephone Number", "type": "number", "editable": true },
+          { "key": "employersAddress", "label": "Employer's Address", "type": "text", "editable": true },
+          { "key": "taxidentificationNumber", "label": "Tax Identification Number", "type": "text", "editable": true },
+          { "key": "BVNNumber", "label": "BVN", "type": "number", "editable": true },
+          { "key": "identificationType", "label": "ID Type", "type": "select", "editable": true },
           { "key": "identificationNumber", "label": "Identification Number", "type": "text", "editable": true },
-          { "key": "issuingBody", "label": "Issuing Body", "type": "text", "editable": true },
-          { "key": "identification", "label": "Identification", "type": "file", "editable": true },
-          { "key": "passportPhotograph", "label": "Passport Photograph", "type": "file", "editable": true }
+          { "key": "issuingCountry", "label": "Issuing Country", "type": "text", "editable": true },
+          { "key": "issuedDate", "label": "Issued Date", "type": "date", "editable": true },
+          { "key": "expiryDate", "label": "Expiry Date", "type": "date", "editable": true }
+        ]
+      },
+      {
+        "title": "Account Details & Uploads",
+        "fields": [
+          { "key": "annualIncomeRange", "label": "Annual Income Range", "type": "select", "editable": true },
+          { "key": "premiumPaymentSource", "label": "Premium Payment Source", "type": "select", "editable": true },
+          { "key": "identification", "label": "Upload Means of Identification", "type": "file", "editable": true }
         ]
       }
     ]
