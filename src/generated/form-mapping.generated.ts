@@ -61,31 +61,78 @@ export const FORM_MAPPINGS = {
     ]
   },
   'brokers-c-d-d': {
-    "title": "Brokers C D D",
+    "title": "Brokers CDD",
     "sections": [
       {
-        "title": "General Information",
+        "title": "Company Info",
         "fields": [
           { "key": "companyName", "label": "Company Name", "type": "text", "editable": true },
-          { "key": "registeredAddress", "label": "Registered Address", "type": "textarea", "editable": true },
+          { "key": "companyAddress", "label": "Company Address", "type": "text", "editable": true },
           { "key": "city", "label": "City", "type": "text", "editable": true },
           { "key": "state", "label": "State", "type": "text", "editable": true },
           { "key": "country", "label": "Country", "type": "text", "editable": true },
-          { "key": "email", "label": "Email", "type": "email", "editable": true },
-          { "key": "website", "label": "Website", "type": "url", "editable": true },
-          { "key": "contactPersonName", "label": "Contact Person Name", "type": "text", "editable": true },
-          { "key": "contactPersonNumber", "label": "Contact Person Number", "type": "text", "editable": true },
-          { "key": "taxId", "label": "Tax Id", "type": "text", "editable": true },
-          { "key": "vatRegistrationNumber", "label": "Vat Registration Number", "type": "text", "editable": true },
-          { "key": "incorporationNumber", "label": "Incorporation Number", "type": "text", "editable": true },
+          { "key": "incorporationNumber", "label": "Incorporation/RC Number", "type": "text", "editable": true },
+          { "key": "registrationNumber", "label": "Registration Number", "type": "text", "editable": true },
           { "key": "incorporationState", "label": "Incorporation State", "type": "text", "editable": true },
-          { "key": "businessNature", "label": "Business Nature", "type": "textarea", "editable": true },
-          { "key": "bvn", "label": "Bvn", "type": "text", "editable": true },
-          { "key": "directors", "label": "Directors", "type": "array", "editable": true },
-          { "key": "incorporationCertificate", "label": "Incorporation Certificate", "type": "file", "editable": true },
-          { "key": "businessLicense", "label": "Business License", "type": "file", "editable": true },
-          { "key": "taxClearanceCertificate", "label": "Tax Clearance Certificate", "type": "file", "editable": true },
-          { "key": "naicomLicense", "label": "Naicom License", "type": "file", "editable": true }
+          { "key": "companyLegalForm", "label": "Company Type", "type": "select", "editable": true },
+          { "key": "dateOfIncorporationRegistration", "label": "Date Of Incorporation/Registration", "type": "date", "editable": true },
+          { "key": "emailAddress", "label": "Email Address", "type": "email", "editable": true },
+          { "key": "website", "label": "Website", "type": "text", "editable": true },
+          { "key": "natureOfBusiness", "label": "Business Type/Occupation", "type": "text", "editable": true },
+          { "key": "taxIdentificationNumber", "label": "Tax Number", "type": "text", "editable": true },
+          { "key": "telephoneNumber", "label": "Telephone Number", "type": "number", "editable": true }
+        ]
+      },
+      {
+        "title": "Directors Info",
+        "fields": [
+          { "key": "title", "label": "Title", "type": "text", "editable": true },
+          { "key": "gender", "label": "Gender", "type": "select", "editable": true },
+          { "key": "firstName", "label": "First Name", "type": "text", "editable": true },
+          { "key": "middleName", "label": "Middle Name", "type": "text", "editable": true },
+          { "key": "lastName", "label": "Last Name", "type": "text", "editable": true },
+          { "key": "dob", "label": "Date of Birth", "type": "date", "editable": true },
+          { "key": "placeOfBirth", "label": "Place of Birth", "type": "text", "editable": true },
+          { "key": "nationality", "label": "Nationality", "type": "text", "editable": true },
+          { "key": "residenceCountry", "label": "Residence Country", "type": "text", "editable": true },
+          { "key": "occupation", "label": "Occupation", "type": "text", "editable": true },
+          { "key": "BVNNumber", "label": "BVN", "type": "number", "editable": true },
+          { "key": "employersName", "label": "Employer's Name", "type": "text", "editable": true },
+          { "key": "phoneNumber", "label": "Phone Number", "type": "number", "editable": true },
+          { "key": "address", "label": "Address", "type": "text", "editable": true },
+          { "key": "email", "label": "Email", "type": "email", "editable": true },
+          { "key": "taxIDNumber", "label": "Tax ID Number", "type": "text", "editable": true },
+          { "key": "intPassNo", "label": "International Passport Number", "type": "text", "editable": true },
+          { "key": "passIssuedCountry", "label": "Passport Issued Country", "type": "text", "editable": true },
+          { "key": "idType", "label": "ID Type", "type": "select", "editable": true },
+          { "key": "idNumber", "label": "Identification Number", "type": "text", "editable": true },
+          { "key": "issuedBy", "label": "Issued By (Issuing Country)", "type": "text", "editable": true },
+          { "key": "issuedDate", "label": "Issued Date", "type": "date", "editable": true },
+          { "key": "expiryDate", "label": "Expiry Date", "type": "date", "editable": true },
+          { "key": "sourceOfIncome", "label": "Source of Income", "type": "select", "editable": true }
+        ]
+      },
+      {
+        "title": "Account Details",
+        "fields": [
+          { "key": "localBankName", "label": "Local Bank Name", "type": "text", "editable": true },
+          { "key": "bankBranch", "label": "Bank Branch", "type": "text", "editable": true },
+          { "key": "currentAccountNumber", "label": "Current Account Number", "type": "number", "editable": true },
+          { "key": "accountOpeningDate", "label": "Account Opening Date", "type": "date", "editable": true },
+          { "key": "domAccountNumber2", "label": "Domicilliary Account Number", "type": "number", "editable": true },
+          { "key": "foreignBankName2", "label": "Foreign Bank Name", "type": "text", "editable": true },
+          { "key": "bankBranchName2", "label": "Bank Branch Name", "type": "text", "editable": true },
+          { "key": "currency", "label": "Currency", "type": "text", "editable": true },
+          { "key": "accountOpeningDate2", "label": "Account Opening Date", "type": "date", "editable": true }
+        ]
+      },
+      {
+        "title": "Uploads",
+        "fields": [
+          { "key": "Incorporation", "label": "Certificate of Incorporation", "type": "file", "editable": true },
+          { "key": "identification", "label": "Identification Means for Director 1", "type": "file", "editable": true },
+          { "key": "identification2", "label": "Identification Means for Director 2", "type": "file", "editable": true },
+          { "key": "NAICOMForm", "label": "NAICOM License Certificate", "type": "file", "editable": true }
         ]
       }
     ]
