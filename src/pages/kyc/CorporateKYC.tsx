@@ -52,10 +52,10 @@ const corporateKYCSchema = yup.object().shape({
     .required("Contact person mobile is required")
     .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
     .max(15, "Phone number cannot exceed 15 characters"),
-  taxIdNo: yup.string()
+  taxIDNo: yup.string()
     .matches(/^\d*$/, "Tax ID must contain only numbers")
     .max(10, "Tax ID cannot exceed 10 digits"),
-  email: yup.string()
+  emailAddress: yup.string()
     .required("Email is required")
     .email("Please enter a valid email")
     .typeError("Please enter a valid email"),
@@ -103,7 +103,7 @@ const corporateKYCSchema = yup.object().shape({
       .matches(/^[\d\s+\-()]*$/, "Invalid phone number format")
       .max(15, "Phone number cannot exceed 15 characters"),
     residentialAddress: yup.string().required("Residential address is required"),
-    taxIdNumber: yup.string()
+    taxIDNumber: yup.string()
       .matches(/^\d*$/, "Tax ID must contain only numbers")
       .max(10, "Tax ID cannot exceed 10 digits"),
     idType: yup.string().required("ID type is required"),
@@ -136,7 +136,7 @@ const corporateKYCSchema = yup.object().shape({
 
   // Verification
   companyNameVerificationDoc: yup.string().required("Verification document type is required"),
-  verificationDocument: yup.mixed().required("Verification document upload is required"),
+  verificationDoc: yup.mixed().required("Verification document upload is required"),
 
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
@@ -155,8 +155,8 @@ const defaultValues = {
   dateOfIncorporationRegistration: undefined,
   BVNNumber: '',
   contactPersonNo: '',
-  taxIdNo: '',
-  email: '',
+  taxIDNo: '',
+  emailAddress: '',
   natureOfBusiness: '',
   estimatedTurnover: '',
   premiumPaymentSource: '',
@@ -176,7 +176,7 @@ const defaultValues = {
     employersName: '',
     employersPhoneNumber: '',
     residentialAddress: '',
-    taxIdNumber: '',
+    taxIDNumber: '',
     idType: '',
     idNumber: '',
     issuingBody: '',
@@ -432,11 +432,11 @@ const CorporateKYC: React.FC = () => {
     0: [
       'branchOffice', 'insured', 'officeAddress', 'ownershipOfCompany', 'contactPerson', 
       'website', 'incorporationNumber', 'incorporationState', 'dateOfIncorporationRegistration',
-      'BVNNumber', 'contactPersonNo', 'taxIdNo', 'email', 'natureOfBusiness', 
+      'BVNNumber', 'contactPersonNo', 'taxIDNo', 'emailAddress', 'natureOfBusiness', 
       'estimatedTurnover', 'premiumPaymentSource', 'premiumPaymentSourceOther'
     ],
     1: ['directors'],
-    2: ['companyNameVerificationDoc', 'verificationDocument'],
+    2: ['companyNameVerificationDoc', 'verificationDoc'],
     3: ['agreeToDataPrivacy', 'signature']
   };
 
@@ -526,13 +526,13 @@ const CorporateKYC: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
-              name="taxIdNo"
+              name="taxIDNo"
               label="Tax Identification Number"
               required={false}
               maxLength={10}
             />
             <FormField
-              name="email"
+              name="emailAddress"
               label="Email Address"
               required={true}
               type="email"
@@ -678,12 +678,12 @@ const CorporateKYC: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <FormField
                   name={`directors.${index}.employersName`}
-                  label="Employer Name"
+                  label="Employers Name"
                   required={false}
                 />
                 <FormField
                   name={`directors.${index}.employersPhoneNumber`}
-                  label="Employer Phone"
+                  label="Employers Phone Number"
                   required={false}
                   maxLength={15}
                 />
@@ -697,7 +697,7 @@ const CorporateKYC: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <FormField
-                  name={`directors.${index}.taxIdNumber`}
+                  name={`directors.${index}.taxIDNumber`}
                   label="Tax ID Number"
                   required={false}
                   maxLength={10}
@@ -785,7 +785,7 @@ const CorporateKYC: React.FC = () => {
               employersName: '',
               employersPhoneNumber: '',
               residentialAddress: '',
-              taxIdNumber: '',
+              taxIDNumber: '',
               idType: '',
               idNumber: '',
               issuingBody: '',
@@ -827,23 +827,23 @@ const CorporateKYC: React.FC = () => {
               onFileSelect={(file) => {
                 setUploadedFiles(prev => ({
                   ...prev,
-                  verificationDocument: file
+                  verificationDoc: file
                 }));
-                formMethods.setValue('verificationDocument', file);
-                if (formMethods.formState.errors.verificationDocument) {
-                  formMethods.clearErrors('verificationDocument');
+                formMethods.setValue('verificationDoc', file);
+                if (formMethods.formState.errors.verificationDoc) {
+                  formMethods.clearErrors('verificationDoc');
                 }
               }}
               maxSize={3 * 1024 * 1024}
             />
-            {uploadedFiles.verificationDocument && (
+            {uploadedFiles.verificationDoc && (
               <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
                 <Check className="h-4 w-4" />
-                {uploadedFiles.verificationDocument.name}
+                {uploadedFiles.verificationDoc.name}
               </div>
             )}
-            {formMethods.formState.errors.verificationDocument && (
-              <p className="text-sm text-destructive">{formMethods.formState.errors.verificationDocument.message?.toString()}</p>
+            {formMethods.formState.errors.verificationDoc && (
+              <p className="text-sm text-destructive">{formMethods.formState.errors.verificationDoc.message?.toString()}</p>
             )}
           </div>
         </div>
