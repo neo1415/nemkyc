@@ -43,29 +43,29 @@ const agentsCDDSchema = yup.object().shape({
     })
     .typeError('Please select a valid date'),
   placeOfBirth: yup.string().required("Place of birth is required"),
-  otherSourceOfIncome: yup.string().required("Other source of income is required"),
-  otherSourceOfIncomeOther: yup.string().when('otherSourceOfIncome', {
+  sourceOfIncome: yup.string().required("Other source of income is required"),
+  sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
     is: 'other',
     then: (schema) => schema.required('Please specify income source'),
     otherwise: (schema) => schema.notRequired()
   }),
   nationality: yup.string().required("Nationality is required"),
-  phoneNumber: yup.string()
+  GSMno: yup.string()
     .required("Phone number is required")
     .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
     .max(15, "Phone number cannot exceed 15 characters"),
-  bvn: yup.string()
+  BVNNumber: yup.string()
     .required("BVN is required")
     .matches(/^\d+$/, "BVN must contain only numbers")
     .length(11, "BVN must be exactly 11 digits"),
-  taxIdNumber: yup.string(),
+  taxIDNumber: yup.string(),
   occupation: yup.string().required("Occupation is required"),
-  email: yup.string()
+  emailAddress: yup.string()
     .required("Email is required")
     .email("Please enter a valid email")
     .typeError("Please enter a valid email"),
-  validMeansOfId: yup.string().required("Valid means of ID is required"),
-  identificationNumber: yup.string().required("Identification number is required"),
+  idType: yup.string().required("Valid means of ID is required"),
+  idNumber: yup.string().required("Identification number is required"),
   issuedDate: yup.date()
     .required("Issued date is required")
     .test('not-future', 'Date cannot be in the future', function(value) {
@@ -86,10 +86,10 @@ const agentsCDDSchema = yup.object().shape({
   issuingBody: yup.string().required("Issuing body is required"),
   
   // Additional Info
-  agentName: yup.string().required("Agent name is required"),
-  agentsOfficeAddress: yup.string().required("Agents office address is required"),
-  naicomLicenseNumber: yup.string().required("NAICOM license number is required"),
-  licenseIssuedDate: yup.date()
+  agentsName: yup.string().required("Agent name is required"),
+  agentsAddress: yup.string().required("Agents office address is required"),
+  naicomNo: yup.string().required("NAICOM license number is required"),
+  lisenceIssuedDate: yup.date()
     .required("License issued date is required")
     .test('not-future', 'Date cannot be in the future', function(value) {
       if (!value) return false;
@@ -98,7 +98,7 @@ const agentsCDDSchema = yup.object().shape({
       return value <= today;
     })
     .typeError('Please select a valid date'),
-  licenseExpiryDate: yup.date()
+  lisenceExpiryDate: yup.date()
     .required("License expiry date is required")
     .test('not-past', 'Expiry date cannot be in the past', function(value) {
       if (!value) return false;
@@ -107,27 +107,27 @@ const agentsCDDSchema = yup.object().shape({
       return value > today;
     })
     .typeError('Please select a valid date'),
-  emailAddress: yup.string()
+  agentsEmail: yup.string()
     .required("Email address is required")
     .email("Please enter a valid email")
     .typeError("Please enter a valid email"),
   website: yup.string().required("Website is required"),
-  mobileNumber: yup.string()
+  mobileNo: yup.string()
     .required("Mobile number is required")
     .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
     .max(15, "Phone number cannot exceed 15 characters"),
-  taxIdentificationNumber: yup.string(),
-  arianMembershipNumber: yup.string().required("ARIAN membership number is required"),
-  listOfAgentsApprovedPrincipals: yup.string().required("List of agents approved principals is required"),
+  taxIDNo: yup.string(),
+  arian: yup.string().required("ARIAN membership number is required"),
+  listOfAgents: yup.string().required("List of agents approved principals is required"),
   
   // Financial Info
-  localAccountNumber: yup.string()
+  accountNumber: yup.string()
     .required("Account number is required")
     .matches(/^\d+$/, "Account number must contain only numbers")
     .max(10, "Account number cannot exceed 10 digits"),
-  localBankName: yup.string().required("Bank name is required"),
-  localBankBranch: yup.string().required("Bank branch is required"),
-  localAccountOpeningDate: yup.date()
+  bankName: yup.string().required("Bank name is required"),
+  bankBranch: yup.string().required("Bank branch is required"),
+  accountOpeningDate: yup.date()
     .required("Account opening date is required")
     .test('not-future', 'Date cannot be in the future', function(value) {
       if (!value) return false;
@@ -136,10 +136,10 @@ const agentsCDDSchema = yup.object().shape({
       return value <= today;
     })
     .typeError('Please select a valid date'),
-  foreignAccountNumber: yup.string(),
-  foreignBankName: yup.string(),
-  foreignBankBranch: yup.string(),
-  foreignAccountOpeningDate: yup.date()
+  accountNumber2: yup.string(),
+  bankName2: yup.string(),
+  bankBranch2: yup.string(),
+  accountOpeningDate2: yup.date()
     .test('not-future', 'Date cannot be in the future', function(value) {
       if (!value) return true; // Optional field
       const today = new Date();
@@ -166,38 +166,38 @@ const defaultValues = {
   position: '',
   dateOfBirth: undefined,
   placeOfBirth: '',
-  otherSourceOfIncome: '',
-  otherSourceOfIncomeOther: '',
+  sourceOfIncome: '',
+  sourceOfIncomeOther: '',
   nationality: '',
-  phoneNumber: '',
-  bvn: '',
-  taxIdNumber: '',
+  GSMno: '',
+  BVNNumber: '',
+  taxIDNumber: '',
   occupation: '',
-  email: '',
-  validMeansOfId: '',
-  identificationNumber: '',
+  emailAddress: '',
+  idType: '',
+  idNumber: '',
   issuedDate: undefined,
   expiryDate: undefined,
   issuingBody: '',
-  agentName: '',
-  agentsOfficeAddress: '',
-  naicomLicenseNumber: '',
-  licenseIssuedDate: undefined,
-  licenseExpiryDate: undefined,
-  emailAddress: '',
+  agentsName: '',
+  agentsAddress: '',
+  naicomNo: '',
+  lisenceIssuedDate: undefined,
+  lisenceExpiryDate: undefined,
+  agentsEmail: '',
   website: '',
-  mobileNumber: '',
-  taxIdentificationNumber: '',
-  arianMembershipNumber: '',
-  listOfAgentsApprovedPrincipals: '',
-  localAccountNumber: '',
-  localBankName: '',
-  localBankBranch: '',
-  localAccountOpeningDate: undefined,
-  foreignAccountNumber: '',
-  foreignBankName: '',
-  foreignBankBranch: '',
-  foreignAccountOpeningDate: undefined,
+  mobileNo: '',
+  taxIDNo: '',
+  arian: '',
+  listOfAgents: '',
+  accountNumber: '',
+  bankName: '',
+  bankBranch: '',
+  accountOpeningDate: undefined,
+  accountNumber2: '',
+  bankName2: '',
+  bankBranch2: '',
+  accountOpeningDate2: undefined,
   agentId: '',
   naicomCertificate: '',
   agreeToDataPrivacy: false,
@@ -404,9 +404,9 @@ const AgentsCDD: React.FC = () => {
 
   // Step field mappings for validation
   const stepFieldMappings = {
-    0: ['firstName', 'lastName', 'residentialAddress', 'gender', 'position', 'dateOfBirth', 'placeOfBirth', 'otherSourceOfIncome', 'nationality', 'phoneNumber', 'bvn', 'occupation', 'email', 'validMeansOfId', 'identificationNumber', 'issuedDate', 'issuingBody'],
-    1: ['agentName', 'agentsOfficeAddress', 'naicomLicenseNumber', 'licenseIssuedDate', 'licenseExpiryDate', 'emailAddress', 'website', 'mobileNumber', 'arianMembershipNumber', 'listOfAgentsApprovedPrincipals'],
-    2: ['localAccountNumber', 'localBankName', 'localBankBranch', 'localAccountOpeningDate', 'agentId', 'naicomCertificate'],
+    0: ['firstName', 'lastName', 'residentialAddress', 'gender', 'position', 'dateOfBirth', 'placeOfBirth', 'sourceOfIncome', 'nationality', 'GSMno', 'BVNNumber', 'occupation', 'emailAddress', 'idType', 'idNumber', 'issuedDate', 'issuingBody'],
+    1: ['agentsName', 'agentsAddress', 'naicomNo', 'lisenceIssuedDate', 'lisenceExpiryDate', 'agentsEmail', 'website', 'mobileNo', 'arian', 'listOfAgents'],
+    2: ['accountNumber', 'bankName', 'bankBranch', 'accountOpeningDate', 'agentId', 'naicomCertificate'],
     3: ['agreeToDataPrivacy', 'signature']
   };
 
@@ -567,19 +567,19 @@ const AgentsCDD: React.FC = () => {
           </div>
           
           <FormSelect
-            name="otherSourceOfIncome"
+            name="sourceOfIncome"
             label="Other Source of Income"
             required={true}
             options={[
-              { value: 'salary', label: 'Salary or Business Income' },
-              { value: 'investments', label: 'Investments or Dividends' },
-              { value: 'other', label: 'Other (please specify)' }
+              { value: 'salary', label: 'Salary Or Business Income' },
+              { value: 'investments', label: 'Investments Or Dividends' },
+              { value: 'other', label: 'Other(please specify)' }
             ]}
           />
           
-          {watchedValues.otherSourceOfIncome === 'other' && (
+          {watchedValues.sourceOfIncome === 'other' && (
             <FormField
-              name="otherSourceOfIncomeOther"
+              name="sourceOfIncomeOther"
               label="Please specify income source"
               required={true}
             />
@@ -592,7 +592,7 @@ const AgentsCDD: React.FC = () => {
               required={true}
             />
             <FormField
-              name="phoneNumber"
+              name="GSMno"
               label="Phone Number"
               required={true}
               maxLength={15}
@@ -601,13 +601,13 @@ const AgentsCDD: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField
-              name="bvn"
+              name="BVNNumber"
               label="BVN"
               required={true}
               maxLength={11}
             />
             <FormField
-              name="taxIdNumber"
+              name="taxIDNumber"
               label="Tax ID Number"
             />
             <FormField
@@ -618,27 +618,27 @@ const AgentsCDD: React.FC = () => {
           </div>
           
           <FormField
-            name="email"
+            name="emailAddress"
             label="Email"
             type="email"
             required={true}
           />
           
           <FormSelect
-            name="validMeansOfId"
-            label="Valid Means of ID"
+            name="idType"
+            label="Valid means of ID"
             required={true}
             options={[
-              { value: 'passport', label: 'International Passport' },
+              { value: 'passport', label: 'International passport' },
               { value: 'nimc', label: 'NIMC' },
-              { value: 'driversLicense', label: 'Drivers Licence' },
+              { value: 'driversLicense', label: 'Drivers licence' },
               { value: 'votersCard', label: 'Voters Card' }
             ]}
           />
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <FormField
-              name="identificationNumber"
+              name="idNumber"
               label="Identification Number"
               required={true}
             />
@@ -660,31 +660,31 @@ const AgentsCDD: React.FC = () => {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
-              name="agentName"
+              name="agentsName"
               label="Agent Name"
               required={true}
             />
             <FormField
-              name="naicomLicenseNumber"
-              label="NAICOM License Number (RIA)"
+              name="naicomNo"
+              label="Naicom Lisence Number (RIA)"
               required={true}
             />
           </div>
           
           <FormTextarea
-            name="agentsOfficeAddress"
+            name="agentsAddress"
             label="Agents Office Address"
             required={true}
           />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormDatePicker name="licenseIssuedDate" label="License Issued Date" required={true} />
-            <FormDatePicker name="licenseExpiryDate" label="License Expiry Date" required={true} />
+            <FormDatePicker name="lisenceIssuedDate" label="Lisence Issued Date" required={true} />
+            <FormDatePicker name="lisenceExpiryDate" label="Lisence Expiry Date" required={true} />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
-              name="emailAddress"
+              name="agentsEmail"
               label="Email Address"
               type="email"
               required={true}
@@ -698,25 +698,25 @@ const AgentsCDD: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField
-              name="mobileNumber"
+              name="mobileNo"
               label="Mobile Number"
               required={true}
               maxLength={15}
             />
             <FormField
-              name="taxIdentificationNumber"
+              name="taxIDNo"
               label="Tax Identification Number"
             />
             <FormField
-              name="arianMembershipNumber"
+              name="arian"
               label="ARIAN Membership Number"
               required={true}
             />
           </div>
           
           <FormTextarea
-            name="listOfAgentsApprovedPrincipals"
-            label="List of Agents Approved Principals"
+            name="listOfAgents"
+            label="List of Agents Approved Principals (Insurers)"
             required={true}
           />
         </div>
@@ -727,45 +727,45 @@ const AgentsCDD: React.FC = () => {
       title: 'Financial Information',
       component: (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Local Bank Account Details</h3>
+          <h3 className="text-lg font-semibold">Local Account Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField
-              name="localAccountNumber"
+              name="accountNumber"
               label="Account Number"
               required={true}
               maxLength={10}
             />
             <FormField
-              name="localBankName"
+              name="bankName"
               label="Bank Name"
               required={true}
             />
             <FormField
-              name="localBankBranch"
+              name="bankBranch"
               label="Bank Branch"
               required={true}
             />
           </div>
           
-          <FormDatePicker name="localAccountOpeningDate" label="Account Opening Date" required={true} />
+          <FormDatePicker name="accountOpeningDate" label="Account Opening Date" required={true} />
           
-          <h3 className="text-lg font-semibold mt-6">Foreign Bank Account Details (Optional)</h3>
+          <h3 className="text-lg font-semibold mt-6">Foreign Account Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField
-              name="foreignAccountNumber"
+              name="accountNumber2"
               label="Account Number"
             />
             <FormField
-              name="foreignBankName"
+              name="bankName2"
               label="Bank Name"
             />
             <FormField
-              name="foreignBankBranch"
+              name="bankBranch2"
               label="Bank Branch"
             />
           </div>
           
-          <FormDatePicker name="foreignAccountOpeningDate" label="Account Opening Date" />
+          <FormDatePicker name="accountOpeningDate2" label="Account Opening Date" />
 
           <h3 className="text-lg font-semibold mt-6">Required Documents</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -940,9 +940,9 @@ const AgentsCDD: React.FC = () => {
                   <p><strong>Date of Birth:</strong> {watchedValues.dateOfBirth ? format(new Date(watchedValues.dateOfBirth), 'PPP') : ''}</p>
                   <p><strong>Place of Birth:</strong> {watchedValues.placeOfBirth}</p>
                   <p><strong>Nationality:</strong> {watchedValues.nationality}</p>
-                  <p><strong>Phone:</strong> {watchedValues.phoneNumber}</p>
-                  <p><strong>Email:</strong> {watchedValues.email}</p>
-                  <p><strong>BVN:</strong> {watchedValues.bvn}</p>
+                  <p><strong>Phone:</strong> {watchedValues.GSMno}</p>
+                  <p><strong>Email:</strong> {watchedValues.emailAddress}</p>
+                  <p><strong>BVN:</strong> {watchedValues.BVNNumber}</p>
                   <p><strong>Occupation:</strong> {watchedValues.occupation}</p>
                 </CardContent>
               </Card>
@@ -952,13 +952,13 @@ const AgentsCDD: React.FC = () => {
                   <CardTitle>Additional Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <p><strong>Agent Name:</strong> {watchedValues.agentName}</p>
-                  <p><strong>Office Address:</strong> {watchedValues.agentsOfficeAddress}</p>
-                  <p><strong>NAICOM License:</strong> {watchedValues.naicomLicenseNumber}</p>
-                  <p><strong>Email Address:</strong> {watchedValues.emailAddress}</p>
+                  <p><strong>Agent Name:</strong> {watchedValues.agentsName}</p>
+                  <p><strong>Office Address:</strong> {watchedValues.agentsAddress}</p>
+                  <p><strong>NAICOM License:</strong> {watchedValues.naicomNo}</p>
+                  <p><strong>Email Address:</strong> {watchedValues.agentsEmail}</p>
                   <p><strong>Website:</strong> {watchedValues.website}</p>
-                  <p><strong>Mobile:</strong> {watchedValues.mobileNumber}</p>
-                  <p><strong>ARIAN Membership:</strong> {watchedValues.arianMembershipNumber}</p>
+                  <p><strong>Mobile:</strong> {watchedValues.mobileNo}</p>
+                  <p><strong>ARIAN Membership:</strong> {watchedValues.arian}</p>
                 </CardContent>
               </Card>
 
