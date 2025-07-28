@@ -233,11 +233,14 @@ const FormViewer: React.FC = () => {
     }
     
     // Process sections in the exact order they appear in form mappings
-    mapping.sections.forEach((section: any, sectionIndex: number) => {
+    mapping.sections.forEach((section: any) => {
+      // Skip system information sections
+      if (section.title.toLowerCase().includes('system')) return;
+      
       const sectionFields: FormFieldWithValue[] = [];
       
       // Process fields in the exact order they appear in the section
-      section.fields.forEach((field: FormField, fieldIndex: number) => {
+      section.fields.forEach((field: FormField) => {
         // Skip system/technical fields in FormViewer
         const excludedFields = ['formId', 'id', 'collection', 'timestamp'];
         if (excludedFields.includes(field.key)) {
@@ -718,7 +721,8 @@ const FormViewer: React.FC = () => {
     );
   }
 
-  const mapping = FORM_MAPPINGS[collection || ''];
+  const mappingKey = getFormMappingKey(collection || '', formData);
+  const mapping = FORM_MAPPINGS[mappingKey];
   const formTitle = mapping?.title || collection?.replace(/[-_]/g, ' ').toUpperCase();
 
   return (
