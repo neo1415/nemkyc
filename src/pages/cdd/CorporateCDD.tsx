@@ -215,7 +215,7 @@ const corporateCDDSchema = yup.object().shape({
     then: (schema) => schema.required("Please specify other company type"),
     otherwise: (schema) => schema.notRequired()
   }),
-  email: yup.string()
+  emailAddress: yup.string()
     .required("Email is required")
     .email("Please enter a valid email")
     .typeError("Please enter a valid email"),
@@ -243,7 +243,7 @@ const corporateCDDSchema = yup.object().shape({
         .required("Last name is required")
         .min(2, "Last name must be at least 2 characters")
         .max(50, "Last name cannot exceed 50 characters"),
-      dateOfBirth: yup.date()
+      dob: yup.date()
         .required("Date of birth is required")
         .test('age', 'Must be at least 18 years old', function(value) {
           if (!value) return false;
@@ -270,23 +270,23 @@ const corporateCDDSchema = yup.object().shape({
         .required("Phone number is required")
         .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
         .max(15, "Phone number cannot exceed 15 characters"),
-      bvn: yup.string()
+      BVNNumber: yup.string()
         .required("BVN is required")
         .matches(/^\d+$/, "BVN must contain only numbers")
         .length(11, "BVN must be exactly 11 digits"),
-      employerName: yup.string()
+      employersName: yup.string()
         .max(100, "Employer name cannot exceed 100 characters"),
-      employerPhone: yup.string()
+      employersPhoneNumber: yup.string()
         .matches(/^[\d\s+\-()]*$/, "Invalid phone number format")
         .max(15, "Phone number cannot exceed 15 characters"),
       residentialAddress: yup.string()
         .required("Residential address is required")
         .min(10, "Address must be at least 10 characters")
         .max(500, "Address cannot exceed 500 characters"),
-      taxIdNumber: yup.string()
+      taxIDNumber: yup.string()
         .max(20, "Tax ID cannot exceed 20 characters"),
       idType: yup.string().required("ID type is required"),
-      identificationNumber: yup.string()
+      idNumber: yup.string()
         .required("Identification number is required")
         .min(1, "Identification number is required")
         .max(50, "Identification number cannot exceed 50 characters"),
@@ -345,14 +345,14 @@ const corporateCDDSchema = yup.object().shape({
     .typeError('Please select a valid date'),
 
   // Foreign Account (optional)
-  foreignBankName: yup.string()
+  bankName2: yup.string()
     .max(100, "Bank name cannot exceed 100 characters"),
-  foreignAccountNumber: yup.string()
+  accountNumber2: yup.string()
     .matches(/^[\d\-]*$/, "Account number must contain only numbers and dashes")
     .max(30, "Account number cannot exceed 30 characters"),
-  foreignBankBranch: yup.string()
+  bankBranch2: yup.string()
     .max(100, "Bank branch cannot exceed 100 characters"),
-  foreignAccountOpeningDate: yup.date()
+  accountOpeningDate2: yup.date()
     .test('not-future', 'Date cannot be in the future', function(value) {
       if (!value) return true; // Optional field
       const today = new Date();
@@ -362,7 +362,7 @@ const corporateCDDSchema = yup.object().shape({
     .typeError('Please select a valid date'),
 
   // File uploads
-  cacCertificate: yup.mixed().required("CAC Certificate upload is required"),
+  cac: yup.mixed().required("CAC Certificate upload is required"),
   identification: yup.mixed().required("Identification document upload is required"),
 
   // Declaration
@@ -389,20 +389,20 @@ const CorporateCDD: React.FC = () => {
     firstName: '',
     middleName: '',
     lastName: '',
-    dateOfBirth: undefined,
+    dob: undefined,
     placeOfBirth: '',
     nationality: '',
     country: '',
     occupation: '',
     email: '',
     phoneNumber: '',
-    bvn: '',
-    employerName: '',
-    employerPhone: '',
+    BVNNumber: '',
+    employersName: '',
+    employersPhoneNumber: '',
     residentialAddress: '',
-    taxIdNumber: '',
+    taxIDNumber: '',
     idType: '',
-    identificationNumber: '',
+    idNumber: '',
     issuingBody: '',
     issuedDate: undefined,
     expiryDate: undefined,
@@ -421,7 +421,7 @@ const CorporateCDD: React.FC = () => {
       natureOfBusiness: '',
       companyLegalForm: '',
       companyLegalFormOther: '',
-      email: '',
+      emailAddress: '',
       website: '',
       taxIdentificationNumber: '',
       telephoneNumber: '',
@@ -430,11 +430,11 @@ const CorporateCDD: React.FC = () => {
       accountNumber: '',
       bankBranch: '',
       accountOpeningDate: undefined,
-      foreignBankName: '',
-      foreignAccountNumber: '',
-      foreignBankBranch: '',
-      foreignAccountOpeningDate: undefined,
-      cacCertificate: '',
+      bankName2: '',
+      accountNumber2: '',
+      bankBranch2: '',
+      accountOpeningDate2: undefined,
+      cac: '',
       identification: '',
       agreeToDataPrivacy: false,
       signature: ''
@@ -578,10 +578,10 @@ const CorporateCDD: React.FC = () => {
 
   // Step field mappings for validation
   const stepFieldMappings = {
-    0: ['companyName', 'registeredCompanyAddress', 'incorporationNumber', 'incorporationState', 'dateOfIncorporationRegistration', 'natureOfBusiness', 'companyLegalForm', 'companyLegalFormOther', 'email', 'website', 'taxIdentificationNumber', 'telephoneNumber'],
+    0: ['companyName', 'registeredCompanyAddress', 'incorporationNumber', 'incorporationState', 'dateOfIncorporationRegistration', 'natureOfBusiness', 'companyLegalForm', 'companyLegalFormOther', 'emailAddress', 'website', 'taxIdentificationNumber', 'telephoneNumber'],
     1: ['directors'],
-    2: ['bankName', 'accountNumber', 'bankBranch', 'accountOpeningDate', 'foreignBankName', 'foreignAccountNumber', 'foreignBankBranch', 'foreignAccountOpeningDate'],
-    3: ['cacCertificate', 'identification'],
+    2: ['bankName', 'accountNumber', 'bankBranch', 'accountOpeningDate', 'bankName2', 'accountNumber2', 'bankBranch2', 'accountOpeningDate2'],
+    3: ['cac', 'identification'],
     4: ['agreeToDataPrivacy', 'signature']
   };
 
@@ -652,7 +652,7 @@ const CorporateCDD: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
-              name="email"
+              name="emailAddress"
               label="Email Address"
               required={true}
               type="email"
@@ -739,13 +739,13 @@ const CorporateCDD: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormDatePicker 
-                    name={`directors.${index}.dateOfBirth`} 
+                    name={`directors.${index}.dob`} 
                     label="Date of Birth" 
                     required={true}
                   />
                   <FormField
                     name={`directors.${index}.placeOfBirth`}
-                    label="Place of Birth"
+                    label="Place Of Birth"
                     required={true}
                     maxLength={100}
                   />
@@ -790,7 +790,7 @@ const CorporateCDD: React.FC = () => {
                     maxLength={15}
                   />
                   <FormField
-                    name={`directors.${index}.bvn`}
+                    name={`directors.${index}.BVNNumber`}
                     label="BVN"
                     required={true}
                     maxLength={11}
@@ -799,13 +799,13 @@ const CorporateCDD: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
-                    name={`directors.${index}.employerName`}
-                    label="Employer's Name"
+                    name={`directors.${index}.employersName`}
+                    label="Employers Name"
                     maxLength={100}
                   />
                   <FormField
-                    name={`directors.${index}.employerPhone`}
-                    label="Employer's Phone"
+                    name={`directors.${index}.employersPhoneNumber`}
+                    label="Employers Phone Number"
                     maxLength={15}
                   />
                 </div>
@@ -818,7 +818,7 @@ const CorporateCDD: React.FC = () => {
                 />
 
                 <FormField
-                  name={`directors.${index}.taxIdNumber`}
+                  name={`directors.${index}.taxIDNumber`}
                   label="Tax ID Number"
                   maxLength={20}
                 />
@@ -832,7 +832,7 @@ const CorporateCDD: React.FC = () => {
                     placeholder="Choose Identification Type"
                   />
                   <FormField
-                    name={`directors.${index}.identificationNumber`}
+                    name={`directors.${index}.idNumber`}
                     label="Identification Number"
                     required={true}
                     maxLength={50}
@@ -922,12 +922,12 @@ const CorporateCDD: React.FC = () => {
             <h3 className="text-lg font-medium mb-4">Foreign Account Details (Optional)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
-                name="foreignBankName"
+                name="bankName2"
                 label="Bank Name"
                 maxLength={100}
               />
               <FormField
-                name="foreignAccountNumber"
+                name="accountNumber2"
                 label="Account Number"
                 maxLength={30}
               />
@@ -935,12 +935,12 @@ const CorporateCDD: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <FormField
-                name="foreignBankBranch"
+                name="bankBranch2"
                 label="Bank Branch"
                 maxLength={100}
               />
               <FormDatePicker
-                name="foreignAccountOpeningDate"
+                name="accountOpeningDate2"
                 label="Account Opening Date"
               />
             </div>
@@ -954,30 +954,30 @@ const CorporateCDD: React.FC = () => {
       component: (
         <div className="space-y-6">
           <div>
-            <Label>Upload CAC Certificate <span className="required-asterisk">*</span></Label>
+            <Label>Upload Your CAC Certificate <span className="required-asterisk">*</span></Label>
             <FileUpload
               accept=".png,.jpg,.jpeg,.pdf"
               onFileSelect={(file) => {
                 setUploadedFiles(prev => ({
                   ...prev,
-                  cacCertificate: file
+                  cac: file
                 }));
-                formMethods.setValue('cacCertificate', file);
-                if (formMethods.formState.errors.cacCertificate) {
-                  formMethods.clearErrors('cacCertificate');
+                formMethods.setValue('cac', file);
+                if (formMethods.formState.errors.cac) {
+                  formMethods.clearErrors('cac');
                 }
               }}
               maxSize={3 * 1024 * 1024}
             />
-            {uploadedFiles.cacCertificate && (
+            {uploadedFiles.cac && (
               <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
                 <Check className="h-4 w-4" />
-                {uploadedFiles.cacCertificate.name}
+                {uploadedFiles.cac.name}
               </div>
             )}
-            {formMethods.formState.errors.cacCertificate && (
+            {formMethods.formState.errors.cac && (
               <p className="text-sm text-destructive">
-                {formMethods.formState.errors.cacCertificate.message?.toString()}
+                {formMethods.formState.errors.cac.message?.toString()}
               </p>
             )}
           </div>
@@ -1107,7 +1107,7 @@ const CorporateCDD: React.FC = () => {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><strong>Company Name:</strong> {watchedValues.companyName}</div>
                 <div><strong>Incorporation Number:</strong> {watchedValues.incorporationNumber}</div>
-                <div><strong>Email:</strong> {watchedValues.email}</div>
+                <div><strong>Email:</strong> {watchedValues.emailAddress}</div>
                 <div><strong>Phone:</strong> {watchedValues.telephoneNumber}</div>
                 <div><strong>Company Type:</strong> {watchedValues.companyLegalForm}</div>
                 <div><strong>Nature of Business:</strong> {watchedValues.natureOfBusiness}</div>
