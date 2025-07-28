@@ -217,22 +217,15 @@ const fetchForms = async () => {
   // Collection to form mapping (handles overlapping collections)
   const getFormMappingKey = (collectionName: string, formData?: FormData): string => {
     const collectionMappings: Record<string, string | ((data: FormData) => string)> = {
-      'corporate-kyc': (data: FormData) => {
-        // Check if it's NAICOM corporate form based on certain fields
-        if (data.naicomField || data.typeOfEntity === 'naicom') {
-          return 'naicom-corporate-cdd';
-        }
-        return 'corporate-kyc';
-      },
-      'partners-kyc': (data: FormData) => {
-        // Check if it's NAICOM partners form
-        if (data.naicomField || data.typeOfEntity === 'naicom') {
-          return 'naicom-partners-cdd';
-        }
-        return 'partners-cdd';
-      },
-      'Individual-kyc-form': 'Individual-kyc-form',
-      'corporate-kyc-form': 'corporate-kyc-form',
+      'agents-kyc': 'agents-c-d-d',
+      'brokers-kyc': 'brokers-c-d-d',
+      'corporate-kyc': 'corporate-c-d-d',
+      'individual-kyc': 'individual-c-d-d',
+      'partners-kyc': 'partners-c-d-d',
+      'Individual-kyc-form': 'individual-k-y-c',
+      'corporate-kyc-form': 'corporate-k-y-c',
+      'naicom-corporate-cdd': 'naicom-corporate-c-d-d',
+      'naicom-partners-cdd': 'naicom-partners-c-d-d',
       'motor-claims': 'motor-claims',
       'fire-claims': 'fire-special-perils-claims',
       'professional-indemnity': 'professional-indemnity-claims',
