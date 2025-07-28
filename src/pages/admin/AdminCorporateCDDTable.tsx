@@ -1,14 +1,8 @@
 import React from 'react';
-import AdminUnifiedTable from './AdminUnifiedTable';
+import CorporateCDDTable from './CorporateCDDTable';
 
 const AdminCorporateCDDTable: React.FC = () => {
-  return (
-    <AdminUnifiedTable 
-      collectionName="corporate-kyc"
-      title="Corporate CDD Management"
-      isClaim={false}
-    />
-  );
+  return <CorporateCDDTable />;
 };
 
 export default AdminCorporateCDDTable;
