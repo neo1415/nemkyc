@@ -455,23 +455,25 @@ const fetchForms = async () => {
     const mappingKey = getFormMappingKey(collectionName, sampleData);
     const mapping = FORM_MAPPINGS[mappingKey];
     if (mapping) {
-      // Flatten all fields from all sections in the correct order
-      const allFields = mapping.sections.reduce((acc, section) => {
+      // Flatten all fields from all sections in the exact order they appear in form mappings
+      const allFieldsInOrder: any[] = [];
+      
+      mapping.sections.forEach(section => {
         // Skip system information sections in admin table
-        if (section.title.toLowerCase().includes('system')) return acc;
+        if (section.title.toLowerCase().includes('system')) return;
         
-        // Filter out files, excluded fields, and priority fields (already added)
-        const validFields = section.fields.filter(field => 
-          !field.type || field.type !== 'file' && 
-          !excludeFields.includes(field.key) && 
-          !priorityFields.includes(field.key)
-        );
-        
-        return acc.concat(validFields);
-      }, [] as any[]);
+        section.fields.forEach(field => {
+          // Skip file fields, excluded fields, and priority fields (already added)
+          if (field.type !== 'file' && 
+              !excludeFields.includes(field.key) && 
+              !priorityFields.includes(field.key)) {
+            allFieldsInOrder.push(field);
+          }
+        });
+      });
 
-      // Create columns for each field in the order they appear in form mappings
-      allFields.forEach(field => {
+      // Create columns for each field in the exact order they appear in form mappings
+      allFieldsInOrder.forEach(field => {
         if (field.type === 'array' && field.key === 'directors') {
           dynamicColumns.push({
             field: 'directors',
