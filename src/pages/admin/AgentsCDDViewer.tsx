@@ -32,8 +32,6 @@ const AgentsCDDViewer: React.FC = () => {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState(false);
-  const [showStatusDialog, setShowStatusDialog] = useState(false);
-  const [newStatus, setNewStatus] = useState('');
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   useEffect(() => {
@@ -115,36 +113,6 @@ const AgentsCDDViewer: React.FC = () => {
     setEditValue('');
   };
 
-  const handleStatusUpdate = async () => {
-    if (!id || !newStatus) return;
-    
-    try {
-      setIsUpdating(true);
-      const docRef = doc(db, 'agents-kyc', id);
-      await updateDoc(docRef, {
-        status: newStatus,
-        updatedAt: new Date()
-      });
-      
-      setFormData(prev => prev ? { ...prev, status: newStatus } : null);
-      setShowStatusDialog(false);
-      
-      toast({
-        title: "Success",
-        description: "Status updated successfully"
-      });
-    } catch (error) {
-      console.error('Error updating status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update status",
-        variant: "destructive"
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
   const formatValue = (value: any, isFile: boolean = false) => {
     if (!value || value === '') {
       return isFile ? 'Document not uploaded' : 'N/A';
@@ -223,7 +191,6 @@ const AgentsCDDViewer: React.FC = () => {
           ],
           'System Information': [
             { label: 'Form Type', field: 'formType' },
-            { label: 'Status', field: 'status' },
             { label: 'Signature', field: 'signature' },
             { label: 'Submitted At', field: 'timestamp', type: 'date' }
           ]
@@ -366,19 +333,6 @@ const AgentsCDDViewer: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={formData.status === 'approved' ? 'default' : formData.status === 'pending' ? 'secondary' : 'destructive'}>
-            {formData.status || 'processing'}
-          </Badge>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setNewStatus(formData.status || '');
-              setShowStatusDialog(true);
-            }}
-          >
-            Update Status
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -500,14 +454,6 @@ const AgentsCDDViewer: React.FC = () => {
               <span>{formatValue(formData.formType)}</span>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4 py-2">
-            <Label className="font-medium">Status</Label>
-            <div className="col-span-2">
-              <Badge variant={formData.status === 'approved' ? 'default' : formData.status === 'pending' ? 'secondary' : 'destructive'}>
-                {formData.status || 'processing'}
-              </Badge>
-            </div>
-          </div>
           {renderEditableField("Digital Signature", "signature", formData.signature)}
           <div className="grid grid-cols-3 gap-4 py-2">
             <Label className="font-medium">Submitted At</Label>
@@ -525,42 +471,6 @@ const AgentsCDDViewer: React.FC = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Status Update Dialog */}
-      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Form Status</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="status">New Status</Label>
-              <Select value={newStatus} onValueChange={setNewStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="processing">Processing</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowStatusDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleStatusUpdate} disabled={isUpdating || !newStatus}>
-              {isUpdating ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : null}
-              Update Status
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
