@@ -1,44 +1,135 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '@/firebase/config';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Download, ArrowLeft } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/firebase/config';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { ArrowLeft, Edit2, Save, X, Download, FileText, ExternalLink, User, CreditCard, FileCheck } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+interface FormData {
+  id: string;
+  [key: string]: any;
+}
+
 const PartnersCDDViewer: React.FC = () => {
-  const [data, setData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
+  const [formData, setFormData] = useState<FormData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!id) return;
-      
-      try {
-        const docRef = doc(db, 'partners-kyc', id);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-          setData({ id: docSnap.id, ...docSnap.data() });
-        } else {
-          toast({ title: 'Document not found', variant: 'destructive' });
-        }
-      } catch (error) {
-        console.error('Error fetching document:', error);
-        toast({ title: 'Error fetching data', variant: 'destructive' });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (!user || !isAdmin()) {
+      navigate('/unauthorized');
+      return;
+    }
+    
+    fetchFormData();
+  }, [user, isAdmin, navigate, id]);
 
-    fetchData();
-  }, [id]);
+  const fetchFormData = async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      const docRef = doc(db, 'partners-kyc', id);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        setFormData({ id: docSnap.id, ...docSnap.data() });
+      } else {
+        toast({
+          title: "Error",
+          description: "Form data not found",
+          variant: "destructive"
+        });
+        navigate('/admin');
+      }
+    } catch (error) {
+      console.error('Error fetching form data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch form data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (fieldName: string, currentValue: string) => {
+    setEditingField(fieldName);
+    setEditValue(currentValue || '');
+  };
+
+  const handleSave = async (fieldName: string) => {
+    if (!id || !formData) return;
+    
+    try {
+      setIsUpdating(true);
+      const docRef = doc(db, 'partners-kyc', id);
+      await updateDoc(docRef, {
+        [fieldName]: editValue,
+        updatedAt: new Date()
+      });
+      
+      setFormData(prev => prev ? { ...prev, [fieldName]: editValue } : null);
+      setEditingField(null);
+      
+      toast({
+        title: "Success",
+        description: "Field updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating field:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update field",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditingField(null);
+    setEditValue('');
+  };
+
+  const formatValue = (value: any, isFile: boolean = false) => {
+    if (!value || value === '') {
+      return isFile ? 'Document not uploaded' : 'N/A';
+    }
+    return value;
+  };
+
+  const formatDate = (value: any) => {
+    if (!value) return 'N/A';
+    try {
+      const date = value.toDate ? value.toDate() : new Date(value);
+      return format(date, 'PPP');
+    } catch {
+      return 'N/A';
+    }
+  };
 
   // Helper function to extract directors/partners data (supports both legacy and new formats)
   const extractDirectorsData = (data: any) => {
@@ -62,18 +153,18 @@ const PartnersCDDViewer: React.FC = () => {
         occupation: data.occupation || data.occupation1 || '',
         email: data.directorEmail || data.directorEmail1 || data.email1 || '',
         phoneNumber: data.phoneNumber || data.phoneNumber1 || '',
-        bvn: data.directorBvn || data.directorBvn1 || data.bvn1 || '',
+        BVNNumber: data.directorBvn || data.directorBvn1 || data.bvn1 || '',
         employerName: data.employerName || data.employerName1 || '',
         employerPhone: data.employerPhone || data.employerPhone1 || '',
         residentialAddress: data.residentialAddress || data.residentialAddress1 || '',
-        taxIdNumber: data.taxIdNumber || data.taxIdNumber1 || '',
+        taxIDNumber: data.taxIdNumber || data.taxIdNumber1 || '',
         idType: data.idType || data.idType1 || '',
-        identificationNumber: data.identificationNumber || data.identificationNumber1 || '',
+        idNumber: data.identificationNumber || data.identificationNumber1 || '',
         issuingBody: data.issuingBody || data.issuingBody1 || '',
         issuedDate: data.issuedDate || data.issuedDate1 || '',
         expiryDate: data.expiryDate || data.expiryDate1 || '',
-        incomeSource: data.incomeSource || data.incomeSource1 || '',
-        incomeSourceOther: data.incomeSourceOther || data.incomeSourceOther1 || ''
+        sourceOfIncome: data.incomeSource || data.incomeSource1 || '',
+        sourceOfIncomeOther: data.incomeSourceOther || data.incomeSourceOther1 || ''
       });
     }
     
@@ -91,45 +182,22 @@ const PartnersCDDViewer: React.FC = () => {
         occupation: data.occupation2 || '',
         email: data.directorEmail2 || data.email2 || '',
         phoneNumber: data.phoneNumber2 || '',
-        bvn: data.directorBvn2 || data.bvn2 || '',
+        BVNNumber: data.directorBvn2 || data.bvn2 || '',
         employerName: data.employerName2 || '',
         employerPhone: data.employerPhone2 || '',
         residentialAddress: data.residentialAddress2 || '',
-        taxIdNumber: data.taxIdNumber2 || '',
+        taxIDNumber: data.taxIdNumber2 || '',
         idType: data.idType2 || '',
-        identificationNumber: data.identificationNumber2 || '',
+        idNumber: data.identificationNumber2 || '',
         issuingBody: data.issuingBody2 || '',
         issuedDate: data.issuedDate2 || '',
         expiryDate: data.expiryDate2 || '',
-        incomeSource: data.incomeSource2 || '',
-        incomeSourceOther: data.incomeSourceOther2 || ''
+        sourceOfIncome: data.incomeSource2 || '',
+        sourceOfIncomeOther: data.incomeSourceOther2 || ''
       });
     }
     
     return directors;
-  };
-
-  // Helper function to format values
-  const formatValue = (value: any, isFile: boolean = false) => {
-    if (!value || value === '') {
-      return isFile ? 'Document not uploaded' : 'N/A';
-    }
-    return value;
-  };
-
-  // Helper function to format dates
-  const formatDate = (date: any) => {
-    if (!date) return 'N/A';
-    if (date.toDate) {
-      return date.toDate().toLocaleDateString();
-    }
-    if (typeof date === 'string') {
-      return new Date(date).toLocaleDateString();
-    }
-    if (date instanceof Date) {
-      return date.toLocaleDateString();
-    }
-    return 'N/A';
   };
 
   // Check if this is a NAICOM form
@@ -137,11 +205,14 @@ const PartnersCDDViewer: React.FC = () => {
     return data.naicomLicenseCertificate && data.naicomLicenseCertificate.trim() !== '';
   };
 
-  const generatePDF = async () => {
-    if (!data) return;
-    setIsGeneratingPDF(true);
+  const handleDownloadPDF = async () => {
+    if (!formData) return;
+    
     try {
-      const element = document.getElementById('partners-cdd-content');
+      setIsGeneratingPDF(true);
+      
+      // Use the same approach as Individual CDD - direct HTML to PDF conversion
+      const element = document.getElementById('partners-cdd-pdf-content');
       if (!element) {
         throw new Error('PDF content element not found');
       }
@@ -150,520 +221,581 @@ const PartnersCDDViewer: React.FC = () => {
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        scrollY: 0,
         backgroundColor: '#ffffff'
       });
 
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 0;
-
-      // Check if content fits on one page
-      if (imgHeight * ratio <= pdfHeight) {
-        pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-      } else {
-        // Multi-page handling
-        let position = 0;
-        const pageHeight = pdfHeight / ratio;
+      // NEM Insurance Header
+      pdf.setFontSize(20);
+      pdf.setTextColor(128, 0, 32); // Burgundy color
+      pdf.text('NEM INSURANCE PLC', 20, 25);
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('Corporate Head Office: 10 Lokogoma Close, Zone 1, Federal Capital Territory, Abuja', 20, 35);
+      pdf.text('Lagos Head Office: 100 NNL Building, Ralph Shodeinde Street, Central Business District, Lagos', 20, 42);
+      
+      // Burgundy line
+      pdf.setDrawColor(128, 0, 32);
+      pdf.setLineWidth(0.5);
+      pdf.line(20, 50, 190, 50);
+      
+      // Title
+      pdf.setFontSize(16);
+      pdf.setTextColor(0, 0, 0);
+      const formType = isNaicomForm(formData) ? 'NAICOM Partners CDD' : 'Partners CDD';
+      pdf.text(`${formType} Form`, 20, 65);
+      
+      // Add the form content
+      const imgWidth = 170;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      let yPosition = 75;
+      
+      if (imgHeight > 220) {
+        // If content is too long, split across pages
+        const pageHeight = 220;
+        let remainingHeight = imgHeight;
+        let currentY = 0;
         
-        while (position < imgHeight) {
-          const pageCanvas = document.createElement('canvas');
-          const pageCtx = pageCanvas.getContext('2d');
-          pageCanvas.width = imgWidth;
-          pageCanvas.height = Math.min(pageHeight, imgHeight - position);
+        while (remainingHeight > 0) {
+          const heightToAdd = Math.min(pageHeight, remainingHeight);
           
-          if (pageCtx) {
-            pageCtx.drawImage(canvas, 0, position, imgWidth, pageCanvas.height, 0, 0, imgWidth, pageCanvas.height);
-            const pageImgData = pageCanvas.toDataURL('image/png');
-            
-            if (position > 0) {
-              pdf.addPage();
-            }
-            
-            pdf.addImage(pageImgData, 'PNG', imgX, imgY, imgWidth * ratio, pageCanvas.height * ratio);
+          const tempCanvas = document.createElement('canvas');
+          const tempCtx = tempCanvas.getContext('2d');
+          tempCanvas.width = canvas.width;
+          tempCanvas.height = (heightToAdd * canvas.width) / imgWidth;
+          
+          tempCtx?.drawImage(
+            canvas,
+            0,
+            (currentY * canvas.width) / imgWidth,
+            canvas.width,
+            tempCanvas.height,
+            0,
+            0,
+            canvas.width,
+            tempCanvas.height
+          );
+          
+          const tempImgData = tempCanvas.toDataURL('image/png');
+          
+          if (currentY > 0) {
+            pdf.addPage();
+            yPosition = 20;
           }
           
-          position += pageHeight;
+          pdf.addImage(tempImgData, 'PNG', 20, yPosition, imgWidth, heightToAdd);
+          
+          currentY += heightToAdd;
+          remainingHeight -= heightToAdd;
         }
+      } else {
+        pdf.addImage(imgData, 'PNG', 20, yPosition, imgWidth, imgHeight);
       }
-
-      const formType = isNaicomForm(data) ? 'NAICOM Partners CDD' : 'Partners CDD';
-      pdf.save(`${formType} - ${data.companyName || 'Unknown'}.pdf`);
+      
+      const filename = `partners-cdd-${formatValue(formData.companyName).replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(filename);
+      
+      toast({
+        title: "Success",
+        description: "PDF downloaded successfully"
+      });
     } catch (error) {
       console.error('Error generating PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF",
+        variant: "destructive"
+      });
     } finally {
       setIsGeneratingPDF(false);
     }
   };
 
-  if (isLoading) {
+  const renderEditableField = (label: string, fieldName: string, value: any, type: 'text' | 'textarea' | 'date' = 'text') => {
+    const isEditing = editingField === fieldName;
+    const displayValue = formatValue(value);
+
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <div className="p-6">
-        <p>No data available</p>
-      </div>
-    );
-  }
-
-  const directors = extractDirectorsData(data);
-  const formType = isNaicomForm(data) ? 'NAICOM Partners CDD' : 'Partners CDD';
-
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6 max-w-5xl">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => navigate('/admin/cdd/partners')}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back</span>
-            </Button>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold">{formType} Details</h1>
-              <p className="text-sm text-muted-foreground">Company: {data.companyName || 'N/A'}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 py-2">
+        <Label className="font-medium text-sm lg:text-base">{label}</Label>
+        {isEditing ? (
+          <div className="lg:col-span-2 space-y-2">
+            {type === 'textarea' ? (
+              <Textarea
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                className="w-full text-sm lg:text-base"
+              />
+            ) : (
+              <Input
+                type={type}
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                className="w-full text-sm lg:text-base"
+              />
+            )}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => handleSave(fieldName)}
+                disabled={isUpdating}
+              >
+                {isUpdating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCancel}
+              >
+                <X className="w-3 h-3" />
+              </Button>
             </div>
           </div>
-          
-          <Button 
-            onClick={generatePDF} 
-            disabled={isGeneratingPDF}
-            className="flex items-center gap-2 w-full sm:w-auto"
-          >
-            {isGeneratingPDF ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-            <span className="sm:hidden">Download</span>
-            <span className="hidden sm:inline">Download PDF</span>
-          </Button>
-        </div>
-
-        {/* PDF Content */}
-        <div id="partners-cdd-content" className="bg-white">
-          {/* PDF Header */}
-          <div className="text-center mb-6 p-6 border-b-2 border-[#800020]">
-            <h1 className="text-2xl font-bold text-[#800020] mb-2">NEM Insurance</h1>
-            <p className="text-sm text-gray-600 mb-1">NEM Insurance Plc</p>
-            <p className="text-sm text-gray-600 mb-4">199, Ikorodu Road, Obanikoro Lagos</p>
-            <h2 className="text-xl font-semibold text-[#800020]">{formType.toUpperCase()} FORM</h2>
-            <p className="text-lg font-medium mt-2">Company: {data.companyName || 'N/A'}</p>
+        ) : (
+          <div className="lg:col-span-2 flex items-center justify-between">
+            <span className={`text-sm lg:text-base break-words ${value ? '' : 'text-muted-foreground'}`}>
+              {type === 'date' ? formatDate(value) : displayValue}
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handleEdit(fieldName, value || '')}
+              className="flex-shrink-0"
+            >
+              <Edit2 className="w-3 h-3" />
+            </Button>
           </div>
+        )}
+      </div>
+    );
+  };
 
-          {/* Company Information */}
-          <Card className="mb-6 border border-gray-200">
-            <CardHeader className="bg-gray-50">
-              <CardTitle className="text-lg font-semibold text-[#800020]">Company Information</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <label className="font-medium text-gray-700">Company Name:</label>
-                  <p className="text-gray-900">{formatValue(data.companyName)}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">Email Address:</label>
-                  <p className="text-gray-900">{formatValue(data.email)}</p>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="font-medium text-gray-700">Registered Address:</label>
-                  <p className="text-gray-900">{formatValue(data.registeredAddress)}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">City:</label>
-                  <p className="text-gray-900">{formatValue(data.city)}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">State:</label>
-                  <p className="text-gray-900">{formatValue(data.state)}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">Country:</label>
-                  <p className="text-gray-900">{formatValue(data.country)}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">Website:</label>
-                  <p className="text-gray-900">{formatValue(data.website)}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">Contact Person Name:</label>
-                  <p className="text-gray-900">{formatValue(data.contactPersonName)}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">Contact Person Number:</label>
-                  <p className="text-gray-900">{formatValue(data.contactPersonNumber)}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">Tax Identification Number:</label>
-                  <p className="text-gray-900">{formatValue(data.taxId)}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">VAT Registration Number:</label>
-                  <p className="text-gray-900">{formatValue(data.vatRegistrationNumber)}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">Incorporation/RC Number:</label>
-                  <p className="text-gray-900">{formatValue(data.incorporationNumber)}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">Date of Incorporation:</label>
-                  <p className="text-gray-900">{formatDate(data.incorporationDate)}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">Incorporation State:</label>
-                  <p className="text-gray-900">{formatValue(data.incorporationState)}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">BVN:</label>
-                  <p className="text-gray-900">{formatValue(data.bvn)}</p>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="font-medium text-gray-700">Nature of Business:</label>
-                  <p className="text-gray-900">{formatValue(data.businessNature)}</p>
-                </div>
-                
-                {/* NAICOM specific fields */}
-                {isNaicomForm(data) && (
-                  <>
-                    <div>
-                      <label className="font-medium text-gray-700">NAICOM License Issuing Date:</label>
-                      <p className="text-gray-900">{formatDate(data.naicomLicenseIssuingDate)}</p>
-                    </div>
-                    <div>
-                      <label className="font-medium text-gray-700">NAICOM License Expiry Date:</label>
-                      <p className="text-gray-900">{formatDate(data.naicomLicenseExpiryDate)}</p>
-                    </div>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+  const renderFileField = (label: string, fileUrl: string) => (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 py-2">
+      <Label className="font-medium text-sm lg:text-base">{label}</Label>
+      <div className="lg:col-span-2">
+        {fileUrl ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(fileUrl, '_blank')}
+            className="flex items-center gap-2 text-sm lg:text-base"
+          >
+            <ExternalLink className="w-4 h-4" />
+            View Document
+          </Button>
+        ) : (
+          <span className="text-muted-foreground text-sm lg:text-base">Document not uploaded</span>
+        )}
+      </div>
+    </div>
+  );
 
-          {/* Directors Information */}
-          <Card className="mb-6 border border-gray-200">
-            <CardHeader className="bg-gray-50">
-              <CardTitle className="text-lg font-semibold text-[#800020]">Directors Information</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              {directors.length > 0 ? (
-                directors.map((director: any, index: number) => (
-                  <div key={index} className="mb-6 last:mb-0">
-                    {index > 0 && <hr className="my-6 border-gray-200" />}
-                    <h3 className="text-md font-semibold text-[#800020] mb-4">Director {index + 1}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <label className="font-medium text-gray-700">Title:</label>
-                        <p className="text-gray-900">{formatValue(director.title)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Gender:</label>
-                        <p className="text-gray-900">{formatValue(director.gender)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">First Name:</label>
-                        <p className="text-gray-900">{formatValue(director.firstName)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Middle Name:</label>
-                        <p className="text-gray-900">{formatValue(director.middleName)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Last Name:</label>
-                        <p className="text-gray-900">{formatValue(director.lastName)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Date of Birth:</label>
-                        <p className="text-gray-900">{formatDate(director.dateOfBirth)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Place of Birth:</label>
-                        <p className="text-gray-900">{formatValue(director.placeOfBirth)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Nationality:</label>
-                        <p className="text-gray-900">{formatValue(director.nationality)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Country:</label>
-                        <p className="text-gray-900">{formatValue(director.country)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Occupation:</label>
-                        <p className="text-gray-900">{formatValue(director.occupation)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Email:</label>
-                        <p className="text-gray-900">{formatValue(director.email)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Phone Number:</label>
-                        <p className="text-gray-900">{formatValue(director.phoneNumber)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">BVN:</label>
-                        <p className="text-gray-900">{formatValue(director.bvn)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Employer Name:</label>
-                        <p className="text-gray-900">{formatValue(director.employerName)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Employer Phone:</label>
-                        <p className="text-gray-900">{formatValue(director.employerPhone)}</p>
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="font-medium text-gray-700">Residential Address:</label>
-                        <p className="text-gray-900">{formatValue(director.residentialAddress)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Tax ID Number:</label>
-                        <p className="text-gray-900">{formatValue(director.taxIdNumber)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">ID Type:</label>
-                        <p className="text-gray-900">{formatValue(director.idType)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Identification Number:</label>
-                        <p className="text-gray-900">{formatValue(director.identificationNumber)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Issuing Body:</label>
-                        <p className="text-gray-900">{formatValue(director.issuingBody)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Issued Date:</label>
-                        <p className="text-gray-900">{formatDate(director.issuedDate)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Expiry Date:</label>
-                        <p className="text-gray-900">{formatDate(director.expiryDate)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Source of Income:</label>
-                        <p className="text-gray-900">{formatValue(director.incomeSource)}</p>
-                      </div>
-                      {director.incomeSource === 'Other' && director.incomeSourceOther && (
-                        <div>
-                          <label className="font-medium text-gray-700">Other Income Source:</label>
-                          <p className="text-gray-900">{formatValue(director.incomeSourceOther)}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500">No directors information available</p>
-              )}
-            </CardContent>
-          </Card>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
-          {/* Account Details & Files */}
-          <Card className="mb-6 border border-gray-200">
-            <CardHeader className="bg-gray-50">
-              <CardTitle className="text-lg font-semibold text-[#800020]">Account Details & Files</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-6">
-                {/* Local Account Information */}
-                <div>
-                  <h3 className="text-md font-semibold text-[#800020] mb-3">Local Account Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <label className="font-medium text-gray-700">Account Number:</label>
-                      <p className="text-gray-900">{formatValue(data.localAccountNumber)}</p>
-                    </div>
-                    <div>
-                      <label className="font-medium text-gray-700">Bank Name:</label>
-                      <p className="text-gray-900">{formatValue(data.localBankName)}</p>
-                    </div>
-                    <div>
-                      <label className="font-medium text-gray-700">Bank Branch:</label>
-                      <p className="text-gray-900">{formatValue(data.localBankBranch)}</p>
-                    </div>
-                    <div>
-                      <label className="font-medium text-gray-700">Account Opening Date:</label>
-                      <p className="text-gray-900">{formatDate(data.localAccountOpeningDate)}</p>
-                    </div>
-                  </div>
-                </div>
+  if (!formData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Form data not found</p>
+      </div>
+    );
+  }
 
-                {/* Foreign Account Information */}
-                {(data.foreignAccountNumber || data.foreignBankName || data.foreignBankBranch) && (
-                  <div>
-                    <h3 className="text-md font-semibold text-[#800020] mb-3">Foreign Account Information</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <label className="font-medium text-gray-700">Account Number:</label>
-                        <p className="text-gray-900">{formatValue(data.foreignAccountNumber)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Bank Name:</label>
-                        <p className="text-gray-900">{formatValue(data.foreignBankName)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Bank Branch:</label>
-                        <p className="text-gray-900">{formatValue(data.foreignBankBranch)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium text-gray-700">Account Opening Date:</label>
-                        <p className="text-gray-900">{formatDate(data.foreignAccountOpeningDate)}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+  const directors = extractDirectorsData(formData);
+  const formType = isNaicomForm(formData) ? 'NAICOM Partners CDD' : 'Partners CDD';
 
-                {/* Document Uploads */}
-                <div>
-                  <h3 className="text-md font-semibold text-[#800020] mb-3">Document Uploads</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <label className="font-medium text-gray-700">Certificate of Incorporation:</label>
-                      <p className="text-gray-900">
-                        {data.certificateOfIncorporation ? (
-                          <a href={data.certificateOfIncorporation} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                            View Document
-                          </a>
-                        ) : (
-                          formatValue(null, true)
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="font-medium text-gray-700">Director 1 ID:</label>
-                      <p className="text-gray-900">
-                        {data.directorId1 ? (
-                          <a href={data.directorId1} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                            View Document
-                          </a>
-                        ) : (
-                          formatValue(null, true)
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="font-medium text-gray-700">Director 2 ID:</label>
-                      <p className="text-gray-900">
-                        {data.directorId2 ? (
-                          <a href={data.directorId2} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                            View Document
-                          </a>
-                        ) : (
-                          formatValue(null, true)
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="font-medium text-gray-700">CAC Status Report:</label>
-                      <p className="text-gray-900">
-                        {data.cacStatusReport ? (
-                          <a href={data.cacStatusReport} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                            View Document
-                          </a>
-                        ) : (
-                          formatValue(null, true)
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="font-medium text-gray-700">VAT Registration License:</label>
-                      <p className="text-gray-900">
-                        {data.vatRegistrationLicense ? (
-                          <a href={data.vatRegistrationLicense} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                            View Document
-                          </a>
-                        ) : (
-                          formatValue(null, true)
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="font-medium text-gray-700">Tax Clearance Certificate:</label>
-                      <p className="text-gray-900">
-                        {data.taxClearanceCertificate ? (
-                          <a href={data.taxClearanceCertificate} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                            View Document
-                          </a>
-                        ) : (
-                          formatValue(null, true)
-                        )}
-                      </p>
-                    </div>
-                    {isNaicomForm(data) && (
-                      <div>
-                        <label className="font-medium text-gray-700">NAICOM License Certificate:</label>
-                        <p className="text-gray-900">
-                          {data.naicomLicenseCertificate ? (
-                            <a href={data.naicomLicenseCertificate} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                              View Document
-                            </a>
-                          ) : (
-                            formatValue(null, true)
-                          )}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* System Information */}
-          <Card className="border border-gray-200">
-            <CardHeader className="bg-gray-50">
-              <CardTitle className="text-lg font-semibold text-[#800020]">System Information</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <label className="font-medium text-gray-700">Form ID:</label>
-                  <p className="text-gray-900 font-mono text-xs">{id || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">Form Type:</label>
-                  <p className="text-gray-900">{data.formType || formType}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">Submitted Date:</label>
-                  <p className="text-gray-900">{formatDate(data.createdAt || data.submittedAt)}</p>
-                </div>
-                <div>
-                  <label className="font-medium text-gray-700">Last Updated:</label>
-                  <p className="text-gray-900">{formatDate(data.updatedAt)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Data Privacy Statement */}
-          <div className="mt-8 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-            <h3 className="text-md font-semibold text-[#800020] mb-2">Data Privacy Statement</h3>
-            <p className="text-sm text-gray-600">
-              This form contains personal and confidential information. All data collected is processed in accordance with applicable data protection 
-              laws and NEM Insurance privacy policy. The information provided will be used solely for insurance purposes and will be kept confidential.
+  return (
+    <div className="container mx-auto p-3 lg:p-6 space-y-4 lg:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/admin')}
+            className="w-fit"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Admin
+          </Button>
+          <div>
+            <h1 className="text-xl lg:text-2xl font-bold">{formType}</h1>
+            <p className="text-sm lg:text-base text-muted-foreground break-words">
+              Company: {formatValue(formData.companyName)} • Submitted: {formatDate(formData.timestamp)}
             </p>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadPDF}
+            disabled={isGeneratingPDF}
+            className="text-sm lg:text-base"
+          >
+            {isGeneratingPDF ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
+            Download PDF
+          </Button>
+        </div>
+      </div>
+
+      {/* PDF Content Wrapper */}
+      <div id="partners-cdd-pdf-content" className="space-y-6 bg-white p-6">
+        {/* Company Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Company Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Company Name</p>
+                <p className="font-medium">{formatValue(formData.companyName)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Incorporation Number</p>
+                <p className="font-medium">{formatValue(formData.incorporationNumber)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Incorporation State</p>
+                <p className="font-medium">{formatValue(formData.incorporationState)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Date of Incorporation</p>
+                <p className="font-medium">{formatDate(formData.dateOfIncorporationRegistration)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Company Type</p>
+                <p className="font-medium">{formatValue(formData.companyLegalForm)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Email Address</p>
+                <p className="font-medium">{formatValue(formData.emailAddress)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Website</p>
+                <p className="font-medium">{formatValue(formData.website)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Tax ID Number</p>
+                <p className="font-medium">{formatValue(formData.taxIdentificationNumber)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Telephone Number</p>
+                <p className="font-medium">{formatValue(formData.telephoneNumber)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Registered Address</p>
+                <p className="font-medium">{formatValue(formData.registeredCompanyAddress)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Nature of Business</p>
+                <p className="font-medium">{formatValue(formData.natureOfBusiness)}</p>
+              </div>
+              
+              {/* NAICOM-specific fields */}
+              {isNaicomForm(formData) && (
+                <>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">NAICOM License Number</p>
+                    <p className="font-medium">{formatValue(formData.naicomLicenseNumber)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">License Issue Date</p>
+                    <p className="font-medium">{formatDate(formData.licenseIssueDate)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">License Expiry Date</p>
+                    <p className="font-medium">{formatDate(formData.licenseExpiryDate)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">ARIAN Membership Number</p>
+                    <p className="font-medium">{formatValue(formData.arianMembershipNumber)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Insurance License Type</p>
+                    <p className="font-medium">{formatValue(formData.insuranceLicenseType)}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Directors Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Directors/Partners Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {directors.map((director: any, index: number) => (
+              <div key={index} className="border rounded p-4">
+                <h4 className="font-semibold mb-3">Director/Partner {index + 1}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">First Name</p>
+                    <p className="font-medium">{formatValue(director.firstName)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Middle Name</p>
+                    <p className="font-medium">{formatValue(director.middleName)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Last Name</p>
+                    <p className="font-medium">{formatValue(director.lastName)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Email</p>
+                    <p className="font-medium">{formatValue(director.email)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Phone Number</p>
+                    <p className="font-medium">{formatValue(director.phoneNumber)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Date of Birth</p>
+                    <p className="font-medium">{formatDate(director.dateOfBirth)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Place of Birth</p>
+                    <p className="font-medium">{formatValue(director.placeOfBirth)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Nationality</p>
+                    <p className="font-medium">{formatValue(director.nationality)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Occupation</p>
+                    <p className="font-medium">{formatValue(director.occupation)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Residential Address</p>
+                    <p className="font-medium">{formatValue(director.residentialAddress)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">BVN Number</p>
+                    <p className="font-medium">{formatValue(director.BVNNumber)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Tax ID Number</p>
+                    <p className="font-medium">{formatValue(director.taxIDNumber)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">ID Type</p>
+                    <p className="font-medium">{formatValue(director.idType)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">ID Number</p>
+                    <p className="font-medium">{formatValue(director.idNumber)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Issuing Body</p>
+                    <p className="font-medium">{formatValue(director.issuingBody)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Issued Date</p>
+                    <p className="font-medium">{formatDate(director.issuedDate)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Expiry Date</p>
+                    <p className="font-medium">{formatDate(director.expiryDate)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Source of Income</p>
+                    <p className="font-medium">{formatValue(director.sourceOfIncome)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Account Details & Files */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              Account Details & Files
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Local Bank Name</p>
+                <p className="font-medium">{formatValue(formData.localBankName)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Local Account Number</p>
+                <p className="font-medium">{formatValue(formData.localAccountNumber)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Local Bank Branch</p>
+                <p className="font-medium">{formatValue(formData.localBankBranch)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Local Account Opening Date</p>
+                <p className="font-medium">{formatDate(formData.localAccountOpeningDate)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Foreign Bank Name</p>
+                <p className="font-medium">{formatValue(formData.foreignBankName)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Foreign Account Number</p>
+                <p className="font-medium">{formatValue(formData.foreignAccountNumber)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Foreign Bank Branch</p>
+                <p className="font-medium">{formatValue(formData.foreignBankBranch)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Foreign Account Opening Date</p>
+                <p className="font-medium">{formatDate(formData.foreignAccountOpeningDate)}</p>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <h4 className="font-medium text-sm text-muted-foreground mb-2">Document Uploads</h4>
+              <div className="space-y-3">
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">CAC Form</p>
+                  {formData.cacForm ? (
+                    <a 
+                      href={formData.cacForm} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline flex items-center gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      View Document
+                    </a>
+                  ) : (
+                    <p className="text-muted-foreground">{formatValue(formData.cacForm, true)}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Incorporation Certificate</p>
+                  {formData.incorporationCertificate ? (
+                    <a 
+                      href={formData.incorporationCertificate} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline flex items-center gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      View Document
+                    </a>
+                  ) : (
+                    <p className="text-muted-foreground">{formatValue(formData.incorporationCertificate, true)}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Memorandum of Association</p>
+                  {formData.memorandumOfAssociation ? (
+                    <a 
+                      href={formData.memorandumOfAssociation} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline flex items-center gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      View Document
+                    </a>
+                  ) : (
+                    <p className="text-muted-foreground">{formatValue(formData.memorandumOfAssociation, true)}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Article of Association</p>
+                  {formData.articleOfAssociation ? (
+                    <a 
+                      href={formData.articleOfAssociation} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline flex items-center gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      View Document
+                    </a>
+                  ) : (
+                    <p className="text-muted-foreground">{formatValue(formData.articleOfAssociation, true)}</p>
+                  )}
+                </div>
+                {/* NAICOM-specific documents */}
+                {isNaicomForm(formData) && (
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">NAICOM License Certificate</p>
+                    {formData.naicomLicenseCertificate ? (
+                      <a 
+                        href={formData.naicomLicenseCertificate} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline flex items-center gap-2"
+                      >
+                        <FileText className="h-4 w-4" />
+                        View Document
+                      </a>
+                    ) : (
+                      <p className="text-muted-foreground">{formatValue(formData.naicomLicenseCertificate, true)}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* System Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileCheck className="w-5 h-5" />
+              System Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Status</p>
+                <Badge variant={formData.status === 'completed' ? 'default' : 'secondary'}>
+                  {formatValue(formData.status)}
+                </Badge>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Submitted At</p>
+                <p className="font-medium">{formatDate(formData.timestamp || formData.createdAt)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Digital Signature</p>
+                <p className="font-medium">{formatValue(formData.signature)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Data Privacy Agreement</p>
+                <p className="font-medium">{formData.agreeToDataPrivacy ? 'Agreed' : 'Not Agreed'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
