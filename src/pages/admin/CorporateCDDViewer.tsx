@@ -492,44 +492,63 @@ const CorporateCDDViewer: React.FC = () => {
               directors.push(...formData.directors);
             }
             
-            // Check for old flat format (director1, director2, etc.)
+            // Check for old flat format (firstName, lastName, firstName2, lastName2, etc.)
             const oldFormatDirectors: Director[] = [];
-            let directorIndex = 1;
-            while (true) {
-              const directorKey = directorIndex === 1 ? '' : directorIndex.toString();
-              const firstNameKey = `director${directorKey}FirstName`;
-              const lastNameKey = `director${directorKey}LastName`;
-              
-              if (formData[firstNameKey] || formData[lastNameKey]) {
-                const director: Director = {
-                  firstName: formData[firstNameKey] || formData[`firstName${directorKey}`],
-                  middleName: formData[`director${directorKey}MiddleName`] || formData[`middleName${directorKey}`],
-                  lastName: formData[lastNameKey] || formData[`lastName${directorKey}`],
-                  dob: formData[`director${directorKey}DOB`] || formData[`dob${directorKey}`],
-                  placeOfBirth: formData[`director${directorKey}PlaceOfBirth`] || formData[`placeOfBirth${directorKey}`],
-                  nationality: formData[`director${directorKey}Nationality`] || formData[`nationality${directorKey}`],
-                  country: formData[`director${directorKey}Country`] || formData[`country${directorKey}`],
-                  occupation: formData[`director${directorKey}Occupation`] || formData[`occupation${directorKey}`],
-                  email: formData[`director${directorKey}Email`] || formData[`email${directorKey}`],
-                  phoneNumber: formData[`director${directorKey}PhoneNumber`] || formData[`phoneNumber${directorKey}`],
-                  BVNNumber: formData[`director${directorKey}BVNNumber`] || formData[`BVNNumber${directorKey}`],
-                  employersName: formData[`director${directorKey}EmployersName`] || formData[`employersName${directorKey}`],
-                  employersPhoneNumber: formData[`director${directorKey}EmployersPhoneNumber`] || formData[`employersPhoneNumber${directorKey}`],
-                  residentialAddress: formData[`director${directorKey}ResidentialAddress`] || formData[`residentialAddress${directorKey}`],
-                  taxIDNumber: formData[`director${directorKey}TaxIDNumber`] || formData[`taxIDNumber${directorKey}`],
-                  idType: formData[`director${directorKey}IdType`] || formData[`idType${directorKey}`],
-                  idNumber: formData[`director${directorKey}IdNumber`] || formData[`idNumber${directorKey}`],
-                  issuingBody: formData[`director${directorKey}IssuingBody`] || formData[`issuingBody${directorKey}`],
-                  issuedDate: formData[`director${directorKey}IssuedDate`] || formData[`issuedDate${directorKey}`],
-                  expiryDate: formData[`director${directorKey}ExpiryDate`] || formData[`expiryDate${directorKey}`],
-                  sourceOfIncome: formData[`director${directorKey}SourceOfIncome`] || formData[`sourceOfIncome${directorKey}`],
-                  sourceOfIncomeOther: formData[`director${directorKey}SourceOfIncomeOther`] || formData[`sourceOfIncomeOther${directorKey}`]
-                };
-                oldFormatDirectors.push(director);
-                directorIndex++;
-              } else {
-                break;
-              }
+            
+            // Director 1 (no number suffix)
+            if (formData.firstName || formData.lastName) {
+              const director: Director = {
+                firstName: formData.firstName || '',
+                middleName: formData.middleName || '',
+                lastName: formData.lastName || '',
+                dob: formData.dob || '',
+                placeOfBirth: formData.placeOfBirth || '',
+                nationality: formData.nationality || '',
+                country: formData.country || '',
+                occupation: formData.occupation || '',
+                email: formData.email || '',
+                phoneNumber: formData.phoneNumber || '',
+                BVNNumber: formData.BVNNumber || '',
+                employersName: formData.employersName || '',
+                employersPhoneNumber: formData.employersPhoneNumber || '',
+                residentialAddress: formData.residentialAddress || '',
+                taxIDNumber: formData.taxIDNumber || '',
+                idType: formData.idType || '',
+                idNumber: formData.idNumber || '',
+                issuingBody: formData.issuingBody || '',
+                issuedDate: formData.issuedDate || '',
+                expiryDate: formData.expiryDate || '',
+                sourceOfIncome: formData.sourceOfIncome || ''
+              };
+              oldFormatDirectors.push(director);
+            }
+            
+            // Director 2 (with "2" suffix)
+            if (formData.firstName2 || formData.lastName2) {
+              const director: Director = {
+                firstName: formData.firstName2 || '',
+                middleName: formData.middleName2 || '',
+                lastName: formData.lastName2 || '',
+                dob: formData.dob2 || '',
+                placeOfBirth: formData.placeOfBirth2 || '',
+                nationality: formData.nationality2 || '',
+                country: formData.country2 || '',
+                occupation: formData.occupation2 || '',
+                email: formData.email2 || '',
+                phoneNumber: formData.phoneNumber2 || '',
+                BVNNumber: formData.BVNNumber2 || '',
+                employersName: formData.employersName2 || '',
+                employersPhoneNumber: formData.employersPhoneNumber2 || '',
+                residentialAddress: formData.residentialAddress2 || '',
+                taxIDNumber: formData.taxIDNumber2 || '',
+                idType: formData.idType2 || '',
+                idNumber: formData.idNumber2 || '',
+                issuingBody: formData.issuingBody2 || '',
+                issuedDate: formData.issuedDate2 || '',
+                expiryDate: formData.expiryDate2 || '',
+                sourceOfIncome: formData.sourceOfIncome2 || ''
+              };
+              oldFormatDirectors.push(director);
             }
             
             // Use old format if no new format directors found
