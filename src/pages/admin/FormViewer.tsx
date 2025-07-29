@@ -12,6 +12,7 @@ import { FORM_MAPPINGS, FormField } from '../../config/formMappings';
 import { sendStatusUpdateNotification } from '../../services/emailService';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../firebase/config';
+import CorporateKYCViewer from './CorporateKYCViewer';
 
 const theme = createTheme({
   palette: {
@@ -718,6 +719,33 @@ const FormViewer: React.FC = () => {
       <ThemeProvider theme={theme}>
         <Box sx={{ p: 3 }}>
           <Typography>Form not found</Typography>
+        </Box>
+      </ThemeProvider>
+    );
+  }
+
+  // Use specialized viewers for specific form types
+  if (collection === 'corporate-kyc-form') {
+    return (
+      <ThemeProvider theme={theme}>
+        <Box sx={{ 
+          p: { xs: 2, sm: 3 }, 
+          maxWidth: '1200px', 
+          mx: 'auto',
+          width: '100%',
+          minHeight: '100vh'
+        }}>
+          <Button
+            startIcon={<ArrowLeft />}
+            onClick={() => navigate(-1)}
+            sx={{ mb: 3 }}
+          >
+            Back
+          </Button>
+          <CorporateKYCViewer 
+            data={formData} 
+            onClose={() => navigate(-1)} 
+          />
         </Box>
       </ThemeProvider>
     );
