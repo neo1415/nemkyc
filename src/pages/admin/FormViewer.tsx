@@ -14,6 +14,7 @@ import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../firebase/config';
 import CorporateKYCViewer from './CorporateKYCViewer';
 import IndividualKYCViewer from './IndividualKYCViewer';
+import IndividualCDDViewer from './IndividualCDDViewer';
 
 const theme = createTheme({
   palette: {
@@ -770,6 +771,32 @@ const FormViewer: React.FC = () => {
             Back
           </Button>
           <IndividualKYCViewer 
+            data={formData} 
+            onClose={() => navigate(-1)} 
+          />
+        </Box>
+      </ThemeProvider>
+    );
+  }
+
+  if (collection === 'individual-kyc') {
+    return (
+      <ThemeProvider theme={theme}>
+        <Box sx={{ 
+          p: { xs: 2, sm: 3 }, 
+          maxWidth: '1200px', 
+          mx: 'auto',
+          width: '100%',
+          minHeight: '100vh'
+        }}>
+          <Button
+            startIcon={<ArrowLeft />}
+            onClick={() => navigate(-1)}
+            sx={{ mb: 3 }}
+          >
+            Back
+          </Button>
+          <IndividualCDDViewer 
             data={formData} 
             onClose={() => navigate(-1)} 
           />
