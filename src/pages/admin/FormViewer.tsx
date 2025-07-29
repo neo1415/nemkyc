@@ -16,6 +16,7 @@ import CorporateKYCViewer from './CorporateKYCViewer';
 import IndividualKYCViewer from './IndividualKYCViewer';
 import IndividualCDDViewer from './IndividualCDDViewer';
 import BrokersCDDViewer from './BrokersCDDViewer';
+import AgentsCDDViewer from './AgentsCDDViewer';
 
 const theme = createTheme({
   palette: {
@@ -829,6 +830,10 @@ const FormViewer: React.FC = () => {
         </Box>
       </ThemeProvider>
     );
+  }
+
+  if (collection === 'agents-kyc') {
+    return <AgentsCDDViewer />;
   }
 
   const mapping = FORM_MAPPINGS[collection || ''];
