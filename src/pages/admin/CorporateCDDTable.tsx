@@ -228,9 +228,34 @@ const CorporateCDDTable: React.FC = () => {
   });
 
   const columns: GridColDef[] = [
+    // Actions column first
+    {
+      field: 'actions',
+      type: 'actions',
+      headerName: 'Actions',
+      width: 100,
+      getActions: (params) => [
+        <GridActionsCellItem
+          key="view"
+          icon={<Visibility />}
+          label="View"
+          onClick={() => handleView(params.id)}
+        />,
+        <GridActionsCellItem
+          key="delete"
+          icon={<Delete />}
+          label="Delete"
+          onClick={() => {
+            setSelectedFormId(params.id as string);
+            setDeleteDialogOpen(true);
+          }}
+        />
+      ]
+    },
+    // Created At column
     {
       field: 'timestamp',
-      headerName: 'Submitted',
+      headerName: 'Created At',
       width: 160,
       renderCell: (params) => (
         <div className="text-sm">
@@ -238,6 +263,7 @@ const CorporateCDDTable: React.FC = () => {
         </div>
       )
     },
+    // Company Information - following CorporateCDDViewer order
     {
       field: 'companyName',
       headerName: 'Company Name',
@@ -249,28 +275,18 @@ const CorporateCDDTable: React.FC = () => {
       )
     },
     {
-      field: 'emailAddress',
-      headerName: 'Email',
-      width: 200,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
-    },
-    {
-      field: 'companyAddress',
-      headerName: 'Company Address',
-      width: 200,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
-    },
-    {
       field: 'incorporationNumber',
-      headerName: 'Incorporation No.',
+      headerName: 'Incorporation Number',
+      width: 160,
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    {
+      field: 'incorporationState',
+      headerName: 'Incorporation State',
       width: 150,
       renderCell: (params) => (
         <div className="truncate">
@@ -279,9 +295,91 @@ const CorporateCDDTable: React.FC = () => {
       )
     },
     {
+      field: 'dateOfIncorporationRegistration',
+      headerName: 'Date of Incorporation',
+      width: 160,
+      renderCell: (params) => (
+        <div className="truncate">
+          {formatDate(params.value) !== 'N/A' ? formatDate(params.value) : params.value || 'N/A'}
+        </div>
+      )
+    },
+    {
+      field: 'companyLegalForm',
+      headerName: 'Company Type',
+      width: 140,
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    {
+      field: 'emailAddress',
+      headerName: 'Email Address',
+      width: 200,
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    {
+      field: 'website',
+      headerName: 'Website',
+      width: 180,
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    {
+      field: 'taxIdentificationNumber',
+      headerName: 'Tax ID Number',
+      width: 140,
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    {
       field: 'telephoneNumber',
-      headerName: 'Phone',
-      width: 130,
+      headerName: 'Telephone Number',
+      width: 150,
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    {
+      field: 'registeredCompanyAddress',
+      headerName: 'Registered Address',
+      width: 200,
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    {
+      field: 'natureOfBusiness',
+      headerName: 'Nature of Business',
+      width: 160,
+      renderCell: (params) => (
+        <div className="truncate">
+          {params.value || 'N/A'}
+        </div>
+      )
+    },
+    
+    // Contact Information
+    {
+      field: 'companyAddress',
+      headerName: 'Company Address',
+      width: 200,
       renderCell: (params) => (
         <div className="truncate">
           {params.value || 'N/A'}
@@ -318,47 +416,103 @@ const CorporateCDDTable: React.FC = () => {
         </div>
       )
     },
+    
+    // Directors Information - All Directors flattened
     {
-      field: 'natureOfBusiness',
-      headerName: 'Business Nature',
-      width: 150,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
-    },
-    {
-      field: 'taxIdentificationNumber',
-      headerName: 'Tax ID',
-      width: 130,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
-    },
-    {
-      field: 'website',
-      headerName: 'Website',
-      width: 180,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
-    },
-    // Directors columns
-    {
-      field: 'director1Name',
-      headerName: 'Director 1 Name',
+      field: 'director1FirstName',
+      headerName: 'Director 1 First Name',
       width: 150,
       valueGetter: (value, row) => {
         const directors = row.directors;
         if (Array.isArray(directors) && directors[0]) {
-          return `${directors[0].firstName || ''} ${directors[0].lastName || ''}`.trim() || 'N/A';
+          return directors[0].firstName || 'N/A';
         }
-        return 'N/A';
+        // Handle old flat format
+        return row.firstName || 'N/A';
+      }
+    },
+    {
+      field: 'director1MiddleName',
+      headerName: 'Director 1 Middle Name',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].middleName || 'N/A';
+        }
+        return row.middleName || 'N/A';
+      }
+    },
+    {
+      field: 'director1LastName',
+      headerName: 'Director 1 Last Name',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].lastName || 'N/A';
+        }
+        return row.lastName || 'N/A';
+      }
+    },
+    {
+      field: 'director1DOB',
+      headerName: 'Director 1 DOB',
+      width: 130,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].dob || 'N/A';
+        }
+        return row.dob || 'N/A';
+      }
+    },
+    {
+      field: 'director1PlaceOfBirth',
+      headerName: 'Director 1 Place of Birth',
+      width: 160,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].placeOfBirth || 'N/A';
+        }
+        return row.placeOfBirth || 'N/A';
+      }
+    },
+    {
+      field: 'director1Nationality',
+      headerName: 'Director 1 Nationality',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].nationality || 'N/A';
+        }
+        return row.nationality || 'N/A';
+      }
+    },
+    {
+      field: 'director1Country',
+      headerName: 'Director 1 Country',
+      width: 140,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].country || 'N/A';
+        }
+        return row.country || 'N/A';
+      }
+    },
+    {
+      field: 'director1Occupation',
+      headerName: 'Director 1 Occupation',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].occupation || 'N/A';
+        }
+        return row.occupation || 'N/A';
       }
     },
     {
@@ -370,31 +524,225 @@ const CorporateCDDTable: React.FC = () => {
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].email || 'N/A';
         }
-        return 'N/A';
+        return row.email || 'N/A';
       }
     },
     {
       field: 'director1Phone',
       headerName: 'Director 1 Phone',
-      width: 140,
+      width: 150,
       valueGetter: (value, row) => {
         const directors = row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].phoneNumber || 'N/A';
         }
-        return 'N/A';
+        return row.phoneNumber || 'N/A';
       }
     },
     {
-      field: 'director2Name',
-      headerName: 'Director 2 Name',
+      field: 'director1BVN',
+      headerName: 'Director 1 BVN',
+      width: 140,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].BVNNumber || 'N/A';
+        }
+        return row.BVNNumber || 'N/A';
+      }
+    },
+    {
+      field: 'director1ResidentialAddress',
+      headerName: 'Director 1 Residential Address',
+      width: 200,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].residentialAddress || 'N/A';
+        }
+        return row.residentialAddress || 'N/A';
+      }
+    },
+    {
+      field: 'director1TaxID',
+      headerName: 'Director 1 Tax ID',
+      width: 140,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].taxIDNumber || 'N/A';
+        }
+        return row.taxIDNumber || 'N/A';
+      }
+    },
+    {
+      field: 'director1IDType',
+      headerName: 'Director 1 ID Type',
+      width: 140,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].idType || 'N/A';
+        }
+        return row.idType || 'N/A';
+      }
+    },
+    {
+      field: 'director1IDNumber',
+      headerName: 'Director 1 ID Number',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].idNumber || 'N/A';
+        }
+        return row.idNumber || 'N/A';
+      }
+    },
+    {
+      field: 'director1IssuingBody',
+      headerName: 'Director 1 Issuing Body',
+      width: 160,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].issuingBody || 'N/A';
+        }
+        return row.issuingBody || 'N/A';
+      }
+    },
+    {
+      field: 'director1IssuedDate',
+      headerName: 'Director 1 Issued Date',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].issuedDate || 'N/A';
+        }
+        return row.issuedDate || 'N/A';
+      }
+    },
+    {
+      field: 'director1ExpiryDate',
+      headerName: 'Director 1 Expiry Date',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].expiryDate || 'N/A';
+        }
+        return row.expiryDate || 'N/A';
+      }
+    },
+    {
+      field: 'director1SourceOfIncome',
+      headerName: 'Director 1 Source of Income',
+      width: 180,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].sourceOfIncome || 'N/A';
+        }
+        return row.sourceOfIncome || 'N/A';
+      }
+    },
+    
+    // Director 2 columns
+    {
+      field: 'director2FirstName',
+      headerName: 'Director 2 First Name',
       width: 150,
       valueGetter: (value, row) => {
         const directors = row.directors;
         if (Array.isArray(directors) && directors[1]) {
-          return `${directors[1].firstName || ''} ${directors[1].lastName || ''}`.trim() || 'N/A';
+          return directors[1].firstName || 'N/A';
         }
-        return 'N/A';
+        return row.firstName2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2MiddleName',
+      headerName: 'Director 2 Middle Name',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].middleName || 'N/A';
+        }
+        return row.middleName2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2LastName',
+      headerName: 'Director 2 Last Name',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].lastName || 'N/A';
+        }
+        return row.lastName2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2DOB',
+      headerName: 'Director 2 DOB',
+      width: 130,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].dob || 'N/A';
+        }
+        return row.dob2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2PlaceOfBirth',
+      headerName: 'Director 2 Place of Birth',
+      width: 160,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].placeOfBirth || 'N/A';
+        }
+        return row.placeOfBirth2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2Nationality',
+      headerName: 'Director 2 Nationality',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].nationality || 'N/A';
+        }
+        return row.nationality2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2Country',
+      headerName: 'Director 2 Country',
+      width: 140,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].country || 'N/A';
+        }
+        return row.country2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2Occupation',
+      headerName: 'Director 2 Occupation',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].occupation || 'N/A';
+        }
+        return row.occupation2 || 'N/A';
       }
     },
     {
@@ -406,21 +754,131 @@ const CorporateCDDTable: React.FC = () => {
         if (Array.isArray(directors) && directors[1]) {
           return directors[1].email || 'N/A';
         }
-        return 'N/A';
+        return row.email2 || 'N/A';
       }
     },
     {
       field: 'director2Phone',
       headerName: 'Director 2 Phone',
-      width: 140,
+      width: 150,
       valueGetter: (value, row) => {
         const directors = row.directors;
         if (Array.isArray(directors) && directors[1]) {
           return directors[1].phoneNumber || 'N/A';
         }
-        return 'N/A';
+        return row.phoneNumber2 || 'N/A';
       }
     },
+    {
+      field: 'director2BVN',
+      headerName: 'Director 2 BVN',
+      width: 140,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].BVNNumber || 'N/A';
+        }
+        return row.BVNNumber2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2ResidentialAddress',
+      headerName: 'Director 2 Residential Address',
+      width: 200,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].residentialAddress || 'N/A';
+        }
+        return row.residentialAddress2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2TaxID',
+      headerName: 'Director 2 Tax ID',
+      width: 140,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].taxIDNumber || 'N/A';
+        }
+        return row.taxIDNumber2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2IDType',
+      headerName: 'Director 2 ID Type',
+      width: 140,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].idType || 'N/A';
+        }
+        return row.idType2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2IDNumber',
+      headerName: 'Director 2 ID Number',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].idNumber || 'N/A';
+        }
+        return row.idNumber2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2IssuingBody',
+      headerName: 'Director 2 Issuing Body',
+      width: 160,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].issuingBody || 'N/A';
+        }
+        return row.issuingBody2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2IssuedDate',
+      headerName: 'Director 2 Issued Date',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].issuedDate || 'N/A';
+        }
+        return row.issuedDate2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2ExpiryDate',
+      headerName: 'Director 2 Expiry Date',
+      width: 150,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].expiryDate || 'N/A';
+        }
+        return row.expiryDate2 || 'N/A';
+      }
+    },
+    {
+      field: 'director2SourceOfIncome',
+      headerName: 'Director 2 Source of Income',
+      width: 180,
+      valueGetter: (value, row) => {
+        const directors = row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].sourceOfIncome || 'N/A';
+        }
+        return row.sourceOfIncome2 || 'N/A';
+      }
+    },
+    
+    // Status column at the end
     {
       field: 'status',
       headerName: 'Status',
@@ -432,29 +890,6 @@ const CorporateCDDTable: React.FC = () => {
           size="small"
         />
       )
-    },
-    {
-      field: 'actions',
-      type: 'actions',
-      headerName: 'Actions',
-      width: 100,
-      getActions: (params) => [
-        <GridActionsCellItem
-          key="view"
-          icon={<Visibility />}
-          label="View"
-          onClick={() => handleView(params.id)}
-        />,
-        <GridActionsCellItem
-          key="delete"
-          icon={<Delete />}
-          label="Delete"
-          onClick={() => {
-            setSelectedFormId(params.id as string);
-            setDeleteDialogOpen(true);
-          }}
-        />
-      ]
     }
   ];
 
