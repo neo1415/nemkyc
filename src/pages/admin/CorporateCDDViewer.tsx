@@ -180,148 +180,426 @@ const CorporateCDDViewer: React.FC = () => {
     if (!formData) return;
     
     const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.width;
     const pageHeight = pdf.internal.pageSize.height;
     let yPosition = 20;
     
-    // Title
-    pdf.setFontSize(16);
-    pdf.setFont(undefined, 'bold');
-    pdf.text('Corporate CDD Form', 20, yPosition);
-    yPosition += 15;
+    // Define burgundy color (139, 69, 19) as RGB values
+    const burgundyR = 139;
+    const burgundyG = 69;
+    const burgundyB = 19;
     
-    // Form ID and Date
+    // Company Header
+    pdf.setFontSize(18);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(burgundyR, burgundyG, burgundyB);
+    pdf.text('NEM INSURANCE PLC', 20, yPosition);
+    yPosition += 8;
+    
     pdf.setFontSize(10);
     pdf.setFont(undefined, 'normal');
-    pdf.text(`Form ID: ${formData.id}`, 20, yPosition);
-    yPosition += 10;
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('199, Ikorodu Road, Obanikoro, Lagos', 20, yPosition);
+    yPosition += 5;
+    pdf.text('Tel: +234-1-295-2627, Email: info@neminsurance.com.ng', 20, yPosition);
+    yPosition += 5;
+    pdf.text('Website: www.neminsurance.com.ng', 20, yPosition);
     
-    if (formData.timestamp) {
-      const submissionDate = formData.timestamp.toDate ? formData.timestamp.toDate() : new Date(formData.timestamp);
-      pdf.text(`Submitted: ${format(submissionDate, 'PPpp')}`, 20, yPosition);
-      yPosition += 15;
-    }
+    // Draw burgundy line under header
+    pdf.setDrawColor(burgundyR, burgundyG, burgundyB);
+    pdf.setLineWidth(0.5);
+    pdf.line(20, yPosition + 3, pageWidth - 20, yPosition + 3);
+    yPosition += 15;
+    
+    // Form Title
+    pdf.setFontSize(16);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(burgundyR, burgundyG, burgundyB);
+    const isNaicomForm = formData.cacForm && formData.cacForm.trim() !== '';
+    pdf.text(isNaicomForm ? 'NAICOM CORPORATE CDD FORM' : 'CORPORATE CDD FORM', 20, yPosition);
+    yPosition += 15;
     
     // Company Details Section
-    pdf.setFontSize(12);
+    pdf.setFontSize(14);
     pdf.setFont(undefined, 'bold');
-    pdf.text('Company Details', 20, yPosition);
-    yPosition += 10;
+    pdf.setTextColor(burgundyR, burgundyG, burgundyB);
+    pdf.text('COMPANY DETAILS', 20, yPosition);
+    yPosition += 2;
+    
+    // Draw burgundy line under section header
+    pdf.setLineWidth(0.3);
+    pdf.line(20, yPosition, pageWidth - 20, yPosition);
+    yPosition += 8;
     
     const companyFields = [
-      { label: 'Company Name', value: formData.companyName },
-      { label: 'Registered Address', value: formData.registeredCompanyAddress },
-      { label: 'Incorporation Number', value: formData.incorporationNumber },
-      { label: 'Incorporation State', value: formData.incorporationState },
-      { label: 'Date of Incorporation', value: formData.dateOfIncorporationRegistration },
-      { label: 'Nature of Business', value: formData.natureOfBusiness },
-      { label: 'Company Type', value: formData.companyLegalForm },
-      { label: 'Email', value: formData.emailAddress },
-      { label: 'Website', value: formData.website },
-      { label: 'Tax ID', value: formData.taxIdentificationNumber },
-      { label: 'Telephone', value: formData.telephoneNumber }
+      { label: 'Company Name', value: formData.companyName || 'N/A' },
+      { label: 'Incorporation Number', value: formData.incorporationNumber || 'N/A' },
+      { label: 'Incorporation State', value: formData.incorporationState || 'N/A' },
+      { label: 'Date of Incorporation', value: formatDate(formData.dateOfIncorporationRegistration) },
+      { label: 'Company Type', value: formData.companyLegalForm || 'N/A' },
+      { label: 'Email Address', value: formData.emailAddress || 'N/A' },
+      { label: 'Website', value: formData.website || 'N/A' },
+      { label: 'Tax ID Number', value: formData.taxIdentificationNumber || 'N/A' },
+      { label: 'Telephone Number', value: formData.telephoneNumber || 'N/A' },
+      { label: 'Registered Address', value: formData.registeredCompanyAddress || 'N/A' },
+      { label: 'Nature of Business', value: formData.natureOfBusiness || 'N/A' }
     ];
     
     pdf.setFontSize(10);
-    pdf.setFont(undefined, 'normal');
+    pdf.setTextColor(0, 0, 0);
     
     companyFields.forEach(field => {
-      if (field.value) {
-        if (yPosition > pageHeight - 20) {
-          pdf.addPage();
-          yPosition = 20;
-        }
-        pdf.text(`${field.label}: ${field.value}`, 20, yPosition);
-        yPosition += 8;
+      if (yPosition > pageHeight - 20) {
+        pdf.addPage();
+        yPosition = 20;
       }
+      pdf.setFont(undefined, 'bold');
+      pdf.text(`${field.label}:`, 20, yPosition);
+      pdf.setFont(undefined, 'normal');
+      
+      const maxWidth = 130;
+      const textLines = pdf.splitTextToSize(field.value, maxWidth);
+      pdf.text(textLines, 70, yPosition);
+      yPosition += Math.max(textLines.length * 5, 6);
     });
     
     // Directors Section
+    yPosition += 5;
+    if (yPosition > pageHeight - 40) {
+      pdf.addPage();
+      yPosition = 20;
+    }
+    
+    pdf.setFontSize(14);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(burgundyR, burgundyG, burgundyB);
+    pdf.text('DIRECTORS INFORMATION', 20, yPosition);
+    yPosition += 2;
+    
+    // Draw burgundy line under section header
+    pdf.setLineWidth(0.3);
+    pdf.line(20, yPosition, pageWidth - 20, yPosition);
+    yPosition += 8;
+    
+    // Handle both new array format and old flat format
+    const directors: Director[] = [];
+    
+    // Check if directors is an array (new format)
     if (formData.directors && Array.isArray(formData.directors)) {
-      yPosition += 10;
-      pdf.setFontSize(12);
-      pdf.setFont(undefined, 'bold');
-      pdf.text('Directors Information', 20, yPosition);
-      yPosition += 10;
+      directors.push(...formData.directors);
+    }
+    
+    // Check for old flat format (firstName, lastName, firstName2, lastName2, etc.)
+    if (directors.length === 0) {
+      // Director 1 (no number suffix)
+      if (formData.firstName || formData.lastName) {
+        const director: Director = {
+          firstName: formData.firstName || '',
+          middleName: formData.middleName || '',
+          lastName: formData.lastName || '',
+          dob: formData.dob || '',
+          placeOfBirth: formData.placeOfBirth || '',
+          nationality: formData.nationality || '',
+          country: formData.country || '',
+          occupation: formData.occupation || '',
+          email: formData.email || '',
+          phoneNumber: formData.phoneNumber || '',
+          BVNNumber: formData.BVNNumber || '',
+          employersName: formData.employersName || '',
+          employersPhoneNumber: formData.employersPhoneNumber || '',
+          residentialAddress: formData.residentialAddress || '',
+          taxIDNumber: formData.taxIDNumber || '',
+          idType: formData.idType || '',
+          idNumber: formData.idNumber || '',
+          issuingBody: formData.issuingBody || '',
+          issuedDate: formData.issuedDate || '',
+          expiryDate: formData.expiryDate || '',
+          sourceOfIncome: formData.sourceOfIncome || ''
+        };
+        directors.push(director);
+      }
       
-      formData.directors.forEach((director: Director, index: number) => {
-        if (yPosition > pageHeight - 40) {
+      // Director 2 (with "2" suffix)
+      if (formData.firstName2 || formData.lastName2) {
+        const director: Director = {
+          firstName: formData.firstName2 || '',
+          middleName: formData.middleName2 || '',
+          lastName: formData.lastName2 || '',
+          dob: formData.dob2 || '',
+          placeOfBirth: formData.placeOfBirth2 || '',
+          nationality: formData.nationality2 || '',
+          country: formData.country2 || '',
+          occupation: formData.occupation2 || '',
+          email: formData.email2 || '',
+          phoneNumber: formData.phoneNumber2 || '',
+          BVNNumber: formData.BVNNumber2 || '',
+          employersName: formData.employersName2 || '',
+          employersPhoneNumber: formData.employersPhoneNumber2 || '',
+          residentialAddress: formData.residentialAddress2 || '',
+          taxIDNumber: formData.taxIDNumber2 || '',
+          idType: formData.idType2 || '',
+          idNumber: formData.idNumber2 || '',
+          issuingBody: formData.issuingBody2 || '',
+          issuedDate: formData.issuedDate2 || '',
+          expiryDate: formData.expiryDate2 || '',
+          sourceOfIncome: formData.sourceOfIncome2 || ''
+        };
+        directors.push(director);
+      }
+    }
+    
+    if (directors.length > 0) {
+      directors.forEach((director: Director, index: number) => {
+        if (yPosition > pageHeight - 60) {
           pdf.addPage();
           yPosition = 20;
         }
         
-        pdf.setFontSize(11);
+        pdf.setFontSize(12);
         pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(burgundyR, burgundyG, burgundyB);
         pdf.text(`Director ${index + 1}`, 20, yPosition);
         yPosition += 8;
         
         pdf.setFontSize(10);
-        pdf.setFont(undefined, 'normal');
+        pdf.setTextColor(0, 0, 0);
         
         const directorFields = [
-          { label: 'Name', value: `${director.firstName || ''} ${director.middleName || ''} ${director.lastName || ''}`.trim() },
-          { label: 'Date of Birth', value: director.dob },
-          { label: 'Place of Birth', value: director.placeOfBirth },
-          { label: 'Nationality', value: director.nationality },
-          { label: 'Country', value: director.country },
-          { label: 'Occupation', value: director.occupation },
-          { label: 'Email', value: director.email },
-          { label: 'Phone', value: director.phoneNumber },
-          { label: 'BVN', value: director.BVNNumber },
-          { label: 'Address', value: director.residentialAddress },
-          { label: 'ID Type', value: director.idType },
-          { label: 'ID Number', value: director.idNumber }
+          { label: 'First Name', value: director.firstName || 'N/A' },
+          { label: 'Middle Name', value: director.middleName || 'N/A' },
+          { label: 'Last Name', value: director.lastName || 'N/A' },
+          { label: 'Date of Birth', value: formatDate(director.dob) },
+          { label: 'Place of Birth', value: director.placeOfBirth || 'N/A' },
+          { label: 'Nationality', value: director.nationality || director.country || 'N/A' },
+          { label: 'Email', value: director.email || 'N/A' },
+          { label: 'Phone Number', value: director.phoneNumber || 'N/A' },
+          { label: 'Residential Address', value: director.residentialAddress || 'N/A' },
+          { label: 'ID Type', value: director.idType || 'N/A' },
+          { label: 'Identification Number', value: director.identificationNumber || director.idNumber || 'N/A' },
+          { label: 'Issued Date', value: formatDate(director.issuedDate) },
+          { label: 'Expiry Date', value: formatDate(director.expiryDate) },
+          { label: 'Issuing Body', value: director.issuingBody || 'N/A' },
+          { label: 'BVN', value: director.BVNNumber || 'N/A' },
+          { label: 'Tax ID Number', value: director.taxIDNumber || director.taxIdNumber || 'N/A' },
+          { label: 'Occupation', value: director.occupation || 'N/A' },
+          { label: 'Employer Name', value: director.employersName || 'N/A' },
+          { label: 'Employer Phone', value: director.employersPhoneNumber || director.employerPhone || 'N/A' },
+          { label: 'Source of Income', value: director.sourceOfIncome || director.incomeSource || 'N/A' }
         ];
         
         directorFields.forEach(field => {
-          if (field.value) {
-            if (yPosition > pageHeight - 20) {
-              pdf.addPage();
-              yPosition = 20;
-            }
-            pdf.text(`${field.label}: ${field.value}`, 25, yPosition);
-            yPosition += 6;
+          if (yPosition > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 20;
           }
+          pdf.setFont(undefined, 'bold');
+          pdf.text(`${field.label}:`, 25, yPosition);
+          pdf.setFont(undefined, 'normal');
+          
+          const maxWidth = 125;
+          const textLines = pdf.splitTextToSize(field.value, maxWidth);
+          pdf.text(textLines, 75, yPosition);
+          yPosition += Math.max(textLines.length * 5, 6);
         });
         
         yPosition += 5;
       });
+    } else {
+      pdf.setFont(undefined, 'normal');
+      pdf.text('No directors information available', 25, yPosition);
+      yPosition += 10;
     }
     
-    // Account Details
+    // Account Details Section
+    yPosition += 5;
+    if (yPosition > pageHeight - 40) {
+      pdf.addPage();
+      yPosition = 20;
+    }
+    
+    pdf.setFontSize(14);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(burgundyR, burgundyG, burgundyB);
+    pdf.text('ACCOUNT DETAILS', 20, yPosition);
+    yPosition += 2;
+    
+    // Draw burgundy line under section header
+    pdf.setLineWidth(0.3);
+    pdf.line(20, yPosition, pageWidth - 20, yPosition);
+    yPosition += 8;
+    
+    // Local Account Details
+    pdf.setFontSize(12);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(burgundyR, burgundyG, burgundyB);
+    pdf.text('Local Account Details', 20, yPosition);
+    yPosition += 6;
+    
+    const localAccountFields = [
+      { label: 'Bank Name', value: formData.bankName || formData.localBankName || 'N/A' },
+      { label: 'Account Number', value: formData.accountNumber || formData.localAccountNumber || 'N/A' },
+      { label: 'Bank Branch', value: formData.bankBranch || formData.localBankBranch || 'N/A' },
+      { label: 'Account Opening Date', value: formatDate(formData.accountOpeningDate || formData.localAccountOpeningDate) }
+    ];
+    
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    
+    localAccountFields.forEach(field => {
+      if (yPosition > pageHeight - 20) {
+        pdf.addPage();
+        yPosition = 20;
+      }
+      pdf.setFont(undefined, 'bold');
+      pdf.text(`${field.label}:`, 25, yPosition);
+      pdf.setFont(undefined, 'normal');
+      
+      const maxWidth = 125;
+      const textLines = pdf.splitTextToSize(field.value, maxWidth);
+      pdf.text(textLines, 75, yPosition);
+      yPosition += Math.max(textLines.length * 5, 6);
+    });
+    
+    yPosition += 5;
+    
+    // Foreign Account Details
+    pdf.setFontSize(12);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(burgundyR, burgundyG, burgundyB);
+    pdf.text('Foreign Account Details', 20, yPosition);
+    yPosition += 6;
+    
+    const foreignAccountFields = [
+      { label: 'Bank Name', value: formData.bankName2 || formData.foreignBankName || 'N/A' },
+      { label: 'Account Number', value: formData.accountNumber2 || formData.foreignAccountNumber || 'N/A' },
+      { label: 'Bank Branch', value: formData.bankBranch2 || formData.foreignBankBranch || 'N/A' },
+      { label: 'Account Opening Date', value: formatDate(formData.accountOpeningDate2 || formData.foreignAccountOpeningDate) }
+    ];
+    
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    
+    foreignAccountFields.forEach(field => {
+      if (yPosition > pageHeight - 20) {
+        pdf.addPage();
+        yPosition = 20;
+      }
+      pdf.setFont(undefined, 'bold');
+      pdf.text(`${field.label}:`, 25, yPosition);
+      pdf.setFont(undefined, 'normal');
+      
+      const maxWidth = 125;
+      const textLines = pdf.splitTextToSize(field.value, maxWidth);
+      pdf.text(textLines, 75, yPosition);
+      yPosition += Math.max(textLines.length * 5, 6);
+    });
+    
+    // Document Uploads Section
     yPosition += 10;
     if (yPosition > pageHeight - 40) {
       pdf.addPage();
       yPosition = 20;
     }
     
-    pdf.setFontSize(12);
+    pdf.setFontSize(14);
     pdf.setFont(undefined, 'bold');
-    pdf.text('Account Details', 20, yPosition);
-    yPosition += 10;
+    pdf.setTextColor(burgundyR, burgundyG, burgundyB);
+    pdf.text('DOCUMENT UPLOADS', 20, yPosition);
+    yPosition += 2;
     
-    const accountFields = [
-      { label: 'Bank Name', value: formData.bankName },
-      { label: 'Account Number', value: formData.accountNumber },
-      { label: 'Bank Branch', value: formData.bankBranch },
-      { label: 'Account Opening Date', value: formData.accountOpeningDate }
+    // Draw burgundy line under section header
+    pdf.setLineWidth(0.3);
+    pdf.line(20, yPosition, pageWidth - 20, yPosition);
+    yPosition += 8;
+    
+    const documentFields = [
+      { label: 'CAC Certificate', uploaded: !!(formData.cac || formData.identificationDocument) },
+      { label: 'Identification Document', uploaded: !!formData.identification },
+      { label: 'NAICOM License Certificate', uploaded: !!(formData.cacForm || formData.naicomLicense) }
     ];
     
     pdf.setFontSize(10);
-    pdf.setFont(undefined, 'normal');
+    pdf.setTextColor(0, 0, 0);
     
-    accountFields.forEach(field => {
-      if (field.value) {
-        if (yPosition > pageHeight - 20) {
-          pdf.addPage();
-          yPosition = 20;
-        }
-        pdf.text(`${field.label}: ${field.value}`, 20, yPosition);
-        yPosition += 8;
+    documentFields.forEach(field => {
+      if (yPosition > pageHeight - 20) {
+        pdf.addPage();
+        yPosition = 20;
       }
+      pdf.setFont(undefined, 'bold');
+      pdf.text(`${field.label}:`, 25, yPosition);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(field.uploaded ? 'Document uploaded' : 'Document not uploaded', 75, yPosition);
+      yPosition += 6;
     });
     
+    // System Information Section
+    yPosition += 10;
+    if (yPosition > pageHeight - 40) {
+      pdf.addPage();
+      yPosition = 20;
+    }
+    
+    pdf.setFontSize(14);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(burgundyR, burgundyG, burgundyB);
+    pdf.text('SYSTEM INFORMATION', 20, yPosition);
+    yPosition += 2;
+    
+    // Draw burgundy line under section header
+    pdf.setLineWidth(0.3);
+    pdf.line(20, yPosition, pageWidth - 20, yPosition);
+    yPosition += 8;
+    
+    const systemFields = [
+      { label: 'Submission Date', value: formData.timestamp ? formatDate(formData.timestamp) : 'N/A' },
+      { label: 'Last Updated', value: formData.updatedAt ? formatDate(formData.updatedAt) : 'N/A' },
+      { label: 'Form Type', value: isNaicomForm ? 'NAICOM Corporate CDD' : 'Corporate CDD' },
+      { label: 'User Email', value: formData.userEmail || 'N/A' }
+    ];
+    
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    
+    systemFields.forEach(field => {
+      if (yPosition > pageHeight - 20) {
+        pdf.addPage();
+        yPosition = 20;
+      }
+      pdf.setFont(undefined, 'bold');
+      pdf.text(`${field.label}:`, 25, yPosition);
+      pdf.setFont(undefined, 'normal');
+      
+      const maxWidth = 125;
+      const textLines = pdf.splitTextToSize(field.value, maxWidth);
+      pdf.text(textLines, 75, yPosition);
+      yPosition += Math.max(textLines.length * 5, 6);
+    });
+    
+    // Footer
+    if (yPosition > pageHeight - 30) {
+      pdf.addPage();
+      yPosition = 20;
+    } else {
+      yPosition += 15;
+    }
+    
+    pdf.setDrawColor(burgundyR, burgundyG, burgundyB);
+    pdf.setLineWidth(0.5);
+    pdf.line(20, yPosition, pageWidth - 20, yPosition);
+    yPosition += 8;
+    
+    pdf.setFontSize(8);
+    pdf.setFont(undefined, 'italic');
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('This document contains confidential information and is generated by NEM Insurance Plc system.', 20, yPosition);
+    yPosition += 4;
+    pdf.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 20, yPosition);
+    
     // Save PDF
-    pdf.save(`Corporate_CDD_${formData.id}.pdf`);
+    const companyName = formData.companyName || 'Unknown_Company';
+    const formType = isNaicomForm ? 'NAICOM_Corporate_CDD' : 'Corporate_CDD';
+    pdf.save(`${companyName}_${formType}.pdf`);
     
     toast({
       title: "Success",
@@ -558,133 +836,98 @@ const CorporateCDDViewer: React.FC = () => {
             
             return directors.length > 0 ? (
               directors.map((director: Director, index: number) => (
-                <div key={index} className="border rounded-lg p-6 space-y-4">
-                  <h4 className="font-semibold text-lg">Director {index + 1}</h4>
+                <div key={index} className="border rounded-lg p-4">
+                  <h4 className="font-semibold text-lg mb-4 text-primary">
+                    Director {index + 1}
+                  </h4>
                   
-                  {/* Personal Information */}
-                  <div>
-                    <h5 className="font-medium text-base mb-3">Personal Information</h5>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Title:</Label>
-                        <span className="text-sm">{director.title || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Gender:</Label>
-                        <span className="text-sm">{director.gender || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">First Name:</Label>
-                        <span className="text-sm">{director.firstName || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Middle Name:</Label>
-                        <span className="text-sm">{director.middleName || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Last Name:</Label>
-                        <span className="text-sm">{director.lastName || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Date of Birth:</Label>
-                        <span className="text-sm">{formatDate(director.dob)}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Place of Birth:</Label>
-                        <span className="text-sm">{director.placeOfBirth || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Nationality:</Label>
-                        <span className="text-sm">{director.nationality || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Country:</Label>
-                        <span className="text-sm">{director.country || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Occupation:</Label>
-                        <span className="text-sm">{director.occupation || 'N/A'}</span>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">First Name</label>
+                      <p className="text-sm">{director.firstName || 'N/A'}</p>
                     </div>
-                  </div>
-
-                  {/* Contact Information */}
-                  <div>
-                    <h5 className="font-medium text-base mb-3">Contact Information</h5>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Email:</Label>
-                        <span className="text-sm">{director.email || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Phone Number:</Label>
-                        <span className="text-sm">{director.phoneNumber || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">BVN:</Label>
-                        <span className="text-sm">{director.BVNNumber || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Tax ID Number:</Label>
-                        <span className="text-sm">{director.taxIDNumber || director.taxIdNumber || 'N/A'}</span>
-                      </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Middle Name</label>
+                      <p className="text-sm">{director.middleName || 'N/A'}</p>
                     </div>
-                    <div className="mt-4 space-y-2">
-                      <Label className="font-medium text-muted-foreground">Residential Address:</Label>
-                      <span className="text-sm">{director.residentialAddress || 'N/A'}</span>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Last Name</label>
+                      <p className="text-sm">{director.lastName || 'N/A'}</p>
                     </div>
-                  </div>
-
-                  {/* Employment Information */}
-                  <div>
-                    <h5 className="font-medium text-base mb-3">Employment Information</h5>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Employer Name:</Label>
-                        <span className="text-sm">{director.employersName || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Employer Phone:</Label>
-                        <span className="text-sm">{director.employersPhoneNumber || director.employerPhone || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Source of Income:</Label>
-                        <span className="text-sm">{director.sourceOfIncome || director.incomeSource || 'N/A'}</span>
-                      </div>
-                      {(director.sourceOfIncome === 'Other' || director.incomeSource === 'Other') && (
-                        <div className="space-y-2">
-                          <Label className="font-medium text-muted-foreground">Other Income Source:</Label>
-                          <span className="text-sm">{director.sourceOfIncomeOther || director.incomeSourceOther || 'N/A'}</span>
-                        </div>
-                      )}
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Date of Birth</label>
+                      <p className="text-sm">{formatDate(director.dob)}</p>
                     </div>
-                  </div>
-
-                  {/* Identification Details */}
-                  <div>
-                    <h5 className="font-medium text-base mb-3">Identification Details</h5>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">ID Type:</Label>
-                        <span className="text-sm">{director.idType || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">ID Number:</Label>
-                        <span className="text-sm">{director.idNumber || director.identificationNumber || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Issuing Body:</Label>
-                        <span className="text-sm">{director.issuingBody || 'N/A'}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Issued Date:</Label>
-                        <span className="text-sm">{formatDate(director.issuedDate)}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Expiry Date:</Label>
-                        <span className="text-sm">{formatDate(director.expiryDate)}</span>
-                      </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Place of Birth</label>
+                      <p className="text-sm">{director.placeOfBirth || 'N/A'}</p>
                     </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Nationality</label>
+                      <p className="text-sm">{director.nationality || director.country || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Email</label>
+                      <p className="text-sm">{director.email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Phone Number</label>
+                      <p className="text-sm">{director.phoneNumber || 'N/A'}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-muted-foreground">Residential Address</label>
+                      <p className="text-sm">{director.residentialAddress || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">ID Type</label>
+                      <p className="text-sm">{director.idType || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Identification Number</label>
+                      <p className="text-sm">{director.identificationNumber || director.idNumber || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Issued Date</label>
+                      <p className="text-sm">{formatDate(director.issuedDate)}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Expiry Date</label>
+                      <p className="text-sm">{formatDate(director.expiryDate)}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Issuing Body</label>
+                      <p className="text-sm">{director.issuingBody || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">BVN</label>
+                      <p className="text-sm">{director.BVNNumber || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Tax ID Number</label>
+                      <p className="text-sm">{director.taxIDNumber || director.taxIdNumber || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Occupation</label>
+                      <p className="text-sm">{director.occupation || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Employer Name</label>
+                      <p className="text-sm">{director.employersName || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Employer Phone</label>
+                      <p className="text-sm">{director.employersPhoneNumber || director.employerPhone || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Source of Income</label>
+                      <p className="text-sm">{director.sourceOfIncome || director.incomeSource || 'N/A'}</p>
+                    </div>
+                    {(director.sourceOfIncomeOther || director.incomeSourceOther) && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Other Source of Income</label>
+                        <p className="text-sm">{director.sourceOfIncomeOther || director.incomeSourceOther}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
