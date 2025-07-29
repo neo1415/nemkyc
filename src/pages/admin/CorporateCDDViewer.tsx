@@ -419,6 +419,9 @@ const CorporateCDDViewer: React.FC = () => {
     );
   }
 
+  // Check if it's NAICOM form based on whether naicom license certificate is uploaded
+  const isNaicomForm = formData.cacForm && formData.cacForm.trim() !== '';
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
@@ -430,18 +433,11 @@ const CorporateCDDViewer: React.FC = () => {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">
-              {formData.isNaicom || formData.taxIdentificationNumber ? 'NAICOM Corporate CDD Form' : 'Corporate CDD Form'}
+              {isNaicomForm ? 'NAICOM Corporate CDD Form' : 'Corporate CDD Form'}
             </h1>
-            <p className="text-muted-foreground">Form ID: {formData.id}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={formData.status === 'approved' ? 'default' : formData.status === 'rejected' ? 'destructive' : 'secondary'}>
-            {formData.status || 'pending'}
-          </Badge>
-          <Button onClick={() => setShowStatusDialog(true)} variant="outline">
-            Update Status
-          </Button>
           <Button onClick={generatePDF} variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Download PDF
@@ -487,143 +483,198 @@ const CorporateCDDViewer: React.FC = () => {
           <CardTitle>Directors Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {formData.directors && Array.isArray(formData.directors) && formData.directors.length > 0 ? (
-            formData.directors.map((director: Director, index: number) => (
-              <div key={index} className="border rounded-lg p-6 space-y-4">
-                <h4 className="font-semibold text-lg">Director {index + 1}</h4>
-                
-                {/* Personal Information */}
-                <div>
-                  <h5 className="font-medium text-base mb-3">Personal Information</h5>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Title:</Label>
-                      <span className="text-sm">{director.title || 'N/A'}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Gender:</Label>
-                      <span className="text-sm">{director.gender || 'N/A'}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">First Name:</Label>
-                      <span className="text-sm">{director.firstName || 'N/A'}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Middle Name:</Label>
-                      <span className="text-sm">{director.middleName || 'N/A'}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Last Name:</Label>
-                      <span className="text-sm">{director.lastName || 'N/A'}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Date of Birth:</Label>
-                      <span className="text-sm">{formatDate(director.dob)}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Place of Birth:</Label>
-                      <span className="text-sm">{director.placeOfBirth || 'N/A'}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Nationality:</Label>
-                      <span className="text-sm">{director.nationality || 'N/A'}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Country:</Label>
-                      <span className="text-sm">{director.country || 'N/A'}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Occupation:</Label>
-                      <span className="text-sm">{director.occupation || 'N/A'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Contact Information */}
-                <div>
-                  <h5 className="font-medium text-base mb-3">Contact Information</h5>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Email:</Label>
-                      <span className="text-sm">{director.email || 'N/A'}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Phone Number:</Label>
-                      <span className="text-sm">{director.phoneNumber || 'N/A'}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">BVN:</Label>
-                      <span className="text-sm">{director.BVNNumber || 'N/A'}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Tax ID Number:</Label>
-                      <span className="text-sm">{director.taxIDNumber || director.taxIdNumber || 'N/A'}</span>
-                    </div>
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    <Label className="font-medium text-muted-foreground">Residential Address:</Label>
-                    <span className="text-sm">{director.residentialAddress || 'N/A'}</span>
-                  </div>
-                </div>
-
-                {/* Employment Information */}
-                <div>
-                  <h5 className="font-medium text-base mb-3">Employment Information</h5>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Employer Name:</Label>
-                      <span className="text-sm">{director.employersName || 'N/A'}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Employer Phone:</Label>
-                      <span className="text-sm">{director.employersPhoneNumber || director.employerPhone || 'N/A'}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Source of Income:</Label>
-                      <span className="text-sm">{director.sourceOfIncome || director.incomeSource || 'N/A'}</span>
-                    </div>
-                    {(director.sourceOfIncome === 'Other' || director.incomeSource === 'Other') && (
+          {(() => {
+            // Handle both new array format and old flat format
+            const directors: Director[] = [];
+            
+            // Check if directors is an array (new format)
+            if (formData.directors && Array.isArray(formData.directors)) {
+              directors.push(...formData.directors);
+            }
+            
+            // Check for old flat format (director1, director2, etc.)
+            const oldFormatDirectors: Director[] = [];
+            let directorIndex = 1;
+            while (true) {
+              const directorKey = directorIndex === 1 ? '' : directorIndex.toString();
+              const firstNameKey = `director${directorKey}FirstName`;
+              const lastNameKey = `director${directorKey}LastName`;
+              
+              if (formData[firstNameKey] || formData[lastNameKey]) {
+                const director: Director = {
+                  firstName: formData[firstNameKey] || formData[`firstName${directorKey}`],
+                  middleName: formData[`director${directorKey}MiddleName`] || formData[`middleName${directorKey}`],
+                  lastName: formData[lastNameKey] || formData[`lastName${directorKey}`],
+                  dob: formData[`director${directorKey}DOB`] || formData[`dob${directorKey}`],
+                  placeOfBirth: formData[`director${directorKey}PlaceOfBirth`] || formData[`placeOfBirth${directorKey}`],
+                  nationality: formData[`director${directorKey}Nationality`] || formData[`nationality${directorKey}`],
+                  country: formData[`director${directorKey}Country`] || formData[`country${directorKey}`],
+                  occupation: formData[`director${directorKey}Occupation`] || formData[`occupation${directorKey}`],
+                  email: formData[`director${directorKey}Email`] || formData[`email${directorKey}`],
+                  phoneNumber: formData[`director${directorKey}PhoneNumber`] || formData[`phoneNumber${directorKey}`],
+                  BVNNumber: formData[`director${directorKey}BVNNumber`] || formData[`BVNNumber${directorKey}`],
+                  employersName: formData[`director${directorKey}EmployersName`] || formData[`employersName${directorKey}`],
+                  employersPhoneNumber: formData[`director${directorKey}EmployersPhoneNumber`] || formData[`employersPhoneNumber${directorKey}`],
+                  residentialAddress: formData[`director${directorKey}ResidentialAddress`] || formData[`residentialAddress${directorKey}`],
+                  taxIDNumber: formData[`director${directorKey}TaxIDNumber`] || formData[`taxIDNumber${directorKey}`],
+                  idType: formData[`director${directorKey}IdType`] || formData[`idType${directorKey}`],
+                  idNumber: formData[`director${directorKey}IdNumber`] || formData[`idNumber${directorKey}`],
+                  issuingBody: formData[`director${directorKey}IssuingBody`] || formData[`issuingBody${directorKey}`],
+                  issuedDate: formData[`director${directorKey}IssuedDate`] || formData[`issuedDate${directorKey}`],
+                  expiryDate: formData[`director${directorKey}ExpiryDate`] || formData[`expiryDate${directorKey}`],
+                  sourceOfIncome: formData[`director${directorKey}SourceOfIncome`] || formData[`sourceOfIncome${directorKey}`],
+                  sourceOfIncomeOther: formData[`director${directorKey}SourceOfIncomeOther`] || formData[`sourceOfIncomeOther${directorKey}`]
+                };
+                oldFormatDirectors.push(director);
+                directorIndex++;
+              } else {
+                break;
+              }
+            }
+            
+            // Use old format if no new format directors found
+            if (directors.length === 0 && oldFormatDirectors.length > 0) {
+              directors.push(...oldFormatDirectors);
+            }
+            
+            return directors.length > 0 ? (
+              directors.map((director: Director, index: number) => (
+                <div key={index} className="border rounded-lg p-6 space-y-4">
+                  <h4 className="font-semibold text-lg">Director {index + 1}</h4>
+                  
+                  {/* Personal Information */}
+                  <div>
+                    <h5 className="font-medium text-base mb-3">Personal Information</h5>
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label className="font-medium text-muted-foreground">Other Income Source:</Label>
-                        <span className="text-sm">{director.sourceOfIncomeOther || director.incomeSourceOther || 'N/A'}</span>
+                        <Label className="font-medium text-muted-foreground">Title:</Label>
+                        <span className="text-sm">{director.title || 'N/A'}</span>
                       </div>
-                    )}
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Gender:</Label>
+                        <span className="text-sm">{director.gender || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">First Name:</Label>
+                        <span className="text-sm">{director.firstName || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Middle Name:</Label>
+                        <span className="text-sm">{director.middleName || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Last Name:</Label>
+                        <span className="text-sm">{director.lastName || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Date of Birth:</Label>
+                        <span className="text-sm">{formatDate(director.dob)}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Place of Birth:</Label>
+                        <span className="text-sm">{director.placeOfBirth || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Nationality:</Label>
+                        <span className="text-sm">{director.nationality || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Country:</Label>
+                        <span className="text-sm">{director.country || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Occupation:</Label>
+                        <span className="text-sm">{director.occupation || 'N/A'}</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                {/* Identification Details */}
-                <div>
-                  <h5 className="font-medium text-base mb-3">Identification Details</h5>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">ID Type:</Label>
-                      <span className="text-sm">{director.idType || 'N/A'}</span>
+                  {/* Contact Information */}
+                  <div>
+                    <h5 className="font-medium text-base mb-3">Contact Information</h5>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Email:</Label>
+                        <span className="text-sm">{director.email || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Phone Number:</Label>
+                        <span className="text-sm">{director.phoneNumber || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">BVN:</Label>
+                        <span className="text-sm">{director.BVNNumber || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Tax ID Number:</Label>
+                        <span className="text-sm">{director.taxIDNumber || director.taxIdNumber || 'N/A'}</span>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">ID Number:</Label>
-                      <span className="text-sm">{director.idNumber || director.identificationNumber || 'N/A'}</span>
+                    <div className="mt-4 space-y-2">
+                      <Label className="font-medium text-muted-foreground">Residential Address:</Label>
+                      <span className="text-sm">{director.residentialAddress || 'N/A'}</span>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Issuing Body:</Label>
-                      <span className="text-sm">{director.issuingBody || 'N/A'}</span>
+                  </div>
+
+                  {/* Employment Information */}
+                  <div>
+                    <h5 className="font-medium text-base mb-3">Employment Information</h5>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Employer Name:</Label>
+                        <span className="text-sm">{director.employersName || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Employer Phone:</Label>
+                        <span className="text-sm">{director.employersPhoneNumber || director.employerPhone || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Source of Income:</Label>
+                        <span className="text-sm">{director.sourceOfIncome || director.incomeSource || 'N/A'}</span>
+                      </div>
+                      {(director.sourceOfIncome === 'Other' || director.incomeSource === 'Other') && (
+                        <div className="space-y-2">
+                          <Label className="font-medium text-muted-foreground">Other Income Source:</Label>
+                          <span className="text-sm">{director.sourceOfIncomeOther || director.incomeSourceOther || 'N/A'}</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Issued Date:</Label>
-                      <span className="text-sm">{formatDate(director.issuedDate)}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-medium text-muted-foreground">Expiry Date:</Label>
-                      <span className="text-sm">{formatDate(director.expiryDate)}</span>
+                  </div>
+
+                  {/* Identification Details */}
+                  <div>
+                    <h5 className="font-medium text-base mb-3">Identification Details</h5>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">ID Type:</Label>
+                        <span className="text-sm">{director.idType || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">ID Number:</Label>
+                        <span className="text-sm">{director.idNumber || director.identificationNumber || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Issuing Body:</Label>
+                        <span className="text-sm">{director.issuingBody || 'N/A'}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Issued Date:</Label>
+                        <span className="text-sm">{formatDate(director.issuedDate)}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Expiry Date:</Label>
+                        <span className="text-sm">{formatDate(director.expiryDate)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No directors information available
               </div>
-            ))
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No directors information available
-            </div>
-          )}
+            );
+          })()}
         </CardContent>
       </Card>
 
@@ -703,7 +754,7 @@ const CorporateCDDViewer: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <span className="text-sm text-muted-foreground">No document uploaded</span>
+                <span className="text-sm text-muted-foreground">Document not uploaded</span>
               )}
             </div>
             
@@ -718,51 +769,24 @@ const CorporateCDDViewer: React.FC = () => {
                   </Button>
                 </div>
               ) : (
-                <span className="text-sm text-muted-foreground">No document uploaded</span>
+                <span className="text-sm text-muted-foreground">Document not uploaded</span>
               )}
             </div>
 
-            {/* NAICOM License for NAICOM forms */}
-            {(formData.isNaicom || formData.taxIdentificationNumber || formData.cacForm) && (
-              <div className="space-y-2">
-                <Label className="font-medium text-muted-foreground">NAICOM License Certificate:</Label>
-                {formData.cacForm || formData.naicomLicense ? (
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    <span className="text-sm">Document uploaded</span>
-                    <Button size="sm" variant="outline" onClick={() => window.open(formData.cacForm || formData.naicomLicense, '_blank')}>
-                      View
-                    </Button>
-                  </div>
-                ) : (
-                  <span className="text-sm text-muted-foreground">No document uploaded</span>
-                )}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Declaration */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Declaration</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+            {/* NAICOM License - Always show this section */}
             <div className="space-y-2">
-              <Label className="font-medium text-muted-foreground">Data Privacy Agreement:</Label>
-              <span className="text-sm">
-                {formData.agreeToDataPrivacy ? (
-                  <Badge variant="default">Agreed</Badge>
-                ) : (
-                  <Badge variant="destructive">Not Agreed</Badge>
-                )}
-              </span>
-            </div>
-            <div className="space-y-2">
-              <Label className="font-medium text-muted-foreground">Digital Signature:</Label>
-              <span className="text-sm">{formData.signature || 'N/A'}</span>
+              <Label className="font-medium text-muted-foreground">NAICOM License Certificate:</Label>
+              {formData.cacForm || formData.naicomLicense ? (
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  <span className="text-sm">Document uploaded</span>
+                  <Button size="sm" variant="outline" onClick={() => window.open(formData.cacForm || formData.naicomLicense, '_blank')}>
+                    View
+                  </Button>
+                </div>
+              ) : (
+                <span className="text-sm text-muted-foreground">Document not uploaded</span>
+              )}
             </div>
           </div>
         </CardContent>
@@ -793,20 +817,8 @@ const CorporateCDDViewer: React.FC = () => {
             <div className="space-y-2">
               <Label className="font-medium text-muted-foreground">Form Type:</Label>
               <span className="text-sm">
-                {formData.isNaicom || formData.taxIdentificationNumber ? 'NAICOM Corporate CDD' : 'Corporate CDD'}
+                {isNaicomForm ? 'NAICOM Corporate CDD' : 'Corporate CDD'}
               </span>
-            </div>
-            <div className="space-y-2">
-              <Label className="font-medium text-muted-foreground">Status:</Label>
-              <span className="text-sm">
-                <Badge variant={formData.status === 'approved' ? 'default' : formData.status === 'rejected' ? 'destructive' : 'secondary'}>
-                  {formData.status || 'pending'}
-                </Badge>
-              </span>
-            </div>
-            <div className="space-y-2">
-              <Label className="font-medium text-muted-foreground">Form ID:</Label>
-              <span className="text-sm">{formData.id}</span>
             </div>
             <div className="space-y-2">
               <Label className="font-medium text-muted-foreground">User Email:</Label>
@@ -816,39 +828,6 @@ const CorporateCDDViewer: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Status Update Dialog */}
-      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Form Status</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>New Status</Label>
-              <Select value={newStatus} onValueChange={setNewStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="processing">Processing</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowStatusDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleStatusUpdate} disabled={!newStatus || isUpdating}>
-              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Update Status
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
