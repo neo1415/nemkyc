@@ -24,6 +24,8 @@ interface FormData {
 }
 
 interface Director {
+  title?: string;
+  gender?: string;
   firstName?: string;
   middleName?: string;
   lastName?: string;
@@ -37,15 +39,20 @@ interface Director {
   BVNNumber?: string;
   employersName?: string;
   employersPhoneNumber?: string;
+  employerPhone?: string;
   residentialAddress?: string;
   taxIDNumber?: string;
+  taxIdNumber?: string;
   idType?: string;
   idNumber?: string;
+  identificationNumber?: string;
   issuingBody?: string;
   issuedDate?: any;
   expiryDate?: any;
   sourceOfIncome?: string;
+  incomeSource?: string;
   sourceOfIncomeOther?: string;
+  incomeSourceOther?: string;
 }
 
 const CorporateCDDViewer: React.FC = () => {
@@ -422,7 +429,9 @@ const CorporateCDDViewer: React.FC = () => {
             Back to Admin
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Corporate CDD Form</h1>
+            <h1 className="text-2xl font-bold">
+              {formData.isNaicom || formData.taxIdentificationNumber ? 'NAICOM Corporate CDD Form' : 'Corporate CDD Form'}
+            </h1>
             <p className="text-muted-foreground">Form ID: {formData.id}</p>
           </div>
         </div>
@@ -440,6 +449,325 @@ const CorporateCDDViewer: React.FC = () => {
         </div>
       </div>
 
+      {/* Company Details */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Company Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-4">
+              {renderEditableField('companyName', 'Company Name', formData.companyName)}
+              {renderEditableField('incorporationNumber', 'Incorporation Number', formData.incorporationNumber)}
+              {renderEditableField('incorporationState', 'Incorporation State', formData.incorporationState)}
+              <div className="space-y-2">
+                <Label className="font-medium text-muted-foreground">Date of Incorporation:</Label>
+                <span className="text-sm">{formatDate(formData.dateOfIncorporationRegistration)}</span>
+              </div>
+              {renderEditableField('companyLegalForm', 'Company Type', formData.companyLegalForm)}
+              {formData.companyLegalForm === 'Other' && renderEditableField('companyLegalFormOther', 'Other Company Type', formData.companyLegalFormOther)}
+              {renderEditableField('emailAddress', 'Email Address', formData.emailAddress)}
+            </div>
+            <div className="space-y-4">
+              {renderEditableField('website', 'Website', formData.website)}
+              {renderEditableField('taxIdentificationNumber', 'Tax ID Number', formData.taxIdentificationNumber)}
+              {renderEditableField('telephoneNumber', 'Telephone Number', formData.telephoneNumber)}
+            </div>
+          </div>
+          <div className="space-y-4">
+            {renderEditableField('registeredCompanyAddress', 'Registered Address', formData.registeredCompanyAddress, 'textarea')}
+            {renderEditableField('natureOfBusiness', 'Nature of Business', formData.natureOfBusiness, 'textarea')}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Directors Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Directors Information</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {formData.directors && Array.isArray(formData.directors) && formData.directors.length > 0 ? (
+            formData.directors.map((director: Director, index: number) => (
+              <div key={index} className="border rounded-lg p-6 space-y-4">
+                <h4 className="font-semibold text-lg">Director {index + 1}</h4>
+                
+                {/* Personal Information */}
+                <div>
+                  <h5 className="font-medium text-base mb-3">Personal Information</h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Title:</Label>
+                      <span className="text-sm">{director.title || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Gender:</Label>
+                      <span className="text-sm">{director.gender || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">First Name:</Label>
+                      <span className="text-sm">{director.firstName || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Middle Name:</Label>
+                      <span className="text-sm">{director.middleName || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Last Name:</Label>
+                      <span className="text-sm">{director.lastName || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Date of Birth:</Label>
+                      <span className="text-sm">{formatDate(director.dob)}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Place of Birth:</Label>
+                      <span className="text-sm">{director.placeOfBirth || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Nationality:</Label>
+                      <span className="text-sm">{director.nationality || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Country:</Label>
+                      <span className="text-sm">{director.country || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Occupation:</Label>
+                      <span className="text-sm">{director.occupation || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Information */}
+                <div>
+                  <h5 className="font-medium text-base mb-3">Contact Information</h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Email:</Label>
+                      <span className="text-sm">{director.email || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Phone Number:</Label>
+                      <span className="text-sm">{director.phoneNumber || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">BVN:</Label>
+                      <span className="text-sm">{director.BVNNumber || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Tax ID Number:</Label>
+                      <span className="text-sm">{director.taxIDNumber || director.taxIdNumber || 'N/A'}</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <Label className="font-medium text-muted-foreground">Residential Address:</Label>
+                    <span className="text-sm">{director.residentialAddress || 'N/A'}</span>
+                  </div>
+                </div>
+
+                {/* Employment Information */}
+                <div>
+                  <h5 className="font-medium text-base mb-3">Employment Information</h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Employer Name:</Label>
+                      <span className="text-sm">{director.employersName || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Employer Phone:</Label>
+                      <span className="text-sm">{director.employersPhoneNumber || director.employerPhone || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Source of Income:</Label>
+                      <span className="text-sm">{director.sourceOfIncome || director.incomeSource || 'N/A'}</span>
+                    </div>
+                    {(director.sourceOfIncome === 'Other' || director.incomeSource === 'Other') && (
+                      <div className="space-y-2">
+                        <Label className="font-medium text-muted-foreground">Other Income Source:</Label>
+                        <span className="text-sm">{director.sourceOfIncomeOther || director.incomeSourceOther || 'N/A'}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Identification Details */}
+                <div>
+                  <h5 className="font-medium text-base mb-3">Identification Details</h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">ID Type:</Label>
+                      <span className="text-sm">{director.idType || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">ID Number:</Label>
+                      <span className="text-sm">{director.idNumber || director.identificationNumber || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Issuing Body:</Label>
+                      <span className="text-sm">{director.issuingBody || 'N/A'}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Issued Date:</Label>
+                      <span className="text-sm">{formatDate(director.issuedDate)}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-muted-foreground">Expiry Date:</Label>
+                      <span className="text-sm">{formatDate(director.expiryDate)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No directors information available
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Account Details */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Account Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Local Account Details */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-base">Local Account Details</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-medium text-muted-foreground">Bank Name:</Label>
+                <span className="text-sm">{formData.bankName || formData.localBankName || 'N/A'}</span>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-muted-foreground">Account Number:</Label>
+                <span className="text-sm">{formData.accountNumber || formData.localAccountNumber || 'N/A'}</span>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-muted-foreground">Bank Branch:</Label>
+                <span className="text-sm">{formData.bankBranch || formData.localBankBranch || 'N/A'}</span>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-muted-foreground">Account Opening Date:</Label>
+                <span className="text-sm">{formatDate(formData.accountOpeningDate || formData.localAccountOpeningDate)}</span>
+              </div>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          {/* Foreign Account Details - Always show even if empty */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-base">Foreign Account Details</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-medium text-muted-foreground">Bank Name:</Label>
+                <span className="text-sm">{formData.bankName2 || formData.foreignBankName || 'N/A'}</span>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-muted-foreground">Account Number:</Label>
+                <span className="text-sm">{formData.accountNumber2 || formData.foreignAccountNumber || 'N/A'}</span>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-muted-foreground">Bank Branch:</Label>
+                <span className="text-sm">{formData.bankBranch2 || formData.foreignBankBranch || 'N/A'}</span>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-muted-foreground">Account Opening Date:</Label>
+                <span className="text-sm">{formatDate(formData.accountOpeningDate2 || formData.foreignAccountOpeningDate)}</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Document Uploads */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Document Uploads</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-2">
+              <Label className="font-medium text-muted-foreground">CAC Certificate:</Label>
+              {formData.cac || formData.identificationDocument ? (
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  <span className="text-sm">Document uploaded</span>
+                  {(formData.cac || formData.identificationDocument) && (
+                    <Button size="sm" variant="outline" onClick={() => window.open(formData.cac || formData.identificationDocument, '_blank')}>
+                      View
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <span className="text-sm text-muted-foreground">No document uploaded</span>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="font-medium text-muted-foreground">Identification Document:</Label>
+              {formData.identification ? (
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  <span className="text-sm">Document uploaded</span>
+                  <Button size="sm" variant="outline" onClick={() => window.open(formData.identification, '_blank')}>
+                    View
+                  </Button>
+                </div>
+              ) : (
+                <span className="text-sm text-muted-foreground">No document uploaded</span>
+              )}
+            </div>
+
+            {/* NAICOM License for NAICOM forms */}
+            {(formData.isNaicom || formData.taxIdentificationNumber || formData.cacForm) && (
+              <div className="space-y-2">
+                <Label className="font-medium text-muted-foreground">NAICOM License Certificate:</Label>
+                {formData.cacForm || formData.naicomLicense ? (
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <span className="text-sm">Document uploaded</span>
+                    <Button size="sm" variant="outline" onClick={() => window.open(formData.cacForm || formData.naicomLicense, '_blank')}>
+                      View
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">No document uploaded</span>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Declaration */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Declaration</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="font-medium text-muted-foreground">Data Privacy Agreement:</Label>
+              <span className="text-sm">
+                {formData.agreeToDataPrivacy ? (
+                  <Badge variant="default">Agreed</Badge>
+                ) : (
+                  <Badge variant="destructive">Not Agreed</Badge>
+                )}
+              </span>
+            </div>
+            <div className="space-y-2">
+              <Label className="font-medium text-muted-foreground">Digital Signature:</Label>
+              <span className="text-sm">{formData.signature || 'N/A'}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* System Information */}
       <Card>
         <CardHeader>
@@ -450,165 +778,41 @@ const CorporateCDDViewer: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div className="space-y-2">
               <Label className="font-medium text-muted-foreground">Submission Date:</Label>
-              <p className="text-sm">
+              <span className="text-sm">
                 {formData.timestamp ? formatDate(formData.timestamp) : 'N/A'}
-              </p>
+              </span>
             </div>
-            <div>
+            <div className="space-y-2">
               <Label className="font-medium text-muted-foreground">Last Updated:</Label>
-              <p className="text-sm">
+              <span className="text-sm">
                 {formData.updatedAt ? formatDate(formData.updatedAt) : 'N/A'}
-              </p>
+              </span>
             </div>
-            <div>
+            <div className="space-y-2">
               <Label className="font-medium text-muted-foreground">Form Type:</Label>
-              <p className="text-sm">{formData.isNaicom ? 'NAICOM Corporate CDD' : 'Corporate CDD'}</p>
+              <span className="text-sm">
+                {formData.isNaicom || formData.taxIdentificationNumber ? 'NAICOM Corporate CDD' : 'Corporate CDD'}
+              </span>
             </div>
-            <div>
+            <div className="space-y-2">
               <Label className="font-medium text-muted-foreground">Status:</Label>
-              <p className="text-sm">
+              <span className="text-sm">
                 <Badge variant={formData.status === 'approved' ? 'default' : formData.status === 'rejected' ? 'destructive' : 'secondary'}>
                   {formData.status || 'pending'}
                 </Badge>
-              </p>
+              </span>
+            </div>
+            <div className="space-y-2">
+              <Label className="font-medium text-muted-foreground">Form ID:</Label>
+              <span className="text-sm">{formData.id}</span>
+            </div>
+            <div className="space-y-2">
+              <Label className="font-medium text-muted-foreground">User Email:</Label>
+              <span className="text-sm">{formData.userEmail || 'N/A'}</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Company Details */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Company Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {renderEditableField('companyName', 'Company Name', formData.companyName)}
-          {renderEditableField('registeredCompanyAddress', 'Registered Address', formData.registeredCompanyAddress, 'textarea')}
-          {renderEditableField('incorporationNumber', 'Incorporation Number', formData.incorporationNumber)}
-          {renderEditableField('incorporationState', 'Incorporation State', formData.incorporationState)}
-          <div className="grid grid-cols-4 items-start gap-4 py-2">
-            <Label className="font-medium text-muted-foreground">Date of Incorporation:</Label>
-            <div className="col-span-3">
-              <span className="text-sm">{formatDate(formData.dateOfIncorporationRegistration)}</span>
-            </div>
-          </div>
-          {renderEditableField('natureOfBusiness', 'Nature of Business', formData.natureOfBusiness, 'textarea')}
-          {renderEditableField('companyLegalForm', 'Company Type', formData.companyLegalForm)}
-          {renderEditableField('emailAddress', 'Email Address', formData.emailAddress)}
-          {renderEditableField('website', 'Website', formData.website)}
-          {renderEditableField('taxIdentificationNumber', 'Tax ID Number', formData.taxIdentificationNumber)}
-          {renderEditableField('telephoneNumber', 'Telephone Number', formData.telephoneNumber)}
-        </CardContent>
-      </Card>
-
-      {/* Directors Information */}
-      {formData.directors && Array.isArray(formData.directors) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Directors Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {formData.directors.map((director: Director, index: number) => (
-              <div key={index} className="border rounded-lg p-4 space-y-4">
-                <h4 className="font-semibold">Director {index + 1}</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="font-medium text-muted-foreground">Full Name:</Label>
-                    <p className="text-sm">{`${director.firstName || ''} ${director.middleName || ''} ${director.lastName || ''}`.trim() || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="font-medium text-muted-foreground">Date of Birth:</Label>
-                    <p className="text-sm">{formatDate(director.dob)}</p>
-                  </div>
-                  <div>
-                    <Label className="font-medium text-muted-foreground">Place of Birth:</Label>
-                    <p className="text-sm">{director.placeOfBirth || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="font-medium text-muted-foreground">Nationality:</Label>
-                    <p className="text-sm">{director.nationality || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="font-medium text-muted-foreground">Country:</Label>
-                    <p className="text-sm">{director.country || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="font-medium text-muted-foreground">Occupation:</Label>
-                    <p className="text-sm">{director.occupation || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="font-medium text-muted-foreground">Email:</Label>
-                    <p className="text-sm">{director.email || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="font-medium text-muted-foreground">Phone Number:</Label>
-                    <p className="text-sm">{director.phoneNumber || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="font-medium text-muted-foreground">BVN:</Label>
-                    <p className="text-sm">{director.BVNNumber || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="font-medium text-muted-foreground">ID Type:</Label>
-                    <p className="text-sm">{director.idType || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="font-medium text-muted-foreground">ID Number:</Label>
-                    <p className="text-sm">{director.idNumber || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="font-medium text-muted-foreground">Source of Income:</Label>
-                    <p className="text-sm">{director.sourceOfIncome || 'N/A'}</p>
-                  </div>
-                </div>
-                <div>
-                  <Label className="font-medium text-muted-foreground">Residential Address:</Label>
-                  <p className="text-sm">{director.residentialAddress || 'N/A'}</p>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Account Details */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-4">
-            <h4 className="font-semibold">Local Account Details</h4>
-            {renderEditableField('bankName', 'Bank Name', formData.bankName)}
-            {renderEditableField('accountNumber', 'Account Number', formData.accountNumber)}
-            {renderEditableField('bankBranch', 'Bank Branch', formData.bankBranch)}
-            <div className="grid grid-cols-4 items-start gap-4 py-2">
-              <Label className="font-medium text-muted-foreground">Account Opening Date:</Label>
-              <div className="col-span-3">
-                <span className="text-sm">{formatDate(formData.accountOpeningDate)}</span>
-              </div>
-            </div>
-          </div>
-          
-          {(formData.bankName2 || formData.accountNumber2) && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h4 className="font-semibold">Foreign Account Details</h4>
-                {renderEditableField('bankName2', 'Bank Name', formData.bankName2)}
-                {renderEditableField('accountNumber2', 'Account Number', formData.accountNumber2)}
-                {renderEditableField('bankBranch2', 'Bank Branch', formData.bankBranch2)}
-                <div className="grid grid-cols-4 items-start gap-4 py-2">
-                  <Label className="font-medium text-muted-foreground">Account Opening Date:</Label>
-                  <div className="col-span-3">
-                    <span className="text-sm">{formatDate(formData.accountOpeningDate2)}</span>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
         </CardContent>
       </Card>
 
