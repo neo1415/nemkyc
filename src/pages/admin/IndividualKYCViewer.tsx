@@ -135,6 +135,7 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
         <div>
           <h2 className="text-2xl font-bold">Individual KYC Form</h2>
           <p className="text-muted-foreground">Form ID: {data.id || 'N/A'}</p>
+          <p className="text-muted-foreground">Form Type: Individual KYC</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={downloadPDF} variant="outline" size="sm">
@@ -254,20 +255,6 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
                 <p className="font-medium text-sm text-muted-foreground">Premium Payment Source</p>
                 <p className="font-medium">{formatValue(data.premiumPaymentSource)}</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Identification Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileCheck className="h-5 w-5" />
-              Identification Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Identification Type</p>
                 <p className="font-medium">{formatValue(data.identificationType)}</p>
@@ -288,18 +275,18 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
           </CardContent>
         </Card>
 
-        {/* Banking Information */}
+        {/* Account Details */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              Banking Information
+              Account Details
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-4">
               <div>
-                <h4 className="font-medium text-lg mb-3">Primary Bank Account</h4>
+                <h4 className="font-medium text-lg mb-3">Local Account Details</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="font-medium text-sm text-muted-foreground">Bank Name</p>
@@ -320,29 +307,27 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
                 </div>
               </div>
               
-              {(data.bankName2 || data.accountNumber2 || data.bankBranch2 || data.accountOpeningDate2) && (
-                <div>
-                  <h4 className="font-medium text-lg mb-3">Foreign Bank Account</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="font-medium text-sm text-muted-foreground">Bank Name</p>
-                      <p className="font-medium">{formatValue(data.bankName2)}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm text-muted-foreground">Account Number</p>
-                      <p className="font-medium">{formatValue(data.accountNumber2)}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm text-muted-foreground">Bank Branch</p>
-                      <p className="font-medium">{formatValue(data.bankBranch2)}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm text-muted-foreground">Account Opening Date</p>
-                      <p className="font-medium">{formatValue(data.accountOpeningDate2)}</p>
-                    </div>
+              <div>
+                <h4 className="font-medium text-lg mb-3">Foreign Account Details</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Bank Name</p>
+                    <p className="font-medium">{formatValue(data.bankName2)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Account Number</p>
+                    <p className="font-medium">{formatValue(data.accountNumber2)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Bank Branch</p>
+                    <p className="font-medium">{formatValue(data.bankBranch2)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Account Opening Date</p>
+                    <p className="font-medium">{formatValue(data.accountOpeningDate2)}</p>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </CardContent>
         </Card>
