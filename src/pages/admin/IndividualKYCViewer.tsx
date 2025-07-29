@@ -18,6 +18,25 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
     if (!value || value === '') {
       return isFile ? 'Document not uploaded' : 'N/A';
     }
+    
+    // Handle Firebase Timestamp objects
+    if (value && typeof value === 'object' && value.seconds && value.nanoseconds) {
+      return new Date(value.seconds * 1000).toLocaleDateString();
+    }
+    
+    // Handle regular Date objects
+    if (value instanceof Date) {
+      return value.toLocaleDateString();
+    }
+    
+    // Handle date strings
+    if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/)) {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString();
+      }
+    }
+    
     return value;
   };
 
@@ -303,7 +322,7 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
               
               {(data.bankName2 || data.accountNumber2 || data.bankBranch2 || data.accountOpeningDate2) && (
                 <div>
-                  <h4 className="font-medium text-lg mb-3">Secondary Bank Account</h4>
+                  <h4 className="font-medium text-lg mb-3">Foreign Bank Account</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <p className="font-medium text-sm text-muted-foreground">Bank Name</p>
