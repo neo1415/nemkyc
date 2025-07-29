@@ -180,7 +180,7 @@ const IndividualCDDViewer: React.FC<IndividualCDDViewerProps> = ({ data, onClose
                 <p className="font-medium">{formatValue(data.gender)}</p>
               </div>
               <div>
-                <p className="font-medium text-sm text-muted-foreground">Country</p>
+                <p className="font-medium text-sm text-muted-foreground">Residence Country</p>
                 <p className="font-medium">{formatValue(data.country)}</p>
               </div>
               <div>
@@ -196,7 +196,7 @@ const IndividualCDDViewer: React.FC<IndividualCDDViewerProps> = ({ data, onClose
                 <p className="font-medium">{formatValue(data.emailAddress)}</p>
               </div>
               <div>
-                <p className="font-medium text-sm text-muted-foreground">GSM Number</p>
+                <p className="font-medium text-sm text-muted-foreground">Mobile Number</p>
                 <p className="font-medium">{formatValue(data.GSMno)}</p>
               </div>
               <div>
@@ -215,6 +215,20 @@ const IndividualCDDViewer: React.FC<IndividualCDDViewerProps> = ({ data, onClose
                 <p className="font-medium text-sm text-muted-foreground">Position</p>
                 <p className="font-medium">{formatValue(data.position)}</p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Additional Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Additional Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Business Type</p>
                 <p className="font-medium">{formatValue(data.businessType)}</p>
@@ -236,12 +250,12 @@ const IndividualCDDViewer: React.FC<IndividualCDDViewerProps> = ({ data, onClose
                 <p className="font-medium">{formatValue(data.employersTelephoneNumber)}</p>
               </div>
               <div>
-                <p className="font-medium text-sm text-muted-foreground">Employer's Address</p>
-                <p className="font-medium">{formatValue(data.employersAddress)}</p>
-              </div>
-              <div>
                 <p className="font-medium text-sm text-muted-foreground">Tax Identification Number</p>
                 <p className="font-medium">{formatValue(data.taxidentificationNumber)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Employer's Address</p>
+                <p className="font-medium">{formatValue(data.employersAddress)}</p>
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">BVN Number</p>
@@ -267,6 +281,20 @@ const IndividualCDDViewer: React.FC<IndividualCDDViewerProps> = ({ data, onClose
                 <p className="font-medium text-sm text-muted-foreground">Expiry Date</p>
                 <p className="font-medium">{formatValue(data.expiryDate)}</p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Account Details & Files */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Account Details & Files
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Annual Income Range</p>
                 <p className="font-medium">{formatValue(data.annualIncomeRange)}</p>
@@ -280,21 +308,11 @@ const IndividualCDDViewer: React.FC<IndividualCDDViewerProps> = ({ data, onClose
                 <p className="font-medium">{formatValue(data.premiumPaymentSourceOther)}</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Document Uploads */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Document Uploads
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-4">
+            
+            <div className="mt-4">
+              <h4 className="font-medium text-sm text-muted-foreground mb-2">Document Uploads</h4>
               <div>
-                <p className="font-medium text-sm text-muted-foreground">Identification Document</p>
+                <p className="font-medium text-sm text-muted-foreground">Valid Means of Identification</p>
                 {data.identification ? (
                   <a 
                     href={data.identification} 
@@ -313,12 +331,12 @@ const IndividualCDDViewer: React.FC<IndividualCDDViewerProps> = ({ data, onClose
           </CardContent>
         </Card>
 
-        {/* System Information */}
+        {/* Declaration & System Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              System Information
+              <FileCheck className="h-5 w-5" />
+              Declaration & System Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -334,7 +352,7 @@ const IndividualCDDViewer: React.FC<IndividualCDDViewerProps> = ({ data, onClose
                 <p className="font-medium">{formatValue(data.timestamp || data.createdAt)}</p>
               </div>
               <div>
-                <p className="font-medium text-sm text-muted-foreground">Signature</p>
+                <p className="font-medium text-sm text-muted-foreground">Digital Signature</p>
                 <p className="font-medium">{formatValue(data.signature)}</p>
               </div>
               <div>
