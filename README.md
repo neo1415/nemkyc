@@ -129,7 +129,7 @@ iii. Your personal data shall not be shared with or sold to any third-party with
 
 
 
-1️⃣ Professional Indemnity Insurance Claim Form
+1️ Professional Indemnity Insurance Claim Form
 Form Name: Professional Indemnity Insurance Claim Form
  Steps / Sections:
 Section 1: Policy Details
