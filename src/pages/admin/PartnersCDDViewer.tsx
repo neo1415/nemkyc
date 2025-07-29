@@ -1,19 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Download, ArrowLeft } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/firebase/config';
+import { toast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-interface PartnersCDDViewerProps {
-  data: any;
-}
-
-const PartnersCDDViewer: React.FC<PartnersCDDViewerProps> = ({ data }) => {
+const PartnersCDDViewer: React.FC = () => {
+  const [data, setData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!id) return;
+      
+      try {
+        const docRef = doc(db, 'partners-kyc', id);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          setData({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          toast({ title: 'Document not found', variant: 'destructive' });
+        }
+      } catch (error) {
+        console.error('Error fetching document:', error);
+        toast({ title: 'Error fetching data', variant: 'destructive' });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id]);
 
   // Helper function to extract directors/partners data (supports both legacy and new formats)
   const extractDirectorsData = (data: any) => {
@@ -113,6 +138,7 @@ const PartnersCDDViewer: React.FC<PartnersCDDViewerProps> = ({ data }) => {
   };
 
   const generatePDF = async () => {
+    if (!data) return;
     setIsGeneratingPDF(true);
     try {
       const element = document.getElementById('partners-cdd-content');
@@ -177,6 +203,22 @@ const PartnersCDDViewer: React.FC<PartnersCDDViewerProps> = ({ data }) => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="p-6">
+        <p>No data available</p>
+      </div>
+    );
+  }
+
   const directors = extractDirectorsData(data);
   const formType = isNaicomForm(data) ? 'NAICOM Partners CDD' : 'Partners CDD';
 
@@ -189,7 +231,7 @@ const PartnersCDDViewer: React.FC<PartnersCDDViewerProps> = ({ data }) => {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => navigate('/admin/partners-cdd')}
+              onClick={() => navigate('/admin/cdd/partners')}
               className="flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
