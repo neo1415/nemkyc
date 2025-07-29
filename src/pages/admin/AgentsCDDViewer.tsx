@@ -141,58 +141,64 @@ const AgentsCDDViewer: React.FC = () => {
         subtitle: `Agent: ${formatValue(formData.agentsName)}`,
         data: formData,
         mapping: {
-          'Personal Information': [
-            { label: 'First Name', field: 'firstName' },
-            { label: 'Middle Name', field: 'middleName' },
-            { label: 'Last Name', field: 'lastName' },
-            { label: 'Residential Address', field: 'residentialAddress' },
-            { label: 'Gender', field: 'gender' },
-            { label: 'Position/Role', field: 'position' },
-            { label: 'Date of Birth', field: 'dateOfBirth', type: 'date' },
-            { label: 'Place of Birth', field: 'placeOfBirth' },
-            { label: 'Source of Income', field: 'sourceOfIncome' },
-            { label: 'Other Source of Income', field: 'sourceOfIncomeOther' },
-            { label: 'Nationality', field: 'nationality' },
-            { label: 'Phone Number', field: 'GSMno' },
-            { label: 'BVN', field: 'BVNNumber' },
-            { label: 'Tax ID Number', field: 'taxIDNumber' },
-            { label: 'Occupation', field: 'occupation' },
-            { label: 'Email', field: 'emailAddress' },
-            { label: 'ID Type', field: 'idType' },
-            { label: 'Identification Number', field: 'idNumber' },
-            { label: 'Issued Date', field: 'issuedDate', type: 'date' },
-            { label: 'Expiry Date', field: 'expiryDate', type: 'date' },
-            { label: 'Issuing Body', field: 'issuingBody' }
-          ],
-          'Additional Information': [
-            { label: 'Agent Name', field: 'agentsName' },
-            { label: 'Agents Office Address', field: 'agentsAddress' },
-            { label: 'NAICOM License Number', field: 'naicomNo' },
-            { label: 'License Issued Date', field: 'lisenceIssuedDate', type: 'date' },
-            { label: 'License Expiry Date', field: 'lisenceExpiryDate', type: 'date' },
-            { label: 'Email Address', field: 'agentsEmail' },
-            { label: 'Website', field: 'website' },
-            { label: 'Mobile Number', field: 'mobileNo' },
-            { label: 'Tax ID Number', field: 'taxIDNo' },
-            { label: 'ARIAN Membership Number', field: 'arian' },
-            { label: 'List of Agents Approved Principals', field: 'listOfAgents' }
-          ],
-          'Account Details & Files': [
-            { label: 'Local Account Number', field: 'accountNumber' },
-            { label: 'Local Bank Name', field: 'bankName' },
-            { label: 'Local Bank Branch', field: 'bankBranch' },
-            { label: 'Local Account Opening Date', field: 'accountOpeningDate', type: 'date' },
-            { label: 'Foreign Account Number', field: 'accountNumber2' },
-            { label: 'Foreign Bank Name', field: 'bankName2' },
-            { label: 'Foreign Bank Branch', field: 'bankBranch2' },
-            { label: 'Foreign Account Opening Date', field: 'accountOpeningDate2', type: 'date' },
-            { label: 'Agent ID Document', field: 'agentId', type: 'file' },
-            { label: 'NAICOM Certificate', field: 'naicomCertificate', type: 'file' }
-          ],
-          'System Information': [
-            { label: 'Form Type', field: 'formType' },
-            { label: 'Signature', field: 'signature' },
-            { label: 'Submitted At', field: 'timestamp', type: 'date' }
+          sections: [
+            {
+              title: 'Personal Information',
+              fields: [
+                { label: 'First Name', field: 'firstName' },
+                { label: 'Middle Name', field: 'middleName' },
+                { label: 'Last Name', field: 'lastName' },
+                { label: 'Residential Address', field: 'residentialAddress' },
+                { label: 'Gender', field: 'gender' },
+                { label: 'Position/Role', field: 'position' },
+                { label: 'Date of Birth', field: 'dateOfBirth', type: 'date' },
+                { label: 'Place of Birth', field: 'placeOfBirth' },
+                { label: 'Source of Income', field: 'sourceOfIncome' },
+                { label: 'Other Source of Income', field: 'sourceOfIncomeOther' },
+                { label: 'Nationality', field: 'nationality' },
+                { label: 'Phone Number', field: 'GSMno' },
+                { label: 'BVN', field: 'BVNNumber' },
+                { label: 'Tax ID Number', field: 'taxIDNumber' },
+                { label: 'Occupation', field: 'occupation' },
+                { label: 'Email', field: 'emailAddress' },
+                { label: 'ID Type', field: 'idType' },
+                { label: 'Identification Number', field: 'idNumber' },
+                { label: 'Issued Date', field: 'issuedDate', type: 'date' },
+                { label: 'Expiry Date', field: 'expiryDate', type: 'date' },
+                { label: 'Issuing Body', field: 'issuingBody' }
+              ]
+            },
+            {
+              title: 'Additional Information',
+              fields: [
+                { label: 'Agent Name', field: 'agentsName' },
+                { label: 'Agents Office Address', field: 'agentsAddress' },
+                { label: 'NAICOM License Number', field: 'naicomNo' },
+                { label: 'License Issued Date', field: 'lisenceIssuedDate', type: 'date' },
+                { label: 'License Expiry Date', field: 'lisenceExpiryDate', type: 'date' },
+                { label: 'Email Address', field: 'agentsEmail' },
+                { label: 'Website', field: 'website' },
+                { label: 'Mobile Number', field: 'mobileNo' },
+                { label: 'Tax ID Number', field: 'taxIDNo' },
+                { label: 'ARIAN Membership Number', field: 'arian' },
+                { label: 'List of Agents Approved Principals', field: 'listOfAgents' }
+              ]
+            },
+            {
+              title: 'Account Details & Files',
+              fields: [
+                { label: 'Local Account Number', field: 'accountNumber' },
+                { label: 'Local Bank Name', field: 'bankName' },
+                { label: 'Local Bank Branch', field: 'bankBranch' },
+                { label: 'Local Account Opening Date', field: 'accountOpeningDate', type: 'date' },
+                { label: 'Foreign Account Number', field: 'accountNumber2' },
+                { label: 'Foreign Bank Name', field: 'bankName2' },
+                { label: 'Foreign Bank Branch', field: 'bankBranch2' },
+                { label: 'Foreign Account Opening Date', field: 'accountOpeningDate2', type: 'date' },
+                { label: 'Agent ID Document', field: 'agentId', type: 'file' },
+                { label: 'NAICOM Certificate', field: 'naicomCertificate', type: 'file' }
+              ]
+            }
           ]
         }
       };
@@ -222,22 +228,22 @@ const AgentsCDDViewer: React.FC = () => {
     const displayValue = formatValue(value);
 
     return (
-      <div className="grid grid-cols-3 gap-4 py-2">
-        <Label className="font-medium">{label}</Label>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 py-2">
+        <Label className="font-medium text-sm lg:text-base">{label}</Label>
         {isEditing ? (
-          <div className="col-span-2 space-y-2">
+          <div className="lg:col-span-2 space-y-2">
             {type === 'textarea' ? (
               <Textarea
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
-                className="w-full"
+                className="w-full text-sm lg:text-base"
               />
             ) : (
               <Input
                 type={type}
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
-                className="w-full"
+                className="w-full text-sm lg:text-base"
               />
             )}
             <div className="flex gap-2">
@@ -258,14 +264,15 @@ const AgentsCDDViewer: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="col-span-2 flex items-center justify-between">
-            <span className={value ? '' : 'text-muted-foreground'}>
+          <div className="lg:col-span-2 flex items-center justify-between">
+            <span className={`text-sm lg:text-base break-words ${value ? '' : 'text-muted-foreground'}`}>
               {type === 'date' ? formatDate(value) : displayValue}
             </span>
             <Button
               size="sm"
               variant="ghost"
               onClick={() => handleEdit(fieldName, value || '')}
+              className="flex-shrink-0"
             >
               <Edit2 className="w-3 h-3" />
             </Button>
@@ -276,21 +283,21 @@ const AgentsCDDViewer: React.FC = () => {
   };
 
   const renderFileField = (label: string, fileUrl: string) => (
-    <div className="grid grid-cols-3 gap-4 py-2">
-      <Label className="font-medium">{label}</Label>
-      <div className="col-span-2">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 py-2">
+      <Label className="font-medium text-sm lg:text-base">{label}</Label>
+      <div className="lg:col-span-2">
         {fileUrl ? (
           <Button
             variant="outline"
             size="sm"
             onClick={() => window.open(fileUrl, '_blank')}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 text-sm lg:text-base"
           >
             <ExternalLink className="w-4 h-4" />
             View Document
           </Button>
         ) : (
-          <span className="text-muted-foreground">Document not uploaded</span>
+          <span className="text-muted-foreground text-sm lg:text-base">Document not uploaded</span>
         )}
       </div>
     </div>
@@ -313,21 +320,22 @@ const AgentsCDDViewer: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-3 lg:p-6 space-y-4 lg:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-4">
           <Button
             variant="outline"
             size="sm"
             onClick={() => navigate('/admin')}
+            className="w-fit"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Admin
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Agents CDD Form</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-xl lg:text-2xl font-bold">Agents CDD Form</h1>
+            <p className="text-sm lg:text-base text-muted-foreground break-words">
               Agent: {formatValue(formData.agentsName)} • Submitted: {formatDate(formData.timestamp)}
             </p>
           </div>
@@ -338,6 +346,7 @@ const AgentsCDDViewer: React.FC = () => {
             size="sm"
             onClick={handleDownloadPDF}
             disabled={isGeneratingPDF}
+            className="text-sm lg:text-base"
           >
             {isGeneratingPDF ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -448,24 +457,24 @@ const AgentsCDDViewer: React.FC = () => {
           <CardTitle>System Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
-          <div className="grid grid-cols-3 gap-4 py-2">
-            <Label className="font-medium">Form Type</Label>
-            <div className="col-span-2">
-              <span>{formatValue(formData.formType)}</span>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 py-2">
+            <Label className="font-medium text-sm lg:text-base">Form Type</Label>
+            <div className="lg:col-span-2">
+              <span className="text-sm lg:text-base">{formatValue(formData.formType)}</span>
             </div>
           </div>
           {renderEditableField("Digital Signature", "signature", formData.signature)}
-          <div className="grid grid-cols-3 gap-4 py-2">
-            <Label className="font-medium">Submitted At</Label>
-            <div className="col-span-2">
-              <span>{formatDate(formData.timestamp)}</span>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 py-2">
+            <Label className="font-medium text-sm lg:text-base">Submitted At</Label>
+            <div className="lg:col-span-2">
+              <span className="text-sm lg:text-base">{formatDate(formData.timestamp)}</span>
             </div>
           </div>
           {formData.updatedAt && (
-            <div className="grid grid-cols-3 gap-4 py-2">
-              <Label className="font-medium">Last Updated</Label>
-              <div className="col-span-2">
-                <span>{formatDate(formData.updatedAt)}</span>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 py-2">
+              <Label className="font-medium text-sm lg:text-base">Last Updated</Label>
+              <div className="lg:col-span-2">
+                <span className="text-sm lg:text-base">{formatDate(formData.updatedAt)}</span>
               </div>
             </div>
           )}
