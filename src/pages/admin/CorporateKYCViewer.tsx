@@ -23,11 +23,71 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
 
   // Helper function to extract directors data (handles both legacy and new formats)
   const extractDirectorsData = (data: any) => {
+    const directors: any[] = [];
+    
+    // Check if directors is an array (new format)
     if (data.directors && Array.isArray(data.directors)) {
-      return data.directors; // New format
+      return data.directors;
     }
-    // For Corporate KYC, directors are typically stored in array format
-    return [];
+    
+    // Check for old flat format (firstName, lastName, firstName2, lastName2, etc.)
+    // Director 1 (no number suffix)
+    if (data.firstName || data.lastName) {
+      const director = {
+        firstName: data.firstName || '',
+        middleName: data.middleName || '',
+        lastName: data.lastName || '',
+        dob: data.dob || '',
+        placeOfBirth: data.placeOfBirth || '',
+        nationality: data.nationality || '',
+        country: data.country || '',
+        occupation: data.occupation || '',
+        email: data.email || '',
+        phoneNumber: data.phoneNumber || '',
+        BVNNumber: data.BVNNumber || '',
+        employersName: data.employersName || '',
+        employersPhoneNumber: data.employersPhoneNumber || '',
+        residentialAddress: data.residentialAddress || '',
+        taxIDNumber: data.taxIDNumber || '',
+        idType: data.idType || '',
+        idNumber: data.idNumber || '',
+        issuingBody: data.issuingBody || '',
+        issuedDate: data.issuedDate || '',
+        expiryDate: data.expiryDate || '',
+        sourceOfIncome: data.sourceOfIncome || ''
+      };
+      directors.push(director);
+    }
+    
+    // Director 2 (with "2" suffix)
+    if (data.firstName2 || data.lastName2) {
+      const director = {
+        firstName: data.firstName2 || '',
+        middleName: data.middleName2 || '',
+        lastName: data.lastName2 || '',
+        dob: data.dob2 || '',
+        placeOfBirth: data.placeOfBirth2 || '',
+        nationality: data.nationality2 || '',
+        country: data.country2 || '',
+        occupation: data.occupation2 || '',
+        email: data.email2 || '',
+        phoneNumber: data.phoneNumber2 || '',
+        BVNNumber: data.BVNNumber2 || '',
+        employersName: data.employersName2 || '',
+        employersPhoneNumber: data.employersPhoneNumber2 || '',
+        residentialAddress: data.residentialAddress2 || '',
+        taxIDNumber: data.taxIDNumber2 || '',
+        idType: data.idType2 || '',
+        idNumber: data.idNumber2 || '',
+        issuingBody: data.issuingBody2 || '',
+        issuedDate: data.issuedDate2 || '',
+        expiryDate: data.expiryDate2 || '',
+        sourceOfIncome: data.sourceOfIncome2 || ''
+      };
+      directors.push(director);
+    }
+    
+    return directors;
   };
 
   const directors = extractDirectorsData(data);
