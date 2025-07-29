@@ -67,6 +67,7 @@ import AdminBrokersCDDTable from './pages/admin/AdminBrokersCDDTable';
 import AdminProfile from './pages/admin/AdminProfile';
 import RoleProtectedRoute from './components/auth/RoleProtectedRoute';
 import CorporateCDDViewer from './pages/admin/CorporateCDDViewer';
+import PartnersCDDViewer from './pages/admin/PartnersCDDViewer';
 
 
 function App() {
@@ -415,6 +416,12 @@ function App() {
           <Route path="admin/corporate-cdd/:id" element={
             <ProtectedRoute>
               <CorporateCDDViewer />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="admin/form/partners-kyc/:id" element={
+            <ProtectedRoute>
+              <PartnersCDDViewer />
             </ProtectedRoute>
           } />
           
