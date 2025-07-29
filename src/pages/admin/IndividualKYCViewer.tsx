@@ -140,8 +140,8 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="font-medium text-sm text-muted-foreground">Branch Office</p>
-                <p className="font-medium">{formatValue(data.branchOffice)}</p>
+                <p className="font-medium text-sm text-muted-foreground">Title</p>
+                <p className="font-medium">{formatValue(data.title)}</p>
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">First Name</p>
@@ -157,11 +157,15 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Date of Birth</p>
-                <p className="font-medium">{formatValue(data.dob)}</p>
+                <p className="font-medium">{formatValue(data.dateOfBirth)}</p>
               </div>
               <div>
-                <p className="font-medium text-sm text-muted-foreground">Place of Birth</p>
-                <p className="font-medium">{formatValue(data.placeOfBirth)}</p>
+                <p className="font-medium text-sm text-muted-foreground">Gender</p>
+                <p className="font-medium">{formatValue(data.gender)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Mother's Maiden Name</p>
+                <p className="font-medium">{formatValue(data.mothersMaidenName)}</p>
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Nationality</p>
@@ -172,47 +176,65 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
                 <p className="font-medium">{formatValue(data.country)}</p>
               </div>
               <div>
+                <p className="font-medium text-sm text-muted-foreground">State</p>
+                <p className="font-medium">{formatValue(data.state)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">City</p>
+                <p className="font-medium">{formatValue(data.city)}</p>
+              </div>
+              <div>
                 <p className="font-medium text-sm text-muted-foreground">Email Address</p>
                 <p className="font-medium">{formatValue(data.emailAddress)}</p>
               </div>
               <div>
-                <p className="font-medium text-sm text-muted-foreground">Phone Number</p>
-                <p className="font-medium">{formatValue(data.phoneNumber)}</p>
+                <p className="font-medium text-sm text-muted-foreground">GSM Number</p>
+                <p className="font-medium">{formatValue(data.GSMno)}</p>
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Residential Address</p>
                 <p className="font-medium">{formatValue(data.residentialAddress)}</p>
               </div>
               <div>
+                <p className="font-medium text-sm text-muted-foreground">Contact Address</p>
+                <p className="font-medium">{formatValue(data.contactAddress)}</p>
+              </div>
+              <div>
                 <p className="font-medium text-sm text-muted-foreground">Occupation</p>
                 <p className="font-medium">{formatValue(data.occupation)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Office Location</p>
+                <p className="font-medium">{formatValue(data.officeLocation)}</p>
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Employer Name</p>
                 <p className="font-medium">{formatValue(data.employersName)}</p>
               </div>
               <div>
-                <p className="font-medium text-sm text-muted-foreground">Employer Phone</p>
-                <p className="font-medium">{formatValue(data.employersPhoneNumber)}</p>
+                <p className="font-medium text-sm text-muted-foreground">Employer Address</p>
+                <p className="font-medium">{formatValue(data.employersAddress)}</p>
               </div>
               <div>
-                <p className="font-medium text-sm text-muted-foreground">BVN Number</p>
-                <p className="font-medium">{formatValue(data.BVNNumber)}</p>
+                <p className="font-medium text-sm text-muted-foreground">Employer Telephone</p>
+                <p className="font-medium">{formatValue(data.employersTelephoneNumber)}</p>
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Tax ID Number</p>
-                <p className="font-medium">{formatValue(data.taxIDNumber)}</p>
+                <p className="font-medium">{formatValue(data.taxIDNo)}</p>
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Source of Income</p>
                 <p className="font-medium">{formatValue(data.sourceOfIncome)}</p>
               </div>
-              {data.sourceOfIncome === 'Other' && (
-                <div>
-                  <p className="font-medium text-sm text-muted-foreground">Other Income Source</p>
-                  <p className="font-medium">{formatValue(data.sourceOfIncomeOther)}</p>
-                </div>
-              )}
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Annual Income Range</p>
+                <p className="font-medium">{formatValue(data.annualIncomeRange)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Premium Payment Source</p>
+                <p className="font-medium">{formatValue(data.premiumPaymentSource)}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -228,16 +250,12 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="font-medium text-sm text-muted-foreground">ID Type</p>
-                <p className="font-medium">{formatValue(data.idType)}</p>
+                <p className="font-medium text-sm text-muted-foreground">Identification Type</p>
+                <p className="font-medium">{formatValue(data.identificationType)}</p>
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">ID Number</p>
                 <p className="font-medium">{formatValue(data.idNumber)}</p>
-              </div>
-              <div>
-                <p className="font-medium text-sm text-muted-foreground">Issuing Body</p>
-                <p className="font-medium">{formatValue(data.issuingBody)}</p>
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Issued Date</p>
@@ -260,23 +278,52 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
-                <p className="font-medium text-sm text-muted-foreground">Bank Name</p>
-                <p className="font-medium">{formatValue(data.bankName)}</p>
+                <h4 className="font-medium text-lg mb-3">Primary Bank Account</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Bank Name</p>
+                    <p className="font-medium">{formatValue(data.bankName)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Account Number</p>
+                    <p className="font-medium">{formatValue(data.accountNumber)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Bank Branch</p>
+                    <p className="font-medium">{formatValue(data.bankBranch)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Account Opening Date</p>
+                    <p className="font-medium">{formatValue(data.accountOpeningDate)}</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-sm text-muted-foreground">Account Number</p>
-                <p className="font-medium">{formatValue(data.accountNumber)}</p>
-              </div>
-              <div>
-                <p className="font-medium text-sm text-muted-foreground">Bank Branch</p>
-                <p className="font-medium">{formatValue(data.bankBranch)}</p>
-              </div>
-              <div>
-                <p className="font-medium text-sm text-muted-foreground">Account Opening Date</p>
-                <p className="font-medium">{formatValue(data.accountOpeningDate)}</p>
-              </div>
+              
+              {(data.bankName2 || data.accountNumber2 || data.bankBranch2 || data.accountOpeningDate2) && (
+                <div>
+                  <h4 className="font-medium text-lg mb-3">Secondary Bank Account</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground">Bank Name</p>
+                      <p className="font-medium">{formatValue(data.bankName2)}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground">Account Number</p>
+                      <p className="font-medium">{formatValue(data.accountNumber2)}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground">Bank Branch</p>
+                      <p className="font-medium">{formatValue(data.bankBranch2)}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground">Account Opening Date</p>
+                      <p className="font-medium">{formatValue(data.accountOpeningDate2)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -290,12 +337,12 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
-                <p className="font-medium text-sm text-muted-foreground">Passport Photograph</p>
-                {data.passportPhotograph ? (
+                <p className="font-medium text-sm text-muted-foreground">Identification Document</p>
+                {data.identification ? (
                   <a 
-                    href={data.passportPhotograph} 
+                    href={data.identification} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-primary hover:underline flex items-center gap-2"
@@ -304,55 +351,7 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
                     View Document
                   </a>
                 ) : (
-                  <p className="text-muted-foreground">{formatValue(data.passportPhotograph, true)}</p>
-                )}
-              </div>
-              <div>
-                <p className="font-medium text-sm text-muted-foreground">Valid ID Document</p>
-                {data.validIdDocument ? (
-                  <a 
-                    href={data.validIdDocument} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline flex items-center gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    View Document
-                  </a>
-                ) : (
-                  <p className="text-muted-foreground">{formatValue(data.validIdDocument, true)}</p>
-                )}
-              </div>
-              <div>
-                <p className="font-medium text-sm text-muted-foreground">Utility Bill</p>
-                {data.utilityBill ? (
-                  <a 
-                    href={data.utilityBill} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline flex items-center gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    View Document
-                  </a>
-                ) : (
-                  <p className="text-muted-foreground">{formatValue(data.utilityBill, true)}</p>
-                )}
-              </div>
-              <div>
-                <p className="font-medium text-sm text-muted-foreground">Bank Statement</p>
-                {data.bankStatement ? (
-                  <a 
-                    href={data.bankStatement} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline flex items-center gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    View Document
-                  </a>
-                ) : (
-                  <p className="text-muted-foreground">{formatValue(data.bankStatement, true)}</p>
+                  <p className="text-muted-foreground">{formatValue(data.identification, true)}</p>
                 )}
               </div>
             </div>
@@ -377,11 +376,11 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Submitted At</p>
-                <p className="font-medium">{formatValue(data.submittedAt || data.createdAt)}</p>
+                <p className="font-medium">{formatValue(data.timestamp || data.createdAt)}</p>
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Signature</p>
-                <p className="font-medium">{formatValue(data.signature)}</p>
+                <p className="font-medium">{formatValue(data.signature1)}</p>
               </div>
             </div>
           </CardContent>
