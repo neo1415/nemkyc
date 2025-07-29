@@ -16,7 +16,8 @@ import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { generateFormPDF, downloadPDF } from '@/services/pdfService';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface FormData {
   id: string;
@@ -136,76 +137,92 @@ const AgentsCDDViewer: React.FC = () => {
     try {
       setIsGeneratingPDF(true);
       
-      const pdfData = {
-        title: 'AGENTS CDD FORM',
-        subtitle: `Agent: ${formatValue(formData.agentsName)}`,
-        data: formData,
-        mapping: {
-          sections: [
-            {
-              title: 'Personal Information',
-              fields: [
-                { label: 'First Name', field: 'firstName' },
-                { label: 'Middle Name', field: 'middleName' },
-                { label: 'Last Name', field: 'lastName' },
-                { label: 'Residential Address', field: 'residentialAddress' },
-                { label: 'Gender', field: 'gender' },
-                { label: 'Position/Role', field: 'position' },
-                { label: 'Date of Birth', field: 'dateOfBirth', type: 'date' },
-                { label: 'Place of Birth', field: 'placeOfBirth' },
-                { label: 'Source of Income', field: 'sourceOfIncome' },
-                { label: 'Other Source of Income', field: 'sourceOfIncomeOther' },
-                { label: 'Nationality', field: 'nationality' },
-                { label: 'Phone Number', field: 'GSMno' },
-                { label: 'BVN', field: 'BVNNumber' },
-                { label: 'Tax ID Number', field: 'taxIDNumber' },
-                { label: 'Occupation', field: 'occupation' },
-                { label: 'Email', field: 'emailAddress' },
-                { label: 'ID Type', field: 'idType' },
-                { label: 'Identification Number', field: 'idNumber' },
-                { label: 'Issued Date', field: 'issuedDate', type: 'date' },
-                { label: 'Expiry Date', field: 'expiryDate', type: 'date' },
-                { label: 'Issuing Body', field: 'issuingBody' }
-              ]
-            },
-            {
-              title: 'Additional Information',
-              fields: [
-                { label: 'Agent Name', field: 'agentsName' },
-                { label: 'Agents Office Address', field: 'agentsAddress' },
-                { label: 'NAICOM License Number', field: 'naicomNo' },
-                { label: 'License Issued Date', field: 'lisenceIssuedDate', type: 'date' },
-                { label: 'License Expiry Date', field: 'lisenceExpiryDate', type: 'date' },
-                { label: 'Email Address', field: 'agentsEmail' },
-                { label: 'Website', field: 'website' },
-                { label: 'Mobile Number', field: 'mobileNo' },
-                { label: 'Tax ID Number', field: 'taxIDNo' },
-                { label: 'ARIAN Membership Number', field: 'arian' },
-                { label: 'List of Agents Approved Principals', field: 'listOfAgents' }
-              ]
-            },
-            {
-              title: 'Account Details & Files',
-              fields: [
-                { label: 'Local Account Number', field: 'accountNumber' },
-                { label: 'Local Bank Name', field: 'bankName' },
-                { label: 'Local Bank Branch', field: 'bankBranch' },
-                { label: 'Local Account Opening Date', field: 'accountOpeningDate', type: 'date' },
-                { label: 'Foreign Account Number', field: 'accountNumber2' },
-                { label: 'Foreign Bank Name', field: 'bankName2' },
-                { label: 'Foreign Bank Branch', field: 'bankBranch2' },
-                { label: 'Foreign Account Opening Date', field: 'accountOpeningDate2', type: 'date' },
-                { label: 'Agent ID Document', field: 'agentId', type: 'file' },
-                { label: 'NAICOM Certificate', field: 'naicomCertificate', type: 'file' }
-              ]
-            }
-          ]
-        }
-      };
+      // Use the same approach as Individual CDD - direct HTML to PDF conversion
+      const element = document.getElementById('agents-cdd-pdf-content');
+      if (!element) {
+        throw new Error('PDF content element not found');
+      }
 
-      const pdfBlob = await generateFormPDF(pdfData);
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      // NEM Insurance Header
+      pdf.setFontSize(20);
+      pdf.setTextColor(128, 0, 32); // Burgundy color
+      pdf.text('NEM INSURANCE PLC', 20, 25);
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('199, Ikorodu Road, Obanikoro Lagos', 20, 35);
+      
+      // Burgundy line
+      pdf.setDrawColor(128, 0, 32);
+      pdf.setLineWidth(0.5);
+      pdf.line(20, 50, 190, 50);
+      
+      // Title
+      pdf.setFontSize(16);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('AGENTS CDD FORM', 20, 65);
+      pdf.text(`Agent: ${formatValue(formData.agentsName)}`, 20, 75);
+      
+      // Add the form content
+      const imgWidth = 170;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      let yPosition = 85;
+      
+      if (imgHeight > 210) {
+        // If content is too long, split across pages
+        const pageHeight = 210;
+        let remainingHeight = imgHeight;
+        let currentY = 0;
+        
+        while (remainingHeight > 0) {
+          const heightToAdd = Math.min(pageHeight, remainingHeight);
+          
+          const tempCanvas = document.createElement('canvas');
+          const tempCtx = tempCanvas.getContext('2d');
+          tempCanvas.width = canvas.width;
+          tempCanvas.height = (heightToAdd * canvas.width) / imgWidth;
+          
+          tempCtx?.drawImage(
+            canvas,
+            0,
+            (currentY * canvas.width) / imgWidth,
+            canvas.width,
+            tempCanvas.height,
+            0,
+            0,
+            canvas.width,
+            tempCanvas.height
+          );
+          
+          const tempImgData = tempCanvas.toDataURL('image/png');
+          
+          if (currentY > 0) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+          
+          pdf.addImage(tempImgData, 'PNG', 20, yPosition, imgWidth, heightToAdd);
+          
+          currentY += heightToAdd;
+          remainingHeight -= heightToAdd;
+        }
+      } else {
+        pdf.addImage(imgData, 'PNG', 20, yPosition, imgWidth, imgHeight);
+      }
+      
       const filename = `agents-cdd-${formatValue(formData.agentsName).replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`;
-      downloadPDF(pdfBlob, filename, formData, 'Agents-CDD');
+      pdf.save(filename);
       
       toast({
         title: "Success",
@@ -358,128 +375,357 @@ const AgentsCDDViewer: React.FC = () => {
         </div>
       </div>
 
-      {/* Personal Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Personal Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          {renderEditableField("First Name", "firstName", formData.firstName)}
-          {renderEditableField("Middle Name", "middleName", formData.middleName)}
-          {renderEditableField("Last Name", "lastName", formData.lastName)}
-          {renderEditableField("Residential Address", "residentialAddress", formData.residentialAddress, 'textarea')}
-          {renderEditableField("Gender", "gender", formData.gender)}
-          {renderEditableField("Position/Role", "position", formData.position)}
-          {renderEditableField("Date of Birth", "dateOfBirth", formData.dateOfBirth, 'date')}
-          {renderEditableField("Place of Birth", "placeOfBirth", formData.placeOfBirth)}
-          {renderEditableField("Source of Income", "sourceOfIncome", formData.sourceOfIncome)}
-          {renderEditableField("Other Source of Income", "sourceOfIncomeOther", formData.sourceOfIncomeOther)}
-          {renderEditableField("Nationality", "nationality", formData.nationality)}
-          {renderEditableField("Phone Number", "GSMno", formData.GSMno)}
-          {renderEditableField("BVN", "BVNNumber", formData.BVNNumber)}
-          {renderEditableField("Tax ID Number", "taxIDNumber", formData.taxIDNumber)}
-          {renderEditableField("Occupation", "occupation", formData.occupation)}
-          {renderEditableField("Email", "emailAddress", formData.emailAddress)}
-          {renderEditableField("ID Type", "idType", formData.idType)}
-          {renderEditableField("Identification Number", "idNumber", formData.idNumber)}
-          {renderEditableField("Issued Date", "issuedDate", formData.issuedDate, 'date')}
-          {renderEditableField("Expiry Date", "expiryDate", formData.expiryDate, 'date')}
-          {renderEditableField("Issuing Body", "issuingBody", formData.issuingBody)}
-        </CardContent>
-      </Card>
-
-      {/* Additional Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Additional Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          {renderEditableField("Agent Name", "agentsName", formData.agentsName)}
-          {renderEditableField("Agents Office Address", "agentsAddress", formData.agentsAddress, 'textarea')}
-          {renderEditableField("NAICOM License Number", "naicomNo", formData.naicomNo)}
-          {renderEditableField("License Issued Date", "lisenceIssuedDate", formData.lisenceIssuedDate, 'date')}
-          {renderEditableField("License Expiry Date", "lisenceExpiryDate", formData.lisenceExpiryDate, 'date')}
-          {renderEditableField("Email Address", "agentsEmail", formData.agentsEmail)}
-          {renderEditableField("Website", "website", formData.website)}
-          {renderEditableField("Mobile Number", "mobileNo", formData.mobileNo)}
-          {renderEditableField("Tax ID Number", "taxIDNo", formData.taxIDNo)}
-          {renderEditableField("ARIAN Membership Number", "arian", formData.arian)}
-          {renderEditableField("List of Agents Approved Principals", "listOfAgents", formData.listOfAgents, 'textarea')}
-        </CardContent>
-      </Card>
-
-      {/* Account Details & Files */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Details & Files</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h4 className="font-medium mb-3">Local Account Details</h4>
-            <div className="space-y-1">
-              {renderEditableField("Account Number", "accountNumber", formData.accountNumber)}
-              {renderEditableField("Bank Name", "bankName", formData.bankName)}
-              {renderEditableField("Bank Branch", "bankBranch", formData.bankBranch)}
-              {renderEditableField("Account Opening Date", "accountOpeningDate", formData.accountOpeningDate, 'date')}
-            </div>
-          </div>
-          
-          <Separator />
-          
-          <div>
-            <h4 className="font-medium mb-3">Foreign Account Details</h4>
-            <div className="space-y-1">
-              {renderEditableField("Account Number", "accountNumber2", formData.accountNumber2)}
-              {renderEditableField("Bank Name", "bankName2", formData.bankName2)}
-              {renderEditableField("Bank Branch", "bankBranch2", formData.bankBranch2)}
-              {renderEditableField("Account Opening Date", "accountOpeningDate2", formData.accountOpeningDate2, 'date')}
-            </div>
-          </div>
-          
-          <Separator />
-          
-          <div>
-            <h4 className="font-medium mb-3">Document Uploads</h4>
-            <div className="space-y-1">
-              {renderFileField("Agent ID Document", formData.agentId)}
-              {renderFileField("NAICOM Certificate", formData.naicomCertificate)}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* System Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>System Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 py-2">
-            <Label className="font-medium text-sm lg:text-base">Form Type</Label>
-            <div className="lg:col-span-2">
-              <span className="text-sm lg:text-base">{formatValue(formData.formType)}</span>
-            </div>
-          </div>
-          {renderEditableField("Digital Signature", "signature", formData.signature)}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 py-2">
-            <Label className="font-medium text-sm lg:text-base">Submitted At</Label>
-            <div className="lg:col-span-2">
-              <span className="text-sm lg:text-base">{formatDate(formData.timestamp)}</span>
-            </div>
-          </div>
-          {formData.updatedAt && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 py-2">
-              <Label className="font-medium text-sm lg:text-base">Last Updated</Label>
-              <div className="lg:col-span-2">
-                <span className="text-sm lg:text-base">{formatDate(formData.updatedAt)}</span>
+      {/* PDF Content Wrapper */}
+      <div id="agents-cdd-pdf-content" className="space-y-6 bg-white p-6">
+        {/* Personal Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Personal Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">First Name</p>
+                <p className="font-medium">{formatValue(formData.firstName)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Middle Name</p>
+                <p className="font-medium">{formatValue(formData.middleName)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Last Name</p>
+                <p className="font-medium">{formatValue(formData.lastName)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Residential Address</p>
+                <p className="font-medium">{formatValue(formData.residentialAddress)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Gender</p>
+                <p className="font-medium">{formatValue(formData.gender)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Position/Role</p>
+                <p className="font-medium">{formatValue(formData.position)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Date of Birth</p>
+                <p className="font-medium">{formatDate(formData.dateOfBirth)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Place of Birth</p>
+                <p className="font-medium">{formatValue(formData.placeOfBirth)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Source of Income</p>
+                <p className="font-medium">{formatValue(formData.sourceOfIncome)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Other Source of Income</p>
+                <p className="font-medium">{formatValue(formData.sourceOfIncomeOther)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Nationality</p>
+                <p className="font-medium">{formatValue(formData.nationality)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Phone Number</p>
+                <p className="font-medium">{formatValue(formData.GSMno)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">BVN</p>
+                <p className="font-medium">{formatValue(formData.BVNNumber)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Tax ID Number</p>
+                <p className="font-medium">{formatValue(formData.taxIDNumber)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Occupation</p>
+                <p className="font-medium">{formatValue(formData.occupation)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Email</p>
+                <p className="font-medium">{formatValue(formData.emailAddress)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">ID Type</p>
+                <p className="font-medium">{formatValue(formData.idType)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Identification Number</p>
+                <p className="font-medium">{formatValue(formData.idNumber)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Issued Date</p>
+                <p className="font-medium">{formatDate(formData.issuedDate)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Expiry Date</p>
+                <p className="font-medium">{formatDate(formData.expiryDate)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Issuing Body</p>
+                <p className="font-medium">{formatValue(formData.issuingBody)}</p>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Additional Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Additional Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Agent Name</p>
+                <p className="font-medium">{formatValue(formData.agentsName)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Agents Office Address</p>
+                <p className="font-medium">{formatValue(formData.agentsAddress)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">NAICOM License Number</p>
+                <p className="font-medium">{formatValue(formData.naicomNo)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">License Issued Date</p>
+                <p className="font-medium">{formatDate(formData.lisenceIssuedDate)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">License Expiry Date</p>
+                <p className="font-medium">{formatDate(formData.lisenceExpiryDate)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Email Address</p>
+                <p className="font-medium">{formatValue(formData.agentsEmail)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Website</p>
+                <p className="font-medium">{formatValue(formData.website)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Mobile Number</p>
+                <p className="font-medium">{formatValue(formData.mobileNo)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Tax ID Number</p>
+                <p className="font-medium">{formatValue(formData.taxIDNo)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">ARIAN Membership Number</p>
+                <p className="font-medium">{formatValue(formData.arian)}</p>
+              </div>
+              <div className="md:col-span-2">
+                <p className="font-medium text-sm text-muted-foreground">List of Agents Approved Principals</p>
+                <p className="font-medium">{formatValue(formData.listOfAgents)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Account Details & Files */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Details & Files</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <h4 className="font-medium mb-4">Local Account Details</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Account Number</p>
+                  <p className="font-medium">{formatValue(formData.accountNumber)}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Bank Name</p>
+                  <p className="font-medium">{formatValue(formData.bankName)}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Bank Branch</p>
+                  <p className="font-medium">{formatValue(formData.bankBranch)}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Account Opening Date</p>
+                  <p className="font-medium">{formatDate(formData.accountOpeningDate)}</p>
+                </div>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div>
+              <h4 className="font-medium mb-4">Foreign Account Details</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Account Number</p>
+                  <p className="font-medium">{formatValue(formData.accountNumber2)}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Bank Name</p>
+                  <p className="font-medium">{formatValue(formData.bankName2)}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Bank Branch</p>
+                  <p className="font-medium">{formatValue(formData.bankBranch2)}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Account Opening Date</p>
+                  <p className="font-medium">{formatDate(formData.accountOpeningDate2)}</p>
+                </div>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div>
+              <h4 className="font-medium mb-4">Document Uploads</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Agent ID Document</p>
+                  <p className="font-medium">{formatValue(formData.agentId, true)}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">NAICOM Certificate</p>
+                  <p className="font-medium">{formatValue(formData.naicomCertificate, true)}</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Editable Interface (visible on screen, hidden in PDF) */}
+      <div className="space-y-4 lg:space-y-6">
+        {/* Personal Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Personal Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {renderEditableField("First Name", "firstName", formData.firstName)}
+            {renderEditableField("Middle Name", "middleName", formData.middleName)}
+            {renderEditableField("Last Name", "lastName", formData.lastName)}
+            {renderEditableField("Residential Address", "residentialAddress", formData.residentialAddress, 'textarea')}
+            {renderEditableField("Gender", "gender", formData.gender)}
+            {renderEditableField("Position/Role", "position", formData.position)}
+            {renderEditableField("Date of Birth", "dateOfBirth", formData.dateOfBirth, 'date')}
+            {renderEditableField("Place of Birth", "placeOfBirth", formData.placeOfBirth)}
+            {renderEditableField("Source of Income", "sourceOfIncome", formData.sourceOfIncome)}
+            {renderEditableField("Other Source of Income", "sourceOfIncomeOther", formData.sourceOfIncomeOther)}
+            {renderEditableField("Nationality", "nationality", formData.nationality)}
+            {renderEditableField("Phone Number", "GSMno", formData.GSMno)}
+            {renderEditableField("BVN", "BVNNumber", formData.BVNNumber)}
+            {renderEditableField("Tax ID Number", "taxIDNumber", formData.taxIDNumber)}
+            {renderEditableField("Occupation", "occupation", formData.occupation)}
+            {renderEditableField("Email", "emailAddress", formData.emailAddress)}
+            {renderEditableField("ID Type", "idType", formData.idType)}
+            {renderEditableField("Identification Number", "idNumber", formData.idNumber)}
+            {renderEditableField("Issued Date", "issuedDate", formData.issuedDate, 'date')}
+            {renderEditableField("Expiry Date", "expiryDate", formData.expiryDate, 'date')}
+            {renderEditableField("Issuing Body", "issuingBody", formData.issuingBody)}
+          </CardContent>
+        </Card>
+
+        {/* Additional Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Additional Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {renderEditableField("Agent Name", "agentsName", formData.agentsName)}
+            {renderEditableField("Agents Office Address", "agentsAddress", formData.agentsAddress, 'textarea')}
+            {renderEditableField("NAICOM License Number", "naicomNo", formData.naicomNo)}
+            {renderEditableField("License Issued Date", "lisenceIssuedDate", formData.lisenceIssuedDate, 'date')}
+            {renderEditableField("License Expiry Date", "lisenceExpiryDate", formData.lisenceExpiryDate, 'date')}
+            {renderEditableField("Email Address", "agentsEmail", formData.agentsEmail)}
+            {renderEditableField("Website", "website", formData.website)}
+            {renderEditableField("Mobile Number", "mobileNo", formData.mobileNo)}
+            {renderEditableField("Tax ID Number", "taxIDNo", formData.taxIDNo)}
+            {renderEditableField("ARIAN Membership Number", "arian", formData.arian)}
+            {renderEditableField("List of Agents Approved Principals", "listOfAgents", formData.listOfAgents, 'textarea')}
+          </CardContent>
+        </Card>
+
+        {/* Account Details & Files */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Details & Files</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <h4 className="font-medium mb-3">Local Account Details</h4>
+              <div className="space-y-1">
+                {renderEditableField("Account Number", "accountNumber", formData.accountNumber)}
+                {renderEditableField("Bank Name", "bankName", formData.bankName)}
+                {renderEditableField("Bank Branch", "bankBranch", formData.bankBranch)}
+                {renderEditableField("Account Opening Date", "accountOpeningDate", formData.accountOpeningDate, 'date')}
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div>
+              <h4 className="font-medium mb-3">Foreign Account Details</h4>
+              <div className="space-y-1">
+                {renderEditableField("Account Number", "accountNumber2", formData.accountNumber2)}
+                {renderEditableField("Bank Name", "bankName2", formData.bankName2)}
+                {renderEditableField("Bank Branch", "bankBranch2", formData.bankBranch2)}
+                {renderEditableField("Account Opening Date", "accountOpeningDate2", formData.accountOpeningDate2, 'date')}
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div>
+              <h4 className="font-medium mb-3">Document Uploads</h4>
+              <div className="space-y-1">
+                {renderFileField("Agent ID Document", formData.agentId)}
+                {renderFileField("NAICOM Certificate", formData.naicomCertificate)}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* System Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>System Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 py-2">
+              <Label className="font-medium text-sm lg:text-base">Form Type</Label>
+              <div className="lg:col-span-2">
+                <span className="text-sm lg:text-base">{formatValue(formData.formType)}</span>
+              </div>
+            </div>
+            {renderEditableField("Digital Signature", "signature", formData.signature)}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 py-2">
+              <Label className="font-medium text-sm lg:text-base">Submitted At</Label>
+              <div className="lg:col-span-2">
+                <span className="text-sm lg:text-base">{formatDate(formData.timestamp)}</span>
+              </div>
+            </div>
+            {formData.updatedAt && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 py-2">
+                <Label className="font-medium text-sm lg:text-base">Last Updated</Label>
+                <div className="lg:col-span-2">
+                  <span className="text-sm lg:text-base">{formatDate(formData.updatedAt)}</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
