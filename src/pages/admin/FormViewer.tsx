@@ -13,6 +13,7 @@ import { sendStatusUpdateNotification } from '../../services/emailService';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../firebase/config';
 import CorporateKYCViewer from './CorporateKYCViewer';
+import IndividualKYCViewer from './IndividualKYCViewer';
 
 const theme = createTheme({
   palette: {
@@ -743,6 +744,32 @@ const FormViewer: React.FC = () => {
             Back
           </Button>
           <CorporateKYCViewer 
+            data={formData} 
+            onClose={() => navigate(-1)} 
+          />
+        </Box>
+      </ThemeProvider>
+    );
+  }
+
+  if (collection === 'Individual-kyc-form') {
+    return (
+      <ThemeProvider theme={theme}>
+        <Box sx={{ 
+          p: { xs: 2, sm: 3 }, 
+          maxWidth: '1200px', 
+          mx: 'auto',
+          width: '100%',
+          minHeight: '100vh'
+        }}>
+          <Button
+            startIcon={<ArrowLeft />}
+            onClick={() => navigate(-1)}
+            sx={{ mb: 3 }}
+          >
+            Back
+          </Button>
+          <IndividualKYCViewer 
             data={formData} 
             onClose={() => navigate(-1)} 
           />
