@@ -280,105 +280,105 @@ const CorporateKYCTable: React.FC = () => {
       field: 'createdAt',
       headerName: 'Created At',
       width: 130,
-      valueFormatter: (params: any) => formatDate(params),
+      renderCell: (params: any) => formatDate(params.row.createdAt || params.row.timestamp || params.row.submittedAt),
     },
     // Company Information - in exact form order
     {
       field: 'branchOffice',
       headerName: 'NEM Branch Office',
       width: 150,
-      valueFormatter: (params: any) => getValue(params.row, 'branchOffice'),
+      renderCell: (params: any) => getValue(params.row, 'branchOffice'),
     },
     {
       field: 'insured',
       headerName: 'Insured',
       width: 150,
-      valueFormatter: (params: any) => getValue(params.row, 'insured'),
+      renderCell: (params: any) => getValue(params.row, 'insured'),
     },
     {
       field: 'officeAddress',
       headerName: 'Office Address',
       width: 200,
-      valueFormatter: (params: any) => getValue(params.row, 'officeAddress'),
+      renderCell: (params: any) => getValue(params.row, 'officeAddress'),
     },
     {
       field: 'ownershipOfCompany',
       headerName: 'Ownership of Company',
       width: 150,
-      valueFormatter: (params: any) => getValue(params.row, 'ownershipOfCompany'),
+      renderCell: (params: any) => getValue(params.row, 'ownershipOfCompany'),
     },
     {
       field: 'contactPerson',
       headerName: 'Contact Person',
       width: 150,
-      valueFormatter: (params: any) => getValue(params.row, 'contactPerson'),
+      renderCell: (params: any) => getValue(params.row, 'contactPerson'),
     },
     {
       field: 'website',
       headerName: 'Website',
       width: 150,
-      valueFormatter: (params: any) => getValue(params.row, 'website'),
+      renderCell: (params: any) => getValue(params.row, 'website'),
     },
     {
       field: 'incorporationNumber',
       headerName: 'Incorporation Number',
       width: 150,
-      valueFormatter: (params: any) => getValue(params.row, 'incorporationNumber'),
+      renderCell: (params: any) => getValue(params.row, 'incorporationNumber'),
     },
     {
       field: 'incorporationState',
       headerName: 'Incorporation State',
       width: 150,
-      valueFormatter: (params: any) => getValue(params.row, 'incorporationState'),
+      renderCell: (params: any) => getValue(params.row, 'incorporationState'),
     },
     {
       field: 'dateOfIncorporationRegistration',
       headerName: 'Date of Incorporation',
       width: 150,
-      valueFormatter: (params: any) => formatDate(params.row.dateOfIncorporationRegistration),
+      renderCell: (params: any) => formatDate(params.row.dateOfIncorporationRegistration),
     },
     {
       field: 'BVNNumber',
       headerName: 'BVN Number',
       width: 130,
-      valueFormatter: (params: any) => getValue(params.row, 'BVNNumber'),
+      renderCell: (params: any) => getValue(params.row, 'BVNNumber'),
     },
     {
       field: 'contactPersonNo',
       headerName: 'Contact Person Mobile',
       width: 150,
-      valueFormatter: (params: any) => getValue(params.row, 'contactPersonNo'),
+      renderCell: (params: any) => getValue(params.row, 'contactPersonNo'),
     },
     {
       field: 'taxIDNo',
       headerName: 'Tax ID Number',
       width: 130,
-      valueFormatter: (params: any) => getValue(params.row, 'taxIDNo'),
+      renderCell: (params: any) => getValue(params.row, 'taxIDNo'),
     },
     {
       field: 'emailAddress',
       headerName: 'Email Address',
       width: 200,
-      valueFormatter: (params: any) => getValue(params.row, 'emailAddress'),
+      renderCell: (params: any) => getValue(params.row, 'emailAddress'),
     },
     {
       field: 'natureOfBusiness',
       headerName: 'Nature of Business',
       width: 150,
-      valueFormatter: (params: any) => getValue(params.row, 'natureOfBusiness'),
+      renderCell: (params: any) => getValue(params.row, 'natureOfBusiness'),
     },
     {
       field: 'estimatedTurnover',
       headerName: 'Estimated Turnover',
       width: 150,
-      valueFormatter: (params: any) => getValue(params.row, 'estimatedTurnover'),
+      renderCell: (params: any) => getValue(params.row, 'estimatedTurnover'),
     },
     // Conditional Premium Payment Source
     {
       field: 'premiumPaymentSource',
       headerName: 'Premium Payment Source',
       width: 180,
-      valueFormatter: (params: any) => {
+      renderCell: (params: any) => {
         const form = params.row;
         if (shouldShowConditionalField(form, 'premiumPaymentSource', 'premiumPaymentSourceOther')) {
           return getValue(form, 'premiumPaymentSourceOther');
@@ -391,25 +391,25 @@ const CorporateKYCTable: React.FC = () => {
       field: 'director1FirstName',
       headerName: 'Director 1 First Name',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'firstName'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'firstName'),
     },
     {
       field: 'director1MiddleName',
       headerName: 'Director 1 Middle Name',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'middleName'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'middleName'),
     },
     {
       field: 'director1LastName',
       headerName: 'Director 1 Last Name',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'lastName'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'lastName'),
     },
     {
       field: 'director1DOB',
       headerName: 'Director 1 Date of Birth',
       width: 150,
-      valueFormatter: (params: any) => {
+      renderCell: (params: any) => {
         if (params.row.directors && Array.isArray(params.row.directors) && params.row.directors[0]) {
           return formatDate(params.row.directors[0].dob);
         }
@@ -420,91 +420,91 @@ const CorporateKYCTable: React.FC = () => {
       field: 'director1PlaceOfBirth',
       headerName: 'Director 1 Place of Birth',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'placeOfBirth'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'placeOfBirth'),
     },
     {
       field: 'director1Nationality',
       headerName: 'Director 1 Nationality',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'nationality'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'nationality'),
     },
     {
       field: 'director1Country',
       headerName: 'Director 1 Country',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'country'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'country'),
     },
     {
       field: 'director1Occupation',
       headerName: 'Director 1 Occupation',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'occupation'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'occupation'),
     },
     {
       field: 'director1Email',
       headerName: 'Director 1 Email',
       width: 200,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'email'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'email'),
     },
     {
       field: 'director1PhoneNumber',
       headerName: 'Director 1 Phone Number',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'phoneNumber'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'phoneNumber'),
     },
     {
       field: 'director1BVN',
       headerName: 'Director 1 BVN',
       width: 130,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'BVNNumber'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'BVNNumber'),
     },
     {
       field: 'director1EmployersName',
       headerName: 'Director 1 Employers Name',
       width: 180,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'employersName'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'employersName'),
     },
     {
       field: 'director1EmployersPhone',
       headerName: 'Director 1 Employers Phone',
       width: 180,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'employersPhoneNumber'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'employersPhoneNumber'),
     },
     {
       field: 'director1ResidentialAddress',
       headerName: 'Director 1 Residential Address',
       width: 200,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'residentialAddress'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'residentialAddress'),
     },
     {
       field: 'director1TaxID',
       headerName: 'Director 1 Tax ID',
       width: 130,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'taxIDNumber'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'taxIDNumber'),
     },
     {
       field: 'director1IDType',
       headerName: 'Director 1 ID Type',
       width: 130,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'idType'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'idType'),
     },
     {
       field: 'director1IDNumber',
       headerName: 'Director 1 ID Number',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'idNumber'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'idNumber'),
     },
     {
       field: 'director1IssuingBody',
       headerName: 'Director 1 Issuing Body',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 0, 'issuingBody'),
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'issuingBody'),
     },
     {
       field: 'director1IssuedDate',
       headerName: 'Director 1 Issued Date',
       width: 150,
-      valueFormatter: (params: any) => {
+      renderCell: (params: any) => {
         if (params.row.directors && Array.isArray(params.row.directors) && params.row.directors[0]) {
           return formatDate(params.row.directors[0].issuedDate);
         }
@@ -515,7 +515,7 @@ const CorporateKYCTable: React.FC = () => {
       field: 'director1ExpiryDate',
       headerName: 'Director 1 Expiry Date',
       width: 150,
-      valueFormatter: (params: any) => {
+      renderCell: (params: any) => {
         if (params.row.directors && Array.isArray(params.row.directors) && params.row.directors[0]) {
           return formatDate(params.row.directors[0].expiryDate);
         }
@@ -526,7 +526,7 @@ const CorporateKYCTable: React.FC = () => {
       field: 'director1SourceOfIncome',
       headerName: 'Director 1 Source of Income',
       width: 180,
-      valueFormatter: (params: any) => {
+      renderCell: (params: any) => {
         if (params.row.directors && Array.isArray(params.row.directors) && params.row.directors[0]) {
           const director = params.row.directors[0];
           if (director.sourceOfIncome === 'Other' && director.sourceOfIncomeOther) {
@@ -546,25 +546,25 @@ const CorporateKYCTable: React.FC = () => {
       field: 'director2FirstName',
       headerName: 'Director 2 First Name',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'firstName'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'firstName'),
     },
     {
       field: 'director2MiddleName',
       headerName: 'Director 2 Middle Name',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'middleName'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'middleName'),
     },
     {
       field: 'director2LastName',
       headerName: 'Director 2 Last Name',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'lastName'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'lastName'),
     },
     {
       field: 'director2DOB',
       headerName: 'Director 2 Date of Birth',
       width: 150,
-      valueFormatter: (params: any) => {
+      renderCell: (params: any) => {
         if (params.row.directors && Array.isArray(params.row.directors) && params.row.directors[1]) {
           return formatDate(params.row.directors[1].dob);
         }
@@ -575,91 +575,91 @@ const CorporateKYCTable: React.FC = () => {
       field: 'director2PlaceOfBirth',
       headerName: 'Director 2 Place of Birth',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'placeOfBirth'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'placeOfBirth'),
     },
     {
       field: 'director2Nationality',
       headerName: 'Director 2 Nationality',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'nationality'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'nationality'),
     },
     {
       field: 'director2Country',
       headerName: 'Director 2 Country',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'country'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'country'),
     },
     {
       field: 'director2Occupation',
       headerName: 'Director 2 Occupation',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'occupation'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'occupation'),
     },
     {
       field: 'director2Email',
       headerName: 'Director 2 Email',
       width: 200,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'email'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'email'),
     },
     {
       field: 'director2PhoneNumber',
       headerName: 'Director 2 Phone Number',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'phoneNumber'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'phoneNumber'),
     },
     {
       field: 'director2BVN',
       headerName: 'Director 2 BVN',
       width: 130,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'BVNNumber'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'BVNNumber'),
     },
     {
       field: 'director2EmployersName',
       headerName: 'Director 2 Employers Name',
       width: 180,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'employersName'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'employersName'),
     },
     {
       field: 'director2EmployersPhone',
       headerName: 'Director 2 Employers Phone',
       width: 180,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'employersPhoneNumber'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'employersPhoneNumber'),
     },
     {
       field: 'director2ResidentialAddress',
       headerName: 'Director 2 Residential Address',
       width: 200,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'residentialAddress'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'residentialAddress'),
     },
     {
       field: 'director2TaxID',
       headerName: 'Director 2 Tax ID',
       width: 130,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'taxIDNumber'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'taxIDNumber'),
     },
     {
       field: 'director2IDType',
       headerName: 'Director 2 ID Type',
       width: 130,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'idType'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'idType'),
     },
     {
       field: 'director2IDNumber',
       headerName: 'Director 2 ID Number',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'idNumber'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'idNumber'),
     },
     {
       field: 'director2IssuingBody',
       headerName: 'Director 2 Issuing Body',
       width: 150,
-      valueFormatter: (params: any) => getDirectorValue(params.row, 1, 'issuingBody'),
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'issuingBody'),
     },
     {
       field: 'director2IssuedDate',
       headerName: 'Director 2 Issued Date',
       width: 150,
-      valueFormatter: (params: any) => {
+      renderCell: (params: any) => {
         if (params.row.directors && Array.isArray(params.row.directors) && params.row.directors[1]) {
           return formatDate(params.row.directors[1].issuedDate);
         }
@@ -670,7 +670,7 @@ const CorporateKYCTable: React.FC = () => {
       field: 'director2ExpiryDate',
       headerName: 'Director 2 Expiry Date',
       width: 150,
-      valueFormatter: (params: any) => {
+      renderCell: (params: any) => {
         if (params.row.directors && Array.isArray(params.row.directors) && params.row.directors[1]) {
           return formatDate(params.row.directors[1].expiryDate);
         }
@@ -681,7 +681,7 @@ const CorporateKYCTable: React.FC = () => {
       field: 'director2SourceOfIncome',
       headerName: 'Director 2 Source of Income',
       width: 180,
-      valueFormatter: (params: any) => {
+      renderCell: (params: any) => {
         if (params.row.directors && Array.isArray(params.row.directors) && params.row.directors[1]) {
           const director = params.row.directors[1];
           if (director.sourceOfIncome === 'Other' && director.sourceOfIncomeOther) {
@@ -701,14 +701,14 @@ const CorporateKYCTable: React.FC = () => {
       field: 'companyNameVerificationDoc',
       headerName: 'Verification Document Type',
       width: 200,
-      valueFormatter: (params: any) => getValue(params.row, 'companyNameVerificationDoc'),
+      renderCell: (params: any) => getValue(params.row, 'companyNameVerificationDoc'),
     },
     // Declaration
     {
       field: 'signature',
       headerName: 'Signature',
       width: 150,
-      valueFormatter: (params: any) => getValue(params.row, 'signature'),
+      renderCell: (params: any) => getValue(params.row, 'signature'),
     }
   ];
 
