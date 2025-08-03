@@ -1,14 +1,8 @@
 import React from 'react';
-import AdminUnifiedTable from './AdminUnifiedTable';
+import CorporateKYCTable from './CorporateKYCTable';
 
 const AdminCorporateKYCTable: React.FC = () => {
-  return (
-    <AdminUnifiedTable 
-      collectionName="corporate-kyc-form"
-      title="Corporate KYC Management"
-      isClaim={false}
-    />
-  );
+  return <CorporateKYCTable />;
 };
 
 export default AdminCorporateKYCTable;
