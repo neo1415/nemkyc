@@ -120,10 +120,31 @@ For fields like premium payment source where only one should show data:
 - Call `.toDate()` on objects without checking if the method exists first
 - Show "N/A" for date columns when timestamp data exists - always use fallback order
 
+## Corporate CDD Table Refactor - 2024-12-08
+
+### Changes Made:
+1. **Replaced `valueGetter` with `renderCell`**: All fields now use `renderCell` for consistent data access and display
+2. **Implemented robust date formatting**: Added comprehensive date handling that checks for `createdAt || timestamp || submittedAt` fallbacks
+3. **Maintained field order**: All fields are displayed in the exact order they appear in the form
+4. **Added null/undefined safety**: All fields now properly handle missing data with "N/A" fallback
+5. **Added Director 2 fields**: Now displays both Director 1 and Director 2 information when available (Director 2 shows N/A if no second director exists)
+6. **Added Foreign Account Details**: Added bankName2, accountNumber2, bankBranch2, and accountOpeningDate2 fields
+7. **Removed Status Column**: Completely removed the status column from the table as requested
+8. **Fixed Export Button Styling**: Updated export button to match Corporate KYC styling (outlined variant with GetApp icon)
+9. **Updated Title**: Changed title styling to match Corporate KYC using Typography component
+
+### CRITICAL RULES (Must Follow for ALL Future Table Refactors):
+- **NEVER modify anything outside the table columns** - Only change DataGrid column definitions
+- **ALWAYS use the same export button styling as Corporate KYC** - `variant="outlined"`, `startIcon={<GetApp />}`, text "Export PDF"
+- **ALWAYS use Typography component for titles** - Match Corporate KYC title styling exactly
+- **ALWAYS include Director 2 fields when dealing with multiple directors** - Show N/A if no second director
+- **ALWAYS include Foreign Account Details when they exist in the form** - Use field names with "2" suffix (bankName2, etc.)
+- **NEVER keep status columns unless explicitly requested** - Remove them immediately
+
 ## Files Modified
 - `src/pages/admin/CorporateKYCTable.tsx` - Updated column definitions and data access patterns
 - `src/pages/admin/AdminIndividualKYCTable.tsx` - Applied same refactoring methodology
-- `src/pages/admin/CorporateCDDTable.tsx` - Applied same refactoring methodology
+- `src/pages/admin/CorporateCDDTable.tsx` - Applied same refactoring methodology with Director 2 fields, Foreign Account Details, removed status column, and fixed export button styling
 
 ## Testing Checklist
 - [ ] Table displays all form fields in correct order
