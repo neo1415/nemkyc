@@ -86,6 +86,35 @@ const AdminIndividualKYCTable: React.FC = () => {
     }
   };
 
+  const formatDate = (timestamp: any): string => {
+    if (!timestamp) return 'N/A';
+    
+    try {
+      let dateObj: Date;
+      
+      if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+        dateObj = timestamp.toDate();
+      } else if (typeof timestamp === 'string') {
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(timestamp)) {
+          return timestamp;
+        }
+        dateObj = new Date(timestamp);
+      } else if (timestamp instanceof Date) {
+        dateObj = timestamp;
+      } else {
+        return 'N/A';
+      }
+
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = String(dateObj.getFullYear());
+      
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      return 'N/A';
+    }
+  };
+
   const exportToPDF = () => {
     const doc = new jsPDF('l', 'mm', 'a4');
     doc.text('Individual KYC Forms Report', 14, 22);
@@ -167,15 +196,8 @@ const AdminIndividualKYCTable: React.FC = () => {
     {
       field: 'createdAt',
       headerName: 'Created At',
-      width: 120,
-      renderCell: (params) => {
-        const date = params.row.createdAt;
-        if (!date) return 'N/A';
-        if (date instanceof Date) {
-          return date.toLocaleDateString();
-        }
-        return 'N/A';
-      },
+      width: 130,
+      renderCell: (params) => formatDate(params.row.createdAt || params.row.timestamp || params.row.submittedAt),
     },
     // All form fields in exact order they appear in the form (using renderCell as per changelog)
     {
