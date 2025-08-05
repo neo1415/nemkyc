@@ -103,15 +103,19 @@ For fields like premium payment source where only one should show data:
 - Handle both legacy and new data formats
 - Show "N/A" for empty fields
 - Keep existing functionality intact
-- Only modify the table columns, not the page structure
+- **CRITICAL: Only modify the table columns, not the page structure, layout, or styling**
+- **NEVER touch export buttons, headers, or any UI elements outside the DataGrid columns**
 - Check for undefined/null before accessing nested properties
+- Always check if date objects have `.toDate()` method before calling it
 
 ### ❌ DON'T:
 - Use `valueFormatter` for complex nested data access
 - Remove or filter out empty fields
-- Change the page layout or design
+- **CRITICAL: Change the page layout, design, export buttons, or any styling outside table columns**
+- **NEVER modify export button styling, header layouts, or page structure**
 - Touch any functionality outside the table columns
 - Assume data format consistency across all records
+- Call `.toDate()` on objects without checking if the method exists first
 
 ## Files Modified
 - `src/pages/admin/CorporateKYCTable.tsx` - Updated column definitions and data access patterns
