@@ -122,6 +122,8 @@ For fields like premium payment source where only one should show data:
 
 ## Files Modified
 - `src/pages/admin/CorporateKYCTable.tsx` - Updated column definitions and data access patterns
+- `src/pages/admin/AdminIndividualKYCTable.tsx` - Applied same refactoring methodology
+- `src/pages/admin/CorporateCDDTable.tsx` - Applied same refactoring methodology
 
 ## Testing Checklist
 - [ ] Table displays all form fields in correct order
