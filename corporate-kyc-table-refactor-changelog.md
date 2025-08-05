@@ -105,8 +105,10 @@ For fields like premium payment source where only one should show data:
 - Keep existing functionality intact
 - **CRITICAL: Only modify the table columns, not the page structure, layout, or styling**
 - **NEVER touch export buttons, headers, or any UI elements outside the DataGrid columns**
+- **CRITICAL: For date columns (like createdAt), always check multiple timestamp fields in fallback order: `createdAt || timestamp || submittedAt`**
 - Check for undefined/null before accessing nested properties
 - Always check if date objects have `.toDate()` method before calling it
+- Use the exact same `formatDate` function as Corporate KYC for consistent date formatting
 
 ### ❌ DON'T:
 - Use `valueFormatter` for complex nested data access
@@ -116,6 +118,7 @@ For fields like premium payment source where only one should show data:
 - Touch any functionality outside the table columns
 - Assume data format consistency across all records
 - Call `.toDate()` on objects without checking if the method exists first
+- Show "N/A" for date columns when timestamp data exists - always use fallback order
 
 ## Files Modified
 - `src/pages/admin/CorporateKYCTable.tsx` - Updated column definitions and data access patterns
