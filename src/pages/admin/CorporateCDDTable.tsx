@@ -139,13 +139,32 @@ const CorporateCDDTable: React.FC = () => {
     }
   };
 
-  const formatDate = (timestamp: any) => {
+  const formatDate = (timestamp: any): string => {
     if (!timestamp) return 'N/A';
+    
     try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      return format(date, 'PPp');
-    } catch {
-      return 'Invalid date';
+      let dateObj: Date;
+      
+      if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+        dateObj = timestamp.toDate();
+      } else if (typeof timestamp === 'string') {
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(timestamp)) {
+          return timestamp;
+        }
+        dateObj = new Date(timestamp);
+      } else if (timestamp instanceof Date) {
+        dateObj = timestamp;
+      } else {
+        return 'N/A';
+      }
+
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = String(dateObj.getFullYear());
+      
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      return 'N/A';
     }
   };
 
@@ -254,628 +273,335 @@ const CorporateCDDTable: React.FC = () => {
     },
     // Created At column
     {
-      field: 'timestamp',
+      field: 'createdAt',
       headerName: 'Created At',
-      width: 160,
-      renderCell: (params) => (
-        <div className="text-sm">
-          {formatDate(params.value)}
-        </div>
-      )
+      width: 130,
+      renderCell: (params) => formatDate(params.row.createdAt || params.row.timestamp || params.row.submittedAt),
     },
-    // Company Information - following CorporateCDDViewer order
+    // All form fields in exact order they appear in the form (using renderCell as per changelog)
     {
       field: 'companyName',
       headerName: 'Company Name',
       width: 200,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
+      renderCell: (params) => params.row.companyName || 'N/A',
+    },
+    {
+      field: 'registeredCompanyAddress',
+      headerName: 'Registered Company Address',
+      width: 200,
+      renderCell: (params) => params.row.registeredCompanyAddress || 'N/A',
     },
     {
       field: 'incorporationNumber',
       headerName: 'Incorporation Number',
       width: 160,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
+      renderCell: (params) => params.row.incorporationNumber || 'N/A',
     },
     {
       field: 'incorporationState',
       headerName: 'Incorporation State',
       width: 150,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
+      renderCell: (params) => params.row.incorporationState || 'N/A',
     },
     {
       field: 'dateOfIncorporationRegistration',
-      headerName: 'Date of Incorporation',
+      headerName: 'Date of Incorporation/Registration',
       width: 160,
-      renderCell: (params) => (
-        <div className="truncate">
-          {formatDate(params.value) !== 'N/A' ? formatDate(params.value) : params.value || 'N/A'}
-        </div>
-      )
-    },
-    {
-      field: 'companyLegalForm',
-      headerName: 'Company Type',
-      width: 140,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
-    },
-    {
-      field: 'emailAddress',
-      headerName: 'Email Address',
-      width: 200,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
-    },
-    {
-      field: 'website',
-      headerName: 'Website',
-      width: 180,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
-    },
-    {
-      field: 'taxIdentificationNumber',
-      headerName: 'Tax ID Number',
-      width: 140,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
-    },
-    {
-      field: 'telephoneNumber',
-      headerName: 'Telephone Number',
-      width: 150,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
-    },
-    {
-      field: 'registeredCompanyAddress',
-      headerName: 'Registered Address',
-      width: 200,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
+      renderCell: (params) => formatDate(params.row.dateOfIncorporationRegistration),
     },
     {
       field: 'natureOfBusiness',
       headerName: 'Nature of Business',
       width: 160,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
+      renderCell: (params) => params.row.natureOfBusiness || 'N/A',
     },
-    
-    // Contact Information
     {
-      field: 'companyAddress',
-      headerName: 'Company Address',
+      field: 'companyLegalForm',
+      headerName: 'Company Legal Form',
+      width: 140,
+      renderCell: (params) => {
+        return params.row.companyLegalForm || params.row.companyLegalFormOther || 'N/A';
+      },
+    },
+    {
+      field: 'emailAddress',
+      headerName: 'Email Address',
       width: 200,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
+      renderCell: (params) => params.row.emailAddress || 'N/A',
     },
     {
-      field: 'city',
-      headerName: 'City',
-      width: 120,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
+      field: 'website',
+      headerName: 'Website',
+      width: 180,
+      renderCell: (params) => params.row.website || 'N/A',
     },
     {
-      field: 'state',
-      headerName: 'State',
-      width: 120,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
+      field: 'taxIdentificationNumber',
+      headerName: 'Tax Identification Number',
+      width: 140,
+      renderCell: (params) => params.row.taxIdentificationNumber || 'N/A',
     },
     {
-      field: 'country',
-      headerName: 'Country',
-      width: 120,
-      renderCell: (params) => (
-        <div className="truncate">
-          {params.value || 'N/A'}
-        </div>
-      )
+      field: 'telephoneNumber',
+      headerName: 'Telephone Number',
+      width: 150,
+      renderCell: (params) => params.row.telephoneNumber || 'N/A',
     },
     
-    // Directors Information - All Directors flattened
+    // Directors Information - All Directors flattened (using renderCell as per changelog)
     {
       field: 'director1FirstName',
       headerName: 'Director 1 First Name',
       width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].firstName || 'N/A';
         }
-        // Handle old flat format
-        return row.firstName || 'N/A';
+        return params.row.firstName || 'N/A';
       }
     },
     {
       field: 'director1MiddleName',
       headerName: 'Director 1 Middle Name',
       width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].middleName || 'N/A';
         }
-        return row.middleName || 'N/A';
+        return params.row.middleName || 'N/A';
       }
     },
     {
       field: 'director1LastName',
       headerName: 'Director 1 Last Name',
       width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].lastName || 'N/A';
         }
-        return row.lastName || 'N/A';
+        return params.row.lastName || 'N/A';
       }
     },
     {
       field: 'director1DOB',
       headerName: 'Director 1 DOB',
       width: 130,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
-          return directors[0].dob || 'N/A';
+          return formatDate(directors[0].dob) || 'N/A';
         }
-        return row.dob || 'N/A';
+        return formatDate(params.row.dob) || 'N/A';
       }
     },
     {
       field: 'director1PlaceOfBirth',
       headerName: 'Director 1 Place of Birth',
       width: 160,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].placeOfBirth || 'N/A';
         }
-        return row.placeOfBirth || 'N/A';
+        return params.row.placeOfBirth || 'N/A';
       }
     },
     {
       field: 'director1Nationality',
       headerName: 'Director 1 Nationality',
       width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].nationality || 'N/A';
         }
-        return row.nationality || 'N/A';
+        return params.row.nationality || 'N/A';
       }
     },
     {
       field: 'director1Country',
       headerName: 'Director 1 Country',
       width: 140,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].country || 'N/A';
         }
-        return row.country || 'N/A';
+        return params.row.country || 'N/A';
       }
     },
     {
       field: 'director1Occupation',
       headerName: 'Director 1 Occupation',
       width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].occupation || 'N/A';
         }
-        return row.occupation || 'N/A';
+        return params.row.occupation || 'N/A';
       }
     },
     {
       field: 'director1Email',
       headerName: 'Director 1 Email',
       width: 180,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].email || 'N/A';
         }
-        return row.email || 'N/A';
+        return params.row.email || 'N/A';
       }
     },
     {
       field: 'director1Phone',
       headerName: 'Director 1 Phone',
       width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].phoneNumber || 'N/A';
         }
-        return row.phoneNumber || 'N/A';
+        return params.row.phoneNumber || 'N/A';
       }
     },
     {
       field: 'director1BVN',
       headerName: 'Director 1 BVN',
       width: 140,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].BVNNumber || 'N/A';
         }
-        return row.BVNNumber || 'N/A';
+        return params.row.BVNNumber || 'N/A';
       }
     },
     {
       field: 'director1ResidentialAddress',
       headerName: 'Director 1 Residential Address',
       width: 200,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].residentialAddress || 'N/A';
         }
-        return row.residentialAddress || 'N/A';
+        return params.row.residentialAddress || 'N/A';
       }
     },
     {
       field: 'director1TaxID',
       headerName: 'Director 1 Tax ID',
       width: 140,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].taxIDNumber || 'N/A';
         }
-        return row.taxIDNumber || 'N/A';
+        return params.row.taxIDNumber || 'N/A';
       }
     },
     {
       field: 'director1IDType',
       headerName: 'Director 1 ID Type',
       width: 140,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].idType || 'N/A';
         }
-        return row.idType || 'N/A';
+        return params.row.idType || 'N/A';
       }
     },
     {
       field: 'director1IDNumber',
       headerName: 'Director 1 ID Number',
       width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].idNumber || 'N/A';
         }
-        return row.idNumber || 'N/A';
+        return params.row.idNumber || 'N/A';
       }
     },
     {
       field: 'director1IssuingBody',
       headerName: 'Director 1 Issuing Body',
       width: 160,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
           return directors[0].issuingBody || 'N/A';
         }
-        return row.issuingBody || 'N/A';
+        return params.row.issuingBody || 'N/A';
       }
     },
     {
       field: 'director1IssuedDate',
       headerName: 'Director 1 Issued Date',
       width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
-          return directors[0].issuedDate || 'N/A';
+          return formatDate(directors[0].issuedDate) || 'N/A';
         }
-        return row.issuedDate || 'N/A';
+        return formatDate(params.row.issuedDate) || 'N/A';
       }
     },
     {
       field: 'director1ExpiryDate',
       headerName: 'Director 1 Expiry Date',
       width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
-          return directors[0].expiryDate || 'N/A';
+          return formatDate(directors[0].expiryDate) || 'N/A';
         }
-        return row.expiryDate || 'N/A';
+        return formatDate(params.row.expiryDate) || 'N/A';
       }
     },
     {
       field: 'director1SourceOfIncome',
       headerName: 'Director 1 Source of Income',
       width: 180,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
+      renderCell: (params) => {
+        const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
-          return directors[0].sourceOfIncome || 'N/A';
+          return directors[0].sourceOfIncome || directors[0].sourceOfIncomeOther || 'N/A';
         }
-        return row.sourceOfIncome || 'N/A';
+        return params.row.sourceOfIncome || params.row.sourceOfIncomeOther || 'N/A';
       }
     },
     
-    // Director 2 columns
+    // Bank Account Details
     {
-      field: 'director2FirstName',
-      headerName: 'Director 2 First Name',
+      field: 'bankName',
+      headerName: 'Bank Name',
       width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].firstName || 'N/A';
-        }
-        return row.firstName2 || 'N/A';
-      }
+      renderCell: (params) => params.row.bankName || 'N/A',
     },
     {
-      field: 'director2MiddleName',
-      headerName: 'Director 2 Middle Name',
+      field: 'accountNumber',
+      headerName: 'Account Number',
       width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].middleName || 'N/A';
-        }
-        return row.middleName2 || 'N/A';
-      }
+      renderCell: (params) => params.row.accountNumber || 'N/A',
     },
     {
-      field: 'director2LastName',
-      headerName: 'Director 2 Last Name',
+      field: 'bankBranch',
+      headerName: 'Bank Branch',
       width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].lastName || 'N/A';
-        }
-        return row.lastName2 || 'N/A';
-      }
+      renderCell: (params) => params.row.bankBranch || 'N/A',
     },
     {
-      field: 'director2DOB',
-      headerName: 'Director 2 DOB',
-      width: 130,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].dob || 'N/A';
-        }
-        return row.dob2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2PlaceOfBirth',
-      headerName: 'Director 2 Place of Birth',
+      field: 'accountOpeningDate',
+      headerName: 'Account Opening Date',
       width: 160,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].placeOfBirth || 'N/A';
-        }
-        return row.placeOfBirth2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2Nationality',
-      headerName: 'Director 2 Nationality',
-      width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].nationality || 'N/A';
-        }
-        return row.nationality2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2Country',
-      headerName: 'Director 2 Country',
-      width: 140,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].country || 'N/A';
-        }
-        return row.country2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2Occupation',
-      headerName: 'Director 2 Occupation',
-      width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].occupation || 'N/A';
-        }
-        return row.occupation2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2Email',
-      headerName: 'Director 2 Email',
-      width: 180,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].email || 'N/A';
-        }
-        return row.email2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2Phone',
-      headerName: 'Director 2 Phone',
-      width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].phoneNumber || 'N/A';
-        }
-        return row.phoneNumber2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2BVN',
-      headerName: 'Director 2 BVN',
-      width: 140,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].BVNNumber || 'N/A';
-        }
-        return row.BVNNumber2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2ResidentialAddress',
-      headerName: 'Director 2 Residential Address',
-      width: 200,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].residentialAddress || 'N/A';
-        }
-        return row.residentialAddress2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2TaxID',
-      headerName: 'Director 2 Tax ID',
-      width: 140,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].taxIDNumber || 'N/A';
-        }
-        return row.taxIDNumber2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2IDType',
-      headerName: 'Director 2 ID Type',
-      width: 140,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].idType || 'N/A';
-        }
-        return row.idType2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2IDNumber',
-      headerName: 'Director 2 ID Number',
-      width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].idNumber || 'N/A';
-        }
-        return row.idNumber2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2IssuingBody',
-      headerName: 'Director 2 Issuing Body',
-      width: 160,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].issuingBody || 'N/A';
-        }
-        return row.issuingBody2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2IssuedDate',
-      headerName: 'Director 2 Issued Date',
-      width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].issuedDate || 'N/A';
-        }
-        return row.issuedDate2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2ExpiryDate',
-      headerName: 'Director 2 Expiry Date',
-      width: 150,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].expiryDate || 'N/A';
-        }
-        return row.expiryDate2 || 'N/A';
-      }
-    },
-    {
-      field: 'director2SourceOfIncome',
-      headerName: 'Director 2 Source of Income',
-      width: 180,
-      valueGetter: (value, row) => {
-        const directors = row.directors;
-        if (Array.isArray(directors) && directors[1]) {
-          return directors[1].sourceOfIncome || 'N/A';
-        }
-        return row.sourceOfIncome2 || 'N/A';
-      }
+      renderCell: (params) => formatDate(params.row.accountOpeningDate),
     },
     
     // Status column at the end
