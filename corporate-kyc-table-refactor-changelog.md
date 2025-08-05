@@ -145,6 +145,7 @@ For fields like premium payment source where only one should show data:
 - `src/pages/admin/CorporateKYCTable.tsx` - Updated column definitions and data access patterns
 - `src/pages/admin/AdminIndividualKYCTable.tsx` - Applied same refactoring methodology
 - `src/pages/admin/CorporateCDDTable.tsx` - Applied same refactoring methodology with Director 2 fields, Foreign Account Details, removed status column, and fixed export button styling
+- `src/pages/admin/AdminIndividualCDDTable.tsx` - **NEW:** Applied same refactoring pattern following exact form field order from IndividualCDD.tsx
 
 ## Testing Checklist
 - [ ] Table displays all form fields in correct order
