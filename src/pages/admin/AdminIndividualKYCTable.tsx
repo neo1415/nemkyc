@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridToolbar, GridActionsCellItem } from '@mui/x-data-grid';
 import { Box, Button, Typography, Chip, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { Visibility, Delete, GetApp } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { collection, query, getDocs, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { Eye, Trash2, Download } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -40,12 +40,16 @@ const AdminIndividualKYCTable: React.FC = () => {
       const q = query(collection(db, 'Individual-kyc-form'), orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
       
-      const forms = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      }));
+      const forms = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Handle createdAt safely - check if it has toDate method before calling it
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt || data.submittedAt || data.timestamp),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
+        };
+      });
 
       setKycForms(forms);
     } catch (error) {
@@ -142,33 +146,36 @@ const AdminIndividualKYCTable: React.FC = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 150,
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            size="small"
-            startIcon={<Eye size={16} />}
-            onClick={() => navigate(`/admin/form/Individual-kyc-form/${params.row.id}`)}
-          >
-            View
-          </Button>
-          <Button
-            size="small"
-            color="error"
-            startIcon={<Trash2 size={16} />}
-            onClick={() => setDeleteDialog({ open: true, id: params.row.id })}
-          >
-            Delete
-          </Button>
-        </Box>
-      ),
+      width: 120,
+      type: 'actions',
+      getActions: (params) => [
+        <GridActionsCellItem
+          key="view"
+          icon={<Visibility />}
+          label="View"
+          onClick={() => navigate(`/admin/form/Individual-kyc-form/${params.id}`)}
+        />,
+        <GridActionsCellItem
+          key="delete"
+          icon={<Delete />}
+          label="Delete"
+          onClick={() => setDeleteDialog({ open: true, id: params.id as string })}
+        />,
+      ],
     },
     // Created At column second (as per changelog)
     {
       field: 'createdAt',
       headerName: 'Created At',
       width: 120,
-      renderCell: (params) => params.row.createdAt?.toLocaleDateString() || 'N/A',
+      renderCell: (params) => {
+        const date = params.row.createdAt;
+        if (!date) return 'N/A';
+        if (date instanceof Date) {
+          return date.toLocaleDateString();
+        }
+        return 'N/A';
+      },
     },
     // All form fields in exact order they appear in the form (using renderCell as per changelog)
     {
@@ -414,22 +421,23 @@ const AdminIndividualKYCTable: React.FC = () => {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ height: '100vh', width: '100%', p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h4" gutterBottom>
-            Individual KYC Management
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Download />}
-            onClick={exportToPDF}
-            sx={{ mb: 2 }}
-          >
-            Export PDF
-          </Button>
-        </Box>
+      <div className="p-6">
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <Typography variant="h4" component="h1" gutterBottom>
+              Individual KYC Management
+            </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<GetApp />}
+              onClick={exportToPDF}
+            >
+              Export PDF
+            </Button>
+          </div>
+        </div>
         
-        <Box sx={{ height: 600, width: '100%' }}>
+        <div style={{ height: 600, width: '100%' }}>
           <DataGrid
             rows={kycForms}
             columns={columns}
@@ -448,7 +456,7 @@ const AdminIndividualKYCTable: React.FC = () => {
             checkboxSelection
             disableRowSelectionOnClick
           />
-        </Box>
+        </div>
 
         <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, id: null })}>
           <DialogTitle>Confirm Delete</DialogTitle>
@@ -464,7 +472,7 @@ const AdminIndividualKYCTable: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
-      </Box>
+      </div>
     </ThemeProvider>
   );
 };
