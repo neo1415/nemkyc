@@ -155,7 +155,7 @@ const AdminIndividualCDDTable: React.FC = () => {
             key="view"
             icon={<Visibility />}
             label="View"
-            onClick={() => navigate(`/admin/form/individual-cdd/${id}`)}
+            onClick={() => navigate(`/admin/form/individual-kyc/${id}`)}
             color="inherit"
           />,
           <GridActionsCellItem
