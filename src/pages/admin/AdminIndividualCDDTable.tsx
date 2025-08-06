@@ -119,6 +119,54 @@ const AdminIndividualCDDTable: React.FC = () => {
 
   const generateColumns = (data: FormData[]) => {
     const baseColumns: GridColDef[] = [
+            {
+        field: 'timestamp',
+        headerName: 'createdAt',
+        width: 180,
+        renderCell: (params) => {
+          if (!params.value) return 'N/A';
+          try {
+            let date;
+            if (typeof params.value === 'string') {
+              date = new Date(params.value);
+            } else if (params.value?.toDate) {
+              date = params.value.toDate();
+            } else if (params.value instanceof Date) {
+              date = params.value;
+            } else {
+              return 'N/A';
+            }
+            
+            if (isNaN(date.getTime())) return 'N/A';
+            return format(date, 'dd/MM/yyyy HH:mm');
+          } catch (error) {
+            return 'N/A';
+          }
+        }
+      },
+      {
+        field: 'actions',
+        type: 'actions',
+        headerName: 'Actions',
+        width: 120,
+        cellClassName: 'actions',
+        getActions: ({ id }: { id: GridRowId }) => [
+          <GridActionsCellItem
+            key="view"
+            icon={<Visibility />}
+            label="View"
+            onClick={() => navigate(`/admin/form/individual-cdd/${id}`)}
+            color="inherit"
+          />,
+          <GridActionsCellItem
+            key="delete"
+            icon={<Delete />}
+            label="Delete"
+            onClick={() => handleDeleteClick(id as string)}
+            color="inherit"
+          />,
+        ],
+      },
       {
         field: 'title',
         headerName: 'Title',
@@ -353,54 +401,6 @@ const AdminIndividualCDDTable: React.FC = () => {
           }
           return params.value || 'N/A';
         }
-      },
-      {
-        field: 'timestamp',
-        headerName: 'Submitted',
-        width: 180,
-        renderCell: (params) => {
-          if (!params.value) return 'N/A';
-          try {
-            let date;
-            if (typeof params.value === 'string') {
-              date = new Date(params.value);
-            } else if (params.value?.toDate) {
-              date = params.value.toDate();
-            } else if (params.value instanceof Date) {
-              date = params.value;
-            } else {
-              return 'N/A';
-            }
-            
-            if (isNaN(date.getTime())) return 'N/A';
-            return format(date, 'dd/MM/yyyy HH:mm');
-          } catch (error) {
-            return 'N/A';
-          }
-        }
-      },
-      {
-        field: 'actions',
-        type: 'actions',
-        headerName: 'Actions',
-        width: 120,
-        cellClassName: 'actions',
-        getActions: ({ id }: { id: GridRowId }) => [
-          <GridActionsCellItem
-            key="view"
-            icon={<Visibility />}
-            label="View"
-            onClick={() => navigate(`/admin/individual-cdd/${id}`)}
-            color="inherit"
-          />,
-          <GridActionsCellItem
-            key="delete"
-            icon={<Delete />}
-            label="Delete"
-            onClick={() => handleDeleteClick(id as string)}
-            color="inherit"
-          />,
-        ],
       },
     ];
 
