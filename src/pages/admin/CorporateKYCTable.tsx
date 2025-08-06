@@ -132,7 +132,7 @@ const CorporateKYCTable: React.FC = () => {
   };
 
   const handleView = (id: GridRowId) => {
-    navigate(`/admin/corporate-kyc/${id}`);
+    navigate(`/admin/form/corporate-kyc-form/${id}`);
   };
 
   const handleDelete = async () => {
