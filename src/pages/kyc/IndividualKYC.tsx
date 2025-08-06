@@ -28,7 +28,7 @@ const individualKYCSchema = yup.object().shape({
   officeLocation: yup.string().required("Office location is required"),
   title: yup.string().required("Title is required"),
   firstName: yup.string().required("First name is required"),
-  middleName: yup.string().required("Middle name is required"),
+  middleName: yup.string(),
   lastName: yup.string().required("Last name is required"),
   contactAddress: yup.string().required("Contact address is required"),
   occupation: yup.string().required("Occupation is required"),
@@ -437,7 +437,7 @@ const IndividualKYC: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField name="firstName" label="First Name" required />
-              <FormField name="middleName" label="Middle Name" required />
+              <FormField name="middleName" label="Middle Name" />
               <FormField name="lastName" label="Last Name" required />
             </div>
 
