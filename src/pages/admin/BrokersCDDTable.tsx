@@ -112,7 +112,7 @@ const BrokersCDDTable: React.FC = () => {
   };
 
   const handleView = (id: GridRowId) => {
-    navigate(`/admin/brokers-cdd/${id}`);
+    navigate(`/admin/form/brokers-kyc/${id}`);
   };
 
   const handleDelete = async () => {
