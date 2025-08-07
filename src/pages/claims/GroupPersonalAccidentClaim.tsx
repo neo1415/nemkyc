@@ -918,7 +918,19 @@ const GroupPersonalAccidentClaim: React.FC = () => {
               </p>
             )}
             
-            <FormField name="signature" label="Digital Signature" required placeholder="Type your full name as signature" />
+            <FormField
+              control={formMethods.control}
+              name="signature"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Digital Signature *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Type your full name as signature" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
