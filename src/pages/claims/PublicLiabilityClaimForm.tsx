@@ -761,7 +761,7 @@ const PublicLiabilityClaimForm: React.FC = () => {
         {/* Success Modal */}
         <SuccessModal
           isOpen={authShowSuccess}
-          onClose={() => setAuthShowSuccess(false)}
+          onClose={() => setAuthShowSuccess()}
           title="Public Liability Claim Submitted!"
           formType="Public Liability Claim"
           isLoading={authSubmitting}
