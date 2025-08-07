@@ -596,7 +596,7 @@ const RewrittenFormComponent: React.FC = () => {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
                 <FileText className="w-8 h-8 text-primary" />
               </div>
-              <h1 className="text-3xl font-bold tracking-tight mb-2">Custom Form</h1>
+              <h1 className="text-3xl font-bold tracking-tight mb-2">Rent Assurance Claim</h1>
               <p className="text-muted-foreground">
                 Please provide accurate information for your submission
               </p>
@@ -604,13 +604,7 @@ const RewrittenFormComponent: React.FC = () => {
 
             <Card className="shadow-xl border-0 bg-white/50 backdrop-blur-sm">
               <CardHeader className="text-center pb-2">
-                <CardTitle className="flex items-center justify-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Form Submission
-                </CardTitle>
-                <CardDescription>
-                  Complete all sections to submit your form
-                </CardDescription>
+     
               </CardHeader>
               <CardContent>
                 <MultiStepForm
