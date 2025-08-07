@@ -989,10 +989,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                     Back to Edit
                   </Button>
                   <Button 
-                    onClick={() => {
-                      const currentData = formMethods.getValues();
-                      handleSubmit(currentData);
-                    }} 
+                    onClick={() => handleSubmit(watchedValues)} 
                     disabled={isSubmitting || authSubmitting}
                   >
                     {isSubmitting || authSubmitting ? (
