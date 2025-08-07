@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { get } from 'lodash';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { FileText, User, Shield, Signature, CalendarIcon, CheckCircle2, AlertCircle, Plus, Trash2, Loader2 } from 'lucide-react';
+import { FileText, Shield, CalendarIcon, CheckCircle2, Plus, Trash2, Loader2, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -20,14 +21,10 @@ import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { db } from '@/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { sendEmail } from '@/services/emailService';
-import { useAuth } from '@/contexts/AuthContext';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
-import AuthRequiredSubmit from '@/components/common/AuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
 
+// Public Liability Schema - Complete validation for all fields
 const publicLiabilitySchema = yup.object().shape({
   // Policy Details
   policyNumber: yup.string().required('Policy number is required'),
@@ -35,7 +32,7 @@ const publicLiabilitySchema = yup.object().shape({
   coverageToDate: yup.date().required('Coverage to date is required'),
   
   // Insured Details
-  companyName: yup.string(),
+  companyName: yup.string(), // Optional field
   address: yup.string().required('Address is required'),
   phone: yup.string().required('Phone number is required'),
   email: yup.string().email('Invalid email').required('Email is required'),
@@ -53,22 +50,25 @@ const publicLiabilitySchema = yup.object().shape({
   employeeActivity: yup.string().required('Employee activity details are required'),
   responsiblePersonName: yup.string().required('Responsible person name is required'),
   responsiblePersonAddress: yup.string().required('Responsible person address is required'),
-  responsibleEmployer: yup.string(),
+  responsibleEmployer: yup.string(), // Optional
   
   // Police and Insurance
   policeInvolved: yup.string().required('Please specify if police were involved'),
   policeStation: yup.string().when('policeInvolved', {
     is: 'yes',
-    then: (schema) => schema.required('Police station is required')
+    then: (schema) => schema.required('Police station is required'),
+    otherwise: (schema) => schema.notRequired()
   }),
   officerNumber: yup.string().when('policeInvolved', {
     is: 'yes',
-    then: (schema) => schema.required('Officer number is required')
+    then: (schema) => schema.required('Officer number is required'),
+    otherwise: (schema) => schema.notRequired()
   }),
   otherInsurance: yup.string().required('Please specify if you have other insurance'),
   otherInsuranceDetails: yup.string().when('otherInsurance', {
     is: 'yes',
-    then: (schema) => schema.required('Other insurance details are required')
+    then: (schema) => schema.required('Other insurance details are required'),
+    otherwise: (schema) => schema.notRequired()
   }),
   
   // Claimant
@@ -78,15 +78,18 @@ const publicLiabilitySchema = yup.object().shape({
   claimNoticeReceived: yup.string().required('Please specify if claim notice was received'),
   noticeFrom: yup.string().when('claimNoticeReceived', {
     is: 'yes',
-    then: (schema) => schema.required('Notice from is required')
+    then: (schema) => schema.required('Notice from is required'),
+    otherwise: (schema) => schema.notRequired()
   }),
   noticeWhen: yup.date().when('claimNoticeReceived', {
     is: 'yes',
-    then: (schema) => schema.required('Notice when is required')
+    then: (schema) => schema.required('Notice when is required'),
+    otherwise: (schema) => schema.notRequired()
   }),
   noticeForm: yup.string().when('claimNoticeReceived', {
     is: 'yes',
-    then: (schema) => schema.required('Notice form is required')
+    then: (schema) => schema.required('Notice form is required'),
+    otherwise: (schema) => schema.notRequired()
   }),
   
   // Declaration
@@ -135,6 +138,155 @@ interface PublicLiabilityClaimData {
   signature: string;
 }
 
+// Form field components with validation (same as Motor Claim)
+const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
+  const { register, formState: { errors }, clearErrors } = useFormContext();
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type={type}
+        maxLength={maxLength}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
+  const { register, watch, formState: { errors }, clearErrors } = useFormContext();
+  const currentValue = watch(name) || '';
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Textarea
+        id={name}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      <div className="flex justify-between">
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
+        <span className="text-sm text-muted-foreground ml-auto">
+          {currentValue.length}/{maxLength}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const FormSelect = ({ name, label, required = false, options, placeholder, children, ...props }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(newValue) => {
+          setValue(name, newValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        {...props}
+      >
+        <SelectTrigger className={error ? 'border-destructive' : ''}>
+          <SelectValue placeholder={placeholder || `Select ${label}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {children}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormDatePicker = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-full justify-start text-left font-normal",
+              !value && "text-muted-foreground",
+              error && "border-destructive"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0">
+          <ReactCalendar
+            mode="single"
+            selected={value ? new Date(value) : undefined}
+            onSelect={(date) => {
+              setValue(name, date);
+              if (error) {
+                clearErrors(name);
+              }
+            }}
+            initialFocus
+            className="pointer-events-auto"
+          />
+        </PopoverContent>
+      </Popover>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
 const defaultValues: Partial<PublicLiabilityClaimData> = {
   policyNumber: '',
   companyName: '',
@@ -167,22 +319,14 @@ const defaultValues: Partial<PublicLiabilityClaimData> = {
 
 const PublicLiabilityClaimForm: React.FC = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
   const [showSummary, setShowSummary] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const [editingField, setEditingField] = useState<string | null>(null);
   const { 
     handleSubmitWithAuth, 
-    showAuthDialog, 
     showSuccess: authShowSuccess,
     setShowSuccess: setAuthShowSuccess,
-    isSubmitting: authSubmitting,
-    proceedToSignup,
-    dismissAuthDialog,
-    formType
+    isSubmitting: authSubmitting
   } = useAuthRequiredSubmit();
 
   // Check for pending submission when component mounts
@@ -191,7 +335,6 @@ const PublicLiabilityClaimForm: React.FC = () => {
       const hasPending = sessionStorage.getItem('pendingSubmission');
       if (hasPending) {
         setShowPostAuthLoading(true);
-        // Hide loading after 5 seconds max (in case something goes wrong)
         setTimeout(() => setShowPostAuthLoading(false), 5000);
       }
     };
@@ -207,10 +350,15 @@ const PublicLiabilityClaimForm: React.FC = () => {
   }, [authShowSuccess]);
 
   const formMethods = useForm<any>({
-    // resolver: yupResolver(publicLiabilitySchema),
+    resolver: yupResolver(publicLiabilitySchema),
     defaultValues,
     mode: 'onChange'
   });
+
+  // Make toast available globally for MultiStepForm
+  useEffect(() => {
+    (window as any).toast = toast;
+  }, [toast]);
 
   const { fields: witnessFields, append: addWitness, remove: removeWitness } = useFieldArray({
     control: formMethods.control,
@@ -221,7 +369,7 @@ const PublicLiabilityClaimForm: React.FC = () => {
   const watchedValues = formMethods.watch();
 
   // Auto-save draft
-  React.useEffect(() => {
+  useEffect(() => {
     const subscription = formMethods.watch((data) => {
       saveDraft(data);
     });
@@ -260,36 +408,14 @@ const PublicLiabilityClaimForm: React.FC = () => {
     setShowSummary(true);
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
-    return (
-      <div className="space-y-2">
-        <Label>{label}</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !value && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <ReactCalendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={(date) => formMethods.setValue(name, date)}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-    );
+  // Step field mappings for validation
+  const stepFieldMappings = {
+    0: ['policyNumber', 'coverageFromDate', 'coverageToDate'],
+    1: ['address', 'phone', 'email'], // companyName is optional
+    2: ['accidentDate', 'accidentTime', 'accidentPlace', 'accidentDetails', 'witnesses', 'employeeActivity', 'responsiblePersonName', 'responsiblePersonAddress'],
+    3: ['policeInvolved', 'policeStation', 'officerNumber', 'otherInsurance', 'otherInsuranceDetails'],
+    4: ['claimantName', 'claimantAddress', 'injuryNature', 'claimNoticeReceived', 'noticeFrom', 'noticeWhen', 'noticeForm'],
+    5: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
   };
 
   const steps = [
@@ -297,434 +423,298 @@ const PublicLiabilityClaimForm: React.FC = () => {
       id: 'policy',
       title: 'Policy Details',
       component: (
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="policyNumber">Policy Number *</Label>
-            <Input
-              id="policyNumber"
-              {...formMethods.register('policyNumber')}
-            />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <DatePickerField
-                name="coverageFromDate"
-                label="Period of Cover - From *"
-              />
-            </div>
-            <div>
-              <DatePickerField
-                name="coverageToDate"
-                label="Period of Cover - To *"
-              />
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormField name="policyNumber" label="Policy Number" required />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormDatePicker name="coverageFromDate" label="Period of Cover - From" required />
+              <FormDatePicker name="coverageToDate" label="Period of Cover - To" required />
             </div>
           </div>
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'insured',
       title: 'Insured Details',
       component: (
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="companyName">Company Name (if applicable)</Label>
-            <Input
-              id="companyName"
-              {...formMethods.register('companyName')}
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="address">Address *</Label>
-            <Textarea
-              id="address"
-              {...formMethods.register('address')}
-            />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="phone">Phone *</Label>
-              <Input
-                id="phone"
-                {...formMethods.register('phone')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                {...formMethods.register('email')}
-              />
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormField name="companyName" label="Company Name (if applicable)" />
+            <FormTextarea name="address" label="Address" required />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField name="phone" label="Phone" required />
+              <FormField name="email" label="Email" type="email" required />
             </div>
           </div>
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'loss',
       title: 'Details of Loss',
       component: (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <DatePickerField
-                name="accidentDate"
-                label="Date of Accident *"
-              />
-            </div>
-            <div>
-              <Label htmlFor="accidentTime">Time of Accident *</Label>
-              <Input
-                id="accidentTime"
-                type="time"
-                {...formMethods.register('accidentTime')}
-              />
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="accidentPlace">Place where accident occurred *</Label>
-            <Input
-              id="accidentPlace"
-              {...formMethods.register('accidentPlace')}
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="accidentDetails">Full details of how accident occurred *</Label>
-            <Textarea
-              id="accidentDetails"
-              {...formMethods.register('accidentDetails')}
-              rows={4}
-            />
-          </div>
-          
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <Label>Names & addresses of all witnesses</Label>
-              <Button
-                type="button"
-                onClick={() => addWitness({ name: '', address: '', isEmployee: 'independent' })}
-                className="flex items-center space-x-2"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Add Witness</span>
-              </Button>
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormDatePicker name="accidentDate" label="Date of Accident" required />
+              <FormField name="accidentTime" label="Time of Accident" type="time" required />
             </div>
             
-            {witnessFields.map((field, index) => (
-              <div key={field.id} className="border p-4 rounded-lg space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium">Witness {index + 1}</h4>
-                  {witnessFields.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeWitness(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor={`witnesses.${index}.name`}>Name</Label>
-                    <Input {...formMethods.register(`witnesses.${index}.name` as const)} />
+            <FormField name="accidentPlace" label="Place where accident occurred" required />
+            <FormTextarea name="accidentDetails" label="Full details of how accident occurred" required rows={4} />
+            
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <Label>Names & addresses of all witnesses</Label>
+                <Button
+                  type="button"
+                  onClick={() => addWitness({ name: '', address: '', isEmployee: 'independent' })}
+                  className="flex items-center space-x-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Witness</span>
+                </Button>
+              </div>
+              
+              {witnessFields.map((field, index) => (
+                <Card key={field.id} className="p-4 mb-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-medium">Witness {index + 1}</h4>
+                    {witnessFields.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeWitness(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
-                  <div>
-                    <Label htmlFor={`witnesses.${index}.isEmployee`}>Is employee or independent?</Label>
-                    <Select
-                      value={watchedValues.witnesses?.[index]?.isEmployee || ''}
-                      onValueChange={(value) => formMethods.setValue(`witnesses.${index}.isEmployee` as const, value as 'employee' | 'independent')}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField name={`witnesses.${index}.name`} label="Name" required />
+                      <FormSelect name={`witnesses.${index}.isEmployee`} label="Is employee or independent?" required placeholder="Select status">
                         <SelectItem value="employee">Employee</SelectItem>
                         <SelectItem value="independent">Independent</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      </FormSelect>
+                    </div>
+                    <FormTextarea name={`witnesses.${index}.address`} label="Address" required />
                   </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor={`witnesses.${index}.address`}>Address</Label>
-                    <Textarea {...formMethods.register(`witnesses.${index}.address` as const)} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div>
-            <Label htmlFor="employeeActivity">What were you or your employees doing? *</Label>
-            <Textarea
-              id="employeeActivity"
-              {...formMethods.register('employeeActivity')}
-              rows={3}
-            />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="responsiblePersonName">Name of person who caused accident *</Label>
-              <Input
-                id="responsiblePersonName"
-                {...formMethods.register('responsiblePersonName')}
-              />
+                </Card>
+              ))}
             </div>
-            <div>
-              <Label htmlFor="responsiblePersonAddress">Address of person who caused accident *</Label>
-              <Textarea
-                id="responsiblePersonAddress"
-                {...formMethods.register('responsiblePersonAddress')}
-              />
+            
+            <FormTextarea name="employeeActivity" label="What were you or your employees doing?" required rows={3} />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField name="responsiblePersonName" label="Name of person who caused accident" required />
+              <FormTextarea name="responsiblePersonAddress" label="Address of person who caused accident" required />
             </div>
+            
+            <FormTextarea name="responsibleEmployer" label="Name/address of that person's employer (if other than insured)" />
           </div>
-          
-          <div>
-            <Label htmlFor="responsibleEmployer">Name/address of that person's employer (if other than insured)</Label>
-            <Textarea
-              id="responsibleEmployer"
-              {...formMethods.register('responsibleEmployer')}
-            />
-          </div>
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'police',
       title: 'Police and Other Insurances',
       component: (
-        <div className="space-y-4">
-          <div>
-            <Label>Were particulars taken by police? *</Label>
-            <Select
-              value={watchedValues.policeInvolved || ''}
-              onValueChange={(value) => formMethods.setValue('policeInvolved', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="yes">Yes</SelectItem>
-                <SelectItem value="no">No</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {watchedValues.policeInvolved === 'yes' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="policeStation">Police Station *</Label>
-                <Input
-                  id="policeStation"
-                  {...formMethods.register('policeStation')}
-                />
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormSelect name="policeInvolved" label="Were particulars taken by police?" required placeholder="Select">
+              <SelectItem value="yes">Yes</SelectItem>
+              <SelectItem value="no">No</SelectItem>
+            </FormSelect>
+            
+            {watchedValues.policeInvolved === 'yes' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField name="policeStation" label="Police Station" required />
+                <FormField name="officerNumber" label="Officer Number" required />
               </div>
-              <div>
-                <Label htmlFor="officerNumber">Officer Number *</Label>
-                <Input
-                  id="officerNumber"
-                  {...formMethods.register('officerNumber')}
-                />
-              </div>
-            </div>
-          )}
-          
-          <div>
-            <Label>Do you hold other policies covering this accident? *</Label>
-            <Select
-              value={watchedValues.otherInsurance || ''}
-              onValueChange={(value) => formMethods.setValue('otherInsurance', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="yes">Yes</SelectItem>
-                <SelectItem value="no">No</SelectItem>
-              </SelectContent>
-            </Select>
+            )}
+            
+            <FormSelect name="otherInsurance" label="Do you hold other policies covering this accident?" required placeholder="Select">
+              <SelectItem value="yes">Yes</SelectItem>
+              <SelectItem value="no">No</SelectItem>
+            </FormSelect>
+            
+            {watchedValues.otherInsurance === 'yes' && (
+              <FormTextarea name="otherInsuranceDetails" label="Other insurance details" required rows={3} />
+            )}
           </div>
-          
-          {watchedValues.otherInsurance === 'yes' && (
-            <div>
-              <Label htmlFor="otherInsuranceDetails">Other insurance details *</Label>
-              <Textarea
-                id="otherInsuranceDetails"
-                {...formMethods.register('otherInsuranceDetails')}
-                rows={3}
-              />
-            </div>
-          )}
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'claimant',
       title: 'Claimant',
       component: (
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="claimantName">Name *</Label>
-            <Input
-              id="claimantName"
-              {...formMethods.register('claimantName')}
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="claimantAddress">Address *</Label>
-            <Textarea
-              id="claimantAddress"
-              {...formMethods.register('claimantAddress')}
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="injuryNature">Nature of injury or damage *</Label>
-            <Textarea
-              id="injuryNature"
-              {...formMethods.register('injuryNature')}
-              rows={3}
-            />
-          </div>
-          
-          <div>
-            <Label>Have you received claim notice? *</Label>
-            <Select
-              value={watchedValues.claimNoticeReceived || ''}
-              onValueChange={(value) => formMethods.setValue('claimNoticeReceived', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="yes">Yes</SelectItem>
-                <SelectItem value="no">No</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {watchedValues.claimNoticeReceived === 'yes' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="noticeFrom">From whom *</Label>
-                  <Input
-                    id="noticeFrom"
-                    {...formMethods.register('noticeFrom')}
-                  />
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormField name="claimantName" label="Name" required />
+            <FormTextarea name="claimantAddress" label="Address" required />
+            <FormTextarea name="injuryNature" label="Nature of injury or damage" required rows={3} />
+            
+            <FormSelect name="claimNoticeReceived" label="Have you received claim notice?" required placeholder="Select">
+              <SelectItem value="yes">Yes</SelectItem>
+              <SelectItem value="no">No</SelectItem>
+            </FormSelect>
+            
+            {watchedValues.claimNoticeReceived === 'yes' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField name="noticeFrom" label="From whom" required />
+                  <FormDatePicker name="noticeWhen" label="When" required />
                 </div>
-                <div>
-                  <DatePickerField
-                    name="noticeWhen"
-                    label="When *"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="noticeForm">In what form *</Label>
-                <Input
-                  id="noticeForm"
-                  {...formMethods.register('noticeForm')}
+                <FormField name="noticeForm" label="In what form" required />
+                <FileUpload
+                  label="Notice Document (if written)"
+                  onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, noticeDocument: file }))}
+                  currentFile={uploadedFiles.noticeDocument}
+                  accept=".pdf,.jpg,.png"
+                  maxSize={3}
                 />
               </div>
-              <FileUpload
-                label="Notice Document (if written)"
-                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, noticeDocument: file }))}
-                currentFile={uploadedFiles.noticeDocument}
-                accept=".pdf,.jpg,.png"
-                maxSize={3}
-              />
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </FormProvider>
       )
     },
-  {
+    {
       id: 'declaration',
       title: 'Declaration & Signature',
       component: (
-        <div className="space-y-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Data Privacy</h3>
-            <div className="text-sm space-y-2">
-              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Data Privacy</h3>
+              <div className="text-sm space-y-2">
+                <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+                <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="agreeToDataPrivacy"
+                checked={formMethods.watch('agreeToDataPrivacy') || false}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('agreeToDataPrivacy', !!checked);
+                  if (formMethods.formState.errors.agreeToDataPrivacy) {
+                    formMethods.clearErrors('agreeToDataPrivacy');
+                  }
+                }}
+                className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
+              />
+              <Label htmlFor="agreeToDataPrivacy">
+                I agree to the data privacy terms <span className="required-asterisk">*</span>
+              </Label>
+            </div>
+            {formMethods.formState.errors.agreeToDataPrivacy && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
+              </p>
+            )}
+            
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Declaration</h3>
+              <div className="text-sm space-y-2">
+                <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+                <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+                <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="declarationTrue"
+                checked={formMethods.watch('declarationTrue') || false}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('declarationTrue', !!checked);
+                  if (formMethods.formState.errors.declarationTrue) {
+                    formMethods.clearErrors('declarationTrue');
+                  }
+                }}
+                className={cn(formMethods.formState.errors.declarationTrue && "border-destructive")}
+              />
+              <Label htmlFor="declarationTrue">
+                I agree that statements are true <span className="required-asterisk">*</span>
+              </Label>
+            </div>
+            {formMethods.formState.errors.declarationTrue && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.declarationTrue.message?.toString()}
+              </p>
+            )}
+            
+            <FormField name="signature" label="Signature of policyholder (digital signature)" required placeholder="Type your full name as signature" />
+            
+            <div>
+              <Label>Date</Label>
+              <Input value={new Date().toISOString().split('T')[0]} disabled />
             </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy || false}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
-            />
-            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
-          </div>
-          
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Declaration</h3>
-            <div className="text-sm space-y-2">
-              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="declarationTrue"
-              checked={watchedValues.declarationTrue || false}
-              onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
-            />
-            <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
-          </div>
-          
-          <div>
-            <Label htmlFor="signature">Signature of policyholder (digital signature) *</Label>
-            <Input
-              id="signature"
-              {...formMethods.register('signature')}
-              placeholder="Type your full name as signature"
-            />
-          </div>
-          
-          <div>
-            <Label>Date</Label>
-            <Input value={new Date().toISOString().split('T')[0]} disabled />
-          </div>
-        </div>
+        </FormProvider>
       )
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <div className="container mx-auto py-8 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
-              <Shield className="w-8 h-8 text-primary" />
+    <FormProvider {...formMethods}>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+        {/* Loading overlay */}
+        {showPostAuthLoading && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-lg font-semibold">Completing your submission...</p>
+              <p className="text-sm text-muted-foreground text-center">
+                Please do not close this window while we process your claim
+              </p>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">Public Liability Claim Form</h1>
-            <p className="text-muted-foreground">
-              Submit your public liability insurance claim with all required details
-            </p>
           </div>
+        )}
 
-          <MultiStepForm
-            steps={steps}
-            onSubmit={onFinalSubmit}
-            formMethods={formMethods}
-          />
+        <div className="container mx-auto py-8 px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
+                <Shield className="w-8 h-8 text-primary" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight mb-2">Public Liability Claim Form</h1>
+              <p className="text-muted-foreground">
+                Submit your public liability insurance claim with all required details
+              </p>
+            </div>
+
+            <Card className="shadow-xl border-0 bg-white/50 backdrop-blur-sm">
+              <CardHeader className="text-center pb-2">
+                <CardTitle className="flex items-center justify-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Public Liability Claim
+                </CardTitle>
+                <CardDescription>
+                  Complete all sections to submit your public liability claim
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MultiStepForm
+                  steps={steps}
+                  onSubmit={onFinalSubmit}
+                  formMethods={formMethods}
+                  submitButtonText="Submit Public Liability Claim"
+                  stepFieldMappings={stepFieldMappings}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
           {/* Summary Dialog */}
           <Dialog open={showSummary} onOpenChange={setShowSummary}>
