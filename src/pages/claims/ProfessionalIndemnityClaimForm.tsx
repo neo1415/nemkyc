@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, FormProvider } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import AuthRequiredSubmit from '@/components/common/AuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import _ from 'lodash';
 
 const professionalIndemnitySchema = yup.object().shape({
   // Policy Details
@@ -231,7 +241,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
   }, [authShowSuccess]);
 
   const formMethods = useForm<any>({
-    // resolver: yupResolver(professionalIndemnitySchema),
+    resolver: yupResolver(professionalIndemnitySchema),
     defaultValues,
     mode: 'onChange'
   });
@@ -279,18 +289,130 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
     setShowSummary(true);
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
+  // Form Components with Validation
+  const FormFieldWrapper = ({ name, label, required = true, children }: { 
+    name: string; 
+    label: string; 
+    required?: boolean; 
+    children: React.ReactNode;
+  }) => {
+    const error = formMethods.formState.errors[name];
+    const hasError = !!error;
+    
     return (
-      <div className="space-y-2">
-        <Label>{label}</Label>
+      <div className="space-y-1">
+        <Label className={cn(hasError && "text-destructive")}>
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </Label>
+        <div className={cn(hasError && "has-error")}>
+          {children}
+        </div>
+        {hasError && (
+          <p className="text-sm text-destructive mt-1">
+            {error?.message?.toString()}
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  const FormInput = ({ name, label, type = "text", placeholder, required = true }: {
+    name: string;
+    label: string;
+    type?: string;
+    placeholder?: string;
+    required?: boolean;
+  }) => {
+    const error = formMethods.formState.errors[name];
+    const hasError = !!error;
+    
+    return (
+      <FormFieldWrapper name={name} label={label} required={required}>
+        <Input
+          {...formMethods.register(name)}
+          type={type}
+          placeholder={placeholder}
+          className={cn(hasError && "border-red-500 focus:border-red-500")}
+        />
+      </FormFieldWrapper>
+    );
+  };
+
+  const FormTextarea = ({ name, label, placeholder, rows = 3, required = true }: {
+    name: string;
+    label: string;
+    placeholder?: string;
+    rows?: number;
+    required?: boolean;
+  }) => {
+    const error = formMethods.formState.errors[name];
+    const hasError = !!error;
+    
+    return (
+      <FormFieldWrapper name={name} label={label} required={required}>
+        <Textarea
+          {...formMethods.register(name)}
+          placeholder={placeholder}
+          rows={rows}
+          className={cn(hasError && "border-red-500 focus:border-red-500")}
+        />
+      </FormFieldWrapper>
+    );
+  };
+
+  const FormSelect = ({ name, label, placeholder, children, required = true }: {
+    name: string;
+    label: string;
+    placeholder?: string;
+    children: React.ReactNode;
+    required?: boolean;
+  }) => {
+    const error = formMethods.formState.errors[name];
+    const hasError = !!error;
+    const value = formMethods.watch(name);
+    
+    return (
+      <FormFieldWrapper name={name} label={label} required={required}>
+        <Select
+          value={value || ''}
+          onValueChange={(selectedValue) => {
+            formMethods.setValue(name, selectedValue);
+            if (hasError) {
+              formMethods.clearErrors(name);
+            }
+          }}
+        >
+          <SelectTrigger className={cn(hasError && "border-red-500 focus:border-red-500")}>
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {children}
+          </SelectContent>
+        </Select>
+      </FormFieldWrapper>
+    );
+  };
+
+  const FormDatePicker = ({ name, label, required = true }: {
+    name: string;
+    label: string;
+    required?: boolean;
+  }) => {
+    const error = formMethods.formState.errors[name];
+    const hasError = !!error;
+    const value = formMethods.watch(name);
+    
+    return (
+      <FormFieldWrapper name={name} label={label} required={required}>
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               className={cn(
                 "w-full justify-start text-left font-normal",
-                !value && "text-muted-foreground"
+                !value && "text-muted-foreground",
+                hasError && "border-red-500"
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -301,14 +423,70 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
             <ReactCalendar
               mode="single"
               selected={value ? new Date(value) : undefined}
-              onSelect={(date) => formMethods.setValue(name, date)}
+              onSelect={(date) => {
+                formMethods.setValue(name, date);
+                if (hasError) {
+                  formMethods.clearErrors(name);
+                }
+              }}
               initialFocus
               className="pointer-events-auto"
             />
           </PopoverContent>
         </Popover>
+      </FormFieldWrapper>
+    );
+  };
+
+  const FormCheckbox = ({ name, label, required = true }: {
+    name: string;
+    label: string;
+    required?: boolean;
+  }) => {
+    const error = formMethods.formState.errors[name];
+    const hasError = !!error;
+    const value = formMethods.watch(name);
+    
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id={name}
+            checked={value || false}
+            onCheckedChange={(checked) => {
+              formMethods.setValue(name, !!checked);
+              if (hasError) {
+                formMethods.clearErrors(name);
+              }
+            }}
+            className={cn(hasError && "border-red-500")}
+          />
+          <Label 
+            htmlFor={name}
+            className={cn(hasError && "text-destructive", "text-sm")}
+          >
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+          </Label>
+        </div>
+        {hasError && (
+          <p className="text-sm text-destructive mt-1">
+            {error?.message?.toString()}
+          </p>
+        )}
       </div>
     );
+  };
+
+  // Step field mappings for validation
+  const stepFieldMappings = {
+    policy: ['policyNumber', 'coverageFromDate', 'coverageToDate'],
+    insured: ['insuredName', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
+    claimant: ['claimantName', 'claimantAddress'],
+    retainer: ['retainerDetails', 'contractInWriting', 'workPerformedFrom', 'workPerformedTo', 'workPerformerName', 'workPerformerTitle', 'workPerformerDuties', 'workPerformerContact'],
+    claim: ['claimNature', 'firstAwareDate', 'claimMadeDate', 'intimationMode', 'amountClaimed'],
+    response: ['responseComments', 'quantumComments', 'estimatedLiability', 'additionalInfo', 'solicitorInstructed'],
+    declaration: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
   };
 
   const steps = [
@@ -317,27 +495,21 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
       title: 'Policy Details',
       component: (
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="policyNumber">Policy Number *</Label>
-            <Input
-              id="policyNumber"
-              {...formMethods.register('policyNumber')}
-            />
-          </div>
+          <FormInput
+            name="policyNumber"
+            label="Policy Number"
+            placeholder="Enter policy number"
+          />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <DatePickerField
-                name="coverageFromDate"
-                label="Period of Cover - From *"
-              />
-            </div>
-            <div>
-              <DatePickerField
-                name="coverageToDate"
-                label="Period of Cover - To *"
-              />
-            </div>
+            <FormDatePicker
+              name="coverageFromDate"
+              label="Period of Cover - From"
+            />
+            <FormDatePicker
+              name="coverageToDate"
+              label="Period of Cover - To"
+            />
           </div>
         </div>
       )
@@ -348,89 +520,65 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
       component: (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="insuredName">Name of Insured *</Label>
-              <Input
-                id="insuredName"
-                {...formMethods.register('insuredName')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="companyName">Company Name (if applicable)</Label>
-              <Input
-                id="companyName"
-                {...formMethods.register('companyName')}
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label>Title *</Label>
-              <Select
-                value={watchedValues.title || ''}
-                onValueChange={(value) => formMethods.setValue('title', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select title" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Mr">Mr</SelectItem>
-                  <SelectItem value="Mrs">Mrs</SelectItem>
-                  <SelectItem value="Chief">Chief</SelectItem>
-                  <SelectItem value="Dr">Dr</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <DatePickerField
-                name="dateOfBirth"
-                label="Date of Birth *"
-              />
-            </div>
-            <div>
-              <Label>Gender *</Label>
-              <Select
-                value={watchedValues.gender || ''}
-                onValueChange={(value) => formMethods.setValue('gender', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="address">Address *</Label>
-            <Textarea
-              id="address"
-              {...formMethods.register('address')}
+            <FormInput
+              name="insuredName"
+              label="Name of Insured"
+              placeholder="Enter name of insured"
+            />
+            <FormInput
+              name="companyName"
+              label="Company Name"
+              placeholder="Enter company name (if applicable)"
+              required={false}
             />
           </div>
           
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormSelect
+              name="title"
+              label="Title"
+              placeholder="Select title"
+            >
+              <SelectItem value="Mr">Mr</SelectItem>
+              <SelectItem value="Mrs">Mrs</SelectItem>
+              <SelectItem value="Chief">Chief</SelectItem>
+              <SelectItem value="Dr">Dr</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </FormSelect>
+            <FormDatePicker
+              name="dateOfBirth"
+              label="Date of Birth"
+            />
+            <FormSelect
+              name="gender"
+              label="Gender"
+              placeholder="Select gender"
+            >
+              <SelectItem value="Male">Male</SelectItem>
+              <SelectItem value="Female">Female</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </FormSelect>
+          </div>
+          
+          <FormTextarea
+            name="address"
+            label="Address"
+            placeholder="Enter full address"
+            rows={3}
+          />
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="phone">Phone *</Label>
-              <Input
-                id="phone"
-                {...formMethods.register('phone')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                {...formMethods.register('email')}
-              />
-            </div>
+            <FormInput
+              name="phone"
+              label="Phone"
+              placeholder="Enter phone number"
+            />
+            <FormInput
+              name="email"
+              label="Email"
+              type="email"
+              placeholder="Enter email address"
+            />
           </div>
         </div>
       )
@@ -440,21 +588,18 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
       title: 'Claimant Details',
       component: (
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="claimantName">Full Name of Claimant *</Label>
-            <Input
-              id="claimantName"
-              {...formMethods.register('claimantName')}
-            />
-          </div>
+          <FormInput
+            name="claimantName"
+            label="Full Name of Claimant"
+            placeholder="Enter claimant's full name"
+          />
           
-          <div>
-            <Label htmlFor="claimantAddress">Address of Claimant *</Label>
-            <Textarea
-              id="claimantAddress"
-              {...formMethods.register('claimantAddress')}
-            />
-          </div>
+          <FormTextarea
+            name="claimantAddress"
+            label="Address of Claimant"
+            placeholder="Enter claimant's full address"
+            rows={3}
+          />
         </div>
       )
     },
@@ -463,30 +608,21 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
       title: 'Retainer/Contract Details',
       component: (
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="retainerDetails">What were you retained/contracted to do? *</Label>
-            <Textarea
-              id="retainerDetails"
-              {...formMethods.register('retainerDetails')}
-              rows={4}
-            />
-          </div>
+          <FormTextarea
+            name="retainerDetails"
+            label="What were you retained/contracted to do?"
+            placeholder="Describe the nature of your professional engagement"
+            rows={4}
+          />
           
-          <div>
-            <Label>Was your contract evidenced in writing? *</Label>
-            <Select
-              value={watchedValues.contractInWriting || ''}
-              onValueChange={(value) => formMethods.setValue('contractInWriting', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="yes">Yes</SelectItem>
-                <SelectItem value="no">No</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormSelect
+            name="contractInWriting"
+            label="Was your contract evidenced in writing?"
+            placeholder="Select option"
+          >
+            <SelectItem value="yes">Yes</SelectItem>
+            <SelectItem value="no">No</SelectItem>
+          </FormSelect>
           
           {watchedValues.contractInWriting === 'yes' && (
             <FileUpload
@@ -499,62 +635,48 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
           )}
           
           {watchedValues.contractInWriting === 'no' && (
-            <div>
-              <Label htmlFor="contractDetails">Details of contract and its terms *</Label>
-              <Textarea
-                id="contractDetails"
-                {...formMethods.register('contractDetails')}
-                rows={4}
-              />
-            </div>
+            <FormTextarea
+              name="contractDetails"
+              label="Details of contract and its terms"
+              placeholder="Describe the contract details and terms"
+              rows={4}
+            />
           )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <DatePickerField
-                name="workPerformedFrom"
-                label="When did you perform the work giving rise to the claim? From *"
-              />
-            </div>
-            <div>
-              <DatePickerField
-                name="workPerformedTo"
-                label="To *"
-              />
-            </div>
+            <FormDatePicker
+              name="workPerformedFrom"
+              label="When did you perform the work giving rise to the claim? From"
+            />
+            <FormDatePicker
+              name="workPerformedTo"
+              label="To"
+            />
           </div>
           
           <div className="bg-gray-50 p-4 rounded-lg space-y-4">
             <h3 className="font-medium">Who actually performed the work?</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="workPerformerName">Name *</Label>
-                <Input
-                  id="workPerformerName"
-                  {...formMethods.register('workPerformerName')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="workPerformerTitle">Title *</Label>
-                <Input
-                  id="workPerformerTitle"
-                  {...formMethods.register('workPerformerTitle')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="workPerformerDuties">Duties *</Label>
-                <Input
-                  id="workPerformerDuties"
-                  {...formMethods.register('workPerformerDuties')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="workPerformerContact">Contact *</Label>
-                <Input
-                  id="workPerformerContact"
-                  {...formMethods.register('workPerformerContact')}
-                />
-              </div>
+              <FormInput
+                name="workPerformerName"
+                label="Name"
+                placeholder="Enter name"
+              />
+              <FormInput
+                name="workPerformerTitle"
+                label="Title"
+                placeholder="Enter title"
+              />
+              <FormInput
+                name="workPerformerDuties"
+                label="Duties"
+                placeholder="Enter duties"
+              />
+              <FormInput
+                name="workPerformerContact"
+                label="Contact"
+                placeholder="Enter contact information"
+              />
             </div>
           </div>
         </div>
@@ -565,45 +687,32 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
       title: 'Claim Details',
       component: (
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="claimNature">Nature of the claim or the circumstances *</Label>
-            <Textarea
-              id="claimNature"
-              {...formMethods.register('claimNature')}
-              rows={4}
+          <FormTextarea
+            name="claimNature"
+            label="Nature of the claim or the circumstances"
+            placeholder="Describe the nature of the claim in detail"
+            rows={4}
+          />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormDatePicker
+              name="firstAwareDate"
+              label="Date first became aware of the claim"
+            />
+            <FormDatePicker
+              name="claimMadeDate"
+              label="Date claim or intimation of claim made to you"
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <DatePickerField
-                name="firstAwareDate"
-                label="Date first became aware of the claim *"
-              />
-            </div>
-            <div>
-              <DatePickerField
-                name="claimMadeDate"
-                label="Date claim or intimation of claim made to you *"
-              />
-            </div>
-          </div>
-          
-          <div>
-            <Label>Was intimation oral or written? *</Label>
-            <Select
-              value={watchedValues.intimationMode || ''}
-              onValueChange={(value) => formMethods.setValue('intimationMode', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="oral">Oral</SelectItem>
-                <SelectItem value="written">Written</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormSelect
+            name="intimationMode"
+            label="Was intimation oral or written?"
+            placeholder="Select option"
+          >
+            <SelectItem value="oral">Oral</SelectItem>
+            <SelectItem value="written">Written</SelectItem>
+          </FormSelect>
           
           {watchedValues.intimationMode === 'written' && (
             <FileUpload
@@ -616,24 +725,20 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
           )}
           
           {watchedValues.intimationMode === 'oral' && (
-            <div>
-              <Label htmlFor="oralDetails">Details of oral intimation (first-person details) *</Label>
-              <Textarea
-                id="oralDetails"
-                {...formMethods.register('oralDetails')}
-                rows={3}
-              />
-            </div>
+            <FormTextarea
+              name="oralDetails"
+              label="Details of oral intimation (first-person details)"
+              placeholder="Provide details of the oral intimation"
+              rows={3}
+            />
           )}
           
-          <div>
-            <Label htmlFor="amountClaimed">Amount claimed *</Label>
-            <Input
-              id="amountClaimed"
-              type="number"
-              {...formMethods.register('amountClaimed')}
-            />
-          </div>
+          <FormInput
+            name="amountClaimed"
+            label="Amount claimed"
+            type="number"
+            placeholder="Enter amount claimed"
+          />
         </div>
       )
     },
@@ -642,59 +747,44 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
       title: "Insured's Response",
       component: (
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="responseComments">Comments in response to the claim *</Label>
-            <Textarea
-              id="responseComments"
-              {...formMethods.register('responseComments')}
-              rows={4}
-            />
-          </div>
+          <FormTextarea
+            name="responseComments"
+            label="Comments in response to the claim"
+            placeholder="Provide your response to the claim"
+            rows={4}
+          />
           
-          <div>
-            <Label htmlFor="quantumComments">Comments on the quantum of the claim *</Label>
-            <Textarea
-              id="quantumComments"
-              {...formMethods.register('quantumComments')}
-              rows={4}
-            />
-          </div>
+          <FormTextarea
+            name="quantumComments"
+            label="Comments on the quantum of the claim"
+            placeholder="Provide comments on the amount claimed"
+            rows={4}
+          />
           
-          <div>
-            <Label htmlFor="estimatedLiability">Estimated monetary liability *</Label>
-            <Input
-              id="estimatedLiability"
-              type="number"
-              {...formMethods.register('estimatedLiability')}
-            />
-          </div>
+          <FormInput
+            name="estimatedLiability"
+            label="Estimated monetary liability"
+            type="number"
+            placeholder="Enter estimated liability amount"
+          />
           
-          <div>
-            <Label>Any other details or info that will help insurer? *</Label>
-            <Select
-              value={watchedValues.additionalInfo || ''}
-              onValueChange={(value) => formMethods.setValue('additionalInfo', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="yes">Yes</SelectItem>
-                <SelectItem value="no">No</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormSelect
+            name="additionalInfo"
+            label="Any other details or info that will help insurer?"
+            placeholder="Select option"
+          >
+            <SelectItem value="yes">Yes</SelectItem>
+            <SelectItem value="no">No</SelectItem>
+          </FormSelect>
           
           {watchedValues.additionalInfo === 'yes' && (
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="additionalDetails">Additional details *</Label>
-                <Textarea
-                  id="additionalDetails"
-                  {...formMethods.register('additionalDetails')}
-                  rows={3}
-                />
-              </div>
+              <FormTextarea
+                name="additionalDetails"
+                label="Additional details"
+                placeholder="Provide additional details"
+                rows={3}
+              />
               <FileUpload
                 label="Additional Document (if needed)"
                 onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, additionalDocument: file }))}
@@ -705,52 +795,40 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
             </div>
           )}
           
-          <div>
-            <Label>Have you instructed a solicitor? *</Label>
-            <Select
-              value={watchedValues.solicitorInstructed || ''}
-              onValueChange={(value) => formMethods.setValue('solicitorInstructed', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="yes">Yes</SelectItem>
-                <SelectItem value="no">No</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormSelect
+            name="solicitorInstructed"
+            label="Have you instructed a solicitor?"
+            placeholder="Select option"
+          >
+            <SelectItem value="yes">Yes</SelectItem>
+            <SelectItem value="no">No</SelectItem>
+          </FormSelect>
           
           {watchedValues.solicitorInstructed === 'yes' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="solicitorName">Name *</Label>
-                <Input
-                  id="solicitorName"
-                  {...formMethods.register('solicitorName')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="solicitorCompany">Company *</Label>
-                <Input
-                  id="solicitorCompany"
-                  {...formMethods.register('solicitorCompany')}
-                />
-              </div>
+              <FormInput
+                name="solicitorName"
+                label="Name"
+                placeholder="Enter solicitor name"
+              />
+              <FormInput
+                name="solicitorCompany"
+                label="Company"
+                placeholder="Enter solicitor company"
+              />
               <div className="md:col-span-2">
-                <Label htmlFor="solicitorAddress">Address *</Label>
-                <Textarea
-                  id="solicitorAddress"
-                  {...formMethods.register('solicitorAddress')}
+                <FormTextarea
+                  name="solicitorAddress"
+                  label="Address"
+                  placeholder="Enter solicitor address"
+                  rows={2}
                 />
               </div>
-              <div>
-                <Label htmlFor="solicitorRates">Rates *</Label>
-                <Input
-                  id="solicitorRates"
-                  {...formMethods.register('solicitorRates')}
-                />
-              </div>
+              <FormInput
+                name="solicitorRates"
+                label="Rates"
+                placeholder="Enter solicitor rates"
+              />
             </div>
           )}
         </div>
@@ -770,14 +848,10 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy || false}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
-            />
-            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
-          </div>
+          <FormCheckbox
+            name="agreeToDataPrivacy"
+            label="I agree to the data privacy terms"
+          />
           
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="font-semibold mb-2">Declaration</h3>
@@ -788,23 +862,16 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="declarationTrue"
-              checked={watchedValues.declarationTrue || false}
-              onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
-            />
-            <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
-          </div>
+          <FormCheckbox
+            name="declarationTrue"
+            label="I agree that statements are true"
+          />
           
-          <div>
-            <Label htmlFor="signature">Signature of policyholder (digital signature) *</Label>
-            <Input
-              id="signature"
-              {...formMethods.register('signature')}
-              placeholder="Type your full name as signature"
-            />
-          </div>
+          <FormInput
+            name="signature"
+            label="Signature of policyholder (digital signature)"
+            placeholder="Type your full name as signature"
+          />
           
           <div>
             <Label>Date</Label>
@@ -816,100 +883,110 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <div className="container mx-auto py-8 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
-              <FileText className="w-8 h-8 text-primary" />
+    <FormProvider {...formMethods}>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+        <div className="container mx-auto py-8 px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
+                <FileText className="w-8 h-8 text-primary" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight mb-2">Professional Indemnity Claim Form</h1>
+              <p className="text-muted-foreground">
+                Submit your professional indemnity insurance claim with all required details
+              </p>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">Professional Indemnity Claim Form</h1>
-            <p className="text-muted-foreground">
-              Submit your professional indemnity insurance claim with all required details
-            </p>
+
+            <MultiStepForm
+              steps={steps}
+              onSubmit={onFinalSubmit}
+              formMethods={formMethods}
+              stepFieldMappings={stepFieldMappings}
+            />
+
+            {/* Summary Dialog */}
+            <Dialog open={showSummary} onOpenChange={setShowSummary}>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Claim Summary</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium">Policy Details</h4>
+                    <p className="text-sm text-muted-foreground">Policy: {watchedValues.policyNumber}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Insured</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {watchedValues.insuredName} - {watchedValues.email}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Claimant</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {watchedValues.claimantName}
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowSummary(false)}>
+                    Back to Edit
+                  </Button>
+                  <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Claim'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            {/* Auth Required Dialog */}
+            <AuthRequiredSubmit
+              isOpen={showAuthDialog}
+              onClose={dismissAuthDialog}
+              onProceedToSignup={proceedToSignup}
+              formType={formType}
+            />
+            
+            {/* Success Modal */}
+            <SuccessModal
+              isOpen={showSuccess || authShowSuccess || authSubmitting}
+              onClose={() => {
+                setShowSuccess(false);
+                setAuthShowSuccess();
+              }}
+              title="Professional Indemnity Claim Submitted!"
+              formType="Professional Indemnity Claim"
+              isLoading={authSubmitting}
+              loadingMessage="Your professional indemnity claim is being processed and submitted..."
+            />
           </div>
 
-          <MultiStepForm
-            steps={steps}
-            onSubmit={onFinalSubmit}
-            formMethods={formMethods}
-          />
-
-          {/* Summary Dialog */}
-          <Dialog open={showSummary} onOpenChange={setShowSummary}>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Claim Summary</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium">Policy Details</h4>
-                  <p className="text-sm text-muted-foreground">Policy: {watchedValues.policyNumber}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium">Insured</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {watchedValues.insuredName} - {watchedValues.email}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-medium">Claimant</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {watchedValues.claimantName}
+          {/* Post-Authentication Loading Overlay */}
+          {showPostAuthLoading && (
+            <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+              <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
+                  <p className="text-muted-foreground">
+                    Thank you for signing in! Your professional indemnity claim is now being submitted...
                   </p>
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowSummary(false)}>
-                  Back to Edit
-                </Button>
-                <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    'Submit Claim'
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          
-          {/* Success Modal */}
-          <SuccessModal
-            isOpen={showSuccess || authShowSuccess || authSubmitting}
-            onClose={() => {
-              setShowSuccess(false);
-              setAuthShowSuccess();
-            }}
-            title="Professional Indemnity Claim Submitted!"
-            formType="Professional Indemnity Claim"
-            isLoading={authSubmitting}
-            loadingMessage="Your professional indemnity claim is being processed and submitted..."
-          />
+            </div>
+          )}
         </div>
-
-        {/* Post-Authentication Loading Overlay */}
-        {showPostAuthLoading && (
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                </div>
-                <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
-                <p className="text-muted-foreground">
-                  Thank you for signing in! Your professional indemnity claim is now being submitted...
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
-
-    </div>
+    </FormProvider>
   );
 };
 
