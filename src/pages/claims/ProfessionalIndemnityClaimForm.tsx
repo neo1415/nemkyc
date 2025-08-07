@@ -410,36 +410,43 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
 
   // Main submit handler that checks authentication
   const handleSubmit = async (data: ProfessionalIndemnityClaimData) => {
-    // Prepare file upload data
-    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    setIsSubmitting(true);
     
-    for (const [key, file] of Object.entries(uploadedFiles)) {
-      if (file) {
-        fileUploadPromises.push(
-          uploadFile(file, `professional-indemnity-claims/${Date.now()}-${file.name}`).then(url => [key, url])
-        );
+    try {
+      // Prepare file upload data
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      
+      for (const [key, file] of Object.entries(uploadedFiles)) {
+        if (file) {
+          fileUploadPromises.push(
+            uploadFile(file, `professional-indemnity-claims/${Date.now()}-${file.name}`).then(url => [key, url])
+          );
+        }
       }
+
+      const fileResults = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(fileResults);
+
+      const finalData = {
+        ...data,
+        ...fileUrls,
+        status: 'processing',
+        formType: 'Professional Indemnity Claim'
+      };
+
+      await handleSubmitWithAuth(finalData, 'Professional Indemnity Claim');
+      clearDraft();
+      setShowSummary(false);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const fileResults = await Promise.all(fileUploadPromises);
-    const fileUrls = Object.fromEntries(fileResults);
-
-    const finalData = {
-      ...data,
-      ...fileUrls,
-      status: 'processing',
-      formType: 'Professional Indemnity Claim'
-    };
-
-    await handleSubmitWithAuth(finalData, 'Professional Indemnity Claim');
-    clearDraft();
-    setShowSummary(false);
   };
 
   const onFinalSubmit = (data: ProfessionalIndemnityClaimData) => {
     setShowSummary(true);
   };
-
 
   // Step field mappings for validation
   const stepFieldMappings = {
@@ -978,11 +985,17 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowSummary(false)}>
+                  <Button variant="outline" onClick={() => setShowSummary(false)} disabled={isSubmitting || authSubmitting}>
                     Back to Edit
                   </Button>
-                  <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
-                    {isSubmitting ? (
+                  <Button 
+                    onClick={() => {
+                      const currentData = formMethods.getValues();
+                      handleSubmit(currentData);
+                    }} 
+                    disabled={isSubmitting || authSubmitting}
+                  >
+                    {isSubmitting || authSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Submitting...
