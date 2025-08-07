@@ -18,7 +18,8 @@ interface MultiStepFormProps {
   isSubmitting?: boolean;
   submitButtonText?: string;
   formMethods: any; // react-hook-form methods
-  stepFieldMappings?: Record<number, string[]>; // Optional field mappings for step validation
+  stepFieldMappings?: Record<number, string[]> | Record<string, string[]>; // Optional field mappings for step validation
+  validateStep?: (stepId: string) => Promise<boolean>; // Custom validation function
 }
 
 const MultiStepForm: React.FC<MultiStepFormProps> = ({
@@ -27,13 +28,23 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
   isSubmitting = false,
   submitButtonText = "Submit",
   formMethods,
-  stepFieldMappings
+  stepFieldMappings,
+  validateStep
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
 
   const nextStep = async () => {
-    // If step field mappings are provided, validate only current step fields
-    if (stepFieldMappings) {
+    // Use custom validation function if provided
+    if (validateStep) {
+      const currentStepId = steps[currentStep]?.id;
+      if (currentStepId) {
+        const isValid = await validateStep(currentStepId);
+        if (!isValid) {
+          return; // validateStep function handles error display
+        }
+      }
+    } else if (stepFieldMappings) {
+      // If step field mappings are provided, validate only current step fields
       const currentStepFields = stepFieldMappings[currentStep] || [];
       
       if (currentStepFields.length > 0) {
