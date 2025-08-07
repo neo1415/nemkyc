@@ -951,7 +951,7 @@ const BurglaryClaimForm: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </FormProvider>
   );
 };
 
