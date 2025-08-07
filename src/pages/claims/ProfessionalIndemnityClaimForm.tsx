@@ -28,11 +28,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import AuthRequiredSubmit from '@/components/common/AuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
+// Import Form components renamed to avoid conflict
 import {
   Form,
   FormControl,
   FormDescription,
-  FormField,
   FormItem,
   FormLabel,
   FormMessage,
@@ -213,102 +213,7 @@ const defaultValues = {
   signature: ''
 };
 
-const ProfessionalIndemnityClaimForm: React.FC = () => {
-  const { toast } = useToast();
-  const { user } = useAuth();
-  const [showSummary, setShowSummary] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const { 
-    handleSubmitWithAuth, 
-    showAuthDialog, 
-    showSuccess: authShowSuccess,
-    setShowSuccess: setAuthShowSuccess,
-    isSubmitting: authSubmitting,
-    proceedToSignup,
-    dismissAuthDialog,
-    formType
-  } = useAuthRequiredSubmit();
-
-  // Check for pending submission when component mounts
-  useEffect(() => {
-    const checkPendingSubmission = () => {
-      const hasPending = sessionStorage.getItem('pendingSubmission');
-      if (hasPending) {
-        setShowPostAuthLoading(true);
-        // Hide loading after 5 seconds max (in case something goes wrong)
-        setTimeout(() => setShowPostAuthLoading(false), 5000);
-      }
-    };
-
-    checkPendingSubmission();
-  }, []);
-
-  // Hide post-auth loading when success modal shows
-  useEffect(() => {
-    if (authShowSuccess) {
-      setShowPostAuthLoading(false);
-    }
-  }, [authShowSuccess]);
-
-  const formMethods = useForm<any>({
-    resolver: yupResolver(professionalIndemnitySchema),
-    defaultValues,
-    mode: 'onChange'
-  });
-
-  // Make toast available globally for MultiStepForm
-  useEffect(() => {
-    (window as any).toast = toast;
-  }, [toast]);
-
-  const { saveDraft, clearDraft } = useFormDraft('professionalIndemnity', formMethods);
-  const watchedValues = formMethods.watch();
-
-  // Auto-save draft
-  React.useEffect(() => {
-    const subscription = formMethods.watch((data) => {
-      saveDraft(data);
-    });
-    return () => subscription.unsubscribe();
-  }, [formMethods, saveDraft]);
-
-  // Main submit handler that checks authentication
-  const handleSubmit = async (data: ProfessionalIndemnityClaimData) => {
-    // Prepare file upload data
-    const fileUploadPromises: Array<Promise<[string, string]>> = [];
-    
-    for (const [key, file] of Object.entries(uploadedFiles)) {
-      if (file) {
-        fileUploadPromises.push(
-          uploadFile(file, `professional-indemnity-claims/${Date.now()}-${file.name}`).then(url => [key, url])
-        );
-      }
-    }
-
-    const fileResults = await Promise.all(fileUploadPromises);
-    const fileUrls = Object.fromEntries(fileResults);
-
-    const finalData = {
-      ...data,
-      ...fileUrls,
-      status: 'processing',
-      formType: 'Professional Indemnity Claim'
-    };
-
-    await handleSubmitWithAuth(finalData, 'Professional Indemnity Claim');
-    clearDraft();
-    setShowSummary(false);
-  };
-
-  const onFinalSubmit = (data: ProfessionalIndemnityClaimData) => {
-    setShowSummary(true);
-  };
-
-// Form field components with validation (defined outside main component to prevent focus loss)
+// ========== FORM COMPONENTS (DEFINED OUTSIDE MAIN COMPONENT TO PREVENT FOCUS LOSS) ==========
 const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
   const { register, formState: { errors }, clearErrors } = useFormContext();
   const error = get(errors, name);
@@ -439,6 +344,102 @@ const FormDatePicker = ({ name, label, required = false }: any) => {
     </div>
   );
 };
+
+const ProfessionalIndemnityClaimForm: React.FC = () => {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [showSummary, setShowSummary] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const { 
+    handleSubmitWithAuth, 
+    showAuthDialog, 
+    showSuccess: authShowSuccess,
+    setShowSuccess: setAuthShowSuccess,
+    isSubmitting: authSubmitting,
+    proceedToSignup,
+    dismissAuthDialog,
+    formType
+  } = useAuthRequiredSubmit();
+
+  // Check for pending submission when component mounts
+  useEffect(() => {
+    const checkPendingSubmission = () => {
+      const hasPending = sessionStorage.getItem('pendingSubmission');
+      if (hasPending) {
+        setShowPostAuthLoading(true);
+        // Hide loading after 5 seconds max (in case something goes wrong)
+        setTimeout(() => setShowPostAuthLoading(false), 5000);
+      }
+    };
+
+    checkPendingSubmission();
+  }, []);
+
+  // Hide post-auth loading when success modal shows
+  useEffect(() => {
+    if (authShowSuccess) {
+      setShowPostAuthLoading(false);
+    }
+  }, [authShowSuccess]);
+
+  const formMethods = useForm<any>({
+    resolver: yupResolver(professionalIndemnitySchema),
+    defaultValues,
+    mode: 'onChange'
+  });
+
+  // Make toast available globally for MultiStepForm
+  useEffect(() => {
+    (window as any).toast = toast;
+  }, [toast]);
+
+  const { saveDraft, clearDraft } = useFormDraft('professionalIndemnity', formMethods);
+  const watchedValues = formMethods.watch();
+
+  // Auto-save draft
+  React.useEffect(() => {
+    const subscription = formMethods.watch((data) => {
+      saveDraft(data);
+    });
+    return () => subscription.unsubscribe();
+  }, [formMethods, saveDraft]);
+
+  // Main submit handler that checks authentication
+  const handleSubmit = async (data: ProfessionalIndemnityClaimData) => {
+    // Prepare file upload data
+    const fileUploadPromises: Array<Promise<[string, string]>> = [];
+    
+    for (const [key, file] of Object.entries(uploadedFiles)) {
+      if (file) {
+        fileUploadPromises.push(
+          uploadFile(file, `professional-indemnity-claims/${Date.now()}-${file.name}`).then(url => [key, url])
+        );
+      }
+    }
+
+    const fileResults = await Promise.all(fileUploadPromises);
+    const fileUrls = Object.fromEntries(fileResults);
+
+    const finalData = {
+      ...data,
+      ...fileUrls,
+      status: 'processing',
+      formType: 'Professional Indemnity Claim'
+    };
+
+    await handleSubmitWithAuth(finalData, 'Professional Indemnity Claim');
+    clearDraft();
+    setShowSummary(false);
+  };
+
+  const onFinalSubmit = (data: ProfessionalIndemnityClaimData) => {
+    setShowSummary(true);
+  };
+
 
   // Step field mappings for validation
   const stepFieldMappings = {
