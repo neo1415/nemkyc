@@ -56,6 +56,21 @@ const groupPersonalAccidentClaimSchema = yup.object().shape({
   doctorAddress: yup.string().required("Doctor address is required"),
   isUsualDoctor: yup.boolean(),
 
+  // Incapacity Details - at least one period must be filled
+  totalIncapacityFrom: yup.string().when(['totalIncapacityTo', 'partialIncapacityFrom', 'partialIncapacityTo'], {
+    is: (totalTo: any, partialFrom: any, partialTo: any) => !totalTo && !partialFrom && !partialTo,
+    then: (schema) => schema.required("At least one incapacity period must be provided"),
+    otherwise: (schema) => schema
+  }),
+  totalIncapacityTo: yup.string(),
+  partialIncapacityFrom: yup.string(),
+  partialIncapacityTo: yup.string(),
+
+  // Other Insurer Details - required fields
+  otherInsurerName: yup.string().required("Other insurer name is required"),
+  otherInsurerAddress: yup.string().required("Other insurer address is required"),
+  otherPolicyNumber: yup.string(),
+
   // Witnesses
   witnesses: yup.array().of(
     yup.object().shape({
