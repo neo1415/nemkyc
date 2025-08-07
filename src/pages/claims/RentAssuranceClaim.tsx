@@ -844,8 +844,8 @@ const RentAssuranceClaim = () => {
           formType="Custom Form"
         />
       </div>
-    </FormProvider>
+    </div>
   );
 };
 
-export default RewrittenFormComponent;
+export default RentAssuranceClaim;
