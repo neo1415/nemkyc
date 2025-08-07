@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { get } from 'lodash';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -115,6 +117,138 @@ interface GroupPersonalAccidentClaimData {
   signature: string;
 }
 
+// Form field components with validation (defined outside main component to prevent focus loss)
+const FormFieldComponent = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
+  const { register, formState: { errors }, clearErrors } = useFormContext();
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type={type}
+        maxLength={maxLength}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormTextareaComponent = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
+  const { register, watch, formState: { errors }, clearErrors } = useFormContext();
+  const currentValue = watch(name) || '';
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Textarea
+        id={name}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      <div className="flex justify-between">
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
+        <span className="text-sm text-muted-foreground ml-auto">
+          {currentValue.length}/{maxLength}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const FormSelectComponent = ({ name, label, required = false, options, placeholder, children, ...props }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(newValue) => {
+          setValue(name, newValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        {...props}
+      >
+        <SelectTrigger className={error ? 'border-destructive' : ''}>
+          <SelectValue placeholder={placeholder || `Select ${label}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {children}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormDatePickerComponent = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        type="date"
+        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
+        onChange={(e) => {
+          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+          setValue(name, dateValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        className={error ? 'border-destructive' : ''}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
 const defaultValues: Partial<GroupPersonalAccidentClaimData> = {
   policyNumber: '',
   companyName: '',
@@ -177,10 +311,15 @@ const GroupPersonalAccidentClaim: React.FC = () => {
   }, [authShowSuccess]);
 
   const formMethods = useForm<any>({
-    // resolver: yupResolver(groupPersonalAccidentClaimSchema),
+    resolver: yupResolver(groupPersonalAccidentClaimSchema),
     defaultValues,
     mode: 'onChange'
   });
+
+  // Make toast available globally for MultiStepForm
+  useEffect(() => {
+    (window as any).toast = toast;
+  }, [toast]);
 
   const { fields: witnessFields, append: addWitness, remove: removeWitness } = useFieldArray({
     control: formMethods.control,
@@ -228,6 +367,18 @@ const GroupPersonalAccidentClaim: React.FC = () => {
 
   const onFinalSubmit = (data: GroupPersonalAccidentClaimData) => {
     setShowSummary(true);
+  };
+
+  // Step field mappings for validation
+  const stepFieldMappings = {
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
+    1: ['companyName', 'address', 'phone', 'email'],
+    2: ['accidentDate', 'accidentTime', 'accidentPlace', 'incidentDescription', 'particularsOfInjuries'],
+    3: ['witnesses'],
+    4: ['doctorName', 'doctorAddress'],
+    5: ['totalIncapacityFrom', 'totalIncapacityTo', 'partialIncapacityFrom', 'partialIncapacityTo'],
+    6: ['otherInsurerName', 'otherInsurerAddress', 'otherPolicyNumber'],
+    7: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
   };
 
   const DatePickerField = ({ name, label }: { name: string; label: string }) => {
@@ -279,140 +430,136 @@ const GroupPersonalAccidentClaim: React.FC = () => {
       id: 'policy',
       title: 'Policy Details',
       component: (
-        <div className="space-y-4">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="policyNumber" className="flex items-center gap-1">
-                    Policy Number *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input
-                    id="policyNumber"
-                    {...formMethods.register('policyNumber')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter your group personal accident insurance policy number</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DatePickerField
-              name="periodOfCoverFrom"
-              label="Period of Cover From *"
-            />
-            <DatePickerField
-              name="periodOfCoverTo"
-              label="Period of Cover To *"
-            />
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <FormFieldComponent name="policyNumber" label="Policy Number" required />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter your group personal accident insurance policy number</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <DatePickerField
+                name="periodOfCoverFrom"
+                label="Period of Cover From *"
+              />
+              <DatePickerField
+                name="periodOfCoverTo"
+                label="Period of Cover To *"
+              />
+            </div>
           </div>
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'insured',
       title: 'Insured Details',
       component: (
-        <TooltipProvider>
-          <div className="space-y-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="companyName" className="flex items-center gap-1">
-                    Company Name *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input
-                    id="companyName"
-                    {...formMethods.register('companyName')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter the insured company name</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="address" className="flex items-center gap-1">
-                    Address *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Textarea
-                    id="address"
-                    placeholder="Enter full address"
-                    rows={3}
-                    {...formMethods.register('address')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter the complete address</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormProvider {...formMethods}>
+          <TooltipProvider>
+            <div className="space-y-4">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <Label htmlFor="phone" className="flex items-center gap-1">
-                      Phone Number *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="phone"
-                      {...formMethods.register('phone')}
-                    />
+                    <FormFieldComponent name="companyName" label="Company Name" required />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Enter contact phone number</p>
+                  <p>Enter the insured company name</p>
                 </TooltipContent>
               </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <FormTextareaComponent name="address" label="Address" required placeholder="Enter full address" rows={3} />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter the complete address</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <FormFieldComponent name="phone" label="Phone Number" required />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter contact phone number</p>
+                  </TooltipContent>
+                </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Label htmlFor="email" className="flex items-center gap-1">
-                      Email Address *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      {...formMethods.register('email')}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter email address for correspondence</p>
-                </TooltipContent>
-              </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <FormFieldComponent name="email" label="Email Address" type="email" required />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter email address for correspondence</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
-          </div>
-        </TooltipProvider>
+          </TooltipProvider>
+        </FormProvider>
       )
     },
     {
       id: 'accident',
       title: 'Details of Loss',
       component: (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={formMethods.control}
+                name="accidentDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Accident Date *</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={formMethods.control}
+                name="accidentTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time *</FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
             <FormField
               control={formMethods.control}
-              name="accidentDate"
+              name="accidentPlace"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Accident Date *</FormLabel>
+                  <FormLabel>Place *</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input placeholder="Where did the accident occur?" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -421,479 +568,469 @@ const GroupPersonalAccidentClaim: React.FC = () => {
             
             <FormField
               control={formMethods.control}
-              name="accidentTime"
+              name="incidentDescription"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Time *</FormLabel>
+                  <FormLabel>Incident Description *</FormLabel>
                   <FormControl>
-                    <Input type="time" {...field} />
+                    <Textarea placeholder="Describe how the incident occurred" rows={4} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={formMethods.control}
+              name="particularsOfInjuries"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Particulars of Injuries *</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Describe the injuries sustained" rows={4} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
-          
-          <FormField
-            control={formMethods.control}
-            name="accidentPlace"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Place *</FormLabel>
-                <FormControl>
-                  <Input placeholder="Where did the accident occur?" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={formMethods.control}
-            name="incidentDescription"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Incident Description *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Describe how the incident occurred" rows={4} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={formMethods.control}
-            name="particularsOfInjuries"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Particulars of Injuries *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Describe the injuries sustained" rows={4} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'witnesses',
       title: 'Witness Information',
       component: (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Witnesses</h3>
-            <Button
-              type="button"
-              onClick={() => addWitness({ name: '', address: '' })}
-              variant="outline"
-              size="sm"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Witness
-            </Button>
-          </div>
-          
-          {witnessFields.map((field, index) => (
-            <Card key={field.id} className="p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="font-semibold">Witness {index + 1}</h4>
-                <Button
-                  type="button"
-                  onClick={() => removeWitness(index)}
-                  variant="destructive"
-                  size="sm"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="space-y-4">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Label htmlFor={`witness_name_${index}`} className="flex items-center gap-1">
-                          Witness Name *
-                          <Info className="h-3 w-3" />
-                        </Label>
-                        <Input
-                          id={`witness_name_${index}`}
-                          placeholder="Enter witness name"
-                          {...formMethods.register(`witnesses.${index}.name`)}
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Enter the full name of the witness</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Label htmlFor={`witness_address_${index}`} className="flex items-center gap-1">
-                          Witness Address *
-                          <Info className="h-3 w-3" />
-                        </Label>
-                        <Textarea
-                          id={`witness_address_${index}`}
-                          placeholder="Enter witness address"
-                          rows={2}
-                          {...formMethods.register(`witnesses.${index}.address`)}
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Enter the complete address of the witness</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </Card>
-          ))}
-          
-          {witnessFields.length === 0 && (
-            <div className="text-center text-sm text-muted-foreground border p-6 rounded-md">
-              No witnesses added yet. Click "Add Witness" to add witness information.
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Witnesses</h3>
+              <Button
+                type="button"
+                onClick={() => addWitness({ name: '', address: '' })}
+                variant="outline"
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Witness
+              </Button>
             </div>
-          )}
-        </div>
+            
+            {witnessFields.map((field, index) => (
+              <Card key={field.id} className="p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-semibold">Witness {index + 1}</h4>
+                  <Button
+                    type="button"
+                    onClick={() => removeWitness(index)}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="space-y-4">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <FormFieldComponent name={`witnesses.${index}.name`} label="Witness Name" required placeholder="Enter witness name" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Enter the full name of the witness</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <FormTextareaComponent name={`witnesses.${index}.address`} label="Witness Address" required placeholder="Enter witness address" rows={2} />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Enter the complete address of the witness</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </Card>
+            ))}
+            
+            {witnessFields.length === 0 && (
+              <div className="text-center text-sm text-muted-foreground border p-6 rounded-md">
+                No witnesses added yet. Click "Add Witness" to add witness information.
+              </div>
+            )}
+          </div>
+        </FormProvider>
       )
     },
     {
       id: 'doctor',
       title: 'Doctor Information',
       component: (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={formMethods.control}
-              name="doctorName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name of doctor *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter doctor's name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={formMethods.control}
+                name="doctorName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name of doctor *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter doctor's name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={formMethods.control}
+                name="doctorAddress"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address of doctor *</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Enter doctor's address" rows={2} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             
             <FormField
               control={formMethods.control}
-              name="doctorAddress"
+              name="isUsualDoctor"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Address of doctor *</FormLabel>
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                   <FormControl>
-                    <Textarea placeholder="Enter doctor's address" rows={2} {...field} />
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
-                  <FormMessage />
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Is this your usual doctor?</FormLabel>
+                  </div>
                 </FormItem>
               )}
             />
           </div>
-          
-          <FormField
-            control={formMethods.control}
-            name="isUsualDoctor"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Is this your usual doctor?</FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'incapacity',
       title: 'Incapacity Details',
       component: (
-        <div className="space-y-6">
-          <div>
-            <h4 className="font-medium mb-4">Total incapacity period:</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={formMethods.control}
-                name="totalIncapacityFrom"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>From</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={formMethods.control}
-                name="totalIncapacityTo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>To</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            <div>
+              <h4 className="font-medium mb-4">Total incapacity period:</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={formMethods.control}
+                  name="totalIncapacityFrom"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>From</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={formMethods.control}
+                  name="totalIncapacityTo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>To</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="font-medium mb-4">Partial incapacity period:</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={formMethods.control}
+                  name="partialIncapacityFrom"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>From</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={formMethods.control}
+                  name="partialIncapacityTo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>To</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
           </div>
-          
-          <div>
-            <h4 className="font-medium mb-4">Partial incapacity period:</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={formMethods.control}
-                name="partialIncapacityFrom"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>From</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={formMethods.control}
-                name="partialIncapacityTo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>To</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'other-insurers',
       title: 'Other Insurers',
       component: (
-        <div className="space-y-6">
-          <FormField
-            control={formMethods.control}
-            name="otherInsurerName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Name *</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter other insurer name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={formMethods.control}
-            name="otherInsurerAddress"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Address *</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Enter other insurer address" rows={3} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={formMethods.control}
-            name="otherPolicyNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Policy Number</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter policy number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            <FormField
+              control={formMethods.control}
+              name="otherInsurerName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter other insurer name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={formMethods.control}
+              name="otherInsurerAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address *</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Enter other insurer address" rows={3} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={formMethods.control}
+              name="otherPolicyNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Policy Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter policy number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </FormProvider>
       )
     },
     {
       id: 'declaration',
       title: 'Declaration & Signature',
       component: (
-        <div className="space-y-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Data Privacy</h3>
-            <div className="text-sm space-y-2">
-              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Data Privacy</h3>
+              <div className="text-sm space-y-2">
+                <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+                <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="agreeToDataPrivacy"
+                checked={formMethods.watch('agreeToDataPrivacy') || false}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('agreeToDataPrivacy', !!checked);
+                  if (formMethods.formState.errors.agreeToDataPrivacy) {
+                    formMethods.clearErrors('agreeToDataPrivacy');
+                  }
+                }}
+                className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
+              />
+              <Label htmlFor="agreeToDataPrivacy">
+                I agree to the data privacy terms <span className="required-asterisk">*</span>
+              </Label>
+            </div>
+            {formMethods.formState.errors.agreeToDataPrivacy && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
+              </p>
+            )}
+            
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Declaration</h3>
+              <div className="text-sm space-y-2">
+                <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+                <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+                <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="declarationTrue"
+                checked={formMethods.watch('declarationTrue') || false}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('declarationTrue', !!checked);
+                  if (formMethods.formState.errors.declarationTrue) {
+                    formMethods.clearErrors('declarationTrue');
+                  }
+                }}
+                className={cn(formMethods.formState.errors.declarationTrue && "border-destructive")}
+              />
+              <Label htmlFor="declarationTrue">
+                I declare that the above statements are true <span className="required-asterisk">*</span>
+              </Label>
+            </div>
+            {formMethods.formState.errors.declarationTrue && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.declarationTrue.message?.toString()}
+              </p>
+            )}
+            
+            <FormField name="signature" label="Digital Signature" required placeholder="Type your full name as signature" />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Place</Label>
+                <Input value="Nigeria" disabled />
+              </div>
+              <div>
+                <Label>Date</Label>
+                <Input value={new Date().toISOString().split('T')[0]} disabled />
+              </div>
             </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy || false}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
-            />
-            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
-          </div>
-          
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Declaration</h3>
-            <div className="text-sm space-y-2">
-              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="declarationTrue"
-              checked={watchedValues.declarationTrue || false}
-              onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
-            />
-            <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
-          </div>
-          
-          <div>
-            <Label htmlFor="signature">Signature of policyholder (digital signature) *</Label>
-            <Input
-              id="signature"
-              {...formMethods.register('signature')}
-              placeholder="Type your full name as signature"
-            />
-          </div>
-          
-          <div>
-            <Label>Date</Label>
-            <Input value={new Date().toISOString().split('T')[0]} disabled />
-          </div>
-        </div>
+        </FormProvider>
       )
     }
   ];
 
-  if (showSuccess) {
-    return (
-      <div className="max-w-md mx-auto text-center p-6">
-        <div className="bg-green-50 rounded-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold text-green-800 mb-2">Claim Submitted Successfully!</h2>
-          <p className="text-green-600">
-            Your group personal accident claim has been submitted and you'll receive a confirmation email shortly.
-          </p>
-        </div>
-        <Button onClick={() => window.location.reload()}>
-          Submit Another Claim
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Group Personal Accident Insurance Claim
-          </h1>
-          <p className="text-lg text-gray-600">
-            Please fill out all required information accurately
-          </p>
+    <FormProvider {...formMethods}>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+        {/* Loading overlay */}
+        {showPostAuthLoading && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-lg font-semibold">Completing your submission...</p>
+              <p className="text-sm text-muted-foreground text-center">
+                Please do not close this window while we process your claim
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="container mx-auto py-8 px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
+                <Users className="w-8 h-8 text-primary" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight mb-2">Group Personal Accident Claim Form</h1>
+              <p className="text-muted-foreground">
+                Please provide accurate information about your group personal accident insurance claim
+              </p>
+            </div>
+
+            <Card className="shadow-xl border-0 bg-white/50 backdrop-blur-sm">
+              <CardHeader className="text-center pb-2">
+                <CardTitle className="flex items-center justify-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Group Personal Accident Insurance Claim
+                </CardTitle>
+                <CardDescription>
+                  Complete all sections to submit your group personal accident claim
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MultiStepForm
+                  steps={steps}
+                  onSubmit={onFinalSubmit}
+                  formMethods={formMethods}
+                  submitButtonText="Submit Group Personal Accident Claim"
+                  stepFieldMappings={stepFieldMappings}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        <div>
-          <MultiStepForm
-            steps={steps}
-      onSubmit={onFinalSubmit}
-            formMethods={formMethods}
-          />
-        </div>
-
+        {/* Summary Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Review Your Claim</DialogTitle>
+              <DialogTitle>Confirm Your Group Personal Accident Claim Submission</DialogTitle>
             </DialogHeader>
             
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-semibold mb-2">Policy Details</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>Policy Number: {watchedValues.policyNumber}</div>
-                  <div>Period: {watchedValues.periodOfCoverFrom} to {watchedValues.periodOfCoverTo}</div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Insured Details</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>Company: {watchedValues.companyName}</div>
-                  <div>Email: {watchedValues.email}</div>
-                  <div>Phone: {watchedValues.phone}</div>
-                  <div>Address: {watchedValues.address}</div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Accident Details</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>Date: {watchedValues.accidentDate}</div>
-                  <div>Time: {watchedValues.accidentTime}</div>
-                  <div>Place: {watchedValues.accidentPlace}</div>
-                </div>
-                <div className="mt-2 text-sm">
-                  <div>Description: {watchedValues.incidentDescription}</div>
-                  <div>Injuries: {watchedValues.particularsOfInjuries}</div>
-                </div>
-              </div>
-
-              {watchedValues.witnesses && watchedValues.witnesses.length > 0 && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <h3 className="font-semibold mb-2">Witnesses</h3>
-                  {watchedValues.witnesses.map((witness, index) => (
-                    <div key={index} className="text-sm mb-2">
-                      <div>Name: {witness.name}</div>
-                      <div>Address: {witness.address}</div>
-                    </div>
-                  ))}
+                  <span className="font-medium">Policy Number:</span>
+                  <p>{watchedValues.policyNumber}</p>
                 </div>
-              )}
+                <div>
+                  <span className="font-medium">Company Name:</span>
+                  <p>{watchedValues.companyName}</p>
+                </div>
+              </div>
+              
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-yellow-800">Important Notice</h3>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Please review all information carefully before submitting. Once submitted, you cannot modify your claim details.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSummary(false)}>
-                Edit Claim
+                Review Again
               </Button>
-              <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
-                {isSubmitting ? (
+              <Button 
+                onClick={() => handleSubmit(watchedValues)}
+                disabled={authSubmitting}
+                className="min-w-[120px]"
+              >
+                {authSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Submitting...
                   </>
                 ) : (
@@ -903,38 +1040,17 @@ const GroupPersonalAccidentClaim: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        
+
         {/* Success Modal */}
         <SuccessModal
-          isOpen={showSuccess || authShowSuccess || authSubmitting}
-          onClose={() => {
-            setShowSuccess(false);
-            setAuthShowSuccess();
-          }}
-          title="Group Personal Accident Claim Submitted!"
+          isOpen={authShowSuccess}
+          onClose={() => setAuthShowSuccess()}
+          title="Group Personal Accident Claim Submitted Successfully!"
+          message="Your group personal accident claim has been received and is being processed. You will receive updates via email and SMS."
           formType="Group Personal Accident Claim"
-          isLoading={authSubmitting}
-          loadingMessage="Your group personal accident claim is being processed and submitted..."
         />
       </div>
-
-      {/* Post-Authentication Loading Overlay */}
-      {showPostAuthLoading && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
-              </div>
-              <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
-              <p className="text-muted-foreground">
-                Thank you for signing in! Your group personal accident claim is now being submitted...
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </FormProvider>
   );
 };
 
