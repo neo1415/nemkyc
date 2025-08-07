@@ -1,79 +1,317 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import MultiStepForm from '../../components/common/MultiStepForm';
-import FormSection from '../../components/common/FormSection';
-import PhoneInput from '../../components/common/PhoneInput';
-import { useToast } from '../../hooks/use-toast';
-import { useFormDraft } from '../../hooks/useFormDraft';
-import { uploadFile } from '../../services/fileService';
-import { useAuthRequiredSubmit } from '../../hooks/useAuthRequiredSubmit';
-import SuccessModal from '../../components/common/SuccessModal';
-import { Loader2 } from 'lucide-react';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Textarea } from '../../components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
-import { Label } from '../../components/ui/label';
-import { Checkbox } from '../../components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { get } from 'lodash';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Calendar, CalendarIcon, Upload, Edit2, DollarSign, FileText, CheckCircle2, Loader2, Plus, Trash2, Info } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import MultiStepForm from '@/components/common/MultiStepForm';
+import { useFormDraft } from '@/hooks/useFormDraft';
+import FileUpload from '@/components/common/FileUpload';
+import { uploadFile } from '@/services/fileService';
+import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import SuccessModal from '@/components/common/SuccessModal';
 
+// Money Insurance Claim Schema
 const moneyInsuranceSchema = yup.object().shape({
+  // Policy Details
   policyNumber: yup.string().required('Policy number is required'),
   periodOfCoverFrom: yup.date().required('Period start date is required'),
   periodOfCoverTo: yup.date().required('Period end date is required'),
+
+  // Insured Details
   companyName: yup.string().required('Company name is required'),
   address: yup.string().required('Address is required'),
   phone: yup.string().required('Phone is required'),
   email: yup.string().email('Invalid email').required('Email is required'),
+
+  // Loss Details
   lossDate: yup.date().required('Loss date is required'),
   lossTime: yup.string().required('Loss time is required'),
   lossLocation: yup.string().required('Loss location is required'),
   moneyLocation: yup.string().oneOf(['transit', 'safe']).required('Money location is required'),
+
+  // Discoverer Details
   discovererName: yup.string().required('Discoverer name is required'),
   discovererPosition: yup.string(),
   discovererSalary: yup.number().min(0, 'Salary must be positive'),
+
+  // Transit Details
   policeEscort: yup.string().oneOf(['yes', 'no']),
   amountAtStart: yup.number().min(0, 'Amount must be positive'),
   disbursements: yup.number().min(0, 'Disbursements must be positive'),
   doubtIntegrity: yup.string().oneOf(['yes', 'no']),
-  integrityExplanation: yup.string(),
+  integrityExplanation: yup.string().when('doubtIntegrity', {
+    is: 'yes',
+    then: (schema) => schema.required('Explanation required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+
+  // Safe Details
   safeType: yup.string(),
   keyholders: yup.array().of(
-    yup.object({
-      name: yup.string().required('Name is required'),
+    yup.object().shape({
+      name: yup.string().required('Keyholder name is required'),
       position: yup.string().required('Position is required'),
       salary: yup.number().min(0, 'Salary must be positive').required('Salary is required')
     })
   ),
+
+  // General Details
   howItHappened: yup.string().required('How it happened is required'),
   policeNotified: yup.string().oneOf(['yes', 'no']).required('Police notification status is required'),
-  policeStation: yup.string(),
+  policeStation: yup.string().when('policeNotified', {
+    is: 'yes',
+    then: (schema) => schema.required('Police station details required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
   previousLoss: yup.string().oneOf(['yes', 'no']).required('Previous loss status is required'),
-  previousLossDetails: yup.string(),
+  previousLossDetails: yup.string().when('previousLoss', {
+    is: 'yes',
+    then: (schema) => schema.required('Previous loss details required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
   lossAmount: yup.number().min(0, 'Loss amount must be positive').required('Loss amount is required'),
   lossDescription: yup.string().required('Loss description is required'),
+
+  // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to data privacy'),
   declarationTrue: yup.boolean().oneOf([true], 'You must confirm the declaration is true'),
   signature: yup.string().required('Signature is required'),
 });
 
-type MoneyInsuranceData = yup.InferType<typeof moneyInsuranceSchema>;
+interface Keyholder {
+  name: string;
+  position: string;
+  salary: number;
+}
+
+interface MoneyInsuranceData {
+  // Policy Details
+  policyNumber: string;
+  periodOfCoverFrom: Date;
+  periodOfCoverTo: Date;
+
+  // Insured Details
+  companyName: string;
+  address: string;
+  phone: string;
+  email: string;
+
+  // Loss Details
+  lossDate: Date;
+  lossTime: string;
+  lossLocation: string;
+  moneyLocation: string;
+
+  // Discoverer Details
+  discovererName: string;
+  discovererPosition?: string;
+  discovererSalary?: number;
+
+  // Transit Details
+  policeEscort?: string;
+  amountAtStart?: number;
+  disbursements?: number;
+  doubtIntegrity?: string;
+  integrityExplanation?: string;
+
+  // Safe Details
+  safeType?: string;
+  keyholders: Keyholder[];
+
+  // General Details
+  howItHappened: string;
+  policeNotified: string;
+  policeStation?: string;
+  previousLoss: string;
+  previousLossDetails?: string;
+  lossAmount: number;
+  lossDescription: string;
+
+  // Declaration
+  agreeToDataPrivacy: boolean;
+  declarationTrue: boolean;
+  signature: string;
+}
+
+// Form field components with validation (same as Motor Claim)
+const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
+  const { register, formState: { errors }, clearErrors } = useFormContext();
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type={type}
+        maxLength={maxLength}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
+  const { register, watch, formState: { errors }, clearErrors } = useFormContext();
+  const currentValue = watch(name) || '';
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Textarea
+        id={name}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      <div className="flex justify-between">
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
+        <span className="text-sm text-muted-foreground ml-auto">
+          {currentValue.length}/{maxLength}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const FormSelect = ({ name, label, required = false, options, placeholder, children, ...props }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(newValue) => {
+          setValue(name, newValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        {...props}
+      >
+        <SelectTrigger className={error ? 'border-destructive' : ''}>
+          <SelectValue placeholder={placeholder || `Select ${label}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {children}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormDatePicker = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        type="date"
+        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
+        onChange={(e) => {
+          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+          setValue(name, dateValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        className={error ? 'border-destructive' : ''}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
 
 const defaultValues: Partial<MoneyInsuranceData> = {
-  signature: '',
-  policeNotified: 'no',
-  previousLoss: 'no',
-  keyholders: [{ name: '', position: '', salary: 0 }]
+  policyNumber: '',
+  companyName: '',
+  address: '',
+  phone: '',
+  email: '',
+  lossTime: '',
+  lossLocation: '',
+  moneyLocation: '',
+  discovererName: '',
+  discovererPosition: '',
+  discovererSalary: 0,
+  policeEscort: '',
+  amountAtStart: 0,
+  disbursements: 0,
+  doubtIntegrity: '',
+  integrityExplanation: '',
+  safeType: '',
+  keyholders: [],
+  howItHappened: '',
+  policeNotified: '',
+  policeStation: '',
+  previousLoss: '',
+  previousLossDetails: '',
+  lossAmount: 0,
+  lossDescription: '',
+  agreeToDataPrivacy: false,
+  declarationTrue: false,
+  signature: ''
 };
 
 const MoneyInsuranceClaim: React.FC = () => {
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
   const { 
@@ -82,16 +320,6 @@ const MoneyInsuranceClaim: React.FC = () => {
     setShowSuccess: setAuthShowSuccess,
     isSubmitting: authSubmitting
   } = useAuthRequiredSubmit();
-
-  const formMethods = useForm<Partial<MoneyInsuranceData>>({
-    defaultValues,
-    mode: 'onChange'
-  });
-
-  const { watch, setValue, getValues } = formMethods;
-  const { saveDraft, loadDraft, clearDraft } = useFormDraft('money-insurance-claim', formMethods);
-  
-  const watchedValues = watch();
 
   // Check for pending submission when component mounts
   useEffect(() => {
@@ -114,26 +342,32 @@ const MoneyInsuranceClaim: React.FC = () => {
     }
   }, [authShowSuccess]);
 
+  const formMethods = useForm<any>({
+    resolver: yupResolver(moneyInsuranceSchema),
+    defaultValues,
+    mode: 'onChange'
+  });
+
+  // Make toast available globally for MultiStepForm
   useEffect(() => {
-    const subscription = watch((value) => {
-      saveDraft(value);
+    (window as any).toast = toast;
+  }, [toast]);
+
+  const { fields: keyholderFields, append: addKeyholder, remove: removeKeyholder } = useFieldArray({
+    control: formMethods.control,
+    name: 'keyholders'
+  });
+
+  const { saveDraft, clearDraft } = useFormDraft('moneyInsuranceClaim', formMethods);
+  const watchedValues = formMethods.watch();
+
+  // Auto-save draft
+  useEffect(() => {
+    const subscription = formMethods.watch((data) => {
+      saveDraft(data);
     });
     return () => subscription.unsubscribe();
-  }, [watch, saveDraft]);
-
-  useEffect(() => {
-    loadDraft();
-  }, [loadDraft]);
-
-  const cleanData = (data: any) => {
-    const cleaned = Object.entries(data).reduce((acc, [key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        acc[key] = value;
-      }
-      return acc;
-    }, {} as any);
-    return cleaned;
-  };
+  }, [formMethods, saveDraft]);
 
   // Main submit handler that checks authentication
   const handleSubmit = async (data: MoneyInsuranceData) => {
@@ -167,661 +401,415 @@ const MoneyInsuranceClaim: React.FC = () => {
     setShowSummary(true);
   };
 
+  // Step field mappings for validation
+  const stepFieldMappings = {
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
+    1: ['companyName', 'address', 'phone', 'email'],
+    2: ['lossDate', 'lossTime', 'lossLocation', 'moneyLocation'],
+    3: ['discovererName', 'discovererPosition', 'discovererSalary', 'policeEscort', 'amountAtStart', 'disbursements', 'doubtIntegrity', 'integrityExplanation'],
+    4: ['discovererName', 'safeType', 'keyholders'],
+    5: ['howItHappened', 'policeNotified', 'policeStation', 'previousLoss', 'previousLossDetails', 'lossAmount', 'lossDescription'],
+    6: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
+  };
+
   const steps = [
     {
       id: 'policy',
       title: 'Policy Details',
       component: (
-        <FormSection title="Policy Details" description="Enter your policy information">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="policyNumber">Policy Number *</Label>
-              <Input
-                {...formMethods.register('policyNumber')}
-                placeholder="Enter policy number"
-              />
-              {formMethods.formState.errors.policyNumber && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.policyNumber.message}
-                </p>
-              )}
-            </div>
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormField name="policyNumber" label="Policy Number" required />
             
-            <div>
-              <Label htmlFor="periodOfCoverFrom">Period of Cover From *</Label>
-              <Input
-                type="date"
-                {...formMethods.register('periodOfCoverFrom')}
-              />
-              {formMethods.formState.errors.periodOfCoverFrom && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.periodOfCoverFrom.message}
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="periodOfCoverTo">Period of Cover To *</Label>
-              <Input
-                type="date"
-                {...formMethods.register('periodOfCoverTo')}
-              />
-              {formMethods.formState.errors.periodOfCoverTo && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.periodOfCoverTo.message}
-                </p>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
+              <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
             </div>
           </div>
-        </FormSection>
+        </FormProvider>
       )
     },
     {
       id: 'insured',
       title: 'Insured Details',
       component: (
-        <FormSection title="Insured Details" description="Enter the insured company details">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <Label htmlFor="companyName">Company Name *</Label>
-              <Input
-                {...formMethods.register('companyName')}
-                placeholder="Enter company name"
-              />
-              {formMethods.formState.errors.companyName && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.companyName.message}
-                </p>
-              )}
-            </div>
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormField name="companyName" label="Company Name" required />
+            <FormTextarea name="address" label="Address" required />
             
-            <div className="md:col-span-2">
-              <Label htmlFor="address">Address *</Label>
-              <Textarea
-                {...formMethods.register('address')}
-                placeholder="Enter full address"
-                rows={3}
-              />
-              {formMethods.formState.errors.address && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.address.message}
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <PhoneInput
-                label="Phone Number *"
-                value={watchedValues.phone || ''}
-                onChange={(value) => setValue('phone', value)}
-                error={formMethods.formState.errors.phone?.message}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                type="email"
-                {...formMethods.register('email')}
-                placeholder="Enter email address"
-              />
-              {formMethods.formState.errors.email && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.email.message}
-                </p>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField name="phone" label="Phone Number" required />
+              <FormField name="email" label="Email" type="email" required />
             </div>
           </div>
-        </FormSection>
+        </FormProvider>
       )
     },
     {
       id: 'loss',
       title: 'Details of Loss',
       component: (
-        <FormSection title="Details of Loss" description="Provide details about when and where the loss occurred">
+        <FormProvider {...formMethods}>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="lossDate">Date *</Label>
-                <Input
-                  type="date"
-                  {...formMethods.register('lossDate')}
-                />
-                {formMethods.formState.errors.lossDate && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {formMethods.formState.errors.lossDate.message}
-                  </p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="lossTime">Time *</Label>
-                <Input
-                  type="time"
-                  {...formMethods.register('lossTime')}
-                />
-                {formMethods.formState.errors.lossTime && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {formMethods.formState.errors.lossTime.message}
-                  </p>
-                )}
-              </div>
+              <FormDatePicker name="lossDate" label="Date" required />
+              <FormField name="lossTime" label="Time" type="time" required />
             </div>
             
-            <div>
-              <Label htmlFor="lossLocation">Where did it happen? *</Label>
-              <Textarea
-                {...formMethods.register('lossLocation')}
-                placeholder="Describe the location where the loss occurred"
-                rows={3}
-              />
-              {formMethods.formState.errors.lossLocation && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.lossLocation.message}
-                </p>
-              )}
-            </div>
+            <FormTextarea name="lossLocation" label="Where did it happen?" required />
             
-            <div>
-              <Label>Was the money in transit or locked in a safe? *</Label>
-              <RadioGroup
-                value={watchedValues.moneyLocation}
-                onValueChange={(value: 'transit' | 'safe') => setValue('moneyLocation', value)}
-                className="flex space-x-4 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="transit" id="transit" />
-                  <Label htmlFor="transit">In Transit</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="safe" id="safe" />
-                  <Label htmlFor="safe">Locked in Safe</Label>
-                </div>
-              </RadioGroup>
-              {formMethods.formState.errors.moneyLocation && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.moneyLocation.message}
-                </p>
-              )}
-            </div>
+            <FormSelect name="moneyLocation" label="Was the money in transit or locked in a safe?" required placeholder="Select location">
+              <SelectItem value="transit">In Transit</SelectItem>
+              <SelectItem value="safe">Locked in Safe</SelectItem>
+            </FormSelect>
           </div>
-        </FormSection>
+        </FormProvider>
       )
     },
     {
       id: 'transit',
       title: 'If loss was in transit',
       component: (
-        <FormSection title="Transit Loss Details" description="Complete this section if money was lost in transit">
+        <FormProvider {...formMethods}>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="discovererName">Name of person who discovered loss *</Label>
-              <Input
-                {...formMethods.register('discovererName')}
-                placeholder="Enter name"
-              />
-              {formMethods.formState.errors.discovererName && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.discovererName.message}
-                </p>
-              )}
+            <div className="text-sm text-muted-foreground mb-4">
+              Complete this section if money was lost in transit
             </div>
+            
+            <FormField name="discovererName" label="Name of person who discovered loss" required />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="discovererPosition">Position</Label>
-                <Input
-                  {...formMethods.register('discovererPosition')}
-                  placeholder="Enter position"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="discovererSalary">Salary (₦)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  {...formMethods.register('discovererSalary')}
-                  placeholder="Enter salary"
-                />
-              </div>
+              <FormField name="discovererPosition" label="Position" />
+              <FormField name="discovererSalary" label="Salary (₦)" type="number" step="0.01" />
             </div>
             
-            <div>
-              <Label>Was there a police escort?</Label>
-              <RadioGroup
-                value={watchedValues.policeEscort}
-                onValueChange={(value: 'yes' | 'no') => setValue('policeEscort', value)}
-                className="flex space-x-4 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="yes" id="escort-yes" />
-                  <Label htmlFor="escort-yes">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="no" id="escort-no" />
-                  <Label htmlFor="escort-no">No</Label>
-                </div>
-              </RadioGroup>
-            </div>
+            <FormSelect name="policeEscort" label="Was there a police escort?" placeholder="Select yes or no">
+              <SelectItem value="yes">Yes</SelectItem>
+              <SelectItem value="no">No</SelectItem>
+            </FormSelect>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="amountAtStart">How much was in employee's possession at journey start? (₦)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  {...formMethods.register('amountAtStart')}
-                  placeholder="Enter amount"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="disbursements">What disbursements were made by him during journey? (₦)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  {...formMethods.register('disbursements')}
-                  placeholder="Enter disbursements"
-                />
-              </div>
+              <FormField name="amountAtStart" label="Amount at journey start (₦)" type="number" step="0.01" />
+              <FormField name="disbursements" label="Disbursements during journey (₦)" type="number" step="0.01" />
             </div>
             
-            <div>
-              <Label>Any reason to doubt integrity of employee?</Label>
-              <RadioGroup
-                value={watchedValues.doubtIntegrity}
-                onValueChange={(value: 'yes' | 'no') => setValue('doubtIntegrity', value)}
-                className="flex space-x-4 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="yes" id="doubt-yes" />
-                  <Label htmlFor="doubt-yes">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="no" id="doubt-no" />
-                  <Label htmlFor="doubt-no">No</Label>
-                </div>
-              </RadioGroup>
-            </div>
+            <FormSelect name="doubtIntegrity" label="Any reason to doubt integrity of employee?" placeholder="Select yes or no">
+              <SelectItem value="yes">Yes</SelectItem>
+              <SelectItem value="no">No</SelectItem>
+            </FormSelect>
             
             {watchedValues.doubtIntegrity === 'yes' && (
-              <div>
-                <Label htmlFor="integrityExplanation">Explanation</Label>
-                <Textarea
-                  {...formMethods.register('integrityExplanation')}
-                  placeholder="Explain your concerns"
-                  rows={3}
-                />
-              </div>
+              <FormTextarea name="integrityExplanation" label="Explanation" required />
             )}
           </div>
-        </FormSection>
+        </FormProvider>
       )
     },
     {
       id: 'safe',
       title: 'If loss was in safe',
       component: (
-        <FormSection title="Safe Loss Details" description="Complete this section if money was lost from a safe">
+        <FormProvider {...formMethods}>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="discovererName">Name of person who discovered loss</Label>
-              <Input
-                {...formMethods.register('discovererName')}
-                placeholder="Enter name"
-              />
+            <div className="text-sm text-muted-foreground mb-4">
+              Complete this section if money was lost from a safe
             </div>
             
-            <div>
-              <Label htmlFor="safeType">Was the safe bricked into wall or standing free?</Label>
-              <select
-                {...formMethods.register('safeType')}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              >
-                <option value="">Select option</option>
-                <option value="bricked">Bricked into wall</option>
-                <option value="standing">Standing free</option>
-              </select>
-            </div>
+            <FormField name="discovererName" label="Name of person who discovered loss" />
             
-            <div>
+            <FormSelect name="safeType" label="Was the safe bricked into wall or standing free?" placeholder="Select option">
+              <SelectItem value="bricked">Bricked into wall</SelectItem>
+              <SelectItem value="standing">Standing free</SelectItem>
+            </FormSelect>
+            
+            <div className="space-y-4">
               <Label>Names, positions, salaries of employees in charge of keys</Label>
-              {watchedValues.keyholders?.map((_, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 p-4 border rounded">
-                  <div>
-                    <Label htmlFor={`keyholders.${index}.name`}>Name</Label>
-                    <Input
-                      {...formMethods.register(`keyholders.${index}.name`)}
-                      placeholder="Enter name"
-                    />
+              
+              {keyholderFields.map((keyholder, index) => (
+                <Card key={keyholder.id} className="p-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-medium">Keyholder {index + 1}</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeKeyholder(index)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Remove
+                    </Button>
                   </div>
-                  <div>
-                    <Label htmlFor={`keyholders.${index}.position`}>Position</Label>
-                    <Input
-                      {...formMethods.register(`keyholders.${index}.position`)}
-                      placeholder="Enter position"
-                    />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField name={`keyholders.${index}.name`} label="Name" required />
+                    <FormField name={`keyholders.${index}.position`} label="Position" required />
+                    <FormField name={`keyholders.${index}.salary`} label="Salary (₦)" type="number" step="0.01" required />
                   </div>
-                  <div>
-                    <Label htmlFor={`keyholders.${index}.salary`}>Salary (₦)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      {...formMethods.register(`keyholders.${index}.salary`)}
-                      placeholder="Enter salary"
-                    />
-                  </div>
-                </div>
+                </Card>
               ))}
+              
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  const current = getValues('keyholders') || [];
-                  setValue('keyholders', [...current, { name: '', position: '', salary: 0 }]);
-                }}
-                className="mt-2"
+                onClick={() => addKeyholder({
+                  name: '',
+                  position: '',
+                  salary: 0
+                })}
+                className="w-full"
               >
-                Add Another Keyholder
+                <Plus className="h-4 w-4 mr-2" />
+                Add Keyholder
               </Button>
             </div>
           </div>
-        </FormSection>
+        </FormProvider>
       )
     },
     {
       id: 'general',
       title: 'General',
       component: (
-        <FormSection title="General Information" description="Additional details about the loss">
+        <FormProvider {...formMethods}>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="howItHappened">How did it happen? *</Label>
-              <Textarea
-                {...formMethods.register('howItHappened')}
-                placeholder="Describe how the loss occurred"
-                rows={4}
-              />
-              {formMethods.formState.errors.howItHappened && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.howItHappened.message}
-                </p>
-              )}
-            </div>
+            <FormTextarea name="howItHappened" label="How did it happen?" required />
             
-            <div>
-              <Label>Have police been notified? *</Label>
-              <RadioGroup
-                value={watchedValues.policeNotified}
-                onValueChange={(value: 'yes' | 'no') => setValue('policeNotified', value)}
-                className="flex space-x-4 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="yes" id="police-yes" />
-                  <Label htmlFor="police-yes">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="no" id="police-no" />
-                  <Label htmlFor="police-no">No</Label>
-                </div>
-              </RadioGroup>
-              {formMethods.formState.errors.policeNotified && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.policeNotified.message}
-                </p>
-              )}
-            </div>
+            <FormSelect name="policeNotified" label="Have police been notified?" required placeholder="Select yes or no">
+              <SelectItem value="yes">Yes</SelectItem>
+              <SelectItem value="no">No</SelectItem>
+            </FormSelect>
             
             {watchedValues.policeNotified === 'yes' && (
-              <div>
-                <Label htmlFor="policeStation">Police Station</Label>
-                <Input
-                  {...formMethods.register('policeStation')}
-                  placeholder="Enter police station name"
-                />
-              </div>
+              <FormField name="policeStation" label="Police Station" required />
             )}
             
-            <div>
-              <Label>Previous loss under the policy? *</Label>
-              <RadioGroup
-                value={watchedValues.previousLoss}
-                onValueChange={(value: 'yes' | 'no') => setValue('previousLoss', value)}
-                className="flex space-x-4 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="yes" id="previous-yes" />
-                  <Label htmlFor="previous-yes">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="no" id="previous-no" />
-                  <Label htmlFor="previous-no">No</Label>
-                </div>
-              </RadioGroup>
-              {formMethods.formState.errors.previousLoss && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.previousLoss.message}
-                </p>
-              )}
-            </div>
+            <FormSelect name="previousLoss" label="Previous loss under the policy?" required placeholder="Select yes or no">
+              <SelectItem value="yes">Yes</SelectItem>
+              <SelectItem value="no">No</SelectItem>
+            </FormSelect>
             
             {watchedValues.previousLoss === 'yes' && (
-              <div>
-                <Label htmlFor="previousLossDetails">Details of previous loss</Label>
-                <Textarea
-                  {...formMethods.register('previousLossDetails')}
-                  placeholder="Provide details of previous loss"
-                  rows={3}
-                />
-              </div>
+              <FormTextarea name="previousLossDetails" label="Details of previous loss" required />
             )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="lossAmount">What is the amount of loss? (₦) *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  {...formMethods.register('lossAmount')}
-                  placeholder="Enter loss amount"
-                />
-                {formMethods.formState.errors.lossAmount && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {formMethods.formState.errors.lossAmount.message}
-                  </p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="lossDescription">What did it consist of? *</Label>
-                <Textarea
-                  {...formMethods.register('lossDescription')}
-                  placeholder="Describe what was lost"
-                  rows={3}
-                />
-                {formMethods.formState.errors.lossDescription && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {formMethods.formState.errors.lossDescription.message}
-                  </p>
-                )}
-              </div>
+              <FormField name="lossAmount" label="What is the amount of loss? (₦)" type="number" step="0.01" required />
+              <FormTextarea name="lossDescription" label="What did it consist of?" required />
             </div>
           </div>
-        </FormSection>
+        </FormProvider>
       )
     },
-      {
+    {
       id: 'declaration',
       title: 'Declaration & Signature',
       component: (
-        <div className="space-y-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Data Privacy</h3>
-            <div className="text-sm space-y-2">
-              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Data Privacy</h3>
+              <div className="text-sm space-y-2">
+                <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+                <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="agreeToDataPrivacy"
+                checked={formMethods.watch('agreeToDataPrivacy') || false}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('agreeToDataPrivacy', !!checked);
+                  if (formMethods.formState.errors.agreeToDataPrivacy) {
+                    formMethods.clearErrors('agreeToDataPrivacy');
+                  }
+                }}
+                className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
+              />
+              <Label htmlFor="agreeToDataPrivacy">
+                I agree to the data privacy terms <span className="required-asterisk">*</span>
+              </Label>
+            </div>
+            {formMethods.formState.errors.agreeToDataPrivacy && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
+              </p>
+            )}
+            
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Declaration</h3>
+              <div className="text-sm space-y-2">
+                <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+                <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+                <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="declarationTrue"
+                checked={formMethods.watch('declarationTrue') || false}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('declarationTrue', !!checked);
+                  if (formMethods.formState.errors.declarationTrue) {
+                    formMethods.clearErrors('declarationTrue');
+                  }
+                }}
+                className={cn(formMethods.formState.errors.declarationTrue && "border-destructive")}
+              />
+              <Label htmlFor="declarationTrue">
+                I declare that the above statements are true <span className="required-asterisk">*</span>
+              </Label>
+            </div>
+            {formMethods.formState.errors.declarationTrue && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.declarationTrue.message?.toString()}
+              </p>
+            )}
+            
+            <FormField name="signature" label="Digital Signature" required placeholder="Type your full name as signature" />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Place</Label>
+                <Input value="Nigeria" disabled />
+              </div>
+              <div>
+                <Label>Date</Label>
+                <Input value={new Date().toISOString().split('T')[0]} disabled />
+              </div>
             </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy || false}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
-            />
-            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
-          </div>
-          
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Declaration</h3>
-            <div className="text-sm space-y-2">
-              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="declarationTrue"
-              checked={watchedValues.declarationTrue || false}
-              onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
-            />
-            <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
-          </div>
-          
-          <div>
-            <Label htmlFor="signature">Signature of policyholder (digital signature) *</Label>
-            <Input
-              id="signature"
-              {...formMethods.register('signature')}
-              placeholder="Type your full name as signature"
-            />
-          </div>
-          
-          <div>
-            <Label>Date</Label>
-            <Input value={new Date().toISOString().split('T')[0]} disabled />
-          </div>
-        </div>
+        </FormProvider>
       )
     }
   ];
 
-  if (showSuccess) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <CardTitle className="text-green-600">Claim Submitted Successfully!</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-gray-600">
-              Your money insurance claim has been submitted successfully. 
-              You will receive a confirmation email shortly.
-            </p>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">For claim status and inquiries:</h4>
-              <p className="text-sm">Email: claims@neminsurance.com</p>
-              <p className="text-sm">Phone: +234 1 234 5678</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Money Insurance Claim Form</h1>
-          <p className="text-gray-600 mt-2">Submit your claim for money insurance</p>
-        </div>
-
-        <MultiStepForm
-          steps={steps}
-          onSubmit={onFinalSubmit}
-          formMethods={formMethods}
-        />
-
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Review Your Claim</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold">Policy Information</h3>
-                <p>Policy Number: {watchedValues.policyNumber}</p>
-                <p>Period: {watchedValues.periodOfCoverFrom?.toString()} to {watchedValues.periodOfCoverTo?.toString()}</p>
-              </div>
-              
-              <div>
-                <h3 className="font-semibold">Company Details</h3>
-                <p>Company: {watchedValues.companyName}</p>
-                <p>Email: {watchedValues.email}</p>
-                <p>Phone: {watchedValues.phone}</p>
-              </div>
-              
-              <div>
-                <h3 className="font-semibold">Loss Details</h3>
-                <p>Amount: ₦{watchedValues.lossAmount}</p>
-                <p>Description: {watchedValues.lossDescription}</p>
-                <p>Date: {watchedValues.lossDate?.toString()}</p>
-              </div>
-              
-              <div className="flex space-x-4">
-                <Button variant="outline" onClick={() => setShowSummary(false)}>
-                  Edit Details
-                </Button>
-                <Button onClick={() => handleSubmit(getValues())} disabled={isSubmitting}>
-                  {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-        
-        {/* Success Modal */}
-        <SuccessModal
-          isOpen={showSuccess || authShowSuccess || authSubmitting}
-          onClose={() => {
-            setShowSuccess(false);
-            setAuthShowSuccess();
-          }}
-          title="Money Insurance Claim Submitted!"
-          formType="Money Insurance Claim"
-          isLoading={authSubmitting}
-          loadingMessage="Your money insurance claim is being processed and submitted..."
-        />
-      </div>
-
-      {/* Post-Authentication Loading Overlay */}
-      {showPostAuthLoading && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
-              </div>
-              <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
-              <p className="text-muted-foreground">
-                Thank you for signing in! Your money insurance claim is now being submitted...
+    <FormProvider {...formMethods}>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+        {/* Loading overlay */}
+        {showPostAuthLoading && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-lg font-semibold">Completing your submission...</p>
+              <p className="text-sm text-muted-foreground text-center">
+                Please do not close this window while we process your claim
               </p>
             </div>
           </div>
+        )}
+
+        <div className="container mx-auto py-8 px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
+                <DollarSign className="w-8 h-8 text-primary" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight mb-2">Money Insurance Claim Form</h1>
+              <p className="text-muted-foreground">
+                Please provide accurate information about your money insurance claim
+              </p>
+            </div>
+
+            <Card className="shadow-xl border-0 bg-white/50 backdrop-blur-sm">
+              <CardHeader className="text-center pb-2">
+                <CardTitle className="flex items-center justify-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Money Insurance Claim
+                </CardTitle>
+                <CardDescription>
+                  Complete all sections to submit your money insurance claim
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MultiStepForm
+                  steps={steps}
+                  onSubmit={onFinalSubmit}
+                  formMethods={formMethods}
+                  submitButtonText="Submit Money Insurance Claim"
+                  stepFieldMappings={stepFieldMappings}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      )}
-    </div>
+
+        {/* Summary Dialog */}
+        <Dialog open={showSummary} onOpenChange={setShowSummary}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Confirm Your Money Insurance Claim Submission</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">Policy Number:</span>
+                  <p>{watchedValues.policyNumber}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Company Name:</span>
+                  <p>{watchedValues.companyName}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Loss Amount:</span>
+                  <p>₦{watchedValues.lossAmount}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Loss Date:</span>
+                  <p>{watchedValues.lossDate?.toString()}</p>
+                </div>
+              </div>
+              
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-yellow-800">Important Notice</h3>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Please review all information carefully before submitting. Once submitted, you cannot modify your claim details.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSummary(false)}>
+                Review Again
+              </Button>
+              <Button 
+                onClick={() => handleSubmit(watchedValues)}
+                disabled={authSubmitting}
+                className="min-w-[120px]"
+              >
+                {authSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Claim'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Success Modal */}
+        <SuccessModal
+          isOpen={authShowSuccess}
+          onClose={() => setAuthShowSuccess()}
+          title="Money Insurance Claim Submitted Successfully!"
+          message="Your money insurance claim has been received and is being processed. You will receive updates via email and SMS."
+          formType="Money Insurance Claim"
+        />
+      </div>
+    </FormProvider>
   );
 };
 
