@@ -744,8 +744,8 @@ const PublicLiabilityClaimForm: React.FC = () => {
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
                   Back to Edit
                 </Button>
-                <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
-                  {isSubmitting ? (
+                <Button onClick={() => handleSubmit(watchedValues)} disabled={authSubmitting}>
+                  {authSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Submitting...
@@ -758,19 +758,15 @@ const PublicLiabilityClaimForm: React.FC = () => {
             </DialogContent>
           </Dialog>
           
-          {/* Success Modal */}
-          <SuccessModal
-            isOpen={showSuccess || authShowSuccess || authSubmitting}
-            onClose={() => {
-              setShowSuccess(false);
-              setAuthShowSuccess();
-            }}
-            title="Public Liability Claim Submitted!"
-            formType="Public Liability Claim"
-            isLoading={authSubmitting}
-            loadingMessage="Your public liability claim is being processed and submitted..."
-          />
-        </div>
+        {/* Success Modal */}
+        <SuccessModal
+          isOpen={authShowSuccess}
+          onClose={() => setAuthShowSuccess(false)}
+          title="Public Liability Claim Submitted!"
+          formType="Public Liability Claim"
+          isLoading={authSubmitting}
+          loadingMessage="Your public liability claim is being processed and submitted..."
+        />
 
         {/* Post-Authentication Loading Overlay */}
         {showPostAuthLoading && (
@@ -789,8 +785,7 @@ const PublicLiabilityClaimForm: React.FC = () => {
           </div>
         )}
       </div>
-
-    </div>
+    </FormProvider>
   );
 };
 
