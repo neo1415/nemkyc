@@ -1,32 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../firebase/config';
-import MultiStepForm from '../../components/common/MultiStepForm';
-import FormSection from '../../components/common/FormSection';
-import PhoneInput from '../../components/common/PhoneInput';
-import { useToast } from '../../hooks/use-toast';
-import { useFormDraft } from '../../hooks/useFormDraft';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Textarea } from '../../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
-import { Label } from '../../components/ui/label';
-import { Checkbox } from '../../components/ui/checkbox';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { get } from 'lodash';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Settings, Upload, FileText, CheckCircle2, Loader2, Plus, Trash2, Info } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import MultiStepForm from '@/components/common/MultiStepForm';
+import { useFormDraft } from '@/hooks/useFormDraft';
+import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
-import { Loader2 } from 'lucide-react';
+import PhoneInput from '@/components/common/PhoneInput';
 
+// Enhanced schema with better validation
 const contractorsSchema = yup.object().shape({
+  // Policy Details
   policyNumber: yup.string().required('Policy number is required'),
   periodOfCoverFrom: yup.date().required('Period start date is required'),
   periodOfCoverTo: yup.date().required('Period end date is required'),
+
+  // Insured Details
   nameOfInsured: yup.string().required('Name is required'),
   companyName: yup.string(),
   title: yup.string().required('Title is required'),
@@ -39,61 +43,329 @@ const contractorsSchema = yup.object().shape({
   // Plant/Machinery Details
   plantMachineryItems: yup.array().of(yup.object().shape({
     itemNumber: yup.string().required('Item number is required'),
-    yearOfManufacture: yup.number().required('Year of manufacture is required'),
+    yearOfManufacture: yup.number()
+      .required('Year of manufacture is required')
+      .min(1900, 'Year must be after 1900')
+      .max(new Date().getFullYear(), 'Year cannot be in the future'),
     make: yup.string().required('Make is required'),
     registrationNumber: yup.string(),
-    dateOfPurchase: yup.string().required('Date of purchase is required'),
-    costPrice: yup.number().required('Cost price is required'),
-    deductionForAge: yup.number(),
-    sumClaimed: yup.number().required('Sum claimed is required'),
-    claimType: yup.string().oneOf(['presentValue', 'repairs']).required('Claim type is required')
+    dateOfPurchase: yup.date().required('Date of purchase is required'),
+    costPrice: yup.number()
+      .required('Cost price is required')
+      .min(0, 'Cost price must be positive'),
+    deductionForAge: yup.number()
+      .min(0, 'Deduction cannot be negative'),
+    sumClaimed: yup.number()
+      .required('Sum claimed is required')
+      .min(0, 'Sum claimed must be positive'),
+    claimType: yup.string()
+      .oneOf(['presentValue', 'repairs'], 'Please select a valid claim type')
+      .required('Claim type is required')
   })).min(1, 'At least one plant/machinery item is required'),
   
   // Loss/Damage Details
-  dateOfLoss: yup.string().required('Date of loss is required'),
+  dateOfLoss: yup.date().required('Date of loss is required'),
   timeOfLoss: yup.string().required('Time of loss is required'),
   lastSeenIntact: yup.string(),
-  whereDidLossOccur: yup.string().required('Where did loss occur is required'),
-  partsDamaged: yup.string().required('Parts damaged is required'),
-  whereCanBeInspected: yup.string().required('Where can be inspected is required'),
+  whereDidLossOccur: yup.string().required('Location of loss is required'),
+  partsDamaged: yup.string().required('Parts damaged description is required'),
+  whereCanBeInspected: yup.string().required('Inspection location is required'),
   fullAccountCircumstances: yup.string().required('Full account of circumstances is required'),
   suspicionInformation: yup.string(),
   
   // Theft/Third Party
   policeInformed: yup.boolean().required('Police informed status is required'),
-  policeStation: yup.string(),
+  policeStation: yup.string().when('policeInformed', {
+    is: true,
+    then: (schema) => schema.required('Police station details required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
   otherRecoveryActions: yup.string(),
   isSoleOwner: yup.boolean().required('Sole owner status is required'),
-  ownershipDetails: yup.string(),
+  ownershipDetails: yup.string().when('isSoleOwner', {
+    is: false,
+    then: (schema) => schema.required('Ownership details required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
   hasOtherInsurance: yup.boolean().required('Other insurance status is required'),
-  otherInsuranceDetails: yup.string(),
+  otherInsuranceDetails: yup.string().when('hasOtherInsurance', {
+    is: true,
+    then: (schema) => schema.required('Other insurance details required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
   thirdPartyInvolved: yup.boolean().required('Third party involvement is required'),
-  thirdPartyName: yup.string(),
-  thirdPartyAddress: yup.string(),
-  thirdPartyInsurer: yup.string(),
+  thirdPartyName: yup.string().when('thirdPartyInvolved', {
+    is: true,
+    then: (schema) => schema.required('Third party name required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  thirdPartyAddress: yup.string().when('thirdPartyInvolved', {
+    is: true,
+    then: (schema) => schema.required('Third party address required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  thirdPartyInsurer: yup.string().when('thirdPartyInvolved', {
+    is: true,
+    then: (schema) => schema.required('Third party insurer required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
   
+  // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to data privacy'),
   signature: yup.string().required('Signature required')
 });
 
-type ContractorsData = yup.InferType<typeof contractorsSchema>;
+interface PlantMachineryItem {
+  itemNumber: string;
+  yearOfManufacture: number;
+  make: string;
+  registrationNumber?: string;
+  dateOfPurchase: Date;
+  costPrice: number;
+  deductionForAge?: number;
+  sumClaimed: number;
+  claimType: 'presentValue' | 'repairs';
+}
+
+interface ContractorsData {
+  // Policy Details
+  policyNumber: string;
+  periodOfCoverFrom: Date;
+  periodOfCoverTo: Date;
+
+  // Insured Details
+  nameOfInsured: string;
+  companyName?: string;
+  title: string;
+  dateOfBirth: Date;
+  gender: string;
+  address: string;
+  phone: string;
+  email: string;
+  
+  // Plant/Machinery Details
+  plantMachineryItems: PlantMachineryItem[];
+  
+  // Loss/Damage Details
+  dateOfLoss: Date;
+  timeOfLoss: string;
+  lastSeenIntact?: string;
+  whereDidLossOccur: string;
+  partsDamaged: string;
+  whereCanBeInspected: string;
+  fullAccountCircumstances: string;
+  suspicionInformation?: string;
+  
+  // Theft/Third Party
+  policeInformed: boolean;
+  policeStation?: string;
+  otherRecoveryActions?: string;
+  isSoleOwner: boolean;
+  ownershipDetails?: string;
+  hasOtherInsurance: boolean;
+  otherInsuranceDetails?: string;
+  thirdPartyInvolved: boolean;
+  thirdPartyName?: string;
+  thirdPartyAddress?: string;
+  thirdPartyInsurer?: string;
+  
+  // Declaration
+  agreeToDataPrivacy: boolean;
+  signature: string;
+}
+
+// Reusable form components
+const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
+  const { register, formState: { errors }, clearErrors } = useFormContext();
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="text-destructive ml-1">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type={type}
+        maxLength={maxLength}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
+  const { register, watch, formState: { errors }, clearErrors } = useFormContext();
+  const currentValue = watch(name) || '';
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="text-destructive ml-1">*</span>}
+      </Label>
+      <Textarea
+        id={name}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        maxLength={maxLength}
+        {...props}
+      />
+      <div className="flex justify-between">
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
+        <span className="text-sm text-muted-foreground ml-auto">
+          {currentValue.length}/{maxLength}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const FormSelect = ({ name, label, required = false, placeholder, children, ...props }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="text-destructive ml-1">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(newValue) => {
+          setValue(name, newValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        {...props}
+      >
+        <SelectTrigger className={error ? 'border-destructive' : ''}>
+          <SelectValue placeholder={placeholder || `Select ${label}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {children}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormDatePicker = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {required && <span className="text-destructive ml-1">*</span>}
+      </Label>
+      <Input
+        type="date"
+        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
+        onChange={(e) => {
+          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+          setValue(name, dateValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        className={error ? 'border-destructive' : ''}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormRadioGroup = ({ name, label, required = false, options }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {required && <span className="text-destructive ml-1">*</span>}
+      </Label>
+      <RadioGroup
+        value={value?.toString()}
+        onValueChange={(newValue) => {
+          setValue(name, newValue === 'true');
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        className="flex space-x-6 mt-2"
+      >
+        {options.map((option: any) => (
+          <div key={option.value} className="flex items-center space-x-2">
+            <RadioGroupItem value={option.value} id={`${name}-${option.value}`} />
+            <Label htmlFor={`${name}-${option.value}`}>{option.label}</Label>
+          </div>
+        ))}
+      </RadioGroup>
+      {error && (
+        <p className="text-sm text-destructive mt-2">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
 
 const defaultValues: Partial<ContractorsData> = {
-  policeInformed: false,
-  isSoleOwner: true,
-  hasOtherInsurance: false,
-  thirdPartyInvolved: false,
+  policyNumber: '',
+  nameOfInsured: '',
+  companyName: '',
+  title: '',
+  gender: '',
+  address: '',
+  phone: '',
+  email: '',
   plantMachineryItems: [{
     itemNumber: '',
     yearOfManufacture: new Date().getFullYear(),
     make: '',
     registrationNumber: '',
-    dateOfPurchase: '',
+    dateOfPurchase: new Date(),
     costPrice: 0,
     deductionForAge: 0,
     sumClaimed: 0,
     claimType: 'repairs'
   }],
+  policeInformed: false,
+  isSoleOwner: true,
+  hasOtherInsurance: false,
+  thirdPartyInvolved: false,
   agreeToDataPrivacy: false,
   signature: ''
 };
@@ -118,11 +390,9 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
       const hasPending = sessionStorage.getItem('pendingSubmission');
       if (hasPending) {
         setShowPostAuthLoading(true);
-        // Hide loading after 5 seconds max (in case something goes wrong)
         setTimeout(() => setShowPostAuthLoading(false), 5000);
       }
     };
-
     checkPendingSubmission();
   }, []);
 
@@ -133,39 +403,35 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
     }
   }, [authShowSuccess]);
 
-  const formMethods = useForm<Partial<ContractorsData>>({
+  const formMethods = useForm<any>({
+    resolver: yupResolver(contractorsSchema),
     defaultValues,
     mode: 'onChange'
   });
 
-  const { watch, setValue } = formMethods;
-  const { saveDraft, clearDraft } = useFormDraft('contractors-claim', formMethods);
+  // Make toast available globally for MultiStepForm
+  useEffect(() => {
+    (window as any).toast = toast;
+  }, [toast]);
+
   const { fields: plantFields, append: appendPlant, remove: removePlant } = useFieldArray({
     control: formMethods.control,
     name: 'plantMachineryItems'
   });
-  
-  const watchedValues = watch();
 
+  const { saveDraft, clearDraft } = useFormDraft('contractors-claim', formMethods);
+  const watchedValues = formMethods.watch();
+
+  // Auto-save draft
   useEffect(() => {
-    const subscription = watch((value) => {
-      saveDraft(value);
+    const subscription = formMethods.watch((data) => {
+      saveDraft(data);
     });
     return () => subscription.unsubscribe();
-  }, [watch, saveDraft]);
-
-  const cleanData = (data: any) => {
-    const cleaned = Object.entries(data).reduce((acc, [key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        acc[key] = value;
-      }
-      return acc;
-    }, {} as any);
-    return cleaned;
-  };
+  }, [formMethods, saveDraft]);
 
   // Main submit handler that checks authentication
-  const handleFormSubmit = async (data: ContractorsData) => {
+  const handleSubmit = async (data: ContractorsData) => {
     // Prepare file upload data
     const fileUploadPromises: Array<Promise<[string, string]>> = [];
     
@@ -196,186 +462,90 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
     setShowSummary(true);
   };
 
+  // Step field mappings for validation
+  const stepFieldMappings = {
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
+    1: ['nameOfInsured', 'companyName', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
+    2: ['plantMachineryItems'],
+    3: ['dateOfLoss', 'timeOfLoss', 'lastSeenIntact', 'whereDidLossOccur', 'partsDamaged', 'whereCanBeInspected', 'fullAccountCircumstances', 'suspicionInformation'],
+    4: ['policeInformed', 'policeStation', 'otherRecoveryActions', 'isSoleOwner', 'ownershipDetails', 'hasOtherInsurance', 'otherInsuranceDetails', 'thirdPartyInvolved', 'thirdPartyName', 'thirdPartyAddress', 'thirdPartyInsurer'],
+    5: ['agreeToDataPrivacy', 'signature']
+  };
+
   const steps = [
     {
       id: 'policy',
       title: 'Policy Details',
       component: (
-        <FormSection title="Policy Information" description="Enter your policy details">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="policyNumber">Policy Number *</Label>
-              <Input
-                {...formMethods.register('policyNumber')}
-                placeholder="Enter policy number"
-              />
-              {formMethods.formState.errors.policyNumber && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.policyNumber.message}
-                </p>
-              )}
-            </div>
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormField name="policyNumber" label="Policy Number" required />
             
-            <div>
-              <Label htmlFor="periodOfCoverFrom">Period of Cover From *</Label>
-              <Input
-                type="date"
-                {...formMethods.register('periodOfCoverFrom')}
-              />
-              {formMethods.formState.errors.periodOfCoverFrom && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.periodOfCoverFrom.message}
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="periodOfCoverTo">Period of Cover To *</Label>
-              <Input
-                type="date"
-                {...formMethods.register('periodOfCoverTo')}
-              />
-              {formMethods.formState.errors.periodOfCoverTo && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.periodOfCoverTo.message}
-                </p>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
+              <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
             </div>
           </div>
-        </FormSection>
+        </FormProvider>
       )
     },
     {
       id: 'insured',
       title: 'Insured Details',
       component: (
-        <FormSection title="Insured Information" description="Enter the insured party details">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="nameOfInsured">Name of Insured *</Label>
-              <Input
-                {...formMethods.register('nameOfInsured')}
-                placeholder="Enter full name"
-              />
-              {formMethods.formState.errors.nameOfInsured && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.nameOfInsured.message}
-                </p>
-              )}
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormField name="nameOfInsured" label="Name of Insured" required />
+            <FormField name="companyName" label="Company Name" />
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormSelect name="title" label="Title" required placeholder="Select title">
+                <SelectItem value="mr">Mr</SelectItem>
+                <SelectItem value="mrs">Mrs</SelectItem>
+                <SelectItem value="ms">Ms</SelectItem>
+                <SelectItem value="dr">Dr</SelectItem>
+                <SelectItem value="chief">Chief</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </FormSelect>
+
+              <FormDatePicker name="dateOfBirth" label="Date of Birth" required />
+
+              <FormSelect name="gender" label="Gender" required placeholder="Select gender">
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </FormSelect>
             </div>
             
-            <div>
-              <Label htmlFor="companyName">Company Name</Label>
-              <Input
-                {...formMethods.register('companyName')}
-                placeholder="Enter company name (optional)"
-              />
-            </div>
+            <FormTextarea name="address" label="Address" required />
             
-            <div>
-              <Label htmlFor="title">Title *</Label>
-              <Select onValueChange={(value) => setValue('title', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select title" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mr">Mr</SelectItem>
-                  <SelectItem value="mrs">Mrs</SelectItem>
-                  <SelectItem value="ms">Ms</SelectItem>
-                  <SelectItem value="dr">Dr</SelectItem>
-                  <SelectItem value="chief">Chief</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-              {formMethods.formState.errors.title && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.title.message}
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-              <Input
-                type="date"
-                {...formMethods.register('dateOfBirth')}
-              />
-              {formMethods.formState.errors.dateOfBirth && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.dateOfBirth.message}
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="gender">Gender *</Label>
-              <Select onValueChange={(value) => setValue('gender', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-              {formMethods.formState.errors.gender && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.gender.message}
-                </p>
-              )}
-            </div>
-            
-            <div className="md:col-span-2">
-              <Label htmlFor="address">Address *</Label>
-              <Textarea
-                {...formMethods.register('address')}
-                placeholder="Enter full address"
-                rows={3}
-              />
-              {formMethods.formState.errors.address && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.address.message}
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <PhoneInput
-                label="Phone Number *"
-                value={watchedValues.phone || ''}
-                onChange={(value) => setValue('phone', value)}
-                error={formMethods.formState.errors.phone?.message}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                type="email"
-                {...formMethods.register('email')}
-                placeholder="Enter email address"
-              />
-              {formMethods.formState.errors.email && (
-                <p className="text-sm text-red-600 mt-1">
-                  {formMethods.formState.errors.email.message}
-                </p>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>
+                  Phone Number <span className="text-destructive ml-1">*</span>
+                </Label>
+                <PhoneInput
+                  value={watchedValues.phone || ''}
+                  onChange={(value) => formMethods.setValue('phone', value)}
+                  error={formMethods.formState.errors.phone?.message?.toString()}
+                />
+              </div>
+              <FormField name="email" label="Email" type="email" required />
             </div>
           </div>
-        </FormSection>
+        </FormProvider>
       )
     },
     {
       id: 'plant-machinery',
       title: 'Plant/Machinery Details',
       component: (
-        <FormSection title="Plant/Machinery Information" description="Provide details about the plant/machinery">
+        <FormProvider {...formMethods}>
           <div className="space-y-6">
             {plantFields.map((field, index) => (
-              <Card key={field.id} className="p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="text-lg font-semibold">Item {index + 1}</h4>
+              <Card key={field.id} className="p-6 bg-gray-50/50">
+                <div className="flex justify-between items-center mb-6">
+                  <h4 className="text-lg font-semibold text-primary">Plant/Machinery Item {index + 1}</h4>
                   {plantFields.length > 1 && (
                     <Button
                       type="button"
@@ -383,55 +553,46 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
                       size="sm"
                       onClick={() => removePlant(index)}
                     >
+                      <Trash2 className="h-4 w-4 mr-1" />
                       Remove
                     </Button>
                   )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Item Number *</Label>
-                    <Input {...formMethods.register(`plantMachineryItems.${index}.itemNumber`)} />
-                  </div>
-                  <div>
-                    <Label>Year of Manufacture *</Label>
-                    <Input type="number" {...formMethods.register(`plantMachineryItems.${index}.yearOfManufacture`)} />
-                  </div>
-                  <div>
-                    <Label>Make *</Label>
-                    <Input {...formMethods.register(`plantMachineryItems.${index}.make`)} />
-                  </div>
-                  <div>
-                    <Label>Registration Number</Label>
-                    <Input {...formMethods.register(`plantMachineryItems.${index}.registrationNumber`)} />
-                  </div>
-                  <div>
-                    <Label>Date of Purchase *</Label>
-                    <Input type="date" {...formMethods.register(`plantMachineryItems.${index}.dateOfPurchase`)} />
-                  </div>
-                  <div>
-                    <Label>Cost Price *</Label>
-                    <Input type="number" step="0.01" {...formMethods.register(`plantMachineryItems.${index}.costPrice`)} />
-                  </div>
-                  <div>
-                    <Label>Deduction for Age</Label>
-                    <Input type="number" step="0.01" {...formMethods.register(`plantMachineryItems.${index}.deductionForAge`)} />
-                  </div>
-                  <div>
-                    <Label>Sum Claimed *</Label>
-                    <Input type="number" step="0.01" {...formMethods.register(`plantMachineryItems.${index}.sumClaimed`)} />
-                  </div>
-                  <div>
-                    <Label>Claim Type *</Label>
-                    <Select onValueChange={(value: 'presentValue' | 'repairs') => setValue(`plantMachineryItems.${index}.claimType`, value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select claim type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="repairs">Repairs</SelectItem>
-                        <SelectItem value="presentValue">Present Value</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <FormField name={`plantMachineryItems.${index}.itemNumber`} label="Item Number" required />
+                  <FormField 
+                    name={`plantMachineryItems.${index}.yearOfManufacture`} 
+                    label="Year of Manufacture" 
+                    type="number" 
+                    required 
+                  />
+                  <FormField name={`plantMachineryItems.${index}.make`} label="Make" required />
+                  <FormField name={`plantMachineryItems.${index}.registrationNumber`} label="Registration Number" />
+                  <FormDatePicker name={`plantMachineryItems.${index}.dateOfPurchase`} label="Date of Purchase" required />
+                  <FormField 
+                    name={`plantMachineryItems.${index}.costPrice`} 
+                    label="Cost Price" 
+                    type="number" 
+                    step="0.01" 
+                    required 
+                  />
+                  <FormField 
+                    name={`plantMachineryItems.${index}.deductionForAge`} 
+                    label="Deduction for Age" 
+                    type="number" 
+                    step="0.01" 
+                  />
+                  <FormField 
+                    name={`plantMachineryItems.${index}.sumClaimed`} 
+                    label="Sum Claimed" 
+                    type="number" 
+                    step="0.01" 
+                    required 
+                  />
+                  <FormSelect name={`plantMachineryItems.${index}.claimType`} label="Claim Type" required placeholder="Select claim type">
+                    <SelectItem value="repairs">Repairs</SelectItem>
+                    <SelectItem value="presentValue">Present Value</SelectItem>
+                  </FormSelect>
                 </div>
               </Card>
             ))}
@@ -443,205 +604,224 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
                 yearOfManufacture: new Date().getFullYear(),
                 make: '',
                 registrationNumber: '',
-                dateOfPurchase: '',
+                dateOfPurchase: new Date(),
                 costPrice: 0,
                 deductionForAge: 0,
                 sumClaimed: 0,
                 claimType: 'repairs'
               })}
+              className="w-full"
             >
-              Add Another Item
+              <Plus className="h-4 w-4 mr-2" />
+              Add Another Plant/Machinery Item
             </Button>
           </div>
-        </FormSection>
+        </FormProvider>
       )
     },
     {
       id: 'loss-details',
       title: 'Loss/Damage Details',
       component: (
-        <FormSection title="Loss/Damage Information" description="Provide details about the loss or damage">
+        <FormProvider {...formMethods}>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Date of Loss *</Label>
-                <Input type="date" {...formMethods.register('dateOfLoss')} />
-              </div>
-              <div>
-                <Label>Time of Loss *</Label>
-                <Input type="time" {...formMethods.register('timeOfLoss')} />
-              </div>
+              <FormDatePicker name="dateOfLoss" label="Date of Loss" required />
+              <FormField name="timeOfLoss" label="Time of Loss" type="time" required />
             </div>
-            <div>
-              <Label>When was it last seen intact?</Label>
-              <Textarea {...formMethods.register('lastSeenIntact')} rows={2} />
-            </div>
-            <div>
-              <Label>Where did the loss occur? *</Label>
-              <Textarea {...formMethods.register('whereDidLossOccur')} rows={3} />
-            </div>
-            <div>
-              <Label>What parts were damaged? *</Label>
-              <Textarea {...formMethods.register('partsDamaged')} rows={3} />
-            </div>
-            <div>
-              <Label>Where can it be inspected? *</Label>
-              <Textarea {...formMethods.register('whereCanBeInspected')} rows={3} />
-            </div>
-            <div>
-              <Label>Give a full account of the circumstances *</Label>
-              <Textarea {...formMethods.register('fullAccountCircumstances')} rows={4} />
-            </div>
-            <div>
-              <Label>Any suspicion or other information</Label>
-              <Textarea {...formMethods.register('suspicionInformation')} rows={3} />
-            </div>
+            <FormTextarea name="lastSeenIntact" label="When was it last seen intact?" />
+            <FormTextarea name="whereDidLossOccur" label="Where did the loss occur?" required />
+            <FormTextarea name="partsDamaged" label="What parts were damaged?" required />
+            <FormTextarea name="whereCanBeInspected" label="Where can it be inspected?" required />
+            <FormTextarea name="fullAccountCircumstances" label="Give a full account of the circumstances" required />
+            <FormTextarea name="suspicionInformation" label="Any suspicion or other information" />
           </div>
-        </FormSection>
+        </FormProvider>
       )
     },
     {
       id: 'theft-third-party',
       title: 'Theft / Third Party',
       component: (
-        <FormSection title="Theft / Third Party Information" description="Additional information about theft and third parties">
-          <div className="space-y-4">
-            <div>
-              <Label>Have police been informed? *</Label>
-              <RadioGroup
-                value={watchedValues.policeInformed ? 'yes' : 'no'}
-                onValueChange={(value: 'yes' | 'no') => setValue('policeInformed', value === 'yes')}
-                className="flex space-x-4 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="yes" id="police-yes" />
-                  <Label htmlFor="police-yes">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="no" id="police-no" />
-                  <Label htmlFor="police-no">No</Label>
-                </div>
-              </RadioGroup>
-            </div>
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            <FormRadioGroup 
+              name="policeInformed" 
+              label="Have police been informed?" 
+              required
+              options={[
+                { value: 'true', label: 'Yes' },
+                { value: 'false', label: 'No' }
+              ]}
+            />
             
             {watchedValues.policeInformed && (
-              <div>
-                <Label>Police Station & Details</Label>
-                <Textarea {...formMethods.register('policeStation')} rows={3} />
-              </div>
+              <FormTextarea name="policeStation" label="Police Station & Details" required />
             )}
             
-            <div>
-              <Label>Other recovery actions taken</Label>
-              <Textarea {...formMethods.register('otherRecoveryActions')} rows={3} />
-            </div>
+            <FormTextarea name="otherRecoveryActions" label="Other recovery actions taken" />
             
-            <div>
-              <Label>Are you the sole owner? *</Label>
-              <RadioGroup
-                value={watchedValues.isSoleOwner ? 'yes' : 'no'}
-                onValueChange={(value: 'yes' | 'no') => setValue('isSoleOwner', value === 'yes')}
-                className="flex space-x-4 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="yes" id="sole-yes" />
-                  <Label htmlFor="sole-yes">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="no" id="sole-no" />
-                  <Label htmlFor="sole-no">No</Label>
-                </div>
-              </RadioGroup>
-            </div>
+            <FormRadioGroup 
+              name="isSoleOwner" 
+              label="Are you the sole owner?" 
+              required
+              options={[
+                { value: 'true', label: 'Yes' },
+                { value: 'false', label: 'No' }
+              ]}
+            />
             
             {!watchedValues.isSoleOwner && (
-              <div>
-                <Label>Please provide ownership details</Label>
-                <Textarea {...formMethods.register('ownershipDetails')} rows={3} />
-              </div>
+              <FormTextarea name="ownershipDetails" label="Please provide ownership details" required />
             )}
             
-            <div>
-              <Label>Do you have other insurance on this property? *</Label>
-              <RadioGroup
-                value={watchedValues.hasOtherInsurance ? 'yes' : 'no'}
-                onValueChange={(value: 'yes' | 'no') => setValue('hasOtherInsurance', value === 'yes')}
-                className="flex space-x-4 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="yes" id="insurance-yes" />
-                  <Label htmlFor="insurance-yes">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="no" id="insurance-no" />
-                  <Label htmlFor="insurance-no">No</Label>
-                </div>
-              </RadioGroup>
-            </div>
+            <FormRadioGroup 
+              name="hasOtherInsurance" 
+              label="Do you have other insurance on this property?" 
+              required
+              options={[
+                { value: 'true', label: 'Yes' },
+                { value: 'false', label: 'No' }
+              ]}
+            />
             
             {watchedValues.hasOtherInsurance && (
-              <div>
-                <Label>Please provide other insurance details</Label>
-                <Textarea {...formMethods.register('otherInsuranceDetails')} rows={3} />
-              </div>
+              <FormTextarea name="otherInsuranceDetails" label="Please provide other insurance details" required />
             )}
             
-            <div>
-              <Label>Is a third party involved? *</Label>
-              <RadioGroup
-                value={watchedValues.thirdPartyInvolved ? 'yes' : 'no'}
-                onValueChange={(value: 'yes' | 'no') => setValue('thirdPartyInvolved', value === 'yes')}
-                className="flex space-x-4 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="yes" id="third-party-yes" />
-                  <Label htmlFor="third-party-yes">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="no" id="third-party-no" />
-                  <Label htmlFor="third-party-no">No</Label>
-                </div>
-              </RadioGroup>
-            </div>
+            <FormRadioGroup 
+              name="thirdPartyInvolved" 
+              label="Is a third party involved?" 
+              required
+              options={[
+                { value: 'true', label: 'Yes' },
+                { value: 'false', label: 'No' }
+              ]}
+            />
             
             {watchedValues.thirdPartyInvolved && (
-              <div className="space-y-4">
-                <div>
-                  <Label>Third Party Name</Label>
-                  <Input {...formMethods.register('thirdPartyName')} />
-                </div>
-                <div>
-                  <Label>Third Party Address</Label>
-                  <Textarea {...formMethods.register('thirdPartyAddress')} rows={3} />
-                </div>
-                <div>
-                  <Label>Third Party Insurer</Label>
-                  <Input {...formMethods.register('thirdPartyInsurer')} />
-                </div>
+              <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
+                <h4 className="font-semibold text-blue-900">Third Party Details</h4>
+                <FormField name="thirdPartyName" label="Third Party Name" required />
+                <FormTextarea name="thirdPartyAddress" label="Third Party Address" required />
+                <FormField name="thirdPartyInsurer" label="Third Party Insurer" required />
               </div>
             )}
           </div>
-        </FormSection>
+        </FormProvider>
+      )
+    },
+    {
+      id: 'files',
+      title: 'Supporting Documents',
+      component: (
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            <div className="text-center">
+              <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Upload Supporting Documents</h3>
+              <p className="text-muted-foreground mb-6">
+                Please upload any relevant documents to support your claim (photos, receipts, reports, etc.)
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label>Photos of Damaged Items</Label>
+                <FileUpload
+                  accept="image/*"
+                  multiple
+                  onFilesChange={(files) => {
+                    if (files.length > 0) {
+                      setUploadedFiles(prev => ({ ...prev, damagePhotos: files[0] }));
+                    }
+                  }}
+                  maxSize={10}
+                  className="mt-2"
+                />
+              </div>
+
+              <div>
+                <Label>Purchase Receipts/Invoices</Label>
+                <FileUpload
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  multiple
+                  onFilesChange={(files) => {
+                    if (files.length > 0) {
+                      setUploadedFiles(prev => ({ ...prev, purchaseReceipts: files[0] }));
+                    }
+                  }}
+                  maxSize={10}
+                  className="mt-2"
+                />
+              </div>
+
+              <div>
+                <Label>Police Report (if applicable)</Label>
+                <FileUpload
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onFilesChange={(files) => {
+                    if (files.length > 0) {
+                      setUploadedFiles(prev => ({ ...prev, policeReport: files[0] }));
+                    }
+                  }}
+                  maxSize={10}
+                  className="mt-2"
+                />
+              </div>
+
+              <div>
+                <Label>Other Supporting Documents</Label>
+                <FileUpload
+                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                  multiple
+                  onFilesChange={(files) => {
+                    if (files.length > 0) {
+                      setUploadedFiles(prev => ({ ...prev, otherDocuments: files[0] }));
+                    }
+                  }}
+                  maxSize={10}
+                  className="mt-2"
+                />
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-yellow-800">Document Guidelines</h4>
+                  <ul className="text-sm text-yellow-700 mt-1 list-disc list-inside space-y-1">
+                    <li>Maximum file size: 10MB per file</li>
+                    <li>Accepted formats: PDF, JPG, JPEG, PNG, DOC, DOCX</li>
+                    <li>Clear, legible photos/scans work best</li>
+                    <li>Multiple files can be uploaded for each category</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </FormProvider>
       )
     },
     {
       id: 'declaration',
       title: 'Declaration',
       component: (
-        <FormSection title="Data Privacy & Declaration">
+        <FormProvider {...formMethods}>
           <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Data Privacy</h3>
-              <div className="text-sm text-gray-600 space-y-2">
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">Data Privacy</h3>
+              <div className="text-sm text-gray-700 space-y-3">
                 <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
                 <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
                 <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
               </div>
             </div>
             
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Declaration</h3>
-              <div className="text-sm text-gray-600 space-y-2">
+            <div className="bg-blue-50 p-6 rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">Declaration</h3>
+              <div className="text-sm text-blue-800 space-y-3">
                 <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
                 <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
                 <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
@@ -651,155 +831,179 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  id="declaration"
-                  checked={watchedValues.agreeToDataPrivacy}
-                  onCheckedChange={(checked: boolean) => setValue('agreeToDataPrivacy', checked)}
+                  id="agreeToDataPrivacy"
+                  checked={formMethods.watch('agreeToDataPrivacy') || false}
+                  onCheckedChange={(checked) => {
+                    formMethods.setValue('agreeToDataPrivacy', !!checked);
+                    if (formMethods.formState.errors.agreeToDataPrivacy) {
+                      formMethods.clearErrors('agreeToDataPrivacy');
+                    }
+                  }}
+                  className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
                 />
-                <Label htmlFor="declaration" className="text-sm">
-                  I agree to the data privacy policy and declaration above *
+                <Label htmlFor="agreeToDataPrivacy">
+                  I agree to the data privacy policy and declaration above <span className="text-destructive ml-1">*</span>
                 </Label>
               </div>
               {formMethods.formState.errors.agreeToDataPrivacy && (
-                <p className="text-sm text-red-600">
-                  {formMethods.formState.errors.agreeToDataPrivacy.message}
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
                 </p>
               )}
               
-              <div>
-                <Label htmlFor="signature">Digital Signature *</Label>
-                <Input
-                  {...formMethods.register('signature')}
-                  placeholder="Type your full name as signature"
-                />
-                {formMethods.formState.errors.signature && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {formMethods.formState.errors.signature.message}
-                  </p>
-                )}
+              <FormField name="signature" label="Digital Signature" required placeholder="Type your full name as signature" />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Place</Label>
+                  <Input value="Nigeria" disabled className="bg-gray-50" />
+                </div>
+                <div>
+                  <Label>Date</Label>
+                  <Input value={new Date().toISOString().split('T')[0]} disabled className="bg-gray-50" />
+                </div>
               </div>
             </div>
           </div>
-        </FormSection>
+        </FormProvider>
       )
     }
   ];
 
-  if (showSuccess) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <CardTitle className="text-green-600">Claim Submitted Successfully!</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-gray-600">
-              Your contractors plant & machinery claim has been submitted successfully. 
-              You will receive a confirmation email shortly.
-            </p>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">For claim status and inquiries:</h4>
-              <p className="text-sm">Email: claims@neminsurance.com</p>
-              <p className="text-sm">Phone: +234 1 234 5678</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Contractors Plant & Machinery Claim Form</h1>
-          <p className="text-gray-600 mt-2">Submit your claim for contractors plant and machinery</p>
-        </div>
-
-        <MultiStepForm
-          steps={steps}
-          onSubmit={onFinalSubmit}
-          formMethods={formMethods}
-        />
-
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Review Your Claim</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold">Policy Information</h3>
-                <p>Policy Number: {watchedValues.policyNumber}</p>
-                <p>Period: {watchedValues.periodOfCoverFrom?.toString()} to {watchedValues.periodOfCoverTo?.toString()}</p>
-              </div>
-              
-              <div>
-                <h3 className="font-semibold">Insured Details</h3>
-                <p>Name: {watchedValues.nameOfInsured}</p>
-                <p>Email: {watchedValues.email}</p>
-                <p>Phone: {watchedValues.phone}</p>
-              </div>
-              
-              <div>
-                <h3 className="font-semibold">Plant/Machinery Details</h3>
-                <p>Items: {watchedValues.plantMachineryItems?.length || 0} item(s)</p>
-              </div>
-              
-              <div className="flex space-x-4">
-                <Button variant="outline" onClick={() => setShowSummary(false)}>
-                  Edit Details
-                </Button>
-                <Button onClick={() => handleFormSubmit(watchedValues)} disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    'Submit Claim'
-                  )}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-        
-        {/* Success Modal */}
-        <SuccessModal
-          isOpen={showSuccess || authShowSuccess || authSubmitting}
-          onClose={() => {
-            setShowSuccess(false);
-            setAuthShowSuccess();
-          }}
-          title="Contractors Plant & Machinery Claim Submitted!"
-          formType="Contractors Plant & Machinery Claim"
-          isLoading={authSubmitting}
-          loadingMessage="Your contractors plant & machinery claim is being processed and submitted..."
-        />
-      </div>
-
-      {/* Post-Authentication Loading Overlay */}
-      {showPostAuthLoading && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
-              </div>
-              <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
-              <p className="text-muted-foreground">
-                Thank you for signing in! Your contractors plant & machinery claim is now being submitted...
+    <FormProvider {...formMethods}>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+        {/* Loading overlay */}
+        {showPostAuthLoading && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-lg font-semibold">Completing your submission...</p>
+              <p className="text-sm text-muted-foreground text-center">
+                Please do not close this window while we process your claim
               </p>
             </div>
           </div>
+        )}
+
+        <div className="container mx-auto py-8 px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
+                <Settings className="w-8 h-8 text-primary" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight mb-2">Contractors Plant & Machinery Claim</h1>
+              <p className="text-muted-foreground">
+                Submit your claim for contractors plant and machinery insurance
+              </p>
+            </div>
+
+            <Card className="shadow-xl border-0 bg-white/50 backdrop-blur-sm">
+              <CardHeader className="text-center pb-2">
+                <CardTitle className="flex items-center justify-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Contractors Plant & Machinery Insurance Claim
+                </CardTitle>
+                <CardDescription>
+                  Complete all sections to submit your contractors claim
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MultiStepForm
+                  steps={steps}
+                  onSubmit={onFinalSubmit}
+                  formMethods={formMethods}
+                  submitButtonText="Submit Contractors Claim"
+                  stepFieldMappings={stepFieldMappings}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      )}
-    </div>
+
+        {/* Summary Dialog */}
+        <Dialog open={showSummary} onOpenChange={setShowSummary}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Confirm Your Contractors Claim Submission</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">Policy Number:</span>
+                  <p>{watchedValues.policyNumber}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Insured Name:</span>
+                  <p>{watchedValues.nameOfInsured}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Items Claimed:</span>
+                  <p>{watchedValues.plantMachineryItems?.length || 0} item(s)</p>
+                </div>
+                <div>
+                  <span className="font-medium">Date of Loss:</span>
+                  <p>{watchedValues.dateOfLoss ? new Date(watchedValues.dateOfLoss).toLocaleDateString() : 'N/A'}</p>
+                </div>
+              </div>
+              
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-yellow-800">Important Notice</h3>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Please review all information carefully before submitting. Once submitted, you cannot modify your claim details. Uploaded documents will be processed with your claim.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {Object.keys(uploadedFiles).length > 0 && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <h4 className="font-semibold text-green-800 mb-2">Uploaded Documents</h4>
+                  <ul className="text-sm text-green-700 list-disc list-inside">
+                    {Object.entries(uploadedFiles).map(([key, file]) => (
+                      <li key={key}>{file.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSummary(false)}>
+                Review Again
+              </Button>
+              <Button 
+                onClick={() => handleSubmit(watchedValues)}
+                disabled={authSubmitting}
+                className="min-w-[120px]"
+              >
+                {authSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Claim'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Success Modal */}
+        <SuccessModal
+          isOpen={authShowSuccess}
+          onClose={() => setAuthShowSuccess()}
+          title="Contractors Claim Submitted Successfully!"
+          message="Your contractors plant & machinery claim has been received and is being processed. You will receive updates via email and SMS."
+          formType="Contractors Plant & Machinery Claim"
+        />
+      </div>
+    </FormProvider>
   );
 };
 
