@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { get } from 'lodash';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,19 +37,18 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import _ from 'lodash';
 
 const professionalIndemnitySchema = yup.object().shape({
   // Policy Details
   policyNumber: yup.string().required('Policy number is required'),
-  coverageFromDate: yup.date().required('Coverage from date is required'),
-  coverageToDate: yup.date().required('Coverage to date is required'),
+  coverageFromDate: yup.date().required('Coverage from date is required').typeError('Please enter a valid date'),
+  coverageToDate: yup.date().required('Coverage to date is required').typeError('Please enter a valid date'),
   
   // Insured Details
   insuredName: yup.string().required('Name of insured is required'),
   companyName: yup.string(),
   title: yup.string().required('Title is required'),
-  dateOfBirth: yup.date().required('Date of birth is required'),
+  dateOfBirth: yup.date().required('Date of birth is required').typeError('Please enter a valid date'),
   gender: yup.string().required('Gender is required'),
   address: yup.string().required('Address is required'),
   phone: yup.string().required('Phone number is required'),
@@ -63,10 +63,11 @@ const professionalIndemnitySchema = yup.object().shape({
   contractInWriting: yup.string().required('Please specify if contract was in writing'),
   contractDetails: yup.string().when('contractInWriting', {
     is: 'no',
-    then: (schema) => schema.required('Contract details are required')
+    then: (schema) => schema.required('Contract details are required'),
+    otherwise: (schema) => schema.notRequired()
   }),
-  workPerformedFrom: yup.date().required('Work performed from date is required'),
-  workPerformedTo: yup.date().required('Work performed to date is required'),
+  workPerformedFrom: yup.date().required('Work performed from date is required').typeError('Please enter a valid date'),
+  workPerformedTo: yup.date().required('Work performed to date is required').typeError('Please enter a valid date'),
   
   // Work Performer Details
   workPerformerName: yup.string().required('Work performer name is required'),
@@ -76,40 +77,46 @@ const professionalIndemnitySchema = yup.object().shape({
   
   // Claim Details
   claimNature: yup.string().required('Nature of claim is required'),
-  firstAwareDate: yup.date().required('Date first became aware is required'),
-  claimMadeDate: yup.date().required('Date claim was made is required'),
+  firstAwareDate: yup.date().required('Date first became aware is required').typeError('Please enter a valid date'),
+  claimMadeDate: yup.date().required('Date claim was made is required').typeError('Please enter a valid date'),
   intimationMode: yup.string().required('Please specify if intimation was oral or written'),
   oralDetails: yup.string().when('intimationMode', {
     is: 'oral',
-    then: (schema) => schema.required('Oral details are required')
+    then: (schema) => schema.required('Oral details are required'),
+    otherwise: (schema) => schema.notRequired()
   }),
-  amountClaimed: yup.number().required('Amount claimed is required'),
+  amountClaimed: yup.number().required('Amount claimed is required').typeError('Please enter a valid number'),
   
   // Response
   responseComments: yup.string().required('Response comments are required'),
   quantumComments: yup.string().required('Quantum comments are required'),
-  estimatedLiability: yup.number().required('Estimated liability is required'),
+  estimatedLiability: yup.number().required('Estimated liability is required').typeError('Please enter a valid number'),
   additionalInfo: yup.string().required('Please specify if you have additional information'),
   additionalDetails: yup.string().when('additionalInfo', {
     is: 'yes',
-    then: (schema) => schema.required('Additional details are required')
+    then: (schema) => schema.required('Additional details are required'),
+    otherwise: (schema) => schema.notRequired()
   }),
   solicitorInstructed: yup.string().required('Please specify if solicitor was instructed'),
   solicitorName: yup.string().when('solicitorInstructed', {
     is: 'yes',
-    then: (schema) => schema.required('Solicitor name is required')
+    then: (schema) => schema.required('Solicitor name is required'),
+    otherwise: (schema) => schema.notRequired()
   }),
   solicitorAddress: yup.string().when('solicitorInstructed', {
     is: 'yes',
-    then: (schema) => schema.required('Solicitor address is required')
+    then: (schema) => schema.required('Solicitor address is required'),
+    otherwise: (schema) => schema.notRequired()
   }),
   solicitorCompany: yup.string().when('solicitorInstructed', {
     is: 'yes',
-    then: (schema) => schema.required('Solicitor company is required')
+    then: (schema) => schema.required('Solicitor company is required'),
+    otherwise: (schema) => schema.notRequired()
   }),
   solicitorRates: yup.string().when('solicitorInstructed', {
     is: 'yes',
-    then: (schema) => schema.required('Solicitor rates are required')
+    then: (schema) => schema.required('Solicitor rates are required'),
+    otherwise: (schema) => schema.notRequired()
   }),
   
   // Declaration
@@ -162,11 +169,14 @@ interface ProfessionalIndemnityClaimData {
   signature: string;
 }
 
-const defaultValues: Partial<ProfessionalIndemnityClaimData> = {
+const defaultValues = {
   policyNumber: '',
+  coverageFromDate: undefined,
+  coverageToDate: undefined,
   insuredName: '',
   companyName: '',
   title: '',
+  dateOfBirth: undefined,
   gender: '',
   address: '',
   phone: '',
@@ -174,22 +184,26 @@ const defaultValues: Partial<ProfessionalIndemnityClaimData> = {
   claimantName: '',
   claimantAddress: '',
   retainerDetails: '',
-  contractInWriting: 'no',
+  contractInWriting: '' as '' | 'yes' | 'no',
   contractDetails: '',
+  workPerformedFrom: undefined,
+  workPerformedTo: undefined,
   workPerformerName: '',
   workPerformerTitle: '',
   workPerformerDuties: '',
   workPerformerContact: '',
   claimNature: '',
-  intimationMode: 'oral',
+  firstAwareDate: undefined,
+  claimMadeDate: undefined,
+  intimationMode: '' as '' | 'oral' | 'written',
   oralDetails: '',
-  amountClaimed: 0,
+  amountClaimed: undefined,
   responseComments: '',
   quantumComments: '',
-  estimatedLiability: 0,
-  additionalInfo: 'no',
+  estimatedLiability: undefined,
+  additionalInfo: '' as '' | 'yes' | 'no',
   additionalDetails: '',
-  solicitorInstructed: 'no',
+  solicitorInstructed: '' as '' | 'yes' | 'no',
   solicitorName: '',
   solicitorAddress: '',
   solicitorCompany: '',
@@ -246,101 +260,10 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
     mode: 'onChange'
   });
 
-  // Step validation function
-  const validateStep = async (stepId: string): Promise<boolean> => {
-    const fieldsToValidate = stepFieldMappings[stepId as keyof typeof stepFieldMappings] || [];
-    
-    // Get current form values
-    const currentValues = formMethods.getValues();
-    
-    let hasErrors = false;
-    const errors: string[] = [];
-    
-    // Validate each field for this step
-    for (const fieldName of fieldsToValidate) {
-      try {
-        await professionalIndemnitySchema.validateAt(fieldName, currentValues);
-      } catch (error: any) {
-        hasErrors = true;
-        errors.push(error.message);
-        formMethods.setError(fieldName, { 
-          type: 'manual', 
-          message: error.message 
-        });
-      }
-    }
-    
-    // Handle conditional fields
-    if (stepId === 'retainer') {
-      if (currentValues.contractInWriting === 'no' && !currentValues.contractDetails?.trim()) {
-        hasErrors = true;
-        errors.push('Contract details are required when contract is not in writing');
-        formMethods.setError('contractDetails', { 
-          type: 'manual', 
-          message: 'Contract details are required when contract is not in writing' 
-        });
-      }
-    }
-    
-    if (stepId === 'claim') {
-      if (currentValues.intimationMode === 'oral' && !currentValues.oralDetails?.trim()) {
-        hasErrors = true;
-        errors.push('Oral details are required when intimation was oral');
-        formMethods.setError('oralDetails', { 
-          type: 'manual', 
-          message: 'Oral details are required when intimation was oral' 
-        });
-      }
-    }
-    
-    if (stepId === 'response') {
-      if (currentValues.additionalInfo === 'yes' && !currentValues.additionalDetails?.trim()) {
-        hasErrors = true;
-        errors.push('Additional details are required');
-        formMethods.setError('additionalDetails', { 
-          type: 'manual', 
-          message: 'Additional details are required' 
-        });
-      }
-      
-      if (currentValues.solicitorInstructed === 'yes') {
-        const solicitorFields = ['solicitorName', 'solicitorAddress', 'solicitorCompany', 'solicitorRates'];
-        for (const field of solicitorFields) {
-          if (!currentValues[field]?.trim()) {
-            hasErrors = true;
-            const fieldLabel = field.replace('solicitor', 'Solicitor ').replace(/([A-Z])/g, ' $1').toLowerCase();
-            errors.push(`${fieldLabel} is required when solicitor is instructed`);
-            formMethods.setError(field, { 
-              type: 'manual', 
-              message: `${fieldLabel} is required when solicitor is instructed` 
-            });
-          }
-        }
-      }
-    }
-    
-    if (hasErrors) {
-      toast({
-        title: "Validation Error",
-        description: `Please fill in all required fields before proceeding. ${errors.length} error(s) found.`,
-        variant: "destructive",
-      });
-      
-      // Focus on first error field
-      const firstErrorField = fieldsToValidate.find(field => formMethods.formState.errors[field]);
-      if (firstErrorField) {
-        const element = document.querySelector(`[name="${firstErrorField}"]`) as HTMLElement;
-        if (element) {
-          element.focus();
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
-      
-      return false;
-    }
-    
-    return true;
-  };
+  // Make toast available globally for MultiStepForm
+  useEffect(() => {
+    (window as any).toast = toast;
+  }, [toast]);
 
   const { saveDraft, clearDraft } = useFormDraft('professionalIndemnity', formMethods);
   const watchedValues = formMethods.watch();
@@ -385,204 +308,147 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
     setShowSummary(true);
   };
 
-  // Form Components with Validation
-  const FormFieldWrapper = ({ name, label, required = true, children }: { 
-    name: string; 
-    label: string; 
-    required?: boolean; 
-    children: React.ReactNode;
-  }) => {
-    const error = formMethods.formState.errors[name];
-    const hasError = !!error;
-    
-    return (
-      <div className="space-y-1">
-        <Label className={cn(hasError && "text-destructive")}>
-          {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
-        </Label>
-        <div className={cn(hasError && "has-error")}>
-          {children}
-        </div>
-        {hasError && (
-          <p className="text-sm text-destructive mt-1">
-            {error?.message?.toString()}
-          </p>
-        )}
-      </div>
-    );
-  };
-
-  const FormInput = ({ name, label, type = "text", placeholder, required = true }: {
-    name: string;
-    label: string;
-    type?: string;
-    placeholder?: string;
-    required?: boolean;
-  }) => {
-    const error = formMethods.formState.errors[name];
-    const hasError = !!error;
-    
-    return (
-      <FormFieldWrapper name={name} label={label} required={required}>
-        <Input
-          {...formMethods.register(name)}
-          type={type}
-          placeholder={placeholder}
-          className={cn(hasError && "border-red-500 focus:border-red-500")}
-        />
-      </FormFieldWrapper>
-    );
-  };
-
-  const FormTextarea = ({ name, label, placeholder, rows = 3, required = true }: {
-    name: string;
-    label: string;
-    placeholder?: string;
-    rows?: number;
-    required?: boolean;
-  }) => {
-    const error = formMethods.formState.errors[name];
-    const hasError = !!error;
-    
-    return (
-      <FormFieldWrapper name={name} label={label} required={required}>
-        <Textarea
-          {...formMethods.register(name)}
-          placeholder={placeholder}
-          rows={rows}
-          className={cn(hasError && "border-red-500 focus:border-red-500")}
-        />
-      </FormFieldWrapper>
-    );
-  };
-
-  const FormSelect = ({ name, label, placeholder, children, required = true }: {
-    name: string;
-    label: string;
-    placeholder?: string;
-    children: React.ReactNode;
-    required?: boolean;
-  }) => {
-    const error = formMethods.formState.errors[name];
-    const hasError = !!error;
-    const value = formMethods.watch(name);
-    
-    return (
-      <FormFieldWrapper name={name} label={label} required={required}>
-        <Select
-          value={value || ''}
-          onValueChange={(selectedValue) => {
-            formMethods.setValue(name, selectedValue);
-            if (hasError) {
-              formMethods.clearErrors(name);
+// Form field components with validation (defined outside main component to prevent focus loss)
+const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
+  const { register, formState: { errors }, clearErrors } = useFormContext();
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type={type}
+        maxLength={maxLength}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
             }
-          }}
-        >
-          <SelectTrigger className={cn(hasError && "border-red-500 focus:border-red-500")}>
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
-          <SelectContent>
-            {children}
-          </SelectContent>
-        </Select>
-      </FormFieldWrapper>
-    );
-  };
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
 
-  const FormDatePicker = ({ name, label, required = true }: {
-    name: string;
-    label: string;
-    required?: boolean;
-  }) => {
-    const error = formMethods.formState.errors[name];
-    const hasError = !!error;
-    const value = formMethods.watch(name);
-    
-    return (
-      <FormFieldWrapper name={name} label={label} required={required}>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !value && "text-muted-foreground",
-                hasError && "border-red-500"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <ReactCalendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={(date) => {
-                formMethods.setValue(name, date);
-                if (hasError) {
-                  formMethods.clearErrors(name);
-                }
-              }}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </FormFieldWrapper>
-    );
-  };
-
-  const FormCheckbox = ({ name, label, required = true }: {
-    name: string;
-    label: string;
-    required?: boolean;
-  }) => {
-    const error = formMethods.formState.errors[name];
-    const hasError = !!error;
-    const value = formMethods.watch(name);
-    
-    return (
-      <div className="space-y-1">
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id={name}
-            checked={value || false}
-            onCheckedChange={(checked) => {
-              formMethods.setValue(name, !!checked);
-              if (hasError) {
-                formMethods.clearErrors(name);
-              }
-            }}
-            className={cn(hasError && "border-red-500")}
-          />
-          <Label 
-            htmlFor={name}
-            className={cn(hasError && "text-destructive", "text-sm")}
-          >
-            {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
-          </Label>
-        </div>
-        {hasError && (
-          <p className="text-sm text-destructive mt-1">
-            {error?.message?.toString()}
-          </p>
+const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
+  const { register, watch, formState: { errors }, clearErrors } = useFormContext();
+  const currentValue = watch(name) || '';
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Textarea
+        id={name}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      <div className="flex justify-between">
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
         )}
+        <span className="text-sm text-muted-foreground ml-auto">
+          {currentValue.length}/{maxLength}
+        </span>
       </div>
-    );
-  };
+    </div>
+  );
+};
+
+const FormSelect = ({ name, label, required = false, placeholder, children, ...props }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(newValue) => {
+          setValue(name, newValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        {...props}
+      >
+        <SelectTrigger className={error ? 'border-destructive' : ''}>
+          <SelectValue placeholder={placeholder || `Select ${label}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {children}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormDatePicker = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        type="date"
+        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
+        onChange={(e) => {
+          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+          setValue(name, dateValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        className={error ? 'border-destructive' : ''}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
 
   // Step field mappings for validation
   const stepFieldMappings = {
-    policy: ['policyNumber', 'coverageFromDate', 'coverageToDate'],
-    insured: ['insuredName', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
-    claimant: ['claimantName', 'claimantAddress'],
-    retainer: ['retainerDetails', 'contractInWriting', 'workPerformedFrom', 'workPerformedTo', 'workPerformerName', 'workPerformerTitle', 'workPerformerDuties', 'workPerformerContact'],
-    claim: ['claimNature', 'firstAwareDate', 'claimMadeDate', 'intimationMode', 'amountClaimed'],
-    response: ['responseComments', 'quantumComments', 'estimatedLiability', 'additionalInfo', 'solicitorInstructed'],
-    declaration: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
+    0: ['policyNumber', 'coverageFromDate', 'coverageToDate'],
+    1: ['insuredName', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
+    2: ['claimantName', 'claimantAddress'],
+    3: ['retainerDetails', 'contractInWriting', 'contractDetails', 'workPerformedFrom', 'workPerformedTo', 'workPerformerName', 'workPerformerTitle', 'workPerformerDuties', 'workPerformerContact'],
+    4: ['claimNature', 'firstAwareDate', 'claimMadeDate', 'intimationMode', 'oralDetails', 'amountClaimed'],
+    5: ['responseComments', 'quantumComments', 'estimatedLiability', 'additionalInfo', 'additionalDetails', 'solicitorInstructed', 'solicitorName', 'solicitorAddress', 'solicitorCompany', 'solicitorRates'],
+    6: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
   };
 
   const steps = [
@@ -590,390 +456,476 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
       id: 'policy',
       title: 'Policy Details',
       component: (
-        <div className="space-y-4">
-          <FormInput
-            name="policyNumber"
-            label="Policy Number"
-            placeholder="Enter policy number"
-          />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormDatePicker
-              name="coverageFromDate"
-              label="Period of Cover - From"
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormField
+              name="policyNumber"
+              label="Policy Number"
+              placeholder="Enter policy number"
+              required
             />
-            <FormDatePicker
-              name="coverageToDate"
-              label="Period of Cover - To"
-            />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormDatePicker
+                name="coverageFromDate"
+                label="Period of Cover - From"
+                required
+              />
+              <FormDatePicker
+                name="coverageToDate"
+                label="Period of Cover - To"
+                required
+              />
+            </div>
           </div>
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'insured',
       title: 'Insured Details',
       component: (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormInput
-              name="insuredName"
-              label="Name of Insured"
-              placeholder="Enter name of insured"
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                name="insuredName"
+                label="Name of Insured"
+                placeholder="Enter name of insured"
+                required
+              />
+              <FormField
+                name="companyName"
+                label="Company Name"
+                placeholder="Enter company name (if applicable)"
+                required={false}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormSelect
+                name="title"
+                label="Title"
+                placeholder="Select title"
+                required
+              >
+                <SelectItem value="Mr">Mr</SelectItem>
+                <SelectItem value="Mrs">Mrs</SelectItem>
+                <SelectItem value="Chief">Chief</SelectItem>
+                <SelectItem value="Dr">Dr</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </FormSelect>
+              <FormDatePicker
+                name="dateOfBirth"
+                label="Date of Birth"
+                required
+              />
+              <FormSelect
+                name="gender"
+                label="Gender"
+                placeholder="Select gender"
+                required
+              >
+                <SelectItem value="Male">Male</SelectItem>
+                <SelectItem value="Female">Female</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </FormSelect>
+            </div>
+            
+            <FormTextarea
+              name="address"
+              label="Address"
+              placeholder="Enter full address"
+              rows={3}
+              required
             />
-            <FormInput
-              name="companyName"
-              label="Company Name"
-              placeholder="Enter company name (if applicable)"
-              required={false}
-            />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                name="phone"
+                label="Phone"
+                placeholder="Enter phone number"
+                required
+              />
+              <FormField
+                name="email"
+                label="Email"
+                type="email"
+                placeholder="Enter email address"
+                required
+              />
+            </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormSelect
-              name="title"
-              label="Title"
-              placeholder="Select title"
-            >
-              <SelectItem value="Mr">Mr</SelectItem>
-              <SelectItem value="Mrs">Mrs</SelectItem>
-              <SelectItem value="Chief">Chief</SelectItem>
-              <SelectItem value="Dr">Dr</SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
-            </FormSelect>
-            <FormDatePicker
-              name="dateOfBirth"
-              label="Date of Birth"
-            />
-            <FormSelect
-              name="gender"
-              label="Gender"
-              placeholder="Select gender"
-            >
-              <SelectItem value="Male">Male</SelectItem>
-              <SelectItem value="Female">Female</SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
-            </FormSelect>
-          </div>
-          
-          <FormTextarea
-            name="address"
-            label="Address"
-            placeholder="Enter full address"
-            rows={3}
-          />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormInput
-              name="phone"
-              label="Phone"
-              placeholder="Enter phone number"
-            />
-            <FormInput
-              name="email"
-              label="Email"
-              type="email"
-              placeholder="Enter email address"
-            />
-          </div>
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'claimant',
       title: 'Claimant Details',
       component: (
-        <div className="space-y-4">
-          <FormInput
-            name="claimantName"
-            label="Full Name of Claimant"
-            placeholder="Enter claimant's full name"
-          />
-          
-          <FormTextarea
-            name="claimantAddress"
-            label="Address of Claimant"
-            placeholder="Enter claimant's full address"
-            rows={3}
-          />
-        </div>
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormField
+              name="claimantName"
+              label="Full Name of Claimant"
+              placeholder="Enter claimant's full name"
+              required
+            />
+            
+            <FormTextarea
+              name="claimantAddress"
+              label="Address of Claimant"
+              placeholder="Enter claimant's full address"
+              rows={3}
+              required
+            />
+          </div>
+        </FormProvider>
       )
     },
     {
       id: 'retainer',
       title: 'Retainer/Contract Details',
       component: (
-        <div className="space-y-4">
-          <FormTextarea
-            name="retainerDetails"
-            label="What were you retained/contracted to do?"
-            placeholder="Describe the nature of your professional engagement"
-            rows={4}
-          />
-          
-          <FormSelect
-            name="contractInWriting"
-            label="Was your contract evidenced in writing?"
-            placeholder="Select option"
-          >
-            <SelectItem value="yes">Yes</SelectItem>
-            <SelectItem value="no">No</SelectItem>
-          </FormSelect>
-          
-          {watchedValues.contractInWriting === 'yes' && (
-            <FileUpload
-              label="Contract Document (PDF, max 3MB)"
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, contractDocument: file }))}
-              currentFile={uploadedFiles.contractDocument}
-              accept=".pdf"
-              maxSize={3}
-            />
-          )}
-          
-          {watchedValues.contractInWriting === 'no' && (
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
             <FormTextarea
-              name="contractDetails"
-              label="Details of contract and its terms"
-              placeholder="Describe the contract details and terms"
+              name="retainerDetails"
+              label="What were you retained/contracted to do?"
+              placeholder="Describe the nature of your professional engagement"
               rows={4}
+              required
             />
-          )}
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormDatePicker
-              name="workPerformedFrom"
-              label="When did you perform the work giving rise to the claim? From"
-            />
-            <FormDatePicker
-              name="workPerformedTo"
-              label="To"
-            />
-          </div>
-          
-          <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-            <h3 className="font-medium">Who actually performed the work?</h3>
+            
+            <FormSelect
+              name="contractInWriting"
+              label="Was your contract evidenced in writing?"
+              placeholder="Select option"
+              required
+            >
+              <SelectItem value="yes">Yes</SelectItem>
+              <SelectItem value="no">No</SelectItem>
+            </FormSelect>
+            
+            {watchedValues.contractInWriting === 'yes' && (
+              <FileUpload
+                label="Contract Document (PDF, max 3MB)"
+                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, contractDocument: file }))}
+                currentFile={uploadedFiles.contractDocument}
+                accept=".pdf"
+                maxSize={3}
+              />
+            )}
+            
+            {watchedValues.contractInWriting === 'no' && (
+              <FormTextarea
+                name="contractDetails"
+                label="Details of contract and its terms"
+                placeholder="Describe the contract details and terms"
+                rows={4}
+                required
+              />
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput
-                name="workPerformerName"
-                label="Name"
-                placeholder="Enter name"
+              <FormDatePicker
+                name="workPerformedFrom"
+                label="When did you perform the work giving rise to the claim? From"
+                required
               />
-              <FormInput
-                name="workPerformerTitle"
-                label="Title"
-                placeholder="Enter title"
-              />
-              <FormInput
-                name="workPerformerDuties"
-                label="Duties"
-                placeholder="Enter duties"
-              />
-              <FormInput
-                name="workPerformerContact"
-                label="Contact"
-                placeholder="Enter contact information"
+              <FormDatePicker
+                name="workPerformedTo"
+                label="To"
+                required
               />
             </div>
+            
+            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+              <h3 className="font-medium">Who actually performed the work?</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  name="workPerformerName"
+                  label="Name"
+                  placeholder="Enter name"
+                  required
+                />
+                <FormField
+                  name="workPerformerTitle"
+                  label="Title"
+                  placeholder="Enter title"
+                  required
+                />
+                <FormField
+                  name="workPerformerDuties"
+                  label="Duties"
+                  placeholder="Enter duties"
+                  required
+                />
+                <FormField
+                  name="workPerformerContact"
+                  label="Contact"
+                  placeholder="Enter contact information"
+                  required
+                />
+              </div>
+            </div>
           </div>
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'claim',
       title: 'Claim Details',
       component: (
-        <div className="space-y-4">
-          <FormTextarea
-            name="claimNature"
-            label="Nature of the claim or the circumstances"
-            placeholder="Describe the nature of the claim in detail"
-            rows={4}
-          />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormDatePicker
-              name="firstAwareDate"
-              label="Date first became aware of the claim"
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormTextarea
+              name="claimNature"
+              label="Nature of the claim or the circumstances"
+              placeholder="Describe the nature of the claim in detail"
+              rows={4}
+              required
             />
-            <FormDatePicker
-              name="claimMadeDate"
-              label="Date claim or intimation of claim made to you"
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormDatePicker
+                name="firstAwareDate"
+                label="Date first became aware of the claim"
+                required
+              />
+              <FormDatePicker
+                name="claimMadeDate"
+                label="Date claim or intimation of claim made to you"
+                required
+              />
+            </div>
+            
+            <FormSelect
+              name="intimationMode"
+              label="Was intimation oral or written?"
+              placeholder="Select option"
+              required
+            >
+              <SelectItem value="oral">Oral</SelectItem>
+              <SelectItem value="written">Written</SelectItem>
+            </FormSelect>
+            
+            {watchedValues.intimationMode === 'written' && (
+              <FileUpload
+                label="Written Intimation Document (PDF, max 3MB)"
+                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, writtenIntimation: file }))}
+                currentFile={uploadedFiles.writtenIntimation}
+                accept=".pdf"
+                maxSize={3}
+              />
+            )}
+            
+            {watchedValues.intimationMode === 'oral' && (
+              <FormTextarea
+                name="oralDetails"
+                label="Details of oral intimation (first-person details)"
+                placeholder="Provide details of the oral intimation"
+                rows={3}
+                required
+              />
+            )}
+            
+            <FormField
+              name="amountClaimed"
+              label="Amount claimed"
+              type="number"
+              placeholder="Enter amount claimed"
+              required
             />
           </div>
-          
-          <FormSelect
-            name="intimationMode"
-            label="Was intimation oral or written?"
-            placeholder="Select option"
-          >
-            <SelectItem value="oral">Oral</SelectItem>
-            <SelectItem value="written">Written</SelectItem>
-          </FormSelect>
-          
-          {watchedValues.intimationMode === 'written' && (
-            <FileUpload
-              label="Written Intimation Document (PDF, max 3MB)"
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, writtenIntimation: file }))}
-              currentFile={uploadedFiles.writtenIntimation}
-              accept=".pdf"
-              maxSize={3}
-            />
-          )}
-          
-          {watchedValues.intimationMode === 'oral' && (
-            <FormTextarea
-              name="oralDetails"
-              label="Details of oral intimation (first-person details)"
-              placeholder="Provide details of the oral intimation"
-              rows={3}
-            />
-          )}
-          
-          <FormInput
-            name="amountClaimed"
-            label="Amount claimed"
-            type="number"
-            placeholder="Enter amount claimed"
-          />
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'response',
       title: "Insured's Response",
       component: (
-        <div className="space-y-4">
-          <FormTextarea
-            name="responseComments"
-            label="Comments in response to the claim"
-            placeholder="Provide your response to the claim"
-            rows={4}
-          />
-          
-          <FormTextarea
-            name="quantumComments"
-            label="Comments on the quantum of the claim"
-            placeholder="Provide comments on the amount claimed"
-            rows={4}
-          />
-          
-          <FormInput
-            name="estimatedLiability"
-            label="Estimated monetary liability"
-            type="number"
-            placeholder="Enter estimated liability amount"
-          />
-          
-          <FormSelect
-            name="additionalInfo"
-            label="Any other details or info that will help insurer?"
-            placeholder="Select option"
-          >
-            <SelectItem value="yes">Yes</SelectItem>
-            <SelectItem value="no">No</SelectItem>
-          </FormSelect>
-          
-          {watchedValues.additionalInfo === 'yes' && (
-            <div className="space-y-4">
-              <FormTextarea
-                name="additionalDetails"
-                label="Additional details"
-                placeholder="Provide additional details"
-                rows={3}
-              />
-              <FileUpload
-                label="Additional Document (if needed)"
-                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, additionalDocument: file }))}
-                currentFile={uploadedFiles.additionalDocument}
-                accept=".pdf,.jpg,.png"
-                maxSize={3}
-              />
-            </div>
-          )}
-          
-          <FormSelect
-            name="solicitorInstructed"
-            label="Have you instructed a solicitor?"
-            placeholder="Select option"
-          >
-            <SelectItem value="yes">Yes</SelectItem>
-            <SelectItem value="no">No</SelectItem>
-          </FormSelect>
-          
-          {watchedValues.solicitorInstructed === 'yes' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput
-                name="solicitorName"
-                label="Name"
-                placeholder="Enter solicitor name"
-              />
-              <FormInput
-                name="solicitorCompany"
-                label="Company"
-                placeholder="Enter solicitor company"
-              />
-              <div className="md:col-span-2">
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormTextarea
+              name="responseComments"
+              label="Comments in response to the claim"
+              placeholder="Provide your response to the claim"
+              rows={4}
+              required
+            />
+            
+            <FormTextarea
+              name="quantumComments"
+              label="Comments on the quantum of the claim"
+              placeholder="Provide comments on the amount claimed"
+              rows={4}
+              required
+            />
+            
+            <FormField
+              name="estimatedLiability"
+              label="Estimated monetary liability"
+              type="number"
+              placeholder="Enter estimated liability amount"
+              required
+            />
+            
+            <FormSelect
+              name="additionalInfo"
+              label="Any other details or info that will help insurer?"
+              placeholder="Select option"
+              required
+            >
+              <SelectItem value="yes">Yes</SelectItem>
+              <SelectItem value="no">No</SelectItem>
+            </FormSelect>
+            
+            {watchedValues.additionalInfo === 'yes' && (
+              <div className="space-y-4">
                 <FormTextarea
-                  name="solicitorAddress"
-                  label="Address"
-                  placeholder="Enter solicitor address"
-                  rows={2}
+                  name="additionalDetails"
+                  label="Additional details"
+                  placeholder="Provide additional details"
+                  rows={3}
+                  required
+                />
+                <FileUpload
+                  label="Additional Document (if needed)"
+                  onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, additionalDocument: file }))}
+                  currentFile={uploadedFiles.additionalDocument}
+                  accept=".pdf,.jpg,.png"
+                  maxSize={3}
                 />
               </div>
-              <FormInput
-                name="solicitorRates"
-                label="Rates"
-                placeholder="Enter solicitor rates"
-              />
-            </div>
-          )}
-        </div>
+            )}
+            
+            <FormSelect
+              name="solicitorInstructed"
+              label="Have you instructed a solicitor?"
+              placeholder="Select option"
+              required
+            >
+              <SelectItem value="yes">Yes</SelectItem>
+              <SelectItem value="no">No</SelectItem>
+            </FormSelect>
+            
+            {watchedValues.solicitorInstructed === 'yes' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  name="solicitorName"
+                  label="Name"
+                  placeholder="Enter solicitor name"
+                  required
+                />
+                <FormField
+                  name="solicitorCompany"
+                  label="Company"
+                  placeholder="Enter solicitor company"
+                  required
+                />
+                <div className="md:col-span-2">
+                  <FormTextarea
+                    name="solicitorAddress"
+                    label="Address"
+                    placeholder="Enter solicitor address"
+                    rows={2}
+                    required
+                  />
+                </div>
+                <FormField
+                  name="solicitorRates"
+                  label="Rates"
+                  placeholder="Enter solicitor rates"
+                  required
+                />
+              </div>
+            )}
+          </div>
+        </FormProvider>
       )
     },
     {
       id: 'declaration',
       title: 'Declaration & Signature',
       component: (
-        <div className="space-y-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Data Privacy</h3>
-            <div className="text-sm space-y-2">
-              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Data Privacy</h3>
+              <div className="text-sm space-y-2">
+                <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+                <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="agreeToDataPrivacy"
+                checked={formMethods.watch('agreeToDataPrivacy')}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('agreeToDataPrivacy', checked === true);
+                  if (formMethods.formState.errors.agreeToDataPrivacy) {
+                    formMethods.clearErrors('agreeToDataPrivacy');
+                  }
+                }}
+                className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
+              />
+              <Label htmlFor="agreeToDataPrivacy" className="text-sm">
+                I agree to the data privacy terms <span className="required-asterisk">*</span>
+              </Label>
+            </div>
+            {formMethods.formState.errors.agreeToDataPrivacy && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
+              </p>
+            )}
+            
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Declaration</h3>
+              <div className="text-sm space-y-2">
+                <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+                <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+                <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="declarationTrue"
+                checked={formMethods.watch('declarationTrue')}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('declarationTrue', checked === true);
+                  if (formMethods.formState.errors.declarationTrue) {
+                    formMethods.clearErrors('declarationTrue');
+                  }
+                }}
+                className={cn(formMethods.formState.errors.declarationTrue && "border-destructive")}
+              />
+              <Label htmlFor="declarationTrue" className="text-sm">
+                I agree that statements are true <span className="required-asterisk">*</span>
+              </Label>
+            </div>
+            {formMethods.formState.errors.declarationTrue && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.declarationTrue.message?.toString()}
+              </p>
+            )}
+            
+            <FormField
+              name="signature"
+              label="Signature of policyholder (digital signature)"
+              placeholder="Type your full name as signature"
+              required
+            />
+            
+            <div>
+              <Label>Date</Label>
+              <Input value={new Date().toISOString().split('T')[0]} disabled />
             </div>
           </div>
-          
-          <FormCheckbox
-            name="agreeToDataPrivacy"
-            label="I agree to the data privacy terms"
-          />
-          
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Declaration</h3>
-            <div className="text-sm space-y-2">
-              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-            </div>
-          </div>
-          
-          <FormCheckbox
-            name="declarationTrue"
-            label="I agree that statements are true"
-          />
-          
-          <FormInput
-            name="signature"
-            label="Signature of policyholder (digital signature)"
-            placeholder="Type your full name as signature"
-          />
-          
-          <div>
-            <Label>Date</Label>
-            <Input value={new Date().toISOString().split('T')[0]} disabled />
-          </div>
-        </div>
+        </FormProvider>
       )
     }
   ];
@@ -998,7 +950,6 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
               onSubmit={onFinalSubmit}
               formMethods={formMethods}
               stepFieldMappings={stepFieldMappings}
-              validateStep={validateStep}
             />
 
             {/* Summary Dialog */}
