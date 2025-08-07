@@ -246,6 +246,102 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
     mode: 'onChange'
   });
 
+  // Step validation function
+  const validateStep = async (stepId: string): Promise<boolean> => {
+    const fieldsToValidate = stepFieldMappings[stepId as keyof typeof stepFieldMappings] || [];
+    
+    // Get current form values
+    const currentValues = formMethods.getValues();
+    
+    let hasErrors = false;
+    const errors: string[] = [];
+    
+    // Validate each field for this step
+    for (const fieldName of fieldsToValidate) {
+      try {
+        await professionalIndemnitySchema.validateAt(fieldName, currentValues);
+      } catch (error: any) {
+        hasErrors = true;
+        errors.push(error.message);
+        formMethods.setError(fieldName, { 
+          type: 'manual', 
+          message: error.message 
+        });
+      }
+    }
+    
+    // Handle conditional fields
+    if (stepId === 'retainer') {
+      if (currentValues.contractInWriting === 'no' && !currentValues.contractDetails?.trim()) {
+        hasErrors = true;
+        errors.push('Contract details are required when contract is not in writing');
+        formMethods.setError('contractDetails', { 
+          type: 'manual', 
+          message: 'Contract details are required when contract is not in writing' 
+        });
+      }
+    }
+    
+    if (stepId === 'claim') {
+      if (currentValues.intimationMode === 'oral' && !currentValues.oralDetails?.trim()) {
+        hasErrors = true;
+        errors.push('Oral details are required when intimation was oral');
+        formMethods.setError('oralDetails', { 
+          type: 'manual', 
+          message: 'Oral details are required when intimation was oral' 
+        });
+      }
+    }
+    
+    if (stepId === 'response') {
+      if (currentValues.additionalInfo === 'yes' && !currentValues.additionalDetails?.trim()) {
+        hasErrors = true;
+        errors.push('Additional details are required');
+        formMethods.setError('additionalDetails', { 
+          type: 'manual', 
+          message: 'Additional details are required' 
+        });
+      }
+      
+      if (currentValues.solicitorInstructed === 'yes') {
+        const solicitorFields = ['solicitorName', 'solicitorAddress', 'solicitorCompany', 'solicitorRates'];
+        for (const field of solicitorFields) {
+          if (!currentValues[field]?.trim()) {
+            hasErrors = true;
+            const fieldLabel = field.replace('solicitor', 'Solicitor ').replace(/([A-Z])/g, ' $1').toLowerCase();
+            errors.push(`${fieldLabel} is required when solicitor is instructed`);
+            formMethods.setError(field, { 
+              type: 'manual', 
+              message: `${fieldLabel} is required when solicitor is instructed` 
+            });
+          }
+        }
+      }
+    }
+    
+    if (hasErrors) {
+      toast({
+        title: "Validation Error",
+        description: `Please fill in all required fields before proceeding. ${errors.length} error(s) found.`,
+        variant: "destructive",
+      });
+      
+      // Focus on first error field
+      const firstErrorField = fieldsToValidate.find(field => formMethods.formState.errors[field]);
+      if (firstErrorField) {
+        const element = document.querySelector(`[name="${firstErrorField}"]`) as HTMLElement;
+        if (element) {
+          element.focus();
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+      
+      return false;
+    }
+    
+    return true;
+  };
+
   const { saveDraft, clearDraft } = useFormDraft('professionalIndemnity', formMethods);
   const watchedValues = formMethods.watch();
 
@@ -902,6 +998,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
               onSubmit={onFinalSubmit}
               formMethods={formMethods}
               stepFieldMappings={stepFieldMappings}
+              validateStep={validateStep}
             />
 
             {/* Summary Dialog */}
