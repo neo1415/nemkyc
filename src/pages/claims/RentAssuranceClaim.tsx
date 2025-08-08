@@ -803,29 +803,6 @@ const RentAssuranceClaim = () => {
                 <p><strong>iii.</strong> Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
               </div>
             </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="agreeToDataPrivacy"
-                checked={formMethods.watch('agreeToDataPrivacy') || false}
-                onCheckedChange={(checked) => {
-                  formMethods.setValue('agreeToDataPrivacy', !!checked);
-                  if (formMethods.formState.errors.agreeToDataPrivacy) {
-                    formMethods.clearErrors('agreeToDataPrivacy');
-                  }
-                }}
-                className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
-              />
-              <Label htmlFor="agreeToDataPrivacy">
-                I agree to the data privacy policy <span className="text-red-500">*</span>
-              </Label>
-            </div>
-            {formMethods.formState.errors.agreeToDataPrivacy && (
-              <p className="text-sm text-destructive">
-                {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
-              </p>
-            )}
-          </div>
           
           <div className="space-y-6">
             <div className="bg-gray-50 p-4 rounded-lg">
@@ -875,6 +852,29 @@ const RentAssuranceClaim = () => {
                 )}
               </div>
             </div>
+
+              <div className="flex items-center space-x-2">
+              <Checkbox
+                id="agreeToDataPrivacy"
+                checked={formMethods.watch('agreeToDataPrivacy') || false}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('agreeToDataPrivacy', !!checked);
+                  if (formMethods.formState.errors.agreeToDataPrivacy) {
+                    formMethods.clearErrors('agreeToDataPrivacy');
+                  }
+                }}
+                className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
+              />
+              <Label htmlFor="agreeToDataPrivacy">
+                I agree to the data privacy policy <span className="text-red-500">*</span>
+              </Label>
+            </div>
+            {formMethods.formState.errors.agreeToDataPrivacy && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
+              </p>
+            )}
+          </div>
 
             <FormField
               name="signature"
