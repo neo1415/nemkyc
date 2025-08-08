@@ -219,6 +219,7 @@ const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...prop
         {required && <span className="text-destructive ml-1">*</span>}
       </Label>
       <Textarea
+        key={name}
         id={name}
         {...register(name, {
           onChange: () => {
