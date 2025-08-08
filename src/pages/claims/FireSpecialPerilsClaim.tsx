@@ -1,36 +1,141 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import MultiStepForm from '@/components/common/MultiStepForm';
-import FormSection from '@/components/common/FormSection';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
+import { get } from 'lodash';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { CheckCircle2, Loader2, Trash2, Plus } from 'lucide-react';
-import FileUpload from '@/components/common/FileUpload';
+import { CheckCircle2, Loader2, Trash2, Plus, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
+import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
 
+// Fire and Special Perils Claim Schema
+const fireSpecialPerilsSchema = yup.object().shape({
+  // Policy Details
+  policyNumber: yup.string().required('Policy number is required'),
+  periodOfCoverFrom: yup.date().required('Period of cover start date is required'),
+  periodOfCoverTo: yup.date().required('Period of cover end date is required'),
+  
+  // Insured Details
+  name: yup.string().required('Name is required'),
+  companyName: yup.string(),
+  title: yup.string().required('Title is required'),
+  dateOfBirth: yup.date().required('Date of birth is required'),
+  gender: yup.string().required('Gender is required'),
+  address: yup.string().required('Address is required'),
+  phone: yup.string().required('Phone number is required'),
+  email: yup.string().email('Invalid email').required('Email is required'),
+  
+  // Loss Details
+  premisesAddress: yup.string().required('Premises address is required'),
+  premisesPhone: yup.string().required('Premises phone is required'),
+  dateOfOccurrence: yup.date().required('Date of occurrence is required'),
+  timeOfOccurrence: yup.string().required('Time of occurrence is required'),
+  incidentDescription: yup.string().required('Incident description is required'),
+  causeOfFire: yup.string().required('Cause of fire is required'),
+  
+  // Premises Use
+  premisesUsedAsPerPolicy: yup.boolean(),
+  premisesUsageDetails: yup.string().when('premisesUsedAsPerPolicy', {
+    is: false,
+    then: (schema) => schema.required('Please specify how premises was used'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  purposeOfPremises: yup.string().required('Purpose of premises is required'),
+  unallowedRiskIntroduced: yup.boolean(),
+  unallowedRiskDetails: yup.string().when('unallowedRiskIntroduced', {
+    is: true,
+    then: (schema) => schema.required('Please specify the unallowed risk'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  measuresWhenFireDiscovered: yup.string().required('Measures taken when fire was discovered is required'),
+  
+  // Property Ownership
+  soleOwner: yup.boolean(),
+  otherOwnersName: yup.string().when('soleOwner', {
+    is: false,
+    then: (schema) => schema.required('Other owner name is required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  otherOwnersAddress: yup.string().when('soleOwner', {
+    is: false,
+    then: (schema) => schema.required('Other owner address is required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  
+  // Other Insurance
+  hasOtherInsurance: yup.boolean(),
+  otherInsuranceName: yup.string().when('hasOtherInsurance', {
+    is: true,
+    then: (schema) => schema.required('Other insurance company name is required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  otherInsuranceAddress: yup.string().when('hasOtherInsurance', {
+    is: true,
+    then: (schema) => schema.required('Other insurance company address is required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  
+  // Valuation
+  premisesContentsValue: yup.number().min(0, 'Value must be positive').required('Premises contents value is required'),
+  hasPreviousClaim: yup.boolean(),
+  previousClaimDate: yup.date().when('hasPreviousClaim', {
+    is: true,
+    then: (schema) => schema.required('Previous claim date is required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  previousClaimAmount: yup.number().min(0, 'Amount must be positive').when('hasPreviousClaim', {
+    is: true,
+    then: (schema) => schema.required('Previous claim amount is required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  
+  // Items Lost/Damaged
+  itemsLost: yup.array().of(
+    yup.object().shape({
+      sn: yup.number(),
+      description: yup.string().required('Description is required'),
+      costPrice: yup.number().min(0, 'Cost price must be positive').required('Cost price is required'),
+      dateOfPurchase: yup.date().required('Date of purchase is required'),
+      estimatedValueAtOccurrence: yup.number().min(0, 'Estimated value must be positive').required('Estimated value is required'),
+      valueOfSalvage: yup.number().min(0, 'Salvage value must be positive'),
+      netAmountClaimed: yup.number().min(0, 'Net amount must be positive'),
+    })
+  ).min(1, 'At least one item must be added'),
+  
+  // File Uploads
+  picturesOfLoss: yup.mixed().required('Pictures of loss are required'),
+  additionalDocuments: yup.mixed(),
+  
+  // Declaration
+  agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to data privacy'),
+  declarationTrue: yup.boolean().oneOf([true], 'You must confirm the declaration is true'),
+  signature: yup.string().required('Signature is required'),
+});
+
 interface FireSpecialPerilsClaimData {
   // Policy Details
   policyNumber: string;
-  periodOfCoverFrom: string;
-  periodOfCoverTo: string;
+  periodOfCoverFrom: Date;
+  periodOfCoverTo: Date;
   
   // Insured Details
   name: string;
   companyName: string;
   title: string;
-  dateOfBirth: string;
+  dateOfBirth: Date;
   gender: string;
   address: string;
   phone: string;
@@ -39,7 +144,7 @@ interface FireSpecialPerilsClaimData {
   // Loss Details
   premisesAddress: string;
   premisesPhone: string;
-  dateOfOccurrence: string;
+  dateOfOccurrence: Date;
   timeOfOccurrence: string;
   incidentDescription: string;
   causeOfFire: string;
@@ -65,7 +170,7 @@ interface FireSpecialPerilsClaimData {
   // Valuation
   premisesContentsValue: number;
   hasPreviousClaim: boolean;
-  previousClaimDate: string;
+  previousClaimDate: Date;
   previousClaimAmount: number;
   
   // Items Lost/Damaged
@@ -73,7 +178,7 @@ interface FireSpecialPerilsClaimData {
     sn: number;
     description: string;
     costPrice: number;
-    dateOfPurchase: string;
+    dateOfPurchase: Date;
     estimatedValueAtOccurrence: number;
     valueOfSalvage: number;
     netAmountClaimed: number;
@@ -89,55 +194,180 @@ interface FireSpecialPerilsClaimData {
   signature: string;
 }
 
-const schema = yup.object().shape({
-  policyNumber: yup.string().required('Policy number is required'),
-  periodOfCoverFrom: yup.string().required('Period of cover start date is required'),
-  periodOfCoverTo: yup.string().required('Period of cover end date is required'),
-  name: yup.string().required('Name is required'),
-  companyName: yup.string(),
-  title: yup.string().required('Title is required'),
-  dateOfBirth: yup.string().required('Date of birth is required'),
-  gender: yup.string().required('Gender is required'),
-  address: yup.string().required('Address is required'),
-  phone: yup.string().required('Phone number is required'),
-  email: yup.string().email('Invalid email').required('Email is required'),
-  premisesAddress: yup.string().required('Premises address is required'),
-  premisesPhone: yup.string().required('Premises phone is required'),
-  dateOfOccurrence: yup.string().required('Date of occurrence is required'),
-  timeOfOccurrence: yup.string().required('Time of occurrence is required'),
-  incidentDescription: yup.string().required('Incident description is required'),
-  causeOfFire: yup.string().required('Cause of fire is required'),
-  premisesUsedAsPerPolicy: yup.boolean(),
-  premisesUsageDetails: yup.string(),
-  purposeOfPremises: yup.string().required('Purpose of premises is required'),
-  unallowedRiskIntroduced: yup.boolean(),
-  unallowedRiskDetails: yup.string(),
-  measuresWhenFireDiscovered: yup.string().required('Measures taken when fire was discovered is required'),
-  soleOwner: yup.boolean(),
-  otherOwnersName: yup.string(),
-  otherOwnersAddress: yup.string(),
-  hasOtherInsurance: yup.boolean(),
-  otherInsuranceName: yup.string(),
-  otherInsuranceAddress: yup.string(),
-  premisesContentsValue: yup.number().min(0, 'Value must be positive').required('Premises contents value is required'),
-  hasPreviousClaim: yup.boolean(),
-  previousClaimDate: yup.string(),
-  previousClaimAmount: yup.number().min(0, 'Amount must be positive'),
-  itemsLost: yup.array().of(
-    yup.object().shape({
-      sn: yup.number(),
-      description: yup.string().required('Description is required'),
-      costPrice: yup.number().min(0, 'Cost price must be positive').required('Cost price is required'),
-      dateOfPurchase: yup.string().required('Date of purchase is required'),
-      estimatedValueAtOccurrence: yup.number().min(0, 'Estimated value must be positive').required('Estimated value is required'),
-      valueOfSalvage: yup.number().min(0, 'Salvage value must be positive'),
-      netAmountClaimed: yup.number().min(0, 'Net amount must be positive'),
-    })
-  ).min(1, 'At least one item must be added'),
-  agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to data privacy'),
-  declarationTrue: yup.boolean().oneOf([true], 'You must confirm the declaration is true'),
-  signature: yup.string().required('Signature is required'),
-});
+// Form field components with validation (defined outside main component to prevent focus loss)
+const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
+  const { register, formState: { errors }, clearErrors } = useFormContext();
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type={type}
+        maxLength={maxLength}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
+  const { register, watch, formState: { errors }, clearErrors } = useFormContext();
+  const currentValue = watch(name) || '';
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Textarea
+        id={name}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      <div className="flex justify-between">
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
+        <span className="text-sm text-muted-foreground ml-auto">
+          {currentValue.length}/{maxLength}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const FormSelect = ({ name, label, required = false, options, placeholder, children, ...props }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(newValue) => {
+          setValue(name, newValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        {...props}
+      >
+        <SelectTrigger className={error ? 'border-destructive' : ''}>
+          <SelectValue placeholder={placeholder || `Select ${label}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {children}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormDatePicker = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        type="date"
+        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
+        onChange={(e) => {
+          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+          setValue(name, dateValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        className={error ? 'border-destructive' : ''}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const defaultValues: Partial<FireSpecialPerilsClaimData> = {
+  policyNumber: '',
+  name: '',
+  companyName: '',
+  title: '',
+  gender: '',
+  address: '',
+  phone: '',
+  email: '',
+  premisesAddress: '',
+  premisesPhone: '',
+  timeOfOccurrence: '',
+  incidentDescription: '',
+  causeOfFire: '',
+  premisesUsedAsPerPolicy: true,
+  premisesUsageDetails: '',
+  purposeOfPremises: '',
+  unallowedRiskIntroduced: false,
+  unallowedRiskDetails: '',
+  measuresWhenFireDiscovered: '',
+  soleOwner: true,
+  otherOwnersName: '',
+  otherOwnersAddress: '',
+  hasOtherInsurance: false,
+  otherInsuranceName: '',
+  otherInsuranceAddress: '',
+  premisesContentsValue: 0,
+  hasPreviousClaim: false,
+  previousClaimAmount: 0,
+  itemsLost: [{
+    sn: 1,
+    description: '',
+    costPrice: 0,
+    dateOfPurchase: undefined,
+    estimatedValueAtOccurrence: 0,
+    valueOfSalvage: 0,
+    netAmountClaimed: 0
+  }],
+  agreeToDataPrivacy: false,
+  declarationTrue: false,
+  signature: ''
+};
 
 const FireSpecialPerilsClaim: React.FC = () => {
   const { toast } = useToast();
@@ -154,73 +384,15 @@ const FireSpecialPerilsClaim: React.FC = () => {
     isSubmitting: authSubmitting
   } = useAuthRequiredSubmit();
 
-  const formMethods = useForm<FireSpecialPerilsClaimData>({
-    // resolver: yupResolver(schema as any),
-    defaultValues: {
-      policyNumber: '',
-      periodOfCoverFrom: '',
-      periodOfCoverTo: '',
-      name: '',
-      companyName: '',
-      title: '',
-      dateOfBirth: '',
-      gender: '',
-      address: '',
-      phone: '',
-      email: '',
-      premisesAddress: '',
-      premisesPhone: '',
-      dateOfOccurrence: '',
-      timeOfOccurrence: '',
-      incidentDescription: '',
-      causeOfFire: '',
-      premisesUsedAsPerPolicy: true,
-      premisesUsageDetails: '',
-      purposeOfPremises: '',
-      unallowedRiskIntroduced: false,
-      unallowedRiskDetails: '',
-      measuresWhenFireDiscovered: '',
-      soleOwner: true,
-      otherOwnersName: '',
-      otherOwnersAddress: '',
-      hasOtherInsurance: false,
-      otherInsuranceName: '',
-      otherInsuranceAddress: '',
-      premisesContentsValue: 0,
-      hasPreviousClaim: false,
-      previousClaimDate: '',
-      previousClaimAmount: 0,
-      itemsLost: [{ 
-        sn: 1, 
-        description: '', 
-        costPrice: 0, 
-        dateOfPurchase: '', 
-        estimatedValueAtOccurrence: 0, 
-        valueOfSalvage: 0, 
-        netAmountClaimed: 0 
-      }],
-      picturesOfLoss: [],
-      additionalDocuments: [],
-      agreeToDataPrivacy: false,
-      declarationTrue: false,
-      signature: ''
-    },
-  });
-
-  const watchedValues = formMethods.watch();
-  const { saveDraft, loadDraft, clearDraft } = useFormDraft('fireSpecialPerilsClaim', formMethods);
-
   // Check for pending submission when component mounts
   useEffect(() => {
     const checkPendingSubmission = () => {
       const hasPending = sessionStorage.getItem('pendingSubmission');
       if (hasPending) {
         setShowPostAuthLoading(true);
-        // Hide loading after 5 seconds max (in case something goes wrong)
         setTimeout(() => setShowPostAuthLoading(false), 5000);
       }
     };
-
     checkPendingSubmission();
   }, []);
 
@@ -231,20 +403,38 @@ const FireSpecialPerilsClaim: React.FC = () => {
     }
   }, [authShowSuccess]);
 
+  const formMethods = useForm<any>({
+    resolver: yupResolver(fireSpecialPerilsSchema),
+    defaultValues,
+    mode: 'onChange'
+  });
+
+  const { fields: itemFields, append: addItem, remove: removeItem } = useFieldArray({
+    control: formMethods.control,
+    name: 'itemsLost'
+  });
+
+  const { saveDraft, loadDraft, clearDraft } = useFormDraft('fireSpecialPerilsClaim', formMethods);
+  const watchedValues = formMethods.watch();
+
   useEffect(() => {
     loadDraft();
   }, [loadDraft]);
 
+  // Auto-save draft
   useEffect(() => {
-    saveDraft(watchedValues);
-  }, [watchedValues, saveDraft]);
+    const subscription = formMethods.watch((data) => {
+      saveDraft(data);
+    });
+    return () => subscription.unsubscribe();
+  }, [formMethods, saveDraft]);
 
   // Calculate net amount claimed for each item in real-time
   useEffect(() => {
-    const items = formMethods.getValues('itemsLost');
+    const items = formMethods.getValues('itemsLost') || [];
     let hasChanges = false;
     
-    items.forEach((item, index) => {
+    items.forEach((item: any, index: number) => {
       const netAmount = (item.estimatedValueAtOccurrence || 0) - (item.valueOfSalvage || 0);
       if (netAmount !== item.netAmountClaimed) {
         formMethods.setValue(`itemsLost.${index}.netAmountClaimed`, netAmount, { shouldValidate: false });
@@ -252,12 +442,11 @@ const FireSpecialPerilsClaim: React.FC = () => {
       }
     });
     
-    // Force re-render to show updated values
     if (hasChanges) {
       formMethods.trigger();
     }
   }, [
-    watchedValues.itemsLost?.map(item => `${item.estimatedValueAtOccurrence}-${item.valueOfSalvage}`).join(','),
+    watchedValues.itemsLost?.map((item: any) => `${item.estimatedValueAtOccurrence}-${item.valueOfSalvage}`).join(','),
     formMethods
   ]);
 
@@ -290,874 +479,433 @@ const FireSpecialPerilsClaim: React.FC = () => {
   };
 
   const onFinalSubmit = (data: FireSpecialPerilsClaimData) => {
-    // Check data privacy agreement and signature before showing summary
-    if (!data.agreeToDataPrivacy) {
-      toast({
-        title: "Agreement Required",
-        description: "You must agree to the data privacy notice and declaration.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!data.signature || data.signature.trim() === '') {
-      toast({
-        title: "Signature Required",
-        description: "Please provide your digital signature.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setShowSummary(true);
   };
 
-  const addItem = () => {
-    const currentItems = formMethods.getValues('itemsLost');
-    const newItem = {
-      sn: currentItems.length + 1,
-      description: '',
-      costPrice: 0,
-      dateOfPurchase: '',
-      estimatedValueAtOccurrence: 0,
-      valueOfSalvage: 0,
-      netAmountClaimed: 0
-    };
-    formMethods.setValue('itemsLost', [...currentItems, newItem]);
-  };
-
-  const removeItem = (index: number) => {
-    const currentItems = formMethods.getValues('itemsLost');
-    if (currentItems.length > 1) {
-      const updatedItems = currentItems.filter((_, i) => i !== index);
-      // Renumber items
-      updatedItems.forEach((item, i) => {
-        item.sn = i + 1;
-      });
-      formMethods.setValue('itemsLost', updatedItems);
-    }
+  // Step field mappings for validation
+  const stepFieldMappings = {
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
+    1: ['name', 'companyName', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
+    2: ['premisesAddress', 'premisesPhone', 'dateOfOccurrence', 'timeOfOccurrence', 'incidentDescription', 'causeOfFire'],
+    3: ['premisesUsedAsPerPolicy', 'premisesUsageDetails', 'purposeOfPremises', 'unallowedRiskIntroduced', 'unallowedRiskDetails', 'measuresWhenFireDiscovered'],
+    4: ['soleOwner', 'otherOwnersName', 'otherOwnersAddress'],
+    5: ['hasOtherInsurance', 'otherInsuranceName', 'otherInsuranceAddress'],
+    6: ['premisesContentsValue', 'hasPreviousClaim', 'previousClaimDate', 'previousClaimAmount'],
+    7: ['itemsLost'],
+    8: ['picturesOfLoss', 'additionalDocuments'],
+    9: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
   };
 
   const steps = [
     {
-      id: "policy-details",
-      title: "Policy Details",
+      id: 'policy',
+      title: 'Policy Details',
       component: (
-        <FormSection title="Policy Information" description="Enter your policy details">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="policyNumber">Policy Number *</Label>
-              <Input
-                id="policyNumber"
-                {...formMethods.register('policyNumber')}
-                placeholder="Enter policy number"
-              />
-              {formMethods.formState.errors.policyNumber && (
-                <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.policyNumber.message}</p>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label htmlFor="periodOfCoverFrom">Period of Cover From *</Label>
-                <Input
-                  id="periodOfCoverFrom"
-                  type="date"
-                  {...formMethods.register('periodOfCoverFrom')}
-                />
-                {formMethods.formState.errors.periodOfCoverFrom && (
-                  <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.periodOfCoverFrom.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="periodOfCoverTo">To *</Label>
-                <Input
-                  id="periodOfCoverTo"
-                  type="date"
-                  {...formMethods.register('periodOfCoverTo')}
-                />
-                {formMethods.formState.errors.periodOfCoverTo && (
-                  <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.periodOfCoverTo.message}</p>
-                )}
-              </div>
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormField name="policyNumber" label="Policy Number" required />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
+              <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
             </div>
           </div>
-        </FormSection>
-      ),
+        </FormProvider>
+      )
     },
     {
-      id: "insured-details",
-      title: "Insured Details",
+      id: 'insured',
+      title: 'Insured Details',
       component: (
-        <FormSection title="Insured Information" description="Enter your personal/company details">
+        <FormProvider {...formMethods}>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  {...formMethods.register('name')}
-                  placeholder="Enter full name"
-                />
-                {formMethods.formState.errors.name && (
-                  <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.name.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="companyName">Company Name</Label>
-                <Input
-                  id="companyName"
-                  {...formMethods.register('companyName')}
-                  placeholder="Enter company name (optional)"
-                />
-              </div>
+              <FormField name="name" label="Full Name" required />
+              <FormField name="companyName" label="Company Name" />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="title">Title *</Label>
-                <Select onValueChange={(value) => formMethods.setValue('title', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select title" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Mr">Mr</SelectItem>
-                    <SelectItem value="Mrs">Mrs</SelectItem>
-                    <SelectItem value="Ms">Ms</SelectItem>
-                    <SelectItem value="Dr">Dr</SelectItem>
-                    <SelectItem value="Chief">Chief</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                {formMethods.formState.errors.title && (
-                  <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.title.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-                <Input
-                  id="dateOfBirth"
-                  type="date"
-                  {...formMethods.register('dateOfBirth')}
-                />
-                {formMethods.formState.errors.dateOfBirth && (
-                  <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.dateOfBirth.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="gender">Gender *</Label>
-                <Select onValueChange={(value) => formMethods.setValue('gender', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                {formMethods.formState.errors.gender && (
-                  <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.gender.message}</p>
-                )}
-              </div>
+              <FormSelect name="title" label="Title" required>
+                <SelectItem value="Mr">Mr</SelectItem>
+                <SelectItem value="Mrs">Mrs</SelectItem>
+                <SelectItem value="Ms">Ms</SelectItem>
+                <SelectItem value="Dr">Dr</SelectItem>
+                <SelectItem value="Chief">Chief</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </FormSelect>
+              <FormDatePicker name="dateOfBirth" label="Date of Birth" required />
+              <FormSelect name="gender" label="Gender" required>
+                <SelectItem value="Male">Male</SelectItem>
+                <SelectItem value="Female">Female</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </FormSelect>
             </div>
 
-            <div>
-              <Label htmlFor="address">Address *</Label>
-              <Textarea
-                id="address"
-                {...formMethods.register('address')}
-                placeholder="Enter full address"
-                rows={3}
-              />
-              {formMethods.formState.errors.address && (
-                <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.address.message}</p>
-              )}
-            </div>
+            <FormTextarea name="address" label="Address" required rows={3} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="phone">Phone Number *</Label>
-                <Input
-                  id="phone"
-                  {...formMethods.register('phone')}
-                  placeholder="Enter phone number"
-                />
-                {formMethods.formState.errors.phone && (
-                  <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.phone.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="email">Email Address *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  {...formMethods.register('email')}
-                  placeholder="Enter email address"
-                />
-                {formMethods.formState.errors.email && (
-                  <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.email.message}</p>
-                )}
-              </div>
+              <FormField name="phone" label="Phone Number" required />
+              <FormField name="email" label="Email Address" required type="email" />
             </div>
           </div>
-        </FormSection>
-      ),
+        </FormProvider>
+      )
     },
     {
-      id: "loss-details",
-      title: "Loss Details",
+      id: 'loss-details',
+      title: 'Loss Details',
       component: (
-        <FormSection title="Loss Information" description="Provide details about the incident">
+        <FormProvider {...formMethods}>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="premisesAddress">Full Address of Premises Involved *</Label>
-              <Textarea
-                id="premisesAddress"
-                {...formMethods.register('premisesAddress')}
-                placeholder="Enter complete address of affected premises"
-                rows={3}
-              />
-              {formMethods.formState.errors.premisesAddress && (
-                <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.premisesAddress.message}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="premisesPhone">Premises Telephone *</Label>
-              <Input
-                id="premisesPhone"
-                {...formMethods.register('premisesPhone')}
-                placeholder="Enter premises phone number"
-              />
-              {formMethods.formState.errors.premisesPhone && (
-                <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.premisesPhone.message}</p>
-              )}
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dateOfOccurrence">Date of Occurrence *</Label>
-                <Input
-                  id="dateOfOccurrence"
-                  type="date"
-                  {...formMethods.register('dateOfOccurrence')}
-                />
-                {formMethods.formState.errors.dateOfOccurrence && (
-                  <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.dateOfOccurrence.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="timeOfOccurrence">Time of Occurrence *</Label>
-                <Input
-                  id="timeOfOccurrence"
-                  type="time"
-                  {...formMethods.register('timeOfOccurrence')}
-                />
-                {formMethods.formState.errors.timeOfOccurrence && (
-                  <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.timeOfOccurrence.message}</p>
-                )}
-              </div>
+              <FormTextarea name="premisesAddress" label="Premises Address" required rows={3} />
+              <FormField name="premisesPhone" label="Premises Phone" required />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormDatePicker name="dateOfOccurrence" label="Date of Occurrence" required />
+              <FormField name="timeOfOccurrence" label="Time of Occurrence" required type="time" />
             </div>
 
-            <div>
-              <Label htmlFor="incidentDescription">Incident Description *</Label>
-              <Textarea
-                id="incidentDescription"
-                {...formMethods.register('incidentDescription')}
-                placeholder="Provide detailed description of what happened"
-                rows={4}
-              />
-              {formMethods.formState.errors.incidentDescription && (
-                <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.incidentDescription.message}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="causeOfFire">Cause of Fire *</Label>
-              <Textarea
-                id="causeOfFire"
-                {...formMethods.register('causeOfFire')}
-                placeholder="Describe the cause of fire. Include any suspicious circumstances if cause is undiscovered"
-                rows={3}
-              />
-              {formMethods.formState.errors.causeOfFire && (
-                <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.causeOfFire.message}</p>
-              )}
-            </div>
+            <FormTextarea name="incidentDescription" label="Description of Incident" required />
+            <FormTextarea name="causeOfFire" label="Cause of Fire" required />
           </div>
-        </FormSection>
-      ),
+        </FormProvider>
+      )
     },
     {
-      id: "premises-use",
-      title: "Premises Use",
+      id: 'premises-use',
+      title: 'Premises Use',
       component: (
-        <FormSection title="Premises Usage Information" description="Details about how the premises were being used">
+        <FormProvider {...formMethods}>
           <div className="space-y-4">
-            <div>
-              <Label>Was the premises used as per policy? *</Label>
-              <div className="flex items-center space-x-4 mt-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="premisesUsedYes"
-                    checked={watchedValues.premisesUsedAsPerPolicy === true}
-                    onCheckedChange={(checked) => formMethods.setValue('premisesUsedAsPerPolicy', !!checked)}
-                  />
-                  <Label htmlFor="premisesUsedYes">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="premisesUsedNo"
-                    checked={watchedValues.premisesUsedAsPerPolicy === false}
-                    onCheckedChange={(checked) => formMethods.setValue('premisesUsedAsPerPolicy', !checked)}
-                  />
-                  <Label htmlFor="premisesUsedNo">No</Label>
-                </div>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="premisesUsedAsPerPolicy"
+                checked={formMethods.watch('premisesUsedAsPerPolicy')}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('premisesUsedAsPerPolicy', checked === true);
+                  const error = get(formMethods.formState.errors, 'premisesUsedAsPerPolicy');
+                  if (error) {
+                    formMethods.clearErrors('premisesUsedAsPerPolicy');
+                  }
+                }}
+              />
+              <Label htmlFor="premisesUsedAsPerPolicy">
+                Were the premises being used strictly as per policy?
+              </Label>
             </div>
 
-            {watchedValues.premisesUsedAsPerPolicy === false && (
-              <div>
-                <Label htmlFor="premisesUsageDetails">If No, Please Provide Details *</Label>
-                <Textarea
-                  id="premisesUsageDetails"
-                  {...formMethods.register('premisesUsageDetails')}
-                  placeholder="Explain how the premises was being used differently from the policy"
-                  rows={3}
-                />
-              </div>
+            {!formMethods.watch('premisesUsedAsPerPolicy') && (
+              <FormTextarea name="premisesUsageDetails" label="How were the premises being used?" required />
             )}
 
-            <div>
-              <Label htmlFor="purposeOfPremises">Purpose Premises Was Being Used For *</Label>
-              <Textarea
-                id="purposeOfPremises"
-                {...formMethods.register('purposeOfPremises')}
-                placeholder="Describe the purpose for which the premises was being used"
-                rows={3}
+            <FormTextarea name="purposeOfPremises" label="Purpose of Premises" required />
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="unallowedRiskIntroduced"
+                checked={formMethods.watch('unallowedRiskIntroduced')}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('unallowedRiskIntroduced', checked === true);
+                  const error = get(formMethods.formState.errors, 'unallowedRiskIntroduced');
+                  if (error) {
+                    formMethods.clearErrors('unallowedRiskIntroduced');
+                  }
+                }}
               />
-              {formMethods.formState.errors.purposeOfPremises && (
-                <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.purposeOfPremises.message}</p>
-              )}
+              <Label htmlFor="unallowedRiskIntroduced">
+                Was any unallowed risk introduced?
+              </Label>
             </div>
 
-            <div>
-              <Label>Any Unallowed Element of Risk Introduced?</Label>
-              <div className="flex items-center space-x-4 mt-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="unallowedRiskYes"
-                    checked={watchedValues.unallowedRiskIntroduced === true}
-                    onCheckedChange={(checked) => formMethods.setValue('unallowedRiskIntroduced', !!checked)}
-                  />
-                  <Label htmlFor="unallowedRiskYes">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="unallowedRiskNo"
-                    checked={watchedValues.unallowedRiskIntroduced === false}
-                    onCheckedChange={(checked) => formMethods.setValue('unallowedRiskIntroduced', !checked)}
-                  />
-                  <Label htmlFor="unallowedRiskNo">No</Label>
-                </div>
-              </div>
-            </div>
-
-            {watchedValues.unallowedRiskIntroduced === true && (
-              <div>
-                <Label htmlFor="unallowedRiskDetails">Please Explain *</Label>
-                <Textarea
-                  id="unallowedRiskDetails"
-                  {...formMethods.register('unallowedRiskDetails')}
-                  placeholder="Describe the unallowed risk element"
-                  rows={3}
-                />
-              </div>
+            {formMethods.watch('unallowedRiskIntroduced') && (
+              <FormTextarea name="unallowedRiskDetails" label="Specify the unallowed risk" required />
             )}
 
-            <div>
-              <Label htmlFor="measuresWhenFireDiscovered">Measures Taken When Fire Was Discovered *</Label>
-              <Textarea
-                id="measuresWhenFireDiscovered"
-                {...formMethods.register('measuresWhenFireDiscovered')}
-                placeholder="Describe what actions were taken when the fire was discovered"
-                rows={3}
-              />
-              {formMethods.formState.errors.measuresWhenFireDiscovered && (
-                <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.measuresWhenFireDiscovered.message}</p>
-              )}
-            </div>
+            <FormTextarea name="measuresWhenFireDiscovered" label="Measures taken when fire was discovered" required />
           </div>
-        </FormSection>
-      ),
+        </FormProvider>
+      )
     },
     {
-      id: "property-ownership",
-      title: "Property Ownership",
+      id: 'ownership',
+      title: 'Property Ownership',
       component: (
-        <FormSection title="Property Ownership Details" description="Information about property ownership">
+        <FormProvider {...formMethods}>
           <div className="space-y-4">
-            <div>
-              <Label>Are you the sole owner? *</Label>
-              <div className="flex items-center space-x-4 mt-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="soleOwnerYes"
-                    checked={watchedValues.soleOwner === true}
-                    onCheckedChange={(checked) => formMethods.setValue('soleOwner', !!checked)}
-                  />
-                  <Label htmlFor="soleOwnerYes">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="soleOwnerNo"
-                    checked={watchedValues.soleOwner === false}
-                    onCheckedChange={(checked) => formMethods.setValue('soleOwner', !checked)}
-                  />
-                  <Label htmlFor="soleOwnerNo">No</Label>
-                </div>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="soleOwner"
+                checked={formMethods.watch('soleOwner')}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('soleOwner', checked === true);
+                  const error = get(formMethods.formState.errors, 'soleOwner');
+                  if (error) {
+                    formMethods.clearErrors('soleOwner');
+                  }
+                }}
+              />
+              <Label htmlFor="soleOwner">
+                Are you the sole owner of the property?
+              </Label>
             </div>
 
-            {watchedValues.soleOwner === false && (
+            {!formMethods.watch('soleOwner') && (
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="otherOwnersName">Name of Other Owners *</Label>
-                  <Input
-                    id="otherOwnersName"
-                    {...formMethods.register('otherOwnersName')}
-                    placeholder="Enter names of other owners"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="otherOwnersAddress">Address of Other Owners *</Label>
-                  <Textarea
-                    id="otherOwnersAddress"
-                    {...formMethods.register('otherOwnersAddress')}
-                    placeholder="Enter address of other owners"
-                    rows={3}
-                  />
-                </div>
+                <FormField name="otherOwnersName" label="Other Owner's Name" required />
+                <FormTextarea name="otherOwnersAddress" label="Other Owner's Address" required />
               </div>
             )}
           </div>
-        </FormSection>
-      ),
+        </FormProvider>
+      )
     },
     {
-      id: "other-insurance",
-      title: "Other Insurance",
+      id: 'other-insurance',
+      title: 'Other Insurance',
       component: (
-        <FormSection title="Other Insurance Information" description="Details about any other insurance policies">
+        <FormProvider {...formMethods}>
           <div className="space-y-4">
-            <div>
-              <Label>At the time of occurrence, were there any other existing insurance covers on the said Property with any other Insurer, whether effected by the Claimant or by any other person ? *</Label>
-              <div className="flex items-center space-x-4 mt-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="hasOtherInsuranceYes"
-                    checked={watchedValues.hasOtherInsurance === true}
-                    onCheckedChange={(checked) => formMethods.setValue('hasOtherInsurance', !!checked)}
-                  />
-                  <Label htmlFor="hasOtherInsuranceYes">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="hasOtherInsuranceNo"
-                    checked={watchedValues.hasOtherInsurance === false}
-                    onCheckedChange={(checked) => formMethods.setValue('hasOtherInsurance', !checked)}
-                  />
-                  <Label htmlFor="hasOtherInsuranceNo">No</Label>
-                </div>
-              </div>
-            </div>
-
-            {watchedValues.hasOtherInsurance === true && (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="otherInsuranceName">Name of Other Insurer *</Label>
-                  <Input
-                    id="otherInsuranceName"
-                    {...formMethods.register('otherInsuranceName')}
-                    placeholder="Enter name of other insurance company"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="otherInsuranceAddress">Address of Other Insurer *</Label>
-                  <Textarea
-                    id="otherInsuranceAddress"
-                    {...formMethods.register('otherInsuranceAddress')}
-                    placeholder="Enter address of other insurance company"
-                    rows={3}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </FormSection>
-      ),
-    },
-    {
-      id: "valuation",
-      title: "Valuation",
-      component: (
-        <FormSection title="Valuation Information" description="Property valuation and previous claim details">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="premisesContentsValue">At the time of Occurrence, what amount would you value the total contents of the Premises? (₦) *</Label>
-              <Input
-                id="premisesContentsValue"
-                type="number"
-                step="0.01"
-                {...formMethods.register('premisesContentsValue', { valueAsNumber: true })}
-                placeholder="0.00"
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasOtherInsurance"
+                checked={formMethods.watch('hasOtherInsurance')}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('hasOtherInsurance', checked === true);
+                  const error = get(formMethods.formState.errors, 'hasOtherInsurance');
+                  if (error) {
+                    formMethods.clearErrors('hasOtherInsurance');
+                  }
+                }}
               />
-              {formMethods.formState.errors.premisesContentsValue && (
-                <p className="text-sm text-red-600 mt-1">{formMethods.formState.errors.premisesContentsValue.message}</p>
-              )}
+              <Label htmlFor="hasOtherInsurance">
+                Do you have other insurance covering this property?
+              </Label>
             </div>
 
-            <div>
-              <Label>) Have you previously claimed against any insurer in respect of risks covered by this policy? *</Label>
-              <div className="flex items-center space-x-4 mt-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="hasPreviousClaimYes"
-                    checked={watchedValues.hasPreviousClaim === true}
-                    onCheckedChange={(checked) => formMethods.setValue('hasPreviousClaim', !!checked)}
-                  />
-                  <Label htmlFor="hasPreviousClaimYes">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="hasPreviousClaimNo"
-                    checked={watchedValues.hasPreviousClaim === false}
-                    onCheckedChange={(checked) => formMethods.setValue('hasPreviousClaim', !checked)}
-                  />
-                  <Label htmlFor="hasPreviousClaimNo">No</Label>
-                </div>
+            {formMethods.watch('hasOtherInsurance') && (
+              <div className="space-y-4">
+                <FormField name="otherInsuranceName" label="Other Insurance Company Name" required />
+                <FormTextarea name="otherInsuranceAddress" label="Other Insurance Company Address" required />
               </div>
+            )}
+          </div>
+        </FormProvider>
+      )
+    },
+    {
+      id: 'valuation',
+      title: 'Valuation & Previous Claims',
+      component: (
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormField name="premisesContentsValue" label="Total Value of Premises & Contents" required type="number" />
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasPreviousClaim"
+                checked={formMethods.watch('hasPreviousClaim')}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('hasPreviousClaim', checked === true);
+                  const error = get(formMethods.formState.errors, 'hasPreviousClaim');
+                  if (error) {
+                    formMethods.clearErrors('hasPreviousClaim');
+                  }
+                }}
+              />
+              <Label htmlFor="hasPreviousClaim">
+                Have you made any previous claims?
+              </Label>
             </div>
 
-            {watchedValues.hasPreviousClaim === true && (
+            {formMethods.watch('hasPreviousClaim') && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="previousClaimDate">Date of Loss *</Label>
-                  <Input
-                    id="previousClaimDate"
-                    type="date"
-                    {...formMethods.register('previousClaimDate')}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="previousClaimAmount">Amount of Loss (₦) *</Label>
-                  <Input
-                    id="previousClaimAmount"
-                    type="number"
-                    step="0.01"
-                    {...formMethods.register('previousClaimAmount', { valueAsNumber: true })}
-                    placeholder="0.00"
-                  />
-                </div>
+                <FormDatePicker name="previousClaimDate" label="Previous Claim Date" required />
+                <FormField name="previousClaimAmount" label="Previous Claim Amount" required type="number" />
               </div>
             )}
           </div>
-        </FormSection>
-      ),
+        </FormProvider>
+      )
     },
     {
-      id: "items-lost",
-      title: "Items Lost or Damaged",
+      id: 'items-lost',
+      title: 'Items Lost/Damaged',
       component: (
-        <FormSection title="Itemized List of Lost/Damaged Property" description="List all items that were lost or damaged">
+        <FormProvider {...formMethods}>
           <div className="space-y-4">
-            {watchedValues.itemsLost?.map((item, index) => (
-              <Card key={`item-${index}`} className="p-4">
+            {itemFields.map((item, index) => (
+              <Card key={item.id} className="p-4">
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-medium">Item {index + 1}</h4>
-                  {watchedValues.itemsLost.length > 1 && (
+                  <h3 className="text-lg font-medium">Item {index + 1}</h3>
+                  {itemFields.length > 1 && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => removeItem(index)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Remove
                     </Button>
                   )}
                 </div>
                 
                 <div className="space-y-4">
-                  <div>
-                    <Label htmlFor={`description-${index}`}>Description *</Label>
-                    <Textarea
-                      id={`description-${index}`}
-                      {...formMethods.register(`itemsLost.${index}.description`)}
-                      placeholder="Describe the item"
-                      rows={2}
-                    />
+                  <FormTextarea name={`itemsLost.${index}.description`} label="Description" required />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField name={`itemsLost.${index}.costPrice`} label="Cost Price" required type="number" />
+                    <FormDatePicker name={`itemsLost.${index}.dateOfPurchase`} label="Date of Purchase" required />
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor={`costPrice-${index}`}>Cost Price (₦) *</Label>
-                      <Input
-                        id={`costPrice-${index}`}
-                        type="number"
-                        step="0.01"
-                        {...formMethods.register(`itemsLost.${index}.costPrice`, { valueAsNumber: true })}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`dateOfPurchase-${index}`}>Date of Purchase *</Label>
-                      <Input
-                        id={`dateOfPurchase-${index}`}
-                        type="date"
-                        {...formMethods.register(`itemsLost.${index}.dateOfPurchase`)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`estimatedValue-${index}`}>Estimated Value at Occurrence (₦) *</Label>
-                      <Input
-                        id={`estimatedValue-${index}`}
-                        type="number"
-                        step="0.01"
-                        {...formMethods.register(`itemsLost.${index}.estimatedValueAtOccurrence`, { valueAsNumber: true })}
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor={`salvageValue-${index}`}>Value of Salvage (₦)</Label>
-                      <Input
-                        id={`salvageValue-${index}`}
-                        type="number"
-                        step="0.01"
-                        {...formMethods.register(`itemsLost.${index}.valueOfSalvage`, { valueAsNumber: true })}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`netAmount-${index}`}>Net Amount Claimed (₦)</Label>
-                      <Input
-                        id={`netAmount-${index}`}
-                        type="number"
-                        step="0.01"
-                        value={item.netAmountClaimed || 0}
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
+                    <FormField name={`itemsLost.${index}.estimatedValueAtOccurrence`} label="Estimated Value at Occurrence" required type="number" />
+                    <FormField name={`itemsLost.${index}.valueOfSalvage`} label="Value of Salvage" type="number" />
+                    <FormField name={`itemsLost.${index}.netAmountClaimed`} label="Net Amount Claimed" type="number" disabled />
                   </div>
                 </div>
               </Card>
             ))}
             
-            <Button type="button" variant="outline" onClick={addItem} className="w-full">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => addItem({
+                sn: itemFields.length + 1,
+                description: '',
+                costPrice: 0,
+                dateOfPurchase: undefined,
+                estimatedValueAtOccurrence: 0,
+                valueOfSalvage: 0,
+                netAmountClaimed: 0
+              })}
+              className="w-full"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Another Item
             </Button>
           </div>
-        </FormSection>
-      ),
+        </FormProvider>
+      )
     },
     {
-      id: 'file-uploads',
-      title: 'File Uploads',
+      id: 'documents',
+      title: 'Supporting Documents',
       component: (
-        <FormSection title="Required Documents" description="Upload the required supporting documents">
+        <FormProvider {...formMethods}>
           <div className="space-y-6">
-            <FileUpload
-              label="Fire Brigade Report *"
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, fireBrigadeReport: file }))}
-              currentFile={uploadedFiles.fireBrigadeReport}
-              accept=".pdf,.jpg,.jpeg,.png"
-              maxSize={5}
-            />
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-medium">Pictures of Loss *</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const currentPictures = watchedValues.picturesOfLoss || [];
-                    formMethods.setValue('picturesOfLoss', [...currentPictures, null]);
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add More Pictures
-                </Button>
-              </div>
-              
-              {(watchedValues.picturesOfLoss?.length > 0 ? watchedValues.picturesOfLoss : [null]).map((_, index) => (
-                <div key={`picture-${index}`} className="flex items-start gap-4">
-                  <div className="flex-1">
-                    <FileUpload
-                      label={`Picture ${index + 1}`}
-                      onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, [`pictureOfLoss${index + 1}`]: file }))}
-                      currentFile={uploadedFiles[`pictureOfLoss${index + 1}`]}
-                      accept=".jpg,.jpeg,.png"
-                      maxSize={5}
-                    />
-                  </div>
-                  {(watchedValues.picturesOfLoss?.length > 1) && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const currentPictures = watchedValues.picturesOfLoss || [];
-                        const updatedPictures = currentPictures.filter((_, i) => i !== index);
-                        formMethods.setValue('picturesOfLoss', updatedPictures);
-                        
-                        // Remove from uploaded files
-                        setUploadedFiles(prev => {
-                          const updated = { ...prev };
-                          delete updated[`pictureOfLoss${index + 1}`];
-                          return updated;
-                        });
-                      }}
-                      className="mt-8"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+            <div>
+              <Label>Pictures of Loss <span className="required-asterisk">*</span></Label>
+              <FileUpload
+                accept=".png,.jpg,.jpeg,.pdf"
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    picturesOfLoss: file
+                  }));
+                  formMethods.setValue('picturesOfLoss', file);
+                  if (formMethods.formState.errors.picturesOfLoss) {
+                    formMethods.clearErrors('picturesOfLoss');
+                  }
+                }}
+                maxSize={5 * 1024 * 1024}
+              />
+              {uploadedFiles.picturesOfLoss && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.picturesOfLoss.name}
                 </div>
-              ))}
+              )}
+              {formMethods.formState.errors.picturesOfLoss && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.picturesOfLoss.message?.toString()}
+                </p>
+              )}
             </div>
-            
-            <FileUpload
-              label="Police Report *"
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, policeReport: file }))}
-              currentFile={uploadedFiles.policeReport}
-              accept=".pdf,.jpg,.jpeg,.png"
-              maxSize={5}
-            />
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-medium">Additional Documents</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const currentDocs = watchedValues.additionalDocuments || [];
-                    formMethods.setValue('additionalDocuments', [...currentDocs, null]);
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Document
-                </Button>
-              </div>
-              
-              {(watchedValues.additionalDocuments?.length > 0) && 
-                watchedValues.additionalDocuments.map((_, index) => (
-                  <div key={`additional-${index}`} className="flex items-start gap-4">
-                    <div className="flex-1">
-                      <FileUpload
-                        label={`Additional Document ${index + 1}`}
-                        onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, [`additionalDocument${index + 1}`]: file }))}
-                        currentFile={uploadedFiles[`additionalDocument${index + 1}`]}
-                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                        maxSize={5}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const currentDocs = watchedValues.additionalDocuments || [];
-                        const updatedDocs = currentDocs.filter((_, i) => i !== index);
-                        formMethods.setValue('additionalDocuments', updatedDocs);
-                        
-                        // Remove from uploaded files
-                        setUploadedFiles(prev => {
-                          const updated = { ...prev };
-                          delete updated[`additionalDocument${index + 1}`];
-                          return updated;
-                        });
-                      }}
-                      className="mt-8"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))
-              }
-            </div>
-            
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm font-medium text-blue-800">
-                For claims status enquiries, call 01 448 9570
-              </p>
+
+            <div>
+              <Label>Additional Documents</Label>
+              <FileUpload
+                accept=".png,.jpg,.jpeg,.pdf"
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    additionalDocuments: file
+                  }));
+                  formMethods.setValue('additionalDocuments', file);
+                }}
+                maxSize={5 * 1024 * 1024}
+              />
+              {uploadedFiles.additionalDocuments && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.additionalDocuments.name}
+                </div>
+              )}
             </div>
           </div>
-        </FormSection>
-      ),
+        </FormProvider>
+      )
     },
     {
       id: 'declaration',
       title: 'Declaration & Signature',
       component: (
-        <div className="space-y-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Data Privacy</h3>
-            <div className="text-sm space-y-2">
-              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Data Privacy</h3>
+              <div className="text-sm space-y-2">
+                <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+                <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="agreeToDataPrivacy"
+                checked={watchedValues.agreeToDataPrivacy || false}
+                onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
+              />
+              <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
+            </div>
+            
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Declaration</h3>
+              <div className="text-sm space-y-2">
+                <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+                <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+                <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="declarationTrue"
+                checked={watchedValues.declarationTrue || false}
+                onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
+              />
+              <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
+            </div>
+            
+            <div>
+              <Label htmlFor="signature">Signature of policyholder (digital signature) *</Label>
+              <Input
+                id="signature"
+                {...formMethods.register('signature')}
+                placeholder="Type your full name as signature"
+              />
+            </div>
+            
+            <div>
+              <Label>Date</Label>
+              <Input value={new Date().toISOString().split('T')[0]} disabled />
             </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy || false}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
-            />
-            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
-          </div>
-          
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Declaration</h3>
-            <div className="text-sm space-y-2">
-              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="declarationTrue"
-              checked={watchedValues.declarationTrue || false}
-              onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
-            />
-            <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
-          </div>
-          
-          <div>
-            <Label htmlFor="signature">Signature of policyholder (digital signature) *</Label>
-            <Input
-              id="signature"
-              {...formMethods.register('signature')}
-              placeholder="Type your full name as signature"
-            />
-          </div>
-          
-          <div>
-            <Label>Date</Label>
-            <Input value={new Date().toISOString().split('T')[0]} disabled />
-          </div>
-        </div>
+        </FormProvider>
       )
     }
   ];
