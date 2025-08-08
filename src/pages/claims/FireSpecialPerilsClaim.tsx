@@ -561,7 +561,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField name="name" label="Name" required placeholder="Enter full name" />
-                <FormField name="companyName" label="Company Name" placeholder="Enter company name (optional)" />
+                <FormField name="companyName" label="Company Name (If applicable)" placeholder="Enter company name (optional)" />
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -608,7 +608,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
                 <FormField name="timeOfOccurrence" label="Time of Occurrence" type="time" required />
               </div>
 
-              <FormTextarea name="incidentDescription" label="Incident Description" required placeholder="Provide detailed description of what happened" rows={4} />
+              <FormTextarea name="incidentDescription" label="Incident Description" required placeholder="Describe what happened and the resultant damage" rows={4} />
 
               <FormTextarea name="causeOfFire" label="Cause of Fire" required placeholder="Describe the cause of fire. Include any suspicious circumstances if cause is undiscovered" rows={3} />
             </div>
@@ -652,7 +652,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
               <FormTextarea name="purposeOfPremises" label="Purpose Premises Was Being Used For" required placeholder="Describe the purpose for which the premises was being used" rows={3} />
 
               <div>
-                <Label>Any Unallowed Element of Risk Introduced?</Label>
+                <Label>Any) Had any element of risk been introduced which was not allowed in the Policy ?</Label>
                 <div className="flex items-center space-x-4 mt-2">
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -691,7 +691,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
           <FormSection title="Property Ownership Details" description="Information about property ownership">
             <div className="space-y-4">
               <div>
-                <Label>Are you the sole owner? <span className="text-red-500">*</span></Label>
+                <Label>Are you the sole owner of the property damaged or destroyed ? <span className="text-red-500">*</span></Label>
                 <div className="flex items-center space-x-4 mt-2">
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -993,11 +993,6 @@ const FireSpecialPerilsClaim: React.FC = () => {
               }
             </div>
             
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm font-medium text-blue-800">
-                For claims status enquiries, call 01 448 9570
-              </p>
-            </div>
           </div>
         </FormSection>
       ),
@@ -1016,26 +1011,6 @@ const FireSpecialPerilsClaim: React.FC = () => {
                 <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
               </div>
             </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="agreeToDataPrivacy"
-                checked={watchedValues.agreeToDataPrivacy || false}
-                onCheckedChange={(checked) => {
-                  formMethods.setValue('agreeToDataPrivacy', !!checked);
-                  if (formMethods.formState.errors.agreeToDataPrivacy) {
-                    formMethods.clearErrors('agreeToDataPrivacy');
-                  }
-                }}
-                className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
-              />
-              <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms <span className="text-red-500">*</span></Label>
-            </div>
-            {formMethods.formState.errors.agreeToDataPrivacy && (
-              <p className="text-sm text-destructive">
-                {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
-              </p>
-            )}
             
             <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="font-semibold mb-2">Declaration</h3>
@@ -1182,22 +1157,14 @@ const FireSpecialPerilsClaim: React.FC = () => {
           {/* Summary Dialog */}
           <Dialog open={showSummary} onOpenChange={setShowSummary}>
             <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Review Your Fire and Special Perils Claim Submission</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><strong>Policy Number:</strong> {watchedValues.policyNumber}</div>
-                  <div><strong>Name:</strong> {watchedValues.name}</div>
-                  <div><strong>Email:</strong> {watchedValues.email}</div>
-                  <div><strong>Premises Contents Value:</strong> ₦{watchedValues.premisesContentsValue?.toLocaleString()}</div>
-                </div>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm font-medium text-blue-800">
-                    For claims status enquiries, call 01 448 9570
-                  </p>
-                </div>
-              </div>
+            <DialogHeader>
+              <DialogTitle>Confirm Your Submission</DialogTitle>
+              <h3 className="font-semibold text-yellow-800">Important Notice</h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Please review all information carefully before submitting. Once submitted, you cannot modify your details.
+                </p>
+            </DialogHeader>
+             
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
                   Back to Edit
