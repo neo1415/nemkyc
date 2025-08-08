@@ -1235,4 +1235,4 @@ const EmployersLiabilityClaim: React.FC = () => {
   );
 };
 
-export default EmployersLiabilityClaim;....look at this one too : 
+export default EmployersLiabilityClaim;
