@@ -1007,6 +1007,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
           steps={steps}
           onSubmit={onFinalSubmit}
           formMethods={formMethods}
+          stepFieldMappings={stepFieldMappings}
         />
 
         {/* Summary Dialog */}
