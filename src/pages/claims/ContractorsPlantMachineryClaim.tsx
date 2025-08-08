@@ -899,15 +899,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
             </div>
 
             <Card className="shadow-xl border-0 bg-white/50 backdrop-blur-sm">
-              <CardHeader className="text-center pb-2">
-                <CardTitle className="flex items-center justify-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Contractors Plant & Machinery Insurance Claim
-                </CardTitle>
-                <CardDescription>
-                  Complete all sections to submit your contractors claim
-                </CardDescription>
-              </CardHeader>
+
               <CardContent>
                 <MultiStepForm
                   steps={steps}
@@ -926,52 +918,12 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Confirm Your Contractors Claim Submission</DialogTitle>
+              <h3 className="font-semibold text-yellow-800">Important Notice</h3>
+              <p className="text-sm text-yellow-700 mt-1">
+                Please review all information carefully before submitting. Once submitted, you cannot modify your claim details. Uploaded documents will be processed with your claim.
+              </p>
             </DialogHeader>
             
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Policy Number:</span>
-                  <p>{watchedValues.policyNumber}</p>
-                </div>
-                <div>
-                  <span className="font-medium">Insured Name:</span>
-                  <p>{watchedValues.nameOfInsured}</p>
-                </div>
-                <div>
-                  <span className="font-medium">Items Claimed:</span>
-                  <p>{watchedValues.plantMachineryItems?.length || 0} item(s)</p>
-                </div>
-                <div>
-                  <span className="font-medium">Date of Loss:</span>
-                  <p>{watchedValues.dateOfLoss ? new Date(watchedValues.dateOfLoss).toLocaleDateString() : 'N/A'}</p>
-                </div>
-              </div>
-              
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold text-yellow-800">Important Notice</h3>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      Please review all information carefully before submitting. Once submitted, you cannot modify your claim details. Uploaded documents will be processed with your claim.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {Object.keys(uploadedFiles).length > 0 && (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <h4 className="font-semibold text-green-800 mb-2">Uploaded Documents</h4>
-                  <ul className="text-sm text-green-700 list-disc list-inside">
-                    {Object.entries(uploadedFiles).map(([key, file]) => (
-                      <li key={key}>{file.name}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Review Again
