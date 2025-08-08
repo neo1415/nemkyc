@@ -186,6 +186,7 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
         {required && <span className="text-destructive ml-1">*</span>}
       </Label>
       <Input
+        key={name}
         id={name}
         type={type}
         maxLength={maxLength}
@@ -353,14 +354,14 @@ const defaultValues: Partial<ContractorsData> = {
   email: '',
   plantMachineryItems: [{
     itemNumber: '',
-    yearOfManufacture: new Date().getFullYear(),
+    yearOfManufacture: '' as any,
     make: '',
     registrationNumber: '',
-    dateOfPurchase: new Date(),
-    costPrice: 0,
-    deductionForAge: 0,
-    sumClaimed: 0,
-    claimType: 'repairs'
+    dateOfPurchase: undefined as any,
+    costPrice: '' as any,
+    deductionForAge: '' as any,
+    sumClaimed: '' as any,
+    claimType: '' as any
   }],
   policeInformed: false,
   isSoleOwner: true,
@@ -470,6 +471,42 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
     3: ['dateOfLoss', 'timeOfLoss', 'lastSeenIntact', 'whereDidLossOccur', 'partsDamaged', 'whereCanBeInspected', 'fullAccountCircumstances', 'suspicionInformation'],
     4: ['policeInformed', 'policeStation', 'otherRecoveryActions', 'isSoleOwner', 'ownershipDetails', 'hasOtherInsurance', 'otherInsuranceDetails', 'thirdPartyInvolved', 'thirdPartyName', 'thirdPartyAddress', 'thirdPartyInsurer'],
     5: ['agreeToDataPrivacy', 'signature']
+  };
+
+  const validateStep = async (stepId: string) => {
+    const showError = () => {
+      if (typeof window !== 'undefined' && (window as any).toast) {
+        (window as any).toast({
+          title: 'Validation Error',
+          description: 'Please fill all required fields before proceeding',
+          variant: 'destructive'
+        });
+      }
+    };
+
+    if (stepId === 'plant-machinery') {
+      const items = formMethods.getValues('plantMachineryItems') || [];
+      const requiredFields = ['itemNumber','yearOfManufacture','make','dateOfPurchase','costPrice','sumClaimed','claimType'];
+      const fields: string[] = [];
+      items.forEach((_: any, i: number) => {
+        requiredFields.forEach(f => fields.push(`plantMachineryItems.${i}.${f}`));
+      });
+      const isValid = await formMethods.trigger(fields);
+      if (!isValid) showError();
+      return isValid;
+    }
+
+    const stepMap: Record<string, string[]> = {
+      policy: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
+      insured: ['nameOfInsured', 'companyName', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
+      'loss-details': ['dateOfLoss', 'timeOfLoss', 'lastSeenIntact', 'whereDidLossOccur', 'partsDamaged', 'whereCanBeInspected', 'fullAccountCircumstances', 'suspicionInformation'],
+      'theft-third-party': ['policeInformed', 'policeStation', 'otherRecoveryActions', 'isSoleOwner', 'ownershipDetails', 'hasOtherInsurance', 'otherInsuranceDetails', 'thirdPartyInvolved', 'thirdPartyName', 'thirdPartyAddress', 'thirdPartyInsurer'],
+      declaration: ['agreeToDataPrivacy', 'signature']
+    };
+    const fields = stepMap[stepId] || [];
+    const isValid = await formMethods.trigger(fields.length ? fields : undefined);
+    if (!isValid) showError();
+    return isValid;
   };
 
   const steps = [
@@ -599,17 +636,17 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => appendPlant({
-                itemNumber: '',
-                yearOfManufacture: new Date().getFullYear(),
-                make: '',
-                registrationNumber: '',
-                dateOfPurchase: new Date(),
-                costPrice: 0,
-                deductionForAge: 0,
-                sumClaimed: 0,
-                claimType: 'repairs'
-              })}
+                onClick={() => appendPlant({
+                  itemNumber: '',
+                  yearOfManufacture: '' as any,
+                  make: '',
+                  registrationNumber: '',
+                  dateOfPurchase: undefined as any,
+                  costPrice: '' as any,
+                  deductionForAge: '' as any,
+                  sumClaimed: '' as any,
+                  claimType: '' as any
+                })}
               className="w-full"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -907,6 +944,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
                   formMethods={formMethods}
                   submitButtonText="Submit Contractors Claim"
                   stepFieldMappings={stepFieldMappings}
+                  validateStep={validateStep}
                 />
               </CardContent>
             </Card>
