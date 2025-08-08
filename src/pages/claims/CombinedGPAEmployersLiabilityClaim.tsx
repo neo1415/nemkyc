@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { get } from 'lodash';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -236,6 +237,138 @@ interface CombinedGPAEmployersLiabilityClaimData {
   signature: string;
 }
 
+// Form field components with validation (defined outside main component to prevent focus loss)
+const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
+  const { register, formState: { errors }, clearErrors } = useFormContext();
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        id={name}
+        type={type}
+        maxLength={maxLength}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...props }: any) => {
+  const { register, watch, formState: { errors }, clearErrors } = useFormContext();
+  const currentValue = watch(name) || '';
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Textarea
+        id={name}
+        {...register(name, {
+          onChange: () => {
+            if (error) {
+              clearErrors(name);
+            }
+          }
+        })}
+        className={error ? 'border-destructive' : ''}
+        {...props}
+      />
+      <div className="flex justify-between">
+        {error && (
+          <p className="text-sm text-destructive">{error.message?.toString()}</p>
+        )}
+        <span className="text-sm text-muted-foreground ml-auto">
+          {currentValue.length}/{maxLength}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const FormSelect = ({ name, label, required = false, options, placeholder, children, ...props }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(newValue) => {
+          setValue(name, newValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        {...props}
+      >
+        <SelectTrigger className={error ? 'border-destructive' : ''}>
+          <SelectValue placeholder={placeholder || `Select ${label}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {children}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
+const FormDatePicker = ({ name, label, required = false }: any) => {
+  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+  const value = watch(name);
+  const error = get(errors, name);
+  
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {required && <span className="required-asterisk">*</span>}
+      </Label>
+      <Input
+        type="date"
+        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
+        onChange={(e) => {
+          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+          setValue(name, dateValue);
+          if (error) {
+            clearErrors(name);
+          }
+        }}
+        className={error ? 'border-destructive' : ''}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error.message?.toString()}</p>
+      )}
+    </div>
+  );
+};
+
 const defaultValues: Partial<CombinedGPAEmployersLiabilityClaimData> = {
   policyNumber: '',
   name: '',
@@ -325,10 +458,15 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
   }, [authShowSuccess]);
 
   const formMethods = useForm<any>({
-    // resolver: yupResolver(combinedGPAEmployersLiabilityClaimSchema),
+    resolver: yupResolver(combinedGPAEmployersLiabilityClaimSchema),
     defaultValues,
     mode: 'onChange'
   });
+
+  // Make toast available globally for MultiStepForm
+  useEffect(() => {
+    (window as any).toast = toast;
+  }, [toast]);
 
   const { fields: witnessFields, append: addWitness, remove: removeWitness } = useFieldArray({
     control: formMethods.control,
@@ -378,48 +516,20 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
     setShowSummary(true);
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
-    return (
-      <TooltipProvider>
-        <div className="space-y-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Label className="flex items-center gap-1">
-                {label}
-                <Info className="h-3 w-3" />
-              </Label>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Select the {label.toLowerCase()}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !value && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <ReactCalendar
-                mode="single"
-                selected={value ? new Date(value) : undefined}
-                onSelect={(date) => formMethods.setValue(name, date)}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </TooltipProvider>
-    );
+  // Step field mappings for validation
+  const stepFieldMappings = {
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
+    1: ['name', 'address', 'phone', 'email'],
+    2: ['injuredPartyName', 'injuredPartyAge', 'injuredPartyAddress', 'averageMonthlyEarnings', 'occupation', 'dateOfEmployment', 'employerName', 'employerAddress', 'durationEmployed', 'maritalStatus', 'previousAccidents', 'previousAccidentsDetails'],
+    3: ['natureOfInjuries', 'machineryInvolved'],
+    4: ['accidentDate', 'accidentTime', 'accidentPlace', 'dateReported', 'dateTimeStoppedWork', 'workAtTime', 'howItOccurred'],
+    5: ['receivingTreatment', 'hospitalName', 'hospitalAddress', 'stillInHospital', 'dischargeDate', 'ableToDoduties', 'dutiesDetails', 'dateNatureResumedWork'],
+    6: ['doctorName'],
+    7: ['totallyDisabled', 'estimatedDuration'],
+    8: ['witnesses'],
+    9: ['otherInsurerName', 'otherInsurerAddress', 'otherInsurerPolicyNumber'],
+    10: ['earnings'],
+    11: ['agreeToDataPrivacy', 'declarationTrue', 'declarationAdditionalInfo', 'declarationDocuments', 'signature']
   };
 
   const steps = [
@@ -427,822 +537,623 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
       id: 'policy',
       title: 'Policy Details',
       component: (
-        <div className="space-y-4">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="policyNumber" className="flex items-center gap-1">
-                    Policy Number *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input
-                    id="policyNumber"
-                    {...formMethods.register('policyNumber')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter your combined GPA & employers liability insurance policy number</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DatePickerField
-              name="periodOfCoverFrom"
-              label="Period of Cover From *"
-            />
-            <DatePickerField
-              name="periodOfCoverTo"
-              label="Period of Cover To *"
-            />
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <FormField name="policyNumber" label="Policy Number" required />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter your combined GPA & employers liability insurance policy number</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormDatePicker
+                name="periodOfCoverFrom"
+                label="Period of Cover From"
+                required
+              />
+              <FormDatePicker
+                name="periodOfCoverTo"
+                label="Period of Cover To"
+                required
+              />
+            </div>
           </div>
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'insured',
       title: 'Insured Details',
       component: (
-        <TooltipProvider>
-          <div className="space-y-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="name" className="flex items-center gap-1">
-                    Name *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input
-                    id="name"
-                    {...formMethods.register('name')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter the insured person's name</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="address" className="flex items-center gap-1">
-                    Address *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Textarea
-                    id="address"
-                    {...formMethods.register('address')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter the insured's full address</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormProvider {...formMethods}>
+          <TooltipProvider>
+            <div className="space-y-4">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <Label htmlFor="phone" className="flex items-center gap-1">
-                      Phone Number *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="phone"
-                      {...formMethods.register('phone')}
-                    />
+                    <FormField name="name" label="Name" required />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Enter contact phone number</p>
+                  <p>Enter the insured person's name</p>
                 </TooltipContent>
               </Tooltip>
               
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <Label htmlFor="email" className="flex items-center gap-1">
-                      Email Address *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      {...formMethods.register('email')}
-                    />
+                    <FormTextarea name="address" label="Address" required />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Enter email address for correspondence</p>
+                  <p>Enter the insured's full address</p>
                 </TooltipContent>
               </Tooltip>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <FormField name="phone" label="Phone Number" required />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter contact phone number</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <FormField name="email" label="Email Address" type="email" required />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter email address for correspondence</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
-          </div>
-        </TooltipProvider>
+          </TooltipProvider>
+        </FormProvider>
       )
     },
     {
       id: 'injured-party',
       title: 'Injured Party Details',
       component: (
-        <TooltipProvider>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Label htmlFor="injuredPartyName" className="flex items-center gap-1">
-                      Name *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="injuredPartyName"
-                      {...formMethods.register('injuredPartyName')}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter the injured party's full name</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Label htmlFor="injuredPartyAge" className="flex items-center gap-1">
-                      Age *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="injuredPartyAge"
-                      type="number"
-                      {...formMethods.register('injuredPartyAge')}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter the age of the injured party</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="injuredPartyAddress" className="flex items-center gap-1">
-                    Address *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Textarea
-                    id="injuredPartyAddress"
-                    {...formMethods.register('injuredPartyAddress')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter the injured party's address</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Label htmlFor="averageMonthlyEarnings" className="flex items-center gap-1">
-                      Average Monthly Earnings *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="averageMonthlyEarnings"
-                      type="number"
-                      {...formMethods.register('averageMonthlyEarnings')}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter the average monthly earnings in Naira</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Label htmlFor="occupation" className="flex items-center gap-1">
-                      Occupation *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="occupation"
-                      {...formMethods.register('occupation')}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter the occupation/job title</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            
-            <DatePickerField
-              name="dateOfEmployment"
-              label="Date of Employment *"
-            />
-
-            <div>
-              <Label htmlFor="durationEmployed">Duration Employed</Label>
-                <Input
-                  id="durationEmployed"
-                  {...formMethods.register('durationEmployed')}
-                 />
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="notDirectlyEmployed"
-                checked={watchedValues.notDirectlyEmployed || false}
-                onCheckedChange={(checked) => formMethods.setValue('notDirectlyEmployed', checked)}
-              />
-              <Label htmlFor="notDirectlyEmployed">If not directly employed</Label>
-            </div>
-            
-            {watchedValues.notDirectlyEmployed && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="employerName">Employer Name *</Label>
-                    <Input
-                      id="employerName"
-                      {...formMethods.register('employerName')}
-                    />
-                  </div>
-                  
-                </div>
+        <FormProvider {...formMethods}>
+          <TooltipProvider>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <FormField name="injuredPartyName" label="Name" required />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter the injured party's full name</p>
+                  </TooltipContent>
+                </Tooltip>
                 
-                <div>
-                  <Label htmlFor="employerAddress">Employer Address *</Label>
-                  <Textarea
-                    id="employerAddress"
-                    {...formMethods.register('employerAddress')}
-                  />
-                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <FormField name="injuredPartyAge" label="Age" type="number" required />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter the age of the injured party</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
-            )}
-            
-            <div>
-              <Label>Marital Status *</Label>
-              <Select
-                value={watchedValues.maritalStatus || ''}
-                onValueChange={(value) => formMethods.setValue('maritalStatus', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select marital status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Single">Single</SelectItem>
-                  <SelectItem value="Married">Married</SelectItem>
-                  <SelectItem value="Divorced">Divorced</SelectItem>
-                  <SelectItem value="Widowed">Widowed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label>Previous Accidents *</Label>
-              <Select
-                value={watchedValues.previousAccidents || ''}
-                onValueChange={(value) => formMethods.setValue('previousAccidents', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select yes or no" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="yes">Yes</SelectItem>
-                  <SelectItem value="no">No</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {watchedValues.previousAccidents === 'yes' && (
-              <div>
-                <Label htmlFor="previousAccidentsDetails">Previous Accidents Details *</Label>
-                <Textarea
-                  id="previousAccidentsDetails"
-                  {...formMethods.register('previousAccidentsDetails')}
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <FormTextarea name="injuredPartyAddress" label="Address" required />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter the injured party's address</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <FormField name="averageMonthlyEarnings" label="Average Monthly Earnings" type="number" required />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter the average monthly earnings in Naira</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <FormField name="occupation" label="Occupation" required />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter the occupation/job title</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              
+              <FormDatePicker
+                name="dateOfEmployment"
+                label="Date of Employment"
+                required
+              />
+
+              <FormField name="durationEmployed" label="Duration Employed" />
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="notDirectlyEmployed"
+                  checked={watchedValues.notDirectlyEmployed || false}
+                  onCheckedChange={(checked) => formMethods.setValue('notDirectlyEmployed', checked)}
                 />
+                <Label htmlFor="notDirectlyEmployed">If not directly employed</Label>
               </div>
-            )}
-          </div>
-        </TooltipProvider>
+              
+              {watchedValues.notDirectlyEmployed && (
+                <div className="space-y-4">
+                  <FormField name="employerName" label="Employer Name" required />
+                  <FormTextarea name="employerAddress" label="Employer Address" required />
+                </div>
+              )}
+              
+              <FormSelect name="maritalStatus" label="Marital Status" required placeholder="Select marital status">
+                <SelectItem value="Single">Single</SelectItem>
+                <SelectItem value="Married">Married</SelectItem>
+                <SelectItem value="Divorced">Divorced</SelectItem>
+                <SelectItem value="Widowed">Widowed</SelectItem>
+              </FormSelect>
+              
+              <FormSelect name="previousAccidents" label="Previous Accidents" required placeholder="Select yes or no">
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </FormSelect>
+              
+              {watchedValues.previousAccidents === 'yes' && (
+                <FormTextarea name="previousAccidentsDetails" label="Previous Accidents Details" required />
+              )}
+            </div>
+          </TooltipProvider>
+        </FormProvider>
       )
     },
     {
       id: 'injury',
       title: 'Injury Details',
       component: (
-        <TooltipProvider>
-          <div className="space-y-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="natureOfInjuries" className="flex items-center gap-1">
-                    Nature of Injuries *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Textarea
-                    id="natureOfInjuries"
-                    {...formMethods.register('natureOfInjuries')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Describe the nature and extent of injuries</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="machineryInvolved" className="flex items-center gap-1">
-                    Machinery Involved
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Textarea
-                    id="machineryInvolved"
-                    {...formMethods.register('machineryInvolved')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Describe any machinery involved in the incident</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </TooltipProvider>
+        <FormProvider {...formMethods}>
+          <TooltipProvider>
+            <div className="space-y-4">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <FormTextarea name="natureOfInjuries" label="Nature of Injuries" required />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Describe the nature and extent of injuries</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <FormTextarea name="machineryInvolved" label="Machinery Involved" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Describe any machinery involved in the incident</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
+        </FormProvider>
       )
     },
     {
       id: 'accident',
       title: 'Accident Details',
       component: (
-        <TooltipProvider>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DatePickerField
-                name="accidentDate"
-                label="Accident Date *"
-              />
+        <FormProvider {...formMethods}>
+          <TooltipProvider>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormDatePicker
+                  name="accidentDate"
+                  label="Accident Date"
+                  required
+                />
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <FormField name="accidentTime" label="Time" type="time" required />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter the time when the accident occurred</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <Label htmlFor="accidentTime" className="flex items-center gap-1">
-                      Time *
-                      <Info className="h-3 w-3" />
-                    </Label>
-                    <Input
-                      id="accidentTime"
-                      type="time"
-                      {...formMethods.register('accidentTime')}
-                    />
+                    <FormTextarea name="accidentPlace" label="Place" required />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Enter the time when the accident occurred</p>
+                  <p>Describe the location where the accident occurred</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormDatePicker
+                  name="dateReported"
+                  label="Date Reported"
+                  required
+                />
+                
+                <FormField name="dateTimeStoppedWork" label="Date/Time Stopped Work" type="datetime-local" required />
+              </div>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <FormTextarea name="workAtTime" label="Work at Time" required />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Describe the work being performed when the accident occurred</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <FormTextarea name="howItOccurred" label="How It Occurred" required />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Provide a detailed description of how the accident happened</p>
                 </TooltipContent>
               </Tooltip>
             </div>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="accidentPlace" className="flex items-center gap-1">
-                    Place *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Textarea
-                    id="accidentPlace"
-                    {...formMethods.register('accidentPlace')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Describe the location where the accident occurred</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DatePickerField
-                name="dateReported"
-                label="Date Reported *"
-              />
-              
-              <div>
-                <Label htmlFor="dateTimeStoppedWork">Date/Time Stopped Work *</Label>
-                <Input
-                  id="dateTimeStoppedWork"
-                  type="datetime-local"
-                  {...formMethods.register('dateTimeStoppedWork')}
-                />
-              </div>
-            </div>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="workAtTime" className="flex items-center gap-1">
-                    Work at Time *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Textarea
-                    id="workAtTime"
-                    {...formMethods.register('workAtTime')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Describe the work being performed when the accident occurred</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="howItOccurred" className="flex items-center gap-1">
-                    How It Occurred *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Textarea
-                    id="howItOccurred"
-                    {...formMethods.register('howItOccurred')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Provide a detailed description of how the accident happened</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </TooltipProvider>
+          </TooltipProvider>
+        </FormProvider>
       )
     },
     {
       id: 'medical',
       title: 'Medical',
       component: (
-        <TooltipProvider>
-          <div className="space-y-4">
-            <div>
-              <Label>Receiving Treatment *</Label>
-              <Select
-                value={watchedValues.receivingTreatment || ''}
-                onValueChange={(value) => formMethods.setValue('receivingTreatment', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select yes or no" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="yes">Yes</SelectItem>
-                  <SelectItem value="no">No</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {watchedValues.receivingTreatment === 'yes' && (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="hospitalName">Hospital Name *</Label>
-                  <Input
-                    id="hospitalName"
-                    {...formMethods.register('hospitalName')}
-                  />
+        <FormProvider {...formMethods}>
+          <TooltipProvider>
+            <div className="space-y-4">
+              <FormSelect name="receivingTreatment" label="Receiving Treatment" required placeholder="Select yes or no">
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </FormSelect>
+              
+              {watchedValues.receivingTreatment === 'yes' && (
+                <div className="space-y-4">
+                  <FormField name="hospitalName" label="Hospital Name" required />
+                  <FormTextarea name="hospitalAddress" label="Hospital Address" required />
+                  
+                  <FormSelect name="stillInHospital" label="Still in Hospital?" required placeholder="Select yes or no">
+                    <SelectItem value="yes">Yes</SelectItem>
+                    <SelectItem value="no">No</SelectItem>
+                  </FormSelect>
+                  
+                  {watchedValues.stillInHospital === 'no' && (
+                    <FormDatePicker
+                      name="dischargeDate"
+                      label="Discharge Date"
+                      required
+                    />
+                  )}
                 </div>
-                
-                <div>
-                  <Label htmlFor="hospitalAddress">Hospital Address *</Label>
-                  <Textarea
-                    id="hospitalAddress"
-                    {...formMethods.register('hospitalAddress')}
-                  />
-                </div>
-                
-                <div>
-                  <Label>Still in Hospital? *</Label>
-                  <Select
-                    value={watchedValues.stillInHospital || ''}
-                    onValueChange={(value) => formMethods.setValue('stillInHospital', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select yes or no" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yes">Yes</SelectItem>
-                      <SelectItem value="no">No</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {watchedValues.stillInHospital === 'no' && (
-                  <DatePickerField
-                    name="dischargeDate"
-                    label="Discharge Date *"
-                  />
-                )}
-              </div>
-            )}
-            
-            <div>
-              <Label>Able to Do Duties? *</Label>
-              <Select
-                value={watchedValues.ableToDoduties || ''}
-                onValueChange={(value) => formMethods.setValue('ableToDoduties', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select yes or no" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="yes">Yes</SelectItem>
-                  <SelectItem value="no">No</SelectItem>
-                </SelectContent>
-              </Select>
+              )}
+              
+              <FormSelect name="ableToDoduties" label="Able to Do Duties?" required placeholder="Select yes or no">
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </FormSelect>
+              
+              {watchedValues.ableToDoduties === 'yes' && (
+                <FormTextarea name="dutiesDetails" label="Duties Details" required />
+              )}
+              
+              <FormTextarea name="dateNatureResumedWork" label="Date and Nature of Resumed Work" />
             </div>
-            
-            {watchedValues.ableToDoduties === 'yes' && (
-              <div>
-                <Label htmlFor="dutiesDetails">Duties Details *</Label>
-                <Textarea
-                  id="dutiesDetails"
-                  {...formMethods.register('dutiesDetails')}
-                />
-              </div>
-            )}
-            
-            <div>
-              <Label htmlFor="dateNatureResumedWork">Date and Nature of Resumed Work</Label>
-              <Textarea
-                id="dateNatureResumedWork"
-                {...formMethods.register('dateNatureResumedWork')}
-              />
-            </div>
-          </div>
-        </TooltipProvider>
+          </TooltipProvider>
+        </FormProvider>
       )
     },
     {
       id: 'doctor',
       title: 'Doctor Details',
       component: (
-        <TooltipProvider>
-          <div className="space-y-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Label htmlFor="doctorName" className="flex items-center gap-1">
-                    Name of Doctor *
-                    <Info className="h-3 w-3" />
-                  </Label>
-                  <Input
-                    id="doctorName"
-                    {...formMethods.register('doctorName')}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter the name of the attending doctor</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </TooltipProvider>
+        <FormProvider {...formMethods}>
+          <TooltipProvider>
+            <div className="space-y-4">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <FormField name="doctorName" label="Name of Doctor" required />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter the name of the attending doctor</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
+        </FormProvider>
       )
     },
     {
       id: 'disablement',
       title: 'Disablement',
       component: (
-        <TooltipProvider>
-          <div className="space-y-4">
-            <div>
-              <Label>Totally Disabled? *</Label>
-              <Select
-                value={watchedValues.totallyDisabled || ''}
-                onValueChange={(value) => formMethods.setValue('totallyDisabled', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select yes or no" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="yes">Yes</SelectItem>
-                  <SelectItem value="no">No</SelectItem>
-                </SelectContent>
-              </Select>
+        <FormProvider {...formMethods}>
+          <TooltipProvider>
+            <div className="space-y-4">
+              <FormSelect name="totallyDisabled" label="Totally Disabled?" required placeholder="Select yes or no">
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </FormSelect>
+              
+              <FormField name="estimatedDuration" label="Estimated Duration" />
             </div>
-            
-            <div>
-              <Label htmlFor="estimatedDuration">Estimated Duration</Label>
-              <Input
-                id="estimatedDuration"
-                {...formMethods.register('estimatedDuration')}
-              />
-            </div>
-          </div>
-        </TooltipProvider>
+          </TooltipProvider>
+        </FormProvider>
       )
     },
     {
       id: 'witnesses',
       title: 'Witnesses',
       component: (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <Label className="text-lg font-semibold">Witnesses</Label>
-            <Button
-              type="button"
-              onClick={() => addWitness({ name: '', address: '', phone: '' })}
-              variant="outline"
-              size="sm"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Witness
-            </Button>
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <Label className="text-lg font-semibold">Witnesses</Label>
+              <Button
+                type="button"
+                onClick={() => addWitness({ name: '', address: '', phone: '' })}
+                variant="outline"
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Witness
+              </Button>
+            </div>
+            
+            {witnessFields.map((field, index) => (
+              <Card key={field.id} className="p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-semibold">Witness {index + 1}</h3>
+                  <Button
+                    type="button"
+                    onClick={() => removeWitness(index)}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="space-y-4">
+                  <FormField name={`witnesses.${index}.name`} label="Witness Name" required />
+                  <FormTextarea name={`witnesses.${index}.address`} label="Witness Address" required />
+                  <FormField name={`witnesses.${index}.phone`} label="Witness Phone" required />
+                </div>
+              </Card>
+            ))}
           </div>
-          
-          {witnessFields.map((field, index) => (
-            <Card key={field.id} className="p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold">Witness {index + 1}</h3>
-                <Button
-                  type="button"
-                  onClick={() => removeWitness(index)}
-                  variant="destructive"
-                  size="sm"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor={`witnesses.${index}.name`}>Witness Name *</Label>
-                  <Input
-                    {...formMethods.register(`witnesses.${index}.name`)}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor={`witnesses.${index}.address`}>Witness Address *</Label>
-                  <Textarea
-                    {...formMethods.register(`witnesses.${index}.address`)}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor={`witnesses.${index}.phone`}>Witness Phone *</Label>
-                  <Input
-                    {...formMethods.register(`witnesses.${index}.phone`)}
-                  />
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'other-insurers',
       title: 'Other Insurers',
       component: (
-        <TooltipProvider>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="otherInsurerName">Other Insurer Name</Label>
-              <Input
-                id="otherInsurerName"
-                {...formMethods.register('otherInsurerName')}
-              />
+        <FormProvider {...formMethods}>
+          <TooltipProvider>
+            <div className="space-y-4">
+              <FormField name="otherInsurerName" label="Other Insurer Name" />
+              <FormTextarea name="otherInsurerAddress" label="Other Insurer Address" />
+              <FormField name="otherInsurerPolicyNumber" label="Policy Number" />
             </div>
-            
-            <div>
-              <Label htmlFor="otherInsurerAddress">Other Insurer Address</Label>
-              <Textarea
-                id="otherInsurerAddress"
-                {...formMethods.register('otherInsurerAddress')}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="otherInsurerPolicyNumber">Policy Number</Label>
-              <Input
-                id="otherInsurerPolicyNumber"
-                {...formMethods.register('otherInsurerPolicyNumber')}
-              />
-            </div>
-          </div>
-        </TooltipProvider>
+          </TooltipProvider>
+        </FormProvider>
       )
     },
     {
       id: 'earnings',
       title: 'Statement of Earnings',
       component: (
-        <div className="space-y-4">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-300">
-              <thead>
-                <tr>
-                  <th className="border border-gray-300 p-2 bg-gray-50">Month Ending</th>
-                  <th className="border border-gray-300 p-2 bg-gray-50">Wages & Bonus</th>
-                  <th className="border border-gray-300 p-2 bg-gray-50">Plus Monthly Allowances</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: 12 }, (_, index) => (
-                  <tr key={index}>
-                    <td className="border border-gray-300 p-2">
-                      <Input
-                        {...formMethods.register(`earnings.${index}.monthEnding`)}
-                        placeholder="MM/YYYY"
-                      />
-                    </td>
-                    <td className="border border-gray-300 p-2">
-                      <Input
-                        type="number"
-                        {...formMethods.register(`earnings.${index}.wagesAndBonus`)}
-                        placeholder="0"
-                      />
-                    </td>
-                    <td className="border border-gray-300 p-2">
-                      <Input
-                        type="number"
-                        {...formMethods.register(`earnings.${index}.monthlyAllowances`)}
-                        placeholder="0"
-                      />
-                    </td>
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr>
+                    <th className="border border-gray-300 p-2 bg-gray-50">Month Ending</th>
+                    <th className="border border-gray-300 p-2 bg-gray-50">Wages & Bonus</th>
+                    <th className="border border-gray-300 p-2 bg-gray-50">Plus Monthly Allowances</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {Array.from({ length: 12 }, (_, index) => (
+                    <tr key={index}>
+                      <td className="border border-gray-300 p-2">
+                        <Input
+                          {...formMethods.register(`earnings.${index}.monthEnding`)}
+                          placeholder="MM/YYYY"
+                        />
+                      </td>
+                      <td className="border border-gray-300 p-2">
+                        <Input
+                          type="number"
+                          {...formMethods.register(`earnings.${index}.wagesAndBonus`)}
+                          placeholder="0"
+                        />
+                      </td>
+                      <td className="border border-gray-300 p-2">
+                        <Input
+                          type="number"
+                          {...formMethods.register(`earnings.${index}.monthlyAllowances`)}
+                          placeholder="0"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </FormProvider>
       )
     },
     {
       id: 'declaration',
       title: 'Declaration & Signature',
       component: (
-        <div className="space-y-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Data Privacy</h3>
-            <div className="text-sm space-y-2">
-              <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-              <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
-              <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Data Privacy</h3>
+              <div className="text-sm space-y-2">
+                <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+                <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="agreeToDataPrivacy"
+                checked={formMethods.watch('agreeToDataPrivacy') || false}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('agreeToDataPrivacy', !!checked);
+                  if (formMethods.formState.errors.agreeToDataPrivacy) {
+                    formMethods.clearErrors('agreeToDataPrivacy');
+                  }
+                }}
+                className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
+              />
+              <Label htmlFor="agreeToDataPrivacy">
+                I agree to the data privacy terms <span className="required-asterisk">*</span>
+              </Label>
+            </div>
+            {formMethods.formState.errors.agreeToDataPrivacy && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
+              </p>
+            )}
+            
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Declaration</h3>
+              <div className="text-sm space-y-2">
+                <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+                <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+                <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="declarationTrue"
+                checked={formMethods.watch('declarationTrue') || false}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('declarationTrue', !!checked);
+                  if (formMethods.formState.errors.declarationTrue) {
+                    formMethods.clearErrors('declarationTrue');
+                  }
+                }}
+                className={cn(formMethods.formState.errors.declarationTrue && "border-destructive")}
+              />
+              <Label htmlFor="declarationTrue">
+                I agree that statements are true <span className="required-asterisk">*</span>
+              </Label>
+            </div>
+            {formMethods.formState.errors.declarationTrue && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.declarationTrue.message?.toString()}
+              </p>
+            )}
+
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="declarationAdditionalInfo"
+                checked={formMethods.watch('declarationAdditionalInfo') || false}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('declarationAdditionalInfo', !!checked);
+                  if (formMethods.formState.errors.declarationAdditionalInfo) {
+                    formMethods.clearErrors('declarationAdditionalInfo');
+                  }
+                }}
+                className={cn(formMethods.formState.errors.declarationAdditionalInfo && "border-destructive")}
+              />
+              <Label htmlFor="declarationAdditionalInfo">
+                I agree to provide additional information <span className="required-asterisk">*</span>
+              </Label>
+            </div>
+            {formMethods.formState.errors.declarationAdditionalInfo && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.declarationAdditionalInfo.message?.toString()}
+              </p>
+            )}
+
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="declarationDocuments"
+                checked={formMethods.watch('declarationDocuments') || false}
+                onCheckedChange={(checked) => {
+                  formMethods.setValue('declarationDocuments', !!checked);
+                  if (formMethods.formState.errors.declarationDocuments) {
+                    formMethods.clearErrors('declarationDocuments');
+                  }
+                }}
+                className={cn(formMethods.formState.errors.declarationDocuments && "border-destructive")}
+              />
+              <Label htmlFor="declarationDocuments">
+                I agree to submit documents <span className="required-asterisk">*</span>
+              </Label>
+            </div>
+            {formMethods.formState.errors.declarationDocuments && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.declarationDocuments.message?.toString()}
+              </p>
+            )}
+            
+            <FormField name="signature" label="Signature of policyholder (digital signature)" required placeholder="Type your full name as signature" />
+            
+            <div>
+              <Label>Date</Label>
+              <Input value={new Date().toISOString().split('T')[0]} disabled />
             </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="agreeToDataPrivacy"
-              checked={watchedValues.agreeToDataPrivacy || false}
-              onCheckedChange={(checked) => formMethods.setValue('agreeToDataPrivacy', !!checked)}
-            />
-            <Label htmlFor="agreeToDataPrivacy">I agree to the data privacy terms *</Label>
-          </div>
-          
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Declaration</h3>
-            <div className="text-sm space-y-2">
-              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-              <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-              <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="declarationTrue"
-              checked={watchedValues.declarationTrue || false}
-              onCheckedChange={(checked) => formMethods.setValue('declarationTrue', !!checked)}
-            />
-            <Label htmlFor="declarationTrue">I agree that statements are true *</Label>
-          </div>
-          
-          <div>
-            <Label htmlFor="signature">Signature of policyholder (digital signature) *</Label>
-            <Input
-              id="signature"
-              {...formMethods.register('signature')}
-              placeholder="Type your full name as signature"
-            />
-          </div>
-          
-          <div>
-            <Label>Date</Label>
-            <Input value={new Date().toISOString().split('T')[0]} disabled />
-          </div>
-        </div>
+        </FormProvider>
       )
     }
   ];
@@ -1279,100 +1190,103 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <div className="container mx-auto py-8 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
-              <Shield className="w-8 h-8 text-primary" />
+    <FormProvider {...formMethods}>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+        <div className="container mx-auto py-8 px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
+                <Shield className="w-8 h-8 text-primary" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight mb-2">Combined GPA & Employers Liability Claim Form</h1>
+              <p className="text-muted-foreground">
+                Submit your combined GPA & employers liability insurance claim with all required details
+              </p>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">Combined GPA & Employers Liability Claim Form</h1>
-            <p className="text-muted-foreground">
-              Submit your combined GPA & employers liability insurance claim with all required details
-            </p>
+
+            <MultiStepForm
+              steps={steps}
+              onSubmit={onFinalSubmit}
+              formMethods={formMethods}
+              stepFieldMappings={stepFieldMappings}
+            />
+
+            {/* Summary Dialog */}
+            <Dialog open={showSummary} onOpenChange={setShowSummary}>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Claim Summary</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium">Policy Details</h4>
+                    <p className="text-sm text-muted-foreground">Policy: {watchedValues.policyNumber}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Insured</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {watchedValues.name} - {watchedValues.email}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Injured Party</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {watchedValues.injuredPartyName}
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowSummary(false)}>
+                    Back to Edit
+                  </Button>
+                  <Button onClick={() => handleSubmit(watchedValues)} disabled={authSubmitting}>
+                    {authSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Claim'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            {/* Success Modal */}
+            <SuccessModal
+              isOpen={showSuccess || authShowSuccess || authSubmitting}
+              onClose={() => {
+                setShowSuccess(false);
+                setAuthShowSuccess();
+              }}
+              title="Combined GPA & Employers Liability Claim Submitted!"
+              formType="Combined GPA & Employers Liability Claim"
+              isLoading={authSubmitting}
+              loadingMessage="Your combined GPA & employers liability claim is being processed and submitted..."
+            />
           </div>
 
-          <MultiStepForm
-            steps={steps}
-            onSubmit={onFinalSubmit}
-            formMethods={formMethods}
-          />
-
-          {/* Summary Dialog */}
-          <Dialog open={showSummary} onOpenChange={setShowSummary}>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Claim Summary</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium">Policy Details</h4>
-                  <p className="text-sm text-muted-foreground">Policy: {watchedValues.policyNumber}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium">Insured</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {watchedValues.name} - {watchedValues.email}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-medium">Injured Party</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {watchedValues.injuredPartyName}
+          {/* Post-Authentication Loading Overlay */}
+          {showPostAuthLoading && (
+            <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+              <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
+                  <p className="text-muted-foreground">
+                    Thank you for signing in! Your combined GPA & employers liability claim is now being submitted...
                   </p>
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowSummary(false)}>
-                  Back to Edit
-                </Button>
-                <Button onClick={() => handleSubmit(watchedValues)} disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    'Submit Claim'
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          
-          {/* Success Modal */}
-          <SuccessModal
-            isOpen={showSuccess || authShowSuccess || authSubmitting}
-            onClose={() => {
-              setShowSuccess(false);
-              setAuthShowSuccess();
-            }}
-            title="Combined GPA & Employers Liability Claim Submitted!"
-            formType="Combined GPA & Employers Liability Claim"
-            isLoading={authSubmitting}
-            loadingMessage="Your combined GPA & employers liability claim is being processed and submitted..."
-          />
+            </div>
+          )}
         </div>
 
-        {/* Post-Authentication Loading Overlay */}
-        {showPostAuthLoading && (
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="bg-card p-8 rounded-lg shadow-lg animate-scale-in max-w-md mx-4">
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                </div>
-                <h3 className="text-xl font-semibold text-primary">Processing Your Submission</h3>
-                <p className="text-muted-foreground">
-                  Thank you for signing in! Your combined GPA & employers liability claim is now being submitted...
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
-
-    </div>
+    </FormProvider>
   );
 };
 
