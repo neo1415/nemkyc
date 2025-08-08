@@ -32,32 +32,83 @@ const rentAssuranceSchema = yup.object({
   periodOfCoverTo: yup.date().required('Period of cover to is required'),
   nameOfInsured: yup.string().required('Name of insured is required'),
   address: yup.string().required('Address is required'),
-  age: yup.number().required('Age is required').min(1, 'Age must be valid'),
+  age: yup
+    .number()
+    .required('Age is required')
+    .min(1, 'Age must be valid'),
   email: yup.string().email('Invalid email').required('Email is required'),
   phone: yup.string().required('Phone number is required'),
   nameOfLandlord: yup.string().required('Name of landlord is required'),
   addressOfLandlord: yup.string().required('Address of landlord is required'),
-  livingAtPremisesFrom: yup.date().required('Living at premises from date is required'),
-  livingAtPremisesTo: yup.date().required('Living at premises to date is required'),
-  periodOfDefaultFrom: yup.date().required('Period of default from is required'),
-  periodOfDefaultTo: yup.date().required('Period of default to is required'),
-  amountDefaulted: yup.number().required('Amount defaulted is required').min(0),
+  livingAtPremisesFrom: yup
+    .date()
+    .required('Living at premises from date is required'),
+  livingAtPremisesTo: yup
+    .date()
+    .required('Living at premises to date is required'),
+  periodOfDefaultFrom: yup
+    .date()
+    .required('Period of default from is required'),
+  periodOfDefaultTo: yup
+    .date()
+    .required('Period of default to is required'),
+  amountDefaulted: yup
+    .number()
+    .required('Amount defaulted is required')
+    .min(0),
   rentDueDate: yup.date().required('Rent due date is required'),
-  rentPaymentFrequency: yup.string().required('Rent payment frequency is required'),
+  rentPaymentFrequency: yup
+    .string()
+    .required('Rent payment frequency is required'),
   rentPaymentFrequencyOther: yup.string().when('rentPaymentFrequency', {
     is: 'other',
     then: (schema) => schema.required('Please specify the frequency'),
-    otherwise: (schema) => schema.notRequired()
+    otherwise: (schema) => schema.notRequired(),
   }),
-  causeOfInabilityToPay: yup.string().required('Cause of inability to pay is required'),
-  nameOfBeneficiary: yup.string().required('Name of beneficiary is required'),
-  beneficiaryAge: yup.number().required('Beneficiary age is required').min(1),
-  beneficiaryAddress: yup.string().required('Beneficiary address is required'),
-  beneficiaryEmail: yup.string().email('Invalid email').required('Beneficiary email is required'),
-  beneficiaryPhone: yup.string().required('Beneficiary phone is required'),
-  beneficiaryOccupation: yup.string().required('Beneficiary occupation is required'),
-  writtenDeclaration: yup.string().required('Written declaration is required'),
-  agreeToDataPrivacy: yup.boolean().oneOf([true], 'You must agree to the data privacy policy'),
+  causeOfInabilityToPay: yup
+    .string()
+    .required('Cause of inability to pay is required'),
+  nameOfBeneficiary: yup
+    .string()
+    .required('Name of beneficiary is required'),
+  beneficiaryAge: yup
+    .number()
+    .required('Beneficiary age is required')
+    .min(1),
+  beneficiaryAddress: yup
+    .string()
+    .required('Beneficiary address is required'),
+  beneficiaryEmail: yup
+    .string()
+    .email('Invalid email')
+    .required('Beneficiary email is required'),
+  beneficiaryPhone: yup
+    .string()
+    .required('Beneficiary phone is required'),
+  beneficiaryOccupation: yup
+    .string()
+    .required('Beneficiary occupation is required'),
+  // Structured declaration fields
+  declarationName: yup
+    .string()
+    .required('Declaration name is required'),
+  declarationPlace: yup
+    .string()
+    .required('Declaration place is required'),
+  declarationAmount: yup
+    .number()
+    .typeError('Declaration amount must be a number')
+    .required('Declaration amount is required')
+    .min(0, 'Amount must be valid'),
+  declarationYear: yup
+    .number()
+    .typeError('Year must be a number')
+    .required('Declaration year is required')
+    .min(1900, 'Enter a valid year')
+    .max(2100, 'Enter a valid year'),
+  agreeToDataPrivacy: yup
+    .boolean()
+    .oneOf([true], 'You must agree to the data privacy policy'),
   signature: yup.string().required('Signature is required'),
 });
 
@@ -87,7 +138,11 @@ interface RentAssuranceClaimData {
   beneficiaryEmail: string;
   beneficiaryPhone: string;
   beneficiaryOccupation: string;
-  writtenDeclaration: string;
+  declarationName: string;
+  declarationPlace: string;
+  declarationAmount: number;
+  declarationYear: number;
+  declarationStatement?: string;
   agreeToDataPrivacy: boolean;
   signature: string;
 }
@@ -197,6 +252,7 @@ const RentAssuranceClaim = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [fileErrors, setFileErrors] = useState<Record<string, string>>({});
   const { 
     handleSubmitWithAuth, 
     showSuccess: authShowSuccess, 
@@ -245,7 +301,10 @@ const RentAssuranceClaim = () => {
       beneficiaryEmail: '',
       beneficiaryPhone: '',
       beneficiaryOccupation: '',
-      writtenDeclaration: '',
+      declarationName: '',
+      declarationPlace: '',
+      declarationAmount: 0,
+      declarationYear: 0,
       agreeToDataPrivacy: false,
       signature: '',
     },
@@ -286,6 +345,7 @@ const RentAssuranceClaim = () => {
     const finalData = {
       ...data,
       ...fileUrls,
+      declarationStatement: `I ${data.declarationName} of ${data.declarationPlace} do hereby warrant the truth of the answers and particulars given on this form, and that I have withheld no material information and I hereby claim for loss as set out in the Schedule hereto, amounting in all to N${data.declarationAmount}. Dated this Date of 20${data.declarationYear}`,
       status: 'processing',
       formType: 'Rent Assurance Claim'
     };
@@ -305,9 +365,8 @@ const RentAssuranceClaim = () => {
     1: ['nameOfInsured', 'address', 'age', 'email', 'phone', 'nameOfLandlord', 'addressOfLandlord', 'livingAtPremisesFrom', 'livingAtPremisesTo'],
     2: ['periodOfDefaultFrom', 'periodOfDefaultTo', 'amountDefaulted', 'rentDueDate', 'rentPaymentFrequency', 'rentPaymentFrequencyOther', 'causeOfInabilityToPay'],
     3: ['nameOfBeneficiary', 'beneficiaryAge', 'beneficiaryAddress', 'beneficiaryEmail', 'beneficiaryPhone', 'beneficiaryOccupation'],
-    4: [], // File uploads step
-    5: ['agreeToDataPrivacy'],
-    6: ['writtenDeclaration', 'signature']
+    4: [], // File uploads handled via validateStep
+    5: ['agreeToDataPrivacy', 'declarationName', 'declarationPlace', 'declarationAmount', 'declarationYear', 'signature'],
   };
 
   const DatePickerField = ({ name, label }: { name: string; label: string }) => {
@@ -366,6 +425,25 @@ const RentAssuranceClaim = () => {
         </div>
       </TooltipProvider>
     );
+  };
+
+  const validateStep = async (stepId: string) => {
+    if (stepId === 'documents') {
+      if (!uploadedFiles.rentAgreement) {
+        setFileErrors(prev => ({ ...prev, rentAgreement: 'Rent agreement is required' }));
+        if (typeof window !== 'undefined' && (window as any).toast) {
+          (window as any).toast({
+            title: 'Required Document',
+            description: 'Please upload the rent agreement to proceed.',
+            variant: 'destructive',
+          });
+        }
+        return false;
+      } else {
+        setFileErrors(prev => ({ ...prev, rentAgreement: '' }));
+      }
+    }
+    return true;
   };
 
   const steps = [
@@ -649,7 +727,20 @@ const RentAssuranceClaim = () => {
         <div className="space-y-6">
           <FileUpload
             label="Rent Agreement"
-            onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, rentAgreement: file }))}
+            required
+            error={fileErrors.rentAgreement}
+            onFileSelect={(file) => {
+              setUploadedFiles(prev => ({ ...prev, rentAgreement: file }));
+              setFileErrors(prev => ({ ...prev, rentAgreement: '' }));
+            }}
+            onFileRemove={() => {
+              setUploadedFiles(prev => {
+                const copy = { ...prev };
+                delete copy.rentAgreement;
+                return copy;
+              });
+              setFileErrors(prev => ({ ...prev, rentAgreement: 'Rent agreement is required' }));
+            }}
             currentFile={uploadedFiles.rentAgreement}
             accept=".pdf,.jpg,.jpeg,.png"
             maxSize={3}
