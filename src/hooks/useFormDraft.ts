@@ -28,7 +28,7 @@ export const useFormDraft = (formType: string, formMethods: any) => {
   };
 
   const clearDraft = () => {
-    localStorage.removeItem(`form_draft_${formType}`);
+    localStorage.removeItem(`formDraft_${formType}`);
   };
 
   return { saveDraft, loadDraft, clearDraft };
