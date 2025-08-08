@@ -508,7 +508,7 @@ const PublicLiabilityClaimForm: React.FC = () => {
               ))}
             </div>
             
-            <FormTextarea name="employeeActivity" label="What were you or your employees doing?" required rows={3} />
+            <FormTextarea name="employeeActivity" label="What Work were you or your employees engaged to do?" required rows={3} />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField name="responsiblePersonName" label="Name of person who caused accident" required />
@@ -552,7 +552,7 @@ const PublicLiabilityClaimForm: React.FC = () => {
     },
     {
       id: 'claimant',
-      title: 'Claimant',
+      title: 'Particulars of Possible Claimant',
       component: (
         <FormProvider {...formMethods}>
           <div className="space-y-4">
@@ -694,15 +694,7 @@ const PublicLiabilityClaimForm: React.FC = () => {
             </div>
 
             <Card className="shadow-xl border-0 bg-white/50 backdrop-blur-sm">
-              <CardHeader className="text-center pb-2">
-                <CardTitle className="flex items-center justify-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Public Liability Claim
-                </CardTitle>
-                <CardDescription>
-                  Complete all sections to submit your public liability claim
-                </CardDescription>
-              </CardHeader>
+            
               <CardContent>
                 <MultiStepForm
                   steps={steps}
@@ -720,26 +712,10 @@ const PublicLiabilityClaimForm: React.FC = () => {
           <Dialog open={showSummary} onOpenChange={setShowSummary}>
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Claim Summary</DialogTitle>
+                <DialogTitle>Claim Review </DialogTitle>
+                <p>Please Ensure all Information is correct before submitting</p>
               </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium">Policy Details</h4>
-                  <p className="text-sm text-muted-foreground">Policy: {watchedValues.policyNumber}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium">Company</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {watchedValues.companyName} - {watchedValues.email}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-medium">Accident</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {watchedValues.accidentDate && format(new Date(watchedValues.accidentDate), "PPP")} at {watchedValues.accidentPlace}
-                  </p>
-                </div>
-              </div>
+          
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
                   Back to Edit
