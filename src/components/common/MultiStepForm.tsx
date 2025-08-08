@@ -115,7 +115,7 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
           </div>
 
           {/* Step content */}
-          <div className="min-h-[400px]">
+          <div key={steps[currentStep]?.id} className="min-h-[400px]">
             {steps[currentStep]?.component}
           </div>
 
