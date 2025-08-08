@@ -489,7 +489,7 @@ const RentAssuranceClaim = () => {
               </div>
               
               <div>
-                <Label>How long living at premises *</Label>
+                <Label>How long has insured been living at premises *</Label>
                 <div className="grid md:grid-cols-2 gap-4 mt-2">
                   <DatePickerField
                     name="livingAtPremisesFrom"
@@ -680,8 +680,8 @@ const RentAssuranceClaim = () => {
       )
     },
     {
-      id: 'data-privacy',
-      title: 'Data Privacy',
+      id: 'declaration',
+      title: 'Privacy and Declaration',
       component: (
         <FormProvider {...formMethods}>
           <div className="space-y-6">
@@ -716,14 +716,7 @@ const RentAssuranceClaim = () => {
               </p>
             )}
           </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'declaration',
-      title: 'Declaration & Signature',
-      component: (
-        <FormProvider {...formMethods}>
+          
           <div className="space-y-6">
             <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="font-semibold mb-2">Declaration</h3>
@@ -786,32 +779,12 @@ const RentAssuranceClaim = () => {
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Confirm Your Submission</DialogTitle>
+              <h3 className="font-semibold text-yellow-800">Important Notice</h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Please review all information carefully before submitting. Once submitted, you cannot modify your details.
+                </p>
             </DialogHeader>
             
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Policy Number:</span>
-                  <p>{watchedValues.policyNumber}</p>
-                </div>
-                <div>
-                  <span className="font-medium">Full Name:</span>
-                  <p>{watchedValues.fullName}</p>
-                </div>
-              </div>
-              
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold text-yellow-800">Important Notice</h3>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      Please review all information carefully before submitting. Once submitted, you cannot modify your details.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSummary(false)}>
