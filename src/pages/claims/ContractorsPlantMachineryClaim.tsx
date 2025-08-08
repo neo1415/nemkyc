@@ -496,7 +496,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
         <FormProvider {...formMethods}>
           <div className="space-y-4">
             <FormField name="nameOfInsured" label="Name of Insured" required />
-            <FormField name="companyName" label="Company Name" />
+            <FormField name="companyName (If Applicable)" label="Company Name" />
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormSelect name="title" label="Title" required placeholder="Select title">
@@ -630,9 +630,9 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
               <FormField name="timeOfLoss" label="Time of Loss" type="time" required />
             </div>
             <FormTextarea name="lastSeenIntact" label="When was it last seen intact?" />
-            <FormTextarea name="whereDidLossOccur" label="Where did the loss occur?" required />
-            <FormTextarea name="partsDamaged" label="What parts were damaged?" required />
-            <FormTextarea name="whereCanBeInspected" label="Where can it be inspected?" required />
+            <FormTextarea name="whereDidLossOccur" label="Where did the loss/damage occur?" required />
+            <FormTextarea name="partsDamaged" label="Parts of Damage and Extent of Damage?" required />
+            <FormTextarea name="whereCanBeInspected" label="Where can the plant/machinery be inspected?" required />
             <FormTextarea name="fullAccountCircumstances" label="Give a full account of the circumstances" required />
             <FormTextarea name="suspicionInformation" label="Any suspicion or other information" />
           </div>
@@ -656,10 +656,10 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
             />
             
             {watchedValues.policeInformed && (
-              <FormTextarea name="policeStation" label="Police Station & Details" required />
+              <FormTextarea name="policeStation" label="If so, When and Which Police Staion" required />
             )}
             
-            <FormTextarea name="otherRecoveryActions" label="Other recovery actions taken" />
+            <FormTextarea name="otherRecoveryActions" label="Any other recovery actions taken ?" />
             
             <FormRadioGroup 
               name="isSoleOwner" 
@@ -672,7 +672,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
             />
             
             {!watchedValues.isSoleOwner && (
-              <FormTextarea name="ownershipDetails" label="Please provide ownership details" required />
+              <FormTextarea name="ownershipDetails" label="Please provide full ownership details" required />
             )}
             
             <FormRadioGroup 
@@ -686,7 +686,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
             />
             
             {watchedValues.hasOtherInsurance && (
-              <FormTextarea name="otherInsuranceDetails" label="Please provide other insurance details" required />
+              <FormTextarea name="otherInsuranceDetails" label="Please provide other insurance details covering property" required />
             )}
             
             <FormRadioGroup 
@@ -821,7 +821,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
             
             <div className="bg-blue-50 p-6 rounded-lg">
               <h3 className="text-lg font-semibold mb-4">Declaration</h3>
-              <div className="text-sm text-blue-800 space-y-3">
+              <div className="text-sm text-grey-800 space-y-3">
                 <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
                 <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
                 <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
@@ -854,10 +854,10 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
               <FormField name="signature" label="Digital Signature" required placeholder="Type your full name as signature" />
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+{/*                 <div>
                   <Label>Place</Label>
                   <Input value="Nigeria" disabled className="bg-gray-50" />
-                </div>
+                </div> */}
                 <div>
                   <Label>Date</Label>
                   <Input value={new Date().toISOString().split('T')[0]} disabled className="bg-gray-50" />
