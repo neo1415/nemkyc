@@ -104,8 +104,8 @@ const rentAssuranceSchema = yup.object({
     .number()
     .typeError('Year must be a number')
     .required('Declaration year is required')
-    .min(1900, 'Enter a valid year')
-    .max(2100, 'Enter a valid year'),
+    .min(00, 'Enter a valid year')
+    .max(99, 'Enter a valid year'),
   agreeToDataPrivacy: yup
     .boolean()
     .oneOf([true], 'You must agree to the data privacy policy'),
