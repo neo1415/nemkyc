@@ -711,99 +711,99 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
         </FormProvider>
       )
     },
-    {
-      id: 'files',
-      title: 'Supporting Documents',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-6">
-            <div className="text-center">
-              <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Upload Supporting Documents</h3>
-              <p className="text-muted-foreground mb-6">
-                Please upload any relevant documents to support your claim (photos, receipts, reports, etc.)
-              </p>
-            </div>
+    // {
+    //   id: 'files',
+    //   title: 'Supporting Documents',
+    //   component: (
+    //     <FormProvider {...formMethods}>
+    //       <div className="space-y-6">
+    //         <div className="text-center">
+    //           <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+    //           <h3 className="text-lg font-semibold mb-2">Upload Supporting Documents</h3>
+    //           <p className="text-muted-foreground mb-6">
+    //             Please upload any relevant documents to support your claim (photos, receipts, reports, etc.)
+    //           </p>
+    //         </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label>Photos of Damaged Items</Label>
-                <FileUpload
-                  accept="image/*"
-                  multiple
-                  onFilesChange={(files) => {
-                    if (files.length > 0) {
-                      setUploadedFiles(prev => ({ ...prev, damagePhotos: files[0] }));
-                    }
-                  }}
-                  maxSize={10}
-                  className="mt-2"
-                />
-              </div>
+    //         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    //           <div>
+    //             <Label>Photos of Damaged Items</Label>
+    //             <FileUpload
+    //               accept="image/*"
+    //               multiple
+    //               onFilesChange={(files) => {
+    //                 if (files.length > 0) {
+    //                   setUploadedFiles(prev => ({ ...prev, damagePhotos: files[0] }));
+    //                 }
+    //               }}
+    //               maxSize={10}
+    //               className="mt-2"
+    //             />
+    //           </div>
 
-              <div>
-                <Label>Purchase Receipts/Invoices</Label>
-                <FileUpload
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  multiple
-                  onFilesChange={(files) => {
-                    if (files.length > 0) {
-                      setUploadedFiles(prev => ({ ...prev, purchaseReceipts: files[0] }));
-                    }
-                  }}
-                  maxSize={10}
-                  className="mt-2"
-                />
-              </div>
+    //           <div>
+    //             <Label>Purchase Receipts/Invoices</Label>
+    //             <FileUpload
+    //               accept=".pdf,.jpg,.jpeg,.png"
+    //               multiple
+    //               onFilesChange={(files) => {
+    //                 if (files.length > 0) {
+    //                   setUploadedFiles(prev => ({ ...prev, purchaseReceipts: files[0] }));
+    //                 }
+    //               }}
+    //               maxSize={10}
+    //               className="mt-2"
+    //             />
+    //           </div>
 
-              <div>
-                <Label>Police Report (if applicable)</Label>
-                <FileUpload
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onFilesChange={(files) => {
-                    if (files.length > 0) {
-                      setUploadedFiles(prev => ({ ...prev, policeReport: files[0] }));
-                    }
-                  }}
-                  maxSize={10}
-                  className="mt-2"
-                />
-              </div>
+    //           <div>
+    //             <Label>Police Report (if applicable)</Label>
+    //             <FileUpload
+    //               accept=".pdf,.jpg,.jpeg,.png"
+    //               onFilesChange={(files) => {
+    //                 if (files.length > 0) {
+    //                   setUploadedFiles(prev => ({ ...prev, policeReport: files[0] }));
+    //                 }
+    //               }}
+    //               maxSize={10}
+    //               className="mt-2"
+    //             />
+    //           </div>
 
-              <div>
-                <Label>Other Supporting Documents</Label>
-                <FileUpload
-                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                  multiple
-                  onFilesChange={(files) => {
-                    if (files.length > 0) {
-                      setUploadedFiles(prev => ({ ...prev, otherDocuments: files[0] }));
-                    }
-                  }}
-                  maxSize={10}
-                  className="mt-2"
-                />
-              </div>
-            </div>
+    //           <div>
+    //             <Label>Other Supporting Documents</Label>
+    //             <FileUpload
+    //               accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+    //               multiple
+    //               onFilesChange={(files) => {
+    //                 if (files.length > 0) {
+    //                   setUploadedFiles(prev => ({ ...prev, otherDocuments: files[0] }));
+    //                 }
+    //               }}
+    //               maxSize={10}
+    //               className="mt-2"
+    //             />
+    //           </div>
+    //         </div>
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-start space-x-3">
-                <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-yellow-800">Document Guidelines</h4>
-                  <ul className="text-sm text-yellow-700 mt-1 list-disc list-inside space-y-1">
-                    <li>Maximum file size: 10MB per file</li>
-                    <li>Accepted formats: PDF, JPG, JPEG, PNG, DOC, DOCX</li>
-                    <li>Clear, legible photos/scans work best</li>
-                    <li>Multiple files can be uploaded for each category</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </FormProvider>
-      )
-    },
+    //         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+    //           <div className="flex items-start space-x-3">
+    //             <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
+    //             <div>
+    //               <h4 className="font-semibold text-yellow-800">Document Guidelines</h4>
+    //               <ul className="text-sm text-yellow-700 mt-1 list-disc list-inside space-y-1">
+    //                 <li>Maximum file size: 10MB per file</li>
+    //                 <li>Accepted formats: PDF, JPG, JPEG, PNG, DOC, DOCX</li>
+    //                 <li>Clear, legible photos/scans work best</li>
+    //                 <li>Multiple files can be uploaded for each category</li>
+    //               </ul>
+    //             </div>
+    //           </div>
+    //         </div>
+    //       </div>
+    //     </FormProvider>
+    //   )
+    // },
     {
       id: 'declaration',
       title: 'Declaration',
