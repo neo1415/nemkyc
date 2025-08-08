@@ -359,14 +359,14 @@ const RentAssuranceClaim = () => {
     setShowSummary(true);
   };
 
-  // Step field mappings for validation
-  const stepFieldMappings = {
-    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
-    1: ['nameOfInsured', 'address', 'age', 'email', 'phone', 'nameOfLandlord', 'addressOfLandlord', 'livingAtPremisesFrom', 'livingAtPremisesTo'],
-    2: ['periodOfDefaultFrom', 'periodOfDefaultTo', 'amountDefaulted', 'rentDueDate', 'rentPaymentFrequency', 'rentPaymentFrequencyOther', 'causeOfInabilityToPay'],
-    3: ['nameOfBeneficiary', 'beneficiaryAge', 'beneficiaryAddress', 'beneficiaryEmail', 'beneficiaryPhone', 'beneficiaryOccupation'],
-    4: [], // File uploads handled via validateStep
-    5: ['agreeToDataPrivacy', 'declarationName', 'declarationPlace', 'declarationAmount', 'declarationYear', 'signature'],
+  // Step field mappings for validation (by step id)
+  const stepFieldMappings: Record<string, string[]> = {
+    'policy-details': ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
+    'insured-details': ['nameOfInsured', 'address', 'age', 'email', 'phone', 'nameOfLandlord', 'addressOfLandlord', 'livingAtPremisesFrom', 'livingAtPremisesTo'],
+    'claim-information': ['periodOfDefaultFrom', 'periodOfDefaultTo', 'amountDefaulted', 'rentDueDate', 'rentPaymentFrequency', 'rentPaymentFrequencyOther', 'causeOfInabilityToPay'],
+    'beneficiary-details': ['nameOfBeneficiary', 'beneficiaryAge', 'beneficiaryAddress', 'beneficiaryEmail', 'beneficiaryPhone', 'beneficiaryOccupation'],
+    'documents': [], // handled via validateStep (rentAgreement required)
+    'declaration': ['agreeToDataPrivacy', 'declarationName', 'declarationPlace', 'declarationAmount', 'declarationYear', 'signature'],
   };
 
   const DatePickerField = ({ name, label }: { name: string; label: string }) => {
@@ -428,6 +428,24 @@ const RentAssuranceClaim = () => {
   };
 
   const validateStep = async (stepId: string) => {
+    // Validate mapped fields for this step first
+    const fields = (stepFieldMappings as Record<string, string[]>)[stepId] || [];
+    let fieldsValid = true;
+    if (fields.length > 0) {
+      fieldsValid = await formMethods.trigger(fields);
+      if (!fieldsValid) {
+        if (typeof window !== 'undefined' && (window as any).toast) {
+          (window as any).toast({
+            title: 'Validation Error',
+            description: 'Please fill all required fields before proceeding',
+            variant: 'destructive',
+          });
+        }
+        return false;
+      }
+    }
+
+    // Documents step requires Rent Agreement
     if (stepId === 'documents') {
       if (!uploadedFiles.rentAgreement) {
         setFileErrors(prev => ({ ...prev, rentAgreement: 'Rent agreement is required' }));
@@ -443,6 +461,7 @@ const RentAssuranceClaim = () => {
         setFileErrors(prev => ({ ...prev, rentAgreement: '' }));
       }
     }
+
     return true;
   };
 
@@ -811,28 +830,59 @@ const RentAssuranceClaim = () => {
           <div className="space-y-6">
             <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="font-semibold mb-2">Declaration</h3>
-              <div className="text-sm space-y-2">
-                <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
-                <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
-                <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+              <p className="text-sm leading-8">
+                I
+                <Input
+                  {...formMethods.register('declarationName')}
+                  placeholder="Declaration name"
+                  className="mx-2 inline-block w-56 align-middle"
+                />
+                of
+                <Input
+                  {...formMethods.register('declarationPlace')}
+                  placeholder="Place"
+                  className="mx-2 inline-block w-56 align-middle"
+                />
+                do hereby warrant the truth of the answers and particulars given on this form, and that I have withheld no material information and I hereby claim for loss as set out in the Schedule hereto, amounting in all to N
+                <Input
+                  type="number"
+                  {...formMethods.register('declarationAmount', { onChange: (e: any) => formMethods.setValue('declarationAmount', Number(e.target.value)) })}
+                  placeholder="Amount"
+                  className="mx-2 inline-block w-40 align-middle"
+                />
+                .
+                <br />
+                Dated this Date of 20
+                <Input
+                  type="number"
+                  {...formMethods.register('declarationYear', { onChange: (e: any) => formMethods.setValue('declarationYear', Number(e.target.value)) })}
+                  placeholder="Year"
+                  className="mx-2 inline-block w-24 align-middle"
+                />
+              </p>
+              <div className="grid md:grid-cols-2 gap-4 mt-2">
+                {formMethods.formState.errors.declarationName && (
+                  <p className="text-sm text-destructive">{String(formMethods.formState.errors.declarationName.message)}</p>
+                )}
+                {formMethods.formState.errors.declarationPlace && (
+                  <p className="text-sm text-destructive">{String(formMethods.formState.errors.declarationPlace.message)}</p>
+                )}
+                {formMethods.formState.errors.declarationAmount && (
+                  <p className="text-sm text-destructive">{String(formMethods.formState.errors.declarationAmount.message)}</p>
+                )}
+                {formMethods.formState.errors.declarationYear && (
+                  <p className="text-sm text-destructive">{String(formMethods.formState.errors.declarationYear.message)}</p>
+                )}
               </div>
             </div>
-            
-            <FormTextarea
-              name="writtenDeclaration"
-              label="Written Declaration"
-              required
-              placeholder="I, [name], of [address], do hereby warrant that the particulars and statements contained in this claim are true and that I have not suppressed any material facts... amounting in all to..."
-              rows={4}
-            />
-            
+
             <FormField
               name="signature"
               label="Digital Signature"
               required
               placeholder="Type your full name as digital signature"
             />
-            
+
             <div className="text-sm text-muted-foreground">
               Date: {new Date().toLocaleDateString()}
             </div>
@@ -862,6 +912,7 @@ const RentAssuranceClaim = () => {
             formMethods={formMethods}
             submitButtonText="Submit Rent Assurance Claim"
             stepFieldMappings={stepFieldMappings}
+            validateStep={validateStep}
           />
         </FormProvider>
 
