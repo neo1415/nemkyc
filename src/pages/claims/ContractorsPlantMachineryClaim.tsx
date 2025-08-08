@@ -496,7 +496,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
         <FormProvider {...formMethods}>
           <div className="space-y-4">
             <FormField name="nameOfInsured" label="Name of Insured" required />
-            <FormField name="companyName (If Applicable)" label="Company Name" />
+            <FormField name="companyName" label="Company Name (If Applicable)" />
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormSelect name="title" label="Title" required placeholder="Select title">
