@@ -31,8 +31,8 @@ import { Badge } from '@/components/ui/badge';
 const goodsInTransitClaimSchema = yup.object().shape({
   // Policy Details
   policyNumber: yup.string().required("Policy number is required"),
-  periodOfCoverFrom: yup.date().required("Period of cover from is required"),
-  periodOfCoverTo: yup.date().required("Period of cover to is required"),
+  periodOfCoverFrom: yup.date().required("Period of cover from is required").typeError('Please select a valid date'),
+  periodOfCoverTo: yup.date().required("Period of cover to is required").typeError('Please select a valid date'),
 
   // Insured Details
   companyName: yup.string().required("Company name is required"),
@@ -42,7 +42,7 @@ const goodsInTransitClaimSchema = yup.object().shape({
   businessType: yup.string(),
 
   // Loss Details
-  dateOfLoss: yup.date().required("Date of loss is required"),
+  dateOfLoss: yup.date().required("Date of loss is required").typeError('Please select a valid date'),
   timeOfLoss: yup.string().required("Time of loss is required"),
   placeOfOccurrence: yup.string().required("Place of occurrence is required"),
   descriptionOfGoods: yup.string().required("Description of goods is required"),
@@ -67,9 +67,14 @@ const goodsInTransitClaimSchema = yup.object().shape({
   witnessName: yup.string(),
   witnessAddress: yup.string(),
   policeStationAdvised: yup.string(),
-  dateReportedToPolice: yup.date().nullable(),
+  dateReportedToPolice: yup
+    .date()
+    .transform((value, originalValue) => (originalValue === '' ? undefined : value))
+    .typeError('Please select a valid date')
+    .nullable()
+    .notRequired(),
   dispatchAddress: yup.string().required("Dispatch address is required"),
-  dispatchDate: yup.date().required("Dispatch date is required"),
+  dispatchDate: yup.date().required("Dispatch date is required").typeError('Please select a valid date'),
   consigneeName: yup.string().required("Consignee name is required"),
   consigneeAddress: yup.string().required("Consignee address is required"),
 
@@ -130,17 +135,34 @@ const goodsInTransitClaimSchema = yup.object().shape({
     then: (schema) => schema.required("Please confirm if receipt was given"),
     otherwise: (schema) => schema.notRequired()
   }),
+  carriageConditionDocument: yup
+    .mixed()
+    .required("Carriage condition document is required")
+    .test('fileType', 'Please upload a PNG, JPG, JPEG, PDF, DOC, or DOCX file', (value) => {
+      if (!value) return false;
+      const file = Array.isArray(value) ? value[0] : value;
+      const allowed = ['image/png','image/jpg','image/jpeg','application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      return file && allowed.includes(file.type);
+    })
+    .test('fileSize', 'File size must be less than 3MB', (value) => {
+      const file = Array.isArray(value) ? value[0] : value;
+      return file ? file.size <= 3 * 1024 * 1024 : false;
+    }),
   claimMadeAgainstYou: yup.boolean().required("Please confirm if claim was made against you"),
-  claimDateReceived: yup.date().when('claimMadeAgainstYou', {
-    is: true,
-    then: (schema) => schema.required("Claim date is required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
+  claimDateReceived: yup
+    .date()
+    .transform((value, originalValue) => (originalValue === '' ? undefined : value))
+    .typeError('Please select a valid date')
+    .when('claimMadeAgainstYou', {
+      is: true,
+      then: (schema) => schema.required("Claim date is required"),
+      otherwise: (schema) => schema.notRequired().nullable()
+    }),
 
   // Declaration
   declarationAgreed: yup.boolean().oneOf([true], "You must agree to the declaration"),
   signatureOfPolicyholder: yup.string().required("Signature is required"),
-  dateSigned: yup.date().required("Date signed is required")
+  dateSigned: yup.date().required("Date signed is required").typeError('Please select a valid date')
 });
 
 interface GoodsItem {
@@ -259,6 +281,7 @@ const defaultValues: Partial<GoodsInTransitClaimData> = {
   vehicleRegistrationNumber: '',
   loadedByYouOrStaff: false,
   receiptGiven: false,
+  carriageConditionDocument: undefined,
   claimMadeAgainstYou: false,
   declarationAgreed: false,
   signatureOfPolicyholder: '',
@@ -280,7 +303,7 @@ const GoodsInTransitClaim: React.FC = () => {
   } = useAuthRequiredSubmit();
 
   const formMethods = useForm<any>({
-    // resolver: yupResolver(goodsInTransitClaimSchema),
+    resolver: yupResolver(goodsInTransitClaimSchema),
     defaultValues,
     mode: 'onChange'
   });
@@ -406,6 +429,19 @@ const GoodsInTransitClaim: React.FC = () => {
         </div>
       </TooltipProvider>
     );
+  };
+
+  const stepFieldMappings = {
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
+    1: ['companyName', 'address', 'phone', 'email', 'businessType'],
+    2: ['dateOfLoss', 'timeOfLoss', 'placeOfOccurrence', 'descriptionOfGoods', 'numberOfPackages', 'totalWeight', 'weightUnits', 'totalValue', 'goodsPackaging'],
+    3: ['goodsItems'],
+    4: ['lossCircumstances', 'otherVehicleInvolved', 'ownerName', 'ownerAddress', 'witnessName', 'witnessAddress', 'policeStationAdvised', 'dateReportedToPolice', 'dispatchAddress', 'dispatchDate', 'consigneeName', 'consigneeAddress'],
+    5: ['inspectionAddress'],
+    6: ['isOwnerOfGoods', 'howAndByWhomWereGoodsTransported', 'transporterInsurerName', 'transporterInsurerAddress'],
+    7: ['goodsOwnerName', 'goodsOwnerAddress', 'goodsOwnerInsurer'],
+    8: ['goodsSoundOnReceipt', 'checkedByDriver', 'vehicleRegistrationNumber', 'loadedByYouOrStaff', 'receiptGiven', 'carriageConditionDocument', 'claimMadeAgainstYou', 'claimDateReceived'],
+    9: ['declarationAgreed', 'signatureOfPolicyholder', 'dateSigned']
   };
 
   const steps = [
@@ -1576,7 +1612,13 @@ const GoodsInTransitClaim: React.FC = () => {
                       <FormControl>
                         <Checkbox
                           checked={field.value}
-                          onCheckedChange={field.onChange}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked === true);
+                            if (formMethods.formState.errors.goodsSoundOnReceipt) {
+                              formMethods.clearErrors('goodsSoundOnReceipt');
+                            }
+                          }}
+                          className={cn(formMethods.formState.errors.goodsSoundOnReceipt && "border-destructive")}
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
@@ -1585,6 +1627,7 @@ const GoodsInTransitClaim: React.FC = () => {
                           <Info className="h-3 w-3" />
                         </FormLabel>
                       </div>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -1606,7 +1649,13 @@ const GoodsInTransitClaim: React.FC = () => {
                       <FormControl>
                         <Checkbox
                           checked={field.value}
-                          onCheckedChange={field.onChange}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked === true);
+                            if (formMethods.formState.errors.checkedByDriver) {
+                              formMethods.clearErrors('checkedByDriver');
+                            }
+                          }}
+                          className={cn(formMethods.formState.errors.checkedByDriver && "border-destructive")}
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
@@ -1615,6 +1664,7 @@ const GoodsInTransitClaim: React.FC = () => {
                           <Info className="h-3 w-3" />
                         </FormLabel>
                       </div>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -1662,7 +1712,13 @@ const GoodsInTransitClaim: React.FC = () => {
                       <FormControl>
                         <Checkbox
                           checked={field.value}
-                          onCheckedChange={field.onChange}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked === true);
+                            if (formMethods.formState.errors.loadedByYouOrStaff) {
+                              formMethods.clearErrors('loadedByYouOrStaff');
+                            }
+                          }}
+                          className={cn(formMethods.formState.errors.loadedByYouOrStaff && "border-destructive")}
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
@@ -1671,6 +1727,7 @@ const GoodsInTransitClaim: React.FC = () => {
                           <Info className="h-3 w-3" />
                         </FormLabel>
                       </div>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -1693,7 +1750,13 @@ const GoodsInTransitClaim: React.FC = () => {
                         <FormControl>
                           <Checkbox
                             checked={field.value}
-                            onCheckedChange={field.onChange}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked === true);
+                              if (formMethods.formState.errors.receiptGiven) {
+                                formMethods.clearErrors('receiptGiven');
+                              }
+                            }}
+                            className={cn(formMethods.formState.errors.receiptGiven && "border-destructive")}
                           />
                         </FormControl>
                         <div className="space-y-1 leading-none">
@@ -1702,6 +1765,7 @@ const GoodsInTransitClaim: React.FC = () => {
                             <Info className="h-3 w-3" />
                           </FormLabel>
                         </div>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -1718,14 +1782,30 @@ const GoodsInTransitClaim: React.FC = () => {
               <TooltipTrigger asChild>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1">
-                    What condition or carriage do you use (Please attach a specimen-copy) *
+                    What condition or carriage do you use (Please attach a specimen-copy) <span className="required-asterisk">*</span>
                     <Info className="h-3 w-3" />
                   </Label>
                   <FileUpload
-                    onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, carriageConditionDocument: file }))}
+                    onFileSelect={(file) => {
+                      setUploadedFiles(prev => ({ ...prev, carriageConditionDocument: file }));
+                      formMethods.setValue('carriageConditionDocument', file);
+                      if (formMethods.formState.errors.carriageConditionDocument) {
+                        formMethods.clearErrors('carriageConditionDocument');
+                      }
+                    }}
                     maxSize={3 * 1024 * 1024}
                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                   />
+                  {uploadedFiles.carriageConditionDocument && (
+                    <div className="text-sm text-green-600">
+                      {uploadedFiles.carriageConditionDocument.name}
+                    </div>
+                  )}
+                  {formMethods.formState.errors.carriageConditionDocument && (
+                    <p className="text-sm text-destructive">
+                      {formMethods.formState.errors.carriageConditionDocument.message?.toString()}
+                    </p>
+                  )}
                 </div>
               </TooltipTrigger>
               <TooltipContent>
@@ -1745,7 +1825,13 @@ const GoodsInTransitClaim: React.FC = () => {
                       <FormControl>
                         <Checkbox
                           checked={field.value}
-                          onCheckedChange={field.onChange}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked === true);
+                            if (formMethods.formState.errors.claimMadeAgainstYou) {
+                              formMethods.clearErrors('claimMadeAgainstYou');
+                            }
+                          }}
+                          className={cn(formMethods.formState.errors.claimMadeAgainstYou && "border-destructive")}
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
@@ -1754,6 +1840,7 @@ const GoodsInTransitClaim: React.FC = () => {
                           <Info className="h-3 w-3" />
                         </FormLabel>
                       </div>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -1831,7 +1918,13 @@ const GoodsInTransitClaim: React.FC = () => {
                       <FormControl>
                         <Checkbox
                           checked={field.value}
-                          onCheckedChange={field.onChange}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked === true);
+                            if (formMethods.formState.errors.declarationAgreed) {
+                              formMethods.clearErrors('declarationAgreed');
+                            }
+                          }}
+                          className={cn(formMethods.formState.errors.declarationAgreed && "border-destructive")}
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
@@ -1840,6 +1933,7 @@ const GoodsInTransitClaim: React.FC = () => {
                           <Info className="h-3 w-3" />
                         </FormLabel>
                       </div>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -1941,8 +2035,10 @@ const GoodsInTransitClaim: React.FC = () => {
         <div>
           <MultiStepForm
             steps={steps}
-      onSubmit={onFinalSubmit}
+            onSubmit={onFinalSubmit}
             formMethods={formMethods}
+            submitButtonText="Submit Goods In Transit Claim"
+            stepFieldMappings={stepFieldMappings}
           />
         </div>
 
