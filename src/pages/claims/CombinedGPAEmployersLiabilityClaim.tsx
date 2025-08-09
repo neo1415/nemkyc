@@ -697,7 +697,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
                 required
               />
 
-              <FormField name="durationEmployed" label="Duration Employed" />
+              <FormField name="durationEmployed" label="f) How long has the person been continuously employed by you?" />
               
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -705,7 +705,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
                   checked={watchedValues.notDirectlyEmployed || false}
                   onCheckedChange={(checked) => formMethods.setValue('notDirectlyEmployed', checked)}
                 />
-                <Label htmlFor="notDirectlyEmployed">If not directly employed</Label>
+                <Label htmlFor="notDirectlyEmployed">If Injured Party is not directly employed</Label>
               </div>
               
               {watchedValues.notDirectlyEmployed && (
@@ -756,7 +756,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <FormTextarea name="machineryInvolved" label="Machinery Involved" />
+                    <FormTextarea name="machineryInvolved" label="If Machinery is Involved, Please include details" />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -797,7 +797,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <FormTextarea name="accidentPlace" label="Place" required />
+                    <FormTextarea name="accidentPlace" label="Where did the accident occur ?" required />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -808,7 +808,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormDatePicker
                   name="dateReported"
-                  label="Date Reported"
+                  label="Date Accident was Reported"
                   required
                 />
                 
@@ -818,7 +818,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <FormTextarea name="workAtTime" label="Work at Time" required />
+                    <FormTextarea name="workAtTime" label="State fully the work upon which the injured party was engaged at the time of the incident" required />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -829,7 +829,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <FormTextarea name="howItOccurred" label="How It Occurred" required />
+                    <FormTextarea name="howItOccurred" label="Describe how the accident occurred" required />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -848,7 +848,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
         <FormProvider {...formMethods}>
           <TooltipProvider>
             <div className="space-y-4">
-              <FormSelect name="receivingTreatment" label="Receiving Treatment" required placeholder="Select yes or no">
+              <FormSelect name="receivingTreatment" label="Is the Injured Party receiving medical attention ?" required placeholder="Select yes or no">
                 <SelectItem value="yes">Yes</SelectItem>
                 <SelectItem value="no">No</SelectItem>
               </FormSelect>
@@ -873,7 +873,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
                 </div>
               )}
               
-              <FormSelect name="ableToDoduties" label="Able to Do Duties?" required placeholder="Select yes or no">
+              <FormSelect name="ableToDoduties" label="Is the Injured Party able to carry out any part of his duties ?" required placeholder="Select yes or no">
                 <SelectItem value="yes">Yes</SelectItem>
                 <SelectItem value="no">No</SelectItem>
               </FormSelect>
@@ -917,12 +917,12 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
         <FormProvider {...formMethods}>
           <TooltipProvider>
             <div className="space-y-4">
-              <FormSelect name="totallyDisabled" label="Totally Disabled?" required placeholder="Select yes or no">
+              <FormSelect name="totallyDisabled" label="Is the Injured Party totally disabled?" required placeholder="Select yes or no">
                 <SelectItem value="yes">Yes</SelectItem>
                 <SelectItem value="no">No</SelectItem>
               </FormSelect>
               
-              <FormField name="estimatedDuration" label="Estimated Duration" />
+              <FormField name="estimatedDuration" label=") How long is disablement likely to last?" />
             </div>
           </TooltipProvider>
         </FormProvider>
@@ -1102,50 +1102,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
               </p>
             )}
 
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="declarationAdditionalInfo"
-                checked={formMethods.watch('declarationAdditionalInfo') || false}
-                onCheckedChange={(checked) => {
-                  formMethods.setValue('declarationAdditionalInfo', !!checked);
-                  if (formMethods.formState.errors.declarationAdditionalInfo) {
-                    formMethods.clearErrors('declarationAdditionalInfo');
-                  }
-                }}
-                className={cn(formMethods.formState.errors.declarationAdditionalInfo && "border-destructive")}
-              />
-              <Label htmlFor="declarationAdditionalInfo">
-                I agree to provide additional information <span className="required-asterisk">*</span>
-              </Label>
-            </div>
-            {formMethods.formState.errors.declarationAdditionalInfo && (
-              <p className="text-sm text-destructive">
-                {formMethods.formState.errors.declarationAdditionalInfo.message?.toString()}
-              </p>
-            )}
-
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="declarationDocuments"
-                checked={formMethods.watch('declarationDocuments') || false}
-                onCheckedChange={(checked) => {
-                  formMethods.setValue('declarationDocuments', !!checked);
-                  if (formMethods.formState.errors.declarationDocuments) {
-                    formMethods.clearErrors('declarationDocuments');
-                  }
-                }}
-                className={cn(formMethods.formState.errors.declarationDocuments && "border-destructive")}
-              />
-              <Label htmlFor="declarationDocuments">
-                I agree to submit documents <span className="required-asterisk">*</span>
-              </Label>
-            </div>
-            {formMethods.formState.errors.declarationDocuments && (
-              <p className="text-sm text-destructive">
-                {formMethods.formState.errors.declarationDocuments.message?.toString()}
-              </p>
-            )}
-            
+         
             <FormField name="signature" label="Signature of policyholder (digital signature)" required placeholder="Type your full name as signature" />
             
             <div>
@@ -1214,27 +1171,14 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
             {/* Summary Dialog */}
             <Dialog open={showSummary} onOpenChange={setShowSummary}>
               <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Claim Summary</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium">Policy Details</h4>
-                    <p className="text-sm text-muted-foreground">Policy: {watchedValues.policyNumber}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Insured</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {watchedValues.name} - {watchedValues.email}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Injured Party</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {watchedValues.injuredPartyName}
-                    </p>
-                  </div>
-                </div>
+            <DialogHeader>
+              <DialogTitle>Confirm Your Submission</DialogTitle>
+              <h3 className="font-semibold text-yellow-800">Important Notice</h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Please review all information carefully before submitting. Once submitted, you cannot modify your details.
+                </p>
+            </DialogHeader>
+              
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setShowSummary(false)}>
                     Back to Edit
