@@ -586,7 +586,7 @@ const GroupPersonalAccidentClaim: React.FC = () => {
               name="incidentDescription"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Incident Description *</FormLabel>
+                  <FormLabel>Please describe incident *</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Describe how the incident occurred" rows={4} {...field} />
                   </FormControl>
@@ -946,12 +946,7 @@ const GroupPersonalAccidentClaim: React.FC = () => {
                 </FormItem>
               )}
             />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Place</Label>
-                <Input value="Nigeria" disabled />
-              </div>
+
               <div>
                 <Label>Date</Label>
                 <Input value={new Date().toISOString().split('T')[0]} disabled />
@@ -1018,34 +1013,14 @@ const GroupPersonalAccidentClaim: React.FC = () => {
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Confirm Your Group Personal Accident Claim Submission</DialogTitle>
+              <DialogTitle>Confirm Your Submission</DialogTitle>
+              <h3 className="font-semibold text-yellow-800">Important Notice</h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Please review all information carefully before submitting. Once submitted, you cannot modify your details.
+                </p>
             </DialogHeader>
             
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Policy Number:</span>
-                  <p>{watchedValues.policyNumber}</p>
-                </div>
-                <div>
-                  <span className="font-medium">Company Name:</span>
-                  <p>{watchedValues.companyName}</p>
-                </div>
-              </div>
-              
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold text-yellow-800">Important Notice</h3>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      Please review all information carefully before submitting. Once submitted, you cannot modify your claim details.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
+         
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Review Again
