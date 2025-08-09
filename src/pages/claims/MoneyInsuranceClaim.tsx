@@ -453,7 +453,7 @@ const MoneyInsuranceClaim: React.FC = () => {
         <FormProvider {...formMethods}>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="lossDate" label="Date" required />
+              <FormDatePicker name="lossDate" label="When did it happen ?" required />
               <FormField name="lossTime" label="Time" type="time" required />
             </div>
             
@@ -569,7 +569,7 @@ const MoneyInsuranceClaim: React.FC = () => {
     },
     {
       id: 'general',
-      title: 'General',
+      title: 'More details on loss',
       component: (
         <FormProvider {...formMethods}>
           <div className="space-y-4">
@@ -673,10 +673,6 @@ const MoneyInsuranceClaim: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label>Place</Label>
-                <Input value="Nigeria" disabled />
-              </div>
-              <div>
                 <Label>Date</Label>
                 <Input value={new Date().toISOString().split('T')[0]} disabled />
               </div>
@@ -716,15 +712,7 @@ const MoneyInsuranceClaim: React.FC = () => {
             </div>
 
             <Card className="shadow-xl border-0 bg-white/50 backdrop-blur-sm">
-              <CardHeader className="text-center pb-2">
-                <CardTitle className="flex items-center justify-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Money Insurance Claim
-                </CardTitle>
-                <CardDescription>
-                  Complete all sections to submit your money insurance claim
-                </CardDescription>
-              </CardHeader>
+
               <CardContent>
                 <MultiStepForm
                   steps={steps}
@@ -742,42 +730,13 @@ const MoneyInsuranceClaim: React.FC = () => {
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Confirm Your Money Insurance Claim Submission</DialogTitle>
+              <DialogTitle>Confirm Your Submission</DialogTitle>
+              <h3 className="font-semibold text-yellow-800">Important Notice</h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Please review all information carefully before submitting. Once submitted, you cannot modify your details.
+                </p>
             </DialogHeader>
             
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Policy Number:</span>
-                  <p>{watchedValues.policyNumber}</p>
-                </div>
-                <div>
-                  <span className="font-medium">Company Name:</span>
-                  <p>{watchedValues.companyName}</p>
-                </div>
-                <div>
-                  <span className="font-medium">Loss Amount:</span>
-                  <p>₦{watchedValues.lossAmount}</p>
-                </div>
-                <div>
-                  <span className="font-medium">Loss Date:</span>
-                  <p>{watchedValues.lossDate?.toString()}</p>
-                </div>
-              </div>
-              
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold text-yellow-800">Important Notice</h3>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      Please review all information carefully before submitting. Once submitted, you cannot modify your claim details.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Review Again
