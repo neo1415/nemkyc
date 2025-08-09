@@ -234,6 +234,8 @@ interface CombinedGPAEmployersLiabilityClaimData {
   // Declaration
   agreeToDataPrivacy: boolean;
   declarationTrue: boolean;
+  declarationAdditionalInfo: boolean;
+  declarationDocuments: boolean;
   signature: string;
 }
 
@@ -407,13 +409,21 @@ const defaultValues: Partial<CombinedGPAEmployersLiabilityClaimData> = {
   otherInsurerName: '',
   otherInsurerAddress: '',
   otherInsurerPolicyNumber: '',
-  earnings: Array.from({ length: 12 }, (_, i) => ({
-    monthEnding: '',
-    wagesAndBonus: 0,
-    monthlyAllowances: 0
-  })),
+  earnings: Array.from({ length: 12 }, (_, i) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (11 - i));
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return {
+      monthEnding: `${month}/${year}`,
+      wagesAndBonus: 0,
+      monthlyAllowances: 0
+    };
+  }),
   agreeToDataPrivacy: false,
   declarationTrue: false,
+  declarationAdditionalInfo: false,
+  declarationDocuments: false,
   signature: ''
 };
 
@@ -1080,35 +1090,91 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
               </div>
             </div>
             
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="declarationTrue"
-                checked={formMethods.watch('declarationTrue') || false}
-                onCheckedChange={(checked) => {
-                  formMethods.setValue('declarationTrue', !!checked);
-                  if (formMethods.formState.errors.declarationTrue) {
-                    formMethods.clearErrors('declarationTrue');
-                  }
-                }}
-                className={cn(formMethods.formState.errors.declarationTrue && "border-destructive")}
-              />
-              <Label htmlFor="declarationTrue">
-                I agree that statements are true <span className="required-asterisk">*</span>
-              </Label>
-            </div>
-            {formMethods.formState.errors.declarationTrue && (
-              <p className="text-sm text-destructive">
-                {formMethods.formState.errors.declarationTrue.message?.toString()}
-              </p>
-            )}
+             <div className="flex items-center space-x-2">
+               <Checkbox 
+                 id="declarationTrue"
+                 checked={formMethods.watch('declarationTrue') || false}
+                 onCheckedChange={(checked) => {
+                   formMethods.setValue('declarationTrue', !!checked);
+                   if (formMethods.formState.errors.declarationTrue) {
+                     formMethods.clearErrors('declarationTrue');
+                   }
+                 }}
+                 className={cn(formMethods.formState.errors.declarationTrue && "border-destructive")}
+               />
+               <Label htmlFor="declarationTrue">
+                 I agree that statements are true <span className="required-asterisk">*</span>
+               </Label>
+             </div>
+             {formMethods.formState.errors.declarationTrue && (
+               <p className="text-sm text-destructive">
+                 {formMethods.formState.errors.declarationTrue.message?.toString()}
+               </p>
+             )}
+             
+             <div className="flex items-center space-x-2">
+               <Checkbox 
+                 id="declarationAdditionalInfo"
+                 checked={formMethods.watch('declarationAdditionalInfo') || false}
+                 onCheckedChange={(checked) => {
+                   formMethods.setValue('declarationAdditionalInfo', !!checked);
+                   if (formMethods.formState.errors.declarationAdditionalInfo) {
+                     formMethods.clearErrors('declarationAdditionalInfo');
+                   }
+                 }}
+                 className={cn(formMethods.formState.errors.declarationAdditionalInfo && "border-destructive")}
+               />
+               <Label htmlFor="declarationAdditionalInfo">
+                 I agree to provide additional information <span className="required-asterisk">*</span>
+               </Label>
+             </div>
+             {formMethods.formState.errors.declarationAdditionalInfo && (
+               <p className="text-sm text-destructive">
+                 {formMethods.formState.errors.declarationAdditionalInfo.message?.toString()}
+               </p>
+             )}
+             
+             <div className="flex items-center space-x-2">
+               <Checkbox 
+                 id="declarationDocuments"
+                 checked={formMethods.watch('declarationDocuments') || false}
+                 onCheckedChange={(checked) => {
+                   formMethods.setValue('declarationDocuments', !!checked);
+                   if (formMethods.formState.errors.declarationDocuments) {
+                     formMethods.clearErrors('declarationDocuments');
+                   }
+                 }}
+                 className={cn(formMethods.formState.errors.declarationDocuments && "border-destructive")}
+               />
+               <Label htmlFor="declarationDocuments">
+                 I agree to submit required documents <span className="required-asterisk">*</span>
+               </Label>
+             </div>
+             {formMethods.formState.errors.declarationDocuments && (
+               <p className="text-sm text-destructive">
+                 {formMethods.formState.errors.declarationDocuments.message?.toString()}
+               </p>
+             )}
 
-         
-            <FormField name="signature" label="Signature of policyholder (digital signature)" required placeholder="Type your full name as signature" />
-            
-            <div>
-              <Label>Date</Label>
-              <Input value={new Date().toISOString().split('T')[0]} disabled />
-            </div>
+          
+             <FormField name="signature" label="Signature of policyholder (digital signature)" required placeholder="Type your full name as signature" />
+             
+             <div>
+               <Label>Date</Label>
+               <Input value={new Date().toISOString().split('T')[0]} disabled />
+             </div>
+             
+             <div>
+               <Label>File Uploads</Label>
+               <FileUpload
+                 onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, supportingDocuments: file }))}
+                 onFileRemove={() => setUploadedFiles(prev => ({ ...prev, supportingDocuments: undefined }))}
+                 currentFile={uploadedFiles.supportingDocuments}
+                 accept=".jpg,.jpeg,.png,.pdf"
+                 maxSize={3}
+                 label="Upload Supporting Documents"
+               />
+             </div>
           </div>
         </FormProvider>
       )

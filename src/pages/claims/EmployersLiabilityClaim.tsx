@@ -397,11 +397,17 @@ const defaultValues: Partial<EmployersLiabilityClaimData> = {
   otherInsurerName: '',
   otherInsurerAddress: '',
   otherInsurerPolicyNumber: '',
-  earnings: Array.from({ length: 12 }, (_, i) => ({
-    monthEnding: '',
-    wagesAndBonus: 0,
-    monthlyAllowances: 0
-  })),
+  earnings: Array.from({ length: 12 }, (_, i) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (11 - i));
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return {
+      monthEnding: `${month}/${year}`,
+      wagesAndBonus: 0,
+      monthlyAllowances: 0
+    };
+  }),
   agreeToDataPrivacy: false,
   declarationTrue: false,
   declarationAdditionalInfo: false,
@@ -1024,27 +1030,71 @@ const EmployersLiabilityClaim: React.FC = () => {
               </div>
               
               <div className="space-y-4">
-                <div className="flex items-start space-x-2">
-                  <Checkbox
-                    id="declarationTrue"
-                    checked={formMethods.watch('declarationTrue') || false}
-                    onCheckedChange={(checked) => {
-                      formMethods.setValue('declarationTrue', !!checked);
-                      if (formMethods.formState.errors.declarationTrue) {
-                        formMethods.clearErrors('declarationTrue');
-                      }
-                    }}
-                    className={cn(formMethods.formState.errors.declarationTrue && "border-destructive")}
-                  />
-                  <Label htmlFor="declarationTrue" className="text-sm">
-                    I declare that the information given is true <span className="required-asterisk">*</span>
-                  </Label>
-                </div>
-                {formMethods.formState.errors.declarationTrue && (
-                  <p className="text-sm text-destructive">
-                    {formMethods.formState.errors.declarationTrue.message?.toString()}
-                  </p>
-                )}
+                 <div className="flex items-start space-x-2">
+                   <Checkbox
+                     id="declarationTrue"
+                     checked={formMethods.watch('declarationTrue') || false}
+                     onCheckedChange={(checked) => {
+                       formMethods.setValue('declarationTrue', !!checked);
+                       if (formMethods.formState.errors.declarationTrue) {
+                         formMethods.clearErrors('declarationTrue');
+                       }
+                     }}
+                     className={cn(formMethods.formState.errors.declarationTrue && "border-destructive")}
+                   />
+                   <Label htmlFor="declarationTrue" className="text-sm">
+                     I declare that the information given is true <span className="required-asterisk">*</span>
+                   </Label>
+                 </div>
+                 {formMethods.formState.errors.declarationTrue && (
+                   <p className="text-sm text-destructive">
+                     {formMethods.formState.errors.declarationTrue.message?.toString()}
+                   </p>
+                 )}
+                 
+                 <div className="flex items-start space-x-2">
+                   <Checkbox
+                     id="declarationAdditionalInfo"
+                     checked={formMethods.watch('declarationAdditionalInfo') || false}
+                     onCheckedChange={(checked) => {
+                       formMethods.setValue('declarationAdditionalInfo', !!checked);
+                       if (formMethods.formState.errors.declarationAdditionalInfo) {
+                         formMethods.clearErrors('declarationAdditionalInfo');
+                       }
+                     }}
+                     className={cn(formMethods.formState.errors.declarationAdditionalInfo && "border-destructive")}
+                   />
+                   <Label htmlFor="declarationAdditionalInfo" className="text-sm">
+                     I agree to provide additional information <span className="required-asterisk">*</span>
+                   </Label>
+                 </div>
+                 {formMethods.formState.errors.declarationAdditionalInfo && (
+                   <p className="text-sm text-destructive">
+                     {formMethods.formState.errors.declarationAdditionalInfo.message?.toString()}
+                   </p>
+                 )}
+                 
+                 <div className="flex items-start space-x-2">
+                   <Checkbox
+                     id="declarationDocuments"
+                     checked={formMethods.watch('declarationDocuments') || false}
+                     onCheckedChange={(checked) => {
+                       formMethods.setValue('declarationDocuments', !!checked);
+                       if (formMethods.formState.errors.declarationDocuments) {
+                         formMethods.clearErrors('declarationDocuments');
+                       }
+                     }}
+                     className={cn(formMethods.formState.errors.declarationDocuments && "border-destructive")}
+                   />
+                   <Label htmlFor="declarationDocuments" className="text-sm">
+                     I agree to submit required documents <span className="required-asterisk">*</span>
+                   </Label>
+                 </div>
+                 {formMethods.formState.errors.declarationDocuments && (
+                   <p className="text-sm text-destructive">
+                     {formMethods.formState.errors.declarationDocuments.message?.toString()}
+                   </p>
+                 )}
               </div>
             </div>
             
@@ -1062,9 +1112,12 @@ const EmployersLiabilityClaim: React.FC = () => {
             <div>
               <Label>File Uploads</Label>
               <FileUpload
-                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, [file.name]: file }))}
+                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, supportingDocuments: file }))}
+                onFileRemove={() => setUploadedFiles(prev => ({ ...prev, supportingDocuments: undefined }))}
+                currentFile={uploadedFiles.supportingDocuments}
                 accept=".jpg,.jpeg,.png,.pdf"
                 maxSize={3}
+                label="Upload Supporting Documents"
               />
             </div>
           </div>
