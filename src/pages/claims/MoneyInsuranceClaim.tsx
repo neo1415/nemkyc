@@ -547,15 +547,14 @@ const MoneyInsuranceClaim: React.FC = () => {
               <SelectItem value="safe">Locked in Safe</SelectItem>
             </FormSelect>
 
-            <FormField name="discovererName" label="Name of person who discovered loss" required />
-
             {/* Conditional rendering based on money location */}
             {watchedValues.moneyLocation === 'transit' && (
               <div className="space-y-4">
-                <div className="p-4 border rounded-lg bg-blue-50">
-                  <h3 className="font-medium text-blue-900 mb-3">Transit Loss Details</h3>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium text-grey-900 mb-3">Transit Loss Details</h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField name="discovererName" label="Name of person who discovered loss" required />
                     <FormField name="discovererPosition" label="Position" />
                     <FormField name="discovererSalary" label="Salary (₦)" type="number" step="0.01" />
                   </div>
@@ -584,8 +583,8 @@ const MoneyInsuranceClaim: React.FC = () => {
 
             {watchedValues.moneyLocation === 'safe' && (
               <div className="space-y-4">
-                <div className="p-4 border rounded-lg bg-green-50">
-                  <h3 className="font-medium text-green-900 mb-3">Safe Loss Details</h3>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium text-grey-900 mb-3">Safe Loss Details</h3>
                   
                   <FormSelect name="safeType" label="Was the safe bricked into wall or standing free?" required placeholder="Select option">
                     <SelectItem value="bricked">Bricked into wall</SelectItem>
