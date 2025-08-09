@@ -683,7 +683,131 @@ const BurglaryClaimForm: React.FC = () => {
               <FormTextarea name="fireInsurerAddress" label="Fire policy insurer address" required />
             </div>
             
-            {/* ADD OTHER BOOLEAN SECTIONS HERE - SAME PATTERN AS ABOVE */}
+            {/* SOLE OWNER SECTION */}
+            <div className="space-y-2">
+              <Label>Are you the sole owner of the property stolen? *</Label>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="soleOwner-yes"
+                    checked={watchedValues.soleOwner === true}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        formMethods.setValue('soleOwner', true);
+                        formMethods.clearErrors('soleOwner');
+                      }
+                    }}
+                  />
+                  <Label htmlFor="soleOwner-yes">Yes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="soleOwner-no"
+                    checked={watchedValues.soleOwner === false}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        formMethods.setValue('soleOwner', false);
+                        formMethods.clearErrors('soleOwner');
+                      }
+                    }}
+                  />
+                  <Label htmlFor="soleOwner-no">No</Label>
+                </div>
+              </div>
+              {formMethods.formState.errors.soleOwner && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.soleOwner.message?.toString()}
+                </p>
+              )}
+            </div>
+            
+            {watchedValues.soleOwner === false && (
+              <FormTextarea name="ownerDetails" label="If not, give name(s) and address(es) of owner(s)" required />
+            )}
+            
+            {/* OTHER INSURANCE SECTION */}
+            <div className="space-y-2">
+              <Label>Is there any other insurance covering the said property? *</Label>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="otherInsurance-yes"
+                    checked={watchedValues.otherInsurance === true}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        formMethods.setValue('otherInsurance', true);
+                        formMethods.clearErrors('otherInsurance');
+                      }
+                    }}
+                  />
+                  <Label htmlFor="otherInsurance-yes">Yes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="otherInsurance-no"
+                    checked={watchedValues.otherInsurance === false}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        formMethods.setValue('otherInsurance', false);
+                        formMethods.clearErrors('otherInsurance');
+                      }
+                    }}
+                  />
+                  <Label htmlFor="otherInsurance-no">No</Label>
+                </div>
+              </div>
+              {formMethods.formState.errors.otherInsurance && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.otherInsurance.message?.toString()}
+                </p>
+              )}
+            </div>
+            
+            {watchedValues.otherInsurance === true && (
+              <FormTextarea name="otherInsurerDetails" label="Please give full particulars" required />
+            )}
+            
+            {/* PREVIOUS LOSS SECTION */}
+            <div className="space-y-2">
+              <Label>Have you or your household suffered any previous loss by theft, burglary or housebreaking within the last 5 years? *</Label>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="previousLoss-yes"
+                    checked={watchedValues.previousLoss === true}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        formMethods.setValue('previousLoss', true);
+                        formMethods.clearErrors('previousLoss');
+                      }
+                    }}
+                  />
+                  <Label htmlFor="previousLoss-yes">Yes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="previousLoss-no"
+                    checked={watchedValues.previousLoss === false}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        formMethods.setValue('previousLoss', false);
+                        formMethods.clearErrors('previousLoss');
+                      }
+                    }}
+                  />
+                  <Label htmlFor="previousLoss-no">No</Label>
+                </div>
+              </div>
+              {formMethods.formState.errors.previousLoss && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.previousLoss.message?.toString()}
+                </p>
+              )}
+            </div>
+            
+            {watchedValues.previousLoss === true && (
+              <FormTextarea name="previousLossDetails" label="If yes, give details" required />
+            )}
           </div>
         </FormProvider>
       )
