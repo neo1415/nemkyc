@@ -1045,51 +1045,7 @@ const EmployersLiabilityClaim: React.FC = () => {
                     {formMethods.formState.errors.declarationTrue.message?.toString()}
                   </p>
                 )}
-                
-                <div className="flex items-start space-x-2">
-                  <Checkbox
-                    id="declarationAdditionalInfo"
-                    checked={formMethods.watch('declarationAdditionalInfo') || false}
-                    onCheckedChange={(checked) => {
-                      formMethods.setValue('declarationAdditionalInfo', !!checked);
-                      if (formMethods.formState.errors.declarationAdditionalInfo) {
-                        formMethods.clearErrors('declarationAdditionalInfo');
-                      }
-                    }}
-                    className={cn(formMethods.formState.errors.declarationAdditionalInfo && "border-destructive")}
-                  />
-                  <Label htmlFor="declarationAdditionalInfo" className="text-sm">
-                    I agree to provide additional information if required <span className="required-asterisk">*</span>
-                  </Label>
-                </div>
-                {formMethods.formState.errors.declarationAdditionalInfo && (
-                  <p className="text-sm text-destructive">
-                    {formMethods.formState.errors.declarationAdditionalInfo.message?.toString()}
-                  </p>
-                )}
-                
-                <div className="flex items-start space-x-2">
-                  <Checkbox
-                    id="declarationDocuments"
-                    checked={formMethods.watch('declarationDocuments') || false}
-                    onCheckedChange={(checked) => {
-                      formMethods.setValue('declarationDocuments', !!checked);
-                      if (formMethods.formState.errors.declarationDocuments) {
-                        formMethods.clearErrors('declarationDocuments');
-                      }
-                    }}
-                    className={cn(formMethods.formState.errors.declarationDocuments && "border-destructive")}
-                  />
-                  <Label htmlFor="declarationDocuments" className="text-sm">
-                    I agree to submit all required documents <span className="required-asterisk">*</span>
-                  </Label>
-                </div>
-                {formMethods.formState.errors.declarationDocuments && (
-                  <p className="text-sm text-destructive">
-                    {formMethods.formState.errors.declarationDocuments.message?.toString()}
-                  </p>
-                )}
-              </div>
+              
             </div>
             
             <FormField name="signature" label="Digital Signature" required placeholder="Type your full name as signature" />
@@ -1146,15 +1102,7 @@ const EmployersLiabilityClaim: React.FC = () => {
             </div>
 
             <Card className="shadow-xl border-0 bg-white/50 backdrop-blur-sm">
-              <CardHeader className="text-center pb-2">
-                <CardTitle className="flex items-center justify-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Employers Liability Insurance Claim
-                </CardTitle>
-                <CardDescription>
-                  Complete all sections to submit your employers liability claim
-                </CardDescription>
-              </CardHeader>
+
               <CardContent>
                 <MultiStepForm
                   steps={steps}
@@ -1171,34 +1119,14 @@ const EmployersLiabilityClaim: React.FC = () => {
         {/* Summary Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Confirm Your Employers Liability Claim Submission</DialogTitle>
+             <DialogHeader>
+              <DialogTitle>Confirm Your Submission</DialogTitle>
+              <h3 className="font-semibold text-yellow-800">Important Notice</h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Please review all information carefully before submitting. Once submitted, you cannot modify your details.
+                </p>
             </DialogHeader>
             
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Policy Number:</span>
-                  <p>{watchedValues.policyNumber}</p>
-                </div>
-                <div>
-                  <span className="font-medium">Insured Name:</span>
-                  <p>{watchedValues.name}</p>
-                </div>
-              </div>
-              
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold text-yellow-800">Important Notice</h3>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      Please review all information carefully before submitting. Once submitted, you cannot modify your claim details.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSummary(false)}>
