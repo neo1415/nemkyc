@@ -42,29 +42,61 @@ const moneyInsuranceSchema = yup.object().shape({
 
   // Discoverer Details
   discovererName: yup.string().required('Discoverer name is required'),
-  discovererPosition: yup.string(),
-  discovererSalary: yup.number().min(0, 'Salary must be positive'),
+  discovererPosition: yup.string().when('moneyLocation', {
+    is: 'transit',
+    then: (schema) => schema.notRequired(),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  discovererSalary: yup.number().min(0, 'Salary must be positive').when('moneyLocation', {
+    is: 'transit',
+    then: (schema) => schema.notRequired(),
+    otherwise: (schema) => schema.notRequired()
+  }),
 
-  // Transit Details
-  policeEscort: yup.string().oneOf(['yes', 'no']),
-  amountAtStart: yup.number().min(0, 'Amount must be positive'),
-  disbursements: yup.number().min(0, 'Disbursements must be positive'),
-  doubtIntegrity: yup.string().oneOf(['yes', 'no']),
-  integrityExplanation: yup.string().when('doubtIntegrity', {
-    is: 'yes',
+  // Transit Details (only required when moneyLocation is 'transit')
+  policeEscort: yup.string().oneOf(['yes', 'no']).when('moneyLocation', {
+    is: 'transit',
+    then: (schema) => schema.required('Police escort information is required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  amountAtStart: yup.number().min(0, 'Amount must be positive').when('moneyLocation', {
+    is: 'transit',
+    then: (schema) => schema.required('Amount at journey start is required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  disbursements: yup.number().min(0, 'Disbursements must be positive').when('moneyLocation', {
+    is: 'transit',
+    then: (schema) => schema.required('Disbursements information is required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  doubtIntegrity: yup.string().oneOf(['yes', 'no']).when('moneyLocation', {
+    is: 'transit',
+    then: (schema) => schema.required('Integrity information is required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  integrityExplanation: yup.string().when(['doubtIntegrity', 'moneyLocation'], {
+    is: (doubtIntegrity: string, moneyLocation: string) => doubtIntegrity === 'yes' && moneyLocation === 'transit',
     then: (schema) => schema.required('Explanation required'),
     otherwise: (schema) => schema.notRequired()
   }),
 
-  // Safe Details
-  safeType: yup.string(),
-  keyholders: yup.array().of(
-    yup.object().shape({
-      name: yup.string().required('Keyholder name is required'),
-      position: yup.string().required('Position is required'),
-      salary: yup.number().min(0, 'Salary must be positive').required('Salary is required')
-    })
-  ),
+  // Safe Details (only required when moneyLocation is 'safe')
+  safeType: yup.string().when('moneyLocation', {
+    is: 'safe',
+    then: (schema) => schema.required('Safe type is required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  keyholders: yup.array().when('moneyLocation', {
+    is: 'safe',
+    then: (schema) => schema.of(
+      yup.object().shape({
+        name: yup.string().required('Keyholder name is required'),
+        position: yup.string().required('Position is required'),
+        salary: yup.number().min(0, 'Salary must be positive').required('Salary is required')
+      })
+    ).min(1, 'At least one keyholder is required'),
+    otherwise: (schema) => schema.notRequired()
+  }),
 
   // General Details
   howItHappened: yup.string().required('How it happened is required'),
@@ -284,7 +316,7 @@ const defaultValues: Partial<MoneyInsuranceData> = {
   email: '',
   lossTime: '',
   lossLocation: '',
-  moneyLocation: '',
+  moneyLocation: 'safe', // Default to 'safe'
   discovererName: '',
   discovererPosition: '',
   discovererSalary: 0,
@@ -348,11 +380,6 @@ const MoneyInsuranceClaim: React.FC = () => {
     mode: 'onChange'
   });
 
-  // Make toast available globally for MultiStepForm
-  useEffect(() => {
-    (window as any).toast = toast;
-  }, [toast]);
-
   const { fields: keyholderFields, append: addKeyholder, remove: removeKeyholder } = useFieldArray({
     control: formMethods.control,
     name: 'keyholders'
@@ -360,6 +387,17 @@ const MoneyInsuranceClaim: React.FC = () => {
 
   const { saveDraft, clearDraft } = useFormDraft('moneyInsuranceClaim', formMethods);
   const watchedValues = formMethods.watch();
+
+  // Initialize with one keyholder when form loads (since default is 'safe')
+  useEffect(() => {
+    if (keyholderFields.length === 0 && watchedValues.moneyLocation === 'safe') {
+      addKeyholder({
+        name: '',
+        position: '',
+        salary: 0
+      });
+    }
+  }, [keyholderFields.length, watchedValues.moneyLocation, addKeyholder]);
 
   // Auto-save draft
   useEffect(() => {
@@ -401,15 +439,60 @@ const MoneyInsuranceClaim: React.FC = () => {
     setShowSummary(true);
   };
 
+  // Custom validation for merged loss details step
+  const validateStep = async (stepId: string): Promise<boolean> => {
+    if (stepId === 'loss') {
+      const moneyLocation = watchedValues.moneyLocation;
+      const errors: string[] = [];
+
+      // Always required fields
+      if (!watchedValues.lossDate) errors.push('Loss date is required');
+      if (!watchedValues.lossTime) errors.push('Loss time is required');
+      if (!watchedValues.lossLocation) errors.push('Loss location is required');
+      if (!watchedValues.moneyLocation) errors.push('Money location is required');
+      if (!watchedValues.discovererName) errors.push('Discoverer name is required');
+
+      if (moneyLocation === 'transit') {
+        // Transit specific validations
+        if (!watchedValues.policeEscort) errors.push('Police escort information is required');
+        if (watchedValues.amountAtStart === undefined || watchedValues.amountAtStart === null) errors.push('Amount at journey start is required');
+        if (watchedValues.disbursements === undefined || watchedValues.disbursements === null) errors.push('Disbursements information is required');
+        if (!watchedValues.doubtIntegrity) errors.push('Employee integrity information is required');
+        if (watchedValues.doubtIntegrity === 'yes' && !watchedValues.integrityExplanation) errors.push('Integrity explanation is required');
+      } else if (moneyLocation === 'safe') {
+        // Safe specific validations
+        if (!watchedValues.safeType) errors.push('Safe type is required');
+        if (!watchedValues.keyholders || watchedValues.keyholders.length === 0) {
+          errors.push('At least one keyholder is required');
+        } else {
+          // Validate each keyholder
+          watchedValues.keyholders.forEach((keyholder: any, index: number) => {
+            if (!keyholder.name) errors.push(`Keyholder ${index + 1} name is required`);
+            if (!keyholder.position) errors.push(`Keyholder ${index + 1} position is required`);
+            if (keyholder.salary === undefined || keyholder.salary === null) errors.push(`Keyholder ${index + 1} salary is required`);
+          });
+        }
+      }
+
+      if (errors.length > 0) {
+        toast({
+          title: "Required Fields Missing",
+          description: errors.join(', '),
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+    return true;
+  };
+
   // Step field mappings for validation
   const stepFieldMappings = {
     0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
     1: ['companyName', 'address', 'phone', 'email'],
-    2: ['lossDate', 'lossTime', 'lossLocation', 'moneyLocation'],
-    3: ['discovererName', 'discovererPosition', 'discovererSalary', 'policeEscort', 'amountAtStart', 'disbursements', 'doubtIntegrity', 'integrityExplanation'],
-    4: ['discovererName', 'safeType', 'keyholders'],
-    5: ['howItHappened', 'policeNotified', 'policeStation', 'previousLoss', 'previousLossDetails', 'lossAmount', 'lossDescription'],
-    6: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
+    2: [], // Custom validation for merged section
+    3: ['howItHappened', 'policeNotified', 'policeStation', 'previousLoss', 'previousLossDetails', 'lossAmount', 'lossDescription'],
+    4: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
   };
 
   const steps = [
@@ -453,7 +536,7 @@ const MoneyInsuranceClaim: React.FC = () => {
         <FormProvider {...formMethods}>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="lossDate" label="When did it happen ?" required />
+              <FormDatePicker name="lossDate" label="When did it happen?" required />
               <FormField name="lossTime" label="Time" type="time" required />
             </div>
             
@@ -463,113 +546,108 @@ const MoneyInsuranceClaim: React.FC = () => {
               <SelectItem value="transit">In Transit</SelectItem>
               <SelectItem value="safe">Locked in Safe</SelectItem>
             </FormSelect>
-          </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'transit',
-      title: 'If loss was in transit',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <div className="text-sm text-muted-foreground mb-4">
-              Complete this section if money was lost in transit
-            </div>
-            
+
             <FormField name="discovererName" label="Name of person who discovered loss" required />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField name="discovererPosition" label="Position" />
-              <FormField name="discovererSalary" label="Salary (₦)" type="number" step="0.01" />
-            </div>
-            
-            <FormSelect name="policeEscort" label="Was there a police escort?" placeholder="Select yes or no">
-              <SelectItem value="yes">Yes</SelectItem>
-              <SelectItem value="no">No</SelectItem>
-            </FormSelect>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField name="amountAtStart" label="Amount at journey start (₦)" type="number" step="0.01" />
-              <FormField name="disbursements" label="Disbursements during journey (₦)" type="number" step="0.01" />
-            </div>
-            
-            <FormSelect name="doubtIntegrity" label="Any reason to doubt integrity of employee?" placeholder="Select yes or no">
-              <SelectItem value="yes">Yes</SelectItem>
-              <SelectItem value="no">No</SelectItem>
-            </FormSelect>
-            
-            {watchedValues.doubtIntegrity === 'yes' && (
-              <FormTextarea name="integrityExplanation" label="Explanation" required />
+
+            {/* Conditional rendering based on money location */}
+            {watchedValues.moneyLocation === 'transit' && (
+              <div className="space-y-4">
+                <div className="p-4 border rounded-lg bg-blue-50">
+                  <h3 className="font-medium text-blue-900 mb-3">Transit Loss Details</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField name="discovererPosition" label="Position" />
+                    <FormField name="discovererSalary" label="Salary (₦)" type="number" step="0.01" />
+                  </div>
+                  
+                  <FormSelect name="policeEscort" label="Was there a police escort?" required placeholder="Select yes or no">
+                    <SelectItem value="yes">Yes</SelectItem>
+                    <SelectItem value="no">No</SelectItem>
+                  </FormSelect>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField name="amountAtStart" label="Amount at journey start (₦)" type="number" step="0.01" required />
+                    <FormField name="disbursements" label="Disbursements during journey (₦)" type="number" step="0.01" required />
+                  </div>
+                  
+                  <FormSelect name="doubtIntegrity" label="Any reason to doubt integrity of employee?" required placeholder="Select yes or no">
+                    <SelectItem value="yes">Yes</SelectItem>
+                    <SelectItem value="no">No</SelectItem>
+                  </FormSelect>
+                  
+                  {watchedValues.doubtIntegrity === 'yes' && (
+                    <FormTextarea name="integrityExplanation" label="Explanation" required />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {watchedValues.moneyLocation === 'safe' && (
+              <div className="space-y-4">
+                <div className="p-4 border rounded-lg bg-green-50">
+                  <h3 className="font-medium text-green-900 mb-3">Safe Loss Details</h3>
+                  
+                  <FormSelect name="safeType" label="Was the safe bricked into wall or standing free?" required placeholder="Select option">
+                    <SelectItem value="bricked">Bricked into wall</SelectItem>
+                    <SelectItem value="standing">Standing free</SelectItem>
+                  </FormSelect>
+                  
+                  <div className="space-y-4">
+                    <Label>Names, positions, salaries of employees in charge of keys *</Label>
+                    
+                    {keyholderFields.map((keyholder, index) => (
+                      <Card key={keyholder.id} className="p-4">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-lg font-medium">Keyholder {index + 1}</h3>
+                          {keyholderFields.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeKeyholder(index)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Remove
+                            </Button>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <FormField name={`keyholders.${index}.name`} label="Name" required />
+                          <FormField name={`keyholders.${index}.position`} label="Position" required />
+                          <FormField name={`keyholders.${index}.salary`} label="Salary (₦)" type="number" step="0.01" required />
+                        </div>
+                      </Card>
+                    ))}
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => addKeyholder({
+                        name: '',
+                        position: '',
+                        salary: 0
+                      })}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Keyholder
+                    </Button>
+
+                    {keyholderFields.length === 0 && (
+                      <p className="text-sm text-destructive">At least one keyholder is required</p>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </FormProvider>
       )
     },
     {
-      id: 'safe',
-      title: 'If loss was in safe',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <div className="text-sm text-muted-foreground mb-4">
-              Complete this section if money was lost from a safe
-            </div>
-            
-            <FormField name="discovererName" label="Name of person who discovered loss" />
-            
-            <FormSelect name="safeType" label="Was the safe bricked into wall or standing free?" placeholder="Select option">
-              <SelectItem value="bricked">Bricked into wall</SelectItem>
-              <SelectItem value="standing">Standing free</SelectItem>
-            </FormSelect>
-            
-            <div className="space-y-4">
-              <Label>Names, positions, salaries of employees in charge of keys</Label>
-              
-              {keyholderFields.map((keyholder, index) => (
-                <Card key={keyholder.id} className="p-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-medium">Keyholder {index + 1}</h3>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeKeyholder(index)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Remove
-                    </Button>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField name={`keyholders.${index}.name`} label="Name" required />
-                    <FormField name={`keyholders.${index}.position`} label="Position" required />
-                    <FormField name={`keyholders.${index}.salary`} label="Salary (₦)" type="number" step="0.01" required />
-                  </div>
-                </Card>
-              ))}
-              
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => addKeyholder({
-                  name: '',
-                  position: '',
-                  salary: 0
-                })}
-                className="w-full"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Keyholder
-              </Button>
-            </div>
-          </div>
-        </FormProvider>
-      )
-    },
-    {
       id: 'general',
-      title: 'More details on loss',
+      title: 'Additional Information',
       component: (
         <FormProvider {...formMethods}>
           <div className="space-y-4">
@@ -720,6 +798,7 @@ const MoneyInsuranceClaim: React.FC = () => {
                   formMethods={formMethods}
                   submitButtonText="Submit Money Insurance Claim"
                   stepFieldMappings={stepFieldMappings}
+                  validateStep={validateStep}
                 />
               </CardContent>
             </Card>
