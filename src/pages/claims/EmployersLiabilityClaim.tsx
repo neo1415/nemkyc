@@ -1045,7 +1045,7 @@ const EmployersLiabilityClaim: React.FC = () => {
                     {formMethods.formState.errors.declarationTrue.message?.toString()}
                   </p>
                 )}
-              
+              </div>
             </div>
             
             <FormField name="signature" label="Digital Signature" required placeholder="Type your full name as signature" />
