@@ -534,6 +534,31 @@ const FireSpecialPerilsClaim: React.FC = () => {
     9: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
   };
 
+  // Custom validation for file uploads step
+  const validateStep = async (stepId: string) => {
+    if (stepId === 'file-uploads') { // File uploads step
+      const requiredFiles = ['fireBrigadeReport', 'policeReport', 'pictureOfLoss1'];
+      const missingFiles = requiredFiles.filter(fileKey => !uploadedFiles[fileKey]);
+      
+      if (missingFiles.length > 0) {
+        const fileNames = {
+          fireBrigadeReport: 'Fire Brigade Report',
+          policeReport: 'Police Report',
+          pictureOfLoss1: 'Picture of Loss 1'
+        };
+        
+        const missingFileNames = missingFiles.map(key => fileNames[key as keyof typeof fileNames]).join(', ');
+        toast({
+          title: "Required Documents Missing",
+          description: `Please upload the following required documents: ${missingFileNames}`,
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+    return true;
+  };
+
   const steps = [
     {
       id: "policy-details",
@@ -869,13 +894,18 @@ const FireSpecialPerilsClaim: React.FC = () => {
       component: (
         <FormSection title="Required Documents" description="Upload the required supporting documents">
           <div className="space-y-6">
-            <FileUpload
-              label="Fire Brigade Report *"
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, fireBrigadeReport: file }))}
-              currentFile={uploadedFiles.fireBrigadeReport}
-              accept=".pdf,.jpg,.jpeg,.png"
-              maxSize={5}
-            />
+            <div className="space-y-2">
+              <FileUpload
+                label="Fire Brigade Report *"
+                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, fireBrigadeReport: file }))}
+                currentFile={uploadedFiles.fireBrigadeReport}
+                accept=".pdf,.jpg,.jpeg,.png"
+                maxSize={5}
+              />
+              {!uploadedFiles.fireBrigadeReport && (
+                <p className="text-sm text-destructive">This document is required to proceed</p>
+              )}
+            </div>
             
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -931,13 +961,18 @@ const FireSpecialPerilsClaim: React.FC = () => {
               ))}
             </div>
             
-            <FileUpload
-              label="Police Report *"
-              onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, policeReport: file }))}
-              currentFile={uploadedFiles.policeReport}
-              accept=".pdf,.jpg,.jpeg,.png"
-              maxSize={5}
-            />
+            <div className="space-y-2">
+              <FileUpload
+                label="Police Report *"
+                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, policeReport: file }))}
+                currentFile={uploadedFiles.policeReport}
+                accept=".pdf,.jpg,.jpeg,.png"
+                maxSize={5}
+              />
+              {!uploadedFiles.policeReport && (
+                <p className="text-sm text-destructive">This document is required to proceed</p>
+              )}
+            </div>
             
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -1147,12 +1182,13 @@ const FireSpecialPerilsClaim: React.FC = () => {
             </DialogContent>
           </Dialog>
 
-          <MultiStepForm
-            steps={steps}
-            onSubmit={onFinalSubmit}
-            formMethods={formMethods}
-            stepFieldMappings={stepFieldMappings}
-          />
+            <MultiStepForm
+              steps={steps}
+              onSubmit={onFinalSubmit}
+              formMethods={formMethods}
+              stepFieldMappings={stepFieldMappings}
+              validateStep={validateStep}
+            />
 
           {/* Summary Dialog */}
           <Dialog open={showSummary} onOpenChange={setShowSummary}>
