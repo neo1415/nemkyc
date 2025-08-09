@@ -986,15 +986,7 @@ const GroupPersonalAccidentClaim: React.FC = () => {
             </div>
 
             <Card className="shadow-xl border-0 bg-white/50 backdrop-blur-sm">
-              <CardHeader className="text-center pb-2">
-                <CardTitle className="flex items-center justify-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Group Personal Accident Insurance Claim
-                </CardTitle>
-                <CardDescription>
-                  Complete all sections to submit your group personal accident claim
-                </CardDescription>
-              </CardHeader>
+
               <CardContent>
                 <MultiStepForm
                   steps={steps}
