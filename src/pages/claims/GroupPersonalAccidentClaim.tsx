@@ -947,10 +947,9 @@ const GroupPersonalAccidentClaim: React.FC = () => {
               )}
             />
 
-              <div>
-                <Label>Date</Label>
-                <Input value={new Date().toISOString().split('T')[0]} disabled />
-              </div>
+            <div>
+              <Label>Date</Label>
+              <Input value={new Date().toISOString().split('T')[0]} disabled />
             </div>
           </div>
         </FormProvider>
