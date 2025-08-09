@@ -41,7 +41,11 @@ const moneyInsuranceSchema = yup.object().shape({
   moneyLocation: yup.string().oneOf(['transit', 'safe']).required('Money location is required'),
 
   // Discoverer Details
-  discovererName: yup.string().required('Discoverer name is required'),
+  discovererName: yup.string().when('moneyLocation', {
+    is: 'transit',
+    then: (schema) => schema.notRequired(),
+    otherwise: (schema) => schema.notRequired()
+  }),
   discovererPosition: yup.string().when('moneyLocation', {
     is: 'transit',
     then: (schema) => schema.notRequired(),
