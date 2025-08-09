@@ -646,7 +646,7 @@ const MoneyInsuranceClaim: React.FC = () => {
     },
     {
       id: 'general',
-      title: 'Additional Information',
+      title: 'Additional loss Information',
       component: (
         <FormProvider {...formMethods}>
           <div className="space-y-4">
