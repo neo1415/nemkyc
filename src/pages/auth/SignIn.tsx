@@ -21,6 +21,57 @@ const SignIn: React.FC = () => {
   
   const from = location.state?.from?.pathname || '/dashboard';
 
+  // Helper function to get form page URL from form type
+  const getFormPageUrl = (formType: string) => {
+    const formTypeLower = formType.toLowerCase();
+    
+    if (formTypeLower.includes('employers liability') && !formTypeLower.includes('combined')) {
+      return '/claims/employers-liability';
+    }
+    if (formTypeLower.includes('combined') && formTypeLower.includes('gpa')) {
+      return '/claims/combined-gpa-employers-liability';
+    }
+    if (formTypeLower.includes('public liability')) {
+      return '/claims/public-liability';
+    }
+    if (formTypeLower.includes('professional indemnity')) {
+      return '/claims/professional-indemnity';
+    }
+    if (formTypeLower.includes('motor')) {
+      return '/claims/motor';
+    }
+    if (formTypeLower.includes('fire')) {
+      return '/claims/fire-special-perils';
+    }
+    if (formTypeLower.includes('burglary')) {
+      return '/claims/burglary';
+    }
+    if (formTypeLower.includes('all risk') || formTypeLower.includes('allrisk')) {
+      return '/claims/all-risk';
+    }
+    if (formTypeLower.includes('goods')) {
+      return '/claims/goods-in-transit';
+    }
+    if (formTypeLower.includes('money')) {
+      return '/claims/money-insurance';
+    }
+    if (formTypeLower.includes('fidelity')) {
+      return '/claims/fidelity-guarantee';
+    }
+    if (formTypeLower.includes('contractors')) {
+      return '/claims/contractors-plant-machinery';
+    }
+    if (formTypeLower.includes('group') && formTypeLower.includes('personal')) {
+      return '/claims/group-personal-accident';
+    }
+    if (formTypeLower.includes('rent')) {
+      return '/claims/rent-assurance';
+    }
+    
+    // Default fallback
+    return '/dashboard';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -32,18 +83,20 @@ const SignIn: React.FC = () => {
       // Check if there's a pending submission
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
-        // Process pending submission and redirect back to original page
+        // Process pending submission and redirect back to original form page
         const { processPendingSubmissionUtil } = await import('../../hooks/useAuthRequiredSubmit');
         const { getAuth } = await import('firebase/auth');
         const currentUser = getAuth().currentUser;
         
         if (currentUser?.email) {
+          const pendingData = JSON.parse(hasPendingSubmission);
           await processPendingSubmissionUtil(currentUser.email);
+          
+          // Redirect to the specific form page based on form type
+          const formPageUrl = getFormPageUrl(pendingData.formType);
+          navigate(formPageUrl, { replace: true });
+          return;
         }
-        
-        // Redirect back to the original page
-        navigate(-1);
-        return;
       }
 
       // Normal sign-in flow - role-based navigation
@@ -84,21 +137,23 @@ const SignIn: React.FC = () => {
     try {
       await signInWithGoogle();
       
-      // Check  here if there's a pending submission
+      // Check here if there's a pending submission
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
-        // Process pending submission and redirect back to original page
+        // Process pending submission and redirect back to original form page
         const { processPendingSubmissionUtil } = await import('../../hooks/useAuthRequiredSubmit');
         const { getAuth } = await import('firebase/auth');
         const currentUser = getAuth().currentUser;
         
         if (currentUser?.email) {
+          const pendingData = JSON.parse(hasPendingSubmission);
           await processPendingSubmissionUtil(currentUser.email);
+          
+          // Redirect to the specific form page based on form type
+          const formPageUrl = getFormPageUrl(pendingData.formType);
+          navigate(formPageUrl, { replace: true });
+          return;
         }
-        
-        // Redirect back to the original page
-        navigate(-1);
-        return;
       }
 
       // Normal sign-in flow - role-based navigation
