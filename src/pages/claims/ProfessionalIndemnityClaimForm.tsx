@@ -85,7 +85,7 @@ const professionalIndemnitySchema = yup.object().shape({
     then: (schema) => schema.required('Oral details are required'),
     otherwise: (schema) => schema.notRequired()
   }),
-  amountClaimed: yup.number().required('Amount claimed is required').typeError('Please enter a valid number'),
+  amountClaimed: yup.number().typeError('Please enter a valid number'),
   
   // Response
   responseComments: yup.string().required('Response comments are required'),
@@ -649,7 +649,9 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
             </div>
             
             <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-              <h3 className="font-medium">Who actually performed the work?</h3>
+              <h3 className="font-medium">Who is the person within the company 
+                who actually performed thetask or against whom the claim or 
+                potential claim is principally directed ?</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   name="workPerformerName"
@@ -671,7 +673,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                 />
                 <FormField
                   name="workPerformerContact"
-                  label="Contact"
+                  label="Contact details"
                   placeholder="Enter contact information"
                   required
                 />
@@ -743,7 +745,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
               label="Amount claimed"
               type="number"
               placeholder="Enter amount claimed"
-              required
+    
             />
           </div>
         </FormProvider>
@@ -963,27 +965,14 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
             {/* Summary Dialog */}
             <Dialog open={showSummary} onOpenChange={setShowSummary}>
               <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Claim Summary</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium">Policy Details</h4>
-                    <p className="text-sm text-muted-foreground">Policy: {watchedValues.policyNumber}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Insured</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {watchedValues.insuredName} - {watchedValues.email}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Claimant</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {watchedValues.claimantName}
-                    </p>
-                  </div>
-                </div>
+             <DialogHeader>
+              <DialogTitle>Confirm Your Submission</DialogTitle>
+              <h3 className="font-semibold text-yellow-800">Important Notice</h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Please review all information carefully before submitting. Once submitted, you cannot modify your details.
+                </p>
+            </DialogHeader>
+             
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setShowSummary(false)} disabled={isSubmitting || authSubmitting}>
                     Back to Edit
