@@ -998,7 +998,7 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
           { key: 'signature', label: 'Digital Signature', type: 'text', editable: true },
-          { key: 'signatureDate', label: 'Signature Date', type: 'date', editable: true },
+          { key: 'createdAt', label: 'Signature Date', type: 'date', editable: true },
         ]
       },
       {
