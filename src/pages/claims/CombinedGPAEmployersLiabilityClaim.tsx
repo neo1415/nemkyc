@@ -514,10 +514,10 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
       ...data,
       ...fileUrls,
       status: 'processing',
-      formType: 'Combined GPA & Employers Liability Claim'
+      formType: 'Combined GPA Employers Liability Claim'
     };
 
-    await handleSubmitWithAuth(finalData, 'Combined GPA & Employers Liability Claim');
+    await handleSubmitWithAuth(finalData, 'Combined GPA Employers Liability Claim');
     clearDraft();
     setShowSummary(false);
   };
