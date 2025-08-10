@@ -183,7 +183,7 @@ export const FORM_MAPPINGS: FormMapping = {
         title: 'Declaration & Signature',
         fields: [
           { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
-          { key: 'signature', label: 'Signature', type: 'text', editable: true },
+          { key: 'signatureOfPolicyholder', label: 'Signature', type: 'text', editable: true },
         ]
       },
       {
