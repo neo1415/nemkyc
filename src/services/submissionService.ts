@@ -1,4 +1,4 @@
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { toast } from 'sonner';
 
@@ -100,10 +100,19 @@ export const submitFormWithNotifications = async (
     const docRef = await addDoc(collection(db, collectionName), submissionData);
     console.log('SubmissionService: document written with ID', docRef.id);
 
+    try {
+      const savedSnap = await getDoc(docRef);
+      console.log('SubmissionService: verify saved:', savedSnap.exists(), 'path:', `${collectionName}/${docRef.id}`);
+    } catch (e) {
+      console.warn('SubmissionService: verification read failed', e);
+    }
+
     toast.success('Form submitted successfully!');
 
     // Send email notifications
-    await sendEmailNotifications(formType, submissionData, userEmail);
+sendEmailNotifications(formType, { documentId: docRef.id, collectionName }, userEmail).catch((e) =>
+      console.warn('SubmissionService: email notification skipped/error', e)
+    );
 
   } catch (error) {
     console.error('Error submitting form:', error);
