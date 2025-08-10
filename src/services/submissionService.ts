@@ -96,7 +96,9 @@ export const submitFormWithNotifications = async (
 
     // Submit to Firestore
     const collectionName = getFirestoreCollection(formType);
-    await addDoc(collection(db, collectionName), submissionData);
+    console.log('SubmissionService: writing to collection', collectionName, 'for formType', formType);
+    const docRef = await addDoc(collection(db, collectionName), submissionData);
+    console.log('SubmissionService: document written with ID', docRef.id);
 
     toast.success('Form submitted successfully!');
 
@@ -115,6 +117,7 @@ const getFirestoreCollection = (formType: string): string => {
   const formTypeLower = formType.toLowerCase();
   
   // Claims forms
+  if (formTypeLower.includes('combined')) return 'combined-gpa-employers-liability-claims';
   if (formTypeLower.includes('motor')) return 'motor-claims';
   if (formTypeLower.includes('burglary')) return 'burglaryClaims';
   if (formTypeLower.includes('fire')) return 'fire-special-perils-claims';
@@ -128,7 +131,6 @@ const getFirestoreCollection = (formType: string): string => {
   if (formTypeLower.includes('contractors')) return 'contractors-claims';
   if (formTypeLower.includes('group')) return 'group-personal-accident-claims';
   if (formTypeLower.includes('rent')) return 'rent-assurance-claims';
-  if (formTypeLower.includes('combined')) return 'combined-gpa-employers-liability-claims';
   
   // KYC forms
   if (formTypeLower.includes('individual') && formTypeLower.includes('kyc')) return 'Individual-kyc-form';
