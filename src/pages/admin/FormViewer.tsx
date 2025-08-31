@@ -7,7 +7,7 @@ import { Button, Typography, Box, Paper, Divider, Chip, TextField, Dialog, Dialo
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { Download, Edit, ArrowLeft, Save, X } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
-import { generateFormPDF, downloadPDF } from '../../services/pdfService';
+import { downloadDynamicPDF } from '../../services/dynamicPdfService';
 import { FORM_MAPPINGS, FormField } from '../../config/formMappings';
 import { sendStatusUpdateNotification } from '../../services/emailService';
 import { ref, getDownloadURL } from 'firebase/storage';
