@@ -47,29 +47,26 @@ const LETTERHEAD = {
 };
 
 const IMPORTANT_NOTICE = [
-  'Filled by the "Insured" named on the policy schedule.',
-  'Use CAPITAL LETTERS; must be signed by the Insured; all * items required.',
-  'Issue of this form does not imply admission of liability.'
+  'This form should be filled in by the person named as the \'Insured\' on the policy schedule.',
+  'Form is to be filled in CAPITAL LETTER and signed by the Insured. All asterisked (*) items must be filled to completion.',
+  'The issue of this form does not imply admission of liability.'
 ];
 
 const CLAIMS_PROCEDURE = [
-  'Notify NEM Insurance immediately.',
-  'Additional documents/clarifications may be requested depending on claim requirements.',
-  'For claim status enquiries call 01 448 9570.',
-  'NEM Insurance Plc. is regulated by NAICOM.',
-  'NEM Insurance Plc. reserves the right to refute any fraudulent claims.'
+  'NEM Insurance should be notified immediately.',
+  'NEM Insurance may ask for additional documents and /or clarification if any, depending on the requirement of the claim.'
 ];
 
 const DATA_PRIVACY = [
-  'Personal data is used solely for the business contract and to send product/service updates.',
-  'Data is handled per Nigeria Data Protection Regulation 2019 with appropriate security.',
-  'Data isn\'t shared/sold to third parties without consent unless required by law/regulator.'
+  'Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.',
+  'Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.',
+  'Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.'
 ];
 
 const DECLARATION = [
-  'Information provided is true; false/fraudulent statements can cancel policy/forfeit claim.',
-  'Insured agrees to provide additional information if required.',
-  'Insured agrees to submit all requested documents; delays due to non-fulfillment are not NEM\'s responsibility.'
+  'I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.',
+  'I/We agree to provide additional information to NEM Insurance, if required.',
+  'I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirement.'
 ];
 
 // System fields to exclude from PDF
@@ -237,33 +234,66 @@ export class DynamicPDFGenerator {
     }
   }
 
+  private addImportantNotice(): void {
+    this.pdf.setFontSize(11);
+    this.pdf.setFont(undefined, 'bold');
+    this.pdf.setTextColor(139, 69, 19);
+    this.pdf.text('IMPORTANT', this.margin, this.yPosition);
+    this.yPosition += 6;
+
+    this.pdf.setFontSize(9);
+    this.pdf.setFont(undefined, 'normal');
+    this.pdf.setTextColor(0, 0, 0);
+
+    IMPORTANT_NOTICE.forEach(item => {
+      this.checkPageBreak(5);
+      this.pdf.text(`* ${item}`, this.margin + 3, this.yPosition);
+      this.yPosition += 5;
+    });
+    this.yPosition += 8;
+  }
+
   private async addHeader(): Promise<void> {
     try {
-      // Add logo - convert to base64 if needed
-      this.pdf.addImage(logoImage, 'JPEG', this.margin, 10, 25, 20);
+      // Add centered logo - rectangular with height longer than width
+      const logoWidth = 30;
+      const logoHeight = 40;
+      const centerX = (this.pageWidth - logoWidth) / 2;
+      this.pdf.addImage(logoImage, 'JPEG', centerX, 10, logoWidth, logoHeight);
     } catch (error) {
       console.warn('Failed to add logo:', error);
       // Add text logo as fallback
       this.pdf.setFontSize(14);
       this.pdf.setFont(undefined, 'bold');
-      this.pdf.text('NEM', this.margin, 15);
+      const textWidth = this.pdf.getTextWidth('NEM');
+      const centerX = (this.pageWidth - textWidth) / 2;
+      this.pdf.text('NEM', centerX, 25);
     }
 
-    // Company identity block
+    // Company identity block - center aligned below logo
     this.pdf.setFontSize(12);
     this.pdf.setFont(undefined, 'bold');
     this.pdf.setTextColor(139, 69, 19); // Burgundy
-    this.pdf.text(LETTERHEAD.company, 55, 15);
+    const companyWidth = this.pdf.getTextWidth(LETTERHEAD.company);
+    this.pdf.text(LETTERHEAD.company, (this.pageWidth - companyWidth) / 2, 60);
 
     this.pdf.setFontSize(9);
     this.pdf.setFont(undefined, 'normal');
     this.pdf.setTextColor(0, 0, 0);
-    this.pdf.text(LETTERHEAD.address, 55, 20);
-    this.pdf.text(LETTERHEAD.contact, 55, 24);
-    this.pdf.text(LETTERHEAD.phones, 55, 28);
-    this.pdf.text(LETTERHEAD.emails, 55, 32);
+    
+    const addressWidth = this.pdf.getTextWidth(LETTERHEAD.address);
+    this.pdf.text(LETTERHEAD.address, (this.pageWidth - addressWidth) / 2, 66);
+    
+    const contactWidth = this.pdf.getTextWidth(LETTERHEAD.contact);
+    this.pdf.text(LETTERHEAD.contact, (this.pageWidth - contactWidth) / 2, 71);
+    
+    const phonesWidth = this.pdf.getTextWidth(LETTERHEAD.phones);
+    this.pdf.text(LETTERHEAD.phones, (this.pageWidth - phonesWidth) / 2, 76);
+    
+    const emailsWidth = this.pdf.getTextWidth(LETTERHEAD.emails);
+    this.pdf.text(LETTERHEAD.emails, (this.pageWidth - emailsWidth) / 2, 81);
 
-    this.yPosition = 45;
+    this.yPosition = 95;
   }
 
   private addTitle(): void {
@@ -274,33 +304,15 @@ export class DynamicPDFGenerator {
     const titleWidth = this.pdf.getTextWidth(title);
     const centerX = (this.pageWidth - titleWidth) / 2;
     this.pdf.text(title, centerX, this.yPosition);
-    this.yPosition += 15;
+    this.yPosition += 10;
+    
+    // Add Important Notice right after title
+    this.addImportantNotice();
   }
 
   private addPolicyMeta(): void {
-    const policyNumber = this.submissionData.policyNumber || '';
-    const fromDate = this.formatDate(this.submissionData.periodOfCoverFrom);
-    const toDate = this.formatDate(this.submissionData.periodOfCoverTo);
-
-    // Policy meta box (top-right)
-    const boxX = this.pageWidth - 80;
-    const boxY = this.yPosition - 5;
-    
-    this.pdf.setDrawColor(139, 69, 19);
-    this.pdf.rect(boxX, boxY, 70, 25);
-    
-    this.pdf.setFontSize(10);
-    this.pdf.setFont(undefined, 'bold');
-    this.pdf.text('Policy Number:', boxX + 2, boxY + 6);
-    this.pdf.setFont(undefined, 'normal');
-    this.pdf.text(policyNumber || '_____________________', boxX + 2, boxY + 10);
-    
-    this.pdf.setFont(undefined, 'bold');
-    this.pdf.text('Period of Cover:', boxX + 2, boxY + 16);
-    this.pdf.setFont(undefined, 'normal');
-    this.pdf.text(`${fromDate} — ${toDate}`, boxX + 2, boxY + 20);
-
-    this.yPosition += 30;
+    // Remove the policy meta box - this information will be shown in the form data
+    this.yPosition += 10;
   }
 
   private async addFormContent(): Promise<void> {
@@ -532,22 +544,19 @@ export class DynamicPDFGenerator {
   }
 
   private addFooterBlocks(): void {
-    // Important Notice
-    this.addFooterBlock('Important Notice', IMPORTANT_NOTICE);
+    // Data Privacy (first in order)
+    this.addDataPrivacyBlock();
     
-    // Claims Procedure  
-    this.addFooterBlock('Claims Procedure', CLAIMS_PROCEDURE);
+    // Declaration and Signature
+    this.addDeclarationAndSignature();
     
-    // Data Privacy
-    this.addFooterBlock('Data Privacy Statement', DATA_PRIVACY);
-    
-    // Rent Assurance Special Note
+    // Rent Assurance Special Note (if applicable)
     if (this.blueprint.specialHandling?.rentAssuranceNote) {
       this.addRentAssuranceNote();
     }
     
-    // Declaration and Signature
-    this.addDeclarationAndSignature();
+    // Claims Procedure (last)
+    this.addClaimsProcedureBlock();
   }
 
   private addFooterBlock(title: string, content: string[]): void {
@@ -596,6 +605,28 @@ export class DynamicPDFGenerator {
     this.yPosition += 10;
   }
 
+  private addDataPrivacyBlock(): void {
+    this.checkPageBreak(25);
+    
+    this.pdf.setFontSize(11);
+    this.pdf.setFont(undefined, 'bold');
+    this.pdf.setTextColor(139, 69, 19);
+    this.pdf.text('Data Privacy', this.margin, this.yPosition);
+    this.yPosition += 6;
+
+    this.pdf.setFontSize(9);
+    this.pdf.setFont(undefined, 'normal');
+    this.pdf.setTextColor(0, 0, 0);
+
+    DATA_PRIVACY.forEach((item, index) => {
+      this.checkPageBreak(8);
+      const lines = this.pdf.splitTextToSize(`${['i', 'ii', 'iii'][index]}. ${item}`, this.pageWidth - (this.margin * 2));
+      this.pdf.text(lines, this.margin, this.yPosition);
+      this.yPosition += lines.length * 5 + 3;
+    });
+    this.yPosition += 8;
+  }
+
   private addDeclarationAndSignature(): void {
     // Ensure declaration stays on same page
     const requiredSpace = 60;
@@ -604,7 +635,7 @@ export class DynamicPDFGenerator {
     this.pdf.setFontSize(11);
     this.pdf.setFont(undefined, 'bold');
     this.pdf.setTextColor(139, 69, 19);
-    this.pdf.text('Declaration', this.margin, this.yPosition);
+    this.pdf.text('DECLARATION', this.margin, this.yPosition);
     this.yPosition += 8;
 
     this.pdf.setFontSize(9);
@@ -612,17 +643,51 @@ export class DynamicPDFGenerator {
     this.pdf.setTextColor(0, 0, 0);
 
     DECLARATION.forEach((item, index) => {
-      this.pdf.text(`${index + 1}. ${item}`, this.margin, this.yPosition);
-      this.yPosition += 6;
+      const lines = this.pdf.splitTextToSize(`${index + 1}. ${item}`, this.pageWidth - (this.margin * 2));
+      this.pdf.text(lines, this.margin, this.yPosition);
+      this.yPosition += lines.length * 5 + 3;
     });
 
     this.yPosition += 10;
 
     // Signature lines
     this.pdf.setFontSize(10);
-    this.pdf.text('Signature of Policyholder: _________________________________', this.margin, this.yPosition);
-    this.pdf.text('Date: _______________', this.pageWidth - 60, this.yPosition);
+    this.pdf.text('Signature of Policyholder', this.margin, this.yPosition);
+    this.pdf.text('Date', this.pageWidth - 60, this.yPosition);
     this.yPosition += 15;
+  }
+
+  private addClaimsProcedureBlock(): void {
+    this.checkPageBreak(30);
+    
+    // Center-aligned final section
+    this.pdf.setFontSize(10);
+    this.pdf.setFont(undefined, 'bold');
+    this.pdf.setTextColor(0, 0, 0);
+    const fraudText = 'NEM Insurance Plc. reserves the right to refute any fraudulent claims';
+    const fraudWidth = this.pdf.getTextWidth(fraudText);
+    this.pdf.text(fraudText, (this.pageWidth - fraudWidth) / 2, this.yPosition);
+    this.yPosition += 8;
+    
+    this.pdf.setFontSize(11);
+    this.pdf.setFont(undefined, 'bold');
+    this.pdf.setTextColor(139, 69, 19);
+    const procedureTitle = 'CLAIMS PROCEDURE (Please read carefully to understand the claim process)';
+    const titleWidth = this.pdf.getTextWidth(procedureTitle);
+    this.pdf.text(procedureTitle, (this.pageWidth - titleWidth) / 2, this.yPosition);
+    this.yPosition += 8;
+
+    this.pdf.setFontSize(9);
+    this.pdf.setFont(undefined, 'normal');
+    this.pdf.setTextColor(0, 0, 0);
+
+    CLAIMS_PROCEDURE.forEach(item => {
+      this.checkPageBreak(5);
+      const procedureText = `* ${item}`;
+      const procedureWidth = this.pdf.getTextWidth(procedureText);
+      this.pdf.text(procedureText, (this.pageWidth - procedureWidth) / 2, this.yPosition);
+      this.yPosition += 5;
+    });
   }
 
   private checkPageBreak(requiredSpace: number, keepTogether: boolean = false): void {
