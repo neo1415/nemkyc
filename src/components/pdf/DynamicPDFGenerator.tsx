@@ -235,11 +235,20 @@ export class DynamicPDFGenerator {
   }
 
   private addImportantNotice(): void {
+    // Center the Important Notice box (60% width)
+    const boxWidth = (this.pageWidth - (this.margin * 2)) * 0.6;
+    const boxStartX = this.margin + ((this.pageWidth - (this.margin * 2)) - boxWidth) / 2;
+    
+    // Add burgundy border box
+    this.pdf.setDrawColor(139, 69, 19); // Burgundy border
+    this.pdf.setLineWidth(0.5);
+    this.pdf.rect(boxStartX, this.yPosition - 2, boxWidth, 25, 'S');
+    
     this.pdf.setFontSize(11);
     this.pdf.setFont(undefined, 'bold');
-    this.pdf.setTextColor(139, 69, 19);
-    this.pdf.text('IMPORTANT', this.margin, this.yPosition);
-    this.yPosition += 6;
+    this.pdf.setTextColor(139, 69, 19); // Burgundy text
+    this.pdf.text('IMPORTANT', boxStartX + 5, this.yPosition + 3);
+    this.yPosition += 8;
 
     this.pdf.setFontSize(9);
     this.pdf.setFont(undefined, 'normal');
@@ -247,17 +256,18 @@ export class DynamicPDFGenerator {
 
     IMPORTANT_NOTICE.forEach(item => {
       this.checkPageBreak(5);
-      this.pdf.text(`* ${item}`, this.margin + 3, this.yPosition);
-      this.yPosition += 5;
+      const lines = this.pdf.splitTextToSize(`* ${item}`, boxWidth - 10);
+      this.pdf.text(lines, boxStartX + 5, this.yPosition);
+      this.yPosition += lines.length * 4;
     });
     this.yPosition += 8;
   }
 
   private async addHeader(): Promise<void> {
     try {
-      // Add centered logo - rectangular with height longer than width
-      const logoWidth = 30;
-      const logoHeight = 40;
+      // Add centered logo - smaller and more rectangular
+      const logoWidth = 25;
+      const logoHeight = 20;
       const centerX = (this.pageWidth - logoWidth) / 2;
       this.pdf.addImage(logoImage, 'JPEG', centerX, 10, logoWidth, logoHeight);
     } catch (error) {
@@ -275,31 +285,31 @@ export class DynamicPDFGenerator {
     this.pdf.setFont(undefined, 'bold');
     this.pdf.setTextColor(139, 69, 19); // Burgundy
     const companyWidth = this.pdf.getTextWidth(LETTERHEAD.company);
-    this.pdf.text(LETTERHEAD.company, (this.pageWidth - companyWidth) / 2, 60);
+    this.pdf.text(LETTERHEAD.company, (this.pageWidth - companyWidth) / 2, 40);
 
     this.pdf.setFontSize(9);
     this.pdf.setFont(undefined, 'normal');
     this.pdf.setTextColor(0, 0, 0);
     
     const addressWidth = this.pdf.getTextWidth(LETTERHEAD.address);
-    this.pdf.text(LETTERHEAD.address, (this.pageWidth - addressWidth) / 2, 66);
+    this.pdf.text(LETTERHEAD.address, (this.pageWidth - addressWidth) / 2, 46);
     
     const contactWidth = this.pdf.getTextWidth(LETTERHEAD.contact);
-    this.pdf.text(LETTERHEAD.contact, (this.pageWidth - contactWidth) / 2, 71);
+    this.pdf.text(LETTERHEAD.contact, (this.pageWidth - contactWidth) / 2, 51);
     
     const phonesWidth = this.pdf.getTextWidth(LETTERHEAD.phones);
-    this.pdf.text(LETTERHEAD.phones, (this.pageWidth - phonesWidth) / 2, 76);
+    this.pdf.text(LETTERHEAD.phones, (this.pageWidth - phonesWidth) / 2, 56);
     
     const emailsWidth = this.pdf.getTextWidth(LETTERHEAD.emails);
-    this.pdf.text(LETTERHEAD.emails, (this.pageWidth - emailsWidth) / 2, 81);
+    this.pdf.text(LETTERHEAD.emails, (this.pageWidth - emailsWidth) / 2, 61);
 
-    this.yPosition = 95;
+    this.yPosition = 75;
   }
 
   private addTitle(): void {
     this.pdf.setFontSize(16);
     this.pdf.setFont(undefined, 'bold');
-    this.pdf.setTextColor(139, 69, 19);
+    this.pdf.setTextColor(139, 69, 19); // Burgundy
     const title = this.blueprint.title.toUpperCase();
     const titleWidth = this.pdf.getTextWidth(title);
     const centerX = (this.pageWidth - titleWidth) / 2;
@@ -610,11 +620,11 @@ export class DynamicPDFGenerator {
     
     this.pdf.setFontSize(11);
     this.pdf.setFont(undefined, 'bold');
-    this.pdf.setTextColor(139, 69, 19);
+    this.pdf.setTextColor(139, 69, 19); // Burgundy
     this.pdf.text('Data Privacy', this.margin, this.yPosition);
     this.yPosition += 6;
 
-    this.pdf.setFontSize(9);
+    this.pdf.setFontSize(10);
     this.pdf.setFont(undefined, 'normal');
     this.pdf.setTextColor(0, 0, 0);
 
@@ -622,9 +632,9 @@ export class DynamicPDFGenerator {
       this.checkPageBreak(8);
       const lines = this.pdf.splitTextToSize(`${['i', 'ii', 'iii'][index]}. ${item}`, this.pageWidth - (this.margin * 2));
       this.pdf.text(lines, this.margin, this.yPosition);
-      this.yPosition += lines.length * 5 + 3;
+      this.yPosition += lines.length * 4 + 2; // Reduced spacing
     });
-    this.yPosition += 8;
+    this.yPosition += 6; // Reduced spacing
   }
 
   private addDeclarationAndSignature(): void {
@@ -634,27 +644,42 @@ export class DynamicPDFGenerator {
     
     this.pdf.setFontSize(11);
     this.pdf.setFont(undefined, 'bold');
-    this.pdf.setTextColor(139, 69, 19);
+    this.pdf.setTextColor(139, 69, 19); // Burgundy
     this.pdf.text('DECLARATION', this.margin, this.yPosition);
-    this.yPosition += 8;
+    this.yPosition += 6;
 
-    this.pdf.setFontSize(9);
+    this.pdf.setFontSize(10);
     this.pdf.setFont(undefined, 'normal');
     this.pdf.setTextColor(0, 0, 0);
 
     DECLARATION.forEach((item, index) => {
       const lines = this.pdf.splitTextToSize(`${index + 1}. ${item}`, this.pageWidth - (this.margin * 2));
       this.pdf.text(lines, this.margin, this.yPosition);
-      this.yPosition += lines.length * 5 + 3;
+      this.yPosition += lines.length * 4 + 2; // Reduced spacing
     });
 
-    this.yPosition += 10;
+    this.yPosition += 8;
 
-    // Signature lines
+    // Signature area with actual signature line and date from submission
     this.pdf.setFontSize(10);
-    this.pdf.text('Signature of Policyholder', this.margin, this.yPosition);
-    this.pdf.text('Date', this.pageWidth - 60, this.yPosition);
+    this.pdf.text('Signature: ________________________________', this.margin, this.yPosition);
+    
+    // Use submission date if available
+    const submissionDate = this.getSubmissionDate();
+    this.pdf.text(`Date: ${submissionDate}`, this.pageWidth - 60, this.yPosition);
     this.yPosition += 15;
+  }
+
+  private getSubmissionDate(): string {
+    // Try different date fields in the submission
+    const dateFields = ['createdAt', 'submittedAt', 'timestamp', 'dateSubmitted'];
+    for (const field of dateFields) {
+      if (this.submissionData[field]) {
+        return this.formatDate(this.submissionData[field]);
+      }
+    }
+    // Fallback to current date
+    return new Date().toLocaleDateString('en-GB');
   }
 
   private addClaimsProcedureBlock(): void {
@@ -671,7 +696,7 @@ export class DynamicPDFGenerator {
     
     this.pdf.setFontSize(11);
     this.pdf.setFont(undefined, 'bold');
-    this.pdf.setTextColor(139, 69, 19);
+    this.pdf.setTextColor(139, 69, 19); // Burgundy
     const procedureTitle = 'CLAIMS PROCEDURE (Please read carefully to understand the claim process)';
     const titleWidth = this.pdf.getTextWidth(procedureTitle);
     this.pdf.text(procedureTitle, (this.pageWidth - titleWidth) / 2, this.yPosition);
