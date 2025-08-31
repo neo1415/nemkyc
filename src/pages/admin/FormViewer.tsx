@@ -510,15 +510,7 @@ const FormViewer: React.FC = () => {
         })
       );
       
-      const pdfBlob = await generateFormPDF({
-        title: formTitle,
-        subtitle: `Form ID: ${formData.id}`,
-        logoUrl: '/Nem-insurance-Logo.jpg',
-        data: cleanData,
-        mapping: mapping
-      });
-      
-      downloadPDF(pdfBlob, '', formData, collection || '');
+      await downloadDynamicPDF(formData);
       
       toast({
         title: 'Success',
