@@ -22,15 +22,18 @@ export const downloadDynamicPDF = async (
   try {
     const pdfBlob = await generateDynamicPDF(submissionData);
     
-    // Generate filename if not provided - include date
+    // Generate filename if not provided - include form type
     let filename = customFilename;
     if (!filename) {
       const name = submissionData.companyName || 
                    submissionData.nameOfInsured || 
                    submissionData.fullName || 
+                   submissionData.firstName ||
                    'submission';
-      const date = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
-      filename = `${name.replace(/\s+/g, '-')}-${date}.pdf`;
+      const formType = submissionData.formType || 
+                      submissionData.collection || 
+                      'form';
+      filename = `${name.replace(/\s+/g, '-')}-${formType.replace(/\s+/g, '-')}.pdf`;
     }
     
     // Ensure .pdf extension
