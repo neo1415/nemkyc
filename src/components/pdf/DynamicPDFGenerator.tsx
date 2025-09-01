@@ -408,7 +408,10 @@ export class DynamicPDFGenerator {
 
     const value = this.submissionData[field.key];
 
-    if (field.type === 'array' && field.key === 'directors') {
+    // Handle complex data structures
+    if (this.isComplexArrayData(value)) {
+      await this.addComplexDataStructure(field.label, field.key, value);
+    } else if (field.type === 'array' && field.key === 'directors') {
       await this.addDirectorsArray(value);
     } else if (field.type === 'array') {
       await this.addArrayField(field.label, value);
@@ -540,6 +543,249 @@ export class DynamicPDFGenerator {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
     if (isNaN(num)) return String(amount);
     return `₦ ${num.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  // Check if data is a complex array that needs special formatting
+  private isComplexArrayData(value: any): boolean {
+    if (!Array.isArray(value) || value.length === 0) return false;
+    
+    // Check if array contains objects with multiple meaningful properties
+    const firstItem = value[0];
+    if (typeof firstItem === 'object' && firstItem !== null) {
+      const keys = Object.keys(firstItem).filter(key => !EXCLUDED_FIELDS.includes(key));
+      return keys.length > 1; // More than one meaningful property suggests table format
+    }
+    return false;
+  }
+
+  // Handle complex data structures with tables or sections
+  private async addComplexDataStructure(label: string, key: string, value: any[]): Promise<void> {
+    if (!Array.isArray(value) || value.length === 0) {
+      this.pdf.setFont(undefined, 'bold');
+      this.pdf.text(`${label}:`, this.margin, this.yPosition);
+      this.pdf.setFont(undefined, 'normal');
+      this.pdf.text('N/A', this.margin + 70, this.yPosition);
+      this.yPosition += 6;
+      return;
+    }
+
+    // Determine formatting based on field type and content
+    if (this.shouldFormatAsTable(key, value)) {
+      await this.addDataTable(label, value);
+    } else {
+      await this.addDataSections(label, value);
+    }
+  }
+
+  // Determine if data should be formatted as a table
+  private shouldFormatAsTable(key: string, value: any[]): boolean {
+    const tableFields = [
+      'earnings', 'earningsStatement', 'monthlyEarnings', 'salaryDetails',
+      'expenses', 'calculations', 'breakdown', 'schedule', 'payments'
+    ];
+    
+    // Check if key suggests tabular data
+    if (tableFields.some(field => key.toLowerCase().includes(field))) {
+      return true;
+    }
+
+    // Check if all objects have similar structure (good for tables)
+    const firstItem = value[0];
+    if (typeof firstItem === 'object' && firstItem !== null) {
+      const firstKeys = Object.keys(firstItem).sort();
+      return value.every(item => {
+        if (typeof item !== 'object' || item === null) return false;
+        const itemKeys = Object.keys(item).sort();
+        return JSON.stringify(firstKeys) === JSON.stringify(itemKeys);
+      });
+    }
+
+    return false;
+  }
+
+  // Add data as a table with burgundy borders
+  private async addDataTable(label: string, data: any[]): Promise<void> {
+    this.checkPageBreak(30);
+
+    // Table title
+    this.pdf.setFontSize(11);
+    this.pdf.setFont(undefined, 'bold');
+    setBurgundyText(this.pdf);
+    this.pdf.text(label, this.margin, this.yPosition);
+    this.yPosition += 8;
+
+    // Get table structure from first row
+    const firstRow = data[0];
+    const columns = Object.keys(firstRow).filter(key => !EXCLUDED_FIELDS.includes(key));
+    
+    // Calculate column widths
+    const tableWidth = this.pageWidth - (this.margin * 2);
+    const colWidth = tableWidth / columns.length;
+
+    // Table header
+    setBurgundyDraw(this.pdf);
+    this.pdf.setLineWidth(0.5);
+    this.pdf.setFillColor(BURGUNDY.r, BURGUNDY.g, BURGUNDY.b);
+    this.pdf.rect(this.margin, this.yPosition, tableWidth, 8, 'FD');
+
+    this.pdf.setFontSize(9);
+    this.pdf.setFont(undefined, 'bold');
+    this.pdf.setTextColor(255, 255, 255); // White text on burgundy header
+
+    columns.forEach((col, index) => {
+      const colLabel = this.formatFieldLabel(col);
+      const cellX = this.margin + (index * colWidth);
+      const maxWidth = colWidth - 2;
+      const lines = this.pdf.splitTextToSize(colLabel, maxWidth);
+      this.pdf.text(lines[0], cellX + 1, this.yPosition + 5); // Take first line only for header
+    });
+
+    this.yPosition += 8;
+
+    // Table rows
+    this.pdf.setTextColor(0, 0, 0);
+    this.pdf.setFont(undefined, 'normal');
+
+    let grandTotal = 0;
+    let hasNumericColumns = false;
+
+    data.forEach((row, rowIndex) => {
+      this.checkPageBreak(10);
+
+      // Row background (alternating)
+      if (rowIndex % 2 === 1) {
+        this.pdf.setFillColor(248, 249, 250);
+        this.pdf.rect(this.margin, this.yPosition, tableWidth, 6, 'F');
+      }
+
+      // Cell borders
+      setBurgundyDraw(this.pdf);
+      this.pdf.setLineWidth(0.3);
+
+      let rowTotal = 0;
+      columns.forEach((col, colIndex) => {
+        const cellX = this.margin + (colIndex * colWidth);
+        const cellValue = row[col];
+        const maxWidth = colWidth - 2;
+
+        // Draw cell border
+        this.pdf.rect(cellX, this.yPosition, colWidth, 6);
+
+        // Format and display value
+        let displayValue = '';
+        if (cellValue !== null && cellValue !== undefined && cellValue !== '') {
+          if (col.toLowerCase().includes('amount') || col.toLowerCase().includes('value') || typeof cellValue === 'number') {
+            displayValue = this.formatCurrency(cellValue);
+            if (typeof cellValue === 'number' || !isNaN(parseFloat(cellValue))) {
+              rowTotal += parseFloat(cellValue) || 0;
+              hasNumericColumns = true;
+            }
+          } else if (col.toLowerCase().includes('date')) {
+            displayValue = this.formatDate(cellValue);
+          } else {
+            displayValue = String(cellValue);
+          }
+        } else {
+          displayValue = '-';
+        }
+
+        const lines = this.pdf.splitTextToSize(displayValue, maxWidth);
+        this.pdf.text(lines[0], cellX + 1, this.yPosition + 4); // Take first line only
+      });
+
+      if (hasNumericColumns && rowTotal > 0) {
+        grandTotal += rowTotal;
+      }
+
+      this.yPosition += 6;
+    });
+
+    // Add total row if there were numeric columns
+    if (hasNumericColumns && grandTotal > 0) {
+      this.checkPageBreak(8);
+      
+      setBurgundyDraw(this.pdf);
+      this.pdf.setLineWidth(0.5);
+      this.pdf.setFillColor(BURGUNDY.r, BURGUNDY.g, BURGUNDY.b);
+      this.pdf.rect(this.margin, this.yPosition, tableWidth, 6, 'FD');
+
+      this.pdf.setFont(undefined, 'bold');
+      this.pdf.setTextColor(255, 255, 255);
+      this.pdf.text('TOTAL:', this.margin + 1, this.yPosition + 4);
+      
+      const totalText = this.formatCurrency(grandTotal);
+      const totalWidth = this.pdf.getTextWidth(totalText);
+      this.pdf.text(totalText, this.margin + tableWidth - totalWidth - 1, this.yPosition + 4);
+
+      this.yPosition += 6;
+    }
+
+    this.yPosition += 8;
+  }
+
+  // Add data as individual sections (for witnesses, etc.)
+  private async addDataSections(label: string, data: any[]): Promise<void> {
+    this.pdf.setFontSize(11);
+    this.pdf.setFont(undefined, 'bold');
+    setBurgundyText(this.pdf);
+    this.pdf.text(label, this.margin, this.yPosition);
+    this.yPosition += 8;
+
+    data.forEach((item, index) => {
+      this.checkPageBreak(20);
+      
+      // Section header (e.g., "Witness 1")
+      this.pdf.setFontSize(10);
+      this.pdf.setFont(undefined, 'bold');
+      setBurgundyText(this.pdf);
+      
+      const sectionTitle = this.getSectionTitle(label, index + 1);
+      this.pdf.text(sectionTitle, this.margin + 5, this.yPosition);
+      this.yPosition += 6;
+
+      // Section content
+      this.pdf.setFontSize(9);
+      this.pdf.setTextColor(0, 0, 0);
+      this.pdf.setFont(undefined, 'normal');
+
+      if (typeof item === 'object' && item !== null) {
+        Object.entries(item).forEach(([key, value]) => {
+          if (!EXCLUDED_FIELDS.includes(key) && value !== null && value !== undefined && value !== '') {
+            this.checkPageBreak(5);
+            const fieldLabel = this.formatFieldLabel(key);
+            this.pdf.setFont(undefined, 'bold');
+            this.pdf.text(`${fieldLabel}:`, this.margin + 10, this.yPosition);
+            this.pdf.setFont(undefined, 'normal');
+            
+            const displayValue = this.formatValue(value, this.inferFieldType(key, value));
+            const lines = this.pdf.splitTextToSize(displayValue, 100);
+            this.pdf.text(lines, this.margin + 80, this.yPosition);
+            this.yPosition += Math.max(lines.length * 3.5, 5);
+          }
+        });
+      } else {
+        this.pdf.text(String(item), this.margin + 10, this.yPosition);
+        this.yPosition += 5;
+      }
+      
+      this.yPosition += 4;
+    });
+
+    this.yPosition += 4;
+  }
+
+  // Generate appropriate section titles
+  private getSectionTitle(label: string, index: number): string {
+    const lowerLabel = label.toLowerCase();
+    
+    if (lowerLabel.includes('witness')) return `Witness ${index}`;
+    if (lowerLabel.includes('driver')) return `Driver ${index}`;
+    if (lowerLabel.includes('passenger')) return `Passenger ${index}`;
+    if (lowerLabel.includes('vehicle')) return `Vehicle ${index}`;
+    if (lowerLabel.includes('claimant')) return `Claimant ${index}`;
+    if (lowerLabel.includes('injured')) return `Injured Party ${index}`;
+    
+    return `${label} ${index}`;
   }
 
   private async addAttachments(): Promise<void> {
