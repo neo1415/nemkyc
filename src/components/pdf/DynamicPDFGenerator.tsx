@@ -584,8 +584,8 @@ export class DynamicPDFGenerator {
     // Data Privacy (first in order)
     this.addDataPrivacyBlock();
     
-    // Declaration and Signature
-    this.addDeclarationAndSignature();
+    // Declaration
+    this.addDeclaration();
     
     // Rent Assurance Special Note (if applicable)
     if (this.blueprint.specialHandling?.rentAssuranceNote) {
@@ -671,25 +671,21 @@ export class DynamicPDFGenerator {
     this.yPosition += 4;
   }
 
-  private addDeclarationAndSignature(): void {
-    // Ensure declaration stays on same page
-    const requiredSpace = 50;
-    this.checkPageBreak(requiredSpace, true);
-    
+  private addDeclaration(): void {
     this.pdf.setFontSize(11);
     this.pdf.setFont(undefined, 'bold');
     setBurgundyText(this.pdf);
     this.pdf.text('DECLARATION', this.margin, this.yPosition);
     this.yPosition += 6;
 
-    this.pdf.setFontSize(10);
+    this.pdf.setFontSize(9);
     this.pdf.setFont(undefined, 'normal');
     this.pdf.setTextColor(0, 0, 0);
 
     DECLARATION.forEach((item, index) => {
       const lines = this.pdf.splitTextToSize(`${index + 1}. ${item}`, this.pageWidth - (this.margin * 2));
       this.pdf.text(lines, this.margin, this.yPosition);
-      this.yPosition += lines.length * 3.5;
+      this.yPosition += lines.length * 3.5 + 2; // Match Data Privacy spacing
     });
 
     this.yPosition += 4;
@@ -699,33 +695,6 @@ export class DynamicPDFGenerator {
     this.drawYesNoRow('Agree to Declaration', Boolean(decTrue));
 
     this.yPosition += 8;
-
-    // Signature line with actual signature text overlay
-    const sigLabel = 'Signature:';
-    this.pdf.setFontSize(10);
-    this.pdf.setFont(undefined, 'normal');
-    this.pdf.setTextColor(0, 0, 0);
-    this.pdf.text(sigLabel, this.margin, this.yPosition);
-
-    // underline
-    const lineStartX = this.margin + this.pdf.getTextWidth(sigLabel) + 3;
-    const lineEndX = this.pageWidth - 70;
-    const baselineY = this.yPosition + 1;
-    this.pdf.setDrawColor(0, 0, 0);
-    this.pdf.setLineWidth(0.3);
-    this.pdf.line(lineStartX, baselineY, lineEndX, baselineY);
-
-    // signature text placed on the underline
-    const signatureText = this.getSignatureValue();
-    this.pdf.setFont(undefined, 'italic');
-    this.pdf.text(signatureText, lineStartX + 1, this.yPosition);
-
-    // Date
-    const submissionDate = this.getSubmissionDate();
-    this.pdf.setFont(undefined, 'normal');
-    this.pdf.text(`Date: ${submissionDate}`, this.pageWidth - 60, this.yPosition);
-
-    this.yPosition += 12;
   }
 
   private getSignatureValue(): string {
