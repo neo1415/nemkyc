@@ -84,6 +84,11 @@ const FILE_FIELDS = [
   'additionalDocuments'
 ];
 
+const BURGUNDY = { r: 128, g: 0, b: 32 };
+const BURGUNDY_HEX = '#800020';
+const setBurgundyText = (pdf: jsPDF) => pdf.setTextColor(BURGUNDY.r, BURGUNDY.g, BURGUNDY.b);
+const setBurgundyDraw = (pdf: jsPDF) => pdf.setDrawColor(BURGUNDY.r, BURGUNDY.g, BURGUNDY.b);
+
 export class DynamicPDFGenerator {
   private pdf: jsPDF;
   private yPosition: number = 20;
@@ -235,41 +240,63 @@ export class DynamicPDFGenerator {
   }
 
   private addImportantNotice(): void {
-    // Center the Important Notice box (60% width)
+    // Center the Important Notice box (60% width) with proper padding and dynamic height
+    const contentPadding = 5;
     const boxWidth = (this.pageWidth - (this.margin * 2)) * 0.6;
     const boxStartX = this.margin + ((this.pageWidth - (this.margin * 2)) - boxWidth) / 2;
-    
-    // Add burgundy border box
-    this.pdf.setDrawColor(139, 69, 19); // Burgundy border
-    this.pdf.setLineWidth(0.5);
-    this.pdf.rect(boxStartX, this.yPosition - 2, boxWidth, 25, 'S');
-    
-    this.pdf.setFontSize(11);
-    this.pdf.setFont(undefined, 'bold');
-    this.pdf.setTextColor(139, 69, 19); // Burgundy text
-    this.pdf.text('IMPORTANT', boxStartX + 5, this.yPosition + 3);
-    this.yPosition += 8;
 
-    this.pdf.setFontSize(9);
+    // Prepare content to measure height
+    const contentFontSize = 10;
+    const lineHeight = 4.2;
+
+    // Measure content height
+    let contentLines: string[] = [];
+    IMPORTANT_NOTICE.forEach(item => {
+      const lines = this.pdf.splitTextToSize(`* ${item}`, boxWidth - contentPadding * 2);
+      contentLines.push(...lines);
+    });
+    const titleHeight = 6;
+    const contentHeight = contentLines.length * lineHeight;
+    const boxHeight = contentPadding * 2 + titleHeight + contentHeight + 2;
+
+    // Ensure there's enough space on the page
+    this.checkPageBreak(boxHeight + 2);
+
+    const startY = this.yPosition;
+
+    // Draw burgundy border
+    setBurgundyDraw(this.pdf);
+    this.pdf.setLineWidth(0.5);
+    this.pdf.rect(boxStartX, startY, boxWidth, boxHeight, 'S');
+
+    // Title
+    this.pdf.setFontSize(12);
+    this.pdf.setFont(undefined, 'bold');
+    setBurgundyText(this.pdf);
+    this.pdf.text('IMPORTANT', boxStartX + contentPadding, startY + contentPadding + 3);
+
+    // Content
+    this.pdf.setFontSize(contentFontSize);
     this.pdf.setFont(undefined, 'normal');
     this.pdf.setTextColor(0, 0, 0);
 
+    let textY = startY + contentPadding + 3 + 6;
     IMPORTANT_NOTICE.forEach(item => {
-      this.checkPageBreak(5);
-      const lines = this.pdf.splitTextToSize(`* ${item}`, boxWidth - 10);
-      this.pdf.text(lines, boxStartX + 5, this.yPosition);
-      this.yPosition += lines.length * 4;
+      const lines = this.pdf.splitTextToSize(`* ${item}`, boxWidth - contentPadding * 2);
+      this.pdf.text(lines, boxStartX + contentPadding, textY);
+      textY += lines.length * lineHeight;
     });
-    this.yPosition += 8;
+
+    this.yPosition = startY + boxHeight + 8;
   }
 
   private async addHeader(): Promise<void> {
     try {
       // Add centered logo - smaller and more rectangular
-      const logoWidth = 25;
-      const logoHeight = 20;
+      const logoWidth = 20;
+      const logoHeight = 16;
       const centerX = (this.pageWidth - logoWidth) / 2;
-      this.pdf.addImage(logoImage, 'JPEG', centerX, 10, logoWidth, logoHeight);
+      this.pdf.addImage(logoImage, 'JPEG', centerX, 12, logoWidth, logoHeight);
     } catch (error) {
       console.warn('Failed to add logo:', error);
       // Add text logo as fallback
@@ -283,33 +310,33 @@ export class DynamicPDFGenerator {
     // Company identity block - center aligned below logo
     this.pdf.setFontSize(12);
     this.pdf.setFont(undefined, 'bold');
-    this.pdf.setTextColor(139, 69, 19); // Burgundy
+    setBurgundyText(this.pdf);
     const companyWidth = this.pdf.getTextWidth(LETTERHEAD.company);
-    this.pdf.text(LETTERHEAD.company, (this.pageWidth - companyWidth) / 2, 40);
+    this.pdf.text(LETTERHEAD.company, (this.pageWidth - companyWidth) / 2, 38);
 
     this.pdf.setFontSize(9);
     this.pdf.setFont(undefined, 'normal');
     this.pdf.setTextColor(0, 0, 0);
     
     const addressWidth = this.pdf.getTextWidth(LETTERHEAD.address);
-    this.pdf.text(LETTERHEAD.address, (this.pageWidth - addressWidth) / 2, 46);
+    this.pdf.text(LETTERHEAD.address, (this.pageWidth - addressWidth) / 2, 44);
     
     const contactWidth = this.pdf.getTextWidth(LETTERHEAD.contact);
-    this.pdf.text(LETTERHEAD.contact, (this.pageWidth - contactWidth) / 2, 51);
+    this.pdf.text(LETTERHEAD.contact, (this.pageWidth - contactWidth) / 2, 49);
     
     const phonesWidth = this.pdf.getTextWidth(LETTERHEAD.phones);
-    this.pdf.text(LETTERHEAD.phones, (this.pageWidth - phonesWidth) / 2, 56);
+    this.pdf.text(LETTERHEAD.phones, (this.pageWidth - phonesWidth) / 2, 54);
     
     const emailsWidth = this.pdf.getTextWidth(LETTERHEAD.emails);
-    this.pdf.text(LETTERHEAD.emails, (this.pageWidth - emailsWidth) / 2, 61);
+    this.pdf.text(LETTERHEAD.emails, (this.pageWidth - emailsWidth) / 2, 59);
 
-    this.yPosition = 75;
+    this.yPosition = 72;
   }
 
   private addTitle(): void {
     this.pdf.setFontSize(16);
     this.pdf.setFont(undefined, 'bold');
-    this.pdf.setTextColor(139, 69, 19); // Burgundy
+    setBurgundyText(this.pdf);
     const title = this.blueprint.title.toUpperCase();
     const titleWidth = this.pdf.getTextWidth(title);
     const centerX = (this.pageWidth - titleWidth) / 2;
@@ -348,7 +375,7 @@ export class DynamicPDFGenerator {
     // Section header
     this.pdf.setFontSize(12);
     this.pdf.setFont(undefined, 'bold');
-    this.pdf.setTextColor(139, 69, 19);
+    setBurgundyText(this.pdf);
     this.pdf.text(section.title, this.margin, this.yPosition);
     this.yPosition += 8;
 
@@ -405,7 +432,7 @@ export class DynamicPDFGenerator {
       
       this.pdf.setFontSize(11);
       this.pdf.setFont(undefined, 'bold');
-      this.pdf.setTextColor(139, 69, 19);
+      setBurgundyText(this.pdf);
       this.pdf.text(`Director ${index + 1}`, this.margin, this.yPosition);
       this.yPosition += 8;
 
@@ -536,7 +563,7 @@ export class DynamicPDFGenerator {
       
       this.pdf.setFontSize(12);
       this.pdf.setFont(undefined, 'bold');
-      this.pdf.setTextColor(139, 69, 19);
+      setBurgundyText(this.pdf);
       this.pdf.text('Attachments', this.margin, this.yPosition);
       this.yPosition += 8;
 
@@ -574,7 +601,7 @@ export class DynamicPDFGenerator {
     
     this.pdf.setFontSize(11);
     this.pdf.setFont(undefined, 'bold');
-    this.pdf.setTextColor(139, 69, 19);
+    setBurgundyText(this.pdf);
     this.pdf.text(title, this.margin, this.yPosition);
     this.yPosition += 6;
 
@@ -620,7 +647,7 @@ export class DynamicPDFGenerator {
     
     this.pdf.setFontSize(11);
     this.pdf.setFont(undefined, 'bold');
-    this.pdf.setTextColor(139, 69, 19); // Burgundy
+    setBurgundyText(this.pdf); // Burgundy
     this.pdf.text('Data Privacy', this.margin, this.yPosition);
     this.yPosition += 6;
 
@@ -639,12 +666,12 @@ export class DynamicPDFGenerator {
 
   private addDeclarationAndSignature(): void {
     // Ensure declaration stays on same page
-    const requiredSpace = 60;
+    const requiredSpace = 70;
     this.checkPageBreak(requiredSpace, true);
     
     this.pdf.setFontSize(11);
     this.pdf.setFont(undefined, 'bold');
-    this.pdf.setTextColor(139, 69, 19); // Burgundy
+    setBurgundyText(this.pdf);
     this.pdf.text('DECLARATION', this.margin, this.yPosition);
     this.yPosition += 6;
 
@@ -655,19 +682,58 @@ export class DynamicPDFGenerator {
     DECLARATION.forEach((item, index) => {
       const lines = this.pdf.splitTextToSize(`${index + 1}. ${item}`, this.pageWidth - (this.margin * 2));
       this.pdf.text(lines, this.margin, this.yPosition);
-      this.yPosition += lines.length * 4 + 2; // Reduced spacing
+      this.yPosition += lines.length * 4; // tighter spacing
     });
 
-    this.yPosition += 8;
+    this.yPosition += 4;
 
-    // Signature area with actual signature line and date from submission
+    // Yes/No checkboxes
+    const agree = (this.submissionData.agreeToDataPrivacy ?? true) as boolean;
+    const decTrue = (this.submissionData.declarationTrue ?? true) as boolean;
+    this.drawYesNoRow('Agree to Data Privacy', Boolean(agree));
+    this.drawYesNoRow('Declaration True', Boolean(decTrue));
+
+    this.yPosition += 4;
+
+    // Signature line with actual signature text overlay
+    const sigLabel = 'Signature:';
     this.pdf.setFontSize(10);
-    this.pdf.text('Signature: ________________________________', this.margin, this.yPosition);
-    
-    // Use submission date if available
+    this.pdf.setFont(undefined, 'normal');
+    this.pdf.setTextColor(0, 0, 0);
+    this.pdf.text(sigLabel, this.margin, this.yPosition);
+
+    // underline
+    const lineStartX = this.margin + this.pdf.getTextWidth(sigLabel) + 3;
+    const lineEndX = this.pageWidth - 70;
+    const baselineY = this.yPosition + 1;
+    this.pdf.setDrawColor(0, 0, 0);
+    this.pdf.setLineWidth(0.3);
+    this.pdf.line(lineStartX, baselineY, lineEndX, baselineY);
+
+    // signature text placed on the underline
+    const signatureText = this.getSignatureValue();
+    this.pdf.setFont(undefined, 'italic');
+    this.pdf.text(signatureText, lineStartX + 1, this.yPosition);
+
+    // Date
     const submissionDate = this.getSubmissionDate();
+    this.pdf.setFont(undefined, 'normal');
     this.pdf.text(`Date: ${submissionDate}`, this.pageWidth - 60, this.yPosition);
-    this.yPosition += 15;
+
+    this.yPosition += 12;
+  }
+
+  private getSignatureValue(): string {
+    return (
+      this.submissionData.signature ||
+      this.submissionData.signatureOfPolicyholder ||
+      this.submissionData.signatureOfPolicyHolder ||
+      this.submissionData.digitalSignature ||
+      this.submissionData.signatureName ||
+      this.submissionData.fullName ||
+      this.submissionData.nameOfInsured ||
+      '________________'
+    );
   }
 
   private getSubmissionDate(): string {
@@ -696,7 +762,7 @@ export class DynamicPDFGenerator {
     
     this.pdf.setFontSize(11);
     this.pdf.setFont(undefined, 'bold');
-    this.pdf.setTextColor(139, 69, 19); // Burgundy
+    setBurgundyText(this.pdf); // Burgundy
     const procedureTitle = 'CLAIMS PROCEDURE (Please read carefully to understand the claim process)';
     const titleWidth = this.pdf.getTextWidth(procedureTitle);
     this.pdf.text(procedureTitle, (this.pageWidth - titleWidth) / 2, this.yPosition);
@@ -715,11 +781,52 @@ export class DynamicPDFGenerator {
     });
   }
 
+  // Draw a labeled YES/NO checkbox row with burgundy checkmark
+  private drawYesNoRow(label: string, checked: boolean): void {
+    const startX = this.margin;
+    const boxSize = 4;
+    const gap = 3;
+    const labelWidth = this.pdf.getTextWidth(`${label}: `);
+
+    this.pdf.setFontSize(10);
+    this.pdf.setFont(undefined, 'normal');
+    this.pdf.setTextColor(0, 0, 0);
+    this.pdf.text(`${label}:`, startX, this.yPosition);
+
+    const yesX = startX + labelWidth + 2;
+    const y = this.yPosition - boxSize + 3;
+
+    setBurgundyDraw(this.pdf);
+    this.pdf.setLineWidth(0.4);
+    // YES box
+    this.pdf.rect(yesX, y, boxSize, boxSize);
+    // NO box
+    const noX = yesX + boxSize + gap + this.pdf.getTextWidth('Yes ') + gap;
+    this.pdf.rect(noX, y, boxSize, boxSize);
+
+    // Labels
+    this.pdf.setTextColor(0, 0, 0);
+    this.pdf.text('Yes', yesX + boxSize + gap, this.yPosition);
+    this.pdf.text('No', noX + boxSize + gap, this.yPosition);
+
+    // Check YES if checked, else NO
+    const markX = checked ? yesX : noX;
+    setBurgundyDraw(this.pdf);
+    this.pdf.line(markX + 0.8, y + boxSize / 2, markX + boxSize - 0.8, y + boxSize - 0.8);
+    this.pdf.line(markX + 0.8, y + boxSize - 0.8, markX + boxSize - 0.8, y + 0.8);
+
+    this.yPosition += 6;
+  }
+
   private checkPageBreak(requiredSpace: number, keepTogether: boolean = false): void {
     if (this.yPosition + requiredSpace > this.pageHeight - this.margin) {
       this.addPageFooter();
       this.pdf.addPage();
       this.yPosition = this.margin;
+      // Reset default body style to avoid footer styles carrying over
+      this.pdf.setFontSize(10);
+      this.pdf.setFont(undefined, 'normal');
+      this.pdf.setTextColor(0, 0, 0);
     }
   }
 
@@ -740,9 +847,9 @@ export const PDFGeneratorComponent: React.FC<{ submissionData: PDFSubmissionData
       const pdfBlob = await generator.generatePDF();
       
       // Generate filename
-      const formType = submissionData.formType || 'form';
-      const name = submissionData.companyName || submissionData.nameOfInsured || submissionData.fullName || 'submission';
-      const filename = `${name.replace(/\s+/g, '-')}-${formType.replace(/\s+/g, '-')}.pdf`;
+      const formType = submissionData.formType || submissionData.collection || 'form';
+      const name = submissionData.companyName || submissionData.nameOfInsured || submissionData.insuredName || submissionData.policyHolderName || submissionData.fullName || ((submissionData.firstName && submissionData.lastName) ? `${submissionData.firstName} ${submissionData.lastName}` : undefined) || submissionData.firstName || submissionData.name || 'submission';
+      const filename = `${String(name).trim().replace(/\s+/g, '-')}-${String(formType).trim().replace(/\s+/g, '-')}.pdf`;
       
       // Download
       const url = URL.createObjectURL(pdfBlob);

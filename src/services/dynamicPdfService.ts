@@ -25,15 +25,19 @@ export const downloadDynamicPDF = async (
     // Generate filename if not provided - include form type
     let filename = customFilename;
     if (!filename) {
-      const name = submissionData.companyName || 
-                   submissionData.nameOfInsured || 
-                   submissionData.fullName || 
-                   submissionData.firstName ||
-                   'submission';
+      const primaryName = submissionData.companyName || 
+                          submissionData.nameOfInsured || 
+                          submissionData.insuredName ||
+                          submissionData.policyHolderName ||
+                          submissionData.fullName || 
+                          ((submissionData.firstName && submissionData.lastName) ? `${submissionData.firstName} ${submissionData.lastName}` : undefined) ||
+                          submissionData.firstName ||
+                          submissionData.name ||
+                          'submission';
       const formType = submissionData.formType || 
                       submissionData.collection || 
                       'form';
-      filename = `${name.replace(/\s+/g, '-')}-${formType.replace(/\s+/g, '-')}.pdf`;
+      filename = `${String(primaryName).trim().replace(/\s+/g, '-')}-${String(formType).trim().replace(/\s+/g, '-')}.pdf`;
     }
     
     // Ensure .pdf extension
