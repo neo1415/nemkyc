@@ -1046,7 +1046,9 @@ export class DynamicPDFGenerator {
   }
 
   private checkPageBreak(requiredSpace: number, keepTogether: boolean = false): void {
-    if (this.yPosition + requiredSpace > this.pageHeight - this.margin) {
+    // Increase bottom margin to prevent content overlap with page numbers
+    const bottomMargin = this.margin + 20; // Add extra space for page numbers
+    if (this.yPosition + requiredSpace > this.pageHeight - bottomMargin) {
       this.addPageFooter();
       this.pdf.addPage();
       this.yPosition = this.margin;
