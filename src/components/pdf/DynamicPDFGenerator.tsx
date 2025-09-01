@@ -647,7 +647,7 @@ export class DynamicPDFGenerator {
     
     this.pdf.setFontSize(11);
     this.pdf.setFont(undefined, 'bold');
-    setBurgundyText(this.pdf); // Burgundy
+    setBurgundyText(this.pdf);
     this.pdf.text('Data Privacy', this.margin, this.yPosition);
     this.yPosition += 6;
 
@@ -659,14 +659,21 @@ export class DynamicPDFGenerator {
       this.checkPageBreak(8);
       const lines = this.pdf.splitTextToSize(`${['i', 'ii', 'iii'][index]}. ${item}`, this.pageWidth - (this.margin * 2));
       this.pdf.text(lines, this.margin, this.yPosition);
-      this.yPosition += lines.length * 4 + 2; // Reduced spacing
+      this.yPosition += lines.length * 3.5 + 1;
     });
-    this.yPosition += 6; // Reduced spacing
+    
+    this.yPosition += 4;
+    
+    // Add "Agree to Data Privacy" checkbox here
+    const agreeToPrivacy = (this.submissionData.agreeToDataPrivacy ?? true) as boolean;
+    this.drawYesNoRow('Agree to Data Privacy', Boolean(agreeToPrivacy));
+    
+    this.yPosition += 4;
   }
 
   private addDeclarationAndSignature(): void {
     // Ensure declaration stays on same page
-    const requiredSpace = 70;
+    const requiredSpace = 50;
     this.checkPageBreak(requiredSpace, true);
     
     this.pdf.setFontSize(11);
@@ -682,18 +689,16 @@ export class DynamicPDFGenerator {
     DECLARATION.forEach((item, index) => {
       const lines = this.pdf.splitTextToSize(`${index + 1}. ${item}`, this.pageWidth - (this.margin * 2));
       this.pdf.text(lines, this.margin, this.yPosition);
-      this.yPosition += lines.length * 4; // tighter spacing
+      this.yPosition += lines.length * 3.5;
     });
 
     this.yPosition += 4;
 
-    // Yes/No checkboxes
-    const agree = (this.submissionData.agreeToDataPrivacy ?? true) as boolean;
+    // Add "Agree to Declaration" checkbox here
     const decTrue = (this.submissionData.declarationTrue ?? true) as boolean;
-    this.drawYesNoRow('Agree to Data Privacy', Boolean(agree));
-    this.drawYesNoRow('Declaration True', Boolean(decTrue));
+    this.drawYesNoRow('Agree to Declaration', Boolean(decTrue));
 
-    this.yPosition += 4;
+    this.yPosition += 8;
 
     // Signature line with actual signature text overlay
     const sigLabel = 'Signature:';
@@ -781,7 +786,7 @@ export class DynamicPDFGenerator {
     });
   }
 
-  // Draw a labeled YES/NO checkbox row with burgundy checkmark
+  // Draw a labeled YES/NO checkbox row with burgundy checkmark - boxes after text
   private drawYesNoRow(label: string, checked: boolean): void {
     const startX = this.margin;
     const boxSize = 4;
@@ -793,27 +798,34 @@ export class DynamicPDFGenerator {
     this.pdf.setTextColor(0, 0, 0);
     this.pdf.text(`${label}:`, startX, this.yPosition);
 
-    const yesX = startX + labelWidth + 2;
-    const y = this.yPosition - boxSize + 3;
+    const yesStartX = startX + labelWidth + 5;
+    const yesTextWidth = this.pdf.getTextWidth('Yes');
+    const noTextWidth = this.pdf.getTextWidth('No');
+    
+    // Calculate positions - boxes come after text
+    const yesBoxX = yesStartX + yesTextWidth + gap;
+    const noStartX = yesBoxX + boxSize + gap + 5;
+    const noBoxX = noStartX + noTextWidth + gap;
+    
+    const boxY = this.yPosition - 3; // Align boxes with text baseline
 
     setBurgundyDraw(this.pdf);
     this.pdf.setLineWidth(0.4);
-    // YES box
-    this.pdf.rect(yesX, y, boxSize, boxSize);
-    // NO box
-    const noX = yesX + boxSize + gap + this.pdf.getTextWidth('Yes ') + gap;
-    this.pdf.rect(noX, y, boxSize, boxSize);
-
-    // Labels
+    
+    // Draw YES text and box
     this.pdf.setTextColor(0, 0, 0);
-    this.pdf.text('Yes', yesX + boxSize + gap, this.yPosition);
-    this.pdf.text('No', noX + boxSize + gap, this.yPosition);
+    this.pdf.text('Yes', yesStartX, this.yPosition);
+    this.pdf.rect(yesBoxX, boxY, boxSize, boxSize);
+    
+    // Draw NO text and box
+    this.pdf.text('No', noStartX, this.yPosition);
+    this.pdf.rect(noBoxX, boxY, boxSize, boxSize);
 
     // Check YES if checked, else NO
-    const markX = checked ? yesX : noX;
+    const markBoxX = checked ? yesBoxX : noBoxX;
     setBurgundyDraw(this.pdf);
-    this.pdf.line(markX + 0.8, y + boxSize / 2, markX + boxSize - 0.8, y + boxSize - 0.8);
-    this.pdf.line(markX + 0.8, y + boxSize - 0.8, markX + boxSize - 0.8, y + 0.8);
+    this.pdf.line(markBoxX + 0.8, boxY + boxSize / 2, markBoxX + boxSize - 0.8, boxY + boxSize - 0.8);
+    this.pdf.line(markBoxX + 0.8, boxY + boxSize - 0.8, markBoxX + boxSize - 0.8, boxY + 0.8);
 
     this.yPosition += 6;
   }
