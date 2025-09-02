@@ -94,7 +94,11 @@ export class DynamicPDFGenerator {
   private yPosition: number = 20;
   private pageHeight: number = 297; // A4 height in mm
   private pageWidth: number = 210; // A4 width in mm
-  private margin: number = 20;
+  private margin: number = 10; // 28pt = ~10mm
+  private topBottomMargin: number = 8.5; // 24pt = ~8.5mm
+  private contentWidth: number;
+  private leftColumnWidth: number;
+  private rightColumnWidth: number;
   private blueprint: PDFBlueprint;
   private submissionData: PDFSubmissionData;
 
@@ -106,6 +110,11 @@ export class DynamicPDFGenerator {
     });
     this.submissionData = submissionData;
     this.blueprint = this.generateBlueprint(submissionData);
+    
+    // Calculate layout metrics
+    this.contentWidth = this.pageWidth - (this.margin * 2);
+    this.leftColumnWidth = this.contentWidth * 0.38;
+    this.rightColumnWidth = this.contentWidth * 0.62;
   }
 
   private generateBlueprint(data: PDFSubmissionData): PDFBlueprint {
@@ -186,6 +195,12 @@ export class DynamicPDFGenerator {
     
     Object.keys(data).forEach(key => {
       if (!EXCLUDED_FIELDS.includes(key) && !FILE_FIELDS.includes(key)) {
+        const normalizedLabel = this.formatFieldLabel(key).toLowerCase();
+        // Skip "Agree to Data Privacy" field
+        if (normalizedLabel.includes('agree') && normalizedLabel.includes('data') && normalizedLabel.includes('privacy')) {
+          return;
+        }
+        
         fields.push({
           key,
           label: this.formatFieldLabel(key),
@@ -372,20 +387,25 @@ export class DynamicPDFGenerator {
   private async addSection(section: PDFBlueprintSection): Promise<void> {
     this.checkPageBreak(20);
 
-    // Section header
-    this.pdf.setFontSize(12);
+    // Section header with background tint
+    this.pdf.setFillColor(246, 248, 250);
+    this.pdf.rect(this.margin, this.yPosition - 2, this.contentWidth, 10, 'F');
+    
+    this.pdf.setFontSize(13);
     this.pdf.setFont(undefined, 'bold');
     setBurgundyText(this.pdf);
-    this.pdf.text(section.title, this.margin, this.yPosition);
-    this.yPosition += 8;
-
-    // Section background
-    this.pdf.setFillColor(248, 249, 250);
-    this.pdf.rect(this.margin - 2, this.yPosition - 6, this.pageWidth - (this.margin * 2) + 4, section.fields.length * 8 + 10, 'F');
+    this.pdf.text(section.title.toUpperCase(), this.margin + 2, this.yPosition + 4);
+    this.yPosition += 12;
 
     this.pdf.setTextColor(0, 0, 0);
 
     for (const field of section.fields) {
+      const normalizedLabel = field.label.toLowerCase();
+      // Skip "Agree to Data Privacy" field
+      if (normalizedLabel.includes('agree') && normalizedLabel.includes('data') && normalizedLabel.includes('privacy')) {
+        continue;
+      }
+      
       if (this.shouldShowField(field)) {
         await this.addField(field);
       }
@@ -491,43 +511,88 @@ export class DynamicPDFGenerator {
     // Determine if this is long content requiring full-width layout
     const isLongContent = this.isLongContent(label, displayValue, type);
     
-    this.pdf.setFontSize(10);
+    if (isLongContent) {
+      // Full-width layout for long content
+      this.pdf.setFontSize(10.5);
+      this.pdf.setFont(undefined, 'bold');
+      this.pdf.text(`${label}:`, this.margin, this.yPosition);
+      this.yPosition += 6;
+      
+      // Full-width value block with background
+      const blockHeight = this.calculateTextHeight(displayValue, this.contentWidth - 6) + 6;
+      this.pdf.setFillColor(246, 248, 250);
+      this.pdf.rect(this.margin, this.yPosition - 3, this.contentWidth, blockHeight, 'F');
+      
+      this.pdf.setFontSize(10);
+      this.pdf.setFont(undefined, 'normal');
+      const lines = this.pdf.splitTextToSize(displayValue, this.contentWidth - 6);
+      this.pdf.text(lines, this.margin + 3, this.yPosition + 3);
+      this.yPosition += blockHeight + 4;
+    } else {
+      // Two-column layout
+      this.renderTwoColumnField(label, displayValue, type);
+    }
+  }
+
+  private renderTwoColumnField(label: string, value: string, type: FormField['type']): void {
+    this.pdf.setFontSize(10.5);
     this.pdf.setFont(undefined, 'bold');
     
-    if (isLongContent) {
-      // Full-width layout for long content: label above, value below
-      this.pdf.text(`${label}:`, this.margin, this.yPosition);
-      this.yPosition += 5;
-      
-      this.pdf.setFont(undefined, 'normal');
-      const lines = this.pdf.splitTextToSize(displayValue, this.pageWidth - (this.margin * 2));
-      this.pdf.text(lines, this.margin + 3, this.yPosition);
-      this.yPosition += lines.length * 4 + 4;
+    // Right-align label in left column
+    const labelWidth = this.pdf.getTextWidth(`${label}:`);
+    const labelX = this.margin + this.leftColumnWidth - labelWidth;
+    this.pdf.text(`${label}:`, labelX, this.yPosition);
+    
+    // Left-align value in right column
+    this.pdf.setFontSize(10);
+    this.pdf.setFont(undefined, 'normal');
+    
+    if (type === 'boolean') {
+      this.renderBooleanCheckboxes(value);
     } else {
-      // Two-column layout: label left, value right
-      const labelWidth = (this.pageWidth - (this.margin * 2)) * 0.35;
-      const valueWidth = (this.pageWidth - (this.margin * 2)) * 0.6;
-      
-      // Draw label in left column
-      this.pdf.text(`${label}:`, this.margin, this.yPosition);
-      
-      // Draw value in right column
-      this.pdf.setFont(undefined, 'normal');
-      const lines = this.pdf.splitTextToSize(displayValue, valueWidth);
-      this.pdf.text(lines, this.margin + labelWidth, this.yPosition);
-      
-      this.yPosition += Math.max(lines.length * 4, 7);
+      const lines = this.pdf.splitTextToSize(value, this.rightColumnWidth - 4);
+      this.pdf.text(lines, this.margin + this.leftColumnWidth + 2, this.yPosition);
+      this.yPosition += Math.max(lines.length * 4, 8);
     }
+  }
+
+  private renderBooleanCheckboxes(value: string): void {
+    const valueX = this.margin + this.leftColumnWidth + 2;
+    const isYes = value === 'Yes';
+    
+    // Draw Yes checkbox
+    this.pdf.rect(valueX, this.yPosition - 3, 3, 3, 'S');
+    if (isYes) {
+      this.pdf.setFillColor(0, 0, 0);
+      this.pdf.rect(valueX + 0.5, this.yPosition - 2.5, 2, 2, 'F');
+    }
+    this.pdf.text('Yes', valueX + 5, this.yPosition);
+    
+    // Draw No checkbox
+    const noX = valueX + 20;
+    this.pdf.rect(noX, this.yPosition - 3, 3, 3, 'S');
+    if (!isYes) {
+      this.pdf.setFillColor(0, 0, 0);
+      this.pdf.rect(noX + 0.5, this.yPosition - 2.5, 2, 2, 'F');
+    }
+    this.pdf.text('No', noX + 5, this.yPosition);
+    
+    this.yPosition += 8;
+  }
+
+  private calculateTextHeight(text: string, width: number): number {
+    const lines = this.pdf.splitTextToSize(text, width);
+    return lines.length * 4;
   }
 
   private sanitizeText(text: string): string {
     if (!text) return '';
     
     return String(text)
-      // Remove control characters and non-printable characters except basic whitespace
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, ' ')
+      // Remove control characters and non-printable characters
+      .replace(/[\x00-\x1F\x7F-\x9F]+/g, ' ')
       // Remove problematic characters like & that appear as artifacts
-      .replace(/&/g, ' ')
+      .replace(/&/g, '')
       // Clean up multiple spaces
       .replace(/\s+/g, ' ')
       // Trim whitespace
@@ -542,10 +607,10 @@ export class DynamicPDFGenerator {
     // Handle boolean-like strings from form submissions first
     if (typeof value === 'string') {
       const lowerValue = value.toLowerCase().trim();
-      if (lowerValue === 'true' || lowerValue === 'yes' || lowerValue === 'y') {
+      if (lowerValue === 'true' || lowerValue === 'yes' || lowerValue === 'y' || lowerValue === '1') {
         return 'Yes';
       }
-      if (lowerValue === 'false' || lowerValue === 'no' || lowerValue === 'n') {
+      if (lowerValue === 'false' || lowerValue === 'no' || lowerValue === 'n' || lowerValue === '0') {
         return 'No';
       }
     }
@@ -1104,7 +1169,7 @@ export class DynamicPDFGenerator {
 
   private checkPageBreak(requiredSpace: number, keepTogether: boolean = false): void {
     // Increase bottom margin to prevent content overlap with page numbers
-    const bottomMargin = this.margin + 20; // Add extra space for page numbers
+    const bottomMargin = 25; // Increased margin for page numbers
     if (this.yPosition + requiredSpace > this.pageHeight - bottomMargin) {
       this.addPageFooter();
       this.pdf.addPage();
