@@ -482,20 +482,34 @@ export class DynamicPDFGenerator {
   }
 
   private async addRegularField(label: string, value: any, type: FormField['type']): Promise<void> {
+    this.checkPageBreak(12);
+    
+    // Format the value based on type and handle boolean questions
+    const displayValue = this.formatValue(value, type);
+    
+    // Determine layout based on content type and length
+    const isLongContent = type === 'textarea' || 
+                         label.toLowerCase().includes('address') || 
+                         label.toLowerCase().includes('description') || 
+                         label.toLowerCase().includes('details') || 
+                         label.toLowerCase().includes('explanation') ||
+                         displayValue.length > 60;
+    
     this.pdf.setFont(undefined, 'bold');
     this.pdf.text(`${label}:`, this.margin, this.yPosition);
     this.pdf.setFont(undefined, 'normal');
-
-    const displayValue = this.formatValue(value, type);
     
-    if (type === 'textarea' || displayValue.length > 50) {
+    if (isLongContent) {
+      // Stack vertically for long content
       this.yPosition += 5;
-      const lines = this.pdf.splitTextToSize(displayValue, 150);
+      const lines = this.pdf.splitTextToSize(displayValue, this.pageWidth - (this.margin * 2) - 10);
       this.pdf.text(lines, this.margin + 5, this.yPosition);
-      this.yPosition += lines.length * 5;
+      this.yPosition += lines.length * 4 + 2;
     } else {
-      const lines = this.pdf.splitTextToSize(displayValue, 90);
-      this.pdf.text(lines, this.margin + 70, this.yPosition);
+      // Side-by-side for short content
+      const availableWidth = this.pageWidth - this.margin - 80;
+      const lines = this.pdf.splitTextToSize(displayValue, availableWidth);
+      this.pdf.text(lines, this.margin + 75, this.yPosition);
       this.yPosition += Math.max(lines.length * 4, 6);
     }
   }
@@ -505,13 +519,24 @@ export class DynamicPDFGenerator {
       return 'N/A';
     }
 
+    // Handle boolean-like strings from form submissions first
+    if (typeof value === 'string') {
+      const lowerValue = value.toLowerCase();
+      if (lowerValue === 'true' || lowerValue === 'yes') {
+        return 'Yes';
+      }
+      if (lowerValue === 'false' || lowerValue === 'no') {
+        return 'No';
+      }
+    }
+
     switch (type) {
       case 'date':
         return this.formatDate(value);
       case 'currency':
         return this.formatCurrency(value);
       case 'boolean':
-        return value ? '☑ Yes ☐ No' : '☐ Yes ☑ No';
+        return value ? 'Yes' : 'No';
       default:
         return String(value);
     }
@@ -908,13 +933,7 @@ export class DynamicPDFGenerator {
       this.yPosition += lines.length * 3.5 + 1;
     });
     
-    this.yPosition += 4;
-    
-    // Add "Agree to Data Privacy" checkbox here
-    const agreeToPrivacy = (this.submissionData.agreeToDataPrivacy ?? true) as boolean;
-    this.drawYesNoRow('Agree to Data Privacy', Boolean(agreeToPrivacy));
-    
-    this.yPosition += 4;
+    this.yPosition += 8;
   }
 
   private addDeclaration(): void {
@@ -933,12 +952,6 @@ export class DynamicPDFGenerator {
       this.pdf.text(lines, this.margin, this.yPosition);
       this.yPosition += lines.length * 3.5 + 2; // Match Data Privacy spacing
     });
-
-    this.yPosition += 4;
-
-    // Add "Agree to Declaration" checkbox here
-    const decTrue = (this.submissionData.declarationTrue ?? true) as boolean;
-    this.drawYesNoRow('Agree to Declaration', Boolean(decTrue));
 
     this.yPosition += 8;
   }
