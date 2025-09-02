@@ -449,7 +449,7 @@ export class DynamicPDFGenerator {
         this.pdf.text(`${label}:`, this.margin + 5, this.yPosition);
         this.pdf.setFont(undefined, 'normal');
         
-        const displayValue = this.formatValue(value, 'text');
+        const displayValue = this.sanitizeAndFormatValue(value, 'text');
         const lines = this.pdf.splitTextToSize(displayValue, 90);
         this.pdf.text(lines, this.margin + 75, this.yPosition);
         this.yPosition += Math.max(lines.length * 4, 6);
@@ -475,7 +475,8 @@ export class DynamicPDFGenerator {
       this.checkPageBreak(8);
       this.pdf.setFont(undefined, 'normal');
       const itemText = typeof item === 'object' ? JSON.stringify(item) : String(item);
-      const lines = this.pdf.splitTextToSize(`${index + 1}. ${itemText}`, 130);
+      const sanitizedText = this.sanitizeText(itemText);
+      const lines = this.pdf.splitTextToSize(`${index + 1}. ${sanitizedText}`, 130);
       this.pdf.text(lines, this.margin + 5, this.yPosition);
       this.yPosition += lines.length * 5;
     });
@@ -484,62 +485,105 @@ export class DynamicPDFGenerator {
   private async addRegularField(label: string, value: any, type: FormField['type']): Promise<void> {
     this.checkPageBreak(12);
     
-    // Format the value based on type and handle boolean questions
-    const displayValue = this.formatValue(value, type);
+    // Sanitize and format the value
+    const displayValue = this.sanitizeAndFormatValue(value, type);
     
-    // Determine layout based on content type and length
-    const isLongContent = type === 'textarea' || 
-                         label.toLowerCase().includes('address') || 
-                         label.toLowerCase().includes('description') || 
-                         label.toLowerCase().includes('details') || 
-                         label.toLowerCase().includes('explanation') ||
-                         displayValue.length > 60;
+    // Determine if this is long content requiring full-width layout
+    const isLongContent = this.isLongContent(label, displayValue, type);
     
+    this.pdf.setFontSize(10);
     this.pdf.setFont(undefined, 'bold');
-    this.pdf.text(`${label}:`, this.margin, this.yPosition);
-    this.pdf.setFont(undefined, 'normal');
     
     if (isLongContent) {
-      // Stack vertically for long content
+      // Full-width layout for long content: label above, value below
+      this.pdf.text(`${label}:`, this.margin, this.yPosition);
       this.yPosition += 5;
-      const lines = this.pdf.splitTextToSize(displayValue, this.pageWidth - (this.margin * 2) - 10);
-      this.pdf.text(lines, this.margin + 5, this.yPosition);
-      this.yPosition += lines.length * 4 + 2;
+      
+      this.pdf.setFont(undefined, 'normal');
+      const lines = this.pdf.splitTextToSize(displayValue, this.pageWidth - (this.margin * 2));
+      this.pdf.text(lines, this.margin + 3, this.yPosition);
+      this.yPosition += lines.length * 4 + 4;
     } else {
-      // Side-by-side for short content
-      const availableWidth = this.pageWidth - this.margin - 80;
-      const lines = this.pdf.splitTextToSize(displayValue, availableWidth);
-      this.pdf.text(lines, this.margin + 75, this.yPosition);
-      this.yPosition += Math.max(lines.length * 4, 6);
+      // Two-column layout: label left, value right
+      const labelWidth = (this.pageWidth - (this.margin * 2)) * 0.35;
+      const valueWidth = (this.pageWidth - (this.margin * 2)) * 0.6;
+      
+      // Draw label in left column
+      this.pdf.text(`${label}:`, this.margin, this.yPosition);
+      
+      // Draw value in right column
+      this.pdf.setFont(undefined, 'normal');
+      const lines = this.pdf.splitTextToSize(displayValue, valueWidth);
+      this.pdf.text(lines, this.margin + labelWidth, this.yPosition);
+      
+      this.yPosition += Math.max(lines.length * 4, 7);
     }
   }
 
-  private formatValue(value: any, type: FormField['type']): string {
+  private sanitizeText(text: string): string {
+    if (!text) return '';
+    
+    return String(text)
+      // Remove control characters and non-printable characters except basic whitespace
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, ' ')
+      // Remove problematic characters like & that appear as artifacts
+      .replace(/&/g, ' ')
+      // Clean up multiple spaces
+      .replace(/\s+/g, ' ')
+      // Trim whitespace
+      .trim();
+  }
+
+  private sanitizeAndFormatValue(value: any, type: FormField['type']): string {
     if (value === null || value === undefined || value === '') {
       return 'N/A';
     }
 
     // Handle boolean-like strings from form submissions first
     if (typeof value === 'string') {
-      const lowerValue = value.toLowerCase();
-      if (lowerValue === 'true' || lowerValue === 'yes') {
+      const lowerValue = value.toLowerCase().trim();
+      if (lowerValue === 'true' || lowerValue === 'yes' || lowerValue === 'y') {
         return 'Yes';
       }
-      if (lowerValue === 'false' || lowerValue === 'no') {
+      if (lowerValue === 'false' || lowerValue === 'no' || lowerValue === 'n') {
         return 'No';
       }
     }
 
+    let formattedValue: string;
+    
     switch (type) {
       case 'date':
-        return this.formatDate(value);
+        formattedValue = this.formatDate(value);
+        break;
       case 'currency':
-        return this.formatCurrency(value);
+        formattedValue = this.formatCurrency(value);
+        break;
       case 'boolean':
-        return value ? 'Yes' : 'No';
+        formattedValue = value ? 'Yes' : 'No';
+        break;
       default:
-        return String(value);
+        formattedValue = String(value);
     }
+    
+    return this.sanitizeText(formattedValue);
+  }
+
+  private isLongContent(label: string, value: string, type: FormField['type']): boolean {
+    const labelLower = label.toLowerCase();
+    
+    // Check for long text indicators in field names
+    const longTextKeywords = [
+      'description', 'details', 'explanation', 'narrative', 'cause', 
+      'reason', 'how', 'remarks', 'address', 'comment'
+    ];
+    
+    const hasLongKeyword = longTextKeywords.some(keyword => labelLower.includes(keyword));
+    
+    return type === 'textarea' || 
+           hasLongKeyword || 
+           value.includes('\n') || 
+           value.length > 120;
   }
 
   private formatDate(date: any): string {
@@ -782,7 +826,7 @@ export class DynamicPDFGenerator {
             this.pdf.text(`${fieldLabel}:`, this.margin + 10, this.yPosition);
             this.pdf.setFont(undefined, 'normal');
             
-            const displayValue = this.formatValue(value, this.inferFieldType(key, value));
+            const displayValue = this.sanitizeAndFormatValue(value, this.inferFieldType(key, value));
             const lines = this.pdf.splitTextToSize(displayValue, 100);
             this.pdf.text(lines, this.margin + 80, this.yPosition);
             this.yPosition += Math.max(lines.length * 3.5, 5);
