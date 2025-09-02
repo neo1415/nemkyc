@@ -34,8 +34,8 @@ const motorClaimSchema = yup.object().shape({
 
   // Insured Details
   nameCompany: yup.string().required("Name/Company is required"),
-  title: yup.string().required("Title is required"),
-  dateOfBirth: yup.date().required("Date of birth is required"),
+  // title: yup.string().required("Title is required"),
+  // dateOfBirth: yup.date().required("Date of birth is required"),
   gender: yup.string().required("Gender is required"),
   address: yup.string().required("Address is required"),
   phone: yup.string().required("Phone number is required"),
@@ -70,8 +70,8 @@ const motorClaimSchema = yup.object().shape({
   trailerAttached: yup.string().required("Trailer attached field is required"),
 
   // Damage Details
-  damageDescription: yup.string().required("Damage description is required"),
-  inspectionLocation: yup.string().required("Inspection location is required"),
+  // damageDescription: yup.string().required("Damage description is required"),
+  // inspectionLocation: yup.string().required("Inspection location is required"),
 
   // Incident Details
   incidentLocation: yup.string().required("Incident location is required"),
@@ -145,8 +145,8 @@ interface MotorClaimData {
 
   // Insured Details
   nameCompany: string;
-  title: string;
-  dateOfBirth: Date;
+  // title: string;
+  // dateOfBirth: Date;
   gender: string;
   address: string;
   phone: string;
@@ -169,8 +169,8 @@ interface MotorClaimData {
   trailerAttached: string;
 
   // Damage Details
-  damageDescription: string;
-  inspectionLocation: string;
+  // damageDescription: string;
+  // inspectionLocation: string;
 
   // Incident Details
   incidentLocation: string;
@@ -333,7 +333,7 @@ const FormDatePicker = ({ name, label, required = false }: any) => {
 const defaultValues: Partial<MotorClaimData> = {
   policyNumber: '',
   nameCompany: '',
-  title: '',
+  // title: '',
   gender: '',
   address: '',
   phone: '',
@@ -352,8 +352,8 @@ const defaultValues: Partial<MotorClaimData> = {
   hirePurchaseDetails: '',
   vehicleUsage: '',
   trailerAttached: '',
-  damageDescription: '',
-  inspectionLocation: '',
+  // damageDescription: '',
+  // inspectionLocation: '',
   incidentLocation: '',
   incidentTime: '',
   policeReported: '',
@@ -471,11 +471,11 @@ const MotorClaim: React.FC = () => {
     0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
     1: ['nameCompany', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
     2: ['registrationNumber', 'make', 'model', 'year', 'engineNumber', 'chassisNumber', 'registeredInYourName', 'registeredInYourNameDetails', 'ownedSolely', 'ownedSolelyDetails', 'hirePurchase', 'hirePurchaseDetails', 'vehicleUsage', 'trailerAttached'],
-    3: ['damageDescription', 'inspectionLocation'],
-    4: ['incidentLocation', 'incidentDate', 'incidentTime', 'policeReported', 'policeStationDetails', 'incidentDescription'],
-    5: ['witnesses'],
-    6: ['otherVehicleInvolved', 'otherVehicleRegNumber', 'otherVehicleMakeModel', 'otherDriverName', 'otherDriverPhone', 'otherDriverAddress'],
-    7: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
+    // 3: ['damageDescription', 'inspectionLocation'],
+    3: ['incidentLocation', 'incidentDate', 'incidentTime', 'policeReported', 'policeStationDetails', 'incidentDescription'],
+    4: ['witnesses'],
+    5: ['otherVehicleInvolved', 'otherVehicleRegNumber', 'otherVehicleMakeModel', 'otherDriverName', 'otherDriverPhone', 'otherDriverAddress'],
+    6: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
   };
 
   const steps = [
@@ -504,7 +504,7 @@ const MotorClaim: React.FC = () => {
             <FormField name="nameCompany" label="Name / Company Name" required />
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormSelect name="title" label="Title" required placeholder="Select title">
+{/*               <FormSelect name="title" label="Title" required placeholder="Select title">
                 <SelectItem value="Mr">Mr</SelectItem>
                 <SelectItem value="Mrs">Mrs</SelectItem>
                 <SelectItem value="Chief">Chief</SelectItem>
@@ -512,7 +512,7 @@ const MotorClaim: React.FC = () => {
                 <SelectItem value="Other">Other</SelectItem>
               </FormSelect>
 
-              <FormDatePicker name="dateOfBirth" label="Date of Birth" required />
+              <FormDatePicker name="dateOfBirth" label="Date of Birth" required /> */}
 
               <FormSelect name="gender" label="Gender" required placeholder="Select gender">
                 <SelectItem value="Male">Male</SelectItem>
@@ -593,18 +593,18 @@ const MotorClaim: React.FC = () => {
         </FormProvider>
       )
     },
-    {
-      id: 'damage',
-      title: 'Damage Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <FormTextarea name="damageDescription" label="Description of Damage" required />
-            <FormField name="inspectionLocation" label="Where can the vehicle be inspected?" required />
-          </div>
-        </FormProvider>
-      )
-    },
+    // {
+    //   id: 'damage',
+    //   title: 'Damage Details',
+    //   component: (
+    //     <FormProvider {...formMethods}>
+    //       <div className="space-y-4">
+    //         <FormTextarea name="damageDescription" label="Description of Damage" required />
+    //         <FormField name="inspectionLocation" label="Where can the vehicle be inspected?" required />
+    //       </div>
+    //     </FormProvider>
+    //   )
+    // },
     {
       id: 'incident',
       title: 'Incident Details',
@@ -736,7 +736,7 @@ const MotorClaim: React.FC = () => {
               <h3 className="font-semibold mb-2">Data Privacy</h3>
               <div className="text-sm space-y-2">
                 <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2023.</p>
                 <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
               </div>
             </div>
