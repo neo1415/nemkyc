@@ -32,8 +32,8 @@ interface FireSpecialPerilsClaimData {
   name: string;
   companyName: string;
   title: string;
-  dateOfBirth: string;
-  gender: string;
+  // dateOfBirth: string;
+  // gender: string;
   address: string;
   phone: string;
   email: string;
@@ -98,8 +98,8 @@ const schema = yup.object().shape({
   name: yup.string().required('Name is required'),
   companyName: yup.string(),
   title: yup.string().required('Title is required'),
-  dateOfBirth: yup.string().required('Date of birth is required'),
-  gender: yup.string().required('Gender is required'),
+  // dateOfBirth: yup.string().required('Date of birth is required'),
+  // gender: yup.string().required('Gender is required'),
   address: yup.string().required('Address is required'),
   phone: yup.string().required('Phone number is required'),
   email: yup.string().email('Invalid email').required('Email is required'),
@@ -335,8 +335,8 @@ const FireSpecialPerilsClaim: React.FC = () => {
       name: '',
       companyName: '',
       title: '',
-      dateOfBirth: '',
-      gender: '',
+      // dateOfBirth: '',
+      // gender: '',
       address: '',
       phone: '',
       email: '',
@@ -523,7 +523,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
   // Step field mappings for validation
   const stepFieldMappings = {
     0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
-    1: ['name', 'companyName', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
+    1: ['name', 'companyName', 'title', 'address', 'phone', 'email'],
     2: ['premisesAddress', 'premisesPhone', 'dateOfOccurrence', 'timeOfOccurrence', 'incidentDescription', 'causeOfFire'],
     3: ['premisesUsedAsPerPolicy', 'premisesUsageDetails', 'purposeOfPremises', 'unallowedRiskIntroduced', 'unallowedRiskDetails', 'measuresWhenFireDiscovered'],
     4: ['soleOwner', 'otherOwnersName', 'otherOwnersAddress'],
@@ -598,12 +598,12 @@ const FireSpecialPerilsClaim: React.FC = () => {
                   <SelectItem value="Chief">Chief</SelectItem>
                   <SelectItem value="Other">Other</SelectItem>
                 </FormSelect>
-                <FormField name="dateOfBirth" label="Date of Birth" type="date" required />
+{/*                 <FormField name="dateOfBirth" label="Date of Birth" type="date" required />
                 <FormSelect name="gender" label="Gender" required placeholder="Select gender">
                   <SelectItem value="Male">Male</SelectItem>
                   <SelectItem value="Female">Female</SelectItem>
                   <SelectItem value="Other">Other</SelectItem>
-                </FormSelect>
+                </FormSelect> */}
               </div>
 
               <FormTextarea name="address" label="Address" required placeholder="Enter full address" rows={3} />
