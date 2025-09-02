@@ -468,14 +468,13 @@ const MotorClaim: React.FC = () => {
 
   // Step field mappings for validation
   const stepFieldMappings = {
-    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
-    1: ['nameCompany', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
-    2: ['registrationNumber', 'make', 'model', 'year', 'engineNumber', 'chassisNumber', 'registeredInYourName', 'registeredInYourNameDetails', 'ownedSolely', 'ownedSolelyDetails', 'hirePurchase', 'hirePurchaseDetails', 'vehicleUsage', 'trailerAttached'],
+   
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo','nameCompany', 'gender', 'address', 'phone', 'email'],
+    1: ['registrationNumber', 'make', 'model', 'year', 'engineNumber', 'chassisNumber', 'registeredInYourName', 'registeredInYourNameDetails', 'ownedSolely', 'ownedSolelyDetails', 'hirePurchase', 'hirePurchaseDetails', 'vehicleUsage', 'trailerAttached'],
     // 3: ['damageDescription', 'inspectionLocation'],
-    3: ['incidentLocation', 'incidentDate', 'incidentTime', 'policeReported', 'policeStationDetails', 'incidentDescription'],
-    4: ['witnesses'],
-    5: ['otherVehicleInvolved', 'otherVehicleRegNumber', 'otherVehicleMakeModel', 'otherDriverName', 'otherDriverPhone', 'otherDriverAddress'],
-    6: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
+    2: ['incidentLocation', 'incidentDate', 'incidentTime', 'policeReported', 'policeStationDetails', 'incidentDescription'],
+    3: ['otherVehicleInvolved', 'otherVehicleRegNumber', 'otherVehicleMakeModel', 'otherDriverName', 'otherDriverPhone', 'otherDriverAddress','witnesses'],
+    4: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
   };
 
   const steps = [
@@ -484,14 +483,7 @@ const MotorClaim: React.FC = () => {
       title: 'Policy Details',
       component: (
         <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <FormField name="policyNumber" label="Policy Number" required />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
-              <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
-            </div>
-          </div>
+       
         </FormProvider>
       )
     },
@@ -500,6 +492,14 @@ const MotorClaim: React.FC = () => {
       title: 'Insured Details',
       component: (
         <FormProvider {...formMethods}>
+             <div className="space-y-4">
+            <FormField name="policyNumber" label="Policy Number" required />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
+              <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
+            </div>
+          </div>
           <div className="space-y-4">
             <FormField name="nameCompany" label="Name / Company Name" required />
             
@@ -637,7 +637,40 @@ const MotorClaim: React.FC = () => {
       title: 'Witnesses',
       component: (
         <FormProvider {...formMethods}>
+        
+        </FormProvider>
+      )
+    },
+    {
+      id: 'otherVehicle',
+      title: 'Other Vehicle Details',
+      component: (
+        <FormProvider {...formMethods}>
           <div className="space-y-4">
+            <FormSelect name="otherVehicleInvolved" label="Was another vehicle involved?" required placeholder="Select yes or no">
+              <SelectItem value="yes">Yes</SelectItem>
+              <SelectItem value="no">No</SelectItem>
+            </FormSelect>
+            
+            {watchedValues.otherVehicleInvolved === 'yes' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField name="otherVehicleRegNumber" label="Registration Number" required />
+                  <FormField name="otherVehicleMakeModel" label="Make/Model" required />
+                </div>
+                
+                <FormField name="otherDriverName" label="Driver's Name" required />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField name="otherDriverPhone" label="Driver's Phone" required />
+                  <FormTextarea name="otherDriverAddress" label="Driver's Address" required />
+                </div>
+                
+                <FormTextarea name="otherVehicleInjuryDamage" label="Injury/Damage to Other Vehicle" />
+              </div>
+            )}
+          </div>
+            <div className="space-y-4">
             <div className="text-sm text-muted-foreground mb-4">
               Add any witnesses to the incident (optional)
             </div>
@@ -695,38 +728,6 @@ const MotorClaim: React.FC = () => {
       )
     },
     {
-      id: 'otherVehicle',
-      title: 'Other Vehicle Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <FormSelect name="otherVehicleInvolved" label="Was another vehicle involved?" required placeholder="Select yes or no">
-              <SelectItem value="yes">Yes</SelectItem>
-              <SelectItem value="no">No</SelectItem>
-            </FormSelect>
-            
-            {watchedValues.otherVehicleInvolved === 'yes' && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField name="otherVehicleRegNumber" label="Registration Number" required />
-                  <FormField name="otherVehicleMakeModel" label="Make/Model" required />
-                </div>
-                
-                <FormField name="otherDriverName" label="Driver's Name" required />
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField name="otherDriverPhone" label="Driver's Phone" required />
-                  <FormTextarea name="otherDriverAddress" label="Driver's Address" required />
-                </div>
-                
-                <FormTextarea name="otherVehicleInjuryDamage" label="Injury/Damage to Other Vehicle" />
-              </div>
-            )}
-          </div>
-        </FormProvider>
-      )
-    },
-    {
       id: 'declaration',
       title: 'Declaration & Signature',
       component: (
@@ -765,9 +766,11 @@ const MotorClaim: React.FC = () => {
             
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="font-semibold mb-2">Declaration</h3>
-              <p className="text-sm">
-                I hereby declare that the statements made above are true and complete to the best of my knowledge and belief and I have not concealed any material facts.
-              </p>
+              <div className="text-sm space-y-2">
+                <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+                <p>2. I/We agree to provide additional information to NEM Insurance, if required.</p>
+                <p>3. I/We agree to submit all required and requested for documents and NEM Insurance shall not be held responsible for any delay in settlement of claim due to non-fulfillment of requirements.</p>
+              </div>
             </div>
             
             <div className="flex items-center space-x-2">
