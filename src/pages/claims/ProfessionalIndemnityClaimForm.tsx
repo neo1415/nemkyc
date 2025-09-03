@@ -448,409 +448,417 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
     setShowSummary(true);
   };
 
-  // Step field mappings for validation
+  // Step field mappings for validation - Reduced to 4 steps
   const stepFieldMappings = {
-    0: ['policyNumber', 'coverageFromDate', 'coverageToDate'],
-    1: ['insuredName', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
-    2: ['claimantName', 'claimantAddress'],
-    3: ['retainerDetails', 'contractInWriting', 'contractDetails', 'workPerformedFrom', 'workPerformedTo', 'workPerformerName', 'workPerformerTitle', 'workPerformerDuties', 'workPerformerContact'],
-    4: ['claimNature', 'firstAwareDate', 'claimMadeDate', 'intimationMode', 'oralDetails', 'amountClaimed'],
-    5: ['responseComments', 'quantumComments', 'estimatedLiability', 'additionalInfo', 'additionalDetails', 'solicitorInstructed', 'solicitorName', 'solicitorAddress', 'solicitorCompany', 'solicitorRates'],
-    6: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
+    0: ['policyNumber', 'coverageFromDate', 'coverageToDate', 'insuredName', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
+    1: ['claimantName', 'claimantAddress', 'claimNature', 'firstAwareDate', 'claimMadeDate', 'intimationMode', 'oralDetails', 'amountClaimed'],
+    2: ['retainerDetails', 'contractInWriting', 'contractDetails', 'workPerformedFrom', 'workPerformedTo', 'workPerformerName', 'workPerformerTitle', 'workPerformerDuties', 'workPerformerContact', 'responseComments', 'quantumComments', 'estimatedLiability', 'additionalInfo', 'additionalDetails', 'solicitorInstructed', 'solicitorName', 'solicitorAddress', 'solicitorCompany', 'solicitorRates'],
+    3: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
   };
 
   const steps = [
     {
-      id: 'policy',
-      title: 'Policy Details',
+      id: 'policy-insured',
+      title: 'Policy & Insured Details',
       component: (
         <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <FormField
-              name="policyNumber"
-              label="Policy Number"
-              placeholder="Enter policy number"
-              required
-            />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker
-                name="coverageFromDate"
-                label="Period of Cover - From"
-                required
-              />
-              <FormDatePicker
-                name="coverageToDate"
-                label="Period of Cover - To"
-                required
-              />
-            </div>
-          </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'insured',
-      title: 'Insured Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                name="insuredName"
-                label="Name of Insured"
-                placeholder="Enter name of insured"
-                required
-              />
-              <FormField
-                name="companyName"
-                label="Company Name"
-                placeholder="Enter company name (if applicable)"
-                required={false}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormSelect
-                name="title"
-                label="Title"
-                placeholder="Select title"
-                required
-              >
-                <SelectItem value="Mr">Mr</SelectItem>
-                <SelectItem value="Mrs">Mrs</SelectItem>
-                <SelectItem value="Chief">Chief</SelectItem>
-                <SelectItem value="Dr">Dr</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </FormSelect>
-              <FormDatePicker
-                name="dateOfBirth"
-                label="Date of Birth"
-                required
-              />
-              <FormSelect
-                name="gender"
-                label="Gender"
-                placeholder="Select gender"
-                required
-              >
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </FormSelect>
-            </div>
-            
-            <FormTextarea
-              name="address"
-              label="Address"
-              placeholder="Enter full address"
-              rows={3}
-              required
-            />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                name="phone"
-                label="Phone"
-                placeholder="Enter phone number"
-                required
-              />
-              <FormField
-                name="email"
-                label="Email"
-                type="email"
-                placeholder="Enter email address"
-                required
-              />
-            </div>
-          </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'claimant',
-      title: 'Claimant Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <FormField
-              name="claimantName"
-              label="Full Name of Claimant"
-              placeholder="Enter claimant's full name"
-              required
-            />
-            
-            <FormTextarea
-              name="claimantAddress"
-              label="Address of Claimant"
-              placeholder="Enter claimant's full address"
-              rows={3}
-              required
-            />
-          </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'retainer',
-      title: 'Retainer/Contract Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <FormTextarea
-              name="retainerDetails"
-              label="What were you retained/contracted to do?"
-              placeholder="Describe the nature of your professional engagement"
-              rows={4}
-              required
-            />
-            
-            <FormSelect
-              name="contractInWriting"
-              label="Was your contract evidenced in writing?"
-              placeholder="Select option"
-              required
-            >
-              <SelectItem value="yes">Yes</SelectItem>
-              <SelectItem value="no">No</SelectItem>
-            </FormSelect>
-            
-            {watchedValues.contractInWriting === 'yes' && (
-              <FileUpload
-                label="Contract Document (PDF, max 3MB)"
-                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, contractDocument: file }))}
-                currentFile={uploadedFiles.contractDocument}
-                accept=".pdf"
-                maxSize={3}
-              />
-            )}
-            
-            {watchedValues.contractInWriting === 'no' && (
-              <FormTextarea
-                name="contractDetails"
-                label="Details of contract and its terms"
-                placeholder="Describe the contract details and terms"
-                rows={4}
-                required
-              />
-            )}
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker
-                name="workPerformedFrom"
-                label="When did you perform the work giving rise to the claim? From"
-                required
-              />
-              <FormDatePicker
-                name="workPerformedTo"
-                label="To"
-                required
-              />
-            </div>
-            
-            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-              <h3 className="font-medium">Who is the person within the company 
-                who actually performed thetask or against whom the claim or 
-                potential claim is principally directed ?</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  name="workPerformerName"
-                  label="Name"
-                  placeholder="Enter name"
-                  required
-                />
-                <FormField
-                  name="workPerformerTitle"
-                  label="Title"
-                  placeholder="Enter title"
-                  required
-                />
-                <FormField
-                  name="workPerformerDuties"
-                  label="Duties"
-                  placeholder="Enter duties"
-                  required
-                />
-                <FormField
-                  name="workPerformerContact"
-                  label="Contact details"
-                  placeholder="Enter contact information"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'claim',
-      title: 'Claim Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <FormTextarea
-              name="claimNature"
-              label="Nature of the claim or the circumstances"
-              placeholder="Describe the nature of the claim in detail"
-              rows={4}
-              required
-            />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker
-                name="firstAwareDate"
-                label="Date first became aware of the claim"
-                required
-              />
-              <FormDatePicker
-                name="claimMadeDate"
-                label="Date claim or intimation of claim made to you"
-                required
-              />
-            </div>
-            
-            <FormSelect
-              name="intimationMode"
-              label="Was intimation oral or written?"
-              placeholder="Select option"
-              required
-            >
-              <SelectItem value="oral">Oral</SelectItem>
-              <SelectItem value="written">Written</SelectItem>
-            </FormSelect>
-            
-            {watchedValues.intimationMode === 'written' && (
-              <FileUpload
-                label="Written Intimation Document (PDF, max 3MB)"
-                onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, writtenIntimation: file }))}
-                currentFile={uploadedFiles.writtenIntimation}
-                accept=".pdf"
-                maxSize={3}
-              />
-            )}
-            
-            {watchedValues.intimationMode === 'oral' && (
-              <FormTextarea
-                name="oralDetails"
-                label="Details of oral intimation (first-person details)"
-                placeholder="Provide details of the oral intimation"
-                rows={3}
-                required
-              />
-            )}
-            
-            <FormField
-              name="amountClaimed"
-              label="Amount claimed"
-              type="number"
-              placeholder="Enter amount claimed"
-    
-            />
-          </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'response',
-      title: "Insured's Response",
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <FormTextarea
-              name="responseComments"
-              label="Comments in response to the claim"
-              placeholder="Provide your response to the claim"
-              rows={4}
-              required
-            />
-            
-            <FormTextarea
-              name="quantumComments"
-              label="Comments on the quantum of the claim"
-              placeholder="Provide comments on the amount claimed"
-              rows={4}
-              required
-            />
-            
-            <FormField
-              name="estimatedLiability"
-              label="Estimated monetary liability"
-              type="number"
-              placeholder="Enter estimated liability amount"
-              required
-            />
-            
-            <FormSelect
-              name="additionalInfo"
-              label="Any other details or info that will help insurer?"
-              placeholder="Select option"
-              required
-            >
-              <SelectItem value="yes">Yes</SelectItem>
-              <SelectItem value="no">No</SelectItem>
-            </FormSelect>
-            
-            {watchedValues.additionalInfo === 'yes' && (
+          <div className="space-y-6">
+            {/* Policy Details Section */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-4">Policy Information</h3>
               <div className="space-y-4">
-                <FormTextarea
-                  name="additionalDetails"
-                  label="Additional details"
-                  placeholder="Provide additional details"
-                  rows={3}
-                  required
-                />
-                <FileUpload
-                  label="Additional Document (if needed)"
-                  onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, additionalDocument: file }))}
-                  currentFile={uploadedFiles.additionalDocument}
-                  accept=".pdf,.jpg,.png"
-                  maxSize={3}
-                />
-              </div>
-            )}
-            
-            <FormSelect
-              name="solicitorInstructed"
-              label="Have you instructed a solicitor?"
-              placeholder="Select option"
-              required
-            >
-              <SelectItem value="yes">Yes</SelectItem>
-              <SelectItem value="no">No</SelectItem>
-            </FormSelect>
-            
-            {watchedValues.solicitorInstructed === 'yes' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
-                  name="solicitorName"
-                  label="Name"
-                  placeholder="Enter solicitor name"
+                  name="policyNumber"
+                  label="Policy Number"
+                  placeholder="Enter policy number"
                   required
                 />
-                <FormField
-                  name="solicitorCompany"
-                  label="Company"
-                  placeholder="Enter solicitor company"
-                  required
-                />
-                <div className="md:col-span-2">
-                  <FormTextarea
-                    name="solicitorAddress"
-                    label="Address"
-                    placeholder="Enter solicitor address"
-                    rows={2}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormDatePicker
+                    name="coverageFromDate"
+                    label="Period of Cover - From"
+                    required
+                  />
+                  <FormDatePicker
+                    name="coverageToDate"
+                    label="Period of Cover - To"
                     required
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Insured Details Section */}
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-4">Insured Information</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    name="insuredName"
+                    label="Name of Insured"
+                    placeholder="Enter name of insured"
+                    required
+                  />
+                  <FormField
+                    name="companyName"
+                    label="Company Name"
+                    placeholder="Enter company name (if applicable)"
+                    required={false}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormSelect
+                    name="title"
+                    label="Title"
+                    placeholder="Select title"
+                    required
+                  >
+                    <SelectItem value="Mr">Mr</SelectItem>
+                    <SelectItem value="Mrs">Mrs</SelectItem>
+                    <SelectItem value="Chief">Chief</SelectItem>
+                    <SelectItem value="Dr">Dr</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </FormSelect>
+                  <FormDatePicker
+                    name="dateOfBirth"
+                    label="Date of Birth"
+                    required
+                  />
+                  <FormSelect
+                    name="gender"
+                    label="Gender"
+                    placeholder="Select gender"
+                    required
+                  >
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </FormSelect>
+                </div>
+                
+                <FormTextarea
+                  name="address"
+                  label="Address"
+                  placeholder="Enter full address"
+                  rows={3}
+                  required
+                />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    name="phone"
+                    label="Phone"
+                    placeholder="Enter phone number"
+                    required
+                  />
+                  <FormField
+                    name="email"
+                    label="Email"
+                    type="email"
+                    placeholder="Enter email address"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </FormProvider>
+      )
+    },
+    {
+      id: 'claimant-claim',
+      title: 'Claimant & Claim Details',
+      component: (
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            {/* Claimant Details Section */}
+            <div className="bg-orange-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-4">Claimant Information</h3>
+              <div className="space-y-4">
                 <FormField
-                  name="solicitorRates"
-                  label="Rates"
-                  placeholder="Enter solicitor rates"
+                  name="claimantName"
+                  label="Full Name of Claimant"
+                  placeholder="Enter claimant's full name"
+                  required
+                />
+                
+                <FormTextarea
+                  name="claimantAddress"
+                  label="Address of Claimant"
+                  placeholder="Enter claimant's full address"
+                  rows={3}
                   required
                 />
               </div>
-            )}
+            </div>
+
+            {/* Claim Details Section */}
+            <div className="bg-red-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-4">Claim Information</h3>
+              <div className="space-y-4">
+                <FormTextarea
+                  name="claimNature"
+                  label="Nature of the claim or the circumstances"
+                  placeholder="Describe the nature of the claim in detail"
+                  rows={4}
+                  required
+                />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormDatePicker
+                    name="firstAwareDate"
+                    label="Date first became aware of the claim"
+                    required
+                  />
+                  <FormDatePicker
+                    name="claimMadeDate"
+                    label="Date claim or intimation of claim made to you"
+                    required
+                  />
+                </div>
+                
+                <FormSelect
+                  name="intimationMode"
+                  label="Was intimation oral or written?"
+                  placeholder="Select option"
+                  required
+                >
+                  <SelectItem value="oral">Oral</SelectItem>
+                  <SelectItem value="written">Written</SelectItem>
+                </FormSelect>
+                
+                {watchedValues.intimationMode === 'written' && (
+                  <FileUpload
+                    label="Written Intimation Document (PDF, max 3MB)"
+                    onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, writtenIntimation: file }))}
+                    currentFile={uploadedFiles.writtenIntimation}
+                    accept=".pdf"
+                    maxSize={3}
+                  />
+                )}
+                
+                {watchedValues.intimationMode === 'oral' && (
+                  <FormTextarea
+                    name="oralDetails"
+                    label="Details of oral intimation (first-person details)"
+                    placeholder="Provide details of the oral intimation"
+                    rows={3}
+                    required
+                  />
+                )}
+                
+                <FormField
+                  name="amountClaimed"
+                  label="Amount claimed"
+                  type="number"
+                  placeholder="Enter amount claimed"
+                />
+              </div>
+            </div>
+          </div>
+        </FormProvider>
+      )
+    },
+    {
+      id: 'contract-response',
+      title: 'Contract & Response Details',
+      component: (
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            {/* Contract/Retainer Details Section */}
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-4">Retainer/Contract Information</h3>
+              <div className="space-y-4">
+                <FormTextarea
+                  name="retainerDetails"
+                  label="What were you retained/contracted to do?"
+                  placeholder="Describe the nature of your professional engagement"
+                  rows={4}
+                  required
+                />
+                
+                <FormSelect
+                  name="contractInWriting"
+                  label="Was your contract evidenced in writing?"
+                  placeholder="Select option"
+                  required
+                >
+                  <SelectItem value="yes">Yes</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                </FormSelect>
+                
+                {watchedValues.contractInWriting === 'yes' && (
+                  <FileUpload
+                    label="Contract Document (PDF, max 3MB)"
+                    onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, contractDocument: file }))}
+                    currentFile={uploadedFiles.contractDocument}
+                    accept=".pdf"
+                    maxSize={3}
+                  />
+                )}
+                
+                {watchedValues.contractInWriting === 'no' && (
+                  <FormTextarea
+                    name="contractDetails"
+                    label="Details of contract and its terms"
+                    placeholder="Describe the contract details and terms"
+                    rows={4}
+                    required
+                  />
+                )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormDatePicker
+                    name="workPerformedFrom"
+                    label="When did you perform the work giving rise to the claim? From"
+                    required
+                  />
+                  <FormDatePicker
+                    name="workPerformedTo"
+                    label="To"
+                    required
+                  />
+                </div>
+                
+                <div className="bg-white p-4 rounded border">
+                  <h4 className="font-medium mb-3">Who is the person within the company 
+                    who actually performed the task or against whom the claim or 
+                    potential claim is principally directed?</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      name="workPerformerName"
+                      label="Name"
+                      placeholder="Enter name"
+                      required
+                    />
+                    <FormField
+                      name="workPerformerTitle"
+                      label="Title"
+                      placeholder="Enter title"
+                      required
+                    />
+                    <FormField
+                      name="workPerformerDuties"
+                      label="Duties"
+                      placeholder="Enter duties"
+                      required
+                    />
+                    <FormField
+                      name="workPerformerContact"
+                      label="Contact details"
+                      placeholder="Enter contact information"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Insured Response Section */}
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-4">Your Response to the Claim</h3>
+              <div className="space-y-4">
+                <FormTextarea
+                  name="responseComments"
+                  label="Comments in response to the claim"
+                  placeholder="Provide your response to the claim"
+                  rows={4}
+                  required
+                />
+                
+                <FormTextarea
+                  name="quantumComments"
+                  label="Comments on the quantum of the claim"
+                  placeholder="Provide comments on the amount claimed"
+                  rows={4}
+                  required
+                />
+                
+                <FormField
+                  name="estimatedLiability"
+                  label="Estimated monetary liability"
+                  type="number"
+                  placeholder="Enter estimated liability amount"
+                  required
+                />
+                
+                <FormSelect
+                  name="additionalInfo"
+                  label="Any other details or info that will help insurer?"
+                  placeholder="Select option"
+                  required
+                >
+                  <SelectItem value="yes">Yes</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                </FormSelect>
+                
+                {watchedValues.additionalInfo === 'yes' && (
+                  <div className="space-y-4">
+                    <FormTextarea
+                      name="additionalDetails"
+                      label="Additional details"
+                      placeholder="Provide additional details"
+                      rows={3}
+                      required
+                    />
+                    <FileUpload
+                      label="Additional Document (if needed)"
+                      onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, additionalDocument: file }))}
+                      currentFile={uploadedFiles.additionalDocument}
+                      accept=".pdf,.jpg,.png"
+                      maxSize={3}
+                    />
+                  </div>
+                )}
+                
+                <FormSelect
+                  name="solicitorInstructed"
+                  label="Have you instructed a solicitor?"
+                  placeholder="Select option"
+                  required
+                >
+                  <SelectItem value="yes">Yes</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                </FormSelect>
+                
+                {watchedValues.solicitorInstructed === 'yes' && (
+                  <div className="bg-white p-4 rounded border">
+                    <h4 className="font-medium mb-3">Solicitor Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        name="solicitorName"
+                        label="Name"
+                        placeholder="Enter solicitor name"
+                        required
+                      />
+                      <FormField
+                        name="solicitorCompany"
+                        label="Company"
+                        placeholder="Enter solicitor company"
+                        required
+                      />
+                      <div className="md:col-span-2">
+                        <FormTextarea
+                          name="solicitorAddress"
+                          label="Address"
+                          placeholder="Enter solicitor address"
+                          rows={2}
+                          required
+                        />
+                      </div>
+                      <FormField
+                        name="solicitorRates"
+                        label="Rates"
+                        placeholder="Enter solicitor rates"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </FormProvider>
       )
