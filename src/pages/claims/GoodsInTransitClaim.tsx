@@ -446,8 +446,8 @@ const GoodsInTransitClaim: React.FC = () => {
 
   const steps = [
     {
-      id: 'policy-details',
-      title: 'Policy Details',
+      id: 'policy-insured-information',
+      title: 'Policy & Insured Information',
       component: (
         <div className="space-y-6">
           <TooltipProvider>
@@ -529,14 +529,7 @@ const GoodsInTransitClaim: React.FC = () => {
               </Tooltip>
             </TooltipProvider>
           </div>
-        </div>
-      )
-    },
-    {
-      id: 'insured-details',
-      title: 'Insured Details',
-      component: (
-        <div className="space-y-6">
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -676,8 +669,8 @@ const GoodsInTransitClaim: React.FC = () => {
       )
     },
     {
-      id: 'loss-details',
-      title: 'Details of Loss',
+      id: 'loss-goods-details',
+      title: 'Loss Details & Goods Information',
       component: (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
@@ -923,124 +916,145 @@ const GoodsInTransitClaim: React.FC = () => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        </div>
-      )
-    },
-    {
-      id: 'particulars-of-goods',
-      title: 'Particulars of Goods',
-      component: (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Goods Items</h3>
-            <Button
-              type="button"
-              onClick={() => addGoodsItem({ quantity: 1, description: '', value: 0 })}
-              variant="outline"
-              size="sm"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Item
-            </Button>
-          </div>
-          
-          {goodsItemsFields.map((field, index) => (
-            <Card key={field.id} className="p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="font-semibold">Item {index + 1}</h4>
-                <Button
-                  type="button"
-                  onClick={() => removeGoodsItem(index)}
-                  variant="destructive"
-                  size="sm"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Label htmlFor={`goodsItems_quantity_${index}`} className="flex items-center gap-1">
-                          Quantity *
-                          <Info className="h-3 w-3" />
-                        </Label>
-                        <Input
-                          id={`goodsItems_quantity_${index}`}
-                          type="number"
-                          placeholder="Enter quantity"
-                          {...formMethods.register(`goodsItems.${index}.quantity`, {
-                            setValueAs: (value) => Number(value)
-                          })}
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Enter the quantity of this specific item</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Label htmlFor={`goodsItems_description_${index}`} className="flex items-center gap-1">
-                          Description *
-                          <Info className="h-3 w-3" />
-                        </Label>
-                         <Textarea
-                           id={`goodsItems_description_${index}`}
-                           placeholder="Enter description"
-                           rows={2}
-                           {...formMethods.register(`goodsItems.${index}.description`)}
-                         />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Enter a detailed description of this specific item including brand, model, specifications</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Label htmlFor={`goodsItems_value_${index}`} className="flex items-center gap-1">
-                          Value (₦) *
-                          <Info className="h-3 w-3" />
-                        </Label>
-                        <Input
-                          id={`goodsItems_value_${index}`}
-                          type="number"
-                          step="0.01"
-                          placeholder="Enter value"
-                          {...formMethods.register(`goodsItems.${index}.value`, {
-                            setValueAs: (value) => Number(value)
-                          })}
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Enter the monetary value of this specific item in Nigerian Naira</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </Card>
-          ))}
-          
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+
+          <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="font-semibold">Total Value:</span>
-              <span className="text-lg font-bold">₦{watchedValues.totalValue?.toLocaleString() || 0}</span>
+              <h3 className="text-lg font-semibold">Goods Items</h3>
+              <Button
+                type="button"
+                onClick={() => addGoodsItem({ quantity: 1, description: '', value: 0 })}
+                variant="outline"
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Item
+              </Button>
+            </div>
+            
+            {goodsItemsFields.map((field, index) => (
+              <Card key={field.id} className="p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-semibold">Item {index + 1}</h4>
+                  <Button
+                    type="button"
+                    onClick={() => removeGoodsItem(index)}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Label htmlFor={`goodsItems_quantity_${index}`} className="flex items-center gap-1">
+                            Quantity *
+                            <Info className="h-3 w-3" />
+                          </Label>
+                          <Input
+                            id={`goodsItems_quantity_${index}`}
+                            type="number"
+                            placeholder="Enter quantity"
+                            {...formMethods.register(`goodsItems.${index}.quantity`, {
+                              setValueAs: (value) => Number(value)
+                            })}
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Enter the quantity of this specific item</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Label htmlFor={`goodsItems_description_${index}`} className="flex items-center gap-1">
+                            Description *
+                            <Info className="h-3 w-3" />
+                          </Label>
+                           <Textarea
+                             id={`goodsItems_description_${index}`}
+                             placeholder="Enter description"
+                             rows={2}
+                             {...formMethods.register(`goodsItems.${index}.description`)}
+                           />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Enter a detailed description of this specific item including brand, model, specifications</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Label htmlFor={`goodsItems_value_${index}`} className="flex items-center gap-1">
+                            Value (₦) *
+                            <Info className="h-3 w-3" />
+                          </Label>
+                          <Input
+                            id={`goodsItems_value_${index}`}
+                            type="number"
+                            step="0.01"
+                            placeholder="Enter value"
+                            {...formMethods.register(`goodsItems.${index}.value`, {
+                              setValueAs: (value) => Number(value)
+                            })}
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Enter the monetary value of this specific item in Nigerian Naira</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </Card>
+            ))}
+            
+            <div className="mt-4 p-4 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">Total Value:</span>
+                <span className="text-lg font-bold">₦{watchedValues.totalValue?.toLocaleString() || 0}</span>
+              </div>
             </div>
           </div>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="inspectionAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Inspection Address *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter inspection address" rows={3} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Enter the address where the damaged goods can be inspected by our claims assessor</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       )
     },
     {
-      id: 'circumstances',
-      title: 'Circumstances',
+      id: 'circumstances-transportation',
+      title: 'Circumstances & Transportation',
       component: (
         <div className="space-y-6">
           <TooltipProvider>
@@ -1360,47 +1374,7 @@ const GoodsInTransitClaim: React.FC = () => {
               </Tooltip>
             </TooltipProvider>
           </div>
-        </div>
-      )
-    },
-    {
-      id: 'inspection',
-      title: 'Where Inspected',
-      component: (
-        <div className="space-y-6">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <FormField
-                  control={formMethods.control}
-                  name="inspectionAddress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1">
-                        Inspection Address *
-                        <Info className="h-3 w-3" />
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Enter inspection address" rows={3} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Enter the address where the damaged goods can be inspected by our claims assessor</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      )
-    },
-    {
-      id: 'owner-details',
-      title: 'If You Are Owner of Goods',
-      component: (
-        <div className="space-y-6">
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -1508,14 +1482,7 @@ const GoodsInTransitClaim: React.FC = () => {
               </TooltipProvider>
             </div>
           )}
-        </div>
-      )
-    },
-    {
-      id: 'carrier-details',
-      title: 'If You Are Claiming As Carrier',
-      component: (
-        <div className="space-y-6">
+
           {!watchedValues.isOwnerOfGoods && (
             <TooltipProvider>
               <div className="space-y-4">
@@ -1593,14 +1560,7 @@ const GoodsInTransitClaim: React.FC = () => {
               </div>
             </TooltipProvider>
           )}
-        </div>
-      )
-    },
-    {
-      id: 'vehicle-transport',
-      title: 'Vehicle / Transport',
-      component: (
-        <div className="space-y-6">
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -1741,6 +1701,268 @@ const GoodsInTransitClaim: React.FC = () => {
           {watchedValues.loadedByYouOrStaff && (
             <TooltipProvider>
               <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="receiptGiven"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 ml-6">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked === true);
+                              if (formMethods.formState.errors.receiptGiven) {
+                                formMethods.clearErrors('receiptGiven');
+                              }
+                            }}
+                            className={cn(formMethods.formState.errors.receiptGiven && "border-destructive")}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel className="flex items-center gap-1">
+                            Receipt Given *
+                            <Info className="h-3 w-3" />
+                          </FormLabel>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Confirm if a receipt was given when the goods were loaded by you or your staff</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1">
+                    What condition or carriage do you use (Please attach a specimen-copy) <span className="required-asterisk">*</span>
+                    <Info className="h-3 w-3" />
+                  </Label>
+                  <FileUpload
+                    onFileSelect={(file) => {
+                      setUploadedFiles(prev => ({ ...prev, carriageConditionDocument: file }));
+                      formMethods.setValue('carriageConditionDocument', file);
+                      if (formMethods.formState.errors.carriageConditionDocument) {
+                        formMethods.clearErrors('carriageConditionDocument');
+                      }
+                    }}
+                    maxSize={3 * 1024 * 1024}
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  />
+                  {uploadedFiles.carriageConditionDocument && (
+                    <div className="text-sm text-green-600">
+                      {uploadedFiles.carriageConditionDocument.name}
+                    </div>
+                  )}
+                  {formMethods.formState.errors.carriageConditionDocument && (
+                    <p className="text-sm text-destructive">
+                      {formMethods.formState.errors.carriageConditionDocument.message?.toString()}
+                    </p>
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Upload a document showing the terms and conditions of carriage. This should be a specimen copy of your standard carriage conditions. Maximum file size: 3MB</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="claimMadeAgainstYou"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked === true);
+                            if (formMethods.formState.errors.claimMadeAgainstYou) {
+                              formMethods.clearErrors('claimMadeAgainstYou');
+                            }
+                          }}
+                          className={cn(formMethods.formState.errors.claimMadeAgainstYou && "border-destructive")}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="flex items-center gap-1">
+                          Claim Made Against You *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Confirm if any claim has been made against you regarding this loss</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          {watchedValues.claimMadeAgainstYou && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FormField
+                    control={formMethods.control}
+                    name="claimDateReceived"
+                    render={({ field }) => (
+                      <FormItem className="ml-6">
+                        <FormLabel className="flex items-center gap-1">
+                          Claim Date Received *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Enter the date when you received the claim made against you</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+      )
+    },
+    {
+      id: 'declaration',
+      title: 'Declaration & Signature',
+      component: (
+        <div className="space-y-6">
+          <div className="p-4 border rounded-lg">
+            <h4 className="font-semibold mb-2">Data Privacy Notice</h4>
+            <p className="text-sm mb-4">
+              We collect and process your personal data in accordance with applicable data protection laws. 
+              Your information will be used to process your insurance claim and may be shared with relevant 
+              third parties including adjusters, investigators, and other insurers as necessary for claim processing. 
+              You have rights regarding your personal data including access, correction, and deletion subject to 
+              legal and contractual requirements.
+            </p>
+          </div>
+          
+          <div className="p-4 border rounded-lg">
+            <h4 className="font-semibold mb-2">Declaration</h4>
+            <div className="text-sm space-y-2">
+              <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
+              <p>2. I/We agree that this declaration shall form the basis of the contract between me/us and the Company.</p>
+              <p>3. I/We undertake to inform the Company of any other insurance covering the same risk.</p>
+              <p>4. I/We authorize the Company to obtain any information from any person, organization or entity that the Company deems necessary to evaluate this claim.</p>
+            </div>
+          </div>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="declarationAgreed"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked === true);
+                            if (formMethods.formState.errors.declarationAgreed) {
+                              formMethods.clearErrors('declarationAgreed');
+                            }
+                          }}
+                          className={cn(formMethods.formState.errors.declarationAgreed && "border-destructive")}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="flex items-center gap-1">
+                          I agree to the data privacy notice and declaration above *
+                          <Info className="h-3 w-3" />
+                        </FormLabel>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>You must agree to the data privacy notice and declaration to proceed with your claim</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="signatureOfPolicyholder"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Signature of Policyholder *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Type your full name as digital signature" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Type your full legal name as it appears on your identification document to serve as your digital signature</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FormField
+                  control={formMethods.control}
+                  name="dateSigned"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Date Signed *
+                        <Info className="h-3 w-3" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field}
+                          value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>The date when you are signing this claim form (defaults to today's date)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )
+    }
+  ];
                 <TooltipTrigger asChild>
                   <FormField
                     control={formMethods.control}
