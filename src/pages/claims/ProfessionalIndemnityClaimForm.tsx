@@ -490,7 +490,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
             </div>
 
             {/* Insured Details Section */}
-            <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="p-4 rounded-lg">
               <h3 className="font-semibold mb-4">Insured Information</h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -574,7 +574,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
         <FormProvider {...formMethods}>
           <div className="space-y-6">
             {/* Claimant Details Section */}
-            <div className="bg-orange-50 p-4 rounded-lg">
+            <div className="p-4 rounded-lg">
               <h3 className="font-semibold mb-4">Claimant Information</h3>
               <div className="space-y-4">
                 <FormField
@@ -595,7 +595,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
             </div>
 
             {/* Claim Details Section */}
-            <div className="bg-red-50 p-4 rounded-lg">
+            <div className="p-4 rounded-lg">
               <h3 className="font-semibold mb-4">Claim Information</h3>
               <div className="space-y-4">
                 <FormTextarea
@@ -668,7 +668,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
         <FormProvider {...formMethods}>
           <div className="space-y-6">
             {/* Contract/Retainer Details Section */}
-            <div className="bg-green-50 p-4 rounded-lg">
+            <div className="p-4 rounded-lg">
               <h3 className="font-semibold mb-4">Retainer/Contract Information</h3>
               <div className="space-y-4">
                 <FormTextarea
@@ -757,7 +757,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
             </div>
 
             {/* Insured Response Section */}
-            <div className="bg-purple-50 p-4 rounded-lg">
+            <div className="p-4 rounded-lg">
               <h3 className="font-semibold mb-4">Your Response to the Claim</h3>
               <div className="space-y-4">
                 <FormTextarea
@@ -869,7 +869,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
       component: (
         <FormProvider {...formMethods}>
           <div className="space-y-6">
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="p-4 rounded-lg">
               <h3 className="font-semibold mb-2">Data Privacy</h3>
               <div className="text-sm space-y-2">
                 <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
@@ -900,7 +900,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
               </p>
             )}
             
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="p-4 rounded-lg">
               <h3 className="font-semibold mb-2">Declaration</h3>
               <div className="text-sm space-y-2">
                 <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
