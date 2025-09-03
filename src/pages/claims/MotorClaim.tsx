@@ -479,15 +479,6 @@ const MotorClaim: React.FC = () => {
 
   const steps = [
     {
-      id: 'policy',
-      title: 'Policy Details',
-      component: (
-        <FormProvider {...formMethods}>
-       
-        </FormProvider>
-      )
-    },
-    {
       id: 'insured',
       title: 'Insured Details',
       component: (
@@ -629,15 +620,6 @@ const MotorClaim: React.FC = () => {
             
             <FormTextarea name="incidentDescription" label="Full description of how the incident occurred" required />
           </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'witnesses',
-      title: 'Witnesses',
-      component: (
-        <FormProvider {...formMethods}>
-        
         </FormProvider>
       )
     },

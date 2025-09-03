@@ -930,7 +930,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
               required
             />
             
-            <div>
+            <div className="space-y-2">
               <Label>Date</Label>
               <Input value={new Date().toISOString().split('T')[0]} disabled />
             </div>
