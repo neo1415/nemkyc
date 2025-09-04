@@ -51,11 +51,19 @@ const isClaimsForm = (formType: string): boolean => {
 // Send email notifications with PDF attachments
 const sendEmailNotifications = async (formType: string, formData: SubmissionData, userEmail: string, fullFormData: SubmissionData) => {
   try {
+    console.log('📧 Sending user confirmation email...');
     // Send confirmation email to user (no PDF attachment)
-    await makeAuthenticatedRequest(`${API_BASE_URL}/send-to-user`, {
+    const userResponse = await makeAuthenticatedRequest(`${API_BASE_URL}/send-to-user`, {
       userEmail,
       formType
     });
+    
+    if (!userResponse.ok) {
+      const errorText = await userResponse.text();
+      console.error('❌ User email failed:', userResponse.status, errorText);
+    } else {
+      console.log('✅ User confirmation email sent successfully');
+    }
 
     // Generate PDF for admin emails
     let pdfAttachment = null;
@@ -98,19 +106,34 @@ const sendEmailNotifications = async (formType: string, formData: SubmissionData
     }
 
     // Send alert email to appropriate team with PDF attachment
+    console.log('📧 Sending admin notification emails...');
     if (isClaimsForm(formType)) {
-      await makeAuthenticatedRequest(`${API_BASE_URL}/send-to-admin-and-claims`, {
+      const adminResponse = await makeAuthenticatedRequest(`${API_BASE_URL}/send-to-admin-and-claims`, {
         formType,
         formData,
         pdfAttachment
       });
+      
+      if (!adminResponse.ok) {
+        const errorText = await adminResponse.text();
+        console.error('❌ Claims admin email failed:', adminResponse.status, errorText);
+      } else {
+        console.log('✅ Claims admin emails sent successfully');
+      }
     } else {
       // KYC/CDD forms go to admin and compliance
-      await makeAuthenticatedRequest(`${API_BASE_URL}/send-to-admin-and-compliance`, {
+      const adminResponse = await makeAuthenticatedRequest(`${API_BASE_URL}/send-to-admin-and-compliance`, {
         formType,
         formData,
         pdfAttachment
       });
+      
+      if (!adminResponse.ok) {
+        const errorText = await adminResponse.text();
+        console.error('❌ Compliance admin email failed:', adminResponse.status, errorText);
+      } else {
+        console.log('✅ Compliance admin emails sent successfully');
+      }
     }
 
     toast.success('Email notifications sent successfully');
