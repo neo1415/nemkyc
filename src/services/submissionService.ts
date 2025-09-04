@@ -1,6 +1,7 @@
 import { collection, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { toast } from 'sonner';
+import { generateDynamicPDF } from './dynamicPdfService';
 
 
 const API_BASE_URL = 'https://nem-server-rhdb.onrender.com';
@@ -47,26 +48,68 @@ const isClaimsForm = (formType: string): boolean => {
   );
 };
 
-// Send email notifications
-const sendEmailNotifications = async (formType: string, formData: SubmissionData, userEmail: string) => {
+// Send email notifications with PDF attachments
+const sendEmailNotifications = async (formType: string, formData: SubmissionData, userEmail: string, fullFormData: SubmissionData) => {
   try {
-    // Send confirmation email to user
+    // Send confirmation email to user (no PDF attachment)
     await makeAuthenticatedRequest(`${API_BASE_URL}/send-to-user`, {
       userEmail,
       formType
     });
 
-    // Send alert email to appropriate team
+    // Generate PDF for admin emails
+    let pdfAttachment = null;
+    try {
+      console.log('Generating PDF for admin emails...');
+      const pdfData = {
+        ...fullFormData,
+        formType,
+        collection: formData.collectionName
+      };
+      
+      const pdfBlob = await generateDynamicPDF(pdfData);
+      
+      // Convert blob to base64 for email attachment
+      const arrayBuffer = await pdfBlob.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      
+      // Generate filename
+      const primaryName = fullFormData.companyName || 
+                         fullFormData.nameOfInsured || 
+                         fullFormData.insuredName ||
+                         fullFormData.policyHolderName ||
+                         fullFormData.fullName || 
+                         fullFormData.firstName ||
+                         fullFormData.name ||
+                         'submission';
+      
+      const filename = `${String(primaryName).trim().replace(/\s+/g, '-')}-${String(formType).trim().replace(/\s+/g, '-')}.pdf`;
+      
+      pdfAttachment = {
+        filename,
+        content: base64,
+        encoding: 'base64'
+      };
+      
+      console.log('PDF generated successfully for admin emails');
+    } catch (pdfError) {
+      console.error('Failed to generate PDF for admin emails:', pdfError);
+      // Continue without PDF if generation fails
+    }
+
+    // Send alert email to appropriate team with PDF attachment
     if (isClaimsForm(formType)) {
       await makeAuthenticatedRequest(`${API_BASE_URL}/send-to-admin-and-claims`, {
         formType,
-        formData
+        formData,
+        pdfAttachment
       });
     } else {
       // KYC/CDD forms go to admin and compliance
       await makeAuthenticatedRequest(`${API_BASE_URL}/send-to-admin-and-compliance`, {
         formType,
-        formData
+        formData,
+        pdfAttachment
       });
     }
 
@@ -109,8 +152,8 @@ export const submitFormWithNotifications = async (
 
     toast.success('Form submitted successfully!');
 
-    // Send email notifications
-sendEmailNotifications(formType, { documentId: docRef.id, collectionName }, userEmail).catch((e) =>
+    // Send email notifications with PDF
+    sendEmailNotifications(formType, { documentId: docRef.id, collectionName }, userEmail, submissionData).catch((e) =>
       console.warn('SubmissionService: email notification skipped/error', e)
     );
 
