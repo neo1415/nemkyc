@@ -58,7 +58,7 @@ This application is a highly professional, production-grade insurance form suite
 
 
 
-## 📌 PERSISTENCE & SECURITY
+## 📌 PERSISTENCE 
 
 ✅ Save to `localStorage` on every change, with one-week expiry.  
 ✅ Encrypt localStorage (e.g., AES) to protect sensitive data.
