@@ -28,7 +28,7 @@ This application is a highly professional, production-grade insurance form suite
 
 ## CONDITIONAL FIELDS
 
-✅ For yes/no or boolean fields with follow-ups like “If yes, explain,” only show the next field if yes is selected.  
+✅ For yes/no or boolean fields with follow-ups like “If yes, explain,” only show the next field if yes .  
 ✅ For options with “Other,” show a conditional text field for specification. Label it unambiguously.
 
 ### AUTOCOMPLETE FIELDS
