@@ -386,14 +386,10 @@ const GroupPersonalAccidentClaim: React.FC = () => {
 
   // Step field mappings for validation
   const stepFieldMappings = {
-    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
-    1: ['companyName', 'address', 'phone', 'email'],
-    2: ['accidentDate', 'accidentTime', 'accidentPlace', 'incidentDescription', 'particularsOfInjuries'],
-    3: ['witnesses'],
-    4: ['doctorName', 'doctorAddress'],
-    5: ['totalIncapacityFrom', 'totalIncapacityTo', 'partialIncapacityFrom', 'partialIncapacityTo'],
-    6: ['otherInsurerName', 'otherInsurerAddress', 'otherPolicyNumber'],
-    7: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'companyName', 'address', 'phone', 'email'],
+    1: ['accidentDate', 'accidentTime', 'accidentPlace', 'incidentDescription', 'particularsOfInjuries'],
+    2: ['witnesses', 'doctorName', 'doctorAddress', 'totalIncapacityFrom', 'totalIncapacityTo', 'partialIncapacityFrom', 'partialIncapacityTo', 'otherInsurerName', 'otherInsurerAddress', 'otherPolicyNumber'],
+    3: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
   };
 
   const DatePickerField = ({ name, label }: { name: string; label: string }) => {
@@ -442,92 +438,95 @@ const GroupPersonalAccidentClaim: React.FC = () => {
 
   const steps = [
     {
-      id: 'policy',
-      title: 'Policy Details',
+      id: 'policy-insured',
+      title: 'Policy & Insured Details',
       component: (
         <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <FormFieldComponent name="policyNumber" label="Policy Number" required />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter your group personal accident insurance policy number</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DatePickerField
-                name="periodOfCoverFrom"
-                label="Period of Cover From *"
-              />
-              <DatePickerField
-                name="periodOfCoverTo"
-                label="Period of Cover To *"
-              />
-            </div>
-          </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'insured',
-      title: 'Insured Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <TooltipProvider>
-            <div className="space-y-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <FormFieldComponent name="companyName" label="Company Name" required />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter the insured company name</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <FormTextareaComponent name="address" label="Address" required placeholder="Enter full address" rows={3} />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter the complete address</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <FormFieldComponent name="phone" label="Phone Number" required />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Enter contact phone number</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <FormFieldComponent name="email" label="Email Address" type="email" required />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Enter email address for correspondence</p>
-                  </TooltipContent>
-                </Tooltip>
+          <div className="space-y-6">
+            {/* Policy Details Section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Policy Details</h3>
+              <div className="space-y-4">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <FormFieldComponent name="policyNumber" label="Policy Number" required />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enter your group personal accident insurance policy number</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <DatePickerField
+                    name="periodOfCoverFrom"
+                    label="Period of Cover From *"
+                  />
+                  <DatePickerField
+                    name="periodOfCoverTo"
+                    label="Period of Cover To *"
+                  />
+                </div>
               </div>
             </div>
-          </TooltipProvider>
+
+            {/* Insured Details Section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Insured Details</h3>
+              <TooltipProvider>
+                <div className="space-y-4">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <FormFieldComponent name="companyName" label="Company Name" required />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enter the insured company name</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <FormTextareaComponent name="address" label="Address" required placeholder="Enter full address" rows={3} />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enter the complete address</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <FormFieldComponent name="phone" label="Phone Number" required />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Enter contact phone number</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <FormFieldComponent name="email" label="Email Address" type="email" required />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Enter email address for correspondence</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </div>
+              </TooltipProvider>
+            </div>
+          </div>
         </FormProvider>
       )
     },
@@ -613,149 +612,216 @@ const GroupPersonalAccidentClaim: React.FC = () => {
       )
     },
     {
-      id: 'witnesses',
-      title: 'Witness Information',
+      id: 'medical-other',
+      title: 'Medical & Other Information',
       component: (
         <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Witnesses</h3>
-              <Button
-                type="button"
-                onClick={() => addWitness({ name: '', address: '' })}
-                variant="outline"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Witness
-              </Button>
-            </div>
-            
-            {witnessFields.map((field, index) => (
-              <Card key={field.id} className="p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold">Witness {index + 1}</h4>
+          <div className="space-y-6">
+            {/* Witnesses Section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Witnesses</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label className="text-lg font-semibold">Witnesses</Label>
                   <Button
                     type="button"
-                    onClick={() => removeWitness(index)}
-                    variant="destructive"
+                    onClick={() => addWitness({ name: '', address: '' })}
+                    variant="outline"
                     size="sm"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Witness
                   </Button>
                 </div>
                 
-                <div className="space-y-4">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div>
-                          <FormFieldComponent name={`witnesses.${index}.name`} label="Witness Name" required placeholder="Enter witness name" />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Enter the full name of the witness</p>
-                      </TooltipContent>
-                    </Tooltip>
+                {witnessFields.map((field, index) => (
+                  <Card key={field.id} className="p-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="font-semibold">Witness {index + 1}</h4>
+                      <Button
+                        type="button"
+                        onClick={() => removeWitness(index)}
+                        variant="destructive"
+                        size="sm"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                     
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div>
-                          <FormTextareaComponent name={`witnesses.${index}.address`} label="Witness Address" required placeholder="Enter witness address" rows={2} />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Enter the complete address of the witness</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </Card>
-            ))}
-            
-            {witnessFields.length === 0 && (
-              <div className="text-center text-sm text-muted-foreground border p-6 rounded-md">
-                No witnesses added yet. Click "Add Witness" to add witness information.
-              </div>
-            )}
-          </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'doctor',
-      title: 'Doctor Information',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={formMethods.control}
-                name="doctorName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name of doctor *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter doctor's name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={formMethods.control}
-                name="doctorAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address of doctor *</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter doctor's address" rows={2} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <FormField
-              control={formMethods.control}
-              name="isUsualDoctor"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Is this your usual doctor?</FormLabel>
+                    <div className="space-y-4">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div>
+                              <FormFieldComponent name={`witnesses.${index}.name`} label="Witness Name" required placeholder="Enter witness name" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Enter the full name of the witness</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div>
+                              <FormTextareaComponent name={`witnesses.${index}.address`} label="Witness Address" required placeholder="Enter witness address" rows={2} />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Enter the complete address of the witness</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </Card>
+                ))}
+                
+                {witnessFields.length === 0 && (
+                  <div className="text-center text-sm text-muted-foreground border p-6 rounded-md">
+                    No witnesses added yet. Click "Add Witness" to add witness information.
                   </div>
-                </FormItem>
-              )}
-            />
-          </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'incapacity',
-      title: 'Incapacity Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-6">
-            <div>
-              <h4 className="font-medium mb-4">Total incapacity period:</h4>
-              <div className="grid grid-cols-2 gap-4">
+                )}
+              </div>
+            </div>
+
+            {/* Doctor Information Section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Doctor Information</h3>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={formMethods.control}
+                    name="doctorName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name of doctor *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter doctor's name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={formMethods.control}
+                    name="doctorAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address of doctor *</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Enter doctor's address" rows={2} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
                 <FormField
                   control={formMethods.control}
-                  name="totalIncapacityFrom"
+                  name="isUsualDoctor"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Is this your usual doctor?</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Incapacity Details Section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Incapacity Details</h3>
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-medium mb-4">Total incapacity period:</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={formMethods.control}
+                      name="totalIncapacityFrom"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>From</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={formMethods.control}
+                      name="totalIncapacityTo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>To</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-4">Partial incapacity period:</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={formMethods.control}
+                      name="partialIncapacityFrom"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>From</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={formMethods.control}
+                      name="partialIncapacityTo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>To</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Other Insurers Section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Other Insurers</h3>
+              <div className="space-y-6">
+                <FormField
+                  control={formMethods.control}
+                  name="otherInsurerName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>From</FormLabel>
+                      <FormLabel>Name *</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input placeholder="Enter other insurer name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -764,31 +830,12 @@ const GroupPersonalAccidentClaim: React.FC = () => {
                 
                 <FormField
                   control={formMethods.control}
-                  name="totalIncapacityTo"
+                  name="otherInsurerAddress"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>To</FormLabel>
+                      <FormLabel>Address *</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="font-medium mb-4">Partial incapacity period:</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={formMethods.control}
-                  name="partialIncapacityFrom"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>From</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
+                        <Textarea placeholder="Enter other insurer address" rows={3} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -797,12 +844,12 @@ const GroupPersonalAccidentClaim: React.FC = () => {
                 
                 <FormField
                   control={formMethods.control}
-                  name="partialIncapacityTo"
+                  name="otherPolicyNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>To</FormLabel>
+                      <FormLabel>Policy Number</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input placeholder="Enter policy number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -810,57 +857,6 @@ const GroupPersonalAccidentClaim: React.FC = () => {
                 />
               </div>
             </div>
-          </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'other-insurers',
-      title: 'Other Insurers',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-6">
-            <FormField
-              control={formMethods.control}
-              name="otherInsurerName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter other insurer name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={formMethods.control}
-              name="otherInsurerAddress"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Address *</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Enter other insurer address" rows={3} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={formMethods.control}
-              name="otherPolicyNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Policy Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter policy number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </div>
         </FormProvider>
       )
