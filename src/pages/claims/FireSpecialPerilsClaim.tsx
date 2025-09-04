@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { CheckCircle2, Loader2, Trash2, Plus } from 'lucide-react';
+import { CheckCircle2, Loader2, Trash2, Plus, Info } from 'lucide-react';
 import FileUpload from '@/components/common/FileUpload';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { uploadFile } from '@/services/fileService';
@@ -472,25 +472,6 @@ const FireSpecialPerilsClaim: React.FC = () => {
   };
 
   const onFinalSubmit = (data: FireSpecialPerilsClaimData) => {
-    // Check data privacy agreement and signature before showing summary
-    if (!data.agreeToDataPrivacy) {
-      toast({
-        title: "Agreement Required",
-        description: "You must agree to the data privacy notice and declaration.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!data.signature || data.signature.trim() === '') {
-      toast({
-        title: "Signature Required",
-        description: "Please provide your digital signature.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setShowSummary(true);
   };
 
@@ -1257,23 +1238,48 @@ const FireSpecialPerilsClaim: React.FC = () => {
 
           {/* Summary Dialog */}
           <Dialog open={showSummary} onOpenChange={setShowSummary}>
-            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Confirm Your Submission</DialogTitle>
-              <h3 className="font-semibold text-yellow-800">Important Notice</h3>
-                <p className="text-sm text-yellow-700 mt-1">
-                  Please review all information carefully before submitting. Once submitted, you cannot modify your details.
-                </p>
-            </DialogHeader>
-             
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Confirm Your Fire Special Perils Claim Submission</DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Policy Number:</span>
+                    <p>{formMethods.watch('policyNumber')}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Insured Name:</span>
+                    <p>{formMethods.watch('name')}</p>
+                  </div>
+                </div>
+                
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
+                    <div>
+                      <h3 className="font-semibold text-yellow-800">Important Notice</h3>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        Please review all information carefully before submitting. Once submitted, you cannot modify your claim details.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
-                  Back to Edit
+                  Review Again
                 </Button>
-                <Button onClick={() => handleSubmit(formMethods.getValues())} disabled={authSubmitting}>
+                <Button 
+                  onClick={() => handleSubmit(formMethods.getValues())}
+                  disabled={authSubmitting}
+                  className="min-w-[120px]"
+                >
                   {authSubmitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Submitting...
                     </>
                   ) : (
@@ -1286,15 +1292,11 @@ const FireSpecialPerilsClaim: React.FC = () => {
           
           {/* Success Modal */}
           <SuccessModal
-            isOpen={showSuccess || authShowSuccess || authSubmitting}
-            onClose={() => {
-              setShowSuccess(false);
-              setAuthShowSuccess();
-            }}
-            title="Fire Special Perils Claim Submitted!"
+            isOpen={authShowSuccess}
+            onClose={() => setAuthShowSuccess()}
+            title="Fire Special Perils Claim Submitted Successfully!"
+            message="Your fire special perils claim has been received and is being processed. You will receive updates via email and SMS."
             formType="Fire Special Perils Claim"
-            isLoading={authSubmitting}
-            loadingMessage="Your fire special perils claim is being processed and submitted..."
           />
         </div>
 
