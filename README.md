@@ -19,7 +19,7 @@ This application is a highly professional, production-grade insurance form suite
 
 
 
-# 📌 FIELD RULES
+# FIELD RULES
 
 ✅ All required fields should have a clear `*` indicator.  
 ✅ Every field must have a **tooltip** describing its purpose.  
