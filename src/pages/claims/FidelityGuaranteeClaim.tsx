@@ -374,44 +374,41 @@ const FidelityGuaranteeClaim: React.FC = () => {
 
   // Step field mappings for validation
   const stepFieldMappings = {
-    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
-    1: ['companyName', 'address', 'phone', 'email'],
-    2: ['defaulterName', 'defaulterAge', 'defaulterAddress', 'defaulterOccupation', 'dateOfDiscovery'],
-    3: ['defaultDetails', 'defaultAmount', 'hasPreviousIrregularity', 'previousIrregularityDetails', 'lastCorrectCheckDate', 'hasDefaulterProperty', 'defaulterPropertyDetails', 'hasRemunerationDue', 'remunerationDetails', 'hasOtherSecurity', 'otherSecurityDetails'],
-    4: ['hasBeenDischarged', 'dischargeDate', 'hasSettlementProposal', 'settlementProposalDetails'],
-    5: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'companyName', 'address', 'phone', 'email'],
+    1: ['defaulterName', 'defaulterAge', 'defaulterAddress', 'defaulterOccupation', 'dateOfDiscovery'],
+    2: ['defaultDetails', 'defaultAmount', 'hasPreviousIrregularity', 'previousIrregularityDetails', 'lastCorrectCheckDate', 'hasDefaulterProperty', 'defaulterPropertyDetails', 'hasRemunerationDue', 'remunerationDetails', 'hasOtherSecurity', 'otherSecurityDetails', 'hasBeenDischarged', 'dischargeDate', 'hasSettlementProposal', 'settlementProposalDetails'],
+    3: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
   };
 
   const steps = [
     {
-      id: "policy-details",
-      title: "Policy Details",
+      id: "policy-insured",
+      title: "Policy & Insured Details",
       component: (
         <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <FormField name="policyNumber" label="Policy Number" required placeholder="Enter policy number" />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
-              <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
+          <div className="space-y-6">
+            {/* Policy Details Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-primary border-b pb-2">Policy Information</h3>
+              <FormField name="policyNumber" label="Policy Number" required placeholder="Enter policy number" />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
+                <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
+              </div>
             </div>
-          </div>
-        </FormProvider>
-      ),
-    },
-    {
-      id: "insured-details", 
-      title: "Insured Details",
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <FormField name="companyName" label="Company Name" required placeholder="Enter company name" />
 
-            <FormTextarea name="address" label="Address" required placeholder="Enter company address" rows={3} />
+            {/* Insured Details Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-primary border-b pb-2">Insured Information</h3>
+              <FormField name="companyName" label="Company Name" required placeholder="Enter company name" />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField name="phone" label="Phone Number" required placeholder="Enter phone number" />
-              <FormField name="email" label="Email Address" type="email" required placeholder="Enter email address" />
+              <FormTextarea name="address" label="Address" required placeholder="Enter company address" rows={3} />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField name="phone" label="Phone Number" required placeholder="Enter phone number" />
+                <FormField name="email" label="Email Address" type="email" required placeholder="Enter email address" />
+              </div>
             </div>
           </div>
         </FormProvider>
@@ -439,104 +436,103 @@ const FidelityGuaranteeClaim: React.FC = () => {
       ),
     },
     {
-      id: "default-details",
-      title: "Details of Default",
+      id: "default-employment",
+      title: "Default Details & Employment Status",
       component: (
         <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <FormTextarea 
-              name="defaultDetails" 
-              label="How long, and in what manner, has the default been carried out and concealed?" 
-              required 
-              placeholder="Provide detailed explanation of the default"
-              rows={4} 
-            />
-
-            <FormField 
-              name="defaultAmount" 
-              label="Amount of the Default (₦)" 
-              type="number" 
-              step="0.01" 
-              required 
-              placeholder="0.00" 
-            />
-
-            <YesNoCheckbox name="hasPreviousIrregularity" label="Previous irregularity in accounts?" required />
-
-            {watchedValues.hasPreviousIrregularity === true && (
+          <div className="space-y-6">
+            {/* Default Details Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-primary border-b pb-2">Details of Default</h3>
               <FormTextarea 
-                name="previousIrregularityDetails" 
-                label="Please Explain" 
+                name="defaultDetails" 
+                label="How long, and in what manner, has the default been carried out and concealed?" 
                 required 
-                placeholder="Provide details about previous irregularities"
-                rows={3} 
-              />
-            )}
-
-            <FormDatePicker name="lastCorrectCheckDate" label="On what date was the account last checked and found correct?" required />
-
-            <YesNoCheckbox name="hasDefaulterProperty" label="Any property/furniture of the defaulter known?" required />
-
-            {watchedValues.hasDefaulterProperty === true && (
-              <FormTextarea 
-                name="defaulterPropertyDetails" 
-                label="Please Provide Details" 
-                required 
-                placeholder="Describe the property/furniture"
-                rows={3} 
-              />
-            )}
-
-            <YesNoCheckbox name="hasRemunerationDue" label="Any salary, commission or other remuneration due to defaulter?" required />
-
-            {watchedValues.hasRemunerationDue === true && (
-              <FormTextarea 
-                name="remunerationDetails" 
-                label="Please Provide Details" 
-                required 
-                placeholder="Describe the remuneration due"
-                rows={3} 
-              />
-            )}
-
-            <YesNoCheckbox name="hasOtherSecurity" label="Other security in addition to the guarantee?" required />
-
-            {watchedValues.hasOtherSecurity === true && (
-              <FormTextarea 
-                name="otherSecurityDetails" 
-                label="Please Provide Details" 
-                required 
-                placeholder="Describe the other security"
-                rows={3} 
-              />
-            )}
-          </div>
-        </FormProvider>
-      ),
-    },
-    {
-      id: "employment-status",
-      title: "Employment Status",
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <YesNoCheckbox name="hasBeenDischarged" label="Has the defaulter been discharged?" required />
-
-            {watchedValues.hasBeenDischarged === true && (
-              <FormDatePicker name="dischargeDate" label="Date of Discharge" required />
-            )}
-
-            <YesNoCheckbox name="hasSettlementProposal" label="Has a proposal for settlement been put forward?" required />
-
-            {watchedValues.hasSettlementProposal === true && (
-              <FormTextarea 
-                name="settlementProposalDetails" 
-                label="Please Provide Details" 
-                required 
-                placeholder="Describe the settlement proposal"
+                placeholder="Provide detailed explanation of the default"
                 rows={4} 
               />
-            )}
+
+              <FormField 
+                name="defaultAmount" 
+                label="Amount of the Default (₦)" 
+                type="number" 
+                step="0.01" 
+                required 
+                placeholder="0.00" 
+              />
+
+              <YesNoCheckbox name="hasPreviousIrregularity" label="Previous irregularity in accounts?" required />
+
+              {watchedValues.hasPreviousIrregularity === true && (
+                <FormTextarea 
+                  name="previousIrregularityDetails" 
+                  label="Please Explain" 
+                  required 
+                  placeholder="Provide details about previous irregularities"
+                  rows={3} 
+                />
+              )}
+
+              <FormDatePicker name="lastCorrectCheckDate" label="On what date was the account last checked and found correct?" required />
+
+              <YesNoCheckbox name="hasDefaulterProperty" label="Any property/furniture of the defaulter known?" required />
+
+              {watchedValues.hasDefaulterProperty === true && (
+                <FormTextarea 
+                  name="defaulterPropertyDetails" 
+                  label="Please Provide Details" 
+                  required 
+                  placeholder="Describe the property/furniture"
+                  rows={3} 
+                />
+              )}
+
+              <YesNoCheckbox name="hasRemunerationDue" label="Any salary, commission or other remuneration due to defaulter?" required />
+
+              {watchedValues.hasRemunerationDue === true && (
+                <FormTextarea 
+                  name="remunerationDetails" 
+                  label="Please Provide Details" 
+                  required 
+                  placeholder="Describe the remuneration due"
+                  rows={3} 
+                />
+              )}
+
+              <YesNoCheckbox name="hasOtherSecurity" label="Other security in addition to the guarantee?" required />
+
+              {watchedValues.hasOtherSecurity === true && (
+                <FormTextarea 
+                  name="otherSecurityDetails" 
+                  label="Please Provide Details" 
+                  required 
+                  placeholder="Describe the other security"
+                  rows={3} 
+                />
+              )}
+            </div>
+
+            {/* Employment Status Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-primary border-b pb-2">Employment Status</h3>
+              <YesNoCheckbox name="hasBeenDischarged" label="Has the defaulter been discharged?" required />
+
+              {watchedValues.hasBeenDischarged === true && (
+                <FormDatePicker name="dischargeDate" label="Date of Discharge" required />
+              )}
+
+              <YesNoCheckbox name="hasSettlementProposal" label="Has a proposal for settlement been put forward?" required />
+
+              {watchedValues.hasSettlementProposal === true && (
+                <FormTextarea 
+                  name="settlementProposalDetails" 
+                  label="Please Provide Details" 
+                  required 
+                  placeholder="Describe the settlement proposal"
+                  rows={4} 
+                />
+              )}
+            </div>
           </div>
         </FormProvider>
       ),
