@@ -432,16 +432,11 @@ const GoodsInTransitClaim: React.FC = () => {
   };
 
   const stepFieldMappings = {
-    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
-    1: ['companyName', 'address', 'phone', 'email', 'businessType'],
-    2: ['dateOfLoss', 'timeOfLoss', 'placeOfOccurrence', 'descriptionOfGoods', 'numberOfPackages', 'totalWeight', 'weightUnits', 'totalValue', 'goodsPackaging'],
-    3: ['goodsItems'],
-    4: ['lossCircumstances', 'otherVehicleInvolved', 'ownerName', 'ownerAddress', 'witnessName', 'witnessAddress', 'policeStationAdvised', 'dateReportedToPolice', 'dispatchAddress', 'dispatchDate', 'consigneeName', 'consigneeAddress'],
-    5: ['inspectionAddress'],
-    6: ['isOwnerOfGoods', 'howAndByWhomWereGoodsTransported', 'transporterInsurerName', 'transporterInsurerAddress'],
-    7: ['goodsOwnerName', 'goodsOwnerAddress', 'goodsOwnerInsurer'],
-    8: ['goodsSoundOnReceipt', 'checkedByDriver', 'vehicleRegistrationNumber', 'loadedByYouOrStaff', 'receiptGiven', 'carriageConditionDocument', 'claimMadeAgainstYou', 'claimDateReceived'],
-    9: ['declarationAgreed', 'signatureOfPolicyholder', 'dateSigned']
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'companyName', 'address', 'phone', 'email', 'businessType'],
+    1: ['dateOfLoss', 'timeOfLoss', 'placeOfOccurrence', 'descriptionOfGoods', 'numberOfPackages', 'totalWeight', 'weightUnits', 'totalValue', 'goodsPackaging', 'goodsItems', 'inspectionAddress'],
+    2: ['lossCircumstances', 'otherVehicleInvolved', 'ownerName', 'ownerAddress', 'witnessName', 'witnessAddress', 'policeStationAdvised', 'dateReportedToPolice', 'dispatchAddress', 'dispatchDate', 'consigneeName', 'consigneeAddress'],
+    3: ['isOwnerOfGoods', 'howAndByWhomWereGoodsTransported', 'transporterInsurerName', 'transporterInsurerAddress', 'goodsOwnerName', 'goodsOwnerAddress', 'goodsOwnerInsurer', 'goodsSoundOnReceipt', 'checkedByDriver', 'vehicleRegistrationNumber', 'loadedByYouOrStaff', 'receiptGiven', 'carriageConditionDocument', 'claimMadeAgainstYou', 'claimDateReceived'],
+    4: ['declarationAgreed', 'signatureOfPolicyholder', 'dateSigned']
   };
 
   const steps = [
