@@ -361,10 +361,8 @@ const RentAssuranceClaim = () => {
 
   // Step field mappings for validation (by step id)
   const stepFieldMappings: Record<string, string[]> = {
-    'policy-details': ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
-    'insured-details': ['nameOfInsured', 'address', 'age', 'email', 'phone', 'nameOfLandlord', 'addressOfLandlord', 'livingAtPremisesFrom', 'livingAtPremisesTo'],
-    'claim-information': ['periodOfDefaultFrom', 'periodOfDefaultTo', 'amountDefaulted', 'rentDueDate', 'rentPaymentFrequency', 'rentPaymentFrequencyOther', 'causeOfInabilityToPay'],
-    'beneficiary-details': ['nameOfBeneficiary', 'beneficiaryAge', 'beneficiaryAddress', 'beneficiaryEmail', 'beneficiaryPhone', 'beneficiaryOccupation'],
+    'policy-insured': ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'nameOfInsured', 'address', 'age', 'email', 'phone', 'nameOfLandlord', 'addressOfLandlord', 'livingAtPremisesFrom', 'livingAtPremisesTo'],
+    'claim-beneficiary': ['periodOfDefaultFrom', 'periodOfDefaultTo', 'amountDefaulted', 'rentDueDate', 'rentPaymentFrequency', 'rentPaymentFrequencyOther', 'causeOfInabilityToPay', 'nameOfBeneficiary', 'beneficiaryAge', 'beneficiaryAddress', 'beneficiaryEmail', 'beneficiaryPhone', 'beneficiaryOccupation'],
     'documents': [], // handled via validateStep (rentAgreement required)
     'declaration': ['agreeToDataPrivacy', 'declarationName', 'declarationPlace', 'declarationAmount', 'declarationYear', 'signature'],
   };
@@ -467,275 +465,281 @@ const RentAssuranceClaim = () => {
 
   const steps = [
     {
-      id: 'policy-details',
-      title: 'Policy Details',
+      id: 'policy-insured',
+      title: 'Policy & Insured Details',
       component: (
         <FormProvider {...formMethods}>
-          <TooltipProvider>
-            <div className="space-y-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
+          <div className="space-y-6">
+            {/* Policy Details Section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Policy Details</h3>
+              <TooltipProvider>
+                <div className="space-y-4">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <FormField
+                          name="policyNumber"
+                          label="Policy Number"
+                          required
+                          placeholder="Enter policy number"
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enter your rent assurance policy number</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
                   <div>
-                    <FormField
-                      name="policyNumber"
-                      label="Policy Number"
-                      required
-                      placeholder="Enter policy number"
-                    />
+                    <Label>Period of Cover *</Label>
+                    <div className="grid md:grid-cols-2 gap-4 mt-2">
+                      <DatePickerField
+                        name="periodOfCoverFrom"
+                        label="From *"
+                      />
+                      <DatePickerField
+                        name="periodOfCoverTo"
+                        label="To *"
+                      />
+                    </div>
                   </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter your rent assurance policy number</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <div>
-                <Label>Period of Cover *</Label>
-                <div className="grid md:grid-cols-2 gap-4 mt-2">
-                  <DatePickerField
-                    name="periodOfCoverFrom"
-                    label="From *"
-                  />
-                  <DatePickerField
-                    name="periodOfCoverTo"
-                    label="To *"
-                  />
                 </div>
-              </div>
+              </TooltipProvider>
             </div>
-          </TooltipProvider>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'insured-details',
-      title: 'Insured Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <TooltipProvider>
-            <div className="space-y-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
+
+            {/* Insured Details Section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Insured Details</h3>
+              <TooltipProvider>
+                <div className="space-y-4">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <FormField
+                          name="nameOfInsured"
+                          label="Name of Insured (Tenant)"
+                          required
+                          placeholder="Enter full name"
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enter the tenant's full name</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <FormTextarea
+                          name="address"
+                          label="Address"
+                          required
+                          placeholder="Enter full address"
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enter the tenant's full residential address</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <div className="grid md:grid-cols-3 gap-4">
                     <FormField
-                      name="nameOfInsured"
-                      label="Name of Insured (Tenant)"
+                      name="age"
+                      label="Age"
                       required
-                      placeholder="Enter full name"
+                      type="number"
+                      placeholder="Enter age"
+                      onChange={(e: any) => formMethods.setValue('age', Number(e.target.value))}
+                    />
+                    <FormField
+                      name="email"
+                      label="Email"
+                      required
+                      type="email"
+                      placeholder="Enter email address"
+                    />
+                    <FormField
+                      name="phone"
+                      label="Phone"
+                      required
+                      placeholder="Enter phone number"
                     />
                   </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter the tenant's full name</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <FormField
+                      name="nameOfLandlord"
+                      label="Name of Landlord"
+                      required
+                      placeholder="Enter landlord's name"
+                    />
                     <FormTextarea
-                      name="address"
-                      label="Address"
+                      name="addressOfLandlord"
+                      label="Address of Landlord"
                       required
-                      placeholder="Enter full address"
+                      placeholder="Enter landlord's address"
                     />
                   </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter the tenant's full residential address</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <div className="grid md:grid-cols-3 gap-4">
-                <FormField
-                  name="age"
-                  label="Age"
-                  required
-                  type="number"
-                  placeholder="Enter age"
-                  onChange={(e: any) => formMethods.setValue('age', Number(e.target.value))}
-                />
-                <FormField
-                  name="email"
-                  label="Email"
-                  required
-                  type="email"
-                  placeholder="Enter email address"
-                />
-                <FormField
-                  name="phone"
-                  label="Phone"
-                  required
-                  placeholder="Enter phone number"
-                />
-              </div>
-              
-              <div className="grid md:grid-cols-2 gap-4">
-                <FormField
-                  name="nameOfLandlord"
-                  label="Name of Landlord"
-                  required
-                  placeholder="Enter landlord's name"
-                />
-                <FormTextarea
-                  name="addressOfLandlord"
-                  label="Address of Landlord"
-                  required
-                  placeholder="Enter landlord's address"
-                />
-              </div>
-              
-              <div>
-                <Label>How long has insured been living at premises *</Label>
-                <div className="grid md:grid-cols-2 gap-4 mt-2">
-                  <DatePickerField
-                    name="livingAtPremisesFrom"
-                    label="From *"
-                  />
-                  <DatePickerField
-                    name="livingAtPremisesTo"
-                    label="To *"
-                  />
-                </div>
-              </div>
-            </div>
-          </TooltipProvider>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'claim-information',
-      title: 'Claim Information',
-      component: (
-        <FormProvider {...formMethods}>
-          <TooltipProvider>
-            <div className="space-y-4">
-              <div>
-                <Label>Period of Default *</Label>
-                <div className="grid md:grid-cols-2 gap-4 mt-2">
-                  <DatePickerField
-                    name="periodOfDefaultFrom"
-                    label="From *"
-                  />
-                  <DatePickerField
-                    name="periodOfDefaultTo"
-                    label="To *"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid md:grid-cols-2 gap-4">
-                <FormField
-                  name="amountDefaulted"
-                  label="Amount Defaulted (₦)"
-                  required
-                  type="number"
-                  placeholder="Enter amount"
-                  onChange={(e: any) => formMethods.setValue('amountDefaulted', Number(e.target.value))}
-                />
-                <DatePickerField
-                  name="rentDueDate"
-                  label="Rent Due Date *"
-                />
-              </div>
-              
-              <FormSelect
-                name="rentPaymentFrequency"
-                label="Frequency of Rent Payment"
-                required
-                placeholder="Select payment frequency"
-              >
-                <SelectItem value="yearly">Yearly</SelectItem>
-                <SelectItem value="half-yearly">Half-yearly</SelectItem>
-                <SelectItem value="biannually">Biannually</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </FormSelect>
-              
-              {watchedValues.rentPaymentFrequency === 'other' && (
-                <FormField
-                  name="rentPaymentFrequencyOther"
-                  label="Specify Other Frequency"
-                  required
-                  placeholder="Enter payment frequency"
-                />
-              )}
-              
-              <FormTextarea
-                name="causeOfInabilityToPay"
-                label="Cause of Inability to Pay"
-                required
-                placeholder="Explain the cause of inability to pay rent"
-                rows={4}
-              />
-            </div>
-          </TooltipProvider>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'beneficiary-details',
-      title: 'Beneficiary Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <TooltipProvider>
-            <div className="space-y-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
+                  
                   <div>
+                    <Label>How long has insured been living at premises *</Label>
+                    <div className="grid md:grid-cols-2 gap-4 mt-2">
+                      <DatePickerField
+                        name="livingAtPremisesFrom"
+                        label="From *"
+                      />
+                      <DatePickerField
+                        name="livingAtPremisesTo"
+                        label="To *"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </TooltipProvider>
+            </div>
+          </div>
+        </FormProvider>
+      )
+    },
+    {
+      id: 'claim-beneficiary',
+      title: 'Claim & Beneficiary Details',
+      component: (
+        <FormProvider {...formMethods}>
+          <div className="space-y-6">
+            {/* Claim Information Section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Claim Information</h3>
+              <TooltipProvider>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Period of Default *</Label>
+                    <div className="grid md:grid-cols-2 gap-4 mt-2">
+                      <DatePickerField
+                        name="periodOfDefaultFrom"
+                        label="From *"
+                      />
+                      <DatePickerField
+                        name="periodOfDefaultTo"
+                        label="To *"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
                     <FormField
-                      name="nameOfBeneficiary"
-                      label="Name of Beneficiary (Landlord)"
+                      name="amountDefaulted"
+                      label="Amount Defaulted (₦)"
                       required
-                      placeholder="Enter beneficiary's name"
+                      type="number"
+                      placeholder="Enter amount"
+                      onChange={(e: any) => formMethods.setValue('amountDefaulted', Number(e.target.value))}
+                    />
+                    <DatePickerField
+                      name="rentDueDate"
+                      label="Rent Due Date *"
                     />
                   </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter the landlord's name as beneficiary</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <div className="grid md:grid-cols-2 gap-4">
-                <FormField
-                  name="beneficiaryAge"
-                  label="Age"
-                  required
-                  type="number"
-                  placeholder="Enter age"
-                  onChange={(e: any) => formMethods.setValue('beneficiaryAge', Number(e.target.value))}
-                />
-                <FormField
-                  name="beneficiaryOccupation"
-                  label="Occupation"
-                  required
-                  placeholder="Enter occupation"
-                />
-              </div>
-              
-              <FormTextarea
-                name="beneficiaryAddress"
-                label="Address"
-                required
-                placeholder="Enter full address"
-              />
-              
-              <div className="grid md:grid-cols-2 gap-4">
-                <FormField
-                  name="beneficiaryEmail"
-                  label="Email"
-                  required
-                  type="email"
-                  placeholder="Enter email address"
-                />
-                <FormField
-                  name="beneficiaryPhone"
-                  label="Phone"
-                  required
-                  placeholder="Enter phone number"
-                />
-              </div>
+                  
+                  <FormSelect
+                    name="rentPaymentFrequency"
+                    label="Frequency of Rent Payment"
+                    required
+                    placeholder="Select payment frequency"
+                  >
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                    <SelectItem value="half-yearly">Half-yearly</SelectItem>
+                    <SelectItem value="biannually">Biannually</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </FormSelect>
+                  
+                  {watchedValues.rentPaymentFrequency === 'other' && (
+                    <FormField
+                      name="rentPaymentFrequencyOther"
+                      label="Specify Other Frequency"
+                      required
+                      placeholder="Enter payment frequency"
+                    />
+                  )}
+                  
+                  <FormTextarea
+                    name="causeOfInabilityToPay"
+                    label="Cause of Inability to Pay"
+                    required
+                    placeholder="Explain the cause of inability to pay rent"
+                    rows={4}
+                  />
+                </div>
+              </TooltipProvider>
             </div>
-          </TooltipProvider>
+
+            {/* Beneficiary Details Section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Beneficiary Details</h3>
+              <TooltipProvider>
+                <div className="space-y-4">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <FormField
+                          name="nameOfBeneficiary"
+                          label="Name of Beneficiary (Landlord)"
+                          required
+                          placeholder="Enter beneficiary's name"
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enter the landlord's name as beneficiary</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <FormField
+                      name="beneficiaryAge"
+                      label="Age"
+                      required
+                      type="number"
+                      placeholder="Enter age"
+                      onChange={(e: any) => formMethods.setValue('beneficiaryAge', Number(e.target.value))}
+                    />
+                    <FormField
+                      name="beneficiaryOccupation"
+                      label="Occupation"
+                      required
+                      placeholder="Enter occupation"
+                    />
+                  </div>
+                  
+                  <FormTextarea
+                    name="beneficiaryAddress"
+                    label="Address"
+                    required
+                    placeholder="Enter full address"
+                  />
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <FormField
+                      name="beneficiaryEmail"
+                      label="Email"
+                      required
+                      type="email"
+                      placeholder="Enter email address"
+                    />
+                    <FormField
+                      name="beneficiaryPhone"
+                      label="Phone"
+                      required
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+                </div>
+              </TooltipProvider>
+            </div>
+          </div>
         </FormProvider>
       )
     },
