@@ -472,6 +472,9 @@ const FireSpecialPerilsClaim: React.FC = () => {
   };
 
   const onFinalSubmit = (data: FireSpecialPerilsClaimData) => {
+    console.log('🔥 Fire Special Perils Form - onFinalSubmit called with data:', data);
+    console.log('🔥 Uploaded files state:', uploadedFiles);
+    console.log('🔥 Form validation errors:', formMethods.formState.errors);
     setShowSummary(true);
   };
 
@@ -511,6 +514,10 @@ const FireSpecialPerilsClaim: React.FC = () => {
 
   // Custom validation for each step
   const validateStep = async (stepId: string): Promise<boolean> => {
+    console.log('🔥 Validating step:', stepId);
+    console.log('🔥 Current watched values:', watchedValues);
+    console.log('🔥 Current uploaded files:', uploadedFiles);
+    
     const errors: string[] = [];
 
     if (stepId === 'policy-insured') {
@@ -618,9 +625,12 @@ const FireSpecialPerilsClaim: React.FC = () => {
       }
       
       // Declaration validation
+      if (!watchedValues.agreeToDataPrivacy) errors.push('You must agree to data privacy terms');
       if (!watchedValues.declarationTrue) errors.push('You must agree that statements are true');
       if (!watchedValues.signature) errors.push('Signature is required');
     }
+
+    console.log('🔥 Validation errors for step', stepId, ':', errors);
 
     if (errors.length > 0) {
       toast({
@@ -631,6 +641,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
       return false;
     }
     
+    console.log('🔥 Step validation passed for:', stepId);
     return true;
   };
 
@@ -1092,7 +1103,29 @@ const FireSpecialPerilsClaim: React.FC = () => {
                 </div>
               </div>
               
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="agreeToDataPrivacy"
+                  checked={watchedValues.agreeToDataPrivacy || false}
+                  onCheckedChange={(checked) => {
+                    formMethods.setValue('agreeToDataPrivacy', !!checked);
+                    if (formMethods.formState.errors.agreeToDataPrivacy) {
+                      formMethods.clearErrors('agreeToDataPrivacy');
+                    }
+                  }}
+                  className={cn(formMethods.formState.errors.agreeToDataPrivacy && "border-destructive")}
+                />
+                <Label htmlFor="agreeToDataPrivacy">
+                  I agree to the data privacy terms <span className="text-red-500 ml-1">*</span>
+                </Label>
+              </div>
+              {formMethods.formState.errors.agreeToDataPrivacy && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.agreeToDataPrivacy.message?.toString()}
+                </p>
+              )}
+              
+              <div className="bg-blue-50 p-4 rounded-lg">
                 <h3 className="font-semibold mb-2">Declaration</h3>
                 <div className="text-sm space-y-2">
                   <p>1. I/We declare to the best of my/our knowledge and belief that the information given on this form is true in every respect and agree that if I/we have made any false or fraudulent statement, be it suppression or concealment, the policy shall be cancelled and the claim shall be forfeited.</p>
@@ -1113,7 +1146,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
                   }}
                   className={cn(formMethods.formState.errors.declarationTrue && "border-destructive")}
                 />
-                <Label htmlFor="declarationTrue">I agree that statements are true <span className="text-red-500">*</span></Label>
+                <Label htmlFor="declarationTrue">I declare that the above statements are true <span className="text-red-500 ml-1">*</span></Label>
               </div>
               {formMethods.formState.errors.declarationTrue && (
                 <p className="text-sm text-destructive">
@@ -1121,11 +1154,17 @@ const FireSpecialPerilsClaim: React.FC = () => {
                 </p>
               )}
               
-              <FormField name="signature" label="Signature of policyholder (digital signature)" required placeholder="Type your full name as signature" />
+              <FormField name="signature" label="Digital Signature" required placeholder="Type your full name as signature" />
               
-              <div>
-                <Label>Date</Label>
-                <Input value={new Date().toISOString().split('T')[0]} disabled />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Place</Label>
+                  <Input value="Nigeria" disabled />
+                </div>
+                <div>
+                  <Label>Date</Label>
+                  <Input value={new Date().toISOString().split('T')[0]} disabled />
+                </div>
               </div>
             </div>
           </div>
@@ -1232,6 +1271,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
               steps={steps}
               onSubmit={onFinalSubmit}
               formMethods={formMethods}
+              submitButtonText="Submit Fire Special Perils Claim"
               stepFieldMappings={stepFieldMappings}
               validateStep={validateStep}
             />
