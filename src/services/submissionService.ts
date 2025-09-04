@@ -52,6 +52,8 @@ const isClaimsForm = (formType: string): boolean => {
 const sendEmailNotifications = async (formType: string, formData: SubmissionData, userEmail: string, fullFormData: SubmissionData) => {
   try {
     console.log('📧 Sending user confirmation email...');
+    console.log('📧 User email data:', { userEmail, formType });
+    
     // Send confirmation email to user (no PDF attachment)
     const userResponse = await makeAuthenticatedRequest(`${API_BASE_URL}/send-to-user`, {
       userEmail,
