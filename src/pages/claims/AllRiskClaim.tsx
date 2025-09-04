@@ -442,221 +442,214 @@ const AllRiskClaim: React.FC = () => {
 
   // Step field mappings for validation
   const stepFieldMappings = {
-    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
-    1: ['nameOfInsured', 'address', 'phone', 'email'],
-    2: ['typeOfClaim', 'locationOfClaim', 'dateOfOccurrence', 'timeOfOccurrence', 'propertyDescription', 'circumstancesOfLoss', 'estimateOfLoss'],
-    3: ['propertyItems'],
-    4: ['soleOwner', 'ownershipExplanation', 'hasHirePurchase', 'hirePurchaseCompany', 'hirePurchaseAddress', 'recoveryStepsTaken', 'hasOtherInsurance', 'otherInsuranceDetails', 'hasPreviousLoss', 'previousLossDetails', 'totalPropertyValue', 'hasOtherInsuranceAtTime', 'otherInsuranceAtTimeDetails', 'hasPriorClaims', 'priorClaimsDetails', 'policeInformed', 'policeStationDetails'],
-    5: ['agreeToDataPrivacy', 'signature']
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'nameOfInsured', 'address', 'phone', 'email'],
+    1: ['typeOfClaim', 'locationOfClaim', 'dateOfOccurrence', 'timeOfOccurrence', 'propertyDescription', 'circumstancesOfLoss', 'estimateOfLoss', 'propertyItems'],
+    2: ['soleOwner', 'ownershipExplanation', 'hasHirePurchase', 'hirePurchaseCompany', 'hirePurchaseAddress', 'recoveryStepsTaken', 'hasOtherInsurance', 'otherInsuranceDetails', 'hasPreviousLoss', 'previousLossDetails', 'totalPropertyValue', 'hasOtherInsuranceAtTime', 'otherInsuranceAtTimeDetails', 'hasPriorClaims', 'priorClaimsDetails', 'policeInformed', 'policeStationDetails'],
+    3: ['agreeToDataPrivacy', 'signature']
   };
 
   const steps = [
     {
-      id: 'policy',
-      title: 'Policy Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <FormField name="policyNumber" label="Policy Number" required />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter your all risk insurance policy number</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker
-                name="periodOfCoverFrom"
-                label="Period of Cover From"
-                required
-              />
-              <FormDatePicker
-                name="periodOfCoverTo"
-                label="Period of Cover To"
-                required
-              />
-            </div>
-          </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'insured',
-      title: 'Insured Details',
+      id: 'policy-insured',
+      title: 'Policy & Insured Details',
       component: (
         <FormProvider {...formMethods}>
           <TooltipProvider>
-            <div className="space-y-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <FormField name="nameOfInsured" label="Name of Insured" required />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter the full name of the insured person</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <FormTextarea name="address" label="Address" required />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Enter your full residential address</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-6">
+              {/* Policy Details Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-primary border-b pb-2">Policy Information</h3>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div>
-                      <FormField name="phone" label="Phone Number" required />
+                      <FormField name="policyNumber" label="Policy Number" required />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Enter your contact phone number</p>
+                    <p>Enter your all risk insurance policy number</p>
                   </TooltipContent>
                 </Tooltip>
-                
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <FormField name="email" label="Email Address" type="email" required />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Enter your email address for correspondence</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
-          </TooltipProvider>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'loss',
-      title: 'Details of Loss',
-      component: (
-        <FormProvider {...formMethods}>
-          <TooltipProvider>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <FormField name="typeOfClaim" label="Type of Claim" required />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Specify the type of claim (theft, damage, etc.)</p>
-                  </TooltipContent>
-                </Tooltip>
-                
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <FormField name="locationOfClaim" label="Location of Claim" required />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Enter where the incident occurred</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormDatePicker
-                  name="dateOfOccurrence"
-                  label="Date of Occurrence"
-                  required
-                />
-                <FormField name="timeOfOccurrence" label="Time" type="time" required />
-              </div>
-              
-              <FormTextarea name="propertyDescription" label="Describe property involved (model, make, year etc)" required rows={3} />
-              <FormTextarea name="circumstancesOfLoss" label="Circumstances of loss/damage" required rows={4} />
-              <FormField name="estimateOfLoss" label="Estimate of loss/repairs" type="number" required />
-            </div>
-          </TooltipProvider>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'property',
-      title: 'Property Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium">Property Items</h3>
-              <Button
-                type="button"
-                onClick={() => addProperty({ 
-                  description: '', 
-                  dateOfPurchase: new Date(), 
-                  costPrice: 0, 
-                  deductionForAge: 0, 
-                  amountClaimed: 0, 
-                  remarks: '' 
-                })}
-                variant="outline"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-            </div>
-            
-            {propertyFields.map((field, index) => (
-              <div key={field.id} className="border p-4 rounded-lg space-y-4">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-medium">Item {index + 1}</h4>
-                  <Button
-                    type="button"
-                    onClick={() => removeProperty(index)}
-                    variant="ghost"
-                    size="sm"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <FormTextarea name={`propertyItems.${index}.description`} label="Description" required />
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormDatePicker
-                    name={`propertyItems.${index}.dateOfPurchase`}
-                    label="Date of Purchase"
+                    name="periodOfCoverFrom"
+                    label="Period of Cover From"
                     required
                   />
-                  <FormField name={`propertyItems.${index}.costPrice`} label="Cost Price" type="number" required />
+                  <FormDatePicker
+                    name="periodOfCoverTo"
+                    label="Period of Cover To"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Insured Details Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-primary border-b pb-2">Insured Information</h3>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <FormField name="nameOfInsured" label="Name of Insured" required />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter the full name of the insured person</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <FormTextarea name="address" label="Address" required />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enter your full residential address</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <FormField name="phone" label="Phone Number" required />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enter your contact phone number</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <FormField name="email" label="Email Address" type="email" required />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enter your email address for correspondence</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+            </div>
+          </TooltipProvider>
+        </FormProvider>
+      )
+    },
+    {
+      id: 'loss-property',
+      title: 'Loss Details & Property',
+      component: (
+        <FormProvider {...formMethods}>
+          <TooltipProvider>
+            <div className="space-y-6">
+              {/* Loss Details Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-primary border-b pb-2">Details of Loss</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <FormField name="typeOfClaim" label="Type of Claim" required />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Specify the type of claim (theft, damage, etc.)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <FormField name="locationOfClaim" label="Location of Claim" required />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enter where the incident occurred</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField name={`propertyItems.${index}.deductionForAge`} label="Deduction for age/use/wear" type="number" required />
-                  <FormField name={`propertyItems.${index}.amountClaimed`} label="Amount claimed" type="number" required />
+                  <FormDatePicker
+                    name="dateOfOccurrence"
+                    label="Date of Occurrence"
+                    required
+                  />
+                  <FormField name="timeOfOccurrence" label="Time" type="time" required />
                 </div>
                 
-                <FormTextarea name={`propertyItems.${index}.remarks`} label="Remarks" required />
+                <FormTextarea name="propertyDescription" label="Describe property involved (model, make, year etc)" required rows={3} />
+                <FormTextarea name="circumstancesOfLoss" label="Circumstances of loss/damage" required rows={4} />
+                <FormField name="estimateOfLoss" label="Estimate of loss/repairs" type="number" required />
               </div>
-            ))}
-            
-            {propertyFields.length === 0 && (
-              <div className="text-center p-8 text-gray-500">
-                No property items added yet. Click "Add Item" to add property details.
+
+              {/* Property Details Section */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center border-b pb-2">
+                  <h3 className="text-lg font-semibold text-primary">Property Items</h3>
+                  <Button
+                    type="button"
+                    onClick={() => addProperty({ 
+                      description: '', 
+                      dateOfPurchase: new Date(), 
+                      costPrice: 0, 
+                      deductionForAge: 0, 
+                      amountClaimed: 0, 
+                      remarks: '' 
+                    })}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Item
+                  </Button>
+                </div>
+                
+                {propertyFields.map((field, index) => (
+                  <div key={field.id} className="border p-4 rounded-lg space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-medium">Item {index + 1}</h4>
+                      <Button
+                        type="button"
+                        onClick={() => removeProperty(index)}
+                        variant="ghost"
+                        size="sm"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <FormTextarea name={`propertyItems.${index}.description`} label="Description" required />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormDatePicker
+                        name={`propertyItems.${index}.dateOfPurchase`}
+                        label="Date of Purchase"
+                        required
+                      />
+                      <FormField name={`propertyItems.${index}.costPrice`} label="Cost Price" type="number" required />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField name={`propertyItems.${index}.deductionForAge`} label="Deduction for age/use/wear" type="number" required />
+                      <FormField name={`propertyItems.${index}.amountClaimed`} label="Amount claimed" type="number" required />
+                    </div>
+                    
+                    <FormTextarea name={`propertyItems.${index}.remarks`} label="Remarks" required />
+                  </div>
+                ))}
+                
+                {propertyFields.length === 0 && (
+                  <div className="text-center p-8 text-gray-500">
+                    No property items added yet. Click "Add Item" to add property details.
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          </TooltipProvider>
         </FormProvider>
       )
     },

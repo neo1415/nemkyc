@@ -466,12 +466,11 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
 
   // Step field mappings for validation
   const stepFieldMappings = {
-    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
-    1: ['nameOfInsured', 'companyName', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
-    2: ['plantMachineryItems'],
-    3: ['dateOfLoss', 'timeOfLoss', 'lastSeenIntact', 'whereDidLossOccur', 'partsDamaged', 'whereCanBeInspected', 'fullAccountCircumstances', 'suspicionInformation'],
-    4: ['policeInformed', 'policeStation', 'otherRecoveryActions', 'isSoleOwner', 'ownershipDetails', 'hasOtherInsurance', 'otherInsuranceDetails', 'thirdPartyInvolved', 'thirdPartyName', 'thirdPartyAddress', 'thirdPartyInsurer'],
-    5: ['agreeToDataPrivacy', 'signature']
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'nameOfInsured', 'companyName', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
+    1: ['plantMachineryItems'],
+    2: ['dateOfLoss', 'timeOfLoss', 'lastSeenIntact', 'whereDidLossOccur', 'partsDamaged', 'whereCanBeInspected', 'fullAccountCircumstances', 'suspicionInformation'],
+    3: ['policeInformed', 'policeStation', 'otherRecoveryActions', 'isSoleOwner', 'ownershipDetails', 'hasOtherInsurance', 'otherInsuranceDetails', 'thirdPartyInvolved', 'thirdPartyName', 'thirdPartyAddress', 'thirdPartyInsurer'],
+    4: ['agreeToDataPrivacy', 'signature']
   };
 
   const validateStep = async (stepId: string) => {
@@ -512,63 +511,62 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
 
   const steps = [
     {
-      id: 'policy',
-      title: 'Policy Details',
+      id: 'policy-insured',
+      title: 'Policy & Insured Details',
       component: (
         <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <FormField name="policyNumber" label="Policy Number" required />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
-              <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
-            </div>
-          </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'insured',
-      title: 'Insured Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <FormField name="nameOfInsured" label="Name of Insured" required />
-            <FormField name="companyName" label="Company Name (If Applicable)" />
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormSelect name="title" label="Title" required placeholder="Select title">
-                <SelectItem value="mr">Mr</SelectItem>
-                <SelectItem value="mrs">Mrs</SelectItem>
-                <SelectItem value="ms">Ms</SelectItem>
-                <SelectItem value="dr">Dr</SelectItem>
-                <SelectItem value="chief">Chief</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </FormSelect>
-
-              <FormDatePicker name="dateOfBirth" label="Date of Birth" required />
-
-              <FormSelect name="gender" label="Gender" required placeholder="Select gender">
-                <SelectItem value="male">Male</SelectItem>
-                <SelectItem value="female">Female</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </FormSelect>
-            </div>
-            
-            <FormTextarea name="address" label="Address" required />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>
-                  Phone Number <span className="text-destructive ml-1">*</span>
-                </Label>
-                <PhoneInput
-                  value={watchedValues.phone || ''}
-                  onChange={(value) => formMethods.setValue('phone', value)}
-                  error={formMethods.formState.errors.phone?.message?.toString()}
-                />
+          <div className="space-y-6">
+            {/* Policy Details Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-primary border-b pb-2">Policy Information</h3>
+              <FormField name="policyNumber" label="Policy Number" required />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
+                <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
               </div>
-              <FormField name="email" label="Email" type="email" required />
+            </div>
+
+            {/* Insured Details Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-primary border-b pb-2">Insured Information</h3>
+              <FormField name="nameOfInsured" label="Name of Insured" required />
+              <FormField name="companyName" label="Company Name (If Applicable)" />
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormSelect name="title" label="Title" required placeholder="Select title">
+                  <SelectItem value="mr">Mr</SelectItem>
+                  <SelectItem value="mrs">Mrs</SelectItem>
+                  <SelectItem value="ms">Ms</SelectItem>
+                  <SelectItem value="dr">Dr</SelectItem>
+                  <SelectItem value="chief">Chief</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </FormSelect>
+
+                <FormDatePicker name="dateOfBirth" label="Date of Birth" required />
+
+                <FormSelect name="gender" label="Gender" required placeholder="Select gender">
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </FormSelect>
+              </div>
+              
+              <FormTextarea name="address" label="Address" required />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>
+                    Phone Number <span className="text-destructive ml-1">*</span>
+                  </Label>
+                  <PhoneInput
+                    value={watchedValues.phone || ''}
+                    onChange={(value) => formMethods.setValue('phone', value)}
+                    error={formMethods.formState.errors.phone?.message?.toString()}
+                  />
+                </div>
+                <FormField name="email" label="Email" type="email" required />
+              </div>
             </div>
           </div>
         </FormProvider>
