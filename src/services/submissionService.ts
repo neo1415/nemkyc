@@ -19,16 +19,20 @@ const getCSRFToken = async (): Promise<string> => {
   return data.csrfToken;
 };
 
-// Helper function to make authenticated requests
+// Helper function to make authenticated requests with fresh timestamp
 const makeAuthenticatedRequest = async (url: string, data: any) => {
+  // Get fresh CSRF token and timestamp for each request to prevent "Request too old" error
   const csrfToken = await getCSRFToken();
+  const timestamp = Date.now().toString();
+  
+  console.log(`📤 Making request to ${url} with timestamp: ${timestamp}`);
   
   return fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'CSRF-Token': csrfToken,
-      'x-timestamp': Date.now().toString(),
+      'x-timestamp': timestamp,
     },
     credentials: 'include',
     body: JSON.stringify(data),
