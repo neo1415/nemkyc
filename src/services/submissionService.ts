@@ -28,7 +28,7 @@ const makeAuthenticatedRequest = async (url: string, data: any) => {
     headers: {
       'Content-Type': 'application/json',
       'CSRF-Token': csrfToken,
-      'x-timestamp': Date.now().toString(), // Fresh timestamp for each request
+      'x-timestamp': Date.now().toString(),
     },
     credentials: 'include',
     body: JSON.stringify(data),
