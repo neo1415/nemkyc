@@ -94,11 +94,13 @@ export class DynamicPDFGenerator {
   private yPosition: number = 20;
   private pageHeight: number = 297; // A4 height in mm
   private pageWidth: number = 210; // A4 width in mm
-  private margin: number = 9.9; // 28pt ≈ 9.9mm
+  private margin: number = 10; // 28pt ≈ 10mm (corrected)
   private topBottomMargin: number = 8.5; // 24pt ≈ 8.5mm
   private contentWidth: number;
   private leftColumnWidth: number;
   private rightColumnWidth: number;
+  private leftColumnX: number;
+  private rightColumnX: number;
   private blueprint: PDFBlueprint;
   private submissionData: PDFSubmissionData;
 
@@ -109,8 +111,8 @@ export class DynamicPDFGenerator {
       format: 'a4'
     });
     
-    // Set up font embedding for copy/paste fidelity
-    this.pdf.setFont('helvetica');
+    // Set up font embedding for copy/paste fidelity - use Helvetica for better copy/paste support
+    this.pdf.setFont('helvetica', 'normal');
     
     this.submissionData = submissionData;
     this.blueprint = this.generateBlueprint(submissionData);
@@ -119,6 +121,10 @@ export class DynamicPDFGenerator {
     this.contentWidth = this.pageWidth - (this.margin * 2);
     this.leftColumnWidth = this.contentWidth * 0.40;
     this.rightColumnWidth = this.contentWidth * 0.60;
+    
+    // Calculate exact column positions for consistent layout
+    this.leftColumnX = this.margin;
+    this.rightColumnX = this.margin + this.leftColumnWidth;
   }
 
   private generateBlueprint(data: PDFSubmissionData): PDFBlueprint {
@@ -547,12 +553,13 @@ export class DynamicPDFGenerator {
   }
 
   private renderTwoColumnField(label: string, value: string, type: FormField['type']): void {
-    // Set uniform font with proper spacing and kerning
+    // Set uniform font with proper spacing and kerning (Helvetica as specified)
     this.pdf.setFont('helvetica', 'bold');
     this.pdf.setFontSize(10.5);
+    this.pdf.setTextColor(0, 0, 0);
     
     // Left-align label in left column (as specified) - no centering or right alignment
-    this.pdf.text(`${label}:`, this.margin, this.yPosition);
+    this.pdf.text(`${label}:`, this.leftColumnX, this.yPosition);
     
     // Left-align value in right column with normal weight
     this.pdf.setFont('helvetica', 'normal');
@@ -561,15 +568,16 @@ export class DynamicPDFGenerator {
     if (type === 'boolean') {
       this.renderBooleanCheckboxes(value);
     } else {
-      const lines = this.pdf.splitTextToSize(value, this.rightColumnWidth - 4);
-      this.pdf.text(lines, this.margin + this.leftColumnWidth + 2, this.yPosition);
-      // Use 1.25 line-height as specified (12.5pt for 10pt font)
-      this.yPosition += Math.max(lines.length * 5, 8);
+      // Proper two-column positioning - value starts exactly at right column boundary
+      const lines = this.pdf.splitTextToSize(value, this.rightColumnWidth - 2);
+      this.pdf.text(lines, this.rightColumnX, this.yPosition);
+      // Use 1.25 line-height as specified: 10pt * 1.25 = 12.5pt ≈ 4.4mm
+      this.yPosition += Math.max(lines.length * 4.4, 8);
     }
   }
 
   private renderBooleanCheckboxes(value: string): void {
-    const valueX = this.margin + this.leftColumnWidth + 2;
+    const valueX = this.rightColumnX; // Use exact right column position
     const isYes = value === 'Yes';
     
     this.pdf.setLineWidth(0.5);
@@ -577,7 +585,7 @@ export class DynamicPDFGenerator {
     
     // Draw □ Yes □ No format with proper square boxes and solid fill for selected option
     const boxSize = 3;
-    const spacing = 2;
+    const spacing = 1;
     
     // Yes checkbox - solid filled square if selected, empty if not
     this.pdf.rect(valueX, this.yPosition - 3, boxSize, boxSize, 'S');
@@ -590,9 +598,9 @@ export class DynamicPDFGenerator {
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.text('Yes', valueX + boxSize + spacing, this.yPosition);
     
-    // No checkbox - position after Yes text with proper spacing
+    // No checkbox - position after Yes text with proper spacing  
     const yesWidth = this.pdf.getTextWidth('Yes');
-    const noX = valueX + boxSize + spacing + yesWidth + 8;
+    const noX = valueX + boxSize + spacing + yesWidth + 6;
     this.pdf.rect(noX, this.yPosition - 3, boxSize, boxSize, 'S');
     if (!isYes) {
       this.pdf.setFillColor(0, 0, 0);
@@ -624,6 +632,10 @@ export class DynamicPDFGenerator {
     
     // Step 4: Remove specific problematic sequences - exact as user specified
     sanitized = sanitized.replace(/[¦�]+/g, '');
+    
+    // Step 5: Remove any remaining ampersand artifacts and strange spacing characters
+    sanitized = sanitized.replace(/&[a-zA-Z0-9#]*;?/g, '');
+    sanitized = sanitized.replace(/\u00A0/g, ' '); // Non-breaking space to regular space
     
     return sanitized;
   }
@@ -703,10 +715,15 @@ export class DynamicPDFGenerator {
 
   private formatCurrency(amount: any): string {
     if (!amount && amount !== 0) return '₦ 0.00';
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    if (isNaN(num)) return String(amount);
-    // Ensure proper ₦ formatting with thousands separators and tight spacing
-    return `₦ ${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    
+    // Handle string inputs that might have currency symbols already
+    let cleanValue = String(amount).replace(/[₦,\s]/g, '');
+    const num = parseFloat(cleanValue);
+    
+    if (isNaN(num)) return this.sanitizeText(String(amount));
+    
+    // Ensure proper ₦ formatting with thousands separators and tight spacing (no space between ₦ and number)
+    return `₦${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
   // Check if data is a complex array that needs special formatting
