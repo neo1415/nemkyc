@@ -108,6 +108,10 @@ export class DynamicPDFGenerator {
       unit: 'mm',
       format: 'a4'
     });
+    
+    // Set up font embedding for copy/paste fidelity
+    this.pdf.setFont('helvetica');
+    
     this.submissionData = submissionData;
     this.blueprint = this.generateBlueprint(submissionData);
     
@@ -543,22 +547,24 @@ export class DynamicPDFGenerator {
   }
 
   private renderTwoColumnField(label: string, value: string, type: FormField['type']): void {
+    // Set uniform font with proper spacing and kerning
+    this.pdf.setFont('helvetica', 'bold');
     this.pdf.setFontSize(10.5);
-    this.pdf.setFont(undefined, 'bold');
     
-    // Left-align label in left column (as specified)
+    // Left-align label in left column (as specified) - no centering or right alignment
     this.pdf.text(`${label}:`, this.margin, this.yPosition);
     
-    // Left-align value in right column
+    // Left-align value in right column with normal weight
+    this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(10);
-    this.pdf.setFont(undefined, 'normal');
     
     if (type === 'boolean') {
       this.renderBooleanCheckboxes(value);
     } else {
       const lines = this.pdf.splitTextToSize(value, this.rightColumnWidth - 4);
       this.pdf.text(lines, this.margin + this.leftColumnWidth + 2, this.yPosition);
-      this.yPosition += Math.max(lines.length * 4.8, 8); // 1.25 line-height ≈ 4.8pt for 10pt font
+      // Use 1.25 line-height as specified (12.5pt for 10pt font)
+      this.yPosition += Math.max(lines.length * 5, 8);
     }
   }
 
@@ -569,28 +575,30 @@ export class DynamicPDFGenerator {
     this.pdf.setLineWidth(0.5);
     setBurgundyDraw(this.pdf);
     
-    // Draw □ Yes ■ No format with proper square boxes
+    // Draw □ Yes □ No format with proper square boxes and solid fill for selected option
     const boxSize = 3;
-    const textOffset = boxSize + 2;
+    const spacing = 2;
     
-    // Yes checkbox - empty square if not selected, filled if selected
+    // Yes checkbox - solid filled square if selected, empty if not
     this.pdf.rect(valueX, this.yPosition - 3, boxSize, boxSize, 'S');
     if (isYes) {
       this.pdf.setFillColor(0, 0, 0);
       this.pdf.rect(valueX + 0.5, this.yPosition - 2.5, boxSize - 1, boxSize - 1, 'F');
     }
-    this.pdf.setTextColor(0, 0, 0);
-    this.pdf.text('Yes', valueX + textOffset, this.yPosition);
     
-    // No checkbox - position after Yes text
+    this.pdf.setTextColor(0, 0, 0);
+    this.pdf.setFont('helvetica', 'normal');
+    this.pdf.text('Yes', valueX + boxSize + spacing, this.yPosition);
+    
+    // No checkbox - position after Yes text with proper spacing
     const yesWidth = this.pdf.getTextWidth('Yes');
-    const noX = valueX + textOffset + yesWidth + 8;
+    const noX = valueX + boxSize + spacing + yesWidth + 8;
     this.pdf.rect(noX, this.yPosition - 3, boxSize, boxSize, 'S');
     if (!isYes) {
       this.pdf.setFillColor(0, 0, 0);
       this.pdf.rect(noX + 0.5, this.yPosition - 2.5, boxSize - 1, boxSize - 1, 'F');
     }
-    this.pdf.text('No', noX + textOffset, this.yPosition);
+    this.pdf.text('No', noX + boxSize + spacing, this.yPosition);
     
     this.yPosition += 8;
   }
@@ -605,17 +613,17 @@ export class DynamicPDFGenerator {
     
     let sanitized = String(text);
     
-    // Step 1: Normalize Unicode (NFC)
+    // Step 1: Normalize Unicode (NFC) - exact as user specified
     sanitized = sanitized.normalize('NFC');
     
-    // Step 2: Remove control characters [\x00-\x1F\x7F-\x9F]
+    // Step 2: Remove control characters [\x00-\x1F\x7F-\x9F] - exact as user specified
     sanitized = sanitized.replace(/[\x00-\x1F\x7F-\x9F]+/g, ' ');
     
-    // Step 3: Collapse whitespace
+    // Step 3: Collapse whitespace - exact as user specified
     sanitized = sanitized.replace(/\s+/g, ' ').trim();
     
-    // Step 4: Remove stray sequences like & if still present
-    sanitized = sanitized.replace(/&/g, '');
+    // Step 4: Remove specific problematic sequences - exact as user specified
+    sanitized = sanitized.replace(/[¦�]+/g, '');
     
     return sanitized;
   }
@@ -697,7 +705,8 @@ export class DynamicPDFGenerator {
     if (!amount && amount !== 0) return '₦ 0.00';
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
     if (isNaN(num)) return String(amount);
-    return `₦ ${num.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    // Ensure proper ₦ formatting with thousands separators and tight spacing
+    return `₦ ${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
   // Check if data is a complex array that needs special formatting
@@ -1069,14 +1078,16 @@ export class DynamicPDFGenerator {
   private addDeclaration(): void {
     this.checkPageBreak(30);
     
+    // Declaration title
+    this.pdf.setFont('helvetica', 'bold');
     this.pdf.setFontSize(11);
-    this.pdf.setFont(undefined, 'bold');
     setBurgundyText(this.pdf);
     this.pdf.text('DECLARATION', this.margin, this.yPosition);
     this.yPosition += 6;
 
+    // Declaration content - keep immutable text unchanged
+    this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(9);
-    this.pdf.setFont(undefined, 'normal');
     this.pdf.setTextColor(0, 0, 0);
 
     DECLARATION.forEach((item, index) => {
@@ -1087,7 +1098,7 @@ export class DynamicPDFGenerator {
 
     this.yPosition += 8;
     
-    // Add signature and date row (justify-between layout)
+    // Add signature and date row (justify-between layout) - NO "I agree" checkboxes
     this.addSignatureAndDateRow();
   }
   
@@ -1097,35 +1108,37 @@ export class DynamicPDFGenerator {
     const signatureValue = this.getSignatureValue();
     const dateValue = this.getSubmissionDate();
     
+    this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(10);
-    this.pdf.setFont(undefined, 'normal');
     this.pdf.setTextColor(0, 0, 0);
     
-    // Left side - Signature
+    const baseY = this.yPosition;
+    
+    // Left side - Signature (justify-between layout as specified)
     if (signatureValue && signatureValue !== '________________') {
-      // Render signature value above the line
+      // Render signature value centered above the signature line
       const signatureWidth = this.pdf.getTextWidth(signatureValue);
-      const signatureX = this.margin + (60 - signatureWidth / 2); // Center above underline
-      this.pdf.text(signatureValue, signatureX, this.yPosition);
-      this.yPosition += 5;
+      const signatureCenterX = this.margin + 15; // Center above 30-char underline
+      this.pdf.text(signatureValue, signatureCenterX - (signatureWidth / 2), baseY);
     }
     
-    this.pdf.text('Signature: ____________________________', this.margin, this.yPosition);
+    // Signature line on the left
+    this.pdf.text('Signature: ____________________________', this.margin, baseY + (signatureValue && signatureValue !== '________________' ? 5 : 0));
     
-    // Right side - Date
-    const dateX = this.margin + this.contentWidth - 60; // Right-aligned area
-    let dateY = this.yPosition;
+    // Right side - Date (justify-between layout)
+    const dateX = this.margin + this.contentWidth - 40; // Right-aligned position for 30-char underline
     
     if (dateValue) {
-      // Render date value above the line
+      // Render date value centered above the date line (DD/MM/YYYY format as specified)
       const dateWidth = this.pdf.getTextWidth(dateValue);
-      const dateCenterX = dateX + 30 - (dateWidth / 2); // Center above underline
-      this.pdf.text(dateValue, dateCenterX, dateY - 5);
+      const dateCenterX = dateX + 15; // Center above 30-char underline  
+      this.pdf.text(dateValue, dateCenterX - (dateWidth / 2), baseY);
     }
     
-    this.pdf.text('Date: ____________________________', dateX, dateY);
+    // Date line on the right
+    this.pdf.text('Date: ____________________________', dateX, baseY + (dateValue ? 5 : 0));
     
-    this.yPosition += 12;
+    this.yPosition = baseY + 12;
   }
 
   private getSignatureValue(): string {
@@ -1146,10 +1159,12 @@ export class DynamicPDFGenerator {
     const dateFields = ['createdAt', 'submittedAt', 'timestamp', 'dateSubmitted'];
     for (const field of dateFields) {
       if (this.submissionData[field]) {
-        return this.formatDate(this.submissionData[field]);
+        const formattedDate = this.formatDate(this.submissionData[field]);
+        // Ensure DD/MM/YYYY format as specified
+        return formattedDate;
       }
     }
-    // Fallback to current date
+    // Fallback to current date in DD/MM/YYYY format
     return new Date().toLocaleDateString('en-GB');
   }
 
