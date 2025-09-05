@@ -94,8 +94,8 @@ export class DynamicPDFGenerator {
   private yPosition: number = 20;
   private pageHeight: number = 297; // A4 height in mm
   private pageWidth: number = 210; // A4 width in mm
-  private margin: number = 10; // 28pt = ~10mm
-  private topBottomMargin: number = 8.5; // 24pt = ~8.5mm
+  private margin: number = 9.9; // 28pt ≈ 9.9mm
+  private topBottomMargin: number = 8.5; // 24pt ≈ 8.5mm
   private contentWidth: number;
   private leftColumnWidth: number;
   private rightColumnWidth: number;
@@ -111,10 +111,10 @@ export class DynamicPDFGenerator {
     this.submissionData = submissionData;
     this.blueprint = this.generateBlueprint(submissionData);
     
-    // Calculate layout metrics
+    // Calculate layout metrics - exact 40%/60% split as specified
     this.contentWidth = this.pageWidth - (this.margin * 2);
-    this.leftColumnWidth = this.contentWidth * 0.38;
-    this.rightColumnWidth = this.contentWidth * 0.62;
+    this.leftColumnWidth = this.contentWidth * 0.40;
+    this.rightColumnWidth = this.contentWidth * 0.60;
   }
 
   private generateBlueprint(data: PDFSubmissionData): PDFBlueprint {
@@ -196,8 +196,12 @@ export class DynamicPDFGenerator {
     Object.keys(data).forEach(key => {
       if (!EXCLUDED_FIELDS.includes(key) && !FILE_FIELDS.includes(key)) {
         const normalizedLabel = this.formatFieldLabel(key).toLowerCase();
-        // Skip "Agree to Data Privacy" field
-        if (normalizedLabel.includes('agree') && normalizedLabel.includes('data') && normalizedLabel.includes('privacy')) {
+        // Enhanced filtering for "Agree to Data Privacy" field variations
+        if ((normalizedLabel.includes('agree') && normalizedLabel.includes('data') && normalizedLabel.includes('privacy')) ||
+            normalizedLabel.includes('dataPrivacyAgreement'.toLowerCase()) ||
+            normalizedLabel.includes('data_privacy_agreement') ||
+            normalizedLabel.includes('privacyAgreement'.toLowerCase()) ||
+            key.toLowerCase().includes('agreement') && key.toLowerCase().includes('privacy')) {
           return;
         }
         
@@ -255,14 +259,14 @@ export class DynamicPDFGenerator {
   }
 
   private addImportantNotice(): void {
-    // Center the Important Notice box (60% width) with proper padding and dynamic height
-    const contentPadding = 5;
+    // Center the Important Notice box (60% width) with reduced visual weight
+    const contentPadding = 3.75; // Reduced by 25%
     const boxWidth = (this.pageWidth - (this.margin * 2)) * 0.6;
     const boxStartX = this.margin + ((this.pageWidth - (this.margin * 2)) - boxWidth) / 2;
 
-    // Prepare content to measure height
-    const contentFontSize = 10;
-    const lineHeight = 4.2;
+    // Prepare content to measure height - reduced font size to 9pt
+    const contentFontSize = 9; // Reduced from 10pt
+    const lineHeight = 3.6; // Reduced proportionally
 
     // Measure content height
     let contentLines: string[] = [];
@@ -270,7 +274,7 @@ export class DynamicPDFGenerator {
       const lines = this.pdf.splitTextToSize(`* ${item}`, boxWidth - contentPadding * 2);
       contentLines.push(...lines);
     });
-    const titleHeight = 6;
+    const titleHeight = 5;
     const contentHeight = contentLines.length * lineHeight;
     const boxHeight = contentPadding * 2 + titleHeight + contentHeight + 2;
 
@@ -284,8 +288,8 @@ export class DynamicPDFGenerator {
     this.pdf.setLineWidth(0.5);
     this.pdf.rect(boxStartX, startY, boxWidth, boxHeight, 'S');
 
-    // Title
-    this.pdf.setFontSize(12);
+    // Title - reduced font size
+    this.pdf.setFontSize(11); // Reduced from 12
     this.pdf.setFont(undefined, 'bold');
     setBurgundyText(this.pdf);
     this.pdf.text('IMPORTANT', boxStartX + contentPadding, startY + contentPadding + 3);
@@ -295,7 +299,7 @@ export class DynamicPDFGenerator {
     this.pdf.setFont(undefined, 'normal');
     this.pdf.setTextColor(0, 0, 0);
 
-    let textY = startY + contentPadding + 3 + 6;
+    let textY = startY + contentPadding + 3 + titleHeight;
     IMPORTANT_NOTICE.forEach(item => {
       const lines = this.pdf.splitTextToSize(`* ${item}`, boxWidth - contentPadding * 2);
       this.pdf.text(lines, boxStartX + contentPadding, textY);
@@ -401,8 +405,12 @@ export class DynamicPDFGenerator {
 
     for (const field of section.fields) {
       const normalizedLabel = field.label.toLowerCase();
-      // Skip "Agree to Data Privacy" field
-      if (normalizedLabel.includes('agree') && normalizedLabel.includes('data') && normalizedLabel.includes('privacy')) {
+      // Enhanced filtering for "Agree to Data Privacy" field variations
+      if ((normalizedLabel.includes('agree') && normalizedLabel.includes('data') && normalizedLabel.includes('privacy')) ||
+          normalizedLabel.includes('dataPrivacyAgreement'.toLowerCase()) ||
+          normalizedLabel.includes('data_privacy_agreement') ||
+          normalizedLabel.includes('privacyAgreement'.toLowerCase()) ||
+          (normalizedLabel.includes('agreement') && normalizedLabel.includes('privacy'))) {
         continue;
       }
       
@@ -538,10 +546,8 @@ export class DynamicPDFGenerator {
     this.pdf.setFontSize(10.5);
     this.pdf.setFont(undefined, 'bold');
     
-    // Right-align label in left column
-    const labelWidth = this.pdf.getTextWidth(`${label}:`);
-    const labelX = this.margin + this.leftColumnWidth - labelWidth;
-    this.pdf.text(`${label}:`, labelX, this.yPosition);
+    // Left-align label in left column (as specified)
+    this.pdf.text(`${label}:`, this.margin, this.yPosition);
     
     // Left-align value in right column
     this.pdf.setFontSize(10);
@@ -552,7 +558,7 @@ export class DynamicPDFGenerator {
     } else {
       const lines = this.pdf.splitTextToSize(value, this.rightColumnWidth - 4);
       this.pdf.text(lines, this.margin + this.leftColumnWidth + 2, this.yPosition);
-      this.yPosition += Math.max(lines.length * 4, 8);
+      this.yPosition += Math.max(lines.length * 4.8, 8); // 1.25 line-height ≈ 4.8pt for 10pt font
     }
   }
 
@@ -560,22 +566,31 @@ export class DynamicPDFGenerator {
     const valueX = this.margin + this.leftColumnWidth + 2;
     const isYes = value === 'Yes';
     
-    // Draw Yes checkbox
-    this.pdf.rect(valueX, this.yPosition - 3, 3, 3, 'S');
+    this.pdf.setLineWidth(0.5);
+    setBurgundyDraw(this.pdf);
+    
+    // Draw □ Yes ■ No format with proper square boxes
+    const boxSize = 3;
+    const textOffset = boxSize + 2;
+    
+    // Yes checkbox - empty square if not selected, filled if selected
+    this.pdf.rect(valueX, this.yPosition - 3, boxSize, boxSize, 'S');
     if (isYes) {
       this.pdf.setFillColor(0, 0, 0);
-      this.pdf.rect(valueX + 0.5, this.yPosition - 2.5, 2, 2, 'F');
+      this.pdf.rect(valueX + 0.5, this.yPosition - 2.5, boxSize - 1, boxSize - 1, 'F');
     }
-    this.pdf.text('Yes', valueX + 5, this.yPosition);
+    this.pdf.setTextColor(0, 0, 0);
+    this.pdf.text('Yes', valueX + textOffset, this.yPosition);
     
-    // Draw No checkbox
-    const noX = valueX + 20;
-    this.pdf.rect(noX, this.yPosition - 3, 3, 3, 'S');
+    // No checkbox - position after Yes text
+    const yesWidth = this.pdf.getTextWidth('Yes');
+    const noX = valueX + textOffset + yesWidth + 8;
+    this.pdf.rect(noX, this.yPosition - 3, boxSize, boxSize, 'S');
     if (!isYes) {
       this.pdf.setFillColor(0, 0, 0);
-      this.pdf.rect(noX + 0.5, this.yPosition - 2.5, 2, 2, 'F');
+      this.pdf.rect(noX + 0.5, this.yPosition - 2.5, boxSize - 1, boxSize - 1, 'F');
     }
-    this.pdf.text('No', noX + 5, this.yPosition);
+    this.pdf.text('No', noX + textOffset, this.yPosition);
     
     this.yPosition += 8;
   }
@@ -588,15 +603,21 @@ export class DynamicPDFGenerator {
   private sanitizeText(text: string): string {
     if (!text) return '';
     
-    return String(text)
-      // Remove control characters and non-printable characters
-      .replace(/[\x00-\x1F\x7F-\x9F]+/g, ' ')
-      // Remove problematic characters like & that appear as artifacts
-      .replace(/&/g, '')
-      // Clean up multiple spaces
-      .replace(/\s+/g, ' ')
-      // Trim whitespace
-      .trim();
+    let sanitized = String(text);
+    
+    // Step 1: Normalize Unicode (NFC)
+    sanitized = sanitized.normalize('NFC');
+    
+    // Step 2: Remove control characters [\x00-\x1F\x7F-\x9F]
+    sanitized = sanitized.replace(/[\x00-\x1F\x7F-\x9F]+/g, ' ');
+    
+    // Step 3: Collapse whitespace
+    sanitized = sanitized.replace(/\s+/g, ' ').trim();
+    
+    // Step 4: Remove stray sequences like & if still present
+    sanitized = sanitized.replace(/&/g, '');
+    
+    return sanitized;
   }
 
   private sanitizeAndFormatValue(value: any, type: FormField['type']): string {
@@ -1046,6 +1067,8 @@ export class DynamicPDFGenerator {
   }
 
   private addDeclaration(): void {
+    this.checkPageBreak(30);
+    
     this.pdf.setFontSize(11);
     this.pdf.setFont(undefined, 'bold');
     setBurgundyText(this.pdf);
@@ -1059,10 +1082,50 @@ export class DynamicPDFGenerator {
     DECLARATION.forEach((item, index) => {
       const lines = this.pdf.splitTextToSize(`${index + 1}. ${item}`, this.pageWidth - (this.margin * 2));
       this.pdf.text(lines, this.margin, this.yPosition);
-      this.yPosition += lines.length * 3.5 + 2; // Match Data Privacy spacing
+      this.yPosition += lines.length * 3.5 + 2;
     });
 
     this.yPosition += 8;
+    
+    // Add signature and date row (justify-between layout)
+    this.addSignatureAndDateRow();
+  }
+  
+  private addSignatureAndDateRow(): void {
+    this.checkPageBreak(15);
+    
+    const signatureValue = this.getSignatureValue();
+    const dateValue = this.getSubmissionDate();
+    
+    this.pdf.setFontSize(10);
+    this.pdf.setFont(undefined, 'normal');
+    this.pdf.setTextColor(0, 0, 0);
+    
+    // Left side - Signature
+    if (signatureValue && signatureValue !== '________________') {
+      // Render signature value above the line
+      const signatureWidth = this.pdf.getTextWidth(signatureValue);
+      const signatureX = this.margin + (60 - signatureWidth / 2); // Center above underline
+      this.pdf.text(signatureValue, signatureX, this.yPosition);
+      this.yPosition += 5;
+    }
+    
+    this.pdf.text('Signature: ____________________________', this.margin, this.yPosition);
+    
+    // Right side - Date
+    const dateX = this.margin + this.contentWidth - 60; // Right-aligned area
+    let dateY = this.yPosition;
+    
+    if (dateValue) {
+      // Render date value above the line
+      const dateWidth = this.pdf.getTextWidth(dateValue);
+      const dateCenterX = dateX + 30 - (dateWidth / 2); // Center above underline
+      this.pdf.text(dateValue, dateCenterX, dateY - 5);
+    }
+    
+    this.pdf.text('Date: ____________________________', dateX, dateY);
+    
+    this.yPosition += 12;
   }
 
   private getSignatureValue(): string {
