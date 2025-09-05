@@ -109,7 +109,7 @@ This application is a highly professional, production-grade insurance form suite
 
 ## 📌 DATA PRIVACY & DECLARATION BLOCK (for all forms, final step)
 
-```markdown
+``
 ## Data Privacy
 
 i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.  
