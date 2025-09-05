@@ -111,13 +111,13 @@ export class DynamicPDFGenerator {
       format: 'a4'
     });
     
-    // Set up font embedding for copy/paste fidelity - use Helvetica for better copy/paste support
+    // Set up font embedding for copy/paste fidelity - use Helvetica with proper kerning
     this.pdf.setFont('helvetica', 'normal');
     
     this.submissionData = submissionData;
     this.blueprint = this.generateBlueprint(submissionData);
     
-    // Calculate layout metrics - exact 40%/60% split as specified
+    // Calculate layout metrics - exact 40%/60% split as specified (28pt margins)
     this.contentWidth = this.pageWidth - (this.margin * 2);
     this.leftColumnWidth = this.contentWidth * 0.40;
     this.rightColumnWidth = this.contentWidth * 0.60;
@@ -814,7 +814,7 @@ export class DynamicPDFGenerator {
     this.pdf.setTextColor(255, 255, 255); // White text on burgundy header
 
     columns.forEach((col, index) => {
-      const colLabel = this.formatFieldLabel(col);
+      const colLabel = this.sanitizeText(this.formatFieldLabel(col));
       const cellX = this.margin + (index * colWidth);
       const maxWidth = colWidth - 2;
       const lines = this.pdf.splitTextToSize(colLabel, maxWidth);
@@ -864,7 +864,7 @@ export class DynamicPDFGenerator {
           } else if (col.toLowerCase().includes('date')) {
             displayValue = this.formatDate(cellValue);
           } else {
-            displayValue = String(cellValue);
+            displayValue = this.sanitizeText(String(cellValue));
           }
         } else {
           displayValue = '-';
@@ -1218,48 +1218,32 @@ export class DynamicPDFGenerator {
     });
   }
 
-  // Draw a labeled YES/NO checkbox row with burgundy checkmark - boxes after text
+  // Draw a labeled YES/NO checkbox row with clean checkboxes (□ Yes ■ No format)
   private drawYesNoRow(label: string, checked: boolean): void {
-    const startX = this.margin;
-    const boxSize = 4;
-    const gap = 3;
-    const labelWidth = this.pdf.getTextWidth(`${label}: `);
+    // Two-column layout: label left (40%), checkbox options right (60%)
+    this.pdf.setFont('helvetica', 'bold');
+    this.pdf.setFontSize(10.5);
+    this.pdf.setTextColor(0, 0, 0);
+    
+    // Render label in left column
+    this.pdf.text(`${label}:`, this.leftColumnX, this.yPosition);
 
+    // Render checkboxes in right column with proper □ Yes ■ No format
+    this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(10);
-    this.pdf.setFont(undefined, 'normal');
-    this.pdf.setTextColor(0, 0, 0);
-    this.pdf.text(`${label}:`, startX, this.yPosition);
-
-    const yesStartX = startX + labelWidth + 5;
-    const yesTextWidth = this.pdf.getTextWidth('Yes');
-    const noTextWidth = this.pdf.getTextWidth('No');
     
-    // Calculate positions - boxes come after text
-    const yesBoxX = yesStartX + yesTextWidth + gap;
-    const noStartX = yesBoxX + boxSize + gap + 5;
-    const noBoxX = noStartX + noTextWidth + gap;
+    const optionsX = this.rightColumnX;
     
-    const boxY = this.yPosition - 3; // Align boxes with text baseline
-
-    setBurgundyDraw(this.pdf);
-    this.pdf.setLineWidth(0.4);
+    // Draw Yes option
+    const yesSymbol = checked ? '■' : '□';
+    this.pdf.text(`${yesSymbol} Yes`, optionsX, this.yPosition);
     
-    // Draw YES text and box
-    this.pdf.setTextColor(0, 0, 0);
-    this.pdf.text('Yes', yesStartX, this.yPosition);
-    this.pdf.rect(yesBoxX, boxY, boxSize, boxSize);
-    
-    // Draw NO text and box
-    this.pdf.text('No', noStartX, this.yPosition);
-    this.pdf.rect(noBoxX, boxY, boxSize, boxSize);
+    // Draw No option (spaced appropriately)
+    const noSymbol = checked ? '□' : '■';
+    const noX = optionsX + this.pdf.getTextWidth(`${yesSymbol} Yes   `);
+    this.pdf.text(`${noSymbol} No`, noX, this.yPosition);
 
-    // Check YES if checked, else NO
-    const markBoxX = checked ? yesBoxX : noBoxX;
-    setBurgundyDraw(this.pdf);
-    this.pdf.line(markBoxX + 0.8, boxY + boxSize / 2, markBoxX + boxSize - 0.8, boxY + boxSize - 0.8);
-    this.pdf.line(markBoxX + 0.8, boxY + boxSize - 0.8, markBoxX + boxSize - 0.8, boxY + 0.8);
-
-    this.yPosition += 6;
+    this.yPosition += 8;
   }
 
   private checkPageBreak(requiredSpace: number, keepTogether: boolean = false): void {
