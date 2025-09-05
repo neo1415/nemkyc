@@ -19,20 +19,16 @@ const getCSRFToken = async (): Promise<string> => {
   return data.csrfToken;
 };
 
-// Helper function to make authenticated requests with fresh timestamp
+// Helper function to make authenticated requests
 const makeAuthenticatedRequest = async (url: string, data: any) => {
-  // Get fresh CSRF token and timestamp right before the request
   const csrfToken = await getCSRFToken();
-  const timestamp = Date.now().toString();
-  
-  console.log('🕒 Making request with fresh timestamp:', timestamp);
   
   return fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'CSRF-Token': csrfToken,
-      'x-timestamp': timestamp,
+      'x-timestamp': Date.now().toString(),
     },
     credentials: 'include',
     body: JSON.stringify(data),
@@ -181,13 +177,10 @@ export const submitFormWithNotifications = async (
 
     toast.success('Form submitted successfully!');
 
-    // Send email notifications with PDF immediately (not fire-and-forget)
-    try {
-      await sendEmailNotifications(formType, { documentId: docRef.id, collectionName }, userEmail, submissionData);
-    } catch (e) {
-      console.warn('SubmissionService: email notification failed', e);
-      // Don't fail the entire submission if email fails
-    }
+    // Send email notifications with PDF
+    sendEmailNotifications(formType, { documentId: docRef.id, collectionName }, userEmail, submissionData).catch((e) =>
+      console.warn('SubmissionService: email notification skipped/error', e)
+    );
 
   } catch (error) {
     console.error('Error submitting form:', error);
