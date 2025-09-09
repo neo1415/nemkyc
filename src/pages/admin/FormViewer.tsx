@@ -558,6 +558,43 @@ const FormViewer: React.FC = () => {
       );
     }
 
+    // Handle dynamic file upload arrays (like picturesOfLoss, additionalDocuments)
+    if (type === 'array' && (key === 'picturesOfLoss' || key === 'additionalDocuments')) {
+      const singularKey = key === 'picturesOfLoss' ? 'pictureOfLoss' : 'additionalDocument';
+      const files = [];
+      
+      // Look for numbered individual fields like pictureOfLoss1, pictureOfLoss2, etc.
+      let index = 1;
+      while (formData[`${singularKey}${index}`]) {
+        files.push({
+          url: formData[`${singularKey}${index}`],
+          name: `${label} ${index}`
+        });
+        index++;
+      }
+      
+      if (files.length === 0) {
+        return <Typography variant="body2" color="text.secondary">No files uploaded</Typography>;
+      }
+      
+      return (
+        <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {files.map((file, index) => (
+            <Button
+              key={index}
+              size="small"
+              variant="outlined"
+              startIcon={<Download />}
+              onClick={() => handleDownloadFile(file.url, `${file.name}.pdf`)}
+              sx={{ alignSelf: 'flex-start' }}
+            >
+              Download {file.name}
+            </Button>
+          ))}
+        </Box>
+      );
+    }
+
     // Handle file fields - always show, even if empty
     if (type === 'file' || type === 'url' || 
         (typeof value === 'string' && (value.startsWith('gs://') || value.includes('firebasestorage.googleapis.com'))) ||
