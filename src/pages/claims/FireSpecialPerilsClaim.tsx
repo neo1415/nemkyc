@@ -82,8 +82,8 @@ interface FireSpecialPerilsClaimData {
   }>;
   
   // File Uploads
-  picturesOfLoss: File[];
-  additionalDocuments: File[];
+  picturesOfLoss: any[];
+  additionalDocuments: any[];
   
   // Declaration
   agreeToDataPrivacy: boolean;
@@ -371,8 +371,8 @@ const FireSpecialPerilsClaim: React.FC = () => {
         valueOfSalvage: 0, 
         netAmountClaimed: 0 
       }],
-      picturesOfLoss: [],
-      additionalDocuments: [],
+      picturesOfLoss: [''],
+      additionalDocuments: [''],
       agreeToDataPrivacy: false,
       declarationTrue: false,
       signature: ''
@@ -845,7 +845,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
                       size="sm"
                       onClick={() => {
                         const currentPictures = watchedValues.picturesOfLoss || [];
-                        formMethods.setValue('picturesOfLoss', [...currentPictures, null]);
+                        formMethods.setValue('picturesOfLoss', [...currentPictures, '']);
                       }}
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -853,7 +853,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
                     </Button>
                   </div>
                   
-                  {(watchedValues.picturesOfLoss?.length > 0 ? watchedValues.picturesOfLoss : [null]).map((_, index) => (
+                  {(watchedValues.picturesOfLoss?.length > 0 ? watchedValues.picturesOfLoss : ['']).map((_, index) => (
                     <div key={`picture-${index}`} className="flex items-start gap-4">
                       <div className="flex-1">
                         <FileUpload
@@ -912,7 +912,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
                       size="sm"
                       onClick={() => {
                         const currentDocs = watchedValues.additionalDocuments || [];
-                        formMethods.setValue('additionalDocuments', [...currentDocs, null]);
+                        formMethods.setValue('additionalDocuments', [...currentDocs, '']);
                       }}
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -920,8 +920,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
                     </Button>
                   </div>
                   
-                  {(watchedValues.additionalDocuments?.length > 0) && 
-                    watchedValues.additionalDocuments.map((_, index) => (
+                  {(watchedValues.additionalDocuments?.length > 0 ? watchedValues.additionalDocuments : ['']).map((_, index) => (
                       <div key={`additional-${index}`} className="flex items-start gap-4">
                         <div className="flex-1">
                           <FileUpload
