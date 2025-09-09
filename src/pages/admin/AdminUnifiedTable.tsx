@@ -351,7 +351,7 @@ const fetchForms = async () => {
     const rows: string[][] = [];
 
     // Exclude system fields from CSV
-    const excludedFields = ['id', 'timestamp', 'createdAt', 'updatedAt', 'submittedAt', 'formType'];
+    const excludedFields = ['id', 'timestamp', 'createdAt', 'updatedAt', 'submittedAt', 'formType', 'sn', 'S/N', 'serialNumber', 'rowNumber'];
 
     // Get headers from form mapping if available
     if (mapping) {
@@ -359,10 +359,14 @@ const fetchForms = async () => {
         // Skip system information sections
         if (section.title.toLowerCase().includes('system')) return;
         
-        section.fields.forEach(field => {
-          if (excludedFields.includes(field.key)) return;
-          
-          if (field.type === 'array' && field.key === 'directors') {
+          section.fields.forEach(field => {
+            if (excludedFields.includes(field.key) ||
+                field.key.toLowerCase().includes('sn') ||
+                field.key.toLowerCase().includes('serial') ||
+                field.label?.toLowerCase().includes('s/n') ||
+                field.label?.toLowerCase().includes('serial')) return;
+            
+            if (field.type === 'array' && field.key === 'directors') {
             // Add director fields
             ['firstName', 'lastName', 'email', 'phoneNumber'].forEach(dirField => {
               headers.push(`Director 1 ${dirField.charAt(0).toUpperCase() + dirField.slice(1)}`);
@@ -392,8 +396,13 @@ const fetchForms = async () => {
           // Skip system information sections
           if (section.title.toLowerCase().includes('system')) return;
           
-          section.fields.forEach(field => {
-            if (excludedFields.includes(field.key) || field.type === 'file') return;
+            section.fields.forEach(field => {
+              if (excludedFields.includes(field.key) || 
+                  field.type === 'file' ||
+                  field.key.toLowerCase().includes('sn') ||
+                  field.key.toLowerCase().includes('serial') ||
+                  field.label?.toLowerCase().includes('s/n') ||
+                  field.label?.toLowerCase().includes('serial')) return;
             
             if (field.type === 'array' && field.key === 'directors') {
               ['firstName', 'lastName', 'email', 'phoneNumber'].forEach(dirField => {
@@ -460,7 +469,8 @@ const fetchForms = async () => {
     const excludeFields = [
       'timestamp', 'agreeToDataPrivacy', 'declarationTrue', 
       'declarationAdditionalInfo', 'declarationDocuments',
-      'signature', 'submittedAt', 'formType'
+      'signature', 'submittedAt', 'formType', 'sn', 'S/N', 
+      'serialNumber', 'rowNumber'
     ];
 
     // Include important fields first
@@ -508,10 +518,14 @@ const fetchForms = async () => {
         if (section.title.toLowerCase().includes('system')) return;
         
         section.fields.forEach(field => {
-          // Skip file fields, excluded fields, and priority fields (already added)
+          // Skip file fields, excluded fields, S/N fields, and priority fields (already added)
           if (field.type !== 'file' && 
               !excludeFields.includes(field.key) && 
-              !priorityFields.includes(field.key)) {
+              !priorityFields.includes(field.key) &&
+              !field.key.toLowerCase().includes('sn') &&
+              !field.key.toLowerCase().includes('serial') &&
+              !field.label?.toLowerCase().includes('s/n') &&
+              !field.label?.toLowerCase().includes('serial')) {
             allFieldsInOrder.push(field);
           }
         });
