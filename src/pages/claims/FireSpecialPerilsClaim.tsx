@@ -504,145 +504,12 @@ const FireSpecialPerilsClaim: React.FC = () => {
     }
   };
 
-  // Step field mappings for validation
+  // Step field mappings for validation (same approach as working Burglary form)
   const stepFieldMappings = {
-    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'name', 'companyName', 'title', 'address', 'phone', 'email'],
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'name', 'title', 'address', 'phone', 'email'],
     1: ['premisesAddress', 'premisesPhone', 'dateOfOccurrence', 'timeOfOccurrence', 'incidentDescription', 'causeOfFire', 'premisesUsedAsPerPolicy', 'premisesUsageDetails', 'purposeOfPremises', 'unallowedRiskIntroduced', 'unallowedRiskDetails', 'measuresWhenFireDiscovered'],
     2: ['soleOwner', 'otherOwnersName', 'otherOwnersAddress', 'hasOtherInsurance', 'otherInsuranceName', 'otherInsuranceAddress', 'premisesContentsValue', 'hasPreviousClaim', 'previousClaimDate', 'previousClaimAmount', 'itemsLost'],
     3: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
-  };
-
-  // Custom validation for each step
-  const validateStep = async (stepId: string): Promise<boolean> => {
-    console.log('🔥 Validating step:', stepId);
-    console.log('🔥 Current watched values:', watchedValues);
-    console.log('🔥 Current uploaded files:', uploadedFiles);
-    
-    const errors: string[] = [];
-
-    if (stepId === 'policy-insured') {
-      // Policy validation
-      if (!watchedValues.policyNumber) errors.push('Policy number is required');
-      if (!watchedValues.periodOfCoverFrom) errors.push('Period of cover from is required');
-      if (!watchedValues.periodOfCoverTo) errors.push('Period of cover to is required');
-      
-      // Insured validation
-      if (!watchedValues.name) errors.push('Name is required');
-      if (!watchedValues.title) errors.push('Title is required');
-      if (!watchedValues.address) errors.push('Address is required');
-      if (!watchedValues.phone) errors.push('Phone number is required');
-      if (!watchedValues.email) errors.push('Email is required');
-    }
-
-    if (stepId === 'loss-premises') {
-      // Loss details validation
-      if (!watchedValues.premisesAddress) errors.push('Premises address is required');
-      if (!watchedValues.premisesPhone) errors.push('Premises phone is required');
-      if (!watchedValues.dateOfOccurrence) errors.push('Date of occurrence is required');
-      if (!watchedValues.timeOfOccurrence) errors.push('Time of occurrence is required');
-      if (!watchedValues.incidentDescription) errors.push('Incident description is required');
-      if (!watchedValues.causeOfFire) errors.push('Cause of fire is required');
-      
-      // Premises use validation
-      if (watchedValues.premisesUsedAsPerPolicy === undefined || watchedValues.premisesUsedAsPerPolicy === null) {
-        errors.push('Please specify if premises was used as per policy');
-      }
-      if (watchedValues.premisesUsedAsPerPolicy === false && !watchedValues.premisesUsageDetails) {
-        errors.push('Please provide details on how premises was used differently');
-      }
-      if (!watchedValues.purposeOfPremises) errors.push('Purpose of premises is required');
-      if (watchedValues.unallowedRiskIntroduced === undefined || watchedValues.unallowedRiskIntroduced === null) {
-        errors.push('Please specify if unallowed risk was introduced');
-      }
-      if (watchedValues.unallowedRiskIntroduced === true && !watchedValues.unallowedRiskDetails) {
-        errors.push('Please provide details about the unallowed risk');
-      }
-      if (!watchedValues.measuresWhenFireDiscovered) errors.push('Measures taken when fire discovered is required');
-    }
-
-    if (stepId === 'property-insurance-items') {
-      // Property ownership validation
-      if (watchedValues.soleOwner === undefined || watchedValues.soleOwner === null) {
-        errors.push('Please specify if you are the sole owner');
-      }
-      if (watchedValues.soleOwner === false) {
-        if (!watchedValues.otherOwnersName) errors.push('Other owners name is required');
-        if (!watchedValues.otherOwnersAddress) errors.push('Other owners address is required');
-      }
-      
-      // Other insurance validation
-      if (watchedValues.hasOtherInsurance === undefined || watchedValues.hasOtherInsurance === null) {
-        errors.push('Please specify if there is other insurance');
-      }
-      if (watchedValues.hasOtherInsurance === true) {
-        if (!watchedValues.otherInsuranceName) errors.push('Other insurance name is required');
-        if (!watchedValues.otherInsuranceAddress) errors.push('Other insurance address is required');
-      }
-      
-      // Valuation validation
-      if (watchedValues.premisesContentsValue === undefined || watchedValues.premisesContentsValue === null) {
-        errors.push('Premises contents value is required');
-      }
-      if (watchedValues.hasPreviousClaim === undefined || watchedValues.hasPreviousClaim === null) {
-        errors.push('Please specify if you have previous claims');
-      }
-      if (watchedValues.hasPreviousClaim === true) {
-        if (!watchedValues.previousClaimDate) errors.push('Previous claim date is required');
-        if (watchedValues.previousClaimAmount === undefined || watchedValues.previousClaimAmount === null) {
-          errors.push('Previous claim amount is required');
-        }
-      }
-      
-      // Items validation
-      if (!watchedValues.itemsLost || watchedValues.itemsLost.length === 0) {
-        errors.push('At least one item must be added');
-      } else {
-        watchedValues.itemsLost.forEach((item: any, index: number) => {
-          if (!item.description) errors.push(`Item ${index + 1} description is required`);
-          if (item.costPrice === undefined || item.costPrice === null) errors.push(`Item ${index + 1} cost price is required`);
-          if (!item.dateOfPurchase) errors.push(`Item ${index + 1} date of purchase is required`);
-          if (item.estimatedValueAtOccurrence === undefined || item.estimatedValueAtOccurrence === null) {
-            errors.push(`Item ${index + 1} estimated value at occurrence is required`);
-          }
-        });
-      }
-    }
-
-    if (stepId === 'documents-declaration') {
-      // File uploads validation
-      const requiredFiles = ['fireBrigadeReport', 'policeReport', 'pictureOfLoss1'];
-      const missingFiles = requiredFiles.filter(fileKey => !uploadedFiles[fileKey]);
-      
-      if (missingFiles.length > 0) {
-        const fileNames = {
-          fireBrigadeReport: 'Fire Brigade Report',
-          policeReport: 'Police Report',
-          pictureOfLoss1: 'Picture of Loss 1'
-        };
-        
-        const missingFileNames = missingFiles.map(key => fileNames[key as keyof typeof fileNames]);
-        errors.push(`Required documents missing: ${missingFileNames.join(', ')}`);
-      }
-      
-      // Declaration validation
-      if (!watchedValues.agreeToDataPrivacy) errors.push('You must agree to data privacy terms');
-      if (!watchedValues.declarationTrue) errors.push('You must agree that statements are true');
-      if (!watchedValues.signature) errors.push('Signature is required');
-    }
-
-    console.log('🔥 Validation errors for step', stepId, ':', errors);
-
-    if (errors.length > 0) {
-      toast({
-        title: "Please complete all required fields",
-        description: errors.slice(0, 3).join('. ') + (errors.length > 3 ? ` and ${errors.length - 3} more.` : '.'),
-        variant: "destructive",
-      });
-      return false;
-    }
-    
-    console.log('🔥 Step validation passed for:', stepId);
-    return true;
   };
 
   const steps = [
@@ -1273,7 +1140,6 @@ const FireSpecialPerilsClaim: React.FC = () => {
               formMethods={formMethods}
               submitButtonText="Submit Fire Special Perils Claim"
               stepFieldMappings={stepFieldMappings}
-              validateStep={validateStep}
             />
 
           {/* Summary Dialog */}
