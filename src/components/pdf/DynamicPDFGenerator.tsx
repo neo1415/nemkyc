@@ -680,20 +680,9 @@ export class DynamicPDFGenerator {
   }
 
   private isLongContent(label: string, value: string, type: FormField['type']): boolean {
-    const labelLower = label.toLowerCase();
-    
-    // Check for long text indicators in field names
-    const longTextKeywords = [
-      'description', 'details', 'explanation', 'narrative', 'cause', 
-      'reason', 'how', 'remarks', 'address', 'comment'
-    ];
-    
-    const hasLongKeyword = longTextKeywords.some(keyword => labelLower.includes(keyword));
-    
-    return type === 'textarea' || 
-           hasLongKeyword || 
-           value.includes('\n') || 
-           value.length > 120;
+    // Always use two-column layout as requested by user
+    // All fields should be label on left, value on right
+    return false;
   }
 
   private formatDate(date: any): string {
@@ -804,9 +793,9 @@ export class DynamicPDFGenerator {
     const firstRow = data[0];
     const columns = Object.keys(firstRow).filter(key => !EXCLUDED_FIELDS.includes(key));
     
-    // Calculate column widths
+    // Calculate dynamic column widths based on content
     const tableWidth = this.pageWidth - (this.margin * 2);
-    const colWidth = tableWidth / columns.length;
+    const columnWidths = this.calculateDynamicColumnWidths(data, columns, tableWidth);
 
     // Table header
     setBurgundyDraw(this.pdf);
@@ -818,12 +807,14 @@ export class DynamicPDFGenerator {
     this.pdf.setFont(undefined, 'bold');
     this.pdf.setTextColor(255, 255, 255); // White text on burgundy header
 
+    let currentX = this.margin;
     columns.forEach((col, index) => {
       const colLabel = this.sanitizeText(this.formatFieldLabel(col));
-      const cellX = this.margin + (index * colWidth);
-      const maxWidth = colWidth - 2;
+      const cellWidth = columnWidths[index];
+      const maxWidth = cellWidth - 2;
       const lines = this.pdf.splitTextToSize(colLabel, maxWidth);
-      this.pdf.text(lines[0], cellX + 1, this.yPosition + 5); // Take first line only for header
+      this.pdf.text(lines[0], currentX + 1, this.yPosition + 5); // Take first line only for header
+      currentX += cellWidth;
     });
 
     this.yPosition += 8;
@@ -839,10 +830,10 @@ export class DynamicPDFGenerator {
       this.checkPageBreak(10);
 
       // Calculate row height first
-      const maxLines = Math.max(1, ...columns.map(col => {
+      const maxLines = Math.max(1, ...columns.map((col, colIndex) => {
         const cellValue = row[col];
         const displayValue = cellValue ? String(cellValue) : '';
-        const maxWidth = colWidth - 2;
+        const maxWidth = columnWidths[colIndex] - 2;
         return this.pdf.splitTextToSize(displayValue, maxWidth).length;
       }));
       
@@ -863,12 +854,16 @@ export class DynamicPDFGenerator {
       const currentRowHeight = (row as any)._rowHeight || 6;
       
       columns.forEach((col, colIndex) => {
-        const cellX = this.margin + (colIndex * colWidth);
+        let cellX = this.margin;
+        for (let i = 0; i < colIndex; i++) {
+          cellX += columnWidths[i];
+        }
         const cellValue = row[col];
-        const maxWidth = colWidth - 2;
+        const cellWidth = columnWidths[colIndex];
+        const maxWidth = cellWidth - 2;
         
         // Draw cell border with dynamic height
-        this.pdf.rect(cellX, this.yPosition, colWidth, currentRowHeight);
+        this.pdf.rect(cellX, this.yPosition, cellWidth, currentRowHeight);
 
         // Format and display value
         let displayValue = '';
@@ -929,6 +924,49 @@ export class DynamicPDFGenerator {
     }
 
     this.yPosition += 8;
+  }
+
+  private calculateDynamicColumnWidths(data: any[], columns: string[], totalWidth: number): number[] {
+    const columnWidths: number[] = new Array(columns.length).fill(0);
+    const minWidth = 30; // Minimum column width
+    const maxWidth = totalWidth / 2; // Maximum column width (50% of total)
+    
+    // Calculate content-based widths
+    columns.forEach((col, index) => {
+      // Start with header width
+      const headerWidth = this.pdf.getTextWidth(this.sanitizeText(this.formatFieldLabel(col))) + 10;
+      let maxContentWidth = headerWidth;
+      
+      // Check content width for this column (sample first 10 rows for performance)
+      const sampleData = data.slice(0, Math.min(10, data.length));
+      sampleData.forEach(row => {
+        const cellValue = String(row[col] || '');
+        let displayValue = cellValue;
+        
+        if (col.toLowerCase().includes('amount') || col.toLowerCase().includes('value')) {
+          displayValue = this.formatCurrency(cellValue);
+        } else if (col.toLowerCase().includes('date')) {
+          displayValue = this.formatDate(cellValue);
+        } else {
+          displayValue = this.sanitizeText(cellValue);
+        }
+        
+        const contentWidth = this.pdf.getTextWidth(displayValue) + 10;
+        maxContentWidth = Math.max(maxContentWidth, contentWidth);
+      });
+      
+      // Apply min/max constraints
+      columnWidths[index] = Math.max(minWidth, Math.min(maxWidth, maxContentWidth));
+    });
+    
+    // Normalize to fit total width
+    const currentTotal = columnWidths.reduce((sum, width) => sum + width, 0);
+    if (currentTotal !== totalWidth) {
+      const scale = totalWidth / currentTotal;
+      return columnWidths.map(width => width * scale);
+    }
+    
+    return columnWidths;
   }
 
   // Add data as individual sections (for witnesses, etc.)
