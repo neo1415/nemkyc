@@ -6,7 +6,7 @@ const AdminBurglaryClaimsTable: React.FC = () => {
   
   return (
     <AdminUnifiedTable 
-      collectionName="burglaryClaims"
+      collectionName="burglary-claims"
       title="Burglary Claims Management"
       isClaim={true}
     />
