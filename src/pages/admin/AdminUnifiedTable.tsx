@@ -166,8 +166,53 @@ const fetchForms = async () => {
   }
 };
 
+  const formatComplexValue = (value: any, fieldKey: string): string => {
+    if (value === null || value === undefined) return 'N/A';
+    
+    // Handle arrays of objects (like witnesses, directors, etc.)
+    if (Array.isArray(value)) {
+      if (value.length === 0) return 'N/A';
+      
+      return value.map((item, index) => {
+        if (typeof item === 'object' && item !== null) {
+          // Format object properties into readable text
+          const entries = Object.entries(item)
+            .filter(([key, val]) => val !== null && val !== undefined && val !== '')
+            .map(([key, val]) => `${formatFieldLabel(key)}: ${val}`)
+            .join(', ');
+          
+          return `${formatFieldLabel(fieldKey)} ${index + 1} - ${entries}`;
+        }
+        return `${formatFieldLabel(fieldKey)} ${index + 1}: ${item}`;
+      }).join(' | ');
+    }
+    
+    // Handle single objects
+    if (typeof value === 'object' && value !== null) {
+      const entries = Object.entries(value)
+        .filter(([key, val]) => val !== null && val !== undefined && val !== '')
+        .map(([key, val]) => `${formatFieldLabel(key)}: ${val}`)
+        .join(', ');
+      
+      return entries || 'View Details';
+    }
+    
+    // Handle strings that are too long
+    if (typeof value === 'string' && value.length > 100) {
+      return value.substring(0, 100) + '...';
+    }
+    
+    return String(value);
+  };
+
+  const formatFieldLabel = (key: string): string => {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, str => str.toUpperCase())
+      .replace(/\b\w/g, l => l.toUpperCase());
+  };
+
   const formatDate = (date: any): string => {
-    if (!date) return '';
     
     try {
       let dateObj: Date;
@@ -474,14 +519,29 @@ const fetchForms = async () => {
 
       // Create columns for each field in the exact order they appear in form mappings
       allFieldsInOrder.forEach(field => {
-        if (field.type === 'array' && field.key === 'directors') {
+        if (field.type === 'array') {
           dynamicColumns.push({
-            field: 'directors',
-            headerName: 'Directors Count',
-            width: 130,
-            valueFormatter: (params) => {
-              const arr = params as any[];
-              return Array.isArray(arr) ? `${arr.length} director(s)` : '0 directors';
+            field: field.key,
+            headerName: field.label,
+            width: 300,
+            renderCell: (params) => {
+              const value = params.value;
+              if (!value || (Array.isArray(value) && value.length === 0)) {
+                return <span style={{ color: '#666' }}>N/A</span>;
+              }
+              
+              const formatted = formatComplexValue(value, field.key);
+              return (
+                <div style={{ 
+                  whiteSpace: 'pre-wrap', 
+                  overflow: 'hidden', 
+                  textOverflow: 'ellipsis',
+                  fontSize: '0.8rem',
+                  lineHeight: '1.2'
+                }}>
+                  {formatted}
+                </div>
+              );
             },
           });
         } else if (field.key.toLowerCase().includes('date') || field.key === 'dateOfBirth' || field.key === 'dob') {
@@ -496,8 +556,22 @@ const fetchForms = async () => {
             field: field.key,
             headerName: field.label,
             width: 150,
-            valueFormatter: (params) => {
-              const value = params as any;
+            renderCell: (params) => {
+              const value = params.value;
+              if (typeof value === 'object' && value !== null) {
+                const formatted = formatComplexValue(value, field.key);
+                return (
+                  <div style={{ 
+                    whiteSpace: 'pre-wrap', 
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis',
+                    fontSize: '0.8rem'
+                  }}>
+                    {formatted}
+                  </div>
+                );
+              }
+              
               if (typeof value === 'string' && value.length > 50) {
                 return value.substring(0, 50) + '...';
               }
@@ -518,16 +592,31 @@ const fetchForms = async () => {
           return;
         }
 
-        // Handle array fields (show count)
+        // Handle array fields (show detailed content instead of just count)
         if (Array.isArray(value)) {
           const fieldName = key.charAt(0).toUpperCase() + key.slice(1);
           dynamicColumns.push({
             field: key,
-            headerName: `${fieldName} Count`,
-            width: 130,
-            valueFormatter: (params) => {
-              const arr = params as any[];
-              return Array.isArray(arr) ? `${arr.length} item(s)` : '0 items';
+            headerName: fieldName,
+            width: 300,
+            renderCell: (params) => {
+              const arr = params.value;
+              if (!Array.isArray(arr) || arr.length === 0) {
+                return <span style={{ color: '#666' }}>N/A</span>;
+              }
+              
+              const formatted = formatComplexValue(arr, key);
+              return (
+                <div style={{ 
+                  whiteSpace: 'pre-wrap', 
+                  overflow: 'hidden', 
+                  textOverflow: 'ellipsis',
+                  fontSize: '0.8rem',
+                  lineHeight: '1.2'
+                }}>
+                  {formatted}
+                </div>
+              );
             },
           });
           return;
@@ -544,14 +633,31 @@ const fetchForms = async () => {
           return;
         }
 
-        // Handle nested objects (show summary)
+        // Handle nested objects (show formatted content instead of "View Details")
         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
           const fieldName = key.charAt(0).toUpperCase() + key.slice(1);
           dynamicColumns.push({
             field: key,
             headerName: fieldName,
-            width: 150,
-            valueFormatter: () => 'View Details',
+            width: 250,
+            renderCell: (params) => {
+              const obj = params.value;
+              if (!obj || typeof obj !== 'object') {
+                return <span style={{ color: '#666' }}>N/A</span>;
+              }
+              
+              const formatted = formatComplexValue(obj, key);
+              return (
+                <div style={{ 
+                  whiteSpace: 'pre-wrap', 
+                  overflow: 'hidden', 
+                  textOverflow: 'ellipsis',
+                  fontSize: '0.8rem'
+                }}>
+                  {formatted}
+                </div>
+              );
+            },
           });
           return;
         }
