@@ -574,7 +574,7 @@ const FormViewer: React.FC = () => {
       }
       
       if (files.length === 0) {
-        return <Typography variant="body2" color="text.secondary">No files uploaded</Typography>;
+        return <Typography variant="body2" color="text.secondary">N/A</Typography>;
       }
       
       return (
@@ -602,16 +602,7 @@ const FormViewer: React.FC = () => {
       const fieldLabel = label.replace(/Url$/, '');
       
       if (!value || value === null || value === undefined || value === '') {
-        return (
-          <Button
-            size="small"
-            variant="outlined"
-            disabled
-            sx={{ mt: 1, color: 'text.secondary' }}
-          >
-            No file uploaded
-          </Button>
-        );
+        return <Typography variant="body2" color="text.secondary">N/A</Typography>;
       }
       
       return (
