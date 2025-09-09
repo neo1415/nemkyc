@@ -52,14 +52,34 @@ const isClaimsForm = (formType: string): boolean => {
   );
 };
 
+// Helper function to make fresh authenticated request (gets new CSRF token each time)
+const makeFreshAuthenticatedRequest = async (url: string, data: any) => {
+  // Get completely fresh CSRF token and timestamp for each request
+  const csrfToken = await getCSRFToken();
+  const timestamp = Date.now().toString();
+  
+  console.log(`📤 Making fresh request to ${url} with timestamp: ${timestamp}`);
+  
+  return fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'CSRF-Token': csrfToken,
+      'x-timestamp': timestamp,
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+};
+
 // Send email notifications with PDF attachments
 const sendEmailNotifications = async (formType: string, formData: SubmissionData, userEmail: string, fullFormData: SubmissionData) => {
   try {
     console.log('📧 Sending user confirmation email...');
     console.log('📧 User email data:', { userEmail, formType });
     
-    // Send confirmation email to user (no PDF attachment)
-    const userResponse = await makeAuthenticatedRequest(`${API_BASE_URL}/send-to-user`, {
+    // Send confirmation email to user (no PDF attachment) - use fresh request
+    const userResponse = await makeFreshAuthenticatedRequest(`${API_BASE_URL}/send-to-user`, {
       userEmail,
       formType
     });
@@ -111,10 +131,10 @@ const sendEmailNotifications = async (formType: string, formData: SubmissionData
       // Continue without PDF if generation fails
     }
 
-    // Send alert email to appropriate team with PDF attachment
+    // Send alert email to appropriate team with PDF attachment - use fresh request
     console.log('📧 Sending admin notification emails...');
     if (isClaimsForm(formType)) {
-      const adminResponse = await makeAuthenticatedRequest(`${API_BASE_URL}/send-to-admin-and-claims`, {
+      const adminResponse = await makeFreshAuthenticatedRequest(`${API_BASE_URL}/send-to-admin-and-claims`, {
         formType,
         formData,
         pdfAttachment
@@ -127,8 +147,8 @@ const sendEmailNotifications = async (formType: string, formData: SubmissionData
         console.log('✅ Claims admin emails sent successfully');
       }
     } else {
-      // KYC/CDD forms go to admin and compliance
-      const adminResponse = await makeAuthenticatedRequest(`${API_BASE_URL}/send-to-admin-and-compliance`, {
+      // KYC/CDD forms go to admin and compliance - use fresh request
+      const adminResponse = await makeFreshAuthenticatedRequest(`${API_BASE_URL}/send-to-admin-and-compliance`, {
         formType,
         formData,
         pdfAttachment
