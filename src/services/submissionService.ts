@@ -200,7 +200,7 @@ const getFirestoreCollection = (formType: string): string => {
   // Claims forms
   if (formTypeLower.includes('combined')) return 'combined-gpa-employers-liability-claims';
   if (formTypeLower.includes('motor')) return 'motor-claims';
-  if (formTypeLower.includes('burglary')) return 'burglaryClaims';
+  if (formTypeLower.includes('burglary')) return 'burglary-claims';
   if (formTypeLower.includes('fire')) return 'fire-special-perils-claims';
   if (formTypeLower.includes('allrisk') || formTypeLower.includes('all risk')) return 'all-risk-claims';
   if (formTypeLower.includes('goods')) return 'goods-in-transit-claims';
