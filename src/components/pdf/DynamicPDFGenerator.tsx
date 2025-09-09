@@ -111,8 +111,10 @@ export class DynamicPDFGenerator {
       format: 'a4'
     });
     
-    // Set up font embedding for copy/paste fidelity - use Helvetica with proper kerning
+    // Set up font embedding for copy/paste fidelity - use Helvetica with proper kerning and character spacing
     this.pdf.setFont('helvetica', 'normal');
+    // Ensure proper font metrics and character spacing (not typewriter)
+    this.pdf.setCharSpace(0);
     
     this.submissionData = submissionData;
     this.blueprint = this.generateBlueprint(submissionData);
@@ -627,15 +629,17 @@ export class DynamicPDFGenerator {
     // Step 2: Remove control characters [\x00-\x1F\x7F-\x9F] - exact as user specified
     sanitized = sanitized.replace(/[\x00-\x1F\x7F-\x9F]+/g, ' ');
     
-    // Step 3: Collapse whitespace - exact as user specified
-    sanitized = sanitized.replace(/\s+/g, ' ').trim();
-    
-    // Step 4: Remove specific problematic sequences - exact as user specified
+    // Step 3: Remove specific problematic sequences - exact as user specified
     sanitized = sanitized.replace(/[¦�]+/g, '');
     
-    // Step 5: Remove any remaining ampersand artifacts and strange spacing characters
+    // Step 4: Remove HTML entities and currency artifacts
     sanitized = sanitized.replace(/&[a-zA-Z0-9#]*;?/g, '');
     sanitized = sanitized.replace(/\u00A0/g, ' '); // Non-breaking space to regular space
+    sanitized = sanitized.replace(/\u00A6/g, ''); // Broken bar character
+    sanitized = sanitized.replace(/\uFFFD/g, ''); // Replacement character
+    
+    // Step 5: Collapse whitespace - exact as user specified
+    sanitized = sanitized.replace(/\s+/g, ' ').trim();
     
     return sanitized;
   }
@@ -714,16 +718,17 @@ export class DynamicPDFGenerator {
   }
 
   private formatCurrency(amount: any): string {
-    if (!amount && amount !== 0) return '₦ 0.00';
+    if (!amount && amount !== 0) return '₦0.00';
     
     // Handle string inputs that might have currency symbols already
-    let cleanValue = String(amount).replace(/[₦,\s]/g, '');
+    let cleanValue = String(amount).replace(/[₦,\s¦�]/g, '');
     const num = parseFloat(cleanValue);
     
     if (isNaN(num)) return this.sanitizeText(String(amount));
     
-    // Ensure proper ₦ formatting with thousands separators and tight spacing (no space between ₦ and number)
-    return `₦${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    // Ensure proper ₦ formatting with thousands separators and NO space between ₦ and number
+    const formatted = `₦${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return this.sanitizeText(formatted);
   }
 
   // Check if data is a complex array that needs special formatting
@@ -833,10 +838,21 @@ export class DynamicPDFGenerator {
     data.forEach((row, rowIndex) => {
       this.checkPageBreak(10);
 
-      // Row background (alternating)
+      // Calculate row height first
+      const maxLines = Math.max(1, ...columns.map(col => {
+        const cellValue = row[col];
+        const displayValue = cellValue ? String(cellValue) : '';
+        const maxWidth = colWidth - 2;
+        return this.pdf.splitTextToSize(displayValue, maxWidth).length;
+      }));
+      
+      const rowHeight = Math.max(6, maxLines * 3 + 2);
+      (row as any)._rowHeight = rowHeight;
+      
+      // Row background (alternating) with dynamic height
       if (rowIndex % 2 === 1) {
         this.pdf.setFillColor(248, 249, 250);
-        this.pdf.rect(this.margin, this.yPosition, tableWidth, 6, 'F');
+        this.pdf.rect(this.margin, this.yPosition, tableWidth, rowHeight, 'F');
       }
 
       // Cell borders
@@ -844,13 +860,15 @@ export class DynamicPDFGenerator {
       this.pdf.setLineWidth(0.3);
 
       let rowTotal = 0;
+      const currentRowHeight = (row as any)._rowHeight || 6;
+      
       columns.forEach((col, colIndex) => {
         const cellX = this.margin + (colIndex * colWidth);
         const cellValue = row[col];
         const maxWidth = colWidth - 2;
-
-        // Draw cell border
-        this.pdf.rect(cellX, this.yPosition, colWidth, 6);
+        
+        // Draw cell border with dynamic height
+        this.pdf.rect(cellX, this.yPosition, colWidth, currentRowHeight);
 
         // Format and display value
         let displayValue = '';
@@ -870,15 +888,24 @@ export class DynamicPDFGenerator {
           displayValue = '-';
         }
 
+        // Handle dynamic row height for content wrapping
         const lines = this.pdf.splitTextToSize(displayValue, maxWidth);
-        this.pdf.text(lines[0], cellX + 1, this.yPosition + 4); // Take first line only
+        const lineHeight = 3;
+        
+        // Render all lines of text, wrapping within the cell
+        lines.forEach((line: string, lineIndex: number) => {
+          if (lineIndex < Math.floor((currentRowHeight - 2) / lineHeight)) {
+            this.pdf.text(line, cellX + 1, this.yPosition + 3 + (lineIndex * lineHeight));
+          }
+        });
       });
 
       if (hasNumericColumns && rowTotal > 0) {
         grandTotal += rowTotal;
       }
 
-      this.yPosition += 6;
+      // Use dynamic row height
+      this.yPosition += currentRowHeight;
     });
 
     // Add total row if there were numeric columns
