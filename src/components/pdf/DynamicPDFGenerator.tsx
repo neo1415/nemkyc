@@ -560,8 +560,9 @@ export class DynamicPDFGenerator {
     this.pdf.setFontSize(10.5);
     this.pdf.setTextColor(0, 0, 0);
     
-    // Left-align label in left column (as specified) - no centering or right alignment
-    this.pdf.text(`${label}:`, this.leftColumnX, this.yPosition);
+    // Split label text to prevent overlap with value column
+    const labelLines = this.pdf.splitTextToSize(`${label}:`, this.leftColumnWidth - 5);
+    this.pdf.text(labelLines, this.leftColumnX, this.yPosition);
     
     // Left-align value in right column with normal weight
     this.pdf.setFont('helvetica', 'normal');
@@ -571,10 +572,13 @@ export class DynamicPDFGenerator {
       this.renderBooleanCheckboxes(value);
     } else {
       // Proper two-column positioning - value starts exactly at right column boundary
-      const lines = this.pdf.splitTextToSize(value, this.rightColumnWidth - 2);
-      this.pdf.text(lines, this.rightColumnX, this.yPosition);
-      // Use 1.25 line-height as specified: 10pt * 1.25 = 12.5pt ≈ 4.4mm
-      this.yPosition += Math.max(lines.length * 4.4, 8);
+      const valueLines = this.pdf.splitTextToSize(value, this.rightColumnWidth - 2);
+      this.pdf.text(valueLines, this.rightColumnX, this.yPosition);
+      
+      // Calculate vertical spacing based on both label and value lines
+      const labelHeight = labelLines.length * 4.4;
+      const valueHeight = valueLines.length * 4.4;
+      this.yPosition += Math.max(labelHeight, valueHeight, 8);
     }
   }
 
