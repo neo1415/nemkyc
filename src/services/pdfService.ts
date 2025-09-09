@@ -13,7 +13,8 @@ export interface PDFOptions {
 
 // System fields to exclude from PDF
 const EXCLUDED_FIELDS = [
-  'formId', 'id', 'collection', 'timestamp', 'createdAt', 'updatedAt', 'submittedAt'
+  'formId', 'id', 'collection', 'timestamp', 'createdAt', 'updatedAt', 'submittedAt', 
+  'sn', 'S/N', 'serialNumber', 'rowNumber'
 ];
 
 // File upload fields to exclude from PDF
@@ -32,6 +33,9 @@ const generateFilename = (data: Record<string, any>, formType: string): string =
 export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
   const pdf = new jsPDF();
   
+  // Fix font configuration to prevent number spacing issues
+  pdf.setFont('helvetica', 'normal');
+  
   // Add logo
   if (options.logoUrl) {
     try {
@@ -43,25 +47,25 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
   
   // Add company header
   pdf.setFontSize(16);
-  pdf.setFont(undefined, 'bold');
+  pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(139, 69, 19); // burgundy
   pdf.text('NEM Insurance', 55, 18);
   
   pdf.setFontSize(10);
-  pdf.setFont(undefined, 'normal');
+  pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(0, 0, 0);
   pdf.text('NEM Insurance Plc', 55, 24);
   pdf.text('199, Ikorodu Road, Obanikoro Lagos', 55, 28);
   
   // Add title
   pdf.setFontSize(18);
-  pdf.setFont(undefined, 'bold');
+  pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(139, 69, 19);
   pdf.text(options.title, 15, 45);
   
   if (options.subtitle) {
     pdf.setFontSize(12);
-    pdf.setFont(undefined, 'normal');
+    pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(0, 0, 0);
     pdf.text(options.subtitle, 15, 55);
   }
@@ -80,18 +84,25 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
       
       // Section header
       pdf.setFontSize(12);
-      pdf.setFont(undefined, 'bold');
+      pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(139, 69, 19);
       const sectionName = String(section.title || section.name || 'Section');
       pdf.text(sectionName, 15, yPosition);
       yPosition += 10;
       
       pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(0, 0, 0);
       
       section.fields.forEach((field: any) => {
-        // Skip excluded fields and file fields
-        if (EXCLUDED_FIELDS.includes(field.key) || FILE_FIELDS.includes(field.key) || field.type === 'file') {
+        // Skip excluded fields, file fields, and S/N type fields
+        if (EXCLUDED_FIELDS.includes(field.key) || 
+            FILE_FIELDS.includes(field.key) || 
+            field.type === 'file' ||
+            field.key.toLowerCase().includes('sn') ||
+            field.key.toLowerCase().includes('serial') ||
+            field.label?.toLowerCase().includes('s/n') ||
+            field.label?.toLowerCase().includes('serial')) {
           return;
         }
         
@@ -102,21 +113,26 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
           if (Array.isArray(value) && value.length > 0) {
             value.forEach((director: any, index: number) => {
               pdf.setFontSize(12);
-              pdf.setFont(undefined, 'bold');
+              pdf.setFont('helvetica', 'bold');
               pdf.setTextColor(139, 69, 19);
               pdf.text(`Director ${index + 1}`, 15, yPosition);
               yPosition += 10;
               
               pdf.setFontSize(10);
+              pdf.setFont('helvetica', 'normal');
               pdf.setTextColor(0, 0, 0);
               
               Object.entries(director).forEach(([dirKey, dirValue]) => {
                 const dirLabel = dirKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                pdf.setFont(undefined, 'bold');
+                pdf.setFont('helvetica', 'bold');
                 pdf.text(`${dirLabel}:`, 15, yPosition);
-                pdf.setFont(undefined, 'normal');
+                pdf.setFont('helvetica', 'normal');
                 
-                const displayValue = dirValue ? String(dirValue) : 'N/A';
+                let displayValue = dirValue ? String(dirValue) : 'N/A';
+                // Fix number formatting by ensuring proper string conversion
+                if (typeof dirValue === 'number') {
+                  displayValue = dirValue.toString();
+                }
                 const maxWidth = 130;
                 const textLines = pdf.splitTextToSize(displayValue, maxWidth);
                 pdf.text(textLines, 70, yPosition);
@@ -131,18 +147,18 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
             });
           } else {
             // Show N/A for empty directors array
-            pdf.setFont(undefined, 'bold');
+            pdf.setFont('helvetica', 'bold');
             pdf.text('Directors:', 15, yPosition);
-            pdf.setFont(undefined, 'normal');
+            pdf.setFont('helvetica', 'normal');
             pdf.text('N/A', 70, yPosition);
             yPosition += 6;
           }
         } else if (field.type === 'array') {
           // Handle other arrays
-          pdf.setFont(undefined, 'bold');
+          pdf.setFont('helvetica', 'bold');
           const fieldLabel = String(field.label || field.key || 'Field');
           pdf.text(`${fieldLabel}:`, 15, yPosition);
-          pdf.setFont(undefined, 'normal');
+          pdf.setFont('helvetica', 'normal');
           
           if (Array.isArray(value) && value.length > 0) {
             yPosition += 6;
@@ -159,10 +175,10 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
           }
         } else {
           // Handle regular fields - show all fields, use N/A for empty values
-          pdf.setFont(undefined, 'bold');
+          pdf.setFont('helvetica', 'bold');
           const fieldLabel = String(field.label || field.key || 'Field');
           pdf.text(`${fieldLabel}:`, 15, yPosition);
-          pdf.setFont(undefined, 'normal');
+          pdf.setFont('helvetica', 'normal');
           
           // Format value - use N/A for empty values
           let displayValue = 'N/A';
@@ -177,6 +193,9 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
               }
             } else if (typeof value === 'boolean') {
               displayValue = value ? 'Yes' : 'No';
+            } else if (typeof value === 'number') {
+              // Fix number formatting to prevent spacing issues
+              displayValue = value.toString();
             } else {
               displayValue = String(value);
             }
@@ -222,8 +241,12 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
             });
             yPosition += 3;
           } else {
-            pdf.setFont(undefined, 'normal');
-            pdf.text(`• ${String(item)}`, 20, yPosition);
+            pdf.setFont('helvetica', 'normal');
+            let itemText = String(item);
+            if (typeof item === 'number') {
+              itemText = item.toString();
+            }
+            pdf.text(`• ${itemText}`, 20, yPosition);
             yPosition += 6;
           }
           
@@ -252,9 +275,9 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
       } else {
         // Handle simple values
         const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-        pdf.setFont(undefined, 'bold');
+        pdf.setFont('helvetica', 'bold');
         pdf.text(`${label}:`, 15, yPosition);
-        pdf.setFont(undefined, 'normal');
+        pdf.setFont('helvetica', 'normal');
         
         // Format value based on type
         let displayValue = String(value);
@@ -264,6 +287,9 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
           displayValue = new Date(value).toLocaleDateString();
         } else if (typeof value === 'boolean') {
           displayValue = value ? 'Yes' : 'No';
+        } else if (typeof value === 'number') {
+          // Fix number formatting to prevent spacing issues
+          displayValue = value.toString();
         }
         
         // Wrap long text
@@ -284,9 +310,9 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
   // Add attachments list
   if (options.attachments && options.attachments.length > 0) {
     yPosition += 10;
-    pdf.setFont(undefined, 'bold');
+    pdf.setFont('helvetica', 'bold');
     pdf.text('Attachments:', 15, yPosition);
-    pdf.setFont(undefined, 'normal');
+    pdf.setFont('helvetica', 'normal');
     yPosition += 8;
     
     options.attachments.forEach(attachment => {
@@ -309,13 +335,13 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
   }
   
   pdf.setFontSize(10);
-  pdf.setFont(undefined, 'bold');
+  pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(139, 69, 19);
   pdf.text('Data Privacy Statement', 15, yPosition);
   yPosition += 8;
   
   pdf.setFontSize(8);
-  pdf.setFont(undefined, 'normal');
+  pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(0, 0, 0);
   const privacyText = 'This form contains personal and confidential information. All data collected is processed in accordance with applicable data protection laws and NEM Insurance privacy policy. The information provided will be used solely for insurance purposes and will be kept confidential.';
   const privacyLines = pdf.splitTextToSize(privacyText, 170);

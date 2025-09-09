@@ -248,9 +248,13 @@ const FormViewer: React.FC = () => {
       const sectionFields: FormFieldWithValue[] = [];
       
       section.fields.forEach((field: FormField) => {
-        // Skip system/technical fields and file uploads in FormViewer
-        const excludedFields = ['formId', 'id', 'collection', 'timestamp'];
-        if (excludedFields.includes(field.key)) {
+        // Skip system/technical fields, file uploads, and S/N fields in FormViewer
+        const excludedFields = ['formId', 'id', 'collection', 'timestamp', 'sn', 'S/N', 'serialNumber', 'rowNumber'];
+        if (excludedFields.includes(field.key) ||
+            field.key.toLowerCase().includes('sn') ||
+            field.key.toLowerCase().includes('serial') ||
+            field.label?.toLowerCase().includes('s/n') ||
+            field.label?.toLowerCase().includes('serial')) {
           return;
         }
         
