@@ -158,7 +158,7 @@ const CDDForms: React.FC = () => {
                       e.stopPropagation();
                       copyToClipboard(cdd.path, cdd.id);
                     }}
-                    className="bg-burgundy-600 hover:bg-burgundy-700 text-white border-burgundy-600 hover:border-burgundy-700 rounded-md px-3 py-1 text-xs flex items-center gap-1"
+                    className="bg-burgundy-600 hover:bg-burgundy-700 text-white hover:text-yellow-400 border-burgundy-600 hover:border-burgundy-700 rounded-md px-3 py-1 text-xs flex items-center gap-1"
                     style={{ backgroundColor: '#800020', borderColor: '#800020' }}
                   >
                     {copiedStates[cdd.id] ? (

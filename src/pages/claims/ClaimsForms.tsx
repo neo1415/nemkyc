@@ -159,7 +159,7 @@ const ClaimsForms: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => copyToClipboard(form.path, form.title)}
-                    className="bg-burgundy-600 hover:bg-burgundy-700 text-white border-burgundy-600 hover:border-burgundy-700 rounded-md px-3 py-1 text-xs flex items-center gap-1 flex-shrink-0"
+                    className="bg-burgundy-600 hover:bg-burgundy-700 text-white hover:text-yellow-400 border-burgundy-600 hover:border-burgundy-700 rounded-md px-3 py-1 text-xs flex items-center gap-1 flex-shrink-0"
                     style={{ backgroundColor: '#800020', borderColor: '#800020' }}
                   >
                     {copiedStates[form.title] ? (
