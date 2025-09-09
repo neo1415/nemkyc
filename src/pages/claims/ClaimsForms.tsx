@@ -1,11 +1,25 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Car, Shield, Users, Building, ArrowRight, UserCheck, Home, DollarSign, FileText, AlertTriangle, Flame, Truck, Wrench, AlertCircle } from 'lucide-react';
+import { Car, Shield, Users, Building, ArrowRight, UserCheck, Home, DollarSign, FileText, AlertTriangle, Flame, Truck, Wrench, AlertCircle, Copy, Check } from 'lucide-react';
 
 const ClaimsForms: React.FC = () => {
+  const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
+
+  const copyToClipboard = async (path: string, title: string) => {
+    const fullUrl = `${window.location.origin}${path}`;
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      setCopiedStates(prev => ({ ...prev, [title]: true }));
+      setTimeout(() => {
+        setCopiedStates(prev => ({ ...prev, [title]: false }));
+      }, 3000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
+  };
   const claimForms = [
     {
       title: 'Motor Claim',
@@ -131,14 +145,35 @@ const ClaimsForms: React.FC = () => {
           {claimForms.map((form, index) => (
             <Card key={index} className="group hover:shadow-lg transition-shadow duration-300">
               <CardHeader>
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-red-50 rounded-lg group-hover:bg-red-100 transition-colors">
-                    {form.icon}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-red-50 rounded-lg group-hover:bg-red-100 transition-colors">
+                      {form.icon}
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">{form.title}</CardTitle>
+                      <CardDescription className="mt-2">{form.description}</CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-xl">{form.title}</CardTitle>
-                    <CardDescription className="mt-2">{form.description}</CardDescription>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(form.path, form.title)}
+                    className="bg-burgundy-600 hover:bg-burgundy-700 text-white border-burgundy-600 hover:border-burgundy-700 rounded-md px-3 py-1 text-xs flex items-center gap-1 flex-shrink-0"
+                    style={{ backgroundColor: '#800020', borderColor: '#800020' }}
+                  >
+                    {copiedStates[form.title] ? (
+                      <>
+                        <Check className="h-3 w-3" />
+                        Link Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3" />
+                        Copy Link
+                      </>
+                    )}
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>

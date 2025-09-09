@@ -3,12 +3,26 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Building2, Users, UserCheck, Briefcase, FileText, AlertCircle } from 'lucide-react';
+import { Building2, Users, UserCheck, Briefcase, FileText, AlertCircle, Copy, Check } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 
 const CDDForms: React.FC = () => {
   const [selectedForm, setSelectedForm] = useState<string | null>(null);
   const [showNaicomModal, setShowNaicomModal] = useState(false);
+  const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
+
+  const copyToClipboard = async (path: string, id: string) => {
+    const fullUrl = `${window.location.origin}${path}`;
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      setCopiedStates(prev => ({ ...prev, [id]: true }));
+      setTimeout(() => {
+        setCopiedStates(prev => ({ ...prev, [id]: false }));
+      }, 3000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
+  };
 
   const cddTypes = [
     {
@@ -127,14 +141,38 @@ const CDDForms: React.FC = () => {
           {cddTypes.map((cdd) => (
             <Card key={cdd.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleFormClick(cdd)}>
               <CardHeader>
-                <div className="flex items-center space-x-3">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${cdd.color}`}>
-                    <cdd.icon className="h-6 w-6" />
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${cdd.color}`}>
+                      <cdd.icon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">{cdd.title}</CardTitle>
+                      <CardDescription className="text-sm">{cdd.description}</CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-lg">{cdd.title}</CardTitle>
-                    <CardDescription className="text-sm">{cdd.description}</CardDescription>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyToClipboard(cdd.path, cdd.id);
+                    }}
+                    className="bg-burgundy-600 hover:bg-burgundy-700 text-white border-burgundy-600 hover:border-burgundy-700 rounded-md px-3 py-1 text-xs flex items-center gap-1"
+                    style={{ backgroundColor: '#800020', borderColor: '#800020' }}
+                  >
+                    {copiedStates[cdd.id] ? (
+                      <>
+                        <Check className="h-3 w-3" />
+                        Link Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3" />
+                        Copy Link
+                      </>
+                    )}
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
