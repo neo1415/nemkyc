@@ -1,11 +1,25 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { User, Building2, FileText, AlertCircle } from 'lucide-react';
+import { User, Building2, FileText, AlertCircle, Copy, Check } from 'lucide-react';
 
 const KYCForms: React.FC = () => {
+  const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
+
+  const copyToClipboard = async (path: string, id: string) => {
+    const fullUrl = `${window.location.origin}${path}`;
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      setCopiedStates(prev => ({ ...prev, [id]: true }));
+      setTimeout(() => {
+        setCopiedStates(prev => ({ ...prev, [id]: false }));
+      }, 3000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
+  };
   const kycTypes = [
     {
       id: 'individual',
@@ -59,14 +73,35 @@ const KYCForms: React.FC = () => {
           {kycTypes.map((kyc) => (
             <Card key={kyc.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                    <kyc.icon className="h-6 w-6 text-red-900" />
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                      <kyc.icon className="h-6 w-6 text-red-900" />
+                    </div>
+                    <div>
+                      <CardTitle>{kyc.title}</CardTitle>
+                      <CardDescription>{kyc.description}</CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle>{kyc.title}</CardTitle>
-                    <CardDescription>{kyc.description}</CardDescription>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(kyc.path, kyc.id)}
+                    className="bg-burgundy-600 hover:bg-burgundy-700 text-white border-burgundy-600 hover:border-burgundy-700 rounded-md px-3 py-1 text-xs flex items-center gap-1"
+                    style={{ backgroundColor: '#800020', borderColor: '#800020' }}
+                  >
+                    {copiedStates[kyc.id] ? (
+                      <>
+                        <Check className="h-3 w-3" />
+                        Link Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3" />
+                        Copy Link
+                      </>
+                    )}
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
