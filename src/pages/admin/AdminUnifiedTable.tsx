@@ -544,7 +544,20 @@ const fetchForms = async () => {
               );
             },
           });
-        } else if (field.key.toLowerCase().includes('date') || field.key === 'dateOfBirth' || field.key === 'dob') {
+        } else if (field.key.toLowerCase().includes('date') || 
+                   field.key === 'dateOfBirth' || 
+                   field.key === 'dob' ||
+                   field.key.toLowerCase().includes('period') ||
+                   field.key.toLowerCase().includes('from') ||
+                   field.key.toLowerCase().includes('to') ||
+                   field.key.toLowerCase().includes('cover') ||
+                   field.key.toLowerCase().includes('start') ||
+                   field.key.toLowerCase().includes('end') ||
+                   field.key.toLowerCase().includes('expiry') ||
+                   field.key.toLowerCase().includes('issued') ||
+                   field.key.toLowerCase().includes('birth') ||
+                   field.key.toLowerCase().includes('time') ||
+                   field.key.toLowerCase().includes('when')) {
           dynamicColumns.push({
             field: field.key,
             headerName: field.label,
@@ -623,7 +636,19 @@ const fetchForms = async () => {
         }
 
         // Handle date fields
-        if (key.toLowerCase().includes('date') || key === 'dateOfBirth') {
+        if (key.toLowerCase().includes('date') || 
+            key === 'dateOfBirth' ||
+            key.toLowerCase().includes('period') ||
+            key.toLowerCase().includes('from') ||
+            key.toLowerCase().includes('to') ||
+            key.toLowerCase().includes('cover') ||
+            key.toLowerCase().includes('start') ||
+            key.toLowerCase().includes('end') ||
+            key.toLowerCase().includes('expiry') ||
+            key.toLowerCase().includes('issued') ||
+            key.toLowerCase().includes('birth') ||
+            key.toLowerCase().includes('time') ||
+            key.toLowerCase().includes('when')) {
           dynamicColumns.push({
             field: key,
             headerName: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'),
