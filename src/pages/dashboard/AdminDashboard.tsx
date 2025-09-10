@@ -53,10 +53,25 @@ const AdminDashboard: React.FC = () => {
     chartData.push({ name: 'Claims Forms', value: stats.claimsForms, color: COLORS[2] });
   }
 
-  if (isLoading) {
+  // Show skeleton while loading instead of full spinner
+  if (isLoading && !stats && !monthlyData) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" text="Loading dashboard..." />
+      <div className="space-y-6 animate-pulse">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-8 bg-gray-300 rounded w-48 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-64"></div>
+          </div>
+        </div>
+        
+        <div className="flex flex-wrap gap-6">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="flex-1 min-w-[250px] bg-gray-200 h-32 rounded"></div>
+          ))}
+        </div>
+        
+        <div className="bg-gray-200 h-64 rounded"></div>
+        <div className="bg-gray-200 h-80 rounded"></div>
       </div>
     );
   }
