@@ -19,6 +19,7 @@ import {
   TrendingUp,
   HeartHandshake
 } from 'lucide-react';
+import heroImage from '@/hero.jpg';
 // Logo is now served from public folder
 
 const Index = () => {
@@ -122,7 +123,7 @@ const Index = () => {
             {/* Right Column - Hero Image */}
             <div className="hero__image-container animate-slide-in-right">
               <img 
-                src="/src/hero.jpg" 
+                src={heroImage} 
                 alt="NEM Forms hero"
                 className="hero__image"
               />
