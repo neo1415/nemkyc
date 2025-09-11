@@ -139,7 +139,7 @@ All colors MUST be HSL.
 .hero {
   height: 100vh;
   min-height: 100vh;
-  background: linear-gradient(180deg, rgba(122,22,55,0.98) 0%, rgba(122,22,55,0.85) 40%, rgba(255,255,255,0.3) 85%, rgba(255,255,255,1) 100%), hsl(var(--color-burgundy));
+  background: linear-gradient(180deg, rgba(122,22,55,0.98) 0%, rgba(122,22,55,0.85) 40%, rgba(122,22,55,0.3) 85%, rgba(255,255,255,1) 100%), hsl(var(--color-burgundy));
   position: relative;
   overflow: hidden;
 }
@@ -174,32 +174,69 @@ All colors MUST be HSL.
   gap: 2rem;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1024px) and (min-width: 769px) {
   .hero-grid {
     grid-template-columns: 60% 40%;
+  }
+  
+  .hero__title {
+    font-size: clamp(2rem, 6vw, 4rem);
+  }
+  
+  .hero__subtitle {
+    font-size: clamp(1rem, 2vw, 1.1rem);
+  }
+  
+  .hero__cta {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
   }
 }
 
 @media (max-width: 768px) {
   .hero {
     height: 100vh;
+    position: relative;
   }
   
   .hero-grid {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-    gap: 1rem;
+    grid-template-rows: 1fr auto;
+    gap: 0;
+    position: relative;
+    height: 100%;
   }
   
   .hero__content {
     order: 2;
-    overflow-y: auto;
-    max-height: 60vh;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    padding: 2rem 1rem;
+    text-align: center;
+    background: linear-gradient(0deg, rgba(122,22,55,0.95) 0%, rgba(122,22,55,0.7) 70%, transparent 100%);
+  }
+  
+  .hero__image-container {
+    order: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 0;
   }
   
   .hero__image {
-    order: 1;
-    height: 40vh;
+    width: 100%;
+    height: calc(100% - 4px);
+    object-fit: cover;
+    object-position: center;
+    border-radius: 0;
+    box-shadow: none;
   }
 }
 
@@ -222,13 +259,13 @@ All colors MUST be HSL.
 }
 
 .hero__cta {
-  background: hsl(var(--color-yellow));
-  color: hsl(var(--color-burgundy));
+  background: hsl(var(--color-burgundy));
+  color: hsl(var(--color-white));
   border: none;
-  padding: 0.75rem 1.75rem;
+  padding: 0.5rem 1.25rem;
   border-radius: 50px;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
