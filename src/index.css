@@ -47,6 +47,7 @@ All colors MUST be HSL.
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-light)));
     --gradient-gold: linear-gradient(135deg, hsl(var(--gold)), hsl(var(--gold-light)));
+    --gradient-gold-shine: linear-gradient(135deg, hsl(var(--gold-light)) 0%, hsl(var(--gold)) 45%, hsl(var(--gold-light)) 100%);
     --gradient-hero: linear-gradient(135deg, hsl(var(--primary-dark)), hsl(var(--primary)), hsl(var(--gold-dark)));
     --gradient-footer: linear-gradient(135deg, hsl(var(--footer-dark)), hsl(var(--primary-dark)));
 
@@ -246,7 +247,7 @@ All colors MUST be HSL.
   line-height: 0.9;
   letter-spacing: -0.02em;
   margin-bottom: 1.5rem;
-  background: linear-gradient(135deg, hsl(var(--gold)), white);
+  background: linear-gradient(135deg, hsl(var(--gold-light)), white);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -262,24 +263,24 @@ All colors MUST be HSL.
 }
 
 .hero__cta {
-  background: hsl(var(--gold));
+  background: var(--gradient-gold-shine);
   color: hsl(var(--color-burgundy));
   border: none;
   padding: 0.5rem 1.25rem;
   border-radius: 50px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.25);
   margin-bottom: 3rem;
 }
 
 .hero__cta:hover {
-  background: hsl(var(--gold));
-  color: white;
+  background: var(--gradient-gold-shine);
+  color: hsl(var(--color-white));
   transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 6px 25px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 35px rgba(0,0,0,0.3);
 }
 
 
