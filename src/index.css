@@ -319,7 +319,7 @@ All colors MUST be HSL.
     height: 90%;
     max-width: 100%;
     width: auto;
-    object-fit: contain;
+    object-fit: cover;
   }
 }
 
