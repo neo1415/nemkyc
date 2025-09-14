@@ -157,7 +157,7 @@ All colors MUST be HSL.
 
 @media (max-width: 1024px) and (min-width: 769px) {
   .hero-grid {
-    grid-template-columns: 50% 50%;
+    grid-template-columns: 1fr;
     padding: 1rem 2rem;
     margin-top: 1rem;
   }
@@ -198,7 +198,7 @@ All colors MUST be HSL.
     gap: 0;
     position: relative;
     height: 100%;
-    padding-top: 1rem;
+    padding: 0;
   }
   
   .hero__content {
@@ -216,7 +216,7 @@ All colors MUST be HSL.
   .hero__image-container {
     order: 1;
     position: absolute;
-    top: 1rem;
+    top: 0;
     left: 0;
     right: 0;
     bottom: 0;
@@ -226,11 +226,34 @@ All colors MUST be HSL.
   
   .hero__image {
     width: 100%;
-    height: calc(100% - 1rem);
+    height: 100%;
     object-fit: cover;
     object-position: center;
     border-radius: 0;
     box-shadow: none;
+  }
+  
+  .hero__image::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+  }
+  
+  .hero__image-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+    z-index: 5;
   }
 }
 
