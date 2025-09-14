@@ -156,16 +156,6 @@ All colors MUST be HSL.
   pointer-events: none;
 }
 
-.hero::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 60%;
-  height: 40%;
-  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.15) 100%);
-  pointer-events: none;
-}
 
 .hero-grid {
   display: grid;
@@ -217,7 +207,7 @@ All colors MUST be HSL.
     z-index: 10;
     padding: 2rem 1rem;
     text-align: center;
-    background: linear-gradient(0deg, rgba(122,22,55,0.95) 0%, rgba(122,22,55,0.7) 70%, transparent 100%);
+    background: linear-gradient(0deg, rgba(122,22,55,0.98) 0%, rgba(122,22,55,0.85) 40%, rgba(122,22,55,0.3) 85%, rgba(255,255,255,1) 100%);
   }
   
   .hero__image-container {
@@ -247,11 +237,11 @@ All colors MUST be HSL.
   line-height: 0.9;
   letter-spacing: -0.02em;
   margin-bottom: 1.5rem;
-  background: linear-gradient(135deg, #ffdf44, white);
+  background: linear-gradient(135deg, #ffd700, white);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
 }
 
 .hero__subtitle {
