@@ -140,7 +140,7 @@ All colors MUST be HSL.
 .hero {
   height: 100vh;
   min-height: 100vh;
-  background: linear-gradient(180deg, rgba(122,22,55,0.98) 0%, rgba(122,22,55,0.85) 40%, rgba(122,22,55,0.3) 85%, rgba(255,255,255,1) 100%), #7a1637;
+  background: #7a1637;
   position: relative;
   overflow: hidden;
 }
