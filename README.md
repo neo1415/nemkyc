@@ -6,7 +6,7 @@ This application is a highly professional, production-grade insurance form suite
 
 
 
-##  GENERAL RULES
+# RULES
 
 ✅ Each form has its own **name**. Use that name in the component and directory structure.  
 ✅ Each form is divided into **sections**. Each section should be treated as a single *step* in a stepper, in the order they appear in the provided data.  
