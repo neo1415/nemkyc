@@ -153,11 +153,19 @@ All colors MUST be HSL.
   gap: 2rem;
 }
 
-@media (max-width: 1024px) and (min-width: 769px) {
+@media (max-width: 1000px) and (min-width: 769px) {
   .hero-grid {
     grid-template-columns: 1fr;
     padding: 1rem 2rem;
     margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .hero__content {
+    text-align: center;
+    width: 100%;
   }
   
   .hero__title {
@@ -174,13 +182,7 @@ All colors MUST be HSL.
   }
   
   .hero__image-container {
-    margin-left: 0;
-  }
-  
-  .hero__image {
-    width: 100%;
-    max-width: 100%;
-    height: 80%;
+    display: none;
   }
 }
 
