@@ -8,7 +8,7 @@ All colors MUST be HSL.
 
 /* Hero-specific color variables */
 :root {
-  --color-burgundy: 122 55% 29%;
+  --color-burgundy: 358 87% 33%;
   --color-yellow: 45 95% 63%;
   --color-white: 0 0% 100%;
   --text-dark: 215 25% 9%;
@@ -27,11 +27,11 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    /* NEM Insurance Brand Colors - Burgundy primary */
-    --primary: 350 50% 30%;
+    /* NEM Insurance Brand Colors - Updated to #9D0B0E */
+    --primary: 358 87% 33%;
     --primary-foreground: 0 0% 98%;
-    --primary-light: 350 40% 45%;
-    --primary-dark: 350 60% 15%;
+    --primary-light: 358 75% 45%;
+    --primary-dark: 358 90% 20%;
 
     /* Gold accents */
     --gold: 45 100% 50%;
@@ -140,7 +140,7 @@ All colors MUST be HSL.
 .hero {
   height: 100vh;
   min-height: 100vh;
-  background: #7a1637;
+  background: #9D0B0E;
   position: relative;
   overflow: hidden;
 }
@@ -250,7 +250,7 @@ All colors MUST be HSL.
 
 .hero__cta {
   background: linear-gradient(135deg, #ffdf44 0%, #ffd700 45%, #ffdf44 100%);
-  color: #7a1637;
+  color: #9D0B0E;
   border: none;
   padding: 0.5rem 1.25rem;
   border-radius: 50px;
