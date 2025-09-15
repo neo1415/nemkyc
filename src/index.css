@@ -208,7 +208,6 @@ All colors MUST be HSL.
   }
   
   .hero-grid {
-    grid-template-columns: 1fr;
     height: 100%;
     position: relative;
     z-index: 2;
@@ -221,10 +220,11 @@ All colors MUST be HSL.
   .hero__content {
     text-align: center;
     width: 100%;
+    max-width: 600px;
   }
   
   .hero__image-container {
-    display: none;
+    display: none !important;
   }
 }
 
