@@ -369,13 +369,13 @@ export const motorClaimSchema = Yup.object({
   claimantName: Yup.string().required('Claimant name is required'),
   claimantPhone: phoneValidation,
   claimantEmail: emailValidation,
-  claimantAddress: Yup.string().required('Claimant address is required'),
-  vehicleMake: Yup.string().required('Vehicle make is required'),
-  vehicleModel: Yup.string().required('Vehicle model is required'),
-  vehicleYear: Yup.number().min(1900).max(new Date().getFullYear()).required('Vehicle year is required'),
-  vehicleRegistration: Yup.string().required('Vehicle registration is required'),
-  chassisNumber: Yup.string().required('Chassis number is required'),
-  engineNumber: Yup.string().required('Engine number is required'),
+  // claimantAddress: Yup.string().required('Claimant address is required'), // REMOVED as requested
+  // vehicleMake: Yup.string().required('Vehicle make is required'), // COMMENTED OUT as requested
+  // vehicleModel: Yup.string().required('Vehicle model is required'), // COMMENTED OUT as requested
+  // vehicleYear: Yup.number().min(1900).max(new Date().getFullYear()).required('Vehicle year is required'), // COMMENTED OUT as requested
+  vehicleRegistration: Yup.string().required('Vehicle registration is required'), // MOVED from vehicle details to insured details
+  // chassisNumber: Yup.string().required('Chassis number is required'), // COMMENTED OUT as requested
+  // engineNumber: Yup.string().required('Engine number is required'), // COMMENTED OUT as requested
   policyNumber: Yup.string().required('Policy number is required'),
   policyStartDate: dateValidation,
   policyEndDate: dateValidation,
