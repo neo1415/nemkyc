@@ -36,14 +36,15 @@ const motorClaimSchema = yup.object().shape({
   nameCompany: yup.string().required("Name/Company is required"),
   // title: yup.string().required("Title is required"),
   // dateOfBirth: yup.date().required("Date of birth is required"),
-  gender: yup.string().required("Gender is required"),
-  address: yup.string().required("Address is required"),
+  // gender: yup.string().required("Gender is required"), // REMOVED as requested
+  // address: yup.string().required("Address is required"), // REMOVED as requested
   phone: yup.string().required("Phone number is required"),
   email: yup.string().email("Valid email is required").required("Email is required"),
+  registrationNumber: yup.string().required("Registration number is required"), // MOVED from vehicle details
 
-  // Vehicle Details
-  registrationNumber: yup.string().required("Registration number is required"),
-  make: yup.string().required("Make is required"),
+  // Vehicle Details - COMMENTED OUT except registrationNumber which moved above
+  /*registrationNumber: yup.string().required("Registration number is required"),*/
+  /*make: yup.string().required("Make is required"),
   model: yup.string().required("Model is required"),
   year: yup.string().required("Year is required"),
   engineNumber: yup.string().required("Engine number is required"),
@@ -67,7 +68,7 @@ const motorClaimSchema = yup.object().shape({
     otherwise: (schema) => schema.notRequired()
   }),
   vehicleUsage: yup.string().required("Vehicle usage is required"),
-  trailerAttached: yup.string().required("Trailer attached field is required"),
+  trailerAttached: yup.string().required("Trailer attached field is required"),*/
 
   // Damage Details
   // damageDescription: yup.string().required("Damage description is required"),
@@ -147,14 +148,15 @@ interface MotorClaimData {
   nameCompany: string;
   // title: string;
   // dateOfBirth: Date;
-  gender: string;
-  address: string;
+  // gender: string; // REMOVED as requested
+  // address: string; // REMOVED as requested
   phone: string;
   email: string;
+  registrationNumber: string; // MOVED from vehicle details
 
-  // Vehicle Details
-  registrationNumber: string;
-  make: string;
+  // Vehicle Details - COMMENTED OUT except registrationNumber which moved above
+  /*registrationNumber: string;*/
+  /*make: string;
   model: string;
   year: string;
   engineNumber: string;
@@ -166,7 +168,7 @@ interface MotorClaimData {
   hirePurchase: string;
   hirePurchaseDetails?: string;
   vehicleUsage: string;
-  trailerAttached: string;
+  trailerAttached: string;*/
 
   // Damage Details
   // damageDescription: string;
@@ -334,12 +336,12 @@ const defaultValues: Partial<MotorClaimData> = {
   policyNumber: '',
   nameCompany: '',
   // title: '',
-  gender: '',
-  address: '',
+  // gender: '', // REMOVED as requested
+  // address: '', // REMOVED as requested
   phone: '',
   email: '',
-  registrationNumber: '',
-  make: '',
+  registrationNumber: '', // MOVED from vehicle details
+  /*make: '',
   model: '',
   year: '',
   engineNumber: '',
@@ -351,7 +353,7 @@ const defaultValues: Partial<MotorClaimData> = {
   hirePurchase: '',
   hirePurchaseDetails: '',
   vehicleUsage: '',
-  trailerAttached: '',
+  trailerAttached: '',*/
   // damageDescription: '',
   // inspectionLocation: '',
   incidentLocation: '',
@@ -469,12 +471,12 @@ const MotorClaim: React.FC = () => {
   // Step field mappings for validation
   const stepFieldMappings = {
    
-    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo','nameCompany', 'gender', 'address', 'phone', 'email'],
-    1: ['registrationNumber', 'make', 'model', 'year', 'engineNumber', 'chassisNumber', 'registeredInYourName', 'registeredInYourNameDetails', 'ownedSolely', 'ownedSolelyDetails', 'hirePurchase', 'hirePurchaseDetails', 'vehicleUsage', 'trailerAttached'],
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo','nameCompany', 'registrationNumber', 'phone', 'email'], // Removed gender, address; added registrationNumber
+    1: [], // Vehicle details section is now empty since registrationNumber moved to insured details
     // 3: ['damageDescription', 'inspectionLocation'],
-    2: ['incidentLocation', 'incidentDate', 'incidentTime', 'policeReported', 'policeStationDetails', 'incidentDescription'],
-    3: ['otherVehicleInvolved', 'otherVehicleRegNumber', 'otherVehicleMakeModel', 'otherDriverName', 'otherDriverPhone', 'otherDriverAddress','witnesses'],
-    4: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
+    2: ['incidentLocation', 'incidentDate', 'incidentTime', 'policeReported', 'policeStationDetails', 'incidentDescription'], // Incident details
+    3: ['otherVehicleInvolved', 'otherVehicleRegNumber', 'otherVehicleMakeModel', 'otherDriverName', 'otherDriverPhone', 'otherDriverAddress','witnesses'], // Other vehicle details
+    4: ['agreeToDataPrivacy', 'declarationTrue', 'signature'] // Declaration
   };
 
   const steps = [
@@ -494,25 +496,8 @@ const MotorClaim: React.FC = () => {
           <div className="space-y-4">
             <FormField name="nameCompany" label="Name / Company Name" required />
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-{/*               <FormSelect name="title" label="Title" required placeholder="Select title">
-                <SelectItem value="Mr">Mr</SelectItem>
-                <SelectItem value="Mrs">Mrs</SelectItem>
-                <SelectItem value="Chief">Chief</SelectItem>
-                <SelectItem value="Dr">Dr</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </FormSelect>
-
-              <FormDatePicker name="dateOfBirth" label="Date of Birth" required /> */}
-
-              <FormSelect name="gender" label="Gender" required placeholder="Select gender">
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </FormSelect>
-            </div>
-            
-            <FormTextarea name="address" label="Address" required />
+            {/* Removed gender and address fields as requested */}
+            <FormField name="registrationNumber" label="Vehicle Registration Number" required />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField name="phone" label="Phone Number" required />
@@ -528,6 +513,12 @@ const MotorClaim: React.FC = () => {
       component: (
         <FormProvider {...formMethods}>
           <div className="space-y-4">
+            {/* COMMENTED OUT: All vehicle details fields except registration number which moved to insured details */}
+            <div className="text-center p-8 text-muted-foreground">
+              <p>Vehicle registration number has been moved to the Insured Details section.</p>
+              <p>All other vehicle details have been removed as requested.</p>
+            </div>
+            {/*
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField name="registrationNumber" label="Registration Number" required />
               <FormField name="make" label="Make" required />
@@ -580,6 +571,7 @@ const MotorClaim: React.FC = () => {
               <SelectItem value="yes">Yes</SelectItem>
               <SelectItem value="no">No</SelectItem>
             </FormSelect>
+            */}
           </div>
         </FormProvider>
       )

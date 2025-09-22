@@ -219,13 +219,13 @@ export interface MotorClaimData {
   claimantName: string;
   claimantPhone: string;
   claimantEmail: string;
-  claimantAddress: string;
-  vehicleMake: string;
-  vehicleModel: string;
-  vehicleYear: number;
-  vehicleRegistration: string;
-  chassisNumber: string;
-  engineNumber: string;
+  // claimantAddress: string; // REMOVED as requested
+  // vehicleMake: string; // COMMENTED OUT as requested
+  // vehicleModel: string; // COMMENTED OUT as requested  
+  // vehicleYear: number; // COMMENTED OUT as requested
+  vehicleRegistration: string; // This maps to registrationNumber in form
+  // chassisNumber: string; // COMMENTED OUT as requested
+  // engineNumber: string; // COMMENTED OUT as requested
   policyNumber: string;
   policyStartDate: string;
   policyEndDate: string;

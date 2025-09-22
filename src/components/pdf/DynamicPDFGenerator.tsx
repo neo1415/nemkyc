@@ -168,7 +168,8 @@ export class DynamicPDFGenerator {
     if (data.rentDueDate || data.nameOfLandlord || data.amountDefaulted) {
       return 'rent-assurance-claims';
     }
-    if (data.registrationNumber || data.vehicleUsage) {
+    // Check for motor claims by registration number (since other vehicle fields are now commented out)
+    if (data.registrationNumber) {
       return 'motor-claims';
     }
     if (data.premisesAddress && data.dateOfTheft) {

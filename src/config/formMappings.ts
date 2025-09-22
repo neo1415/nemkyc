@@ -309,29 +309,31 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'nameCompany', label: 'Name / Company Name', type: 'text', editable: true },
           { key: 'title', label: 'Title', type: 'text', editable: true },
           { key: 'dateOfBirth', label: 'Date of Birth', type: 'date', editable: true },
-          { key: 'gender', label: 'Gender', type: 'text', editable: true },
-          { key: 'address', label: 'Address', type: 'text', editable: true },
+          // { key: 'gender', label: 'Gender', type: 'text', editable: true }, // REMOVED as requested
+          // { key: 'address', label: 'Address', type: 'text', editable: true }, // REMOVED as requested
           { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
           { key: 'email', label: 'Email', type: 'email', editable: true },
+          { key: 'registrationNumber', label: 'Vehicle Registration Number', type: 'text', editable: true }, // MOVED from vehicle details
         ]
       },
       {
         title: 'Vehicle Details',
         fields: [
-          { key: 'registrationNumber', label: 'Registration Number', type: 'text', editable: true },
-          { key: 'make', label: 'Make', type: 'text', editable: true },
-          { key: 'model', label: 'Model', type: 'text', editable: true },
-          { key: 'year', label: 'Year', type: 'text', editable: true },
-          { key: 'engineNumber', label: 'Engine Number', type: 'text', editable: true },
-          { key: 'chassisNumber', label: 'Chassis Number', type: 'text', editable: true },
-          { key: 'registeredInYourName', label: 'Registered in Your Name', type: 'text', editable: true },
-          { key: 'registeredInYourNameDetails', label: 'Registration Details', type: 'text', editable: true },
-          { key: 'ownedSolely', label: 'Owned Solely by You', type: 'text', editable: true },
-          { key: 'ownedSolelyDetails', label: 'Ownership Details', type: 'text', editable: true },
-          { key: 'hirePurchase', label: 'Subject to Hire Purchase', type: 'text', editable: true },
-          { key: 'hirePurchaseDetails', label: 'Hire Purchase Details', type: 'text', editable: true },
-          { key: 'vehicleUsage', label: 'Vehicle Usage', type: 'text', editable: true },
-          { key: 'trailerAttached', label: 'Trailer Attached', type: 'text', editable: true },
+          // ALL VEHICLE DETAILS COMMENTED OUT AS REQUESTED (except registration number which moved to insured details)
+          // { key: 'registrationNumber', label: 'Registration Number', type: 'text', editable: true },
+          // { key: 'make', label: 'Make', type: 'text', editable: true },
+          // { key: 'model', label: 'Model', type: 'text', editable: true },
+          // { key: 'year', label: 'Year', type: 'text', editable: true },
+          // { key: 'engineNumber', label: 'Engine Number', type: 'text', editable: true },
+          // { key: 'chassisNumber', label: 'Chassis Number', type: 'text', editable: true },
+          // { key: 'registeredInYourName', label: 'Registered in Your Name', type: 'text', editable: true },
+          // { key: 'registeredInYourNameDetails', label: 'Registration Details', type: 'text', editable: true },
+          // { key: 'ownedSolely', label: 'Owned Solely by You', type: 'text', editable: true },
+          // { key: 'ownedSolelyDetails', label: 'Ownership Details', type: 'text', editable: true },
+          // { key: 'hirePurchase', label: 'Subject to Hire Purchase', type: 'text', editable: true },
+          // { key: 'hirePurchaseDetails', label: 'Hire Purchase Details', type: 'text', editable: true },
+          // { key: 'vehicleUsage', label: 'Vehicle Usage', type: 'text', editable: true },
+          // { key: 'trailerAttached', label: 'Trailer Attached', type: 'text', editable: true },
         ]
       },
       {
