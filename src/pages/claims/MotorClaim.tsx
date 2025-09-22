@@ -470,13 +470,10 @@ const MotorClaim: React.FC = () => {
 
   // Step field mappings for validation
   const stepFieldMappings = {
-   
-    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo','nameCompany', 'registrationNumber', 'phone', 'email'], // Removed gender, address; added registrationNumber
-    1: [], // Vehicle details section is now empty since registrationNumber moved to insured details
-    // 3: ['damageDescription', 'inspectionLocation'],
-    2: ['incidentLocation', 'incidentDate', 'incidentTime', 'policeReported', 'policeStationDetails', 'incidentDescription'], // Incident details
-    3: ['otherVehicleInvolved', 'otherVehicleRegNumber', 'otherVehicleMakeModel', 'otherDriverName', 'otherDriverPhone', 'otherDriverAddress','witnesses'], // Other vehicle details
-    4: ['agreeToDataPrivacy', 'declarationTrue', 'signature'] // Declaration
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo','nameCompany', 'registrationNumber', 'phone', 'email'], // Insured details with registration number
+    1: ['incidentLocation', 'incidentDate', 'incidentTime', 'policeReported', 'policeStationDetails', 'incidentDescription'], // Incident details
+    2: ['otherVehicleInvolved', 'otherVehicleRegNumber', 'otherVehicleMakeModel', 'otherDriverName', 'otherDriverPhone', 'otherDriverAddress','witnesses'], // Other vehicle details
+    3: ['agreeToDataPrivacy', 'declarationTrue', 'signature'] // Declaration
   };
 
   const steps = [
@@ -507,87 +504,6 @@ const MotorClaim: React.FC = () => {
         </FormProvider>
       )
     },
-    {
-      id: 'vehicle',
-      title: 'Vehicle Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            {/* COMMENTED OUT: All vehicle details fields except registration number which moved to insured details */}
-            <div className="text-center p-8 text-muted-foreground">
-              <p>Vehicle registration number has been moved to the Insured Details section.</p>
-              <p>All other vehicle details have been removed as requested.</p>
-            </div>
-            {/*
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField name="registrationNumber" label="Registration Number" required />
-              <FormField name="make" label="Make" required />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField name="model" label="Model" required />
-              <FormField name="year" label="Year" required />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField name="engineNumber" label="Engine Number" required />
-              <FormField name="chassisNumber" label="Chassis Number" required />
-            </div>
-            
-            <FormSelect name="registeredInYourName" label="Is the vehicle registered in your name?" required placeholder="Select yes or no">
-              <SelectItem value="yes">Yes</SelectItem>
-              <SelectItem value="no">No</SelectItem>
-            </FormSelect>
-            
-            {watchedValues.registeredInYourName === 'no' && (
-              <FormTextarea name="registeredInYourNameDetails" label="If No, provide details" required />
-            )}
-            
-            <FormSelect name="ownedSolely" label="Is the vehicle owned solely by you?" required placeholder="Select yes or no">
-              <SelectItem value="yes">Yes</SelectItem>
-              <SelectItem value="no">No</SelectItem>
-            </FormSelect>
-            
-            {watchedValues.ownedSolely === 'no' && (
-              <FormTextarea name="ownedSolelyDetails" label="If No, provide details" required />
-            )}
-            
-            <FormSelect name="hirePurchase" label="Is the vehicle on hire purchase?" required placeholder="Select yes or no">
-              <SelectItem value="yes">Yes</SelectItem>
-              <SelectItem value="no">No</SelectItem>
-            </FormSelect>
-            
-            {watchedValues.hirePurchase === 'yes' && (
-              <FormTextarea name="hirePurchaseDetails" label="If Yes, provide details" required />
-            )}
-            
-            <FormSelect name="vehicleUsage" label="Vehicle Usage" required placeholder="Select usage">
-              <SelectItem value="Private">Private</SelectItem>
-              <SelectItem value="Commercial">Commercial</SelectItem>
-              <SelectItem value="Both">Both</SelectItem>
-            </FormSelect>
-            
-            <FormSelect name="trailerAttached" label="Was trailer attached?" required placeholder="Select yes or no">
-              <SelectItem value="yes">Yes</SelectItem>
-              <SelectItem value="no">No</SelectItem>
-            </FormSelect>
-            */}
-          </div>
-        </FormProvider>
-      )
-    },
-    // {
-    //   id: 'damage',
-    //   title: 'Damage Details',
-    //   component: (
-    //     <FormProvider {...formMethods}>
-    //       <div className="space-y-4">
-    //         <FormTextarea name="damageDescription" label="Description of Damage" required />
-    //         <FormField name="inspectionLocation" label="Where can the vehicle be inspected?" required />
-    //       </div>
-    //     </FormProvider>
-    //   )
-    // },
     {
       id: 'incident',
       title: 'Incident Details',
