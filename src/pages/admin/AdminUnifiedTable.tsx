@@ -32,7 +32,9 @@ import {
   CheckCircle,
   Cancel,
   FilterList,
-  GetApp
+  GetApp,
+  ThumbUp,
+  ThumbDown
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -95,6 +97,12 @@ const AdminUnifiedTable: React.FC<AdminUnifiedTableProps> = ({
   const [columns, setColumns] = useState<GridColDef[]>([]);
   const [filterValue, setFilterValue] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [approvalDialog, setApprovalDialog] = useState<{ 
+    open: boolean; 
+    action: 'approve' | 'reject' | null; 
+    form: FormData | null;
+    comment: string;
+  }>({ open: false, action: null, form: null, comment: '' });
 
   useEffect(() => {
     if (!user || !isAdmin()) {
@@ -439,6 +447,61 @@ const fetchForms = async () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleApprovalAction = async () => {
+    if (!approvalDialog.form || !approvalDialog.action) return;
+
+    const { form, action, comment } = approvalDialog;
+    
+    try {
+      const response = await fetch('/api/update-claim-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          collectionName,
+          documentId: form.id,
+          status: action === 'approve' ? 'approved' : 'rejected',
+          approverUid: user?.uid,
+          comment: comment.trim() || `Claim ${action}d by administrator`,
+          userEmail: form.email || form.insuredEmail,
+          formType: title
+        }),
+      });
+
+      if (response.ok) {
+        toast({ 
+          title: 'Success', 
+          description: `Claim ${action}d successfully` 
+        });
+        
+        // Update local state
+        setForms(prev => prev.map(f => 
+          f.id === form.id 
+            ? { 
+                ...f, 
+                status: action === 'approve' ? 'approved' : 'rejected',
+                approvedBy: user?.uid,
+                approvedAt: new Date(),
+                approvalComment: comment.trim() || `Claim ${action}d by administrator`
+              } 
+            : f
+        ));
+        
+        setApprovalDialog({ open: false, action: null, form: null, comment: '' });
+      } else {
+        throw new Error('Failed to update claim status');
+      }
+    } catch (error) {
+      console.error('Error updating claim status:', error);
+      toast({ 
+        title: 'Error', 
+        description: `Failed to ${action} claim`, 
+        variant: 'destructive' 
+      });
+    }
+  };
+
   const generateColumns = (data: FormData[]) => {
     const sampleData = data[0];
     const dynamicColumns: GridColDef[] = [];
@@ -447,22 +510,54 @@ const fetchForms = async () => {
     dynamicColumns.push({
       field: 'actions',
       headerName: 'Actions',
-      width: 200,
+      width: isClaim ? 280 : 200,
       type: 'actions',
-      getActions: (params) => [
-        <GridActionsCellItem
-          key="view"
-          icon={<Visibility />}
-          label="View"
-          onClick={() => navigate(`/admin/form/${collectionName}/${params.id}`)}
-        />,
-        <GridActionsCellItem
-          key="delete"
-          icon={<Delete />}
-          label="Delete"
-          onClick={() => handleDeleteClick(params.id as string)}
-        />
-      ],
+      getActions: (params) => {
+        const actions = [
+          <GridActionsCellItem
+            key="view"
+            icon={<Visibility />}
+            label="View"
+            onClick={() => navigate(`/admin/form/${collectionName}/${params.id}`)}
+          />,
+          <GridActionsCellItem
+            key="delete"
+            icon={<Delete />}
+            label="Delete"
+            onClick={() => handleDeleteClick(params.id as string)}
+          />
+        ];
+
+        // Add approval actions for claims with pending/processing status
+        if (isClaim && params.row.status && ['pending', 'processing'].includes(params.row.status.toLowerCase())) {
+          actions.push(
+            <GridActionsCellItem
+              key="approve"
+              icon={<ThumbUp />}
+              label="Approve"
+              onClick={() => setApprovalDialog({ 
+                open: true, 
+                action: 'approve', 
+                form: params.row, 
+                comment: '' 
+              })}
+            />,
+            <GridActionsCellItem
+              key="reject"
+              icon={<ThumbDown />}
+              label="Reject"
+              onClick={() => setApprovalDialog({ 
+                open: true, 
+                action: 'reject', 
+                form: params.row, 
+                comment: '' 
+              })}
+            />
+          );
+        }
+
+        return actions;
+      },
     });
 
     // Exclude certain fields from columns
@@ -877,6 +972,61 @@ const fetchForms = async () => {
             <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleDeleteConfirm} color="error" variant="contained">
               Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Approval/Rejection Dialog */}
+        <Dialog
+          open={approvalDialog.open}
+          onClose={() => setApprovalDialog({ open: false, action: null, form: null, comment: '' })}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>
+            {approvalDialog.action === 'approve' ? 'Approve Claim' : 'Reject Claim'}
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body1" gutterBottom>
+              Are you sure you want to {approvalDialog.action} this claim?
+            </Typography>
+            {approvalDialog.form && (
+              <Box mb={2}>
+                <Typography variant="body2" color="textSecondary">
+                  <strong>Claimant:</strong> {approvalDialog.form.nameOfInsured || approvalDialog.form.insuredName || approvalDialog.form.companyName || 'N/A'}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  <strong>Email:</strong> {approvalDialog.form.email || approvalDialog.form.insuredEmail || 'N/A'}
+                </Typography>
+              </Box>
+            )}
+            <TextField
+              autoFocus
+              margin="dense"
+              label={`${approvalDialog.action === 'approve' ? 'Approval' : 'Rejection'} Comment`}
+              multiline
+              rows={4}
+              fullWidth
+              variant="outlined"
+              value={approvalDialog.comment}
+              onChange={(e) => setApprovalDialog(prev => ({ ...prev, comment: e.target.value }))}
+              placeholder={`Please provide a reason for ${approvalDialog.action}ing this claim...`}
+              required
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => setApprovalDialog({ open: false, action: null, form: null, comment: '' })}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleApprovalAction}
+              color={approvalDialog.action === 'approve' ? 'success' : 'error'}
+              variant="contained"
+              disabled={!approvalDialog.comment.trim()}
+            >
+              {approvalDialog.action === 'approve' ? 'Approve' : 'Reject'}
             </Button>
           </DialogActions>
         </Dialog>
