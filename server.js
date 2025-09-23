@@ -21,10 +21,6 @@ const bcrypt = require('bcrypt');
 const multer = require("multer");
 const { getStorage } = require("firebase-admin/storage");
 
-// const session = require('express-session');
-// const crypto = require('crypto');
-
-
 let config = {
   type: process.env.TYPE,
   project_id: process.env.PROJECT_ID,
@@ -47,8 +43,6 @@ admin.initializeApp({
   storageBucket:"nem-customer-feedback-8d3fb.appspot.com",
   databaseURL: process.env.FIREBASE_DATABASE_URL,
 });
-
-// const firebaseAPIKey = process.env.REACT_APP_FIREBASE_KEY;
 
 const accessLogStream = fs.createWriteStream(path.join(__dirname, 'access.log'), { flags: 'a' });
 
@@ -102,7 +96,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'CSRF-Token', 'X-Requested-With', 'Authorization', 'x-timestamp'],
 }));
 
-
 // Middleware setup
 app.use(morgan('combined', { stream: accessLogStream }));
 app.use(helmet());
@@ -143,7 +136,6 @@ app.use(csurf({
   }
 }));
 
-
 // Initialize CSRF protection middleware
 const csrfProtection = csurf({
   cookie: {
@@ -163,7 +155,6 @@ app.use((req, res, next) => {
   next();
 });
 
-
 const db = admin.firestore();
 const upload = multer({ storage: multer.memoryStorage() });
 const bucket = getStorage().bucket();
@@ -174,22 +165,14 @@ app.get('/', (req, res) => {
   res.send('<h1>Server is running!</h1>');
 });
 
-// Rate limiter middleware to limit login attempts
-// const = rateLimit({
-//   windowMs: 10 * 60 * 1000, // 10 minutes window
-//   max: 15, // Allow up to 15 requests per IP
-//   message: 'Too many login attempts, please try again later.',
-//   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-//   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-// });
-
 // Timestamp validation middleware
 app.use((req, res, next) => {
   if (req.path === '/csrf-token' || 
     req.path === '/listenForUpdates' ||
     req.path === '/send-to-user' ||
     req.path === '/send-to-admin-and-claims' ||
-    req.path === '/send-to-admin-and-compliance') {
+    req.path === '/send-to-admin-and-compliance' ||
+    req.path === '/api/update-claim-status') {
     return next(); // Skip timestamp validation for these routes
   }
 
@@ -217,7 +200,8 @@ app.use((req, res, next) => {
     req.path === '/listenForUpdates' ||
     req.path === '/send-to-user' ||
     req.path === '/send-to-admin-and-claims' ||
-    req.path === '/send-to-admin-and-compliance'){
+    req.path === '/send-to-admin-and-compliance' ||
+    req.path === '/api/update-claim-status'){
     return next(); // Skip CSRF for this route
   }
   csrfProtection(req, res, next); // Apply CSRF protection
@@ -236,96 +220,6 @@ app.get('/csrf-token', (req, res) => {
   res.status(200).json({ csrfToken });
 });
 
-
-const createCustomToken = async (email) => {
-  try {
-    // Attempt to get the user by email
-    const userRecord = await admin.auth().getUserByEmail(email);
-    console.log(`Successfully fetched user: ${userRecord.uid}`);
-
-    // Attempt to create a custom token for the user
-    const customToken = await admin.auth().createCustomToken(userRecord.uid);
-    console.log(`Custom token created successfully for user: ${userRecord.uid}`);
-    
-    return customToken;
-  } catch (error) {
-    // Log specific error messages to understand the failure
-    if (error.code === 'auth/user-not-found') {
-      console.error(`User not found for email: ${email}`);
-    } else {
-      console.error('Error creating custom token:', error.message);
-    }
-
-    throw new Error('Failed to create custom token');
-  }
-};
-
-const authenticateUser = async (email, password) => {
-  const firebaseAPIKey = process.env.REACT_APP_FIREBASE_KEY;
-  
-  try {
-    const authResponse = await axios.post(
-      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseAPIKey}`,
-      {
-        email,
-        password,
-        returnSecureToken: true,
-      }
-    );
-    return authResponse.data.idToken;
-  } catch (error) {
-    throw new Error('Authentication failed');
-  }
-};
-
-
-// Function to create super admin user
-// const createSuperAdmin = async () => {
-//   try {
-//     const email = 'adneo502@gmail.com';
-//     const password = 'admin1234';
-//     const role = 'admin';
-
-//     console.log('Starting the creation of super admin user...');
-
-//     // Check if the user already exists
-//     let userRecord;
-//     try {
-//       userRecord = await admin.auth().getUserByEmail(email);
-//       console.log('User already exists:', userRecord);
-//     } catch (error) {
-//       if (error.code === 'auth/user-not-found') {
-//         // User does not exist, create a new one
-//         userRecord = await admin.auth().createUser({
-//           email,
-//           password,
-//           displayName: 'Super Admin',
-//         });
-//         console.log('User created:', userRecord);
-//       } else {
-//         throw error;
-//       }
-//     }
-
-//     // Set custom claim to assign Admin role
-//     await admin.auth().setCustomUserClaims(userRecord.uid, { [role]: true });
-//     console.log('Custom claims set for user:', userRecord.uid);
-
-//     // Update the Firestore document with the admin role
-//     const userRolesRef = db.collection('userroles').doc(userRecord.uid);
-//     await userRolesRef.set({
-//       email: userRecord.email,
-//       name: userRecord.displayName,
-//       role: 'admin', // Update the role to admin
-//     }, { merge: true }); // Merge with existing data if document exists
-
-//     console.log('User role updated in Firestore:', userRecord.uid);
-
-//   } catch (error) {
-//     console.error('Error creating super admin user:', error);
-//   }
-// };
-
 // Create transporter for sending emails
 const transporter = nodemailer.createTransport({
   host: 'smtp.office365.com', // Microsoft's SMTP server
@@ -338,7 +232,6 @@ const transporter = nodemailer.createTransport({
   logger: true, // Add this
   debug: true   // Add this
 });
-
 
 // Fetch all admin emails from Firebase
 async function getAllAdminEmails() {
@@ -356,7 +249,6 @@ async function getAllAdminEmails() {
     return [];
   }
 }
-
 
 // Function to send email to admins
 async function sendEmailToAdmins(adminEmails, formType, formData) {
@@ -392,7 +284,6 @@ async function sendEmailToAdmins(adminEmails, formType, formData) {
   }
 }
 
-
 //  Reusable helper
 async function getEmailsByRoles(rolesArray) {
   try {
@@ -422,6 +313,108 @@ async function sendEmail(to, subject, html, attachments = []) {
   return transporter.sendMail(mailOptions);
 }
 
+// ✅ NEW: Claims Approval/Rejection with Evidence Preservation
+app.post('/api/update-claim-status', async (req, res) => {
+  try {
+    const { 
+      collectionName, 
+      documentId, 
+      status, 
+      approverUid, 
+      comment, 
+      userEmail, 
+      formType 
+    } = req.body;
+
+    // Validate required fields
+    if (!collectionName || !documentId || !status || !approverUid || !comment) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: collectionName, documentId, status, approverUid, comment'
+      });
+    }
+
+    // Get approver details
+    const approverRecord = await admin.auth().getUser(approverUid);
+    const approverName = approverRecord.displayName || approverRecord.email;
+
+    // Evidence preservation data
+    const evidenceData = {
+      status,
+      approvedBy: approverUid,
+      approverName: approverName,
+      approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+      approvalComment: comment,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+
+    // Update the claim document with evidence preservation
+    await admin.firestore()
+      .collection(collectionName)
+      .doc(documentId)
+      .update(evidenceData);
+
+    // Send status update email to user if email provided
+    if (userEmail && formType) {
+      const isApproved = status === 'approved';
+      const statusText = isApproved ? 'approved' : 'rejected';
+      const statusColor = isApproved ? '#22c55e' : '#ef4444';
+      const statusEmoji = isApproved ? '🎉' : '❌';
+
+      const subject = `${formType} Claim ${statusText.charAt(0).toUpperCase() + statusText.slice(1)}`;
+      
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(90deg, #8B4513, #DAA520); padding: 20px; text-align: center;">
+            <h1 style="color: white; margin: 0;">NEM Insurance</h1>
+          </div>
+          <div style="padding: 20px; background: #f9f9f9;">
+            <h2 style="color: ${statusColor};">Your ${formType} claim has been ${statusText}! ${statusEmoji}</h2>
+            
+            <p>Dear Valued Customer,</p>
+            
+            ${isApproved 
+              ? `<p>We are pleased to inform you that your <strong>${formType}</strong> claim has been <strong>approved</strong>.</p>
+                 <p>Our claims team will contact you shortly with further details regarding the next steps.</p>`
+              : `<p>We regret to inform you that your <strong>${formType}</strong> claim has been <strong>rejected</strong>.</p>
+                 <p><strong>Reason:</strong> ${comment}</p>
+                 <p>If you have any questions or would like to appeal this decision, please contact our claims team.</p>`
+            }
+            
+            <div style="background: #f0f8ff; padding: 15px; border-left: 4px solid ${statusColor}; margin: 20px 0;">
+              <p style="margin: 0;"><strong>Claim Reference:</strong> ${documentId}</p>
+              <p style="margin: 5px 0 0 0;"><strong>Decision Date:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+            
+            ${isApproved ? '<p>Congratulations again!</p>' : '<p>Thank you for your understanding.</p>'}
+            
+            <p>Best regards,<br/>NEM Claims & Support Team</p>
+          </div>
+        </div>
+      `;
+
+      try {
+        await sendEmail(userEmail, subject, html);
+        console.log(`${statusText} email sent to user: ${userEmail}`);
+      } catch (emailError) {
+        console.error(`Failed to send ${statusText} email:`, emailError);
+        // Don't fail the main request if email fails
+      }
+    }
+
+    res.status(200).json({ 
+      message: `Claim ${status} successfully with evidence preserved`,
+      approver: approverName,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Error updating claim status:', error);
+    res.status(500).json({ 
+      error: 'Failed to update claim status',
+      details: error.message 
+    });
+  }
+});
 
 // ✅ 1. Admin + Compliance
 app.post('/send-to-admin-and-compliance', async (req, res) => {
@@ -496,12 +489,12 @@ app.post('/send-to-admin-and-claims', async (req, res) => {
         <div style="padding: 20px; background: #f9f9f9;">
           <h2 style="color: #8B4513;">New ${formType} Submission</h2>
           <p>A new <strong>${formType}</strong> claim has been submitted and requires processing.</p>
-          <p><strong>Claimant:</strong> ${formData?.name || formData?.companyName || 'N/A'}</p>
-          <p><strong>Email:</strong> ${formData?.email || 'N/A'}</p>
+          <p><strong>Claimant:</strong> ${formData?.nameOfInsured || formData?.insuredName || formData?.companyName || 'N/A'}</p>
+          <p><strong>Email:</strong> ${formData?.email || formData?.insuredEmail || 'N/A'}</p>
           <p><strong>Document ID:</strong> ${formData?.documentId || 'N/A'}</p>
           
-          <div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #8B4513;">
-            <p style="margin: 0;"><strong>Claim Processing Required:</strong> Please review and process this claim submission.</p>
+          <div style="margin: 20px 0; padding: 15px; background: #f0f8ff; border-left: 4px solid #8B4513;">
+            <p style="margin: 0;"><strong>Action Required:</strong> Please review and process this claim in the claims dashboard.</p>
           </div>
           
           <p>
@@ -526,7 +519,7 @@ app.post('/send-to-admin-and-claims', async (req, res) => {
     }
 
     // Send emails to all claims + admin users
-    await sendEmail(emails, `New ${formType} - Claim Processing Required`, html, attachments);
+    await sendEmail(emails, `New ${formType} Claim - Processing Required`, html, attachments);
     
     res.status(200).json({ message: 'Emails sent to Claims and Admin teams with PDF attachment' });
   } catch (error) {
@@ -535,15 +528,11 @@ app.post('/send-to-admin-and-claims', async (req, res) => {
   }
 });
 
-
-// ✅ 3. Confirmation to User
+// ✅ 3. User Confirmation
 app.post('/send-to-user', async (req, res) => {
-  const { userEmail, formType } = req.body;
-
-  console.log('📧 /send-to-user received:', { userEmail, formType });
+  const { userEmail, formType, userName } = req.body;
 
   if (!userEmail || !formType) {
-    console.error('❌ Missing required fields:', { userEmail: !!userEmail, formType: !!formType });
     return res.status(400).json({ error: 'Missing userEmail or formType' });
   }
 
@@ -554,30 +543,30 @@ app.post('/send-to-user', async (req, res) => {
           <h1 style="color: white; margin: 0;">NEM Insurance</h1>
         </div>
         <div style="padding: 20px; background: #f9f9f9;">
-          <h2 style="color: #8B4513;">Submission Confirmed! ✅</h2>
-          <p>Your <strong>${formType}</strong> form has been successfully submitted.</p>
+          <h2 style="color: #8B4513;">Form Submission Confirmed</h2>
+          <p>Dear ${userName || 'Valued Customer'},</p>
+          <p>Thank you for submitting your <strong>${formType}</strong> form. We have received your submission and it is currently being processed.</p>
           <p>You can track your submission status by logging in:</p>
           <p>
-            <a href="https://nemforms.com/signin" style="display: inline-block; padding: 10px 20px; background-color: #800020; color: #FFD700; text-decoration: none; border-radius: 5%;">Log in to NEM Forms</a>
+            <a href="https://nemforms.com/signin" style="display: inline-block; padding: 10px 20px; background-color: #800020; color: #FFD700; text-decoration: none; border-radius: 5%;">Track Your Submission</a>
           </p>
-          <p>Thank you for using NEM Forms.<br/>NEM Customer Feedback Team</p>
+          <p>We will notify you via email once your submission has been reviewed.</p>
+          <p>Best regards,<br>NEM Insurance Team</p>
         </div>
       </div>
     `;
 
-    await sendEmail(userEmail, `Your ${formType} Submission Confirmed`, html);
-    console.log('✅ User confirmation email sent successfully');
+    await sendEmail(userEmail, `${formType} Submission Confirmation`, html);
+    
     res.status(200).json({ message: 'Confirmation email sent to user' });
   } catch (error) {
-    console.error('❌ User confirmation email failed:', error);
+    console.error('Error in /send-to-user:', error);
     res.status(500).json({ error: 'User confirmation email failed' });
   }
 });
 
-
-// ✅ 4. Claim Approval Notification to User
-// ✅ 4. Claim Approval Notification to User
-app.post('/send-claim-approval-email', async (req, res) => {
+// Status update email endpoint (existing functionality)
+app.post('/send-status-update-email', async (req, res) => {
   const { userEmail, formType, status, userName, pdfAttachment } = req.body;
 
   if (!userEmail || !formType || !status) {
@@ -589,8 +578,9 @@ app.post('/send-claim-approval-email', async (req, res) => {
     const statusText = isApproved ? 'approved' : 'rejected';
     const statusColor = isApproved ? '#22c55e' : '#ef4444';
     const statusEmoji = isApproved ? '🎉' : '❌';
-    
+
     const subject = `${formType} Claim ${statusText.charAt(0).toUpperCase() + statusText.slice(1)}`;
+    
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(90deg, #8B4513, #DAA520); padding: 20px; text-align: center;">
@@ -598,18 +588,18 @@ app.post('/send-claim-approval-email', async (req, res) => {
         </div>
         <div style="padding: 20px; background: #f9f9f9;">
           <h2 style="color: ${statusColor};">Your ${formType} claim has been ${statusText}! ${statusEmoji}</h2>
-          <p>Dear ${userName || 'Valued User'},</p>
+          
+          <p>Dear ${userName || 'Valued Customer'},</p>
           
           ${isApproved 
             ? `<p>We are pleased to inform you that your <strong>${formType}</strong> claim has been <strong>approved</strong>.</p>
-               <p>Thank you for submitting your claim through the NEM Forms platform. We appreciate your patience throughout the process.</p>`
+               <p>Our claims team will contact you shortly with further details regarding the next steps.</p>`
             : `<p>We regret to inform you that your <strong>${formType}</strong> claim has been <strong>rejected</strong>.</p>
-               <p>Please contact our support team for more information about this decision.</p>`
+               <p>If you have any questions or would like to appeal this decision, please contact our claims team.</p>`
           }
           
-          <p>You can log in to your dashboard to view further details:</p>
           <p>
-            <a href="https://nemforms.com/signin" style="display: inline-block; padding: 10px 20px; background-color: #800020; color: #FFD700; text-decoration: none; border-radius: 5%;">View Your Dashboard</a>
+            <a href="https://nemforms.com/signin" style="display: inline-block; padding: 10px 20px; background-color: #800020; color: #FFD700; text-decoration: none; border-radius: 5%;">View Your Claims</a>
           </p>
           
           ${isApproved ? '<p>Congratulations again!</p>' : '<p>Thank you for your understanding.</p>'}
@@ -619,7 +609,7 @@ app.post('/send-claim-approval-email', async (req, res) => {
       </div>
     `;
 
-    // Prepare attachments if provided
+    // Prepare attachments array
     const attachments = [];
     if (pdfAttachment) {
       attachments.push({
@@ -633,167 +623,17 @@ app.post('/send-claim-approval-email', async (req, res) => {
     
     res.status(200).json({ 
       message: `Claim ${statusText} email sent successfully`,
-      success: true 
+      status: statusText 
     });
   } catch (error) {
     console.error(`Error sending claim ${statusText} email:`, error);
     res.status(500).json({ 
       error: `Failed to send claim ${statusText} email`,
-      success: false 
+      details: error.message 
     });
   }
 });
 
-
-
-// Backend route to verify ID token and create a custom token
-app.post('/verify-token', async (req, res) => {
-  const { idToken } = req.body;
-
-  if (!idToken) {
-    return res.status(400).send({ error: 'ID token is required' });
-  }
-
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    const userRecord = await admin.auth().getUser(decodedToken.uid);
-    const customToken = await admin.auth().createCustomToken(userRecord.uid);
-
-    res.status(200).json({ customToken, role: userRecord.customClaims?.role || 'user' });
-  } catch (error) {
-    console.error('Error verifying ID token:', error);
-    res.status(500).send({ error: 'Authentication failed' });
-  }
-});
-
-app.delete('/delete/:collection/:documentId', async (req, res) => {
-  const { collection, documentId } = req.params;
-
-  if (!collection || !documentId) {
-    return res.status(400).send({ error: 'Collection and documentId are required' });
-  }
-
-  try {
-    const docRef = db.collection(collection).doc(documentId);
-    await docRef.delete();
-    res.status(200).send({ message: 'Document deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting document:', error);
-    res.status(500).send({ error: 'Error deleting document' });
-  }
-});
-
-// Password reset route
-app.post('/resetpassword', [
-  body('uid').isString().notEmpty(),
-  body('newPassword').isString().notEmpty().isLength({ min: 6 }),
-], async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-  const { uid, newPassword } = req.body;
-
-  try {
-    await admin.auth().updateUser(uid, { password: newPassword });
-    await admin.auth().setCustomUserClaims(uid, { forcePasswordReset: null });
-    res.status(200).json({ message: 'Password reset successful' });
-  } catch (error) {
-    console.error('Error during password reset:', error);
-    res.status(500).json({ error: 'Password reset failed' });
-  }
-});
-
-
-app.get('/listenForUpdates', (req, res) => {
-  try {
-    // Set the response headers to indicate Server-Sent Events
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-
-    const userRolesCollection = db.collection('userroles');
-
-    userRolesCollection.onSnapshot((snapshot) => {
-      const userList = snapshot.docs.map((doc) => ({
-        uid: doc.id,
-        name: doc.data().name,
-        email: doc.data().email,
-        role: doc.data().role,
-      }));
-
-      // Send the updated user list as an event
-      res.write(`data: ${JSON.stringify({ users: userList })}\n\n`);
-    });
-  } catch (error) {
-    console.error('Error listening for updates:', error);
-    res.status(500).json({ error: 'Failed to listen for updates' });
-  }
-});
-
-
-async function fetchUsersFromFirestore() {
-  try {
-    const usersSnapshot = await admin
-      .firestore()
-      .collection('userroles')
-      // .orderBy('timestamp', 'desc') // Order by timestamp in descending order (latest first)
-      .get();
-
-    const userList = usersSnapshot.docs.map((doc) => ({
-      uid: doc.id,
-      name: doc.data().name,
-      email: doc.data().email,
-      role: doc.data().role,
-      // Add more user properties  later
-    }));
-
-    return userList;
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    throw error; // Re-throw the error to be handled by the caller
-  }
-}
-
-// Modify the '/get-users' endpoint to simply fetch and return user data
-app.get('/get-users', async (req, res) => {
-  try {
-    const users = await fetchUsersFromFirestore();
-    res.status(200).json({ users });
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({ error: 'Failed to fetch users' });
-  }
-});
-
-app.post('/clear-password-reset-claims', async (req, res) => {
-  const { uid } = req.body;
-
-  // console.log('Request received to clear custom claims for UID:', uid);
-
-  try {
-    const user = await admin.auth().getUser(uid);
-    // console.log('User retrieved:', user);
-
-    const claims = user.customClaims || {}; // Handle the case where customClaims is undefined
-
-    if ('forcePasswordReset' in claims) {
-      delete claims.forcePasswordReset;
-      await admin.auth().setCustomUserClaims(uid, claims);
-      console.log('User claims updated successfully for UID:');
-      res.status(200).json({ message: 'User claims updated successfully' });
-    } else {
-      console.log('No force Password Reset claim found for UID:');
-      res.status(200).json({ message: 'No forcePasswordReset claim to remove' });
-    }
-
-  } catch (error) {
-    console.error('Error updating user claims:', error);
-    res.status(500).json({ error: 'Failed to update user claims' });
-  }
-});
-
-// Backend route to handle login securely
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -813,393 +653,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// User registration route
-
-app.post('/register', async (req, res) => {
-
-  const generateRandomPassword = (length = 8) => {
-    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&(_[]|,';
-    let password = '';
-    for (let i = 0; i < length; i++) {
-      const randomIndex = Math.floor(Math.random() * charset.length);
-      password += charset[randomIndex];
-    }
-    return password;
-  };
-
-  const { email, name, role = 'Default' } = req.body;
-  const trimmedEmail = email.trim(); // Trim any extra spaces
-  const temporaryPassword = generateRandomPassword(); // Generate a random password
-
-  try {
-    // Basic email validation check
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      return res.status(400).json({ error: 'Invalid email address format' });
-    }
-
-    console.log('Starting user registration process...');
-
-    // Create user in Firebase Authentication
-    const userRecord = await admin.auth().createUser({
-      email: trimmedEmail,
-      password: temporaryPassword,
-      displayName: name,
-    });
-
-    console.log('User created successfully:');
-
-    // Set custom claims, including forcePasswordReset and role
-    const claims = {
-      forcePasswordReset: true,
-      role: role,
-    };
-    await admin.auth().setCustomUserClaims(userRecord.uid, claims);
-
-    console.log('Custom claims set for user:');
-
-    // Add user to Firestore userRoles collection
-    const userRolesRef = db.collection('userroles').doc(userRecord.uid);
-    await userRolesRef.set({
-      email: userRecord.email,
-      name: userRecord.displayName,
-      role: role,
-    });
-
-    // console.log('User role added to Firestore:', role);
-
-    // Send welcome email
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.office365.com', // Microsoft's SMTP server
-      port: 587,                  // Port for STARTTLS
-      secure: false,              // Use STARTTLS
-      auth: {
-        user: 'kyc@nem-insurance.com', // Your email address
-        pass: process.env.EMAIL_PASS,  // Your email password or app password
-      },
-    });
-    
-    const mailOptions = {
-      from: 'kyc@nem-insurance.com',
-      to: trimmedEmail,
-      subject: 'NEM Customer Feedback account',
-      html: `<p>Dear ${name},</p>
-      <p>Your account has been successfully created. Here are your login details:</p>
-      <p><strong>Email:</strong> ${trimmedEmail}<br>
-      <strong>Password:</strong> ${temporaryPassword}</p>
-      <p>Please click the following link to log in to the application:<br>
-      <a href="https://nemforms.com/signin">Log in to NEM Feedback</a></p>
-      <p>Best regards,<br>NEM Customer Feedback Team</p>`,
-    };
-
-    console.log('Sending welcome email to:', trimmedEmail);
-
-    await transporter.sendMail(mailOptions);
-
-    console.log('Welcome email sent successfully');
-
-    res.status(201).json({ message: 'User registration successful, email sent', user: userRecord });
-  } catch (error) {
-    console.error('Error during user registration:', error);
-    res.status(500).json({ error: 'User registration failed', details: error.message });
-  }
-});
-
-
-
-// Define the endpoint to delete a user by UID
-app.delete('/delete-user/:uid', async (req, res) => {
-  const { uid } = req.params;
-
-  try {
-    // Delete the user's document from Firestore
-    await admin.firestore().collection('userroles').doc(uid).delete();
-
-    // Delete the user's authentication record from Firebase Authentication
-    await admin.auth().deleteUser(uid);
-
-    res.status(200).json({ message: 'User deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting user:', error);
-    res.status(500).json({ error: 'Failed to delete user' });
-  }
-});
-
-
-//Update user role or role assignment
-app.post('/update-user-role/:uid', async (req, res) => {
-  try {
-    const { uid } = req.params;
-    const { role } = req.body;
-
-    if (role === undefined) {
-      return res.status(400).json({ error: 'Role is missing in the request body' });
-    }
-
-    // Update the 'role' field in the Firestore collection for the specified user
-    await admin.firestore().collection('userroles').doc(uid).update({
-      role: role,
-    });
-
-    res.status(200).json({ message: 'User role updated successfully in Firestore' });
-  } catch (error) {
-    console.error('Error updating user role in Firestore:', error);
-    res.status(500).json({ error: 'User role update in Firestore failed' });
-  }
-});
-
-
-// Role assignment route to assign the 'super admin' role
-app.post('/assign-super-admin-role/:uid', async (req, res) => {
-  try {
-    const { uid } = req.params;
-
-    // Get the existing custom claims
-    const user = await admin.auth().getUser(uid);
-    const currentClaims = user.customClaims || {};
-
-    // Merge the new 'admin' role with the existing claims
-    await admin.auth().setCustomUserClaims(uid, {
-      ...currentClaims,
-      superAdmin: true,
-    });
-
-    res.status(200).json({ message: 'Super Admin role assigned successfully' });
-  } catch (error) {
-    console.error('Error assigning super admin role:', error);
-    res.status(500).json({ error: 'Super Admin role assignment failed' });
-  }
-});
-
-// Role assignment route to assign the 'admin' role
-app.post('/assign-admin-role/:uid', async (req, res) => {
-  try {
-    const { uid } = req.params;
-
-    // Get the existing custom claims
-    const user = await admin.auth().getUser(uid);
-    const currentClaims = user.customClaims || {};
-
-    // Merge the new 'admin' role with the existing claims
-    await admin.auth().setCustomUserClaims(uid, {
-      ...currentClaims,
-      admin: true,
-    });
-
-    res.status(200).json({ message: 'Admin role assigned successfully' });
-  } catch (error) {
-    console.error('Error assigning admin role:', error);
-    res.status(500).json({ error: 'Admin role assignment failed' });
-  }
-});
-
-// Role assignment route to assign the 'moderator' role
-app.post('/assign-compliance-role/:uid', async (req, res) => {
-  try {
-    const { uid } = req.params;
-
-    // Get the existing custom claims
-    const user = await admin.auth().getUser(uid);
-    const currentClaims = user.customClaims || {};
-
-    // Merge the new 'moderator' role with the existing claims
-    await admin.auth().setCustomUserClaims(uid, {
-      ...currentClaims,
-      compliance: true,
-    });
-
-    res.status(200).json({ message: 'Compliance role assigned successfully' });
-  } catch (error) {
-    console.error('Error assigning compliance role:', error);
-    res.status(500).json({ error: 'Compliance role assignment failed' });
-  }
-});
-
-// Role assignment route to assign the 'moderator' role
-app.post('/assign-claims-role/:uid', async (req, res) => {
-  try {
-    const { uid } = req.params;
-
-    // Get the existing custom claims
-    const user = await admin.auth().getUser(uid);
-    const currentClaims = user.customClaims || {};
-
-    // Merge the new 'moderator' role with the existing claims
-    await admin.auth().setCustomUserClaims(uid, {
-      ...currentClaims,
-      claims: true,
-    });
-
-    res.status(200).json({ message: 'Claims role assigned successfully' });
-  } catch (error) {
-    console.error('Error assigning claims role:', error);
-    res.status(500).json({ error: 'Claims role assignment failed' });
-  }
-});
-
-
-// Role assignment route to assign the 'default' role
-app.post('/assign-default-role/:uid', async (req, res) => {
-  try {
-    const { uid } = req.params;
-
-    // Get the existing custom claims
-    const user = await admin.auth().getUser(uid);
-    const currentClaims = user.customClaims || {};
-
-    // Merge the 'default' role with the existing claims
-    await admin.auth().setCustomUserClaims(uid, {
-      ...currentClaims,
-      admin: false,
-      compliance: false,
-    });
-
-    res.status(200).json({ message: 'Default role assigned successfully' });
-  } catch (error) {
-    console.error('Error assigning default role:', error);
-    res.status(500).json({ error: 'Default role assignment failed' });
-  }
-});
-
-// Check admin claim route (if needed)
-app.post('/check-admin-claim', async (req, res) => {
-  try {
-    const { uid } = req.body;
-    const user = await admin.auth().getUser(uid);
-
-    // Check the custom claim
-    const isAdmin = !!user.customClaims?.admin;
-
-    res.json({ isAdmin });
-  } catch (error) {
-    console.error('Error checking admin claim:', error);
-    res.status(500).json({ error: 'Error checking admin claim' });
-  }
-});
-
-app.post('/assign-role/:uid/:role', async (req, res) => {
-  try {
-    const { uid, role } = req.params;
-
-    // Check if the specified role is one of the allowed roles
-    if (role !== 'admin' && role !== 'user' && role !== 'default') {
-      res.status(400).json({ error: 'Invalid role specified' });
-      return;
-    }
-
-    // Set the custom claim for the specified user
-    await admin.auth().setCustomUserClaims(uid, { [role]: true });
-
-    res.status(200).json({ message: `${role} role assigned successfully` });
-  } catch (error) {
-    console.error(`Error assigning ${role} role:`, error);
-    res.status(500).json({ error: `${role} role assignment failed` });
-  }
-});
-
-
-app.post('/validate-user-role', async (req, res) => {
-  try {
-    const { uid, role } = req.body;
-    // console.log('Validating role for UID:', uid);
-    const user = await admin.auth().getUser(uid);
-    const userRole = user.customClaims?.role || 'default';
-
-    const isValid = userRole === role;
-    console.log('Validation result:', isValid);
-
-    res.json({ valid: isValid });
-  } catch (error) {
-    console.error('Error validating user role:', error);
-    res.status(500).json({ error: 'Error validating user role' });
-  }
-});
-
-app.post('/check-user-role', async (req, res) => {
-  try {
-    const { uid } = req.body;
-    // console.log('Fetching user role for UID:', uid);
-    const user = await admin.auth().getUser(uid);
-
-    // console.log('User retrieved from Firebase:', user);
-    // console.log('User custom claims:', user.customClaims);
-
-    // Check and return the role from custom claims
-    const role =  user.customClaims?.superAdmin ? 'superAdmin' :
-                  user.customClaims?.admin ? 'admin' :
-                 user.customClaims?.compliance ? 'compliance' :
-                 'default';
-    console.log('Fetched role:', role);
-
-    res.json({ role });
-  } catch (error) {
-    console.error('Error checking user role:', error);
-    res.status(500).json({ error: 'Error checking user role' });
-  }
-});
-
-const parseLogEntry = (entry) => {
-  const logPattern = /(\S+) - - \[(.*?)\] "(.*?)" (\d{3}) (\d+) "(.*?)" "(.*?)"/;
-  const match = entry.match(logPattern);
-  if (match) {
-    return {
-      ip: match[1] === '::1' ? '127.0.0.1' : match[1],  // Handle IPv6 loopback address
-      date: match[2],
-      request: match[3],
-      statusCode: match[4],
-      responseSize: match[5],
-      referer: match[6],
-      userAgent: match[7],
-    };
-  }
-  return null;
-};
-
-
-app.get('/logs', (req, res) => {
-  fs.readFile(path.join(__dirname, 'access.log'), 'utf8', (err, data) => {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to read log file' });
-    }
-    const logs = data.split('\n').map((line, index) => {
-      const logEntry = parseLogEntry(line);
-      return logEntry ? { id: index, ...logEntry } : null;
-    }).filter(Boolean);
-
-    // Sort the logs by ID in descending order (latest first)
-    logs.sort((a, b) => b.id - a.id);
-
-    res.status(200).json({ logs });
-  });
-});
-
-
-app.get('/logs/:id', (req, res) => {
-  const logId = parseInt(req.params.id, 10);
-  // console.log('Request received for log ID:', logId); // Debugging log
-
-  fs.readFile(path.join(__dirname, 'access.log'), 'utf8', (err, data) => {
-    if (err) {
-      console.error('Failed to read log file:', err);
-      return res.status(500).json({ error: 'Failed to read log file' });
-    }
-    const logs = data.split('\n').map((line, index) => {
-      const logEntry = parseLogEntry(line);
-      return logEntry ? { id: index, ...logEntry } : null;
-    }).filter(Boolean);
-
-    // console.log('Total logs parsed:', logs.length); // Debugging log
-
-    if (logId >= 0 && logId < logs.length) {
-      res.status(200).json({ log: logs[logId] });
-    } else {
-      res.status(404).json({ error: 'Log not found' });
-    }
-  });
-});
-
-
 async function getFormData(req, res, collectionName){
-
   const dataRef = db.collection(collectionName);
   const q = dataRef.orderBy('timestamp', 'desc');
   const snapshot = await q.get();
@@ -1213,93 +667,6 @@ async function getFormData(req, res, collectionName){
 
   res.json(data);
 }
-
-app.post("/submit-public-liability-form", upload.single("claimWrittenForm"), async (req, res) => {
-  try {
-    const file = req.file;
-    const data = req.body;
-
-    // Parse fields from frontend
-    const parsedData = {};
-    for (const key in data) {
-      try {
-        parsedData[key] = JSON.parse(data[key]);
-      } catch {
-        parsedData[key] = data[key];
-      }
-    }
-
-    // If file exists, upload to Firebase Storage
-    let fileUrl = null;
-    if (file) {
-      const storageFile = bucket.file(`uploads/public-liability/${Date.now()}-${file.originalname}`);
-
-      await storageFile.save(file.buffer, {
-        metadata: {
-          contentType: file.mimetype,
-        },
-      });
-
-      // Make file publicly readable (optional)
-      await storageFile.makePublic();
-      fileUrl = storageFile.publicUrl();
-
-      // Replace file with URL
-      parsedData.claimWrittenForm = {
-        url: fileUrl,
-        name: file.originalname,
-        type: file.mimetype,
-      };
-    }
-
-    // Save to Firestore
-    await admin.firestore().collection("public-liability-submissions").add({
-      ...parsedData,
-      submittedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    res.status(200).json({ message: "Form submitted successfully", fileUrl });
-  } catch (error) {
-    console.error("Submission error:", error);
-    res.status(500).json({ error: "Failed to submit form." });
-  }
-});
-
-
-//fetch data for corporate kyc
-
-app.get('/get-corporate-data', async (req, res) => {
-  getFormData(req, res, 'corporate-kyc')
-});
-
-app.get('/get-brokers-data', async (req, res) => {
-  getFormData(req, res, 'brokers-kyc')
-});
-
-
-app.get('/get-partners-data', async (req, res) => {
-  getFormData(req, res, 'partners-kyc')
-});
-
-
-// Endpoint to retrieve saved form data for a specific step
-app.get('/get-agents-data', async (req, res) => {
-  getFormData(req, res, 'agents-kyc')
-});
-
-//fetch data for individual kyc
-app.get('/get-individual-data', async (req, res) => {
-  getFormData(req, res, 'individual-kyc')
-});
-
-
-app.get('/get-corporate-kyc-data', async (req, res) => {
-  getFormData(req, res, 'corporate-kyc-form')
-});
-
-app.get('/get-individual-kyc-data', async (req, res) => {
-  getFormData(req, res, 'Individual-kyc-form')
-});
 
 // Function to handle form submission
 async function handleFormSubmission(req, res, formType, collectionName) {
@@ -1345,95 +712,6 @@ async function handleFormSubmission(req, res, formType, collectionName) {
   }
 }
 
-// Corporate KYC Form Submission Endpoint
-app.post('/submit-corporate-kyc-form', (req, res) => {
-  handleFormSubmission(req, res, 'Corporate KYC', 'corporate-kyc-form');
-});
-
-// Individual KYC Form Submission Endpoint
-app.post('/submit-individual-kyc-form', (req, res) => {
-  handleFormSubmission(req, res, 'Individual KYC', 'Individual-kyc-form');
-});
-
-app.post('/submit-corporate-form',(req, res) => {
-  handleFormSubmission(req, res, 'Corporate CDD', 'corporate-kyc');
-});
-
-app.post('/submit-brokers-form', (req, res) => {
-  handleFormSubmission(req, res, 'Brokers Form', 'brokers-kyc');
-});
-
-app.post('/submit-partners-form', (req, res) => {
-  handleFormSubmission(req, res, 'Partners Form', 'partners-kyc');
-});
-
-app.post('/submit-agents-form', (req, res) => {
-  handleFormSubmission(req, res, 'Agents Form', 'agents-kyc');
-});
-
-app.post('/submit-individual-form', (req, res) => {
-  handleFormSubmission(req, res, 'Individual CDD', 'individual-kyc');
-});
-
-async function handleFormEdit(req, res, collectionName){
-  const {docId} = req.params;
-  const formData = req.body
-
-  try{
-    await admin.firestore().collection(collectionName).doc(docId).update({
-      ...formData,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    const doc = await admin.firestore().collection(collectionName).doc(docId).get();
-    const updatedAtTimestamp = doc.data().timestamp;
-    const updatedAtDate = updatedAtTimestamp.toDate();
-    const formattedDate = `${String(updatedAtDate.getDate()).padStart(2, '0')}/${String(updatedAtDate.getMonth() + 1).padStart(2, '0')}/${String(updatedAtDate.getFullYear())}`;
-
-    await admin.firestore().collection(collectionName).doc(docId).update({
-      updatedAt: formattedDate,
-    });
-
-    res.status(200).json({ message: 'Form updated successfully' });
-  } catch (err) {
-    console.error('Error during form update:', err);
-    res.status(500).json({ error: 'Form update failed' });
-  }
-
-  }
-
-
-
-app.post('/edit-brokers-form/:docId', async (req, res) => {
-  handleFormEdit(req, res, 'brokers-kyc')
-});
-
-app.post('/edit-corporate-form/:docId', async (req, res) => {
-  handleFormEdit(req, res, 'corporate-kyc')
-});
-
-app.post('/edit-individual-form/:docId', async (req, res) => {
-
-  handleFormEdit(req, res, 'individual-kyc')
-
-});
-
-app.post('/edit-agents-form/:docId', async (req, res) => {
-  handleFormEdit(req, res, 'agents-kyc')
-});
-
-app.post('/edit-partners-form/:docId', async (req, res) => {
-  handleFormEdit(req, res, 'partners-kyc')
-});
-
-app.post('/edit-individual-kyc-form/:docId', async (req, res) => {
-  handleFormEdit(req, res, 'individual-kyc-form')
-});
-
-app.post('/edit-corporate-kyc-form/:docId', async (req, res) => {
-  handleFormEdit(req, res, 'corporate-kyc-form')
-});
-
 const setSuperAdminOnStartup = async () => {
   try {
     const email = 'neowalker502@gmail.com';
@@ -1473,9 +751,6 @@ const setSuperAdminOnStartup = async () => {
     console.error(`❌ Failed to assign super admin:`, error);
   }
 };
-
-
-
 
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
