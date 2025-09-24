@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Calendar, Download, FileText, User, Building, CreditCard } from 'lucide-react';
 import { generateFormPDF, downloadPDF } from '@/services/pdfService';
+import logoImage from '../../NEMLogo (2)_page-0001.jpg';
 
 interface BrokersCDDViewerProps {
   data: any;
@@ -80,7 +81,7 @@ const BrokersCDDViewer: React.FC<BrokersCDDViewerProps> = ({ data }) => {
         title: 'Brokers Customer Due Diligence (CDD) Form',
         subtitle: 'NEM Insurance Company Limited',
         data: data,
-        logoUrl: '/NEMLogo (2)_page-0001.jpg',
+        logoUrl: logoImage,
         attachments: []
       });
       
