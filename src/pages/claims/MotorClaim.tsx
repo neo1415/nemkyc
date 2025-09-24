@@ -539,7 +539,7 @@ const MotorClaim: React.FC = () => {
       component: (
         <FormProvider {...formMethods}>
           <div className="space-y-6">
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="bg-white border border-gray-200 p-4 rounded-lg">
               <h3 className="font-semibold mb-2">Data Privacy</h3>
               <div className="text-sm space-y-2">
                 <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
@@ -610,10 +610,10 @@ const MotorClaim: React.FC = () => {
 
   return (
     <FormProvider {...formMethods}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+      <div className="min-h-screen bg-white py-8">
         <div className="max-w-4xl mx-auto px-4">
           <div className="text-center mb-8">
-            <Car className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+            <Car className="h-12 w-12 text-primary mx-auto mb-4" />
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Motor Insurance Claim</h1>
             <p className="text-gray-600">Submit your motor insurance claim quickly and easily</p>
           </div>
