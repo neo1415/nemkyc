@@ -1604,7 +1604,65 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Authenticate user using Firebase Admin SDK
+    // CRITICAL FIX: Validate password using Firebase client SDK first
+    // This is the only secure way to validate credentials
+    try {
+      // Import Firebase client auth to validate credentials
+      const { initializeApp, getApps } = require('firebase/app');
+      const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
+      
+      // Use client app if available, or create one for auth validation
+      let clientApp;
+      const existingApps = getApps();
+      if (existingApps.length > 0) {
+        clientApp = existingApps[0];
+      } else {
+        const firebaseConfig = {
+          apiKey: process.env.FIREBASE_API_KEY,
+          authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+          projectId: process.env.FIREBASE_PROJECT_ID,
+        };
+        clientApp = initializeApp(firebaseConfig, 'validation-app');
+      }
+      
+      const clientAuth = getAuth(clientApp);
+      
+      // Actually validate the password - this will throw if credentials are wrong
+      await signInWithEmailAndPassword(clientAuth, email, password);
+      
+    } catch (authError) {
+      // Password validation failed
+      console.error('Password validation failed:', authError);
+      
+      // Log failed attempt
+      const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+      await logAction({
+        action: 'failed-login',
+        actorUid: null,
+        actorDisplayName: null,
+        actorEmail: email,
+        actorRole: null,
+        targetType: 'user',
+        targetId: email,
+        details: {
+          loginMethod: 'email-password',
+          success: false,
+          error: 'Invalid credentials'
+        },
+        ipMasked: req.ipData?.masked,
+        ipHash: req.ipData?.hash,
+        rawIP: req.ipData?.raw,
+        location: location,
+        userAgent: req.headers['user-agent'] || 'Unknown',
+        meta: {
+          attemptTimestamp: new Date().toISOString()
+        }
+      });
+      
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Now get user record after successful authentication
     const userRecord = await admin.auth().getUserByEmail(email);
     
     // Check if user exists in userroles collection
@@ -2603,6 +2661,245 @@ app.delete('/api/users/:userId', async (req, res) => {
   } catch (error) {
     console.error('Error deleting user:', error);
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// ============= ADDITIONAL FORMS BACKEND ENDPOINTS =============
+
+// Get forms from multiple collections (for CDD and Claims tables)
+app.post('/api/forms/multiple', async (req, res) => {
+  try {
+    const { collections } = req.body;
+    const userAuth = req.headers.authorization;
+    
+    if (!Array.isArray(collections)) {
+      return res.status(400).json({ error: 'Collections must be an array' });
+    }
+    
+    // Get user details for logging
+    let userDetails = { displayName: null, email: null, role: null, uid: null };
+    if (userAuth && userAuth.startsWith('Bearer ')) {
+      const token = userAuth.split(' ')[1];
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        userDetails = await getUserDetailsForLogging(decodedToken.uid);
+        userDetails.uid = decodedToken.uid;
+      } catch (err) {
+        console.warn('Invalid token for multiple forms fetch:', err);
+      }
+    }
+    
+    console.log(`📊 Fetching forms from multiple collections: ${collections.join(', ')}`);
+    
+    const allForms = [];
+    let totalRecords = 0;
+    
+    for (const collectionName of collections) {
+      try {
+        const formsRef = db.collection(collectionName);
+        let snapshot;
+        
+        // Try different timestamp fields for ordering
+        try {
+          snapshot = await formsRef.orderBy('timestamp', 'desc').get();
+          if (snapshot.docs.length === 0) {
+            snapshot = await formsRef.orderBy('submittedAt', 'desc').get();
+            if (snapshot.docs.length === 0) {
+              snapshot = await formsRef.orderBy('createdAt', 'desc').get();
+              if (snapshot.docs.length === 0) {
+                snapshot = await formsRef.get();
+              }
+            }
+          }
+        } catch (error) {
+          snapshot = await formsRef.get();
+        }
+        
+        snapshot.docs.forEach(doc => {
+          allForms.push({
+            id: doc.id,
+            collection: collectionName,
+            ...doc.data()
+          });
+        });
+        
+        totalRecords += snapshot.docs.length;
+        console.log(`✅ Fetched ${snapshot.docs.length} forms from ${collectionName}`);
+        
+      } catch (error) {
+        console.error(`Error fetching from collection ${collectionName}:`, error);
+      }
+    }
+
+    // 📝 LOG MULTIPLE COLLECTIONS RETRIEVAL EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'view-multiple-forms-data',
+      actorUid: userDetails.uid,
+      actorDisplayName: userDetails.displayName,
+      actorEmail: userDetails.email,
+      actorRole: userDetails.role,
+      targetType: 'forms-collections',
+      targetId: collections.join(','),
+      details: {
+        collections: collections,
+        recordsCount: totalRecords,
+        timestamp: new Date().toISOString()
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        accessTimestamp: new Date().toISOString()
+      }
+    });
+
+    console.log(`✅ Successfully fetched ${totalRecords} total forms from ${collections.length} collections`);
+    res.status(200).json({ data: allForms });
+    
+  } catch (error) {
+    console.error('Error fetching multiple collections:', error);
+    res.status(500).json({ error: 'Failed to fetch forms from multiple collections' });
+  }
+});
+
+// Update form status with event logging
+app.patch('/api/forms/:collectionName/:formId/status', async (req, res) => {
+  try {
+    const { collectionName, formId } = req.params;
+    const { status } = req.body;
+    const userAuth = req.headers.authorization;
+    
+    if (!status) {
+      return res.status(400).json({ error: 'Status is required' });
+    }
+    
+    // Get user details for logging
+    let userDetails = { displayName: null, email: null, role: null, uid: null };
+    if (userAuth && userAuth.startsWith('Bearer ')) {
+      const token = userAuth.split(' ')[1];
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        userDetails = await getUserDetailsForLogging(decodedToken.uid);
+        userDetails.uid = decodedToken.uid;
+      } catch (err) {
+        console.warn('Invalid token for status update:', err);
+      }
+    }
+    
+    // Get current form data for logging
+    const formDoc = await db.collection(collectionName).doc(formId).get();
+    const oldStatus = formDoc.exists ? formDoc.data().status : null;
+    
+    // Update the form status
+    await db.collection(collectionName).doc(formId).update({
+      status: status,
+      statusUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      statusUpdatedBy: userDetails.email || 'Unknown'
+    });
+
+    // 📝 LOG STATUS UPDATE EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'update-form-status',
+      actorUid: userDetails.uid,
+      actorDisplayName: userDetails.displayName,
+      actorEmail: userDetails.email,
+      actorRole: userDetails.role,
+      targetType: 'form',
+      targetId: formId,
+      details: {
+        collection: collectionName,
+        formId: formId,
+        oldStatus: oldStatus,
+        newStatus: status,
+        timestamp: new Date().toISOString()
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        updateTimestamp: new Date().toISOString()
+      }
+    });
+
+    console.log(`✅ Updated status for form ${formId} in ${collectionName} from '${oldStatus}' to '${status}'`);
+    res.status(200).json({ success: true });
+    
+  } catch (error) {
+    console.error('Error updating form status:', error);
+    res.status(500).json({ error: 'Failed to update form status' });
+  }
+});
+
+// Delete form with event logging
+app.delete('/api/forms/:collectionName/:formId', async (req, res) => {
+  try {
+    const { collectionName, formId } = req.params;
+    const userAuth = req.headers.authorization;
+    
+    // Get user details for logging
+    let userDetails = { displayName: null, email: null, role: null, uid: null };
+    if (userAuth && userAuth.startsWith('Bearer ')) {
+      const token = userAuth.split(' ')[1];
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        userDetails = await getUserDetailsForLogging(decodedToken.uid);
+        userDetails.uid = decodedToken.uid;
+      } catch (err) {
+        console.warn('Invalid token for form deletion:', err);
+      }
+    }
+    
+    // Get current form data for logging
+    const formDoc = await db.collection(collectionName).doc(formId).get();
+    const formData = formDoc.exists ? formDoc.data() : {};
+    
+    // Delete the form
+    await db.collection(collectionName).doc(formId).delete();
+
+    // 📝 LOG FORM DELETION EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'delete-form',
+      actorUid: userDetails.uid,
+      actorDisplayName: userDetails.displayName,
+      actorEmail: userDetails.email,
+      actorRole: userDetails.role,
+      targetType: 'form',
+      targetId: formId,
+      details: {
+        collection: collectionName,
+        formId: formId,
+        deletedFormData: {
+          // Only log non-sensitive identifying info
+          formType: formData.formType || collectionName,
+          email: formData.email,
+          createdAt: formData.createdAt || formData.timestamp,
+          status: formData.status
+        },
+        timestamp: new Date().toISOString()
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        deleteTimestamp: new Date().toISOString()
+      }
+    });
+
+    console.log(`✅ Deleted form ${formId} from ${collectionName}`);
+    res.status(200).json({ success: true });
+    
+  } catch (error) {
+    console.error('Error deleting form:', error);
+    res.status(500).json({ error: 'Failed to delete form' });
   }
 });
 
