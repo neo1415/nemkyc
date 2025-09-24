@@ -27,11 +27,11 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    /* NEM Insurance Brand Colors - Updated to #800020 */
-    --primary: 345 100% 25%;
+    /* NEM Insurance Brand Colors - Updated to #9e3234 */
+    --primary: 358 52% 41%;
     --primary-foreground: 0 0% 98%;
-    --primary-light: 345 80% 35%;
-    --primary-dark: 345 100% 15%;
+    --primary-light: 358 40% 51%;
+    --primary-dark: 358 62% 31%;
 
     /* Gold accents */
     --gold: 45 100% 50%;
@@ -140,7 +140,7 @@ All colors MUST be HSL.
 .hero {
   height: 100vh;
   min-height: 100vh;
-  background: #800020;
+  background: #9e3234;
   position: relative;
   overflow: hidden;
 }
@@ -250,7 +250,7 @@ All colors MUST be HSL.
 
 .hero__cta {
   background: linear-gradient(135deg, #ffdf44 0%, #ffd700 45%, #ffdf44 100%);
-  color: #800020;
+  color: #9e3234;
   border: none;
   padding: 0.5rem 1.25rem;
   border-radius: 50px;
