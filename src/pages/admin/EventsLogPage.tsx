@@ -75,6 +75,10 @@ const EventsLogPage: React.FC = () => {
   const { user, isAdmin } = useAuth();  
   const navigate = useNavigate();
   
+  console.log('🔄 EventsLogPage: Component initialized');
+  console.log('👤 User:', user?.uid, user?.email);
+  console.log('🔒 isAdmin:', isAdmin());
+  
   // State management
   const [events, setEvents] = useState<EventLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +95,34 @@ const EventsLogPage: React.FC = () => {
     event: EventLog | null;
   }>({ open: false, event: null });
 
+  console.log('📊 EventsLogPage State:', {
+    eventsCount: events.length,
+    loading,
+    tabValue,
+    searchTerm,
+    actionFilter,
+    targetTypeFilter,
+    startDate,
+    endDate,
+    paginationModel,
+    totalCount
+  });
+
+  // Log when events state changes
+  useEffect(() => {
+    console.log('🔄 Events state updated:', {
+      eventsLength: events.length,
+      firstEvent: events[0] || null,
+      lastEvent: events[events.length - 1] || null,
+      sampleEvents: events.slice(0, 2)
+    });
+  }, [events]);
+
+  // Log when loading state changes
+  useEffect(() => {
+    console.log('⏳ Loading state changed to:', loading);
+  }, [loading]);
+
   // Available action types
   const actionTypes = [
     'all', 'approve', 'reject', 'edit', 'delete', 'submit', 'register', 
@@ -104,15 +136,41 @@ const EventsLogPage: React.FC = () => {
   ];
 
   useEffect(() => {
+    console.log('🔄 EventsLogPage useEffect triggered');
+    console.log('⚠️  Dependencies:', { 
+      user: !!user, 
+      isAdmin: isAdmin(), 
+      paginationModel, 
+      actionFilter, 
+      targetTypeFilter, 
+      startDate, 
+      endDate 
+    });
+    
     if (!user || !isAdmin()) {
+      console.log('🚫 Unauthorized access, navigating to /unauthorized');
       navigate('/unauthorized');
       return;
     }
+    
+    console.log('✅ User authorized, calling fetchEvents');
     fetchEvents();
   }, [user, isAdmin, navigate, paginationModel, actionFilter, targetTypeFilter, startDate, endDate]);
 
   const fetchEvents = async () => {
     try {
+      console.log('🚀 fetchEvents: Starting fetch');
+      console.log('📝 Current filters:', {
+        page: paginationModel.page + 1,
+        limit: paginationModel.pageSize,
+        advanced: tabValue === 1,
+        actionFilter,
+        targetTypeFilter,
+        startDate,
+        endDate,
+        searchTerm
+      });
+      
       setLoading(true);
       
       const params = new URLSearchParams({
@@ -127,30 +185,56 @@ const EventsLogPage: React.FC = () => {
       if (endDate) params.append('endDate', endDate);
       if (searchTerm) params.append('searchTerm', searchTerm);
 
+      const finalUrl = `https://nem-server-rhdb.onrender.com/api/events-logs?${params}`;
+      console.log('🌐 Request URL:', finalUrl);
+
       // Prepare headers with required timestamp for server security
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'X-Timestamp': Date.now().toString(),
       };
 
-      const response = await fetch(`https://nem-server-rhdb.onrender.com/api/events-logs?${params}`, {
+      console.log('📤 Request headers:', headers);
+
+      const response = await fetch(finalUrl, {
         method: 'GET',
         headers,
         credentials: 'include',
       });
       
+      console.log('📨 Response status:', response.status, response.statusText);
+      console.log('📨 Response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch events');
+        console.error('❌ Response not OK:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url
+        });
+        throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('📦 Response data:', data);
+      console.log('📊 Events received:', data.events?.length || 0);
+      console.log('📊 Total count:', data.pagination?.totalCount || 0);
+      console.log('📋 Sample events:', data.events?.slice(0, 3));
+      
       setEvents(data.events || []);
       setTotalCount(data.pagination?.totalCount || 0);
       
+      console.log('✅ fetchEvents completed successfully');
+      
     } catch (error) {
-      console.error('Error fetching events:', error);
+      console.error('💥 Error in fetchEvents:', error);
+      console.error('💥 Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       toast({ title: 'Error fetching events', variant: 'destructive' });
     } finally {
+      console.log('🏁 fetchEvents: Setting loading to false');
       setLoading(false);
     }
   };
@@ -360,18 +444,30 @@ const EventsLogPage: React.FC = () => {
   ];
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
+    console.log('🔄 Tab changed from', tabValue, 'to', newValue);
     setTabValue(newValue);
     setPaginationModel({ page: 0, pageSize: paginationModel.pageSize });
     fetchEvents();
   };
 
   const handleSearch = () => {
+    console.log('🔍 Search triggered with filters:', { 
+      searchTerm, 
+      actionFilter, 
+      targetTypeFilter, 
+      startDate, 
+      endDate 
+    });
     setPaginationModel({ page: 0, pageSize: paginationModel.pageSize });
     fetchEvents();
   };
 
   const handleExportCSV = () => {
-    if (events.length === 0) return;
+    console.log('📤 Exporting CSV with', events.length, 'events');
+    if (events.length === 0) {
+      console.log('⚠️  No events to export');
+      return;
+    }
 
     const headers = tabValue === 0 
       ? ['Timestamp', 'Action', 'Target Type', 'Target ID', 'Actor Name', 'Actor Email', 'Actor Role']
@@ -543,13 +639,26 @@ const EventsLogPage: React.FC = () => {
         <Card>
           <Box sx={{ height: 600, width: '100%' }}>
             <DataGrid
-              rows={events}
+              rows={(() => {
+                console.log('🏠 Rendering DataGrid with:', {
+                  rowsLength: events.length,
+                  columns: tabValue === 0 ? 'regularColumns' : 'advancedColumns',
+                  loading,
+                  totalCount,
+                  paginationModel,
+                  firstRow: events[0] || null
+                });
+                return events;
+              })()}
               columns={tabValue === 0 ? regularColumns : advancedColumns}
               loading={loading}
               paginationMode="server"
               rowCount={totalCount}
               paginationModel={paginationModel}
-              onPaginationModelChange={setPaginationModel}
+              onPaginationModelChange={(model) => {
+                console.log('📄 Pagination model changed:', model);
+                setPaginationModel(model);
+              }}
               pageSizeOptions={[25, 50, 100]}
               disableRowSelectionOnClick
               slots={{ toolbar: GridToolbar }}

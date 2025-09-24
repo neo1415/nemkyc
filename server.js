@@ -240,7 +240,14 @@ const getLocationFromIP = async (ip) => {
 
 // Core logAction function - writes event logs to Firestore
 const logAction = async (actionData) => {
-  if (!EVENTS_CONFIG.ENABLE_EVENTS_LOGGING) return;
+  console.log('🚀 logAction called with data:', actionData);
+  
+  if (!EVENTS_CONFIG.ENABLE_EVENTS_LOGGING) {
+    console.log('⚠️  Event logging is DISABLED in config');
+    return;
+  }
+
+  console.log('✅ Event logging is ENABLED, proceeding...');
 
   try {
     const eventLog = {
@@ -260,18 +267,38 @@ const logAction = async (actionData) => {
       meta: actionData.meta || {}
     };
 
+    console.log('📋 Event log object created:', eventLog);
+
     // Add raw IP with TTL for retention policy
     if (actionData.rawIP && EVENTS_CONFIG.RAW_IP_RETENTION_DAYS > 0) {
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + EVENTS_CONFIG.RAW_IP_RETENTION_DAYS);
       eventLog.rawIP = actionData.rawIP;
       eventLog.rawIPExpiry = admin.firestore.Timestamp.fromDate(expiryDate);
+      console.log('🔒 Added raw IP with expiry:', expiryDate);
     }
 
-    await db.collection('eventLogs').add(eventLog);
-    console.log(`📝 Event logged: ${actionData.action} by ${actionData.actorEmail || 'anonymous'}`);
+    console.log('💾 Writing to Firestore collection "eventLogs"...');
+    const docRef = await db.collection('eventLogs').add(eventLog);
+    console.log('✅ Event logged successfully with ID:', docRef.id, '- Action:', actionData.action, 'by', actionData.actorEmail || 'anonymous');
+    
+    // Verify the document was actually written
+    const verifyDoc = await docRef.get();
+    if (verifyDoc.exists) {
+      console.log('✅ Verification: Document exists in Firestore');
+      console.log('📄 Document data:', verifyDoc.data());
+    } else {
+      console.error('❌ Verification failed: Document not found after write');
+    }
+    
   } catch (error) {
-    console.error('Failed to log event:', error);
+    console.error('💥 Failed to log event:', error);
+    console.error('💥 Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
     // Don't throw - logging failures shouldn't break main functionality
   }
 };
@@ -952,7 +979,13 @@ const setSuperAdminOnStartup = async () => {
 // Get event logs with filtering and pagination (Admin only)
 app.get('/api/events-logs', async (req, res) => {
   try {
-    console.log('Events logs request received:', req.query);
+    console.log('🔍 /api/events-logs endpoint called');
+    console.log('📤 Request query params:', req.query);
+    console.log('📤 Request headers:', {
+      'x-timestamp': req.headers['x-timestamp'],
+      'content-type': req.headers['content-type'],
+      'user-agent': req.headers['user-agent']?.substring(0, 50)
+    });
     
     // Basic validation
     const { 
@@ -967,24 +1000,37 @@ app.get('/api/events-logs', async (req, res) => {
       advanced = 'false'
     } = req.query;
 
+    console.log('📋 Parsed parameters:', {
+      page, limit, action, targetType, actorEmail, startDate, endDate, searchTerm, advanced
+    });
+
     // Validate pagination parameters
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     
     if (isNaN(pageNum) || pageNum < 1) {
+      console.error('❌ Invalid page parameter:', page);
       return res.status(400).json({ error: 'Invalid page parameter' });
     }
     
     if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+      console.error('❌ Invalid limit parameter:', limit);
       return res.status(400).json({ error: 'Invalid limit parameter (must be 1-100)' });
     }
 
+    console.log('🔍 Checking if eventLogs collection exists...');
     let query = db.collection('eventLogs');
 
     // Check if collection exists and has documents
     const collectionExists = await db.collection('eventLogs').limit(1).get();
+    console.log('📊 Collection check result:', {
+      empty: collectionExists.empty,
+      size: collectionExists.size,
+      docs: collectionExists.docs.length
+    });
+    
     if (collectionExists.empty) {
-      console.log('EventLogs collection is empty, returning empty response');
+      console.log('⚠️  EventLogs collection is empty, returning empty response');
       return res.json({
         events: [],
         pagination: {
@@ -996,16 +1042,21 @@ app.get('/api/events-logs', async (req, res) => {
       });
     }
 
+    console.log('✅ Collection has documents, building query...');
+
     // Apply filters
     if (action && action !== 'all') {
+      console.log('🔽 Filtering by action:', action);
       query = query.where('action', '==', action);
     }
 
     if (targetType && targetType !== 'all') {
+      console.log('🔽 Filtering by targetType:', targetType);
       query = query.where('targetType', '==', targetType);
     }
 
     if (actorEmail) {
+      console.log('🔽 Filtering by actorEmail:', actorEmail);
       query = query.where('actorEmail', '==', actorEmail);
     }
 
@@ -1013,9 +1064,10 @@ app.get('/api/events-logs', async (req, res) => {
     if (startDate) {
       try {
         const start = admin.firestore.Timestamp.fromDate(new Date(startDate));
+        console.log('🔽 Filtering by startDate:', startDate, '→', start.toDate());
         query = query.where('ts', '>=', start);
       } catch (dateError) {
-        console.error('Invalid startDate:', startDate);
+        console.error('❌ Invalid startDate:', startDate, dateError);
         return res.status(400).json({ error: 'Invalid startDate format' });
       }
     }
@@ -1023,19 +1075,24 @@ app.get('/api/events-logs', async (req, res) => {
     if (endDate) {
       try {
         const end = admin.firestore.Timestamp.fromDate(new Date(endDate + 'T23:59:59'));
+        console.log('🔽 Filtering by endDate:', endDate, '→', end.toDate());
         query = query.where('ts', '<=', end);
       } catch (dateError) {
-        console.error('Invalid endDate:', endDate);
+        console.error('❌ Invalid endDate:', endDate, dateError);
         return res.status(400).json({ error: 'Invalid endDate format' });
       }
     }
 
     // Order by timestamp descending
+    console.log('📅 Ordering by timestamp desc');
     query = query.orderBy('ts', 'desc');
 
     // Apply pagination
     const offset = (pageNum - 1) * limitNum;
+    console.log('📄 Pagination settings:', { pageNum, limitNum, offset });
+    
     if (offset > 0) {
+      console.log('⏭️  Applying pagination offset:', offset);
       const startAfterSnapshot = await query.limit(offset).get();
       if (!startAfterSnapshot.empty) {
         const lastVisible = startAfterSnapshot.docs[startAfterSnapshot.docs.length - 1];
@@ -1045,7 +1102,14 @@ app.get('/api/events-logs', async (req, res) => {
 
     query = query.limit(limitNum);
 
+    console.log('⚡ Executing main query...');
     const snapshot = await query.get();
+    console.log('📊 Query result:', {
+      empty: snapshot.empty,
+      size: snapshot.size,
+      docs: snapshot.docs.length
+    });
+
     const events = snapshot.docs.map(doc => {
       const data = doc.data();
       
@@ -1070,13 +1134,18 @@ app.get('/api/events-logs', async (req, res) => {
       return { id: doc.id, ...eventData };
     });
 
+    console.log('🔄 Processed events:', events.length);
+    console.log('🔍 Sample events:', events.slice(0, 2));
+
     // Get total count for pagination (more efficient way)
+    console.log('🔢 Calculating total count...');
     const totalCountSnapshot = await db.collection('eventLogs').select().get();
     const totalCount = totalCountSnapshot.size;
+    console.log('📊 Total events in collection:', totalCount);
 
-    console.log(`Returning ${events.length} events out of ${totalCount} total`);
+    console.log(`✅ Returning ${events.length} events out of ${totalCount} total`);
 
-    res.json({
+    const response = {
       events,
       pagination: {
         currentPage: pageNum,
@@ -1084,7 +1153,14 @@ app.get('/api/events-logs', async (req, res) => {
         totalCount,
         totalPages: Math.ceil(totalCount / limitNum)
       }
+    };
+
+    console.log('📤 Final response structure:', {
+      eventsCount: response.events.length,
+      pagination: response.pagination
     });
+
+    res.json(response);
 
   } catch (error) {
     console.error('Error fetching event logs:', error);
