@@ -128,13 +128,7 @@ app.use(xss());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(csurf({
-  cookie: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // Only secure in production
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict', // Cross-site cookie policy
-  }
-}));
+// CSRF protection will be applied selectively, not globally
 
 // Initialize CSRF protection middleware
 const csrfProtection = csurf({
@@ -1807,17 +1801,7 @@ app.post('/api/exchange-token', async (req, res) => {
   }
 });
 
-// Token exchange endpoint - frontend does Firebase auth, backend verifies token and returns user info
-app.post('/api/exchange-token', async (req, res) => {
-  try {
-    const { idToken } = req.body;
-    
-    if (!idToken) {
-      return res.status(400).json({ error: 'ID token is required' });
-    }
-
-    // Verify the Firebase ID token
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
+// Duplicate endpoint removed
     const email = decodedToken.email;
     const uid = decodedToken.uid;
     
