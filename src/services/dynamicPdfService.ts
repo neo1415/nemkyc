@@ -11,7 +11,7 @@ export const generateDynamicPDF = async (submissionData: PDFSubmissionData): Pro
 };
 
 /**
- * Generate and download PDF from submission data
+ * Generate and download PDF from submission data with backend logging
  * @param submissionData - The form submission data object
  * @param customFilename - Optional custom filename
  */
@@ -20,6 +20,34 @@ export const downloadDynamicPDF = async (
   customFilename?: string
 ): Promise<void> => {
   try {
+    // Log the download action to backend first
+    try {
+      const API_BASE_URL = 'https://nem-server-rhdb.onrender.com';
+      const csrfResponse = await fetch(`${API_BASE_URL}/csrf-token`, {
+        credentials: 'include',
+      });
+      const { csrfToken } = await csrfResponse.json();
+
+      await fetch(`${API_BASE_URL}/api/pdf/download`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'CSRF-Token': csrfToken,
+          'x-timestamp': Date.now().toString(),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          formData: submissionData,
+          formType: submissionData.formType || submissionData.collection || 'form',
+          downloaderUid: 'current-user', // Should be actual user UID from auth context
+          fileName: customFilename
+        })
+      });
+    } catch (logError) {
+      console.warn('Failed to log PDF download:', logError);
+      // Continue with download even if logging fails
+    }
+
     const pdfBlob = await generateDynamicPDF(submissionData);
     
     // Generate filename if not provided - include form type
