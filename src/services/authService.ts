@@ -46,10 +46,13 @@ export const exchangeToken = async (idToken: string): Promise<AuthResponse> => {
   try {
     console.log('📤 Exchanging token with backend');
     
+    const timestamp = Date.now().toString();
+    
     const response = await fetch(`${API_BASE_URL}/api/exchange-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-timestamp': timestamp,
       },
       credentials: 'include',
       body: JSON.stringify({ idToken }),
