@@ -1753,6 +1753,174 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Token exchange endpoint - frontend does Firebase auth, backend verifies token and returns user info
+app.post('/api/exchange-token', async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    
+    if (!idToken) {
+      return res.status(400).json({ error: 'ID token is required' });
+    }
+
+    // Verify the Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const email = decodedToken.email;
+    const uid = decodedToken.uid;
+    
+    // Get user from Firestore userroles collection
+    const userDoc = await db.collection('userroles').doc(uid).get();
+    
+    if (!userDoc.exists) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    const userData = userDoc.data();
+    
+    // Log successful token exchange
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'login-success',
+      actorUid: uid,
+      actorDisplayName: userData.name,
+      actorEmail: email,
+      actorRole: userData.role,
+      targetType: 'user',
+      targetId: uid,
+      details: { loginMethod: 'token-exchange' },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: { loginTimestamp: new Date().toISOString() }
+    });
+
+    res.json({
+      success: true,
+      role: userData.role,
+      user: { uid, email, displayName: userData.name }
+    });
+
+  } catch (error) {
+    console.error('Token exchange error:', error);
+    res.status(500).json({ error: 'Token exchange failed' });
+  }
+});
+
+// Token exchange endpoint - frontend does Firebase auth, backend verifies token and returns user info
+app.post('/api/exchange-token', async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    
+    if (!idToken) {
+      return res.status(400).json({ error: 'ID token is required' });
+    }
+
+    // Verify the Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const email = decodedToken.email;
+    const uid = decodedToken.uid;
+    
+    // Get user from Firestore userroles collection
+    const userDoc = await db.collection('userroles').doc(uid).get();
+    
+    if (!userDoc.exists) {
+      // Log failed attempt for non-existent user
+      const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+      await logAction({
+        action: 'token-exchange-failed',
+        actorUid: uid,
+        actorDisplayName: decodedToken.name,
+        actorEmail: email,
+        actorRole: null,
+        targetType: 'user',
+        targetId: uid,
+        details: {
+          loginMethod: 'token-exchange',
+          success: false,
+          error: 'User not found in database'
+        },
+        ipMasked: req.ipData?.masked,
+        ipHash: req.ipData?.hash,
+        rawIP: req.ipData?.raw,
+        location: location,
+        userAgent: req.headers['user-agent'] || 'Unknown',
+        meta: {
+          attemptTimestamp: new Date().toISOString()
+        }
+      });
+      
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    const userData = userDoc.data();
+    
+    // Log successful token exchange
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'token-exchange-success',
+      actorUid: uid,
+      actorDisplayName: userData.name,
+      actorEmail: email,
+      actorRole: userData.role,
+      targetType: 'user',
+      targetId: uid,
+      details: {
+        loginMethod: 'token-exchange',
+        success: true
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        loginTimestamp: new Date().toISOString()
+      }
+    });
+
+    res.json({
+      success: true,
+      role: userData.role,
+      user: {
+        uid: uid,
+        email: email,
+        displayName: userData.name
+      }
+    });
+
+  } catch (error) {
+    console.error('Token exchange error:', error);
+    
+    // Log server error
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'token-exchange-error',
+      actorUid: null,
+      actorDisplayName: null,
+      actorEmail: 'unknown',
+      actorRole: null,
+      targetType: 'system',
+      targetId: 'token-exchange',
+      details: {
+        loginMethod: 'token-exchange',
+        success: false,
+        error: error.message
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        errorTimestamp: new Date().toISOString()
+      }
+    });
+    
+    res.status(500).json({ error: 'Token exchange failed' });
+  }
+});
+
 // Register endpoint with event logging
 app.post('/api/register', async (req, res) => {
   try {
