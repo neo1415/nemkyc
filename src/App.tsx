@@ -42,6 +42,7 @@ import AdminCDDTable from './pages/admin/AdminCDDTable';
 import AdminKYCTable from './pages/admin/AdminKYCTable';
 import AdminUsersTable from './pages/admin/AdminUsersTable';
 import FormViewer from './pages/admin/FormViewer';
+import EventsLogPage from './pages/admin/EventsLogPage';
 import AdminMotorClaimsTable from './pages/admin/AdminMotorClaimsTable';
 
 import AdminAgentsCDDTable from './pages/admin/AdminAgentsCDDTable';

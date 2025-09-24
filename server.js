@@ -20,6 +20,7 @@ const axios = require('axios');
 const bcrypt = require('bcrypt'); 
 const multer = require("multer");
 const { getStorage } = require("firebase-admin/storage");
+const crypto = require('crypto');
 
 let config = {
   type: process.env.TYPE,
@@ -158,6 +159,142 @@ app.use((req, res, next) => {
 const db = admin.firestore();
 const upload = multer({ storage: multer.memoryStorage() });
 const bucket = getStorage().bucket();
+
+// ============= EVENTS LOG SYSTEM =============
+
+// Environment configuration for events logging
+const EVENTS_CONFIG = {
+  IP_HASH_SALT: process.env.EVENTS_IP_SALT || 'nem-events-default-salt-2024',
+  ENABLE_IP_GEOLOCATION: process.env.ENABLE_IP_GEOLOCATION === 'true',
+  RAW_IP_RETENTION_DAYS: parseInt(process.env.RAW_IP_RETENTION_DAYS) || 30,
+  ENABLE_EVENTS_LOGGING: process.env.ENABLE_EVENTS_LOGGING !== 'false' // Default to enabled
+};
+
+// IP processing middleware - extracts, masks, and hashes IPs
+const processIPMiddleware = (req, res, next) => {
+  if (!EVENTS_CONFIG.ENABLE_EVENTS_LOGGING) return next();
+
+  // Extract real IP from various headers
+  const extractRealIP = (req) => {
+    return req.headers['x-forwarded-for'] || 
+           req.headers['x-real-ip'] || 
+           req.connection.remoteAddress || 
+           req.socket.remoteAddress ||
+           (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+           '0.0.0.0';
+  };
+
+  const realIP = extractRealIP(req).split(',')[0].trim();
+  
+  // Mask IP (keep first 3 octets, mask last)
+  const maskIP = (ip) => {
+    if (ip.includes(':')) {
+      // IPv6 - mask last 4 groups
+      const parts = ip.split(':');
+      return parts.slice(0, 4).join(':') + ':****:****:****:****';
+    } else {
+      // IPv4 - mask last octet
+      const parts = ip.split('.');
+      return parts.slice(0, 3).join('.') + '.***';
+    }
+  };
+
+  // Hash IP with salt for correlation while protecting privacy
+  const hashIP = (ip) => {
+    return crypto.createHmac('sha256', EVENTS_CONFIG.IP_HASH_SALT)
+                 .update(ip)
+                 .digest('hex')
+                 .substring(0, 16);
+  };
+
+  // Attach processed IP data to request
+  req.ipData = {
+    raw: realIP,
+    masked: maskIP(realIP),
+    hash: hashIP(realIP)
+  };
+
+  next();
+};
+
+// Apply IP processing middleware globally
+app.use(processIPMiddleware);
+
+// Location enrichment function (optional)
+const getLocationFromIP = async (ip) => {
+  if (!EVENTS_CONFIG.ENABLE_IP_GEOLOCATION || ip === '0.0.0.0' || ip.includes('127.0.0.1')) {
+    return 'Local/Unknown';
+  }
+
+  try {
+    // Using a free IP geolocation service - you can replace with your preferred service
+    const response = await axios.get(`http://ip-api.com/json/${ip}`, { timeout: 2000 });
+    if (response.data.status === 'success') {
+      return `${response.data.city || 'Unknown'}, ${response.data.country || 'Unknown'}`;
+    }
+  } catch (error) {
+    console.warn('IP geolocation failed:', error.message);
+  }
+  
+  return 'Unknown';
+};
+
+// Core logAction function - writes event logs to Firestore
+const logAction = async (actionData) => {
+  if (!EVENTS_CONFIG.ENABLE_EVENTS_LOGGING) return;
+
+  try {
+    const eventLog = {
+      ts: admin.firestore.FieldValue.serverTimestamp(),
+      action: actionData.action,
+      actorUid: actionData.actorUid || null,
+      actorDisplayName: actionData.actorDisplayName || null,
+      actorEmail: actionData.actorEmail || null,
+      actorRole: actionData.actorRole || null,
+      targetType: actionData.targetType,
+      targetId: actionData.targetId,
+      details: actionData.details || {},
+      ipMasked: actionData.ipMasked,
+      ipHash: actionData.ipHash,
+      location: actionData.location || 'Unknown',
+      userAgent: actionData.userAgent || 'Unknown',
+      meta: actionData.meta || {}
+    };
+
+    // Add raw IP with TTL for retention policy
+    if (actionData.rawIP && EVENTS_CONFIG.RAW_IP_RETENTION_DAYS > 0) {
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + EVENTS_CONFIG.RAW_IP_RETENTION_DAYS);
+      eventLog.rawIP = actionData.rawIP;
+      eventLog.rawIPExpiry = admin.firestore.Timestamp.fromDate(expiryDate);
+    }
+
+    await db.collection('eventLogs').add(eventLog);
+    console.log(`📝 Event logged: ${actionData.action} by ${actionData.actorEmail || 'anonymous'}`);
+  } catch (error) {
+    console.error('Failed to log event:', error);
+    // Don't throw - logging failures shouldn't break main functionality
+  }
+};
+
+// Helper function to get user details for logging
+const getUserDetailsForLogging = async (uid) => {
+  try {
+    if (!uid) return { displayName: null, email: null, role: null };
+    
+    const userRecord = await admin.auth().getUser(uid);
+    const userDoc = await db.collection('userroles').doc(uid).get();
+    
+    return {
+      displayName: userRecord.displayName || userRecord.email?.split('@')[0] || 'Unknown',
+      email: userRecord.email || null,
+      role: userDoc.exists ? userDoc.data().role : null
+    };
+  } catch (error) {
+    console.warn('Failed to get user details for logging:', error);
+    return { displayName: null, email: null, role: null };
+  }
+};
 
 app.use(express.json());
 
@@ -313,7 +450,7 @@ async function sendEmail(to, subject, html, attachments = []) {
   return transporter.sendMail(mailOptions);
 }
 
-// ✅ NEW: Claims Approval/Rejection with Evidence Preservation
+// ✅ NEW: Claims Approval/Rejection with Evidence Preservation + EVENT LOGGING
 app.post('/api/update-claim-status', async (req, res) => {
   try {
     const { 
@@ -333,9 +470,17 @@ app.post('/api/update-claim-status', async (req, res) => {
       });
     }
 
+    // Get document before update for logging
+    const docBefore = await admin.firestore()
+      .collection(collectionName)
+      .doc(documentId)
+      .get();
+    
+    const beforeData = docBefore.exists ? docBefore.data() : {};
+
     // Get approver details
-    const approverRecord = await admin.auth().getUser(approverUid);
-    const approverName = approverRecord.displayName || approverRecord.email;
+    const approverDetails = await getUserDetailsForLogging(approverUid);
+    const approverName = approverDetails.displayName || approverDetails.email;
 
     // Evidence preservation data
     const evidenceData = {
@@ -352,6 +497,34 @@ app.post('/api/update-claim-status', async (req, res) => {
       .collection(collectionName)
       .doc(documentId)
       .update(evidenceData);
+
+    // 📝 LOG THE APPROVAL/REJECTION EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: status === 'approved' ? 'approve' : 'reject',
+      actorUid: approverUid,
+      actorDisplayName: approverDetails.displayName,
+      actorEmail: approverDetails.email,
+      actorRole: approverDetails.role,
+      targetType: collectionName,
+      targetId: documentId,
+      details: {
+        from: { status: beforeData.status || 'pending' },
+        to: { status: status },
+        comment: comment,
+        formType: formType
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        userEmail: userEmail,
+        formType: formType,
+        approverName: approverName
+      }
+    });
 
     // Send status update email to user if email provided
     if (userEmail && formType) {
@@ -394,6 +567,32 @@ app.post('/api/update-claim-status', async (req, res) => {
 
       try {
         await sendEmail(userEmail, subject, html);
+        
+        // 📝 LOG EMAIL SENT EVENT
+        await logAction({
+          action: 'email-sent',
+          actorUid: approverUid,
+          actorDisplayName: approverDetails.displayName,
+          actorEmail: approverDetails.email,
+          actorRole: approverDetails.role,
+          targetType: 'email',
+          targetId: userEmail,
+          details: {
+            emailType: `claim-${status}`,
+            subject: subject
+          },
+          ipMasked: req.ipData?.masked,
+          ipHash: req.ipData?.hash,
+          rawIP: req.ipData?.raw,
+          location: location,
+          userAgent: req.headers['user-agent'] || 'Unknown',
+          meta: {
+            emailTarget: userEmail,
+            formType: formType,
+            claimStatus: status
+          }
+        });
+
         console.log(`${statusText} email sent to user: ${userEmail}`);
       } catch (emailError) {
         console.error(`Failed to send ${statusText} email:`, emailError);
@@ -752,7 +951,171 @@ const setSuperAdminOnStartup = async () => {
   }
 };
 
+// ============= EVENTS LOG API ENDPOINTS =============
+
+// Get event logs with filtering and pagination (Admin only)
+app.get('/api/events-logs', async (req, res) => {
+  try {
+    // TODO: Add authentication middleware to verify admin role
+    const { 
+      page = 1, 
+      limit = 50, 
+      action, 
+      targetType, 
+      actorEmail, 
+      startDate, 
+      endDate,
+      searchTerm,
+      advanced = 'false'
+    } = req.query;
+
+    let query = db.collection('eventLogs');
+
+    // Apply filters
+    if (action && action !== 'all') {
+      query = query.where('action', '==', action);
+    }
+
+    if (targetType && targetType !== 'all') {
+      query = query.where('targetType', '==', targetType);
+    }
+
+    if (actorEmail) {
+      query = query.where('actorEmail', '==', actorEmail);
+    }
+
+    // Date range filtering
+    if (startDate) {
+      const start = admin.firestore.Timestamp.fromDate(new Date(startDate));
+      query = query.where('ts', '>=', start);
+    }
+
+    if (endDate) {
+      const end = admin.firestore.Timestamp.fromDate(new Date(endDate + 'T23:59:59'));
+      query = query.where('ts', '<=', end);
+    }
+
+    // Order by timestamp descending
+    query = query.orderBy('ts', 'desc');
+
+    // Apply pagination
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    if (offset > 0) {
+      const startAfterSnapshot = await query.limit(offset).get();
+      if (!startAfterSnapshot.empty) {
+        const lastVisible = startAfterSnapshot.docs[startAfterSnapshot.docs.length - 1];
+        query = query.startAfter(lastVisible);
+      }
+    }
+
+    query = query.limit(parseInt(limit));
+
+    const snapshot = await query.get();
+    const events = snapshot.docs.map(doc => {
+      const data = doc.data();
+      
+      // For regular view, exclude sensitive fields
+      if (advanced !== 'true') {
+        const { rawIP, ipHash, userAgent, location, ...regularData } = data;
+        return { id: doc.id, ...regularData };
+      }
+      
+      // For advanced view, include all fields but remove rawIP if expired
+      if (data.rawIPExpiry && data.rawIPExpiry.toDate() < new Date()) {
+        const { rawIP, ...dataWithoutRawIP } = data;
+        return { id: doc.id, ...dataWithoutRawIP };
+      }
+      
+      return { id: doc.id, ...data };
+    });
+
+    // Get total count for pagination
+    const countSnapshot = await db.collection('eventLogs').get();
+    const totalCount = countSnapshot.size;
+
+    res.json({
+      events,
+      pagination: {
+        currentPage: parseInt(page),
+        limit: parseInt(limit),
+        totalCount,
+        totalPages: Math.ceil(totalCount / parseInt(limit))
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching event logs:', error);
+    res.status(500).json({ error: 'Failed to fetch event logs' });
+  }
+});
+
+// Get event details by ID (Admin only)
+app.get('/api/events-logs/:id', async (req, res) => {
+  try {
+    // TODO: Add authentication middleware to verify admin role
+    const { id } = req.params;
+    
+    const doc = await db.collection('eventLogs').doc(id).get();
+    
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Event log not found' });
+    }
+
+    const data = doc.data();
+    
+    // Remove rawIP if expired
+    if (data.rawIPExpiry && data.rawIPExpiry.toDate() < new Date()) {
+      const { rawIP, ...dataWithoutRawIP } = data;
+      return res.json({ id: doc.id, ...dataWithoutRawIP });
+    }
+    
+    res.json({ id: doc.id, ...data });
+    
+  } catch (error) {
+    console.error('Error fetching event log details:', error);
+    res.status(500).json({ error: 'Failed to fetch event log details' });
+  }
+});
+
+// Clean up expired raw IPs (scheduled job - call this periodically)
+app.post('/api/cleanup-expired-ips', async (req, res) => {
+  try {
+    // TODO: Add authentication middleware to verify admin/system role
+    
+    const now = admin.firestore.Timestamp.now();
+    const expiredQuery = db.collection('eventLogs')
+      .where('rawIPExpiry', '<', now)
+      .where('rawIP', '!=', null);
+
+    const snapshot = await expiredQuery.get();
+    
+    if (snapshot.empty) {
+      return res.json({ message: 'No expired IPs to clean up', cleaned: 0 });
+    }
+
+    const batch = db.batch();
+    let cleanedCount = 0;
+
+    snapshot.docs.forEach(doc => {
+      batch.update(doc.ref, { rawIP: admin.firestore.FieldValue.delete() });
+      cleanedCount++;
+    });
+
+    await batch.commit();
+    
+    console.log(`🧹 Cleaned up ${cleanedCount} expired raw IPs`);
+    res.json({ message: `Cleaned up ${cleanedCount} expired raw IPs`, cleaned: cleanedCount });
+    
+  } catch (error) {
+    console.error('Error cleaning up expired IPs:', error);
+    res.status(500).json({ error: 'Failed to clean up expired IPs' });
+  }
+});
+
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
+  console.log(`📝 Events logging: ${EVENTS_CONFIG.ENABLE_EVENTS_LOGGING ? 'ENABLED' : 'DISABLED'}`);
+  console.log(`🌐 IP geolocation: ${EVENTS_CONFIG.ENABLE_IP_GEOLOCATION ? 'ENABLED' : 'DISABLED'}`);
+  console.log(`⏰ Raw IP retention: ${EVENTS_CONFIG.RAW_IP_RETENTION_DAYS} days`);
   await setSuperAdminOnStartup(); // ← 🚨 this line makes it happen
 });
