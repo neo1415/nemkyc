@@ -1652,118 +1652,166 @@ app.post('/api/cleanup-expired-ips', async (req, res) => {
   }
 });
 
+// ✅ Route to manually generate test events (for development/testing)
+app.post('/api/generate-test-events', async (req, res) => {
+  try {
+    console.log('🧪 Manually generating test events...');
+    
+    const sampleEvents = [
+      {
+        action: 'submit',
+        actorUid: 'sample-user-1',
+        actorDisplayName: 'John Doe',
+        actorEmail: 'john.doe@example.com',
+        actorRole: 'user',
+        targetType: 'kyc-form',
+        targetId: 'kyc-sample-001',
+        details: { formType: 'Individual KYC', status: 'processing' },
+        ipMasked: '203.115.45.***',
+        ipHash: 'abc123def456',
+        rawIP: '203.115.45.120',
+        location: 'Lagos, Nigeria',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        meta: { sampleEvent: true, testData: true, generatedAt: new Date().toISOString() }
+      },
+      {
+        action: 'approve',
+        actorUid: 'admin-001',
+        actorDisplayName: 'Admin User',
+        actorEmail: 'admin@nem-insurance.com',
+        actorRole: 'admin',
+        targetType: 'claim',
+        targetId: 'claim-sample-002',
+        details: { 
+          from: { status: 'pending' }, 
+          to: { status: 'approved' },
+          comment: 'Claim approved after review'
+        },
+        ipMasked: '192.168.1.***',
+        ipHash: 'def456ghi789',
+        rawIP: '192.168.1.100',
+        location: 'Abuja, Nigeria',
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15',
+        meta: { sampleEvent: true, adminAction: true, generatedAt: new Date().toISOString() }
+      },
+      {
+        action: 'login',
+        actorUid: user?.uid || 'current-user',
+        actorDisplayName: user?.displayName || user?.email?.split('@')[0] || 'Current User',
+        actorEmail: user?.email || 'current.user@example.com',
+        actorRole: 'admin',
+        targetType: 'user',
+        targetId: user?.uid || 'current-user',
+        details: { loginMethod: 'manual-test', success: true },
+        ipMasked: req.ipData?.masked || '127.0.0.***',
+        ipHash: req.ipData?.hash || 'test-hash',
+        rawIP: req.ipData?.raw || '127.0.0.1',
+        location: 'Test Location',
+        userAgent: req.headers['user-agent'] || 'Test Browser',
+        meta: { sampleEvent: true, manualTest: true, generatedAt: new Date().toISOString() }
+      },
+      {
+        action: 'view',
+        actorUid: 'compliance-001',
+        actorDisplayName: 'Jane Smith',
+        actorEmail: 'jane.smith@nem-insurance.com',
+        actorRole: 'compliance',
+        targetType: 'cdd-form',
+        targetId: 'cdd-sample-003',
+        details: { viewType: 'form-detail', formType: 'Corporate CDD' },
+        ipMasked: '10.0.0.***',
+        ipHash: 'ghi789jkl012',
+        rawIP: '10.0.0.50',
+        location: 'Port Harcourt, Nigeria',
+        userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+        meta: { sampleEvent: true, complianceReview: true, generatedAt: new Date().toISOString() }
+      },
+      {
+        action: 'email-sent',
+        actorUid: 'system',
+        actorDisplayName: 'System',
+        actorEmail: 'system@nem-insurance.com',
+        actorRole: 'system',
+        targetType: 'email',
+        targetId: 'admin@nem-insurance.com',
+        details: { 
+          emailType: 'admin-notification',
+          subject: 'New KYC Submission',
+          formType: 'Individual KYC'
+        },
+        ipMasked: '127.0.0.***',
+        ipHash: 'mno345pqr678',
+        rawIP: '127.0.0.1',
+        location: 'Server Location',
+        userAgent: 'System/1.0',
+        meta: { sampleEvent: true, systemGenerated: true, generatedAt: new Date().toISOString() }
+      }
+    ];
+
+    let successCount = 0;
+    for (const event of sampleEvents) {
+      try {
+        await logAction(event);
+        successCount++;
+      } catch (error) {
+        console.error('Failed to create sample event:', error);
+      }
+    }
+    
+    console.log(`✅ Generated ${successCount}/${sampleEvents.length} test events`);
+    res.status(200).json({ 
+      message: `Successfully generated ${successCount} test events`,
+      success: successCount,
+      total: sampleEvents.length
+    });
+    
+  } catch (error) {
+    console.error('Error generating test events:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate test events',
+      details: error.message 
+    });
+  }
+});
+
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
   console.log(`📝 Events logging: ${EVENTS_CONFIG.ENABLE_EVENTS_LOGGING ? 'ENABLED' : 'DISABLED'}`);
   console.log(`🌐 IP geolocation: ${EVENTS_CONFIG.ENABLE_IP_GEOLOCATION ? 'ENABLED' : 'DISABLED'}`);
   console.log(`⏰ Raw IP retention: ${EVENTS_CONFIG.RAW_IP_RETENTION_DAYS} days`);
   
-  // Generate some initial sample events for testing (only in development)
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('🧪 Generating initial sample events for testing...');
-    setTimeout(async () => {
-      try {
-        const sampleEvents = [
-          {
-            action: 'submit',
-            actorUid: 'sample-user-1',
-            actorDisplayName: 'John Doe',
-            actorEmail: 'john.doe@example.com',
-            actorRole: 'user',
-            targetType: 'kyc-form',
-            targetId: 'kyc-sample-001',
-            details: { formType: 'Individual KYC', status: 'processing' },
-            ipMasked: '203.115.45.***',
-            ipHash: 'abc123def456',
-            rawIP: '203.115.45.120',
-            location: 'Lagos, Nigeria',
-            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            meta: { sampleEvent: true, testData: true }
-          },
-          {
-            action: 'approve',
-            actorUid: 'admin-001',
-            actorDisplayName: 'Admin User',
-            actorEmail: 'admin@nem-insurance.com',
-            actorRole: 'admin',
-            targetType: 'claim',
-            targetId: 'claim-sample-002',
-            details: { 
-              from: { status: 'pending' }, 
-              to: { status: 'approved' },
-              comment: 'Claim approved after review'
-            },
-            ipMasked: '192.168.1.***',
-            ipHash: 'def456ghi789',
-            rawIP: '192.168.1.100',
-            location: 'Abuja, Nigeria',
-            userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15',
-            meta: { sampleEvent: true, adminAction: true }
-          },
-          {
-            action: 'view',
-            actorUid: 'compliance-001',
-            actorDisplayName: 'Jane Smith',
-            actorEmail: 'jane.smith@nem-insurance.com',
-            actorRole: 'compliance',
-            targetType: 'cdd-form',
-            targetId: 'cdd-sample-003',
-            details: { viewType: 'form-detail', formType: 'Corporate CDD' },
-            ipMasked: '10.0.0.***',
-            ipHash: 'ghi789jkl012',
-            rawIP: '10.0.0.50',
-            location: 'Port Harcourt, Nigeria',
-            userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-            meta: { sampleEvent: true, complianceReview: true }
-          },
-          {
-            action: 'login',
-            actorUid: 'user-002',
-            actorDisplayName: 'Bob Wilson',
-            actorEmail: 'bob.wilson@example.com',
-            actorRole: 'user',
-            targetType: 'user',
-            targetId: 'user-002',
-            details: { loginMethod: 'email-password', success: true },
-            ipMasked: '172.16.0.***',
-            ipHash: 'jkl012mno345',
-            rawIP: '172.16.0.25',
-            location: 'Kano, Nigeria',
-            userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15',
-            meta: { sampleEvent: true, mobileLogin: true }
-          },
-          {
-            action: 'email-sent',
-            actorUid: 'system',
-            actorDisplayName: 'System',
-            actorEmail: 'system@nem-insurance.com',
-            actorRole: 'system',
-            targetType: 'email',
-            targetId: 'admin@nem-insurance.com',
-            details: { 
-              emailType: 'admin-notification',
-              subject: 'New KYC Submission',
-              formType: 'Individual KYC'
-            },
-            ipMasked: '127.0.0.***',
-            ipHash: 'mno345pqr678',
-            rawIP: '127.0.0.1',
-            location: 'Server Location',
-            userAgent: 'System/1.0',
-            meta: { sampleEvent: true, systemGenerated: true }
-          }
-        ];
-
-        for (const event of sampleEvents) {
-          await logAction(event);
+  // Force generate sample events on every startup for testing
+  console.log('🧪 Generating initial sample events for testing...');
+  setTimeout(async () => {
+    try {
+      const sampleEvents = [
+        {
+          action: 'login',
+          actorUid: 'startup-user',
+          actorDisplayName: 'Startup User',
+          actorEmail: 'startup@example.com',
+          actorRole: 'admin',
+          targetType: 'user',
+          targetId: 'startup-user',
+          details: { loginMethod: 'startup-generated', success: true },
+          ipMasked: '127.0.0.***',
+          ipHash: 'startup123',
+          rawIP: '127.0.0.1',
+          location: 'Server Startup',
+          userAgent: 'Server/1.0',
+          meta: { sampleEvent: true, startupGenerated: true, timestamp: new Date().toISOString() }
         }
-        
-        console.log('✅ Sample events generated successfully');
-      } catch (error) {
-        console.log('⚠️  Failed to generate sample events:', error.message);
+      ];
+
+      for (const event of sampleEvents) {
+        await logAction(event);
       }
-    }, 2000); // Wait 2 seconds after server starts
-  }
+      
+      console.log('✅ Startup sample events generated successfully');
+    } catch (error) {
+      console.log('⚠️  Failed to generate startup sample events:', error.message);
+    }
+  }, 3000); // Wait 3 seconds after server starts
   
-  await setSuperAdminOnStartup(); // ← 🚨 this line makes it happen
+  await setSuperAdminOnStartup();
 });
