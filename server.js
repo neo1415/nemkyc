@@ -1604,35 +1604,45 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // CRITICAL FIX: Validate password using Firebase client SDK first
-    // This is the only secure way to validate credentials
+    // Validate credentials using Firebase Admin SDK approach
     try {
-      // Import Firebase client auth to validate credentials
+      // First check if user exists
+      const userRecord = await admin.auth().getUserByEmail(email);
+      
+      // For Firebase Auth, we need to validate the password by attempting sign-in
+      // Since we can't directly verify passwords with Admin SDK, we use a different approach
+      
+      // Create a temporary Firebase client auth instance for validation
       const { initializeApp, getApps } = require('firebase/app');
       const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
       
-      // Use client app if available, or create one for auth validation
+      // Firebase config from environment or hardcoded (you should set these env vars)
+      const firebaseConfig = {
+        apiKey: "AIzaSyDTyrzbQ4xYV0IAvngwgCUBf6EPnflacSw",
+        authDomain: "nem-customer-feedback-8d3fb.firebaseapp.com",
+        projectId: "nem-customer-feedback-8d3fb",
+      };
+      
+      // Initialize client app for validation
       let clientApp;
       const existingApps = getApps();
       if (existingApps.length > 0) {
-        clientApp = existingApps[0];
+        clientApp = existingApps.find(app => app.name === 'validation-app') || existingApps[0];
       } else {
-        const firebaseConfig = {
-          apiKey: process.env.FIREBASE_API_KEY,
-          authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-          projectId: process.env.FIREBASE_PROJECT_ID,
-        };
         clientApp = initializeApp(firebaseConfig, 'validation-app');
       }
       
       const clientAuth = getAuth(clientApp);
       
-      // Actually validate the password - this will throw if credentials are wrong
-      await signInWithEmailAndPassword(clientAuth, email, password);
+      // Validate credentials - this will throw if password is wrong
+      const userCredential = await signInWithEmailAndPassword(clientAuth, email, password);
+      
+      // Sign out immediately after validation
+      await clientAuth.signOut();
       
     } catch (authError) {
-      // Password validation failed
-      console.error('Password validation failed:', authError);
+      // Password validation failed or user doesn't exist
+      console.error('Authentication failed:', authError.code, authError.message);
       
       // Log failed attempt
       const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
@@ -1647,7 +1657,8 @@ app.post('/api/login', async (req, res) => {
         details: {
           loginMethod: 'email-password',
           success: false,
-          error: 'Invalid credentials'
+          error: authError.code || 'Invalid credentials',
+          errorMessage: authError.message
         },
         ipMasked: req.ipData?.masked,
         ipHash: req.ipData?.hash,
