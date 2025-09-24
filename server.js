@@ -351,8 +351,7 @@ app.use((req, res, next) => {
 
 // Apply CSRF protection middleware conditionally
 app.use((req, res, next) => {
-  if (req.path === '/csrf-token' || 
-    req.path === '/listenForUpdates' ||
+  if (req.path === '/listenForUpdates' ||
     req.path === '/send-to-user' ||
     req.path === '/send-to-admin-and-claims' ||
     req.path === '/send-to-admin-and-compliance' ||
