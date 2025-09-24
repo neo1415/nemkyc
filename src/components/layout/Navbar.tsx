@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
+import logoImage from '../../NEMLogo (2)_page-0001.jpg';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -109,7 +110,7 @@ const Navbar: React.FC = () => {
           <div className="flex items-center">
               <Link to="/" className="flex items-center space-x-3">
                 <img 
-                  src="/NEMLogo (2)_page-0001.jpg" 
+                  src={logoImage} 
                   alt="NEM Insurance" 
                   className="h-10 w-10 object-contain rounded"
                 />
