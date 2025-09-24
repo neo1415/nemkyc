@@ -453,7 +453,7 @@ const fetchForms = async () => {
     const { form, action, comment } = approvalDialog;
     
     try {
-      const response = await fetch('/api/update-claim-status', {
+      const response = await fetch('https://nem-server-rhdb.onrender.com/api/update-claim-status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
