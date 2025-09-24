@@ -21,6 +21,122 @@ export const FORM_COLLECTIONS = {
   'All Risk Claims': 'all-risk-claims'
 };
 
+// ============= FORMS DATA RETRIEVAL BACKEND ENDPOINTS =============
+
+export const formsService = {
+  // Get forms from any collection with backend logging
+  async getForms(collectionName: string): Promise<any[]> {
+    try {
+      const csrfToken = await getCSRFToken();
+      const timestamp = Date.now().toString();
+      
+      const response = await fetch(`${API_BASE_URL}/api/forms/${collectionName}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'CSRF-Token': csrfToken,
+          'x-timestamp': timestamp,
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch forms: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (error) {
+      console.error(`Error fetching forms from ${collectionName}:`, error);
+      throw error;
+    }
+  },
+
+  // Get multiple collections (for CDD and Claims tables)
+  async getMultipleCollections(collections: string[]): Promise<any[]> {
+    try {
+      const csrfToken = await getCSRFToken();
+      const timestamp = Date.now().toString();
+      
+      const response = await fetch(`${API_BASE_URL}/api/forms/multiple`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'CSRF-Token': csrfToken,
+          'x-timestamp': timestamp,
+        },
+        credentials: 'include',
+        body: JSON.stringify({ collections }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch multiple collections: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching multiple collections:', error);
+      throw error;
+    }
+  },
+
+  // Update form status
+  async updateFormStatus(formId: string, collectionName: string, status: string): Promise<boolean> {
+    try {
+      const csrfToken = await getCSRFToken();
+      const timestamp = Date.now().toString();
+      
+      const response = await fetch(`${API_BASE_URL}/api/forms/${collectionName}/${formId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'CSRF-Token': csrfToken,
+          'x-timestamp': timestamp,
+        },
+        credentials: 'include',
+        body: JSON.stringify({ status }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update form status: ${response.statusText}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error updating form status:', error);
+      throw error;
+    }
+  },
+
+  // Delete form
+  async deleteForm(formId: string, collectionName: string): Promise<boolean> {
+    try {
+      const csrfToken = await getCSRFToken();
+      const timestamp = Date.now().toString();
+      
+      const response = await fetch(`${API_BASE_URL}/api/forms/${collectionName}/${formId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'CSRF-Token': csrfToken,
+          'x-timestamp': timestamp,
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete form: ${response.statusText}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting form:', error);
+      throw error;
+    }
+  }
+};
+
 // Helper function to get CSRF token
 const getCSRFToken = async (): Promise<string> => {
   const response = await fetch(`${API_BASE_URL}/csrf-token`, {
@@ -82,7 +198,7 @@ export const getAllFormsData = async (): Promise<Record<string, FormSubmission[]
   
   for (const [formName, collectionName] of Object.entries(FORM_COLLECTIONS)) {
     try {
-      allData[formName] = await getFormData(collectionName);
+      allData[formName] = await getFormData(collectionName as string);
     } catch (error) {
       console.error(`Error fetching ${formName}:`, error);
       allData[formName] = [];
