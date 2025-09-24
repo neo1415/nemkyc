@@ -135,6 +135,47 @@ const EventsLogPage: React.FC = () => {
     'all', 'kyc-form', 'cdd-form', 'claim', 'user', 'email'
   ];
 
+  // Helper function to generate test events
+  const generateTestEvents = async () => {
+    try {
+      console.log('🧪 Generating test events from frontend...');
+      
+      const response = await fetch('https://nem-server-rhdb.onrender.com/api/generate-test-events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Timestamp': Date.now().toString(),
+        },
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('✅ Test events generated successfully:', result);
+        toast({
+          title: "Success",
+          description: `Generated ${result.success} test events successfully!`,
+        });
+        // Refresh the events after generating
+        fetchEvents();
+      } else {
+        console.error('❌ Failed to generate test events:', result);
+        toast({
+          title: "Error",
+          description: result.error || "Failed to generate test events",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('💥 Error generating test events:', error);
+      toast({
+        title: "Error",
+        description: "Network error while generating test events",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     console.log('🔄 EventsLogPage useEffect triggered');
     console.log('⚠️  Dependencies:', { 
@@ -622,6 +663,14 @@ const EventsLogPage: React.FC = () => {
                 onClick={fetchEvents}
               >
                 Refresh
+              </Button>
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={generateTestEvents}
+                disabled={loading}
+              >
+                Generate Test Events
               </Button>
               <Button
                 variant="outlined"
