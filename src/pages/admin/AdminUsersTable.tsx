@@ -2,16 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/use-toast';
-import { 
-  collection, 
-  getDocs, 
-  orderBy, 
-  query, 
-  updateDoc, 
-  doc, 
-  deleteDoc 
-} from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { getAllUsers, updateUserRole, deleteUser } from '../../services/userService';
 import { 
   Table, 
   TableBody, 
@@ -74,20 +65,10 @@ const AdminUsersTable: React.FC = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      console.log('Fetching users from userroles collection...');
-      // Remove orderBy to fetch all documents, including those without dateCreated
-      const usersQuery = collection(db, 'userroles');
-      const snapshot = await getDocs(usersQuery);
-      console.log('Fetched snapshot:', snapshot.size, 'documents');
-      const usersList = snapshot.docs.map(doc => {
-        const data = doc.data();
-        console.log('User document data:', data);
-        return {
-          id: doc.id,
-          ...data
-        };
-      }) as UserRole[];
-      console.log('Parsed users list:', usersList);
+      console.log('Fetching users from backend...');
+      // Use backend service instead of direct Firebase calls
+      const usersList = await getAllUsers();
+      console.log('Users fetched from backend:', usersList);
       setUsers(usersList);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -197,17 +178,11 @@ const AdminUsersTable: React.FC = () => {
         headers,
       });
 
-      if (!claimsResponse.ok) {
-        throw new Error('Failed to update custom claims');
-      }
+      // Use backend service for role update
+      await updateUserRole(userId, newRole);
 
-      // Update local state
+      // Update local state optimistically
       const now = new Date();
-      await updateDoc(doc(db, 'userroles', userId), {
-        role: newRole,
-        dateModified: now
-      });
-
       setUsers(prevUsers => 
         prevUsers.map(u => 
           u.id === userId 
@@ -279,12 +254,10 @@ const AdminUsersTable: React.FC = () => {
         headers,
       });
 
-      if (!deleteAuthResponse.ok) {
-        throw new Error('Failed to delete user from Firebase Auth');
-      }
-
-      // Delete from Firestore
-      await deleteDoc(doc(db, 'userroles', userId));
+      // Use backend service for user deletion
+      await deleteUser(userId, user.name);
+      
+      // Update local state
       setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
       
       toast({

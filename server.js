@@ -930,6 +930,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// Legacy getFormData function - kept for backward compatibility
 async function getFormData(req, res, collectionName){
   const dataRef = db.collection(collectionName);
   const q = dataRef.orderBy('timestamp', 'desc');
@@ -2436,6 +2437,330 @@ app.post('/api/generate-test-events', async (req, res) => {
       error: 'Failed to generate test events',
       details: error.message 
     });
+  }
+});
+
+// ============= USER MANAGEMENT ENDPOINTS WITH EVENT LOGGING =============
+
+// ✅ NEW: Update user role with EVENT LOGGING
+app.put('/api/users/:userId/role', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { role, updaterUid } = req.body;
+
+    if (role === undefined) {
+      return res.status(400).json({ error: 'Role is missing in the request body' });
+    }
+
+    // Get current user data before update
+    const userDoc = await admin.firestore().collection('userroles').doc(userId).get();
+    const oldRole = userDoc.exists ? userDoc.data().role : null;
+    
+    // Get updater details for logging
+    const updaterDetails = await getUserDetailsForLogging(updaterUid);
+    
+    // Update the 'role' field in the Firestore collection for the specified user
+    await admin.firestore().collection('userroles').doc(userId).update({
+      role: role,
+      dateModified: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Get target user details for logging
+    const targetUserRecord = await admin.auth().getUser(userId);
+
+    // 📝 LOG THE ROLE UPDATE EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'role-update',
+      actorUid: updaterUid,
+      actorDisplayName: updaterDetails.displayName,
+      actorEmail: updaterDetails.email,
+      actorRole: updaterDetails.role,
+      targetType: 'user',
+      targetId: userId,
+      details: {
+        targetUserEmail: targetUserRecord.email,
+        targetUserName: targetUserRecord.displayName || targetUserRecord.email?.split('@')[0],
+        oldRole: oldRole,
+        newRole: role,
+        roleChangeType: oldRole ? 'role-modification' : 'initial-role-assignment'
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        userId: userId,
+        timestamp: new Date().toISOString(),
+        updateMethod: 'admin-panel'
+      }
+    });
+
+    res.status(200).json({ message: 'User role updated successfully' });
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    res.status(500).json({ error: 'User role update failed' });
+  }
+});
+
+// ✅ NEW: Get all users with EVENT LOGGING
+app.get('/api/users', async (req, res) => {
+  try {
+    const { viewerUid } = req.query;
+    
+    // Get viewer details for logging
+    const viewerDetails = await getUserDetailsForLogging(viewerUid);
+    
+    // Fetch users from userroles collection
+    const usersSnapshot = await admin.firestore().collection('userroles').get();
+    const users = usersSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // 📝 LOG THE USER LIST VIEW EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'view',
+      actorUid: viewerUid,
+      actorDisplayName: viewerDetails.displayName,
+      actorEmail: viewerDetails.email,
+      actorRole: viewerDetails.role,
+      targetType: 'user-list',
+      targetId: 'all-users',
+      details: {
+        viewType: 'user-management',
+        usersCount: users.length
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        timestamp: new Date().toISOString(),
+        viewContext: 'admin-dashboard'
+      }
+    });
+
+    res.status(200).json({ data: users });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// ✅ NEW: Delete user with EVENT LOGGING
+app.delete('/api/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { deleterUid, userName } = req.body;
+
+    // Get user data before deletion for logging
+    const userRecord = await admin.auth().getUser(userId);
+    const userDoc = await admin.firestore().collection('userroles').doc(userId).get();
+    const userData = userDoc.exists ? userDoc.data() : {};
+    
+    // Get deleter details for logging
+    const deleterDetails = await getUserDetailsForLogging(deleterUid);
+
+    // Delete from Firebase Auth
+    await admin.auth().deleteUser(userId);
+    
+    // Delete from Firestore
+    await admin.firestore().collection('userroles').doc(userId).delete();
+
+    // 📝 LOG THE USER DELETION EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'delete',
+      actorUid: deleterUid,
+      actorDisplayName: deleterDetails.displayName,
+      actorEmail: deleterDetails.email,
+      actorRole: deleterDetails.role,
+      targetType: 'user',
+      targetId: userId,
+      details: {
+        deletedUserEmail: userRecord.email,
+        deletedUserName: userName || userRecord.displayName || userRecord.email?.split('@')[0],
+        deletedUserRole: userData.role,
+        deletionMethod: 'admin-panel'
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        deletedUserId: userId,
+        timestamp: new Date().toISOString(),
+        permanentDeletion: true
+      }
+    });
+
+    res.status(200).json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// ✅ NEW: Get forms data with EVENT LOGGING
+app.get('/api/forms/:collectionName', async (req, res) => {
+  try {
+    const { collectionName } = req.params;
+    const { viewerUid } = req.query;
+    
+    // Get viewer details for logging
+    const viewerDetails = await getUserDetailsForLogging(viewerUid);
+    
+    const dataRef = admin.firestore().collection(collectionName);
+    const q = dataRef.orderBy('timestamp', 'desc');
+    const snapshot = await q.get();
+
+    const data = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    // 📝 LOG THE FORMS VIEW EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'view',
+      actorUid: viewerUid,
+      actorDisplayName: viewerDetails.displayName,
+      actorEmail: viewerDetails.email,
+      actorRole: viewerDetails.role,
+      targetType: 'form-list',
+      targetId: collectionName,
+      details: {
+        viewType: 'form-collection',
+        formType: collectionName,
+        formsCount: data.length
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        collection: collectionName,
+        timestamp: new Date().toISOString(),
+        viewContext: 'admin-dashboard'
+      }
+    });
+
+    res.json({ data });
+  } catch (error) {
+    console.error(`Error fetching ${collectionName} data:`, error);
+    res.status(500).json({ error: `Failed to fetch ${collectionName} data` });
+  }
+});
+
+// ✅ NEW: Update form status with EVENT LOGGING
+app.put('/api/forms/:collectionName/:docId/status', async (req, res) => {
+  try {
+    const { collectionName, docId } = req.params;
+    const { status, updaterUid, userEmail, formType, comment } = req.body;
+
+    // Get current form data before update
+    const formDoc = await admin.firestore().collection(collectionName).doc(docId).get();
+    const formData = formDoc.exists ? formDoc.data() : {};
+    const oldStatus = formData.status;
+    
+    // Get updater details for logging
+    const updaterDetails = await getUserDetailsForLogging(updaterUid);
+
+    // Update form status
+    await admin.firestore().collection(collectionName).doc(docId).update({
+      status: status,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      lastUpdatedBy: updaterUid
+    });
+
+    // 📝 LOG THE STATUS UPDATE EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'status-update',
+      actorUid: updaterUid,
+      actorDisplayName: updaterDetails.displayName,
+      actorEmail: updaterDetails.email,
+      actorRole: updaterDetails.role,
+      targetType: 'form',
+      targetId: docId,
+      details: {
+        formType: formType || collectionName,
+        formCollection: collectionName,
+        oldStatus: oldStatus,
+        newStatus: status,
+        comment: comment,
+        formSubmitterEmail: userEmail || formData.email
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        formId: docId,
+        collection: collectionName,
+        timestamp: new Date().toISOString(),
+        updateMethod: 'admin-panel'
+      }
+    });
+
+    res.status(200).json({ message: 'Form status updated successfully' });
+  } catch (error) {
+    console.error('Error updating form status:', error);
+    res.status(500).json({ error: 'Failed to update form status' });
+  }
+});
+
+// ✅ NEW: Download PDF with EVENT LOGGING
+app.post('/api/pdf/download', async (req, res) => {
+  try {
+    const { formData, formType, downloaderUid, fileName } = req.body;
+    
+    // Get downloader details for logging
+    const downloaderDetails = await getUserDetailsForLogging(downloaderUid);
+
+    // 📝 LOG THE PDF DOWNLOAD EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'download',
+      actorUid: downloaderUid,
+      actorDisplayName: downloaderDetails.displayName,
+      actorEmail: downloaderDetails.email,
+      actorRole: downloaderDetails.role,
+      targetType: 'pdf',
+      targetId: formData.id || 'unknown',
+      details: {
+        downloadType: 'pdf-form',
+        formType: formType,
+        fileName: fileName,
+        formSubmitterEmail: formData.email
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        formId: formData.id,
+        timestamp: new Date().toISOString(),
+        downloadContext: 'admin-panel'
+      }
+    });
+
+    // Return success - actual PDF generation will be handled by frontend
+    res.status(200).json({ 
+      message: 'PDF download logged successfully',
+      allowDownload: true 
+    });
+  } catch (error) {
+    console.error('Error logging PDF download:', error);
+    res.status(500).json({ error: 'Failed to log PDF download' });
   }
 });
 
