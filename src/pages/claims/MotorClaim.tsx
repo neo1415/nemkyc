@@ -27,85 +27,40 @@ import SuccessModal from '@/components/common/SuccessModal';
 
 // Motor Claim Schema
 const motorClaimSchema = yup.object().shape({
-  // Policy Details
+  // Section 1: Insured Detail
+  insuredName: yup.string().required("Insured name is required"),
+  phone: yup.string().required("Phone number is required"),
+  email: yup.string().email("Valid email is required").required("Email is required"),
+
+  // Section 2: Vehicle Details
+  registrationNumber: yup.string().required("Registration number is required"),
   policyNumber: yup.string().required("Policy number is required"),
   periodOfCoverFrom: yup.date().required("Period of cover from is required"),
   periodOfCoverTo: yup.date().required("Period of cover to is required"),
+  trailerAttached: yup.string().required("Trailer attached field is required"),
 
-  // Insured Details
-  nameCompany: yup.string().required("Name/Company is required"),
-  // title: yup.string().required("Title is required"),
-  // dateOfBirth: yup.date().required("Date of birth is required"),
-  // gender: yup.string().required("Gender is required"), // REMOVED as requested
-  // address: yup.string().required("Address is required"), // REMOVED as requested
-  phone: yup.string().required("Phone number is required"),
-  email: yup.string().email("Valid email is required").required("Email is required"),
-  registrationNumber: yup.string().required("Registration number is required"), // MOVED from vehicle details
-
-  // Vehicle Details - COMMENTED OUT except registrationNumber which moved above
-  /*registrationNumber: yup.string().required("Registration number is required"),*/
-  /*make: yup.string().required("Make is required"),
-  model: yup.string().required("Model is required"),
-  year: yup.string().required("Year is required"),
-  engineNumber: yup.string().required("Engine number is required"),
-  chassisNumber: yup.string().required("Chassis number is required"),
-  registeredInYourName: yup.string().required("Registration ownership field is required"),
-  registeredInYourNameDetails: yup.string().when('registeredInYourName', {
-    is: 'no',
-    then: (schema) => schema.required("Details required for registration ownership"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  ownedSolely: yup.string().required("Sole ownership field is required"),
-  ownedSolelyDetails: yup.string().when('ownedSolely', {
-    is: 'no',
-    then: (schema) => schema.required("Details required for sole ownership"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  hirePurchase: yup.string().required("Hire purchase field is required"),
-  hirePurchaseDetails: yup.string().when('hirePurchase', {
-    is: 'yes',
-    then: (schema) => schema.required("Details required for hire purchase"),
-    otherwise: (schema) => schema.notRequired()
-  }),
-  vehicleUsage: yup.string().required("Vehicle usage is required"),
-  trailerAttached: yup.string().required("Trailer attached field is required"),*/
-
-  // Damage Details
-  // damageDescription: yup.string().required("Damage description is required"),
-  // inspectionLocation: yup.string().required("Inspection location is required"),
-
-  // Incident Details
-  incidentLocation: yup.string().required("Incident location is required"),
-  incidentDate: yup.date().required("Incident date is required"),
-  incidentTime: yup.string().required("Incident time is required"),
-  policeReported: yup.string().required("Police reported field is required"),
+  // Section 3: Incident Details
+  incidentLocation: yup.string().required("Where did the incident occur is required"),
+  incidentDate: yup.date().required("Date of incident is required"),
+  incidentTime: yup.string().required("Time of incident is required"),
+  policeReported: yup.string().required("Was incident reported to police is required"),
   policeStationDetails: yup.string().when('policeReported', {
     is: 'yes',
     then: (schema) => schema.required("Police station details required"),
     otherwise: (schema) => schema.notRequired()
   }),
-  incidentDescription: yup.string().required("Incident description is required"),
+  incidentDescription: yup.string().required("Full description of how the incident occurred is required"),
 
-  // Witnesses
-  witnesses: yup.array().of(
-    yup.object().shape({
-      name: yup.string().required("Witness name is required"),
-      address: yup.string().required("Witness address is required"),
-      phone: yup.string().required("Witness phone is required"),
-      isPassenger: yup.boolean()
-    })
-  ),
-
-  // Other Vehicle
-  otherVehicleInvolved: yup.string().required("Other vehicle involved field is required"),
+  // Other Vehicle (part of incident)
+  otherVehicleInvolved: yup.string().required("Was another vehicle involved field is required"),
   otherVehicleRegNumber: yup.string().when('otherVehicleInvolved', {
     is: 'yes',
     then: (schema) => schema.required("Other vehicle registration required"),
     otherwise: (schema) => schema.notRequired()
   }),
-  otherVehicleMakeModel: yup.string().when('otherVehicleInvolved', {
+  otherVehicleMake: yup.string().when('otherVehicleInvolved', {
     is: 'yes',
-    then: (schema) => schema.required("Other vehicle make/model required"),
+    then: (schema) => schema.required("Other vehicle make required"),
     otherwise: (schema) => schema.notRequired()
   }),
   otherDriverName: yup.string().when('otherVehicleInvolved', {
@@ -113,17 +68,25 @@ const motorClaimSchema = yup.object().shape({
     then: (schema) => schema.required("Other driver name required"),
     otherwise: (schema) => schema.notRequired()
   }),
-  otherDriverPhone: yup.string().when('otherVehicleInvolved', {
-    is: 'yes',
-    then: (schema) => schema.required("Other driver phone required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
   otherDriverAddress: yup.string().when('otherVehicleInvolved', {
     is: 'yes',
     then: (schema) => schema.required("Other driver address required"),
     otherwise: (schema) => schema.notRequired()
   }),
-  otherVehicleInjuryDamage: yup.string(),
+  otherVehicleInjuryDamage: yup.string().when('otherVehicleInvolved', {
+    is: 'yes',
+    then: (schema) => schema.required("Injury or damage to the other vehicle is required"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+
+  // Eye witnesses (part of incident)
+  witnesses: yup.array().of(
+    yup.object().shape({
+      name: yup.string().required("Eye witness name is required"),
+      address: yup.string().required("Eye witness address is required"),
+      phone: yup.string().required("Eye witness phone number is required")
+    })
+  ),
 
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
@@ -135,65 +98,40 @@ interface Witness {
   name: string;
   address: string;
   phone: string;
-  isPassenger: boolean;
 }
 
 interface MotorClaimData {
-  // Policy Details
+  // Section 1: Insured Detail
+  insuredName: string;
+  phone: string;
+  email: string;
+  
+  // Section 2: Vehicle Details
+  registrationNumber: string;
   policyNumber: string;
   periodOfCoverFrom: Date;
   periodOfCoverTo: Date;
-
-  // Insured Details
-  nameCompany: string;
-  // title: string;
-  // dateOfBirth: Date;
-  // gender: string; // REMOVED as requested
-  // address: string; // REMOVED as requested
-  phone: string;
-  email: string;
-  registrationNumber: string; // MOVED from vehicle details
-
-  // Vehicle Details - COMMENTED OUT except registrationNumber which moved above
-  /*registrationNumber: string;*/
-  /*make: string;
-  model: string;
-  year: string;
-  engineNumber: string;
-  chassisNumber: string;
-  registeredInYourName: string;
-  registeredInYourNameDetails?: string;
-  ownedSolely: string;
-  ownedSolelyDetails?: string;
-  hirePurchase: string;
-  hirePurchaseDetails?: string;
-  vehicleUsage: string;
-  trailerAttached: string;*/
-
-  // Damage Details
-  // damageDescription: string;
-  // inspectionLocation: string;
-
-  // Incident Details
+  trailerAttached: string;
+  
+  // Section 3: Incident Details
   incidentLocation: string;
   incidentDate: Date;
   incidentTime: string;
   policeReported: string;
   policeStationDetails?: string;
   incidentDescription: string;
-
-  // Witnesses
-  witnesses: Witness[];
-
-  // Other Vehicle Details
+  
+  // Other vehicle details (part of incident)
   otherVehicleInvolved: string;
   otherVehicleRegNumber?: string;
-  otherVehicleMakeModel?: string;
+  otherVehicleMake?: string;
   otherDriverName?: string;
-  otherDriverPhone?: string;
   otherDriverAddress?: string;
   otherVehicleInjuryDamage?: string;
-
+  
+  // Eye witness details (part of incident)
+  witnesses: Witness[];
+  
   // Declaration
   agreeToDataPrivacy: boolean;
   declarationTrue: boolean;
@@ -333,42 +271,35 @@ const FormDatePicker = ({ name, label, required = false }: any) => {
 };
 
 const defaultValues: Partial<MotorClaimData> = {
-  policyNumber: '',
-  nameCompany: '',
-  // title: '',
-  // gender: '', // REMOVED as requested
-  // address: '', // REMOVED as requested
+  // Section 1: Insured Detail
+  insuredName: '',
   phone: '',
   email: '',
-  registrationNumber: '', // MOVED from vehicle details
-  /*make: '',
-  model: '',
-  year: '',
-  engineNumber: '',
-  chassisNumber: '',
-  registeredInYourName: '',
-  registeredInYourNameDetails: '',
-  ownedSolely: '',
-  ownedSolelyDetails: '',
-  hirePurchase: '',
-  hirePurchaseDetails: '',
-  vehicleUsage: '',
-  trailerAttached: '',*/
-  // damageDescription: '',
-  // inspectionLocation: '',
+  
+  // Section 2: Vehicle Details
+  registrationNumber: '',
+  policyNumber: '',
+  trailerAttached: '',
+  
+  // Section 3: Incident Details
   incidentLocation: '',
   incidentTime: '',
   policeReported: '',
   policeStationDetails: '',
   incidentDescription: '',
-  witnesses: [],
+  
+  // Other vehicle details
   otherVehicleInvolved: '',
   otherVehicleRegNumber: '',
-  otherVehicleMakeModel: '',
+  otherVehicleMake: '',
   otherDriverName: '',
-  otherDriverPhone: '',
   otherDriverAddress: '',
   otherVehicleInjuryDamage: '',
+  
+  // Eye witness details
+  witnesses: [],
+  
+  // Declaration
   agreeToDataPrivacy: false,
   declarationTrue: false,
   signature: ''
@@ -470,149 +401,134 @@ const MotorClaim: React.FC = () => {
 
   // Step field mappings for validation
   const stepFieldMappings = {
-    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo','nameCompany', 'registrationNumber', 'phone', 'email'], // Insured details with registration number
-    1: ['incidentLocation', 'incidentDate', 'incidentTime', 'policeReported', 'policeStationDetails', 'incidentDescription'], // Incident details
-    2: ['otherVehicleInvolved', 'otherVehicleRegNumber', 'otherVehicleMakeModel', 'otherDriverName', 'otherDriverPhone', 'otherDriverAddress','witnesses'], // Other vehicle details
+    0: ['insuredName', 'phone', 'email'], // Section 1: Insured Detail
+    1: ['registrationNumber', 'policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'trailerAttached'], // Section 2: Vehicle Details  
+    2: ['incidentLocation', 'incidentDate', 'incidentTime', 'policeReported', 'policeStationDetails', 'incidentDescription', 'otherVehicleInvolved', 'otherVehicleRegNumber', 'otherVehicleMake', 'otherDriverName', 'otherDriverAddress', 'otherVehicleInjuryDamage', 'witnesses'], // Section 3: Incident Details
     3: ['agreeToDataPrivacy', 'declarationTrue', 'signature'] // Declaration
   };
 
   const steps = [
     {
-      id: 'insured',
-      title: 'Insured Details',
+      id: 'insured-detail',
+      title: 'Section 1: Insured Detail',
       component: (
         <FormProvider {...formMethods}>
-             <div className="space-y-4">
+          <div className="space-y-4">
+            <FormField name="insuredName" label="Insured Name" required />
+            <FormField name="phone" label="Phone Number" required />
+            <FormField name="email" label="Email Address" required />
+          </div>
+        </FormProvider>
+      )
+    },
+    {
+      id: 'vehicle-details',
+      title: 'Section 2: Vehicle Details',
+      component: (
+        <FormProvider {...formMethods}>
+          <div className="space-y-4">
+            <FormField name="registrationNumber" label="Registration Number" required />
             <FormField name="policyNumber" label="Policy Number" required />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
               <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
             </div>
-          </div>
-          <div className="space-y-4">
-            <FormField name="nameCompany" label="Name / Company Name" required />
             
-            {/* Removed gender and address fields as requested */}
-            <FormField name="registrationNumber" label="Vehicle Registration Number" required />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField name="phone" label="Phone Number" required />
-              <FormField name="email" label="Email" type="email" required />
-            </div>
+            <FormSelect name="trailerAttached" label="Was trailer attached?" required placeholder="Select Yes or No">
+              <SelectItem value="yes">Yes</SelectItem>
+              <SelectItem value="no">No</SelectItem>
+            </FormSelect>
           </div>
         </FormProvider>
       )
     },
     {
-      id: 'incident',
-      title: 'Incident Details',
+      id: 'incident-details',
+      title: 'Section 3: Incident Details',
       component: (
         <FormProvider {...formMethods}>
           <div className="space-y-4">
             <FormField name="incidentLocation" label="Where did the incident occur?" required />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="incidentDate" label="Date of Incident" required />
-              <FormField name="incidentTime" label="Time of Incident" type="time" required />
+              <FormDatePicker name="incidentDate" label="Date of incident" required />
+              <FormField name="incidentTime" label="Time of incident" required type="time" />
             </div>
             
-            <FormSelect name="policeReported" label="Was the incident reported to police?" required placeholder="Select yes or no">
+            <FormSelect name="policeReported" label="Was incident reported to police?" required placeholder="Select Yes or No">
               <SelectItem value="yes">Yes</SelectItem>
               <SelectItem value="no">No</SelectItem>
             </FormSelect>
             
-            {watchedValues.policeReported === 'yes' && (
+            {formMethods.watch('policeReported') === 'yes' && (
               <FormTextarea name="policeStationDetails" label="Police Station Details" required />
             )}
             
             <FormTextarea name="incidentDescription" label="Full description of how the incident occurred" required />
-          </div>
-        </FormProvider>
-      )
-    },
-    {
-      id: 'otherVehicle',
-      title: 'Other Vehicle Details',
-      component: (
-        <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <FormSelect name="otherVehicleInvolved" label="Was another vehicle involved?" required placeholder="Select yes or no">
+            
+            <FormSelect name="otherVehicleInvolved" label="Was another vehicle involved?" required placeholder="Select Yes or No">
               <SelectItem value="yes">Yes</SelectItem>
               <SelectItem value="no">No</SelectItem>
             </FormSelect>
             
-            {watchedValues.otherVehicleInvolved === 'yes' && (
-              <div className="space-y-4">
+            {formMethods.watch('otherVehicleInvolved') === 'yes' && (
+              <div className="space-y-4 border-l-4 border-blue-200 pl-4">
+                <h4 className="font-medium text-blue-800">Other Vehicle Details</h4>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField name="otherVehicleRegNumber" label="Registration Number" required />
-                  <FormField name="otherVehicleMakeModel" label="Make/Model" required />
+                  <FormField name="otherVehicleMake" label="Make" required />
                 </div>
                 
                 <FormField name="otherDriverName" label="Driver's Name" required />
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField name="otherDriverPhone" label="Driver's Phone" required />
-                  <FormTextarea name="otherDriverAddress" label="Driver's Address" required />
-                </div>
-                
-                <FormTextarea name="otherVehicleInjuryDamage" label="Injury/Damage to Other Vehicle" />
+                <FormTextarea name="otherDriverAddress" label="Driver Address" required />
+                <FormTextarea name="otherVehicleInjuryDamage" label="Injury or damage to the other vehicle" required />
               </div>
             )}
-          </div>
+            
             <div className="space-y-4">
-            <div className="text-sm text-muted-foreground mb-4">
-              Add any witnesses to the incident (optional)
-            </div>
-            
-            {witnessFields.map((witness, index) => (
-              <Card key={witness.id} className="p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium">Witness {index + 1}</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeWitness(index)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Remove
-                  </Button>
-                </div>
-                
-                <div className="space-y-4">
-                  <FormField name={`witnesses.${index}.name`} label="Name" required />
-                  <FormTextarea name={`witnesses.${index}.address`} label="Address" required />
-                  <FormField name={`witnesses.${index}.phone`} label="Phone" required />
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`witnesses.${index}.isPassenger`}
-                      checked={formMethods.watch(`witnesses.${index}.isPassenger`) || false}
-                      onCheckedChange={(checked) => {
-                        formMethods.setValue(`witnesses.${index}.isPassenger`, !!checked);
-                      }}
-                    />
-                    <Label htmlFor={`witnesses.${index}.isPassenger`}>Was this person a passenger?</Label>
+              <div className="text-sm text-muted-foreground mb-4">
+                Detail of eye witness – Name, Address and Phone Number (optional)
+              </div>
+              
+              {witnessFields.map((witness, index) => (
+                <Card key={witness.id} className="p-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-medium">Eye Witness {index + 1}</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeWitness(index)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Remove
+                    </Button>
                   </div>
-                </div>
-              </Card>
-            ))}
-            
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => addWitness({
-                name: '',
-                address: '',
-                phone: '',
-                isPassenger: false
-              })}
-              className="w-full"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Witness
-            </Button>
+                  
+                  <div className="space-y-4">
+                    <FormField name={`witnesses.${index}.name`} label="Name" required />
+                    <FormTextarea name={`witnesses.${index}.address`} label="Address" required />
+                    <FormField name={`witnesses.${index}.phone`} label="Phone Number" required />
+                  </div>
+                </Card>
+              ))}
+              
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => addWitness({
+                  name: '',
+                  address: '',
+                  phone: ''
+                })}
+                className="w-full"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Eye Witness
+              </Button>
+            </div>
           </div>
         </FormProvider>
       )
@@ -676,7 +592,7 @@ const MotorClaim: React.FC = () => {
                 className={cn(formMethods.formState.errors.declarationTrue && "border-destructive")}
               />
               <Label htmlFor="declarationTrue">
-                I declare that the above statements are true <span className="required-asterisk">*</span>
+                I/We declare that the statements above are true <span className="required-asterisk">*</span>
               </Label>
             </div>
             {formMethods.formState.errors.declarationTrue && (
@@ -685,18 +601,7 @@ const MotorClaim: React.FC = () => {
               </p>
             )}
             
-            <FormField name="signature" label="Digital Signature" required placeholder="Type your full name as signature" />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Place</Label>
-                <Input value="Nigeria" disabled />
-              </div>
-              <div>
-                <Label>Date</Label>
-                <Input value={new Date().toISOString().split('T')[0]} disabled />
-              </div>
-            </div>
+            <FormField name="signature" label="Full Name (Digital Signature)" required />
           </div>
         </FormProvider>
       )
@@ -705,56 +610,33 @@ const MotorClaim: React.FC = () => {
 
   return (
     <FormProvider {...formMethods}>
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-        {/* Loading overlay */}
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center mb-8">
+            <Car className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Motor Insurance Claim</h1>
+            <p className="text-gray-600">Submit your motor insurance claim quickly and easily</p>
+          </div>
+
+          <MultiStepForm 
+            steps={steps}
+            onSubmit={onFinalSubmit}
+            stepFieldMappings={stepFieldMappings}
+            formMethods={formMethods}
+          />
+        </div>
+
+        {/* Loading Overlay for Post-Auth Processing */}
         {showPostAuthLoading && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-lg font-semibold">Completing your submission...</p>
-              <p className="text-sm text-muted-foreground text-center">
-                Please do not close this window while we process your claim
-              </p>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-4">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              <p className="text-lg">Processing your submission...</p>
             </div>
           </div>
         )}
 
-        <div className="container mx-auto py-8 px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
-                <Car className="w-8 h-8 text-primary" />
-              </div>
-              <h1 className="text-3xl font-bold tracking-tight mb-2">Motor Claim Form</h1>
-              <p className="text-muted-foreground">
-                Please provide accurate information about your motor insurance claim
-              </p>
-            </div>
-
-            <Card className="shadow-xl border-0 bg-white/50 backdrop-blur-sm">
-              <CardHeader className="text-center pb-2">
-                <CardTitle className="flex items-center justify-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Motor Insurance Claim
-                </CardTitle>
-                <CardDescription>
-                  Complete all sections to submit your motor claim
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <MultiStepForm
-                  steps={steps}
-                  onSubmit={onFinalSubmit}
-                  formMethods={formMethods}
-                  submitButtonText="Submit Motor Claim"
-                  stepFieldMappings={stepFieldMappings}
-                />
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Summary Dialog */}
+        {/* Confirmation Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
@@ -769,7 +651,7 @@ const MotorClaim: React.FC = () => {
                 </div>
                 <div>
                   <span className="font-medium">Insured Name:</span>
-                  <p>{watchedValues.nameCompany}</p>
+                  <p>{watchedValues.insuredName}</p>
                 </div>
               </div>
               
@@ -813,7 +695,7 @@ const MotorClaim: React.FC = () => {
           isOpen={authShowSuccess}
           onClose={() => setAuthShowSuccess()}
           title="Motor Claim Submitted Successfully!"
-          message="Your motor claim has been received and is being processed. You will receive updates via email and SMS."
+          message="Your entry is successful with a copy sent to your email address. Our claim team will contact you shortly through your email or phone number. For further enquiry, you can reach us through claims@nem-insurance.com or call 234-02-014489570"
           formType="Motor Claim"
         />
       </div>
