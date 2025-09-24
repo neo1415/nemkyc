@@ -43,7 +43,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
     },
     ...(canViewUsers ? [{
       name: 'Users',
-      href: '/admin/users',
+      href: '/admin/users', 
+      icon: Users
+    }, {
+      name: 'Events Log',
+      href: '/admin/events-log',
       icon: Users
     }] : []),
     {
