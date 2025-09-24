@@ -1378,6 +1378,671 @@ const setSuperAdminOnStartup = async () => {
   }
 };
 
+// ============= FORM SUBMISSION BACKEND ENDPOINTS =============
+
+// Centralized form submission endpoint with event logging
+app.post('/api/submit-form', async (req, res) => {
+  try {
+    const { formData, formType, userUid, userEmail } = req.body;
+    
+    console.log('📝 Form submission received:', { formType, userUid, userEmail });
+    
+    if (!formData || !formType) {
+      return res.status(400).json({ error: 'Missing formData or formType' });
+    }
+
+    // Get user details for logging if UID provided
+    let userDetails = { displayName: null, email: null, role: null };
+    if (userUid) {
+      userDetails = await getUserDetailsForLogging(userUid);
+    }
+
+    // Determine Firestore collection based on form type
+    const collectionName = getFirestoreCollection(formType);
+    console.log('📂 Using collection:', collectionName);
+
+    // Add metadata to form data
+    const submissionData = {
+      ...formData,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: new Date().toLocaleDateString('en-GB'),
+      submittedAt: admin.firestore.FieldValue.serverTimestamp(),
+      submittedBy: userEmail || userDetails.email,
+      status: 'pending'
+    };
+
+    // Submit to Firestore
+    const docRef = await db.collection(collectionName).add(submissionData);
+    console.log('✅ Document written with ID:', docRef.id);
+
+    // 📝 LOG THE FORM SUBMISSION EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'submit',
+      actorUid: userUid,
+      actorDisplayName: userDetails.displayName || formData?.name || formData?.companyName,
+      actorEmail: userDetails.email || userEmail || formData?.email,
+      actorRole: userDetails.role,
+      targetType: collectionName.replace(/s$/, ''),
+      targetId: docRef.id,
+      details: {
+        formType: formType,
+        status: 'pending',
+        submitterName: formData?.name || formData?.companyName || 'Unknown',
+        submitterEmail: formData?.email || userEmail || 'Unknown'
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        formType: formType,
+        collectionName: collectionName,
+        submissionId: docRef.id
+      }
+    });
+
+    // Send email notifications
+    try {
+      const finalSubmissionData = { ...submissionData, documentId: docRef.id, collectionName };
+      
+      // Send user confirmation email
+      await sendEmail(userEmail || userDetails.email || formData?.email, 
+        `${formType} Submission Confirmation`, 
+        generateConfirmationEmailHTML(formType));
+
+      // Send admin notification with PDF
+      const isClaimsForm = ['claim', 'motor', 'burglary', 'fire', 'allrisk', 'goods', 'money',
+        'employers', 'public', 'professional', 'fidelity', 'contractors', 'group', 'rent', 'combined']
+        .some(keyword => formType.toLowerCase().includes(keyword));
+
+      const adminRoles = isClaimsForm ? ['claims'] : ['compliance'];
+      const adminEmails = await getEmailsByRoles(adminRoles);
+      
+      if (adminEmails.length > 0) {
+        await sendEmail(adminEmails, 
+          `New ${formType} Submission - Review Required`,
+          generateAdminNotificationHTML(formType, formData, docRef.id));
+      }
+
+      // 📝 LOG EMAIL NOTIFICATIONS
+      await logAction({
+        action: 'email-sent',
+        actorUid: 'system',
+        actorDisplayName: 'System',
+        actorEmail: 'system@nem-insurance.com',
+        actorRole: 'system',
+        targetType: 'email',
+        targetId: (userEmail || userDetails.email || formData?.email) + ',' + adminEmails.join(','),
+        details: {
+          emailType: 'submission-notification',
+          formType: formType,
+          userEmail: userEmail || userDetails.email || formData?.email,
+          adminEmails: adminEmails
+        },
+        ipMasked: req.ipData?.masked,
+        ipHash: req.ipData?.hash,
+        rawIP: req.ipData?.raw,
+        location: location,
+        userAgent: req.headers['user-agent'] || 'Unknown',
+        meta: {
+          relatedSubmission: docRef.id,
+          emailCount: adminEmails.length + 1
+        }
+      });
+
+    } catch (emailError) {
+      console.error('Email notification error:', emailError);
+      // Don't fail submission if email fails
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Form submitted successfully',
+      documentId: docRef.id,
+      collectionName: collectionName
+    });
+
+  } catch (error) {
+    console.error('Form submission error:', error);
+    res.status(500).json({ error: 'Form submission failed', details: error.message });
+  }
+});
+
+// Helper function to determine Firestore collection based on form type
+const getFirestoreCollection = (formType) => {
+  const formTypeLower = formType.toLowerCase();
+  
+  // Claims forms
+  if (formTypeLower.includes('combined')) return 'combined-gpa-employers-liability-claims';
+  if (formTypeLower.includes('motor')) return 'motor-claims';
+  if (formTypeLower.includes('burglary')) return 'burglary-claims';
+  if (formTypeLower.includes('fire')) return 'fire-special-perils-claims';
+  if (formTypeLower.includes('allrisk') || formTypeLower.includes('all risk')) return 'all-risk-claims';
+  if (formTypeLower.includes('goods')) return 'goods-in-transit-claims';
+  if (formTypeLower.includes('money')) return 'money-insurance-claims';
+  if (formTypeLower.includes('employers')) return 'employers-liability-claims';
+  if (formTypeLower.includes('public')) return 'public-liability-claims';
+  if (formTypeLower.includes('professional')) return 'professional-indemnity-claims';
+  if (formTypeLower.includes('fidelity')) return 'fidelity-guarantee-claims';
+  if (formTypeLower.includes('contractors')) return 'contractors-claims';
+  if (formTypeLower.includes('group')) return 'group-personal-accident-claims';
+  if (formTypeLower.includes('rent')) return 'rent-assurance-claims';
+  
+  // KYC forms
+  if (formTypeLower.includes('individual') && formTypeLower.includes('kyc')) return 'Individual-kyc-form';
+  if (formTypeLower.includes('corporate') && formTypeLower.includes('kyc')) return 'corporate-kyc-form';
+  
+  // CDD forms
+  if (formTypeLower.includes('individual') && formTypeLower.includes('cdd')) return 'individualCDD';
+  if (formTypeLower.includes('corporate') && formTypeLower.includes('cdd')) return 'corporateCDD';
+  if (formTypeLower.includes('agents') && formTypeLower.includes('cdd')) return 'agentsCDD';
+  if (formTypeLower.includes('brokers') && formTypeLower.includes('cdd')) return 'brokersCDD';
+  if (formTypeLower.includes('partners') && formTypeLower.includes('cdd')) return 'partnersCDD';
+  
+  return 'formSubmissions';
+};
+
+// Helper functions for email HTML generation
+const generateConfirmationEmailHTML = (formType) => {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(90deg, #8B4513, #DAA520); padding: 20px; text-align: center;">
+        <h1 style="color: white; margin: 0;">NEM Insurance</h1>
+      </div>
+      <div style="padding: 20px; background: #f9f9f9;">
+        <h2 style="color: #8B4513;">Form Submission Confirmed</h2>
+        <p>Thank you for submitting your <strong>${formType}</strong> form. We have received your submission and it is currently being processed.</p>
+        <p>You can track your submission status by logging in:</p>
+        <p>
+          <a href="https://nemforms.com/signin" style="display: inline-block; padding: 10px 20px; background-color: #800020; color: #FFD700; text-decoration: none; border-radius: 5%;">Track Your Submission</a>
+        </p>
+        <p>We will notify you via email once your submission has been reviewed.</p>
+        <p>Best regards,<br>NEM Insurance Team</p>
+      </div>
+    </div>
+  `;
+};
+
+const generateAdminNotificationHTML = (formType, formData, documentId) => {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(90deg, #8B4513, #DAA520); padding: 20px; text-align: center;">
+        <h1 style="color: white; margin: 0;">NEM Insurance</h1>
+      </div>
+      <div style="padding: 20px; background: #f9f9f9;">
+        <h2 style="color: #8B4513;">New ${formType} Submission</h2>
+        <p>A new <strong>${formType}</strong> form has been submitted and requires review.</p>
+        <p><strong>Submitter:</strong> ${formData?.name || formData?.companyName || 'N/A'}</p>
+        <p><strong>Email:</strong> ${formData?.email || 'N/A'}</p>
+        <p><strong>Document ID:</strong> ${documentId}</p>
+        
+        <div style="margin: 20px 0; padding: 15px; background: #f0f8ff; border-left: 4px solid #8B4513;">
+          <p style="margin: 0;"><strong>Action Required:</strong> Please review this submission in the admin dashboard.</p>
+        </div>
+        
+        <p>
+          <a href="https://nemforms.com/signin" style="display: inline-block; padding: 10px 20px; background-color: #800020; color: #FFD700; text-decoration: none; border-radius: 5%;">Access Admin Dashboard</a>
+        </p>
+        
+        <p>Best regards,<br>NEM Forms System</p>
+      </div>
+    </div>
+  `;
+};
+
+// ============= AUTHENTICATION BACKEND ENDPOINTS =============
+
+// Login endpoint with event logging
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Authenticate user using Firebase Admin SDK
+    const userRecord = await admin.auth().getUserByEmail(email);
+    
+    // Check if user exists in userroles collection
+    const userDoc = await db.collection('userroles').doc(userRecord.uid).get();
+    const userRole = userDoc.exists ? userDoc.data().role : 'user';
+    
+    // Create custom token for the user
+    const customToken = await admin.auth().createCustomToken(userRecord.uid, {
+      role: userRole,
+      email: email
+    });
+
+    // 📝 LOG SUCCESSFUL LOGIN EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'login',
+      actorUid: userRecord.uid,
+      actorDisplayName: userRecord.displayName || email.split('@')[0],
+      actorEmail: email,
+      actorRole: userRole,
+      targetType: 'user',
+      targetId: userRecord.uid,
+      details: {
+        loginMethod: 'email-password',
+        success: true
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        loginTimestamp: new Date().toISOString()
+      }
+    });
+
+    res.status(200).json({ 
+      success: true,
+      customToken, 
+      role: userRole,
+      user: {
+        uid: userRecord.uid,
+        email: userRecord.email,
+        displayName: userRecord.displayName
+      }
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    
+    // 📝 LOG FAILED LOGIN EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'failed-login',
+      actorUid: null,
+      actorDisplayName: null,
+      actorEmail: req.body.email,
+      actorRole: null,
+      targetType: 'user',
+      targetId: req.body.email,
+      details: {
+        loginMethod: 'email-password',
+        success: false,
+        error: error.message
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        attemptTimestamp: new Date().toISOString()
+      }
+    });
+    
+    res.status(401).json({ error: 'Authentication failed', details: error.message });
+  }
+});
+
+// Register endpoint with event logging
+app.post('/api/register', async (req, res) => {
+  try {
+    const { email, password, displayName, role = 'user' } = req.body;
+    
+    if (!email || !password || !displayName) {
+      return res.status(400).json({ error: 'Email, password, and displayName are required' });
+    }
+
+    // Create user in Firebase Auth
+    const userRecord = await admin.auth().createUser({
+      email: email,
+      password: password,
+      displayName: displayName,
+      emailVerified: false
+    });
+
+    // Set role in userroles collection
+    await db.collection('userroles').doc(userRecord.uid).set({
+      email: email,
+      role: role,
+      displayName: displayName,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    // 📝 LOG THE REGISTRATION EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'register',
+      actorUid: userRecord.uid,
+      actorDisplayName: displayName,
+      actorEmail: email,
+      actorRole: role,
+      targetType: 'user',
+      targetId: userRecord.uid,
+      details: {
+        registrationMethod: 'email-password',
+        assignedRole: role
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        registrationTimestamp: new Date().toISOString()
+      }
+    });
+
+    res.status(201).json({ 
+      success: true,
+      message: 'User registered successfully',
+      user: {
+        uid: userRecord.uid,
+        email: userRecord.email,
+        displayName: userRecord.displayName
+      }
+    });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Registration failed', details: error.message });
+  }
+});
+
+// ============= DATA RETRIEVAL BACKEND ENDPOINTS =============
+
+// Get forms data with event logging
+app.get('/api/forms/:collection', async (req, res) => {
+  try {
+    const { collection } = req.params;
+    const { viewerUid, page = 1, limit = 50 } = req.query;
+    
+    console.log(`📊 Forms data request for collection: ${collection}`);
+    
+    // Get viewer details for logging
+    let viewerDetails = { displayName: null, email: null, role: null };
+    if (viewerUid) {
+      viewerDetails = await getUserDetailsForLogging(viewerUid);
+    }
+    
+    // Build query
+    let query = db.collection(collection);
+    
+    // Apply pagination
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+    
+    query = query.orderBy('timestamp', 'desc');
+    
+    if (offset > 0) {
+      const offsetSnapshot = await query.limit(offset).get();
+      if (!offsetSnapshot.empty) {
+        const lastDoc = offsetSnapshot.docs[offsetSnapshot.docs.length - 1];
+        query = query.startAfter(lastDoc);
+      }
+    }
+    
+    query = query.limit(limitNum);
+    const snapshot = await query.get();
+    
+    const data = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    // Get total count for pagination
+    const totalSnapshot = await db.collection(collection).get();
+    const totalCount = totalSnapshot.size;
+
+    // 📝 LOG THE DATA RETRIEVAL EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'view',
+      actorUid: viewerUid,
+      actorDisplayName: viewerDetails.displayName,
+      actorEmail: viewerDetails.email,
+      actorRole: viewerDetails.role,
+      targetType: 'collection',
+      targetId: collection,
+      details: {
+        viewType: 'table-data',
+        recordCount: data.length,
+        page: pageNum,
+        limit: limitNum
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        collection: collection,
+        totalRecords: totalCount,
+        paginationInfo: { page: pageNum, limit: limitNum, offset }
+      }
+    });
+
+    res.json({
+      data,
+      pagination: {
+        currentPage: pageNum,
+        limit: limitNum,
+        totalCount: totalCount,
+        totalPages: Math.ceil(totalCount / limitNum)
+      }
+    });
+
+  } catch (error) {
+    console.error(`Error fetching forms data from ${req.params.collection}:`, error);
+    res.status(500).json({ error: 'Failed to fetch forms data', details: error.message });
+  }
+});
+
+// Get specific form by ID with event logging  
+app.get('/api/forms/:collection/:id', async (req, res) => {
+  try {
+    const { collection, id } = req.params;
+    const { viewerUid } = req.query;
+    
+    // Get viewer details for logging
+    let viewerDetails = { displayName: null, email: null, role: null };
+    if (viewerUid) {
+      viewerDetails = await getUserDetailsForLogging(viewerUid);
+    }
+    
+    const doc = await db.collection(collection).doc(id).get();
+    
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    const data = {
+      id: doc.id,
+      ...doc.data()
+    };
+
+    // 📝 LOG THE DOCUMENT VIEW EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'view',
+      actorUid: viewerUid,
+      actorDisplayName: viewerDetails.displayName,
+      actorEmail: viewerDetails.email,
+      actorRole: viewerDetails.role,
+      targetType: collection,
+      targetId: id,
+      details: {
+        viewType: 'form-detail',
+        formType: data.formType || 'unknown'
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        collection: collection,
+        documentId: id
+      }
+    });
+
+    res.json(data);
+
+  } catch (error) {
+    console.error(`Error fetching document ${req.params.id} from ${req.params.collection}:`, error);
+    res.status(500).json({ error: 'Failed to fetch document', details: error.message });
+  }
+});
+
+// ============= FORM EDITING AND STATUS UPDATE ENDPOINTS =============
+
+// Update form status with event logging
+app.put('/api/forms/:collection/:id/status', async (req, res) => {
+  try {
+    const { collection, id } = req.params;
+    const { status, updaterUid, comment, userEmail, formType } = req.body;
+    
+    if (!status || !updaterUid) {
+      return res.status(400).json({ error: 'Status and updaterUid are required' });
+    }
+
+    // Get document before update for logging
+    const docBefore = await db.collection(collection).doc(id).get();
+    if (!docBefore.exists) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    
+    const beforeData = docBefore.data();
+    
+    // Get updater details
+    const updaterDetails = await getUserDetailsForLogging(updaterUid);
+    
+    // Update document
+    const updateData = {
+      status: status,
+      updatedBy: updaterUid,
+      updaterName: updaterDetails.displayName || updaterDetails.email,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    
+    if (comment) {
+      updateData.updateComment = comment;
+    }
+    
+    await db.collection(collection).doc(id).update(updateData);
+
+    // 📝 LOG THE STATUS UPDATE EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'status-update',
+      actorUid: updaterUid,
+      actorDisplayName: updaterDetails.displayName,
+      actorEmail: updaterDetails.email,
+      actorRole: updaterDetails.role,
+      targetType: collection,
+      targetId: id,
+      details: {
+        from: { status: beforeData.status || 'unknown' },
+        to: { status: status },
+        comment: comment,
+        formType: formType || beforeData.formType
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        collection: collection,
+        documentId: id,
+        userEmail: userEmail,
+        updaterName: updaterDetails.displayName || updaterDetails.email
+      }
+    });
+
+    // Send status update email if user email provided
+    if (userEmail && formType) {
+      try {
+        const isApproved = status === 'approved';
+        const statusText = isApproved ? 'approved' : (status === 'rejected' ? 'rejected' : 'updated');
+        const statusColor = isApproved ? '#22c55e' : (status === 'rejected' ? '#ef4444' : '#f59e0b');
+        const statusEmoji = isApproved ? '🎉' : (status === 'rejected' ? '❌' : '📝');
+
+        const subject = `${formType} Status Update - ${statusText.charAt(0).toUpperCase() + statusText.slice(1)}`;
+        
+        const html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(90deg, #8B4513, #DAA520); padding: 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">NEM Insurance</h1>
+            </div>
+            <div style="padding: 20px; background: #f9f9f9;">
+              <h2 style="color: ${statusColor};">Your ${formType} has been ${statusText}! ${statusEmoji}</h2>
+              
+              <p>Dear Valued Customer,</p>
+              
+              <p>We wanted to update you on the status of your <strong>${formType}</strong> submission.</p>
+              
+              <div style="background: #f0f8ff; padding: 15px; border-left: 4px solid ${statusColor}; margin: 20px 0;">
+                <p style="margin: 0;"><strong>New Status:</strong> ${status.charAt(0).toUpperCase() + status.slice(1)}</p>
+                <p style="margin: 5px 0 0 0;"><strong>Reference ID:</strong> ${id}</p>
+                ${comment ? `<p style="margin: 5px 0 0 0;"><strong>Notes:</strong> ${comment}</p>` : ''}
+              </div>
+              
+              <p>
+                <a href="https://nemforms.com/signin" style="display: inline-block; padding: 10px 20px; background-color: #800020; color: #FFD700; text-decoration: none; border-radius: 5%;">View Your Dashboard</a>
+              </p>
+              
+              <p>Best regards,<br/>NEM Insurance Team</p>
+            </div>
+          </div>
+        `;
+
+        await sendEmail(userEmail, subject, html);
+        
+        // 📝 LOG EMAIL SENT EVENT
+        await logAction({
+          action: 'email-sent',
+          actorUid: updaterUid,
+          actorDisplayName: updaterDetails.displayName,
+          actorEmail: updaterDetails.email,
+          actorRole: updaterDetails.role,
+          targetType: 'email',
+          targetId: userEmail,
+          details: {
+            emailType: `status-${status}`,
+            subject: subject
+          },
+          ipMasked: req.ipData?.masked,
+          ipHash: req.ipData?.hash,
+          rawIP: req.ipData?.raw,
+          location: location,
+          userAgent: req.headers['user-agent'] || 'Unknown',
+          meta: {
+            emailTarget: userEmail,
+            formType: formType,
+            newStatus: status,
+            relatedDocument: id
+          }
+        });
+
+      } catch (emailError) {
+        console.error('Failed to send status update email:', emailError);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Status updated to ${status}`,
+      updatedBy: updaterDetails.displayName || updaterDetails.email,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Error updating form status:', error);
+    res.status(500).json({ error: 'Failed to update status', details: error.message });
+  }
+});
+
 // ============= EVENTS LOG API ENDPOINTS =============
 
 // Get event logs with filtering and pagination (Admin only)
