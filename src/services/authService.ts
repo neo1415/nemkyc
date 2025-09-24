@@ -41,37 +41,39 @@ const makeAuthenticatedRequest = async (url: string, data: any, method: string =
   });
 };
 
-// Login via backend with event logging
-export const loginUser = async (email: string, password: string): Promise<AuthResponse> => {
+// Token exchange with backend - frontend handles Firebase auth, backend verifies and logs
+export const exchangeToken = async (idToken: string): Promise<AuthResponse> => {
   try {
-    console.log('📤 Attempting login via backend:', { email });
+    console.log('📤 Exchanging token with backend');
     
-    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/login`, {
-      email,
-      password
+    const response = await fetch(`${API_BASE_URL}/api/exchange-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ idToken }),
     });
 
     const result = await response.json();
 
     if (!response.ok) {
-      console.error('❌ Login failed:', result.error);
-      toast.error(result.error || 'Login failed');
+      console.error('❌ Token exchange failed:', result.error);
+      toast.error(result.error || 'Authentication failed');
       return { success: false, error: result.error };
     }
 
-    console.log('✅ Login successful:', { email, role: result.role });
-    toast.success('Login successful!');
+    console.log('✅ Token exchange successful:', { role: result.role });
     
     return {
       success: true,
-      customToken: result.customToken,
       role: result.role,
       user: result.user
     };
 
   } catch (error) {
-    console.error('Login error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Login failed';
+    console.error('Token exchange error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
     toast.error(errorMessage);
     return { success: false, error: errorMessage };
   }
@@ -120,6 +122,6 @@ export const registerUser = async (
 
 // Export auth service
 export const authService = {
-  loginUser,
+  exchangeToken,
   registerUser
 };
