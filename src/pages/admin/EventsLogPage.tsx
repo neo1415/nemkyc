@@ -127,7 +127,17 @@ const EventsLogPage: React.FC = () => {
       if (endDate) params.append('endDate', endDate);
       if (searchTerm) params.append('searchTerm', searchTerm);
 
-      const response = await fetch(`https://nem-server-rhdb.onrender.com/api/events-logs?${params}`);
+      // Prepare headers with required timestamp for server security
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Timestamp': Date.now().toString(),
+      };
+
+      const response = await fetch(`https://nem-server-rhdb.onrender.com/api/events-logs?${params}`, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch events');
