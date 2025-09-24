@@ -426,6 +426,11 @@ function App() {
             </ProtectedRoute>
           } />
           
+          <Route path="admin/events-log" element={
+            <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super admin']}>
+              <EventsLogPage />
+            </RoleProtectedRoute>
+          } />
           
           <Route path="unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<NotFound />} />
