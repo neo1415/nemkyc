@@ -1,14 +1,40 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { submitFormWithNotifications } from '../services/submissionService';
 
+const API_BASE_URL = 'https://nem-server-rhdb.onrender.com';
 
 interface PendingSubmission {
   formData: any;
   formType: string;
   submitFunction: (data: any) => Promise<void>;
 }
+
+// Helper function to get CSRF token
+const getCSRFToken = async (): Promise<string> => {
+  const response = await fetch(`${API_BASE_URL}/csrf-token`, {
+    credentials: 'include',
+  });
+  const data = await response.json();
+  return data.csrfToken;
+};
+
+// Helper function to make authenticated requests
+const makeAuthenticatedRequest = async (url: string, data: any, method: string = 'POST') => {
+  const csrfToken = await getCSRFToken();
+  const timestamp = Date.now().toString();
+  
+  return fetch(url, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'CSRF-Token': csrfToken,
+      'x-timestamp': timestamp,
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+};
 
 export const useAuthRequiredSubmit = () => {
   const { user } = useAuth();
@@ -25,7 +51,6 @@ export const useAuthRequiredSubmit = () => {
       const postAuthSuccess = sessionStorage.getItem('postAuthSuccess');
       
       if (submissionInProgress) {
-        // Show loading modal first
         setIsSubmitting(true);
         setShowSuccess(true);
       } else if (postAuthSuccess) {
@@ -43,23 +68,31 @@ export const useAuthRequiredSubmit = () => {
     submitFunction?: (data: any) => Promise<void>
   ) => {
     if (!user) {
-      // Store pending submission and redirect to sign-in page first 
       sessionStorage.setItem('pendingSubmission', JSON.stringify({
         formData,
         formType,
         timestamp: Date.now()
       }));
       
-      // Redirect to sign-in page (they can signup from there if needed)
       navigate('/auth/signin');
       return;
     }
 
-    // User is authenticated, proceed with direct submission using submission service
     try {
       setIsSubmitting(true);
-     
-      await submitFormWithNotifications(formData, formType, user.email || '');
+      
+      const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
+        formData,
+        formType,
+        userEmail: user.email,
+        userUid: user.uid
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Form submission failed');
+      }
+
       setIsSubmitting(false);
       setShowSuccess(true);
     } catch (error) {
@@ -69,7 +102,6 @@ export const useAuthRequiredSubmit = () => {
   };
 
   const proceedToSignup = () => {
-    // This function is no longer needed since we redirect directly
     setShowAuthDialog(false);
     navigate('/auth/signup');
   };
@@ -97,24 +129,39 @@ export const useAuthRequiredSubmit = () => {
 };
 
 // Utility function that can be called outside of React components
-export const processPendingSubmissionUtil = async (userEmail: string) => {
+export const processPendingSubmissionUtil = async (userEmail: string, userUid?: string) => {
   const stored = sessionStorage.getItem('pendingSubmission');
   if (stored && userEmail) {
     const { formData, formType, timestamp } = JSON.parse(stored);
     
-    // Check if submission is not too old (30 minutes)
     if (Date.now() - timestamp < 30 * 60 * 1000) {
       sessionStorage.removeItem('pendingSubmission');
       
       try {
-        // Set flag to show loading modal
         sessionStorage.setItem('submissionInProgress', 'true');
         
-        // Import the submission service dynamically
-        const { submitFormWithNotifications } = await import('../services/submissionService');
-        await submitFormWithNotifications(formData, formType, userEmail);
-        
-        // Clear loading and set success flag
+        const csrfToken = await getCSRFToken();
+        const response = await fetch(`${API_BASE_URL}/api/submit-form`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'CSRF-Token': csrfToken,
+            'x-timestamp': Date.now().toString(),
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            formData,
+            formType,
+            userEmail,
+            userUid
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Form submission failed');
+        }
+
         sessionStorage.removeItem('submissionInProgress');
         sessionStorage.setItem('postAuthSuccess', 'true');
         return true;
