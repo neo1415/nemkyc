@@ -23,7 +23,6 @@ import {
   IconButton,
   Card,
   CardContent,
-  Grid2 as Grid,
   FormControl,
   InputLabel,
   Select,
@@ -207,8 +206,8 @@ const EventsLogPage: React.FC = () => {
         <Typography variant="h6" gutterBottom>
           Changes Made
         </Typography>
-        <Grid container spacing={2}>
-          <Grid xs={6}>
+        <Box display="flex" gap={2}>
+          <Box flex={1}>
             <Paper elevation={1} sx={{ p: 2, bgcolor: '#ffebee' }}>
               <Typography variant="subtitle2" color="error" gutterBottom>
                 Before
@@ -217,8 +216,8 @@ const EventsLogPage: React.FC = () => {
                 {JSON.stringify(from, null, 2)}
               </pre>
             </Paper>
-          </Grid>
-          <Grid xs={6}>
+          </Box>
+          <Box flex={1}>
             <Paper elevation={1} sx={{ p: 2, bgcolor: '#e8f5e8' }}>
               <Typography variant="subtitle2" color="success.main" gutterBottom>
                 After
@@ -227,8 +226,8 @@ const EventsLogPage: React.FC = () => {
                 {JSON.stringify(to, null, 2)}
               </pre>
             </Paper>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Box>
     );
   };
@@ -419,8 +418,8 @@ const EventsLogPage: React.FC = () => {
             </Tabs>
 
             {/* Filters */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid xs={12} md={3}>
+            <Box display="flex" flexWrap="wrap" gap={2} sx={{ mb: 3 }}>
+              <Box sx={{ minWidth: 200, flex: '1 1 300px' }}>
                 <TextField
                   fullWidth
                   label="Search"
@@ -431,8 +430,8 @@ const EventsLogPage: React.FC = () => {
                     startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />
                   }}
                 />
-              </Grid>
-              <Grid xs={12} md={2}>
+              </Box>
+              <Box sx={{ minWidth: 150 }}>
                 <FormControl fullWidth>
                   <InputLabel>Action</InputLabel>
                   <Select
@@ -447,8 +446,8 @@ const EventsLogPage: React.FC = () => {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid xs={12} md={2}>
+              </Box>
+              <Box sx={{ minWidth: 150 }}>
                 <FormControl fullWidth>
                   <InputLabel>Target Type</InputLabel>
                   <Select
@@ -463,8 +462,8 @@ const EventsLogPage: React.FC = () => {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid xs={12} md={2}>
+              </Box>
+              <Box sx={{ minWidth: 150 }}>
                 <TextField
                   fullWidth
                   label="Start Date"
@@ -473,8 +472,8 @@ const EventsLogPage: React.FC = () => {
                   onChange={(e) => setStartDate(e.target.value)}
                   InputLabelProps={{ shrink: true }}
                 />
-              </Grid>
-              <Grid xs={12} md={2}>
+              </Box>
+              <Box sx={{ minWidth: 150 }}>
                 <TextField
                   fullWidth
                   label="End Date"
@@ -483,33 +482,31 @@ const EventsLogPage: React.FC = () => {
                   onChange={(e) => setEndDate(e.target.value)}
                   InputLabelProps={{ shrink: true }}
                 />
-              </Grid>
-              <Grid xs={12} md={1}>
-                <Box display="flex" gap={1} height="100%">
-                  <Button
-                    variant="contained"
-                    onClick={handleSearch}
-                    startIcon={<FilterList />}
-                  >
-                    Filter
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={() => {
-                      setSearchTerm('');
-                      setActionFilter('all');
-                      setTargetTypeFilter('all');
-                      setStartDate('');
-                      setEndDate('');
-                      setPaginationModel({ page: 0, pageSize: paginationModel.pageSize });
-                      fetchEvents();
-                    }}
-                  >
-                    Clear
-                  </Button>
-                </Box>
-              </Grid>
-            </Grid>
+              </Box>
+              <Box display="flex" gap={1} alignItems="flex-start">
+                <Button
+                  variant="contained"
+                  onClick={handleSearch}
+                  startIcon={<FilterList />}
+                >
+                  Filter
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setActionFilter('all');
+                    setTargetTypeFilter('all');
+                    setStartDate('');
+                    setEndDate('');
+                    setPaginationModel({ page: 0, pageSize: paginationModel.pageSize });
+                    fetchEvents();
+                  }}
+                >
+                  Clear
+                </Button>
+              </Box>
+            </Box>
 
             {/* Action buttons */}
             <Box display="flex" gap={1} mb={2}>
