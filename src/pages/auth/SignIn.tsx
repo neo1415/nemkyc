@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { loginUser } from '../../services/authService';
+import { exchangeToken } from '../../services/authService';
 import { processPendingSubmissionUtil } from '../../hooks/useAuthRequiredSubmit';  
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -82,18 +82,8 @@ const SignIn: React.FC = () => {
     setLoading(true);
 
     try {
-      // Use backend login service
-      const result = await loginUser(email, password);
-      
-      if (!result.success) {
-        setError(result.error || 'Failed to sign in');
-        return;
-      }
-
-      // Sign in with custom token from backend
-      if (result.customToken) {
-        await signInWithCustomToken(auth, result.customToken);
-      }
+      // Use AuthContext signIn method
+      await signIn(email, password);
       
       // Check if there's a pending submission
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
@@ -109,7 +99,7 @@ const SignIn: React.FC = () => {
       }
 
       // Normal sign-in flow - role-based navigation
-      const role = result.role || 'default';
+      const role = user?.role || 'default';
       if (['admin', 'super admin', 'compliance', 'claims'].includes(role)) {
         navigate('/admin', { replace: true });
       } else {

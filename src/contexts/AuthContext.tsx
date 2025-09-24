@@ -12,6 +12,8 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { User } from '../types';
+import { exchangeToken } from '../services/authService';
+import { processPendingSubmissionUtil } from '../hooks/useAuthRequiredSubmit';
 
 interface AuthContextType {
   user: User | null;
@@ -111,7 +113,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // Use Firebase client auth for login
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const idToken = await userCredential.user.getIdToken();
+      
+      // Exchange token with backend to get user role and log the event
+      const result = await exchangeToken(idToken);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Authentication failed');
+      }
+      
+      // Process any pending form submissions
+      if (result.user?.email) {
+        await processPendingSubmissionUtil(result.user.email, result.user.uid);
+      }
+      
     } catch (error: any) {
       console.error('Sign in error:', error);
       if (error.code === 'auth/user-not-found') {
@@ -123,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (error.code === 'auth/too-many-requests') {
         throw new Error('Too many failed attempts. Please try again later');
       }
-      throw new Error('Failed to sign in. Please try again');
+      throw error;
     }
   };
 
