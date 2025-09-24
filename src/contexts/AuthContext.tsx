@@ -191,6 +191,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    // Clear user state immediately to prevent role leakage
+    setUser(null);
+    setFirebaseUser(null);
+    
+    // Clear any cached data
+    localStorage.clear();
+    sessionStorage.clear();
+    
     await signOut(auth);
   };
 
