@@ -74,7 +74,8 @@ const allowedOrigins = [
   "https://preview--market-mosaic-online-4342.lovable.app",
   "https://market-mosaic-online-4342.lovable.app",
   "https://lovable.dev/projects/88f314bd-27da-41ea-9068-a49b2abcd1b4",
-  "https://preview--nem-demo.lovable.app"
+  "https://88f314bd-27da-41ea-9068-a49b2abcd1b4.lovableproject.com",
+  "https://preview--nem-demo.lovable.app",
   'https://nem-kyc.firebaseapp.com',
   'https://nemforms.com'
 ];
