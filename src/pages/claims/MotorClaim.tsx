@@ -473,8 +473,8 @@ const MotorClaim: React.FC = () => {
             </FormSelect>
             
             {formMethods.watch('otherVehicleInvolved') === 'yes' && (
-              <div className="space-y-4 border-l-4 border-blue-200 pl-4">
-                <h4 className="font-medium text-blue-800">Other Vehicle Details</h4>
+              <div className="space-y-4 border-l-4 border-primary pl-4">
+                <h4 className="font-medium text-primary">Other Vehicle Details</h4>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField name="otherVehicleRegNumber" label="Registration Number" required />

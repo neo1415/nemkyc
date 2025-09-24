@@ -13,7 +13,7 @@ const Footer: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
                <img 
-                 src="/Nem-insurance-Logo.jpg" 
+                 src="/NEMLogo (2)_page-0001.jpg" 
                  alt="NEM Insurance" 
                  className="h-10 w-10 object-contain rounded bg-white p-1"
                />

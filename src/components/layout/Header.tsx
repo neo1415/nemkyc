@@ -28,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           )}
           <Link to="/" className="flex items-center space-x-2">
             <img 
-              src="/Nem-insurance-Logo.jpg" 
+              src="/NEMLogo (2)_page-0001.jpg" 
               alt="NEM Insurance" 
               className="w-8 h-8 object-contain rounded"
             />
