@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { registerUser } from '../../services/authService';
+import { processPendingSubmissionUtil } from '../../hooks/useAuthRequiredSubmit';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -26,7 +28,7 @@ const SignUp: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [submittedFormType, setSubmittedFormType] = useState('');
   
-  const { signUp, signInWithGoogle } = useAuth();
+  const { user, signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -47,13 +49,18 @@ const SignUp: React.FC = () => {
     setLoading(true);
 
     try {
-      await signUp(
+      // Use backend registration service
+      const result = await registerUser(
         formData.email,
         formData.password,
         formData.name,
-        formData.notificationPreference,
-        formData.phone || undefined
+        'user' // default role
       );
+      
+      if (!result.success) {
+        setError(result.error || 'Failed to create account');
+        return;
+      }
       
       // Check if there's a pending submission
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
@@ -62,43 +69,16 @@ const SignUp: React.FC = () => {
         setSubmittedFormType(formType);
         
         // Process pending submission
-        const { processPendingSubmissionUtil } = await import('../../hooks/useAuthRequiredSubmit');
-        const { getAuth } = await import('firebase/auth');
-        const currentUser = getAuth().currentUser;
+        await processPendingSubmissionUtil(formData.email);
+        setShowSuccess(true);
         
-        if (currentUser?.email) {
-          await processPendingSubmissionUtil(currentUser.email);
-          setShowSuccess(true);
-          
-          toast({
-            title: "Form Submitted Successfully!",
-            description: `Your ${formType} has been submitted and confirmation emails have been sent.`,
-          });
-        }
+        toast({
+          title: "Form Submitted Successfully!",
+          description: `Your ${formType} has been submitted and confirmation emails have been sent.`,
+        });
       } else {
-        // Check user role and navigate appropriately
-        const { getAuth } = await import('firebase/auth');
-        const { doc, getDoc } = await import('firebase/firestore');
-        const { db } = await import('../../firebase/config');
-        
-        const currentUser = getAuth().currentUser;
-        if (currentUser) {
-          const userDoc = await getDoc(doc(db, 'userroles', currentUser.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const role = userData.role || 'default';
-            
-            if (['admin', 'super admin', 'compliance', 'claims'].includes(role)) {
-              navigate('/admin');
-            } else {
-              navigate('/dashboard');
-            }
-          } else {
-            navigate('/dashboard');
-          }
-        } else {
-          navigate('/dashboard');
-        }
+        // Navigate to dashboard for default users
+        navigate('/dashboard');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
@@ -112,6 +92,7 @@ const SignUp: React.FC = () => {
     setLoading(true);
 
     try {
+      // Keep using direct Firebase for Google sign-in (as it's already secure)
       await signInWithGoogle();
       
       // Check if there's a pending submission
@@ -121,7 +102,6 @@ const SignUp: React.FC = () => {
         setSubmittedFormType(formType);
         
         // Process pending submission
-        const { processPendingSubmissionUtil } = await import('../../hooks/useAuthRequiredSubmit');
         const { getAuth } = await import('firebase/auth');
         const currentUser = getAuth().currentUser;
         
@@ -135,26 +115,9 @@ const SignUp: React.FC = () => {
           });
         }
       } else {
-        // Check user role and navigate appropriately
-        const { getAuth } = await import('firebase/auth');
-        const { doc, getDoc } = await import('firebase/firestore');
-        const { db } = await import('../../firebase/config');
-        
-        const currentUser = getAuth().currentUser;
-        if (currentUser) {
-          const userDoc = await getDoc(doc(db, 'userroles', currentUser.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const role = userData.role || 'default';
-            
-            if (['admin', 'super admin', 'compliance', 'claims'].includes(role)) {
-              navigate('/admin');
-            } else {
-              navigate('/dashboard');
-            }
-          } else {
-            navigate('/dashboard');
-          }
+        // Navigate based on user role from context
+        if (user?.role && ['admin', 'super admin', 'compliance', 'claims'].includes(user.role)) {
+          navigate('/admin');
         } else {
           navigate('/dashboard');
         }
@@ -333,29 +296,12 @@ const SignUp: React.FC = () => {
           </DialogHeader>
           <div className="flex flex-col space-y-4 pt-4">
             <Button 
-              onClick={async () => {
+              onClick={() => {
                 setShowSuccess(false);
                 
-                // Check user role and navigate appropriately
-                const { getAuth } = await import('firebase/auth');
-                const { doc, getDoc } = await import('firebase/firestore');
-                const { db } = await import('../../firebase/config');
-                
-                const currentUser = getAuth().currentUser;
-                if (currentUser) {
-                  const userDoc = await getDoc(doc(db, 'userroles', currentUser.uid));
-                  if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    const role = userData.role || 'default';
-                    
-                    if (['admin', 'super admin', 'compliance', 'claims'].includes(role)) {
-                      navigate('/admin');
-                    } else {
-                      navigate('/dashboard');
-                    }
-                  } else {
-                    navigate('/dashboard');
-                  }
+                // Navigate based on user role from context
+                if (user?.role && ['admin', 'super admin', 'compliance', 'claims'].includes(user.role)) {
+                  navigate('/admin');
                 } else {
                   navigate('/dashboard');
                 }
