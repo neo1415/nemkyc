@@ -2,12 +2,16 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { loginUser } from '../../services/authService';
+import { processPendingSubmissionUtil } from '../../hooks/useAuthRequiredSubmit';  
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Label } from '../../components/ui/label';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { LogIn, Mail, Loader2 } from 'lucide-react';
+import { signInWithCustomToken } from 'firebase/auth';
+import { auth } from '../../firebase/config';
 
 const SignIn: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -15,7 +19,7 @@ const SignIn: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { signIn, signInWithGoogle } = useAuth();
+  const { user, signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -78,48 +82,36 @@ const SignIn: React.FC = () => {
     setLoading(true);
 
     try {
-      await signIn(email, password);
+      // Use backend login service
+      const result = await loginUser(email, password);
+      
+      if (!result.success) {
+        setError(result.error || 'Failed to sign in');
+        return;
+      }
+
+      // Sign in with custom token from backend
+      if (result.customToken) {
+        await signInWithCustomToken(auth, result.customToken);
+      }
       
       // Check if there's a pending submission
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
         // Process pending submission and redirect back to original form page
-        const { processPendingSubmissionUtil } = await import('../../hooks/useAuthRequiredSubmit');
-        const { getAuth } = await import('firebase/auth');
-        const currentUser = getAuth().currentUser;
+        const pendingData = JSON.parse(hasPendingSubmission);
+        await processPendingSubmissionUtil(email);
         
-        if (currentUser?.email) {
-          const pendingData = JSON.parse(hasPendingSubmission);
-          await processPendingSubmissionUtil(currentUser.email);
-          
-          // Redirect to the specific form page based on form type
-          const formPageUrl = getFormPageUrl(pendingData.formType);
-          navigate(formPageUrl, { replace: true });
-          return;
-        }
+        // Redirect to the specific form page based on form type
+        const formPageUrl = getFormPageUrl(pendingData.formType);
+        navigate(formPageUrl, { replace: true });
+        return;
       }
 
       // Normal sign-in flow - role-based navigation
-      const { doc, getDoc } = await import('firebase/firestore');
-      const { db } = await import('../../firebase/config');
-      const { getAuth } = await import('firebase/auth');
-      
-      const currentUser = getAuth().currentUser;
-      if (currentUser) {
-        const userDoc = await getDoc(doc(db, 'userroles', currentUser.uid));
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const role = userData.role || 'default';
-          
-          if (['admin', 'super admin', 'compliance', 'claims'].includes(role)) {
-            navigate('/admin', { replace: true });
-          } else {
-            navigate('/dashboard', { replace: true });
-          }
-        } else {
-          navigate(from, { replace: true });
-        }
+      const role = result.role || 'default';
+      if (['admin', 'super admin', 'compliance', 'claims'].includes(role)) {
+        navigate('/admin', { replace: true });
       } else {
         navigate(from, { replace: true });
       }
@@ -135,13 +127,13 @@ const SignIn: React.FC = () => {
     setLoading(true);
 
     try {
+      // Keep using direct Firebase for Google sign-in (as it's already secure)
       await signInWithGoogle();
       
       // Check here if there's a pending submission
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
         // Process pending submission and redirect back to original form page
-        const { processPendingSubmissionUtil } = await import('../../hooks/useAuthRequiredSubmit');
         const { getAuth } = await import('firebase/auth');
         const currentUser = getAuth().currentUser;
         
@@ -156,17 +148,9 @@ const SignIn: React.FC = () => {
         }
       }
 
-      // Normal sign-in flow - role-based navigation
-      const { doc, getDoc } = await import('firebase/firestore');
-      const { db } = await import('../../firebase/config');
-      const { getAuth } = await import('firebase/auth');
-      
-      const userDoc = await getDoc(doc(db, 'userroles', getAuth().currentUser?.uid || ''));
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const role = userData.role || 'default';
-        
+      // Normal sign-in flow - role-based navigation based on user context
+      if (user) {
+        const role = user.role || 'default';
         if (['admin', 'super admin', 'compliance', 'claims'].includes(role)) {
           navigate('/admin', { replace: true });
         } else {

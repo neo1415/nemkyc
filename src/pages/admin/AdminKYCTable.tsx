@@ -38,6 +38,9 @@ const AdminKYCTable: React.FC<AdminKYCTableProps> = ({ formType }) => {
 
   const fetchKYCForms = async () => {
     try {
+      // Use backend service instead of direct Firebase calls
+      const { getFormData } = await import('../../services/formsService');
+      
       const kycCollections = formType ? 
         [`${formType}-kyc`] : 
         [
@@ -48,17 +51,16 @@ const AdminKYCTable: React.FC<AdminKYCTableProps> = ({ formType }) => {
       const allForms: any[] = [];
       
       for (const collectionName of kycCollections) {
-        const q = query(collection(db, collectionName), orderBy('createdAt', 'desc'));
-        const querySnapshot = await getDocs(q);
+        const forms = await getFormData(collectionName);
         
-        querySnapshot.forEach((doc) => {
+        forms.forEach((form) => {
           allForms.push({
-            id: doc.id,
+            id: form.id,
             collection: collectionName,
             type: collectionName.replace('-kyc', '').replace('-', ' '),
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate(),
-            updatedAt: doc.data().updatedAt?.toDate(),
+            ...form,
+            createdAt: form.createdAt?.toDate ? form.createdAt.toDate() : form.createdAt,
+            updatedAt: form.updatedAt?.toDate ? form.updatedAt.toDate() : form.updatedAt,
           });
         });
       }
