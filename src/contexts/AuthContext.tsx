@@ -12,7 +12,6 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { User } from '../types';
-import { exchangeToken } from '../services/authService';
 import { processPendingSubmissionUtil } from '../hooks/useAuthRequiredSubmit';
 
 interface AuthContextType {
@@ -114,20 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       // Use Firebase client auth for login
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const idToken = await userCredential.user.getIdToken();
-      
-      // Exchange token with backend to get user role and log the event
-      const result = await exchangeToken(idToken);
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Authentication failed');
-      }
-      
-      // Process any pending form submissions
-      if (result.user?.email) {
-        await processPendingSubmissionUtil(result.user.email, result.user.uid);
-      }
+      await signInWithEmailAndPassword(auth, email, password);
       
     } catch (error: any) {
       console.error('Sign in error:', error);
