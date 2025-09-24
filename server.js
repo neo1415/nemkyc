@@ -952,7 +952,9 @@ const setSuperAdminOnStartup = async () => {
 // Get event logs with filtering and pagination (Admin only)
 app.get('/api/events-logs', async (req, res) => {
   try {
-    // TODO: Add authentication middleware to verify admin role
+    console.log('Events logs request received:', req.query);
+    
+    // Basic validation
     const { 
       page = 1, 
       limit = 50, 
@@ -965,7 +967,34 @@ app.get('/api/events-logs', async (req, res) => {
       advanced = 'false'
     } = req.query;
 
+    // Validate pagination parameters
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    
+    if (isNaN(pageNum) || pageNum < 1) {
+      return res.status(400).json({ error: 'Invalid page parameter' });
+    }
+    
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+      return res.status(400).json({ error: 'Invalid limit parameter (must be 1-100)' });
+    }
+
     let query = db.collection('eventLogs');
+
+    // Check if collection exists and has documents
+    const collectionExists = await db.collection('eventLogs').limit(1).get();
+    if (collectionExists.empty) {
+      console.log('EventLogs collection is empty, returning empty response');
+      return res.json({
+        events: [],
+        pagination: {
+          currentPage: pageNum,
+          limit: limitNum,
+          totalCount: 0,
+          totalPages: 0
+        }
+      });
+    }
 
     // Apply filters
     if (action && action !== 'all') {
@@ -982,20 +1011,30 @@ app.get('/api/events-logs', async (req, res) => {
 
     // Date range filtering
     if (startDate) {
-      const start = admin.firestore.Timestamp.fromDate(new Date(startDate));
-      query = query.where('ts', '>=', start);
+      try {
+        const start = admin.firestore.Timestamp.fromDate(new Date(startDate));
+        query = query.where('ts', '>=', start);
+      } catch (dateError) {
+        console.error('Invalid startDate:', startDate);
+        return res.status(400).json({ error: 'Invalid startDate format' });
+      }
     }
 
     if (endDate) {
-      const end = admin.firestore.Timestamp.fromDate(new Date(endDate + 'T23:59:59'));
-      query = query.where('ts', '<=', end);
+      try {
+        const end = admin.firestore.Timestamp.fromDate(new Date(endDate + 'T23:59:59'));
+        query = query.where('ts', '<=', end);
+      } catch (dateError) {
+        console.error('Invalid endDate:', endDate);
+        return res.status(400).json({ error: 'Invalid endDate format' });
+      }
     }
 
     // Order by timestamp descending
     query = query.orderBy('ts', 'desc');
 
     // Apply pagination
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
     if (offset > 0) {
       const startAfterSnapshot = await query.limit(offset).get();
       if (!startAfterSnapshot.empty) {
@@ -1004,44 +1043,69 @@ app.get('/api/events-logs', async (req, res) => {
       }
     }
 
-    query = query.limit(parseInt(limit));
+    query = query.limit(limitNum);
 
     const snapshot = await query.get();
     const events = snapshot.docs.map(doc => {
       const data = doc.data();
       
+      // Convert timestamp to ISO string for frontend
+      const eventData = {
+        ...data,
+        ts: data.ts ? data.ts.toDate().toISOString() : new Date().toISOString()
+      };
+      
       // For regular view, exclude sensitive fields
       if (advanced !== 'true') {
-        const { rawIP, ipHash, userAgent, location, ...regularData } = data;
+        const { rawIP, ipHash, userAgent, location, ...regularData } = eventData;
         return { id: doc.id, ...regularData };
       }
       
       // For advanced view, include all fields but remove rawIP if expired
       if (data.rawIPExpiry && data.rawIPExpiry.toDate() < new Date()) {
-        const { rawIP, ...dataWithoutRawIP } = data;
+        const { rawIP, ...dataWithoutRawIP } = eventData;
         return { id: doc.id, ...dataWithoutRawIP };
       }
       
-      return { id: doc.id, ...data };
+      return { id: doc.id, ...eventData };
     });
 
-    // Get total count for pagination
-    const countSnapshot = await db.collection('eventLogs').get();
-    const totalCount = countSnapshot.size;
+    // Get total count for pagination (more efficient way)
+    const totalCountSnapshot = await db.collection('eventLogs').select().get();
+    const totalCount = totalCountSnapshot.size;
+
+    console.log(`Returning ${events.length} events out of ${totalCount} total`);
 
     res.json({
       events,
       pagination: {
-        currentPage: parseInt(page),
-        limit: parseInt(limit),
+        currentPage: pageNum,
+        limit: limitNum,
         totalCount,
-        totalPages: Math.ceil(totalCount / parseInt(limit))
+        totalPages: Math.ceil(totalCount / limitNum)
       }
     });
 
   } catch (error) {
     console.error('Error fetching event logs:', error);
-    res.status(500).json({ error: 'Failed to fetch event logs' });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    
+    // Return more specific error messages
+    if (error.code === 9) { // FAILED_PRECONDITION
+      return res.status(400).json({ 
+        error: 'Query requires an index. Please ensure Firestore indexes are configured.',
+        details: error.message
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Failed to fetch event logs',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
