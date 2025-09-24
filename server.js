@@ -867,10 +867,65 @@ app.post('/login', async (req, res) => {
     const idToken = await authenticateUser(email, password);
     const customToken = await createCustomToken(email);
 
-    res.status(200).json({ customToken, role: 'user' });  // Example response
+    // Get user details for logging
+    const userRecord = await admin.auth().getUserByEmail(email);
+    const userDoc = await db.collection('userroles').doc(userRecord.uid).get();
+    const userRole = userDoc.exists ? userDoc.data().role : 'user';
+
+    // 📝 LOG SUCCESSFUL LOGIN EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'login',
+      actorUid: userRecord.uid,
+      actorDisplayName: userRecord.displayName || email.split('@')[0],
+      actorEmail: email,
+      actorRole: userRole,
+      targetType: 'user',
+      targetId: userRecord.uid,
+      details: {
+        loginMethod: 'email-password',
+        success: true
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        loginTimestamp: new Date().toISOString()
+      }
+    });
+
+    res.status(200).json({ customToken, role: userRole });
 
   } catch (error) {
     console.error(error.message);
+    
+    // 📝 LOG FAILED LOGIN EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'failed-login',
+      actorUid: null,
+      actorDisplayName: null,
+      actorEmail: email,
+      actorRole: null,
+      targetType: 'user',
+      targetId: email,
+      details: {
+        loginMethod: 'email-password',
+        success: false,
+        error: error.message
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        attemptTimestamp: new Date().toISOString()
+      }
+    });
+    
     res.status(500).send({ error: 'Authentication failed' });
   }
 });
@@ -890,8 +945,297 @@ async function getFormData(req, res, collectionName){
   res.json(data);
 }
 
-// Function to handle form submission
-async function handleFormSubmission(req, res, formType, collectionName) {
+// ✅ NEW: Form viewing with EVENT LOGGING
+app.get('/api/forms/:collection/:id', async (req, res) => {
+  try {
+    const { collection, id } = req.params;
+    const { viewerUid } = req.query; // Pass viewer UID as query param
+    
+    console.log('🔍 Form view request:', { collection, id, viewerUid });
+    
+    // Get the document
+    const doc = await admin.firestore().collection(collection).doc(id).get();
+    
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Form not found' });
+    }
+    
+    // Get viewer details if UID provided
+    let viewerDetails = { displayName: null, email: null, role: null };
+    if (viewerUid) {
+      viewerDetails = await getUserDetailsForLogging(viewerUid);
+    }
+    
+    // 📝 LOG THE VIEW EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'view',
+      actorUid: viewerUid || null,
+      actorDisplayName: viewerDetails.displayName,
+      actorEmail: viewerDetails.email,
+      actorRole: viewerDetails.role,
+      targetType: collection.replace(/s$/, ''), // Remove 's' from collection name
+      targetId: id,
+      details: {
+        viewType: 'form-detail',
+        formType: doc.data()?.formType || collection
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        collection: collection,
+        documentId: id,
+        viewTimestamp: new Date().toISOString()
+      }
+    });
+    
+    res.json({ id: doc.id, ...doc.data() });
+    
+  } catch (error) {
+    console.error('Error fetching form details:', error);
+    res.status(500).json({ error: 'Failed to fetch form details' });
+  }
+});
+
+// ✅ KYC Form Submissions with EVENT LOGGING
+app.post('/submit-kyc-individual', async (req, res) => {
+  console.log('📝 Individual KYC form submission received');
+  await handleFormSubmission(req, res, 'Individual KYC', 'kyc-individual', req.body.submittedByUid);
+});
+
+app.post('/submit-kyc-corporate', async (req, res) => {
+  console.log('📝 Corporate KYC form submission received');
+  await handleFormSubmission(req, res, 'Corporate KYC', 'kyc-corporate', req.body.submittedByUid);
+});
+
+// ✅ CDD Form Submissions with EVENT LOGGING
+app.post('/submit-cdd-individual', async (req, res) => {
+  console.log('📝 Individual CDD form submission received');
+  await handleFormSubmission(req, res, 'Individual CDD', 'cdd-individual', req.body.submittedByUid);
+});
+
+app.post('/submit-cdd-corporate', async (req, res) => {
+  console.log('📝 Corporate CDD form submission received');
+  await handleFormSubmission(req, res, 'Corporate CDD', 'cdd-corporate', req.body.submittedByUid);
+});
+
+app.post('/submit-cdd-agents', async (req, res) => {
+  console.log('📝 Agents CDD form submission received');
+  await handleFormSubmission(req, res, 'Agents CDD', 'cdd-agents', req.body.submittedByUid);
+});
+
+app.post('/submit-cdd-brokers', async (req, res) => {
+  console.log('📝 Brokers CDD form submission received');
+  await handleFormSubmission(req, res, 'Brokers CDD', 'cdd-brokers', req.body.submittedByUid);
+});
+
+app.post('/submit-cdd-partners', async (req, res) => {
+  console.log('📝 Partners CDD form submission received');
+  await handleFormSubmission(req, res, 'Partners CDD', 'cdd-partners', req.body.submittedByUid);
+});
+
+// ✅ Claims Submissions with EVENT LOGGING
+app.post('/submit-claim-motor', async (req, res) => {
+  console.log('📝 Motor claim form submission received');
+  await handleFormSubmission(req, res, 'Motor Claim', 'claims-motor', req.body.submittedByUid);
+});
+
+app.post('/submit-claim-fire', async (req, res) => {
+  console.log('📝 Fire & Special Perils claim submission received');
+  await handleFormSubmission(req, res, 'Fire & Special Perils Claim', 'claims-fire-special-perils', req.body.submittedByUid);
+});
+
+app.post('/submit-claim-burglary', async (req, res) => {
+  console.log('📝 Burglary claim form submission received');
+  await handleFormSubmission(req, res, 'Burglary Claim', 'claims-burglary', req.body.submittedByUid);
+});
+
+app.post('/submit-claim-all-risk', async (req, res) => {
+  console.log('📝 All Risk claim form submission received');
+  await handleFormSubmission(req, res, 'All Risk Claim', 'claims-all-risk', req.body.submittedByUid);
+});
+
+// ✅ User Registration with EVENT LOGGING
+app.post('/api/register-user', async (req, res) => {
+  try {
+    const { email, displayName, role = 'user' } = req.body;
+    
+    if (!email || !displayName) {
+      return res.status(400).json({ error: 'Email and displayName are required' });
+    }
+    
+    // Create user in Firebase Auth (this is a simplified version)
+    // In practice, you'd use proper user creation methods
+    
+    // 📝 LOG THE REGISTRATION EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'register',
+      actorUid: null, // New user, no UID yet
+      actorDisplayName: displayName,
+      actorEmail: email,
+      actorRole: role,
+      targetType: 'user',
+      targetId: email, // Use email as temporary ID
+      details: {
+        registrationMethod: 'admin-created',
+        assignedRole: role
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        registrationTimestamp: new Date().toISOString()
+      }
+    });
+    
+    res.status(201).json({ 
+      message: 'User registration logged successfully',
+      email,
+      displayName,
+      role 
+    });
+    
+  } catch (error) {
+    console.error('Error in user registration:', error);
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+// ✅ File Download Tracking with EVENT LOGGING
+app.get('/api/download/:fileType/:documentId', async (req, res) => {
+  try {
+    const { fileType, documentId } = req.params;
+    const { downloaderUid, fileName } = req.query;
+    
+    // Get downloader details if UID provided
+    let downloaderDetails = { displayName: null, email: null, role: null };
+    if (downloaderUid) {
+      downloaderDetails = await getUserDetailsForLogging(downloaderUid);
+    }
+    
+    // 📝 LOG THE FILE DOWNLOAD EVENT
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'file-download',
+      actorUid: downloaderUid || null,
+      actorDisplayName: downloaderDetails.displayName,
+      actorEmail: downloaderDetails.email,
+      actorRole: downloaderDetails.role,
+      targetType: 'file',
+      targetId: documentId,
+      details: {
+        fileType: fileType,
+        fileName: fileName || `${fileType}-${documentId}`,
+        downloadMethod: 'direct-link'
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        downloadTimestamp: new Date().toISOString(),
+        fileSize: 'unknown' // Could be calculated if needed
+      }
+    });
+    
+    // In a real implementation, you'd serve the actual file here
+    res.json({ 
+      message: `File download logged: ${fileName || fileType}`,
+      documentId,
+      fileType
+    });
+    
+  } catch (error) {
+    console.error('Error logging file download:', error);
+    res.status(500).json({ error: 'File download logging failed' });
+  }
+});
+
+// ✅ Generate Sample Events for Testing (DEVELOPMENT ONLY)
+app.post('/api/generate-sample-events', async (req, res) => {
+  try {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Sample events can only be generated in development' });
+    }
+    
+    const sampleEvents = [
+      {
+        action: 'submit',
+        actorDisplayName: 'John Doe',
+        actorEmail: 'john.doe@example.com',
+        actorRole: 'user',
+        targetType: 'kyc-form',
+        targetId: 'sample-kyc-123',
+        details: { formType: 'Individual KYC', status: 'processing' }
+      },
+      {
+        action: 'approve',
+        actorDisplayName: 'Admin User',
+        actorEmail: 'admin@nem-insurance.com',
+        actorRole: 'admin',
+        targetType: 'claim',
+        targetId: 'sample-claim-456',
+        details: { from: { status: 'pending' }, to: { status: 'approved' } }
+      },
+      {
+        action: 'view',
+        actorDisplayName: 'Jane Smith',
+        actorEmail: 'jane.smith@nem-insurance.com',
+        actorRole: 'compliance',
+        targetType: 'cdd-form',
+        targetId: 'sample-cdd-789',
+        details: { viewType: 'form-detail' }
+      },
+      {
+        action: 'login',
+        actorDisplayName: 'Bob Wilson',
+        actorEmail: 'bob.wilson@example.com',
+        actorRole: 'user',
+        targetType: 'user',
+        targetId: 'user-123',
+        details: { loginMethod: 'email-password', success: true }
+      }
+    ];
+    
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    
+    for (const event of sampleEvents) {
+      await logAction({
+        ...event,
+        actorUid: `sample-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        ipMasked: req.ipData?.masked || '192.168.1.***',
+        ipHash: req.ipData?.hash || 'sample-hash',
+        rawIP: req.ipData?.raw || '192.168.1.100',
+        location: location,
+        userAgent: req.headers['user-agent'] || 'Sample Browser',
+        meta: { 
+          sampleEvent: true,
+          generatedAt: new Date().toISOString()
+        }
+      });
+    }
+    
+    console.log('✅ Generated sample events for testing');
+    res.json({ 
+      message: 'Sample events generated successfully',
+      eventsGenerated: sampleEvents.length
+    });
+    
+  } catch (error) {
+    console.error('Error generating sample events:', error);
+    res.status(500).json({ error: 'Failed to generate sample events' });
+  }
+});
+
+// Enhanced form submission function with EVENT LOGGING
+async function handleFormSubmission(req, res, formType, collectionName, userUid = null) {
   const formData = req.body;
 
   // Perform validation as needed here...
@@ -904,6 +1248,40 @@ async function handleFormSubmission(req, res, formType, collectionName) {
       ...formData,
       status: 'processing',   
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      submittedBy: userUid, // Track who submitted it
+    });
+
+    // 📝 LOG THE FORM SUBMISSION EVENT
+    let userDetails = { displayName: null, email: null, role: null };
+    if (userUid) {
+      userDetails = await getUserDetailsForLogging(userUid);
+    }
+    
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'submit',
+      actorUid: userUid,
+      actorDisplayName: userDetails.displayName || formData?.name || formData?.companyName,
+      actorEmail: userDetails.email || formData?.email,
+      actorRole: userDetails.role,
+      targetType: collectionName.replace(/s$/, ''), // Remove 's' from collection name (e.g., 'claims' -> 'claim')
+      targetId: docId,
+      details: {
+        formType: formType,
+        status: 'processing',
+        submitterName: formData?.name || formData?.companyName || 'Unknown',
+        submitterEmail: formData?.email || 'Unknown'
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        formType: formType,
+        collectionName: collectionName,
+        submissionId: docId
+      }
     });
 
     // Fetch admin emails
@@ -912,8 +1290,31 @@ async function handleFormSubmission(req, res, formType, collectionName) {
     // Send email to admins if found
     if (adminEmails.length > 0) {
       await sendEmailToAdmins(adminEmails, formType, formData);
-    } else {
-      // console.log('No admin emails found');
+      
+      // 📝 LOG THE EMAIL NOTIFICATION EVENT
+      await logAction({
+        action: 'email-sent',
+        actorUid: 'system',
+        actorDisplayName: 'System',
+        actorEmail: 'system@nem-insurance.com',
+        actorRole: 'system',
+        targetType: 'email',
+        targetId: adminEmails.join(','),
+        details: {
+          emailType: 'admin-notification',
+          formType: formType,
+          recipients: adminEmails
+        },
+        ipMasked: req.ipData?.masked,
+        ipHash: req.ipData?.hash,
+        rawIP: req.ipData?.raw,
+        location: location,
+        userAgent: req.headers['user-agent'] || 'Unknown',
+        meta: {
+          relatedSubmission: docId,
+          adminCount: adminEmails.length
+        }
+      });
     }
 
     // Fetch document and format created date
@@ -927,7 +1328,10 @@ async function handleFormSubmission(req, res, formType, collectionName) {
       createdAt: formattedDate,
     });
 
-    res.status(201).json({ message: 'Form submitted successfully' });
+    res.status(201).json({ 
+      message: 'Form submitted successfully',
+      documentId: docId
+    });
   } catch (err) {
     console.error('Error during form submission:', err);
     res.status(500).json({ error: 'Form submission failed' });
@@ -1253,5 +1657,113 @@ app.listen(port, async () => {
   console.log(`📝 Events logging: ${EVENTS_CONFIG.ENABLE_EVENTS_LOGGING ? 'ENABLED' : 'DISABLED'}`);
   console.log(`🌐 IP geolocation: ${EVENTS_CONFIG.ENABLE_IP_GEOLOCATION ? 'ENABLED' : 'DISABLED'}`);
   console.log(`⏰ Raw IP retention: ${EVENTS_CONFIG.RAW_IP_RETENTION_DAYS} days`);
+  
+  // Generate some initial sample events for testing (only in development)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🧪 Generating initial sample events for testing...');
+    setTimeout(async () => {
+      try {
+        const sampleEvents = [
+          {
+            action: 'submit',
+            actorUid: 'sample-user-1',
+            actorDisplayName: 'John Doe',
+            actorEmail: 'john.doe@example.com',
+            actorRole: 'user',
+            targetType: 'kyc-form',
+            targetId: 'kyc-sample-001',
+            details: { formType: 'Individual KYC', status: 'processing' },
+            ipMasked: '203.115.45.***',
+            ipHash: 'abc123def456',
+            rawIP: '203.115.45.120',
+            location: 'Lagos, Nigeria',
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            meta: { sampleEvent: true, testData: true }
+          },
+          {
+            action: 'approve',
+            actorUid: 'admin-001',
+            actorDisplayName: 'Admin User',
+            actorEmail: 'admin@nem-insurance.com',
+            actorRole: 'admin',
+            targetType: 'claim',
+            targetId: 'claim-sample-002',
+            details: { 
+              from: { status: 'pending' }, 
+              to: { status: 'approved' },
+              comment: 'Claim approved after review'
+            },
+            ipMasked: '192.168.1.***',
+            ipHash: 'def456ghi789',
+            rawIP: '192.168.1.100',
+            location: 'Abuja, Nigeria',
+            userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15',
+            meta: { sampleEvent: true, adminAction: true }
+          },
+          {
+            action: 'view',
+            actorUid: 'compliance-001',
+            actorDisplayName: 'Jane Smith',
+            actorEmail: 'jane.smith@nem-insurance.com',
+            actorRole: 'compliance',
+            targetType: 'cdd-form',
+            targetId: 'cdd-sample-003',
+            details: { viewType: 'form-detail', formType: 'Corporate CDD' },
+            ipMasked: '10.0.0.***',
+            ipHash: 'ghi789jkl012',
+            rawIP: '10.0.0.50',
+            location: 'Port Harcourt, Nigeria',
+            userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+            meta: { sampleEvent: true, complianceReview: true }
+          },
+          {
+            action: 'login',
+            actorUid: 'user-002',
+            actorDisplayName: 'Bob Wilson',
+            actorEmail: 'bob.wilson@example.com',
+            actorRole: 'user',
+            targetType: 'user',
+            targetId: 'user-002',
+            details: { loginMethod: 'email-password', success: true },
+            ipMasked: '172.16.0.***',
+            ipHash: 'jkl012mno345',
+            rawIP: '172.16.0.25',
+            location: 'Kano, Nigeria',
+            userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15',
+            meta: { sampleEvent: true, mobileLogin: true }
+          },
+          {
+            action: 'email-sent',
+            actorUid: 'system',
+            actorDisplayName: 'System',
+            actorEmail: 'system@nem-insurance.com',
+            actorRole: 'system',
+            targetType: 'email',
+            targetId: 'admin@nem-insurance.com',
+            details: { 
+              emailType: 'admin-notification',
+              subject: 'New KYC Submission',
+              formType: 'Individual KYC'
+            },
+            ipMasked: '127.0.0.***',
+            ipHash: 'mno345pqr678',
+            rawIP: '127.0.0.1',
+            location: 'Server Location',
+            userAgent: 'System/1.0',
+            meta: { sampleEvent: true, systemGenerated: true }
+          }
+        ];
+
+        for (const event of sampleEvents) {
+          await logAction(event);
+        }
+        
+        console.log('✅ Sample events generated successfully');
+      } catch (error) {
+        console.log('⚠️  Failed to generate sample events:', error.message);
+      }
+    }, 2000); // Wait 2 seconds after server starts
+  }
+  
   await setSuperAdminOnStartup(); // ← 🚨 this line makes it happen
 });
