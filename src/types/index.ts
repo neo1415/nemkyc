@@ -216,40 +216,45 @@ export interface CorporateKYCData {
 
 // Claims Form Types
 export interface MotorClaimData {
-  claimantName: string;
-  claimantPhone: string;
-  claimantEmail: string;
-  // claimantAddress: string; // REMOVED as requested
-  // vehicleMake: string; // COMMENTED OUT as requested
-  // vehicleModel: string; // COMMENTED OUT as requested  
-  // vehicleYear: number; // COMMENTED OUT as requested
-  vehicleRegistration: string; // This maps to registrationNumber in form
-  // chassisNumber: string; // COMMENTED OUT as requested
-  // engineNumber: string; // COMMENTED OUT as requested
+  // Section 1: Insured Detail  
+  insuredName: string;
+  phone: string;
+  email: string;
+  
+  // Section 2: Vehicle Details
+  registrationNumber: string;
   policyNumber: string;
-  policyStartDate: string;
-  policyEndDate: string;
-  incidentDate: string;
-  incidentTime: string;
+  periodOfCoverFrom: Date;
+  periodOfCoverTo: Date;
+  trailerAttached: 'yes' | 'no';
+  
+  // Section 3: Incident Details
   incidentLocation: string;
+  incidentDate: Date;
+  incidentTime: string;
+  policeReported: 'yes' | 'no';
+  policeStationDetails?: string;
   incidentDescription: string;
-  damageDescription: string;
-  claimAmount: number;
-  thirdPartyInvolved: 'yes' | 'no';
-  policeReportFiled: 'yes' | 'no';
-  policeReported: boolean;
-  policeStation?: string;
-  policeReportNumber?: string;
-  estimatedDamage: number;
-  driverName: string;
-  driverLicense: string;
-  witnessName?: string;
-  witnessPhone?: string;
-  vehiclePhotos?: File[];
-  policeReport?: File;
-  vehicleRegistrationDoc?: File;
+  
+  // Other vehicle details (part of incident)
+  otherVehicleInvolved: 'yes' | 'no';
+  otherVehicleRegNumber?: string;
+  otherVehicleMake?: string;
+  otherDriverName?: string;
+  otherDriverAddress?: string;
+  otherVehicleInjuryDamage?: string;
+  
+  // Eye witness details (part of incident)
+  witnesses: Array<{
+    name: string;
+    address: string;
+    phone: string;
+  }>;
+  
+  // Declaration
+  agreeToDataPrivacy: boolean;
+  declarationTrue: boolean;
   signature: string;
-  agreeToTerms: boolean;
 }
 
 export interface ProfessionalIndemnityClaimData {
