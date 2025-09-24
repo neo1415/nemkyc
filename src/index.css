@@ -6,15 +6,15 @@
 All colors MUST be HSL.
 */
 
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
 /* Hero-specific color variables */
 :root {
-  --color-burgundy: 345 100% 25%;
+  --color-burgundy: 358 52% 41%;
   --color-yellow: 45 95% 63%;
   --color-white: 0 0% 100%;
   --text-dark: 215 25% 9%;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
 
 @layer base {
   :root {
