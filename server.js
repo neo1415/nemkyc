@@ -57,10 +57,6 @@ const allowedOrigins = [
   'https://3463ce13-b353-49e7-b843-5d07a684b845.lovableproject.com',
   "https://preview--psk-services-920.lovable.app",
   "https://psk-services-920.lovable.app",
-  'https://843d1ea4-027c-40d0-9a4f-1a1f59aedfa0.lovableproject.com',
-  "https://preview--sleek-navisphere-65-90-93-704.lovable.app",
-  "https://sleek-navisphere-65-90-93-704.lovable.app",
-  "https://lovable.dev/projects/2c7e8277-18dc-4b3b-b8b8-36a839c5a31a",
   "https://glow-convert-sell-623.lovable.app",
   "https://lovable.dev/projects/50464dab-8208-4baa-91a2-13d656b2f461",
   "https://preview--glow-convert-sell-623.lovable.app",
@@ -77,6 +73,8 @@ const allowedOrigins = [
   "https://lovable.dev/projects/288cf4b9-0920-44a5-b1a4-a69a5341d47f",
   "https://preview--market-mosaic-online-4342.lovable.app",
   "https://market-mosaic-online-4342.lovable.app",
+  "https://lovable.dev/projects/88f314bd-27da-41ea-9068-a49b2abcd1b4",
+  "https://preview--nem-demo.lovable.app"
   'https://nem-kyc.firebaseapp.com',
   'https://nemforms.com'
 ];
@@ -298,9 +296,6 @@ const getUserDetailsForLogging = async (uid) => {
 
 app.use(express.json());
 
-app.get('/', (req, res) => {
-  res.send('<h1>Server is running!</h1>');
-});
 
 // Timestamp validation middleware
 app.use((req, res, next) => {
@@ -919,18 +914,18 @@ const setSuperAdminOnStartup = async () => {
     const user = await admin.auth().getUserByEmail(email);
     const uid = user.uid;
 
-    // 🔐 Set custom claim if not already set
+    //  Set custom claim if not already set
     if (!user.customClaims?.superAdmin) {
       await admin.auth().setCustomUserClaims(uid, {
         ...user.customClaims,
         superAdmin: true,
       });
-      console.log(`✅ Custom claim set: ${email} is now a superAdmin`);
+      console.log(`Custom claim set: ${email} is now a superAdmin`);
     } else {
-      console.log(`ℹ️ Custom claim already exists for ${email}`);
+      console.log(`Custom claim already exists for ${email}`);
     }
 
-    // 🔐 Also set Firestore role
+    // Also set Firestore role
     const userDocRef = admin.firestore().collection('users').doc(uid);
     const userDoc = await userDocRef.get();
 
@@ -942,12 +937,12 @@ const setSuperAdminOnStartup = async () => {
         },
         { merge: true }
       );
-      console.log(`✅ Firestore role set: ${email} is now a superAdmin`);
+      console.log(`Firestore role set: ${email} is now a superAdmin`);
     } else {
-      console.log(`ℹ️ Firestore role already set for ${email}`);
+      console.log(`Firestore role already set for ${email}`);
     }
   } catch (error) {
-    console.error(`❌ Failed to assign super admin:`, error);
+    console.error(`Failed to assign super admin:`, error);
   }
 };
 
