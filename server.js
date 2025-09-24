@@ -76,6 +76,7 @@ const allowedOrigins = [
   "https://lovable.dev/projects/88f314bd-27da-41ea-9068-a49b2abcd1b4",
   "https://88f314bd-27da-41ea-9068-a49b2abcd1b4.lovableproject.com",
   "https://preview--nem-demo.lovable.app",
+  "https://bde588f1-c65e-459e-b330-72159ff17378.lovableproject.com",
   'https://nem-kyc.firebaseapp.com',
   'https://nemforms.com'
 ];
