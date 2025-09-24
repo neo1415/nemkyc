@@ -80,7 +80,7 @@ const BrokersCDDViewer: React.FC<BrokersCDDViewerProps> = ({ data }) => {
         title: 'Brokers Customer Due Diligence (CDD) Form',
         subtitle: 'NEM Insurance Company Limited',
         data: data,
-        logoUrl: '/Nem-insurance-Logo.jpg',
+        logoUrl: '/NEMLogo (2)_page-0001.jpg',
         attachments: []
       });
       

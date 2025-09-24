@@ -109,7 +109,7 @@ const Navbar: React.FC = () => {
           <div className="flex items-center">
               <Link to="/" className="flex items-center space-x-3">
                 <img 
-                  src="/Nem-insurance-Logo.jpg" 
+                  src="/NEMLogo (2)_page-0001.jpg" 
                   alt="NEM Insurance" 
                   className="h-10 w-10 object-contain rounded"
                 />
