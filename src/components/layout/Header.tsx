@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
 import { Menu, User, LogOut, FileText, Building2, Car } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import logoImage from '/NEMLogo (2)_page-0001.jpg';
+import logoImage from '../../NEMs-Logo.jpg';
 
 interface HeaderProps {
   onMenuClick: () => void;

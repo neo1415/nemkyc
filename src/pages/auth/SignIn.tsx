@@ -13,6 +13,7 @@ import { LogIn, Mail, Loader2 } from 'lucide-react';
 import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import MFAModal from '../../components/auth/MFAModal';
+import logoImage from '../../NEMs-Logo.jpg';
 
 const SignIn: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -173,7 +174,11 @@ const SignIn: React.FC = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-red-900 to-yellow-600 rounded-lg"></div>
+            <img 
+              src={logoImage} 
+              alt="NEM Insurance" 
+              className="w-12 h-12 object-contain rounded"
+            />
           </div>
           <CardTitle className="text-2xl font-bold text-center">Sign In</CardTitle>
           <CardDescription className="text-center">
