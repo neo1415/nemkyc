@@ -71,7 +71,6 @@ import CorporateCDDViewer from './pages/admin/CorporateCDDViewer';
 import PartnersCDDViewer from './pages/admin/PartnersCDDViewer';
 import MFAEnrollment from './components/auth/MFAEnrollment';
 import MFAVerification from './components/auth/MFAVerification';
-import MFAHelper from './components/auth/MFAHelper';
 
 
 function App() {
@@ -103,8 +102,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <MFAHelper>
-          <Routes>
+        <Routes>
             <Route path="/" element={<Layout />}>
               <Route index element={<Index />} />
               <Route path="signin" element={<SignIn />} />
@@ -443,9 +441,8 @@ function App() {
              <Route path="unauthorized" element={<Unauthorized />} />
              <Route path="*" element={<NotFound />} />
             </Route>
-          </Routes>
-          <Toaster />
-        </MFAHelper>
+        </Routes>
+        <Toaster />
       </Router>
     </AuthProvider>
   );
