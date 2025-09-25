@@ -30,6 +30,7 @@ const SignIn: React.FC = () => {
   // Handle redirect after successful authentication and user state update
   useEffect(() => {
     if (shouldRedirect && user) {
+      console.log('🎯 Redirecting user:', user.role);
       setShouldRedirect(false);
       
       // Check if there's a pending submission
@@ -47,12 +48,27 @@ const SignIn: React.FC = () => {
 
       // Normal sign-in flow - role-based navigation
       if (['admin', 'super admin', 'compliance', 'claims'].includes(user.role)) {
+        console.log('🎯 Admin user detected, redirecting to /admin');
         navigate('/admin', { replace: true });
       } else {
+        console.log('🎯 Regular user, redirecting to:', from);
         navigate(from, { replace: true });
       }
     }
   }, [user, shouldRedirect, navigate, from]);
+
+  // Additional effect to handle immediate redirect when user is already authenticated
+  useEffect(() => {
+    if (user && !loading && !mfaRequired && !mfaEnrollmentRequired && !emailVerificationRequired) {
+      console.log('🎯 User already authenticated, checking for redirect');
+      
+      // Normal sign-in flow - role-based navigation
+      if (['admin', 'super admin', 'compliance', 'claims'].includes(user.role)) {
+        console.log('🎯 Admin user already authenticated, redirecting to /admin');
+        navigate('/admin', { replace: true });
+      }
+    }
+  }, [user, loading, mfaRequired, mfaEnrollmentRequired, emailVerificationRequired, navigate]);
 
   // Helper function to get form page URL from form type
   const getFormPageUrl = (formType: string) => {
@@ -117,8 +133,11 @@ const SignIn: React.FC = () => {
       // The signIn method will handle MFA flows automatically via AuthContext
       // If we reach here and no MFA/email verification is required, authentication was successful
       if (!mfaRequired && !mfaEnrollmentRequired && !emailVerificationRequired) {
+        console.log('🚀 Sign in successful, setting redirect flag');
         // Set flag to trigger redirect after user state is updated
         setShouldRedirect(true);
+      } else {
+        console.log('🔒 MFA/Email verification required:', { mfaRequired, mfaEnrollmentRequired, emailVerificationRequired });
       }
       // If MFA or email verification is required, the modal will handle the flow
       
