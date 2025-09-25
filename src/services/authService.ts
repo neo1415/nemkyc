@@ -7,6 +7,10 @@ export interface AuthResponse {
   success: boolean;
   customToken?: string;
   role?: string;
+  requireMFA?: boolean;
+  requireMFAEnrollment?: boolean;
+  message?: string;
+  loginCount?: number;
   user?: {
     uid: string;
     email: string;
@@ -66,13 +70,10 @@ export const exchangeToken = async (idToken: string): Promise<AuthResponse> => {
       return { success: false, error: result.error };
     }
 
-    console.log('✅ Token exchange successful:', { role: result.role });
+    console.log('✅ Token exchange result:', result);
     
-    return {
-      success: true,
-      role: result.role,
-      user: result.user
-    };
+    // Return the complete result from backend
+    return result;
 
   } catch (error) {
     console.error('Token exchange error:', error);
