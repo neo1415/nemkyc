@@ -46,7 +46,7 @@ const SignIn: React.FC = () => {
       }
 
       // Normal sign-in flow - role-based navigation
-      if (['admin', 'super-admin', 'compliance', 'claims'].includes(user.role)) {
+      if (['admin', 'super admin', 'compliance', 'claims'].includes(user.role)) {
         navigate('/admin', { replace: true });
       } else {
         navigate(from, { replace: true });

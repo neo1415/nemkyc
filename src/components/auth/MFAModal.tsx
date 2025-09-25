@@ -246,7 +246,7 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
                 <Alert>
                   <Mail className="h-4 w-4" />
                   <AlertDescription>
-                    Your email address must be verified before you can enroll in multi-factor authentication.
+                    Your admin role requires email verification before MFA enrollment. This check happens every 3rd login for enhanced security.
                   </AlertDescription>
                 </Alert>
                 
@@ -417,8 +417,8 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
 
                 <div className="text-xs text-muted-foreground bg-muted p-3 rounded">
                   {isEnrollmentFlow 
-                    ? 'Your role requires two-factor authentication for enhanced security. This is a one-time setup.'
-                    : 'Two-factor authentication is required every 3rd login for your security role.'
+                    ? 'Your admin role requires two-factor authentication for enhanced security. This setup is required every 3rd login.'
+                    : 'Two-factor authentication is required every 3rd login for admin security roles.'
                   }
                 </div>
               </>
