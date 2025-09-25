@@ -43,6 +43,7 @@ interface AuthContextType {
   verifyMFAEnrollment: (verificationCode: string) => Promise<void>;
   verifyMFA: (verificationCode: string) => Promise<void>;
   resendMFACode: () => Promise<void>;
+  initiateMFAVerification: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -371,36 +372,101 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const verifyMFA = async (verificationCode: string) => {
+  const initiateMFAVerification = async () => {
     try {
-      if (!firebaseUser || !mfaResolver) {
-        throw new Error('Invalid MFA state');
+      if (!firebaseUser) {
+        throw new Error('User not authenticated');
       }
 
-      // Use the resolver to complete MFA verification
-      const phoneAuthCredential = PhoneAuthProvider.credential(verificationId!, verificationCode);
-      const multiFactorAssertion = PhoneMultiFactorGenerator.assertion(phoneAuthCredential);
-      
-      const userCredential = await mfaResolver.resolveSignIn(multiFactorAssertion);
-      const idToken = await userCredential.user.getIdToken();
-      
-      // Verify with backend
-      const response = await fetch('https://nem-server-rhdb.onrender.com/api/auth/verify-mfa', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ 
-          idToken,
-          mfaAssertion: 'verified' // Backend will log this as successful
-        }),
-      });
+      // Get stored phone number from userroles collection
+      const userDoc = await getDoc(doc(db, 'userroles', firebaseUser.uid));
+      if (!userDoc.exists() || !userDoc.data().phone) {
+        throw new Error('No phone number found for MFA. Please re-enroll in MFA.');
+      }
 
-      const result = await response.json();
+      const phoneNumber = userDoc.data().phone;
       
-      if (!result.success) {
-        throw new Error(result.error || 'MFA verification failed');
+      // Initialize reCAPTCHA if not already done
+      if (!(window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier = new (window as any).firebase.auth.RecaptchaVerifier('recaptcha-container', {
+          size: 'invisible',
+          callback: () => {
+            console.log('reCAPTCHA solved');
+          }
+        });
+      }
+
+      const session = await multiFactor(firebaseUser).getSession();
+      const phoneInfoOptions = {
+        phoneNumber: phoneNumber,
+        session: session
+      };
+
+      const phoneAuthProvider = new PhoneAuthProvider(auth);
+      const enrollVerificationId = await phoneAuthProvider.verifyPhoneNumber(
+        phoneInfoOptions,
+        (window as any).recaptchaVerifier
+      );
+      
+      setVerificationId(enrollVerificationId);
+      toast.success('Verification code sent to your phone');
+      
+    } catch (error: any) {
+      console.error('MFA initiation error:', error);
+      throw new Error('Failed to initiate MFA: ' + error.message);
+    }
+  };
+
+  const verifyMFA = async (verificationCode: string) => {
+    try {
+      if (!firebaseUser) {
+        throw new Error('User not authenticated');
+      }
+
+      let phoneAuthCredential;
+      let multiFactorAssertion;
+
+      if (mfaResolver) {
+        // Using MFA resolver for multi-factor challenge
+        if (!verificationId) {
+          throw new Error('No verification ID found');
+        }
+        phoneAuthCredential = PhoneAuthProvider.credential(verificationId, verificationCode);
+        multiFactorAssertion = PhoneMultiFactorGenerator.assertion(phoneAuthCredential);
+        
+        const userCredential = await mfaResolver.resolveSignIn(multiFactorAssertion);
+        const idToken = await userCredential.user.getIdToken();
+        
+        // Verify with backend
+        const response = await fetch('https://nem-server-rhdb.onrender.com/api/auth/verify-mfa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ 
+            idToken,
+            mfaAssertion: 'verified'
+          }),
+        });
+
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || 'MFA verification failed');
+        }
+      } else {
+        // Direct verification for users already signed in but need MFA
+        if (!verificationId) {
+          await initiateMFAVerification();
+          throw new Error('Verification code sent. Please enter the code.');
+        }
+        
+        phoneAuthCredential = PhoneAuthProvider.credential(verificationId, verificationCode);
+        multiFactorAssertion = PhoneMultiFactorGenerator.assertion(phoneAuthCredential);
+        
+        // Complete MFA verification
+        await multiFactor(firebaseUser).enroll(multiFactorAssertion, 'Phone Number');
       }
 
       setMfaRequired(false);
@@ -519,7 +585,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     enrollMFA,
     verifyMFAEnrollment,
     verifyMFA,
-    resendMFACode
+    resendMFACode,
+    initiateMFAVerification
   };
 
   return (
