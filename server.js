@@ -1819,7 +1819,7 @@ app.post('/api/exchange-token', async (req, res) => {
     console.log('👤 User data retrieved:', { email, role: userData.role });
     
     // Check for sensitive roles that require MFA
-    const sensitiveRoles = ['admin', 'super-admin', 'compliance', 'claims'];
+    const sensitiveRoles = ['admin', 'super admin', 'compliance', 'claims'];
     const requiresMFA = sensitiveRoles.includes(userData.role);
     
     // Get or create login metadata document
