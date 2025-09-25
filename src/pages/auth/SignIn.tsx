@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { exchangeToken } from '../../services/authService';
@@ -18,12 +18,40 @@ const SignIn: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
   
   const { user, signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
   const from = location.state?.from?.pathname || '/dashboard';
+
+  // Handle redirect after successful authentication and user state update
+  useEffect(() => {
+    if (shouldRedirect && user) {
+      setShouldRedirect(false);
+      
+      // Check if there's a pending submission
+      const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
+      if (hasPendingSubmission) {
+        // Process pending submission and redirect back to original form page
+        const pendingData = JSON.parse(hasPendingSubmission);
+        processPendingSubmissionUtil(user.email!).then(() => {
+          // Redirect to the specific form page based on form type
+          const formPageUrl = getFormPageUrl(pendingData.formType);
+          navigate(formPageUrl, { replace: true });
+        });
+        return;
+      }
+
+      // Normal sign-in flow - role-based navigation
+      if (['admin', 'super admin', 'compliance', 'claims'].includes(user.role)) {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
+    }
+  }, [user, shouldRedirect, navigate, from]);
 
   // Helper function to get form page URL from form type
   const getFormPageUrl = (formType: string) => {
@@ -82,29 +110,15 @@ const SignIn: React.FC = () => {
     setLoading(true);
 
     try {
-      // Use AuthContext signIn method
+      // Use AuthContext signIn method - this will handle the Firebase signIn and backend token exchange
       await signIn(email, password);
       
-      // Check if there's a pending submission
-      const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
-      if (hasPendingSubmission) {
-        // Process pending submission and redirect back to original form page
-        const pendingData = JSON.parse(hasPendingSubmission);
-        await processPendingSubmissionUtil(email);
-        
-        // Redirect to the specific form page based on form type
-        const formPageUrl = getFormPageUrl(pendingData.formType);
-        navigate(formPageUrl, { replace: true });
-        return;
-      }
-
-      // Normal sign-in flow - role-based navigation
-      const role = user?.role || 'default';
-      if (['admin', 'super admin', 'compliance', 'claims'].includes(role)) {
-        navigate('/admin', { replace: true });
-      } else {
-        navigate(from, { replace: true });
-      }
+      // The signIn method will handle MFA flows automatically via AuthContext
+      // If we reach here, authentication was successful (no MFA required or MFA completed)
+      
+      // Set flag to trigger redirect after user state is updated
+      setShouldRedirect(true);
+      
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
     } finally {
@@ -120,35 +134,9 @@ const SignIn: React.FC = () => {
       // Keep using direct Firebase for Google sign-in (as it's already secure)
       await signInWithGoogle();
       
-      // Check here if there's a pending submission
-      const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
-      if (hasPendingSubmission) {
-        // Process pending submission and redirect back to original form page
-        const { getAuth } = await import('firebase/auth');
-        const currentUser = getAuth().currentUser;
-        
-        if (currentUser?.email) {
-          const pendingData = JSON.parse(hasPendingSubmission);
-          await processPendingSubmissionUtil(currentUser.email);
-          
-          // Redirect to the specific form page based on form type
-          const formPageUrl = getFormPageUrl(pendingData.formType);
-          navigate(formPageUrl, { replace: true });
-          return;
-        }
-      }
-
-      // Normal sign-in flow - role-based navigation based on user context
-      if (user) {
-        const role = user.role || 'default';
-        if (['admin', 'super admin', 'compliance', 'claims'].includes(role)) {
-          navigate('/admin', { replace: true });
-        } else {
-          navigate('/dashboard', { replace: true });
-        }
-      } else {
-        navigate(from, { replace: true });
-      }
+      // Set flag to trigger redirect after user state is updated
+      setShouldRedirect(true);
+      
     } catch (err: any) {
       setError(err.message || 'Failed to sign in with Google');
     } finally {
