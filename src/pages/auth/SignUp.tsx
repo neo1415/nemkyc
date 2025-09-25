@@ -13,6 +13,7 @@ import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/dialog';
 import { UserPlus, Mail, CheckCircle2, Loader2 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
+import logoImage from '../../NEMs-Logo.jpg';
 
 const SignUp: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -134,7 +135,11 @@ const SignUp: React.FC = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-red-900 to-yellow-600 rounded-lg"></div>
+            <img 
+              src={logoImage} 
+              alt="NEM Insurance" 
+              className="w-12 h-12 object-contain rounded"
+            />
           </div>
           <CardTitle className="text-2xl font-bold text-center">Create Account</CardTitle>
           <CardDescription className="text-center">
