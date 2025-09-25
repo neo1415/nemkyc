@@ -7,17 +7,24 @@ import {
   signOut,
   onAuthStateChanged,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  multiFactor,
+  PhoneAuthProvider,
+  PhoneMultiFactorGenerator
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { User } from '../types';
 import { processPendingSubmissionUtil } from '../hooks/useAuthRequiredSubmit';
+import { exchangeToken } from '../services/authService';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
   firebaseUser: FirebaseUser | null;
   loading: boolean;
+  mfaRequired: boolean;
+  mfaEnrollmentRequired: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string, notificationPreference: 'email' | 'sms', phone?: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -27,6 +34,10 @@ interface AuthContextType {
   saveFormDraft: (formType: string, data: any) => void;
   getFormDraft: (formType: string) => any;
   clearFormDraft: (formType: string) => void;
+  enrollMFA: (phoneNumber: string) => Promise<void>;
+  verifyMFAEnrollment: (verificationCode: string) => Promise<void>;
+  verifyMFA: (verificationCode: string) => Promise<void>;
+  resendMFACode: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,6 +54,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaEnrollmentRequired, setMfaEnrollmentRequired] = useState(false);
+  const [pendingCredential, setPendingCredential] = useState<any>(null);
+  const [mfaResolver, setMfaResolver] = useState<any>(null);
+  const [verificationId, setVerificationId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -112,11 +128,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true);
+      
       // Use Firebase client auth for login
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const idToken = await userCredential.user.getIdToken();
+      
+      // Exchange token with backend to check MFA requirements
+      const response = await exchangeToken(idToken);
+      
+      if (!response.success) {
+        if (response.requireMFA) {
+          setMfaRequired(true);
+          setFirebaseUser(userCredential.user);
+          toast.info('Multi-factor authentication required');
+          return;
+        }
+        
+        if (response.requireMFAEnrollment) {
+          setMfaEnrollmentRequired(true);
+          setFirebaseUser(userCredential.user);
+          toast.info('Please enroll in multi-factor authentication');
+          return;
+        }
+        
+        throw new Error(response.error || 'Authentication failed');
+      }
+      
+      // Successful login without MFA required
+      setMfaRequired(false);
+      setMfaEnrollmentRequired(false);
       
     } catch (error: any) {
       console.error('Sign in error:', error);
+      setMfaRequired(false);
+      setMfaEnrollmentRequired(false);
+      
       if (error.code === 'auth/user-not-found') {
         throw new Error('No account found with this email address');
       } else if (error.code === 'auth/wrong-password') {
@@ -127,6 +174,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Too many failed attempts. Please try again later');
       }
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -193,10 +242,142 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const enrollMFA = async (phoneNumber: string) => {
+    try {
+      if (!firebaseUser) {
+        throw new Error('User not authenticated');
+      }
+
+      const session = await multiFactor(firebaseUser).getSession();
+      const phoneInfoOptions = {
+        phoneNumber: phoneNumber,
+        session: session
+      };
+
+      const phoneAuthProvider = new PhoneAuthProvider(auth);
+      const enrollVerificationId = await phoneAuthProvider.verifyPhoneNumber(
+        phoneInfoOptions,
+        (window as any).recaptchaVerifier
+      );
+      
+      setVerificationId(enrollVerificationId);
+      toast.success('Verification code sent to your phone');
+      
+    } catch (error: any) {
+      console.error('MFA enrollment error:', error);
+      throw new Error('Failed to enroll in MFA: ' + error.message);
+    }
+  };
+
+  const verifyMFAEnrollment = async (verificationCode: string) => {
+    try {
+      if (!firebaseUser || !verificationId) {
+        throw new Error('Invalid MFA enrollment state');
+      }
+
+      const phoneAuthCredential = PhoneAuthProvider.credential(verificationId, verificationCode);
+      const multiFactorAssertion = PhoneMultiFactorGenerator.assertion(phoneAuthCredential);
+      
+      await multiFactor(firebaseUser).enroll(multiFactorAssertion, 'Phone Number');
+      
+      setMfaEnrollmentRequired(false);
+      setVerificationId(null);
+      toast.success('MFA enrollment successful');
+      
+      // Re-attempt sign in now that MFA is enrolled
+      const idToken = await firebaseUser.getIdToken(true); // Force refresh
+      const response = await exchangeToken(idToken);
+      
+      if (response.success) {
+        // Authentication complete
+        setMfaRequired(false);
+      } else if (response.requireMFA) {
+        setMfaRequired(true);
+      }
+      
+    } catch (error: any) {
+      console.error('MFA enrollment verification error:', error);
+      throw new Error('Failed to verify MFA enrollment: ' + error.message);
+    }
+  };
+
+  const verifyMFA = async (verificationCode: string) => {
+    try {
+      if (!firebaseUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get pending MFA resolver from Firebase
+      if (!mfaResolver) {
+        throw new Error('No pending MFA challenge');
+      }
+
+      const phoneAuthCredential = PhoneAuthProvider.credential(verificationId!, verificationCode);
+      const multiFactorAssertion = PhoneMultiFactorGenerator.assertion(phoneAuthCredential);
+      
+      const userCredential = await mfaResolver.resolveSignIn(multiFactorAssertion);
+      const idToken = await userCredential.user.getIdToken();
+      
+      // Verify with backend
+      const response = await fetch('https://nem-server-rhdb.onrender.com/api/auth/verify-mfa', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          idToken,
+          mfaAssertion: 'verified' // Backend will log this as successful
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'MFA verification failed');
+      }
+
+      setMfaRequired(false);
+      setMfaResolver(null);
+      setVerificationId(null);
+      toast.success('MFA verification successful');
+      
+    } catch (error: any) {
+      console.error('MFA verification error:', error);
+      throw new Error('Failed to verify MFA: ' + error.message);
+    }
+  };
+
+  const resendMFACode = async () => {
+    try {
+      if (!firebaseUser) {
+        throw new Error('User not authenticated');
+      }
+      
+      // Re-trigger MFA enrollment or verification process
+      if (mfaEnrollmentRequired) {
+        // For enrollment, we need the phone number again
+        throw new Error('Please re-enter your phone number to resend code');
+      } else {
+        // For MFA verification, retrigger the resolver
+        throw new Error('Please try signing in again to resend MFA code');
+      }
+      
+    } catch (error: any) {
+      console.error('Resend MFA code error:', error);
+      throw new Error('Failed to resend MFA code: ' + error.message);
+    }
+  };
+
   const logout = async () => {
     // Clear user state immediately to prevent role leakage
     setUser(null);
     setFirebaseUser(null);
+    setMfaRequired(false);
+    setMfaEnrollmentRequired(false);
+    setPendingCredential(null);
+    setMfaResolver(null);
+    setVerificationId(null);
     
     // Clear any cached data
     localStorage.clear();
@@ -254,6 +435,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     firebaseUser,
     loading,
+    mfaRequired,
+    mfaEnrollmentRequired,
     signIn,
     signUp,
     signInWithGoogle,
@@ -262,7 +445,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAdmin,
     saveFormDraft,
     getFormDraft,
-    clearFormDraft
+    clearFormDraft,
+    enrollMFA,
+    verifyMFAEnrollment,
+    verifyMFA,
+    resendMFACode
   };
 
   return (
