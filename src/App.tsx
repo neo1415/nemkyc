@@ -101,67 +101,67 @@ function App() {
   }, []);
 
   return (
-   <AuthProvider>
-     <Router>
-      <MFAHelper>
-       <Routes>
-         <Route path="/" element={<Layout />}>
-           <Route index element={<Index />} />
-           <Route path="signin" element={<SignIn />} />
-           <Route path="signup" element={<SignUp />} />
-           
-           {/* Auth routes with /auth prefix */}
-           <Route path="auth/signin" element={<SignIn />} />
-           <Route path="auth/signup" element={<SignUp />} />
-           
-           {/* MFA Routes */}
-           <Route path="auth/mfa/enroll" element={<MFAEnrollment />} />
-           <Route path="auth/mfa/verify" element={<MFAVerification />} />
-          
-          {/* Claims Routes */}
-          <Route path="/claims" element={<ClaimsForms />} />
-          <Route path="/claims/motor" element={<MotorClaim />} />
-          <Route path="/claims/professional-indemnity" element={<ProfessionalIndemnityClaimForm />} />
-          <Route path="/claims/public-liability" element={<PublicLiabilityClaimForm />} />
-          <Route path="/claims/employers-liability" element={<EmployersLiabilityClaim />} />
-          <Route path="/claims/combined-gpa-employers-liability" element={<CombinedGPAEmployersLiabilityClaim />} />
-          <Route path="/claims/burglary" element={<BurglaryClaimForm />} />
-          <Route path="/claims/group-personal-accident" element={<GroupPersonalAccidentClaim />} />
-          <Route path="/claims/fire-special-perils" element={<FireSpecialPerilsClaim />} />
-          <Route path="/claims/rent-assurance" element={<RentAssuranceClaim />} />
-          <Route path="/claims/money-insurance" element={<MoneyInsuranceClaim />} />
-          <Route path="/claims/goods-in-transit" element={<GoodsInTransitClaim />} />
-          <Route path="/claims/contractors-plant-machinery" element={<ContractorsPlantMachineryClaim />} />
-          <Route path="/claims/all-risk" element={<AllRiskClaim />} />
-          <Route path="/claims/fidelity-guarantee" element={<FidelityGuaranteeClaim />} />
-          
-          {/* KYC Routes - accessible without authentication */}
-          <Route path="kyc" element={<KYCForms />} />
-          <Route path="kyc/individual" element={<IndividualKYC />} />
-          <Route path="kyc/corporate" element={<CorporateKYC />} />
-          
-          {/* CDD Routes - accessible without authentication */}
-          <Route path="cdd" element={<CDDForms />} />
-          <Route path="cdd/corporate" element={<CorporateCDD />} />
-          <Route path="cdd/naicom-corporate" element={<NaicomCorporateCDD />} />
-          <Route path="cdd/partners" element={<PartnersCDD />} />
-          <Route path="cdd/naicom-partners" element={<NaicomPartnersCDD />} />
-          <Route path="cdd/individual" element={<IndividualCDD />} />
-          <Route path="cdd/agents" element={<AgentsCDD />} />
-          <Route path="cdd/brokers" element={<BrokersCDD />} />
-          
-          {/* Protected Routes */}
-          <Route path="dashboard" element={
-            <ProtectedRoute>
-              <UserDashboard />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="admin" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super-admin']}>
-              <AdminDashboard />
-            </RoleProtectedRoute>
-          } />
+    <AuthProvider>
+      <Router>
+        <MFAHelper>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Index />} />
+              <Route path="signin" element={<SignIn />} />
+              <Route path="signup" element={<SignUp />} />
+              
+              {/* Auth routes with /auth prefix */}
+              <Route path="auth/signin" element={<SignIn />} />
+              <Route path="auth/signup" element={<SignUp />} />
+              
+              {/* MFA Routes */}
+              <Route path="auth/mfa/enroll" element={<MFAEnrollment />} />
+              <Route path="auth/mfa/verify" element={<MFAVerification />} />
+             
+             {/* Claims Routes */}
+             <Route path="/claims" element={<ClaimsForms />} />
+             <Route path="/claims/motor" element={<MotorClaim />} />
+             <Route path="/claims/professional-indemnity" element={<ProfessionalIndemnityClaimForm />} />
+             <Route path="/claims/public-liability" element={<PublicLiabilityClaimForm />} />
+             <Route path="/claims/employers-liability" element={<EmployersLiabilityClaim />} />
+             <Route path="/claims/combined-gpa-employers-liability" element={<CombinedGPAEmployersLiabilityClaim />} />
+             <Route path="/claims/burglary" element={<BurglaryClaimForm />} />
+             <Route path="/claims/group-personal-accident" element={<GroupPersonalAccidentClaim />} />
+             <Route path="/claims/fire-special-perils" element={<FireSpecialPerilsClaim />} />
+             <Route path="/claims/rent-assurance" element={<RentAssuranceClaim />} />
+             <Route path="/claims/money-insurance" element={<MoneyInsuranceClaim />} />
+             <Route path="/claims/goods-in-transit" element={<GoodsInTransitClaim />} />
+             <Route path="/claims/contractors-plant-machinery" element={<ContractorsPlantMachineryClaim />} />
+             <Route path="/claims/all-risk" element={<AllRiskClaim />} />
+             <Route path="/claims/fidelity-guarantee" element={<FidelityGuaranteeClaim />} />
+             
+             {/* KYC Routes - accessible without authentication */}
+             <Route path="kyc" element={<KYCForms />} />
+             <Route path="kyc/individual" element={<IndividualKYC />} />
+             <Route path="kyc/corporate" element={<CorporateKYC />} />
+             
+             {/* CDD Routes - accessible without authentication */}
+             <Route path="cdd" element={<CDDForms />} />
+             <Route path="cdd/corporate" element={<CorporateCDD />} />
+             <Route path="cdd/naicom-corporate" element={<NaicomCorporateCDD />} />
+             <Route path="cdd/partners" element={<PartnersCDD />} />
+             <Route path="cdd/naicom-partners" element={<NaicomPartnersCDD />} />
+             <Route path="cdd/individual" element={<IndividualCDD />} />
+             <Route path="cdd/agents" element={<AgentsCDD />} />
+             <Route path="cdd/brokers" element={<BrokersCDD />} />
+             
+             {/* Protected Routes */}
+             <Route path="dashboard" element={
+               <ProtectedRoute>
+                 <UserDashboard />
+               </ProtectedRoute>
+             } />
+             
+             <Route path="admin" element={
+               <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super-admin']}>
+                 <AdminDashboard />
+               </RoleProtectedRoute>
+             } />
 
           <Route path="admin/profile" element={
             <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super-admin']}>
@@ -434,28 +434,20 @@ function App() {
             </ProtectedRoute>
           } />
           
-          <Route path="admin/events-log" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super admin']}>
-              <EventsLogPage />
-            </RoleProtectedRoute>
-          } />
-          
-          {/* MFA Routes */}
-          <Route path="auth/mfa/enroll" element={<MFAEnrollment />} />
-          <Route path="auth/mfa/verify" element={<MFAVerification />} />
-          
-          {/* MFA Routes */}
-          <Route path="auth/mfa/enroll" element={<MFAEnrollment />} />
-          <Route path="auth/mfa/verify" element={<MFAVerification />} />
-          
-          <Route path="unauthorized" element={<Unauthorized />} />
-          <Route path="*" element={<NotFound />} />
-        </Route>
-      </Routes>
-      <Toaster />
-     </MFAHelper>
-    </Router>
-   </AuthProvider>
+             <Route path="admin/events-log" element={
+               <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super-admin']}>
+                 <EventsLogPage />
+               </RoleProtectedRoute>
+             } />
+             
+             <Route path="unauthorized" element={<Unauthorized />} />
+             <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+          <Toaster />
+        </MFAHelper>
+      </Router>
+    </AuthProvider>
   );
 }
 
