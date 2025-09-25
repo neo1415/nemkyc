@@ -7,6 +7,8 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { Shield, Smartphone, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
+import { RecaptchaVerifier } from 'firebase/auth';
+import { auth } from '../../firebase/config';
 
 declare global {
   interface Window {
@@ -27,14 +29,12 @@ const MFAEnrollment: React.FC = () => {
     const initRecaptcha = async () => {
       try {
         if (!window.recaptchaVerifier) {
-          const { RecaptchaVerifier } = await import('firebase/auth');
-          const { auth } = await import('../../firebase/config');
           window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
             size: 'invisible',
             callback: () => {
               console.log('reCAPTCHA solved');
             }
-          }, auth);
+          });
         }
       } catch (error) {
         console.error('Failed to initialize reCAPTCHA:', error);
