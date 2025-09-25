@@ -25,7 +25,7 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
   const [attempts, setAttempts] = useState(0);
   const maxAttempts = 5;
 
-  const { enrollMFA, verifyMFAEnrollment, verifyMFA, resendMFACode, sendVerificationEmail, checkEmailVerification } = useAuth();
+  const { enrollMFA, verifyMFAEnrollment, verifyMFA, resendMFACode, sendVerificationEmail, checkEmailVerification, initiateMFAVerification } = useAuth();
 
   // Initialize reCAPTCHA for phone auth
   useEffect(() => {
@@ -120,8 +120,18 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
         await verifyMFAEnrollment(verificationCode);
         toast.success('MFA enrollment successful!');
       } else {
-        await verifyMFA(verificationCode);
-        toast.success('MFA verification successful!');
+        // For verification type, initiate MFA first if needed
+        try {
+          await verifyMFA(verificationCode);
+          toast.success('MFA verification successful!');
+        } catch (err: any) {
+          // If it says verification code sent, don't treat as error
+          if (err.message.includes('Verification code sent')) {
+            toast.info('Verification code sent to your phone');
+            return;
+          }
+          throw err;
+        }
       }
       onSuccess();
       onClose();
@@ -142,12 +152,34 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
     }
   };
 
+  const handleInitiateMFA = async () => {
+    setError('');
+    setLoading(true);
+
+    try {
+      await initiateMFAVerification();
+      setCodeSent(true);
+      toast.success('Verification code sent to your registered phone');
+    } catch (err: any) {
+      console.error('Error initiating MFA:', err);
+      setError(err.message || 'Failed to send verification code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleResendCode = async () => {
     setResendLoading(true);
     setError('');
 
     try {
-      await resendMFACode();
+      if (type === 'enrollment') {
+        // For enrollment, resend using phone number
+        await enrollMFA(phoneNumber);
+      } else {
+        // For verification, re-initiate MFA
+        await initiateMFAVerification();
+      }
       toast.success('Verification code resent');
       setAttempts(0); // Reset attempts on resend
     } catch (err: any) {
@@ -188,6 +220,7 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
   const isEnrollmentFlow = type === 'enrollment';
   const showPhoneInput = isEnrollmentFlow && !codeSent;
   const showCodeInput = (isEnrollmentFlow && codeSent) || type === 'verification';
+  const showInitiateMFA = type === 'verification' && !codeSent;
 
   return (
     <>
@@ -258,6 +291,33 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
                       Multiple failed attempts detected. Please double-check your verification code.
                     </AlertDescription>
                   </Alert>
+                )}
+
+                {showInitiateMFA && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Phone className="h-4 w-4" />
+                      <span>Get verification code sent to your registered phone</span>
+                    </div>
+                    
+                    <Button 
+                      onClick={handleInitiateMFA} 
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending Code...
+                        </>
+                      ) : (
+                        <>
+                          <Phone className="mr-2 h-4 w-4" />
+                          Send Verification Code
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 )}
 
                 {showPhoneInput && (
