@@ -71,12 +71,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             // Auto-assign super admin role to neowalker502@gmail.com
             let userRole = userData.role || 'default';
-            if (firebaseUser.email === 'neowalker502@gmail.com' && userRole !== 'super admin') {
-              userRole = 'super admin';
+            if (firebaseUser.email === 'neowalker502@gmail.com' && userRole !== 'super-admin') {
+              userRole = 'super-admin';
               // Update in Firestore
               await setDoc(doc(db, 'userroles', firebaseUser.uid), {
                 ...userData,
-                role: 'super admin',
+                role: 'super-admin',
                 dateModified: new Date()
               }, { merge: true });
             }
@@ -395,7 +395,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAdmin = (): boolean => {
-    return user?.role === 'admin' || user?.role === 'compliance' || user?.role === 'super admin' || user?.role === 'claims';
+    return user?.role === 'admin' || user?.role === 'compliance' || user?.role === 'super-admin' || user?.role === 'claims';
   };
 
   // Local storage functions for form drafts

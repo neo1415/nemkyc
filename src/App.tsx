@@ -158,13 +158,13 @@ function App() {
           } />
           
           <Route path="admin" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super admin']}>
+            <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super-admin']}>
               <AdminDashboard />
             </RoleProtectedRoute>
           } />
 
           <Route path="admin/profile" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super admin']}>
+            <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super-admin']}>
               <AdminProfile />
             </RoleProtectedRoute>
           } />
@@ -411,7 +411,7 @@ function App() {
           } />
           
           <Route path="admin/users" element={
-            <RoleProtectedRoute allowedRoles={['super admin']}>
+            <RoleProtectedRoute allowedRoles={['super-admin']}>
               <AdminUsersTable />
             </RoleProtectedRoute>
           } />
