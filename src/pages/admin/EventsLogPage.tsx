@@ -82,13 +82,13 @@ const EventsLogPage: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 25 });
   const [totalCount, setTotalCount] = useState(0);
-  const [selectedRows, setSelectedRows] = useState<GridRowSelectionModel>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [dateFilterAnchor, setDateFilterAnchor] = useState<HTMLButtonElement | null>(null);
   const [viewDialog, setViewDialog] = useState<{
     open: boolean;
     event: EventLog | null;
   }>({ open: false, event: null });
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Real-time search effect
   useEffect(() => {
@@ -212,23 +212,23 @@ const EventsLogPage: React.FC = () => {
   };
 
   const handleDeleteClick = (id: string) => {
-    setSelectedRows([id]);
+    setSelectedEventId(id);
     setDeleteDialogOpen(true);
   };
 
-  const handleBulkDelete = async () => {
+  const handleDeleteConfirm = async () => {
     try {
       toast({
         title: "Success",
-        description: `${Array.isArray(selectedRows) ? selectedRows.length : 1} event(s) deleted successfully`,
+        description: "Event deleted successfully",
       });
       
-      setSelectedRows([]);
+      setSelectedEventId(null);
       fetchEvents();
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to delete events",
+        description: "Failed to delete event",
         variant: "destructive",
       });
     } finally {
@@ -447,19 +447,6 @@ const EventsLogPage: React.FC = () => {
               >
                 Export CSV
               </Button>
-
-              {/* Bulk Delete Button */}
-              {Array.isArray(selectedRows) && selectedRows.length > 0 && (
-                <Button
-                  variant="contained"
-                  startIcon={<Delete />}
-                  onClick={() => setDeleteDialogOpen(true)}
-                  color="error"
-                  sx={{ minWidth: 140 }}
-                >
-                  Delete ({selectedRows.length})
-                </Button>
-              )}
             </Stack>
           </CardContent>
         </Card>
@@ -476,9 +463,6 @@ const EventsLogPage: React.FC = () => {
               onPaginationModelChange={setPaginationModel}
               rowCount={totalCount}
               pageSizeOptions={[25, 50, 100]}
-              checkboxSelection
-              rowSelectionModel={selectedRows}
-              onRowSelectionModelChange={setSelectedRows}
               disableRowSelectionOnClick
               getRowHeight={() => 'auto'}
               sx={{
@@ -633,12 +617,12 @@ const EventsLogPage: React.FC = () => {
           <DialogTitle>Confirm Deletion</DialogTitle>
           <DialogContent>
             <Typography>
-              Are you sure you want to delete {Array.isArray(selectedRows) ? selectedRows.length : 1} event(s)? This action cannot be undone.
+              Are you sure you want to delete this event? This action cannot be undone.
             </Typography>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleBulkDelete} color="error" variant="contained">
+            <Button onClick={handleDeleteConfirm} color="error" variant="contained">
               Delete
             </Button>
           </DialogActions>
