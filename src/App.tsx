@@ -69,6 +69,9 @@ import AdminProfile from './pages/admin/AdminProfile';
 import RoleProtectedRoute from './components/auth/RoleProtectedRoute';
 import CorporateCDDViewer from './pages/admin/CorporateCDDViewer';
 import PartnersCDDViewer from './pages/admin/PartnersCDDViewer';
+import MFAEnrollment from './components/auth/MFAEnrollment';
+import MFAVerification from './components/auth/MFAVerification';
+import MFAHelper from './components/auth/MFAHelper';
 
 
 function App() {
@@ -99,16 +102,21 @@ function App() {
 
   return (
    <AuthProvider>
-    <Router>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Index />} />
-          <Route path="signin" element={<SignIn />} />
-          <Route path="signup" element={<SignUp />} />
-          
-          {/* Auth routes with /auth prefix */}
-          <Route path="auth/signin" element={<SignIn />} />
-          <Route path="auth/signup" element={<SignUp />} />
+    <MFAHelper>
+     <Router>
+       <Routes>
+         <Route path="/" element={<Layout />}>
+           <Route index element={<Index />} />
+           <Route path="signin" element={<SignIn />} />
+           <Route path="signup" element={<SignUp />} />
+           
+           {/* Auth routes with /auth prefix */}
+           <Route path="auth/signin" element={<SignIn />} />
+           <Route path="auth/signup" element={<SignUp />} />
+           
+           {/* MFA Routes */}
+           <Route path="auth/mfa/enroll" element={<MFAEnrollment />} />
+           <Route path="auth/mfa/verify" element={<MFAVerification />} />
           
           {/* Claims Routes */}
           <Route path="/claims" element={<ClaimsForms />} />
@@ -432,12 +440,21 @@ function App() {
             </RoleProtectedRoute>
           } />
           
+          {/* MFA Routes */}
+          <Route path="auth/mfa/enroll" element={<MFAEnrollment />} />
+          <Route path="auth/mfa/verify" element={<MFAVerification />} />
+          
+          {/* MFA Routes */}
+          <Route path="auth/mfa/enroll" element={<MFAEnrollment />} />
+          <Route path="auth/mfa/verify" element={<MFAVerification />} />
+          
           <Route path="unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
       <Toaster />
-    </Router>
+     </Router>
+    </MFAHelper>
    </AuthProvider>
   );
 }

@@ -164,6 +164,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setMfaRequired(false);
       setMfaEnrollmentRequired(false);
       
+      // Handle MFA resolver if needed
+      if (error.code === 'auth/multi-factor-auth-required') {
+        setMfaRequired(true);
+        setMfaResolver(error.resolver);
+        toast.info('Multi-factor authentication required');
+        return;
+      }
+      
       if (error.code === 'auth/user-not-found') {
         throw new Error('No account found with this email address');
       } else if (error.code === 'auth/wrong-password') {
@@ -303,15 +311,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyMFA = async (verificationCode: string) => {
     try {
-      if (!firebaseUser) {
-        throw new Error('User not authenticated');
+      if (!firebaseUser || !mfaResolver) {
+        throw new Error('Invalid MFA state');
       }
 
-      // Get pending MFA resolver from Firebase
-      if (!mfaResolver) {
-        throw new Error('No pending MFA challenge');
-      }
-
+      // Use the resolver to complete MFA verification
       const phoneAuthCredential = PhoneAuthProvider.credential(verificationId!, verificationCode);
       const multiFactorAssertion = PhoneMultiFactorGenerator.assertion(phoneAuthCredential);
       
