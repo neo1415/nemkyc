@@ -21,7 +21,7 @@ const SignIn: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [shouldRedirect, setShouldRedirect] = useState(false);
   
-  const { user, signIn, signInWithGoogle, mfaRequired, mfaEnrollmentRequired } = useAuth();
+  const { user, signIn, signInWithGoogle, mfaRequired, mfaEnrollmentRequired, emailVerificationRequired } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -115,12 +115,12 @@ const SignIn: React.FC = () => {
       await signIn(email, password);
       
       // The signIn method will handle MFA flows automatically via AuthContext
-      // If we reach here and no MFA is required, authentication was successful
-      if (!mfaRequired && !mfaEnrollmentRequired) {
+      // If we reach here and no MFA/email verification is required, authentication was successful
+      if (!mfaRequired && !mfaEnrollmentRequired && !emailVerificationRequired) {
         // Set flag to trigger redirect after user state is updated
         setShouldRedirect(true);
       }
-      // If MFA is required, the modal will handle the flow
+      // If MFA or email verification is required, the modal will handle the flow
       
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
@@ -137,8 +137,8 @@ const SignIn: React.FC = () => {
       // Keep using direct Firebase for Google sign-in (as it's already secure)
       await signInWithGoogle();
       
-      // If no MFA is required, set flag to trigger redirect after user state is updated
-      if (!mfaRequired && !mfaEnrollmentRequired) {
+      // If no MFA or email verification is required, set flag to trigger redirect after user state is updated
+      if (!mfaRequired && !mfaEnrollmentRequired && !emailVerificationRequired) {
         setShouldRedirect(true);
       }
       
@@ -249,9 +249,9 @@ const SignIn: React.FC = () => {
 
       {/* MFA Modal */}
       <MFAModal
-        isOpen={mfaRequired || mfaEnrollmentRequired}
+        isOpen={mfaRequired || mfaEnrollmentRequired || emailVerificationRequired}
         onClose={() => {}}
-        type={mfaEnrollmentRequired ? 'enrollment' : 'verification'}
+        type={emailVerificationRequired ? 'email-verification' : (mfaEnrollmentRequired ? 'enrollment' : 'verification')}
         onSuccess={() => {
           setShouldRedirect(true);
         }}
