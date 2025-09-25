@@ -76,21 +76,47 @@ const allowedOrigins = [
   "https://lovable.dev/projects/88f314bd-27da-41ea-9068-a49b2abcd1b4",
   "https://88f314bd-27da-41ea-9068-a49b2abcd1b4.lovableproject.com",
   "https://preview--nem-demo.lovable.app",
-  "https://bde588f1-c65e-459e-b330-72159ff17378.lovableproject.com",
+  "https://bde588f1-c65e-e-859e-b330-72159ff17378.lovableproject.com",
   'https://nem-kyc.firebaseapp.com',
-  'https://nemforms.com'
+  'https://nemforms.com',
+  // Current project URLs - common NEM forms variations
+  "https://nem-forms-admin-portal.lovable.app",
+  "https://preview--nem-forms-admin-portal.lovable.app",
+  "https://nem-forms-portal.lovable.app",
+  "https://preview--nem-forms-portal.lovable.app",
+  "https://nem-insurance-forms.lovable.app",
+  "https://preview--nem-insurance-forms.lovable.app"
 ];
 
 const port = process.env.PORT || 3001;
 
 app.use(cors({
   origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
+    
+    // Check exact matches first
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
-    } else {
-      return callback(new Error('CORS policy does not allow access from this origin.'), false);
     }
+    
+    // Check if it's a Lovable domain pattern
+    const lovablePatterns = [
+      /^https:\/\/.*\.lovable\.app$/,
+      /^https:\/\/preview--.*\.lovable\.app$/,
+      /^https:\/\/.*\.lovableproject\.com$/,
+      /^https:\/\/lovable\.dev\/projects\/.*$/
+    ];
+    
+    const isLovableDomain = lovablePatterns.some(pattern => pattern.test(origin));
+    
+    if (isLovableDomain) {
+      console.log('✅ CORS: Allowing Lovable domain:', origin);
+      return callback(null, true);
+    }
+    
+    console.error('❌ CORS: Blocked origin:', origin);
+    return callback(new Error(`CORS policy does not allow access from origin: ${origin}`), false);
   },
   credentials: true, // Ensures cookies are sent with CORS requests
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
@@ -322,18 +348,21 @@ app.use(express.json());
 
 // Timestamp validation middleware
 app.use((req, res, next) => {
+  // Skip timestamp validation for specific routes and the exchange-token endpoint
   if (req.path === '/csrf-token' || 
     req.path === '/listenForUpdates' ||
     req.path === '/send-to-user' ||
     req.path === '/send-to-admin-and-claims' ||
     req.path === '/send-to-admin-and-compliance' ||
-    req.path === '/api/update-claim-status') {
+    req.path === '/api/update-claim-status' ||
+    req.path === '/api/exchange-token') {  // ✅ Add exchange-token to exempted routes
     return next(); // Skip timestamp validation for these routes
   }
 
   const timestamp = req.headers['x-timestamp'];
   if (!timestamp) {
-    return res.status(400).send({ error: 'Timestamp is required' });
+    console.error('❌ Timestamp validation failed: Timestamp is required for', req.path);
+    return res.status(400).json({ error: 'Timestamp is required' });
   }
 
   const requestTime = new Date(parseInt(timestamp, 10));
@@ -343,7 +372,8 @@ app.use((req, res, next) => {
   const maxAllowedTime = 5 * 60 * 1000; // 5 minutes
 
   if (timeDiff > maxAllowedTime) {
-    return res.status(400).send({ error: 'Request too old' });
+    console.error('❌ Timestamp validation failed: Request too old for', req.path, 'Time diff:', timeDiff);
+    return res.status(400).json({ error: 'Request too old' });
   }
 
   next();
@@ -351,13 +381,17 @@ app.use((req, res, next) => {
 
 // Apply CSRF protection middleware conditionally
 app.use((req, res, next) => {
+  // Skip CSRF protection for specific routes including exchange-token
   if (req.path === '/listenForUpdates' ||
     req.path === '/send-to-user' ||
     req.path === '/send-to-admin-and-claims' ||
     req.path === '/send-to-admin-and-compliance' ||
-    req.path === '/api/update-claim-status'){
+    req.path === '/api/update-claim-status' ||
+    req.path === '/api/exchange-token') {  // ✅ Add exchange-token to CSRF exemptions
+    console.log('🔓 Skipping CSRF protection for:', req.path);
     return next(); // Skip CSRF for this route
   }
+  console.log('🔐 Applying CSRF protection for:', req.path);
   csrfProtection(req, res, next); // Apply CSRF protection
 });
 
@@ -1750,25 +1784,39 @@ app.post('/api/login', async (req, res) => {
 // Token exchange endpoint with MFA checking - frontend does Firebase auth, backend verifies token and returns user info
 app.post('/api/exchange-token', async (req, res) => {
   try {
+    console.log('🔄 Token exchange request received from origin:', req.headers.origin);
+    console.log('🔄 Request headers:', {
+      'user-agent': req.headers['user-agent'],
+      'content-type': req.headers['content-type'],
+      'x-timestamp': req.headers['x-timestamp']
+    });
+
     const { idToken } = req.body;
     
     if (!idToken) {
+      console.error('❌ Token exchange failed: ID token is required');
       return res.status(400).json({ error: 'ID token is required' });
     }
 
+    console.log('🔍 Verifying Firebase ID token...');
+    
     // Verify the Firebase ID token
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const email = decodedToken.email;
     const uid = decodedToken.uid;
     
+    console.log('✅ Token verified successfully for user:', email);
+    
     // Get user from Firestore userroles collection
     const userDoc = await db.collection('userroles').doc(uid).get();
     
     if (!userDoc.exists) {
+      console.error('❌ User not found in userroles collection:', uid);
       return res.status(401).json({ error: 'User not found' });
     }
 
     const userData = userDoc.data();
+    console.log('👤 User data retrieved:', { email, role: userData.role });
     
     // Check for sensitive roles that require MFA
     const sensitiveRoles = ['admin', 'super-admin', 'compliance', 'claims'];
@@ -1795,6 +1843,8 @@ app.post('/api/exchange-token', async (req, res) => {
       role: userData.role
     }, { merge: true });
     
+    console.log('📊 Login count updated:', { loginCount, requiresMFA });
+    
     // Check if MFA is required (every 3rd login for sensitive roles)
     const shouldRequireMFA = requiresMFA && (loginCount % 3 === 0);
     
@@ -1804,11 +1854,15 @@ app.post('/api/exchange-token', async (req, res) => {
       const userRecord = await admin.auth().getUser(uid);
       mfaEnrolled = userRecord.multiFactor?.enrolledFactors?.length > 0;
     } catch (error) {
-      console.warn('Error checking MFA enrollment:', error);
+      console.warn('⚠️ Error checking MFA enrollment:', error);
     }
+    
+    console.log('🔐 MFA Status:', { shouldRequireMFA, mfaEnrolled });
     
     // If MFA is required but user is not enrolled, require enrollment first
     if (shouldRequireMFA && !mfaEnrolled) {
+      console.log('📝 MFA enrollment required for user:', email);
+      
       await logAction({
         action: 'mfa-enrollment-required',
         actorUid: uid,
@@ -1841,6 +1895,8 @@ app.post('/api/exchange-token', async (req, res) => {
     
     // If MFA is required and user is enrolled, require MFA verification
     if (shouldRequireMFA && mfaEnrolled) {
+      console.log('🔐 MFA verification required for user:', email);
+      
       await logAction({
         action: 'mfa-required',
         actorUid: uid,
