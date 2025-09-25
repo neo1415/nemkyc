@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '../../components/ui/alert';
 import { LogIn, Mail, Loader2 } from 'lucide-react';
 import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '../../firebase/config';
+import MFAModal from '../../components/auth/MFAModal';
 
 const SignIn: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -20,7 +21,7 @@ const SignIn: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [shouldRedirect, setShouldRedirect] = useState(false);
   
-  const { user, signIn, signInWithGoogle } = useAuth();
+  const { user, signIn, signInWithGoogle, mfaRequired, mfaEnrollmentRequired } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -45,7 +46,7 @@ const SignIn: React.FC = () => {
       }
 
       // Normal sign-in flow - role-based navigation
-      if (['admin', 'super admin', 'compliance', 'claims'].includes(user.role)) {
+      if (['admin', 'super-admin', 'compliance', 'claims'].includes(user.role)) {
         navigate('/admin', { replace: true });
       } else {
         navigate(from, { replace: true });
@@ -114,10 +115,12 @@ const SignIn: React.FC = () => {
       await signIn(email, password);
       
       // The signIn method will handle MFA flows automatically via AuthContext
-      // If we reach here, authentication was successful (no MFA required or MFA completed)
-      
-      // Set flag to trigger redirect after user state is updated
-      setShouldRedirect(true);
+      // If we reach here and no MFA is required, authentication was successful
+      if (!mfaRequired && !mfaEnrollmentRequired) {
+        // Set flag to trigger redirect after user state is updated
+        setShouldRedirect(true);
+      }
+      // If MFA is required, the modal will handle the flow
       
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
@@ -134,8 +137,10 @@ const SignIn: React.FC = () => {
       // Keep using direct Firebase for Google sign-in (as it's already secure)
       await signInWithGoogle();
       
-      // Set flag to trigger redirect after user state is updated
-      setShouldRedirect(true);
+      // If no MFA is required, set flag to trigger redirect after user state is updated
+      if (!mfaRequired && !mfaEnrollmentRequired) {
+        setShouldRedirect(true);
+      }
       
     } catch (err: any) {
       setError(err.message || 'Failed to sign in with Google');
@@ -241,6 +246,16 @@ const SignIn: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* MFA Modal */}
+      <MFAModal
+        isOpen={mfaRequired || mfaEnrollmentRequired}
+        onClose={() => {}}
+        type={mfaEnrollmentRequired ? 'enrollment' : 'verification'}
+        onSuccess={() => {
+          setShouldRedirect(true);
+        }}
+      />
     </div>
   );
 };
