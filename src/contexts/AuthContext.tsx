@@ -10,9 +10,11 @@ import {
   signInWithPopup,
   multiFactor,
   PhoneAuthProvider,
-  PhoneMultiFactorGenerator
+  PhoneMultiFactorGenerator,
+  sendEmailVerification as firebaseSendEmailVerification,
+  reload
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { User } from '../types';
 import { processPendingSubmissionUtil } from '../hooks/useAuthRequiredSubmit';
@@ -25,6 +27,7 @@ interface AuthContextType {
   loading: boolean;
   mfaRequired: boolean;
   mfaEnrollmentRequired: boolean;
+  emailVerificationRequired: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string, notificationPreference: 'email' | 'sms', phone?: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -34,6 +37,8 @@ interface AuthContextType {
   saveFormDraft: (formType: string, data: any) => void;
   getFormDraft: (formType: string) => any;
   clearFormDraft: (formType: string) => void;
+  sendVerificationEmail: () => Promise<void>;
+  checkEmailVerification: () => Promise<boolean>;
   enrollMFA: (phoneNumber: string) => Promise<void>;
   verifyMFAEnrollment: (verificationCode: string) => Promise<void>;
   verifyMFA: (verificationCode: string) => Promise<void>;
@@ -56,6 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [mfaRequired, setMfaRequired] = useState(false);
   const [mfaEnrollmentRequired, setMfaEnrollmentRequired] = useState(false);
+  const [emailVerificationRequired, setEmailVerificationRequired] = useState(false);
   const [pendingCredential, setPendingCredential] = useState<any>(null);
   const [mfaResolver, setMfaResolver] = useState<any>(null);
   const [verificationId, setVerificationId] = useState<string | null>(null);
@@ -146,6 +152,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         if (response.requireMFAEnrollment) {
+          // Check if email is verified before MFA enrollment
+          if (!userCredential.user.emailVerified) {
+            setEmailVerificationRequired(true);
+            setFirebaseUser(userCredential.user);
+            toast.info('Please verify your email before enrolling in MFA');
+            return;
+          }
+          
           setMfaEnrollmentRequired(true);
           setFirebaseUser(userCredential.user);
           toast.info('Please enroll in multi-factor authentication');
@@ -250,6 +264,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const sendVerificationEmail = async () => {
+    try {
+      if (!firebaseUser) {
+        throw new Error('User not authenticated');
+      }
+
+      await firebaseSendEmailVerification(firebaseUser);
+      toast.success('Verification email sent! Please check your inbox and click the verification link.');
+      
+    } catch (error: any) {
+      console.error('Email verification error:', error);
+      throw new Error('Failed to send verification email: ' + error.message);
+    }
+  };
+
+  const checkEmailVerification = async (): Promise<boolean> => {
+    try {
+      if (!firebaseUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Reload user to get latest email verification status
+      await reload(firebaseUser);
+      
+      if (firebaseUser.emailVerified) {
+        setEmailVerificationRequired(false);
+        // Now proceed with MFA enrollment
+        setMfaEnrollmentRequired(true);
+        toast.success('Email verified! Please complete MFA enrollment.');
+        return true;
+      } else {
+        toast.error('Email not yet verified. Please check your email and click the verification link.');
+        return false;
+      }
+      
+    } catch (error: any) {
+      console.error('Email verification check error:', error);
+      throw new Error('Failed to check email verification: ' + error.message);
+    }
+  };
+
   const enrollMFA = async (phoneNumber: string) => {
     try {
       if (!firebaseUser) {
@@ -269,6 +324,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
       
       setVerificationId(enrollVerificationId);
+      
+      // Store phone number in Firestore userroles collection
+      await updateDoc(doc(db, 'userroles', firebaseUser.uid), {
+        phone: phoneNumber,
+        dateModified: new Date()
+      });
+      
       toast.success('Verification code sent to your phone');
       
     } catch (error: any) {
@@ -379,6 +441,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setFirebaseUser(null);
     setMfaRequired(false);
     setMfaEnrollmentRequired(false);
+    setEmailVerificationRequired(false);
     setPendingCredential(null);
     setMfaResolver(null);
     setVerificationId(null);
@@ -441,6 +504,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     mfaRequired,
     mfaEnrollmentRequired,
+    emailVerificationRequired,
     signIn,
     signUp,
     signInWithGoogle,
@@ -450,6 +514,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveFormDraft,
     getFormDraft,
     clearFormDraft,
+    sendVerificationEmail,
+    checkEmailVerification,
     enrollMFA,
     verifyMFAEnrollment,
     verifyMFA,
