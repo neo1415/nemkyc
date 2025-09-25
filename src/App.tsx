@@ -102,8 +102,8 @@ function App() {
 
   return (
    <AuthProvider>
-    <MFAHelper>
      <Router>
+      <MFAHelper>
        <Routes>
          <Route path="/" element={<Layout />}>
            <Route index element={<Index />} />
@@ -453,8 +453,8 @@ function App() {
         </Route>
       </Routes>
       <Toaster />
-     </Router>
-    </MFAHelper>
+     </MFAHelper>
+    </Router>
    </AuthProvider>
   );
 }
