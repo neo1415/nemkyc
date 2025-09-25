@@ -50,26 +50,46 @@ export const exchangeToken = async (idToken: string): Promise<AuthResponse> => {
   try {
     console.log('📤 Exchanging token with backend');
     
-    const timestamp = Date.now().toString();
-    
+    // For token exchange, we don't need CSRF token since user isn't authenticated yet
     const response = await fetch(`${API_BASE_URL}/api/exchange-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-timestamp': timestamp,
+        // No CSRF token needed for initial authentication
       },
-      credentials: 'include',
+      credentials: 'include', // Important for session cookies
       body: JSON.stringify({ idToken }),
     });
 
-    const result = await response.json();
-
     if (!response.ok) {
-      console.error('❌ Token exchange failed:', result.error);
-      toast.error(result.error || 'Authentication failed');
-      return { success: false, error: result.error };
+      let errorMessage = 'Authentication failed';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+        console.error('❌ Token exchange failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorMessage
+        });
+      } catch (parseError) {
+        // If we can't parse JSON, it might be HTML (CORS error)
+        const textResponse = await response.text();
+        console.error('❌ Token exchange failed with non-JSON response:', {
+          status: response.status,
+          statusText: response.statusText,
+          responseText: textResponse.substring(0, 200) + '...'
+        });
+        
+        if (response.status === 403 && textResponse.includes('<!DOCTYPE')) {
+          errorMessage = 'CORS error - origin not allowed. Please check server configuration.';
+        }
+      }
+      
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
     }
 
+    const result = await response.json();
     console.log('✅ Token exchange result:', result);
     
     // Return the complete result from backend
@@ -77,7 +97,14 @@ export const exchangeToken = async (idToken: string): Promise<AuthResponse> => {
 
   } catch (error) {
     console.error('Token exchange error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+    let errorMessage = 'Authentication failed';
+    
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      errorMessage = 'Network error - unable to connect to server. Please check your connection.';
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    
     toast.error(errorMessage);
     return { success: false, error: errorMessage };
   }
