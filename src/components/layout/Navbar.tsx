@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
-import logoImage from '../../NEMLogo (2)_page-0001.jpg';
+import logoImage from '/NEMLogo (2)_page-0001.jpg';
 import {
   DropdownMenu,
   DropdownMenuContent,
