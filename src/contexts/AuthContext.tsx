@@ -78,12 +78,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             // Auto-assign super admin role to neowalker502@gmail.com
             let userRole = userData.role || 'default';
-            if (firebaseUser.email === 'neowalker502@gmail.com' && userRole !== 'super-admin') {
-              userRole = 'super-admin';
+            if (firebaseUser.email === 'neowalker502@gmail.com' && userRole !== 'super admin') {
+              userRole = 'super admin';
               // Update in Firestore
               await setDoc(doc(db, 'userroles', firebaseUser.uid), {
                 ...userData,
-                role: 'super-admin',
+                role: 'super admin',
                 dateModified: new Date()
               }, { merge: true });
             }
@@ -153,18 +153,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         if (response.requireMFAEnrollment) {
-          // Check if email is verified before MFA enrollment
-          if (!userCredential.user.emailVerified) {
-            setEmailVerificationRequired(true);
+          // Check if this is an admin role that requires MFA enrollment
+          const adminRoles = ['admin', 'super admin', 'compliance', 'claims'];
+          if (adminRoles.includes(response.role || '')) {
+            // Only trigger email verification and MFA on every 3rd login for admin roles
+            const isThirdLogin = response.loginCount && response.loginCount % 3 === 0;
+            
+            if (isThirdLogin) {
+              // Check if email is verified before MFA enrollment on 3rd login
+              if (!userCredential.user.emailVerified) {
+                setEmailVerificationRequired(true);
+                setFirebaseUser(userCredential.user);
+                toast.info('Email verification required for MFA enrollment (3rd login security check)');
+                return;
+              }
+              
+              setMfaEnrollmentRequired(true);
+              setFirebaseUser(userCredential.user);
+              toast.info('Please enroll in multi-factor authentication (3rd login security check)');
+              return;
+            } else {
+              // Not 3rd login, skip MFA enrollment for now
+              toast.info('Login successful - MFA enrollment will be required on your next 3rd login');
+              // Continue with normal login flow
+            }
+          } else {
+            // Non-admin roles - proceed with immediate MFA enrollment if required
+            if (!userCredential.user.emailVerified) {
+              setEmailVerificationRequired(true);
+              setFirebaseUser(userCredential.user);
+              toast.info('Please verify your email before enrolling in MFA');
+              return;
+            }
+            
+            setMfaEnrollmentRequired(true);
             setFirebaseUser(userCredential.user);
-            toast.info('Please verify your email before enrolling in MFA');
+            toast.info('Please enroll in multi-factor authentication');
             return;
           }
-          
-          setMfaEnrollmentRequired(true);
-          setFirebaseUser(userCredential.user);
-          toast.info('Please enroll in multi-factor authentication');
-          return;
+        }
+        
+        if (response.requireMFA) {
+          // Check if this is an admin role 
+          const adminRoles = ['admin', 'super admin', 'compliance', 'claims'];
+          if (adminRoles.includes(response.role || '')) {
+            // Only require MFA on every 3rd login for admin roles
+            const isThirdLogin = response.loginCount && response.loginCount % 3 === 0;
+            
+            if (isThirdLogin) {
+              setMfaRequired(true);
+              setFirebaseUser(userCredential.user);
+              toast.info('Multi-factor authentication required (3rd login security check)');
+              return;
+            } else {
+              // Not 3rd login, skip MFA for now
+              toast.info('Login successful - MFA will be required on your next 3rd login');
+              // Continue with normal login flow
+            }
+          } else {
+            // Non-admin roles - always require MFA if backend says so
+            setMfaRequired(true);
+            setFirebaseUser(userCredential.user);
+            toast.info('Multi-factor authentication required');
+            return;
+          }
         }
         
         throw new Error(response.error || 'Authentication failed');
@@ -524,7 +576,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAdmin = (): boolean => {
-    return user?.role === 'admin' || user?.role === 'compliance' || user?.role === 'super-admin' || user?.role === 'claims';
+    return user?.role === 'admin' || user?.role === 'compliance' || user?.role === 'super admin' || user?.role === 'claims';
   };
 
   // Local storage functions for form drafts

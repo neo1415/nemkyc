@@ -157,17 +157,17 @@ function App() {
                </ProtectedRoute>
              } />
              
-             <Route path="admin" element={
-               <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super-admin']}>
-                 <AdminDashboard />
-               </RoleProtectedRoute>
-             } />
+              <Route path="admin" element={
+                <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super admin']}>
+                  <AdminDashboard />
+                </RoleProtectedRoute>
+              } />
 
-          <Route path="admin/profile" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super-admin']}>
-              <AdminProfile />
-            </RoleProtectedRoute>
-          } />
+           <Route path="admin/profile" element={
+             <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super admin']}>
+               <AdminProfile />
+             </RoleProtectedRoute>
+           } />
           
           {/* Admin Routes - Role-based access */}
           
@@ -410,11 +410,11 @@ function App() {
             </ProtectedRoute>
           } />
           
-          <Route path="admin/users" element={
-            <RoleProtectedRoute allowedRoles={['super-admin']}>
-              <AdminUsersTable />
-            </RoleProtectedRoute>
-          } />
+           <Route path="admin/users" element={
+             <RoleProtectedRoute allowedRoles={['super admin']}>
+               <AdminUsersTable />
+             </RoleProtectedRoute>
+           } />
           
           <Route path="admin/form/:collection/:id" element={
             <ProtectedRoute>
@@ -434,11 +434,11 @@ function App() {
             </ProtectedRoute>
           } />
           
-             <Route path="admin/events-log" element={
-               <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super-admin']}>
-                 <EventsLogPage />
-               </RoleProtectedRoute>
-             } />
+              <Route path="admin/events-log" element={
+                <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super admin']}>
+                  <EventsLogPage />
+                </RoleProtectedRoute>
+              } />
              
              <Route path="unauthorized" element={<Unauthorized />} />
              <Route path="*" element={<NotFound />} />
