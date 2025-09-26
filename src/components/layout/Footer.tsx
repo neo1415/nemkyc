@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Phone, Mail } from 'lucide-react';
-import logoImage from '/NEMLogo (2)_page-0001.jpg';
+import logoImage from '../../assets/NEMs-Logo.jpg';
 
 const Footer: React.FC = () => {
   return (
