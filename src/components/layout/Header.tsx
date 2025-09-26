@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
 import { Menu, User, LogOut, FileText, Building2, Car } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import logoImage from '../../NEMs-Logo.jpg';
+// Using logo from public folder for better deployment compatibility
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -29,7 +29,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           )}
           <Link to="/" className="flex items-center space-x-2">
             <img 
-              src={logoImage} 
+              src="/NEMs-Logo.jpg" 
               alt="NEM Insurance" 
               className="w-8 h-8 object-contain rounded"
             />
