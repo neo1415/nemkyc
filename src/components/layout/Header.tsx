@@ -32,6 +32,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               src="/NEMs-Logo.jpg" 
               alt="NEM Insurance" 
               className="w-8 h-8 object-contain rounded"
+              onError={(e) => {
+                console.error('Logo failed to load:', e);
+                e.currentTarget.style.display = 'none';
+              }}
+              onLoad={() => console.log('Logo loaded successfully')}
             />
             <span className="text-xl font-bold text-gray-900">NEM Forms</span>
           </Link>
