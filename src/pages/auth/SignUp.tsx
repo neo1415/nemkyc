@@ -13,7 +13,7 @@ import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/dialog';
 import { UserPlus, Mail, CheckCircle2, Loader2 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
-import logoImage from '../../NEMs-Logo.jpg';
+// Using logo from public folder for better deployment compatibility
 
 const SignUp: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -136,7 +136,7 @@ const SignUp: React.FC = () => {
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
             <img 
-              src={logoImage} 
+              src="/NEMs-Logo.jpg" 
               alt="NEM Insurance" 
               className="w-12 h-12 object-contain rounded"
             />
