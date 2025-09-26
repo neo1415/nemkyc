@@ -1,7 +1,7 @@
 import React from 'react';
 import jsPDF from 'jspdf';
 import { FORM_MAPPINGS, FormField, FormSection } from '../../config/formMappings';
-import logoImage from '/NEMLogo (2)_page-0001.jpg';
+import logoImage from '../../assets/NEMs-Logo.jpg';
 
 export interface PDFSubmissionData {
   [key: string]: any;

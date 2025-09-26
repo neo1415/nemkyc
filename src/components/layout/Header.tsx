@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
 import { Menu, User, LogOut, FileText, Building2, Car } from 'lucide-react';
 import { Link } from 'react-router-dom';
-// Using logo from public folder for better deployment compatibility
+import logoImage from '../../assets/NEMs-Logo.jpg';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -29,14 +29,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           )}
           <Link to="/" className="flex items-center space-x-2">
             <img 
-              src="/NEMs-Logo.jpg" 
+              src={logoImage} 
               alt="NEM Insurance" 
               className="w-8 h-8 object-contain rounded"
-              onError={(e) => {
-                console.error('Logo failed to load:', e);
-                e.currentTarget.style.display = 'none';
-              }}
-              onLoad={() => console.log('Logo loaded successfully')}
             />
             <span className="text-xl font-bold text-gray-900">NEM Forms</span>
           </Link>

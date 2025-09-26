@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Calendar, Download, FileText, User, Building, CreditCard } from 'lucide-react';
 import { generateFormPDF, downloadPDF } from '@/services/pdfService';
-import logoImage from '/NEMLogo (2)_page-0001.jpg';
+import logoImage from '../../assets/NEMs-Logo.jpg';
 
 interface BrokersCDDViewerProps {
   data: any;
