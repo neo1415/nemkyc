@@ -13,7 +13,7 @@ import { LogIn, Mail, Loader2 } from 'lucide-react';
 import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import MFAModal from '../../components/auth/MFAModal';
-// Using logo from public folder for better deployment compatibility
+import logoImage from '../../assets/NEMs-Logo.jpg';
 
 const SignIn: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -175,7 +175,7 @@ const SignIn: React.FC = () => {
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
             <img 
-              src="/NEMs-Logo.jpg" 
+              src={logoImage} 
               alt="NEM Insurance" 
               className="w-12 h-12 object-contain rounded"
             />
