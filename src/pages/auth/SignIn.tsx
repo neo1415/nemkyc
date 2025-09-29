@@ -73,7 +73,20 @@ const SignIn: React.FC = () => {
       // Check for pending submission first - this takes priority over normal redirects
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
-        console.log('🎯 Pending submission detected, not redirecting to admin');
+        console.log('🎯 Pending submission detected, processing now');
+        const pendingData = JSON.parse(hasPendingSubmission);
+        
+        processPendingSubmissionUtil(user.email!, user.uid).then(() => {
+          console.log('🎯 Pending submission processed from already authenticated user, redirecting to form page');
+          // Redirect to the specific form page based on form type
+          const formPageUrl = getFormPageUrl(pendingData.formType);
+          navigate(formPageUrl, { replace: true });
+        }).catch((error) => {
+          console.error('🚨 Error processing pending submission for authenticated user:', error);
+          // Still redirect to form page even if submission failed
+          const formPageUrl = getFormPageUrl(pendingData.formType);
+          navigate(formPageUrl, { replace: true });
+        });
         return;
       }
       
