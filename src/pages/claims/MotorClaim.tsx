@@ -312,6 +312,7 @@ const MotorClaim: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [fileErrors, setFileErrors] = useState<Record<string, string>>({});
   const { 
     handleSubmitWithAuth, 
     showSuccess: authShowSuccess, 
@@ -462,7 +463,31 @@ const MotorClaim: React.FC = () => {
             </FormSelect>
             
             {formMethods.watch('policeReported') === 'yes' && (
-              <FormTextarea name="policeStationDetails" label="Police Station Details" required />
+              <div className="space-y-4 border-l-4 border-blue-500 pl-4">
+                <FormTextarea name="policeStationDetails" label="Police Station Details" required />
+                
+                <FileUpload
+                  label="Police Report"
+                  onFileSelect={(file) => {
+                    setUploadedFiles(prev => ({ ...prev, policeReport: file }));
+                    setFileErrors(prev => ({ ...prev, policeReport: '' }));
+                  }}
+                  onFileRemove={() => {
+                    setUploadedFiles(prev => {
+                      const copy = { ...prev };
+                      delete copy.policeReport;
+                      return copy;
+                    });
+                  }}
+                  currentFile={uploadedFiles.policeReport}
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  maxSize={5}
+                  error={fileErrors.policeReport}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Upload police report if available (Optional - PDF, JPG, PNG up to 5MB)
+                </p>
+              </div>
             )}
             
             <FormTextarea name="incidentDescription" label="Full description of how the incident occurred" required />
@@ -484,6 +509,31 @@ const MotorClaim: React.FC = () => {
                 <FormField name="otherDriverName" label="Driver's Name" required />
                 <FormTextarea name="otherDriverAddress" label="Driver Address" required />
                 <FormTextarea name="otherVehicleInjuryDamage" label="Injury or damage to the other vehicle" required />
+                
+                <div className="mt-6">
+                  <h5 className="font-medium text-primary mb-4">Third Party Information</h5>
+                  <FileUpload
+                    label="Third Party Vehicle Damage Photos"
+                    onFileSelect={(file) => {
+                      setUploadedFiles(prev => ({ ...prev, thirdPartyDamagePhotos: file }));
+                      setFileErrors(prev => ({ ...prev, thirdPartyDamagePhotos: '' }));
+                    }}
+                    onFileRemove={() => {
+                      setUploadedFiles(prev => {
+                        const copy = { ...prev };
+                        delete copy.thirdPartyDamagePhotos;
+                        return copy;
+                      });
+                    }}
+                    currentFile={uploadedFiles.thirdPartyDamagePhotos}
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    maxSize={5}
+                    error={fileErrors.thirdPartyDamagePhotos}
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Upload photos of the third party vehicle damage (Optional - JPG, PNG, PDF up to 5MB)
+                  </p>
+                </div>
               </div>
             )}
             

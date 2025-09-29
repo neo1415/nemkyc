@@ -332,6 +332,7 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'incidentTime', label: 'Incident Time', type: 'text', editable: true },
           { key: 'policeReported', label: 'Police Reported', type: 'text', editable: true },
           { key: 'policeStationDetails', label: 'Police Station Details', type: 'text', editable: true },
+          { key: 'policeReport', label: 'Police Report Document', type: 'file', editable: false },
           { key: 'incidentDescription', label: 'Incident Description', type: 'text', editable: true },
         ]
       },
@@ -351,6 +352,7 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'otherDriverPhone', label: 'Other Driver Phone', type: 'text', editable: true },
           { key: 'otherDriverAddress', label: 'Other Driver Address', type: 'text', editable: true },
           { key: 'otherVehicleInjuryDamage', label: 'Other Vehicle Injury/Damage', type: 'text', editable: true },
+          { key: 'thirdPartyDamagePhotos', label: 'Third Party Damage Photos', type: 'file', editable: false },
         ]
       },
       {
