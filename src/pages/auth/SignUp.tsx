@@ -66,17 +66,15 @@ const SignUp: React.FC = () => {
       // Check if there's a pending submission
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
-        const { formType } = JSON.parse(hasPendingSubmission);
-        setSubmittedFormType(formType);
+        const { formData, formType } = JSON.parse(hasPendingSubmission);
         
         // Process pending submission
         await processPendingSubmissionUtil(formData.email);
-        setShowSuccess(true);
         
-        toast({
-          title: "Form Submitted Successfully!",
-          description: `Your ${formType} has been submitted and confirmation emails have been sent.`,
-        });
+        // Redirect back to the form page to show proper success modal
+        const formPageUrl = getFormPageUrl(formType);
+        navigate(formPageUrl, { replace: true });
+        return;
       } else {
         // Navigate to dashboard for default users
         navigate('/dashboard');
@@ -108,12 +106,11 @@ const SignUp: React.FC = () => {
         
         if (currentUser?.email) {
           await processPendingSubmissionUtil(currentUser.email);
-          setShowSuccess(true);
           
-          toast({
-            title: "Form Submitted Successfully!",
-            description: `Your ${formType} has been submitted and confirmation emails have been sent.`,
-          });
+          // Redirect back to the form page to show proper success modal
+          const formPageUrl = getFormPageUrl(formType);
+          navigate(formPageUrl, { replace: true });
+          return;
         }
       } else {
         // Navigate based on user role from context
@@ -128,6 +125,39 @@ const SignUp: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to get form page URL from form type
+  const getFormPageUrl = (formType: string) => {
+    const formTypeLower = formType.toLowerCase();
+    
+    if (formTypeLower.includes('motor')) {
+      return '/claims/motor';
+    }
+    if (formTypeLower.includes('employers liability') && !formTypeLower.includes('combined')) {
+      return '/claims/employers-liability';
+    }
+    if (formTypeLower.includes('combined') && formTypeLower.includes('gpa')) {
+      return '/claims/combined-gpa-employers-liability';
+    }
+    if (formTypeLower.includes('public liability')) {
+      return '/claims/public-liability';
+    }
+    if (formTypeLower.includes('professional indemnity')) {
+      return '/claims/professional-indemnity';
+    }
+    if (formTypeLower.includes('fire')) {
+      return '/claims/fire-special-perils';
+    }
+    if (formTypeLower.includes('burglary')) {
+      return '/claims/burglary';
+    }
+    if (formTypeLower.includes('all risk') || formTypeLower.includes('allrisk')) {
+      return '/claims/all-risk';
+    }
+    
+    // Default fallback
+    return '/claims/motor';
   };
 
   return (
