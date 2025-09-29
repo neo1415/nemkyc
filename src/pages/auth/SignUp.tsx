@@ -67,9 +67,10 @@ const SignUp: React.FC = () => {
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
         const { formData, formType } = JSON.parse(hasPendingSubmission);
+        console.log('🎯 Processing pending submission after signup');
         
-        // Process pending submission
-        await processPendingSubmissionUtil(formData.email);
+        // Process pending submission with the new user's email
+        await processPendingSubmissionUtil(formData.email, result.user?.uid);
         
         // Redirect back to the form page to show proper success modal
         const formPageUrl = getFormPageUrl(formType);
@@ -105,7 +106,8 @@ const SignUp: React.FC = () => {
         const currentUser = getAuth().currentUser;
         
         if (currentUser?.email) {
-          await processPendingSubmissionUtil(currentUser.email);
+          console.log('🎯 Processing pending submission after Google signup');
+          await processPendingSubmissionUtil(currentUser.email, currentUser.uid);
           
           // Redirect back to the form page to show proper success modal
           const formPageUrl = getFormPageUrl(formType);
