@@ -28,7 +28,9 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
     <Dialog open={isOpen} onOpenChange={!isLoading ? onClose : undefined}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+          <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+            isLoading ? 'bg-white border-2 border-primary/20' : 'bg-green-100'
+          }`}>
             {isLoading ? (
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
             ) : (
@@ -46,7 +48,10 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
           {!isLoading && (
             <div className="bg-muted p-4 rounded-lg">
               <p className="text-sm">
-                <strong>For enquiries, call 01 448 9570</strong>
+                <strong>For enquiries, call 234-02-014489570</strong>
+              </p>
+              <p className="text-sm mt-2">
+                Email: <a href="mailto:claims@nem-insurance.com" className="text-primary hover:underline">claims@nem-insurance.com</a>
               </p>
             </div>
           )}

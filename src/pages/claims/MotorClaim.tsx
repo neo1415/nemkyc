@@ -740,12 +740,23 @@ const MotorClaim: React.FC = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Loading Modal */}
+        <SuccessModal
+          isOpen={authSubmitting}
+          onClose={() => {}}
+          title="Submitting Form..."
+          message="Please wait while your form is submitted"
+          formType="Motor Claim"
+          isLoading={true}
+          loadingMessage="Please wait while your form is submitted"
+        />
+
         {/* Success Modal */}
         <SuccessModal
           isOpen={authShowSuccess}
           onClose={() => setAuthShowSuccess()}
           title="Motor Claim Submitted Successfully!"
-          message="Your entry is successful with a copy sent to your email address. Our claim team will contact you shortly through your email or phone number. For further enquiry, you can reach us through claims@nem-insurance.com or call 234-02-014489570"
+          message="Your entry is successful with a copy sent to your email address. Our claim team will contact you shortly through your email or phone number."
           formType="Motor Claim"
         />
       </div>
