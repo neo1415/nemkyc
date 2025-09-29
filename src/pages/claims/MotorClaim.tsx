@@ -28,7 +28,8 @@ import SuccessModal from '@/components/common/SuccessModal';
 // Motor Claim Schema
 const motorClaimSchema = yup.object().shape({
   // Section 1: Insured Detail
-  insuredName: yup.string().required("Insured name is required"),
+  insuredSurname: yup.string().required("Insured surname is required"),
+  insuredFirstName: yup.string().required("Insured first name is required"),
   phone: yup.string().required("Phone number is required"),
   email: yup.string().email("Valid email is required").required("Email is required"),
 
@@ -102,7 +103,8 @@ interface Witness {
 
 interface MotorClaimData {
   // Section 1: Insured Detail
-  insuredName: string;
+  insuredSurname: string;
+  insuredFirstName: string;
   phone: string;
   email: string;
   
@@ -272,7 +274,8 @@ const FormDatePicker = ({ name, label, required = false }: any) => {
 
 const defaultValues: Partial<MotorClaimData> = {
   // Section 1: Insured Detail
-  insuredName: '',
+  insuredSurname: '',
+  insuredFirstName: '',
   phone: '',
   email: '',
   
@@ -402,7 +405,7 @@ const MotorClaim: React.FC = () => {
 
   // Step field mappings for validation
   const stepFieldMappings = {
-    0: ['insuredName', 'phone', 'email'], // Section 1: Insured Detail
+    0: ['insuredSurname', 'insuredFirstName', 'phone', 'email'], // Section 1: Insured Detail
     1: ['registrationNumber', 'policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'trailerAttached'], // Section 2: Vehicle Details  
     2: ['incidentLocation', 'incidentDate', 'incidentTime', 'policeReported', 'policeStationDetails', 'incidentDescription', 'otherVehicleInvolved', 'otherVehicleRegNumber', 'otherVehicleMake', 'otherDriverName', 'otherDriverAddress', 'otherVehicleInjuryDamage', 'witnesses'], // Section 3: Incident Details
     3: ['agreeToDataPrivacy', 'declarationTrue', 'signature'] // Declaration
@@ -415,7 +418,10 @@ const MotorClaim: React.FC = () => {
       component: (
         <FormProvider {...formMethods}>
           <div className="space-y-4">
-            <FormField name="insuredName" label="Insured Name" required />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField name="insuredSurname" label="Insured (Surname first)" required />
+              <FormField name="insuredFirstName" label="First Name" required />
+            </div>
             <FormField name="phone" label="Phone Number" required />
             <FormField name="email" label="Email Address" required />
           </div>
@@ -688,20 +694,180 @@ const MotorClaim: React.FC = () => {
 
         {/* Confirmation Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Confirm Your Motor Claim Submission</DialogTitle>
+              <DialogTitle>Review Your Motor Claim Submission</DialogTitle>
             </DialogHeader>
             
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Policy Number:</span>
-                  <p>{watchedValues.policyNumber}</p>
+            <div className="space-y-6">
+              {/* Section 1: Insured Details */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Insured Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">Surname:</span>
+                    <p className="text-gray-900">{watchedValues.insuredSurname || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">First Name:</span>
+                    <p className="text-gray-900">{watchedValues.insuredFirstName || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Phone Number:</span>
+                    <p className="text-gray-900">{watchedValues.phone || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Email:</span>
+                    <p className="text-gray-900">{watchedValues.email || 'Not provided'}</p>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-medium">Insured Name:</span>
-                  <p>{watchedValues.insuredName}</p>
+              </div>
+
+              {/* Section 2: Vehicle Details */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Vehicle Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">Registration Number:</span>
+                    <p className="text-gray-900">{watchedValues.registrationNumber || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Policy Number:</span>
+                    <p className="text-gray-900">{watchedValues.policyNumber || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Cover Period From:</span>
+                    <p className="text-gray-900">{watchedValues.periodOfCoverFrom ? format(new Date(watchedValues.periodOfCoverFrom), 'dd/MM/yyyy') : 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Cover Period To:</span>
+                    <p className="text-gray-900">{watchedValues.periodOfCoverTo ? format(new Date(watchedValues.periodOfCoverTo), 'dd/MM/yyyy') : 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Trailer Attached:</span>
+                    <p className="text-gray-900 capitalize">{watchedValues.trailerAttached || 'Not provided'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Incident Details */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Incident Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">Incident Location:</span>
+                    <p className="text-gray-900">{watchedValues.incidentLocation || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Incident Date:</span>
+                    <p className="text-gray-900">{watchedValues.incidentDate ? format(new Date(watchedValues.incidentDate), 'dd/MM/yyyy') : 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Incident Time:</span>
+                    <p className="text-gray-900">{watchedValues.incidentTime || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Police Reported:</span>
+                    <p className="text-gray-900 capitalize">{watchedValues.policeReported || 'Not provided'}</p>
+                  </div>
+                  {watchedValues.policeReported === 'yes' && (
+                    <>
+                      <div className="md:col-span-2">
+                        <span className="font-medium text-gray-600">Police Station Details:</span>
+                        <p className="text-gray-900">{watchedValues.policeStationDetails || 'Not provided'}</p>
+                      </div>
+                      {uploadedFiles.policeReport && (
+                        <div className="md:col-span-2">
+                          <span className="font-medium text-gray-600">Police Report:</span>
+                          <p className="text-gray-900">{uploadedFiles.policeReport.name}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <div className="md:col-span-2">
+                    <span className="font-medium text-gray-600">Incident Description:</span>
+                    <p className="text-gray-900">{watchedValues.incidentDescription || 'Not provided'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Other Vehicle Details */}
+              {watchedValues.otherVehicleInvolved === 'yes' && (
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Other Vehicle Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Registration Number:</span>
+                      <p className="text-gray-900">{watchedValues.otherVehicleRegNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Make:</span>
+                      <p className="text-gray-900">{watchedValues.otherVehicleMake || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Driver Name:</span>
+                      <p className="text-gray-900">{watchedValues.otherDriverName || 'Not provided'}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <span className="font-medium text-gray-600">Driver Address:</span>
+                      <p className="text-gray-900">{watchedValues.otherDriverAddress || 'Not provided'}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <span className="font-medium text-gray-600">Injury/Damage to Other Vehicle:</span>
+                      <p className="text-gray-900">{watchedValues.otherVehicleInjuryDamage || 'Not provided'}</p>
+                    </div>
+                    {uploadedFiles.thirdPartyDamagePhotos && (
+                      <div className="md:col-span-2">
+                        <span className="font-medium text-gray-600">Third Party Damage Photos:</span>
+                        <p className="text-gray-900">{uploadedFiles.thirdPartyDamagePhotos.name}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Witnesses */}
+              {watchedValues.witnesses && watchedValues.witnesses.length > 0 && (
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Eye Witnesses</h3>
+                  {watchedValues.witnesses.map((witness: any, index: number) => (
+                    <div key={index} className="border-l-4 border-blue-200 pl-4 mb-4">
+                      <h4 className="font-medium text-gray-800 mb-2">Witness {index + 1}</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium text-gray-600">Name:</span>
+                          <p className="text-gray-900">{witness.name || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Phone:</span>
+                          <p className="text-gray-900">{witness.phone || 'Not provided'}</p>
+                        </div>
+                        <div className="md:col-span-2">
+                          <span className="font-medium text-gray-600">Address:</span>
+                          <p className="text-gray-900">{witness.address || 'Not provided'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Declaration */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Declaration</h3>
+                <div className="grid grid-cols-1 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">Data Privacy Agreement:</span>
+                    <p className="text-gray-900">{watchedValues.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Declaration Acceptance:</span>
+                    <p className="text-gray-900">{watchedValues.declarationTrue ? 'Agreed' : 'Not agreed'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Digital Signature:</span>
+                    <p className="text-gray-900">{watchedValues.signature || 'Not provided'}</p>
+                  </div>
                 </div>
               </div>
               
