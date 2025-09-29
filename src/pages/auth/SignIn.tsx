@@ -37,10 +37,17 @@ const SignIn: React.FC = () => {
       // Check if there's a pending submission
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
+        console.log('🎯 Processing pending submission for authenticated user');
         // Process pending submission and redirect back to original form page
         const pendingData = JSON.parse(hasPendingSubmission);
-        processPendingSubmissionUtil(user.email!).then(() => {
+        processPendingSubmissionUtil(user.email!, user.uid).then(() => {
+          console.log('🎯 Pending submission processed, redirecting to form page');
           // Redirect to the specific form page based on form type
+          const formPageUrl = getFormPageUrl(pendingData.formType);
+          navigate(formPageUrl, { replace: true });
+        }).catch((error) => {
+          console.error('🚨 Error processing pending submission:', error);
+          // Still redirect to form page even if submission failed
           const formPageUrl = getFormPageUrl(pendingData.formType);
           navigate(formPageUrl, { replace: true });
         });
