@@ -63,7 +63,14 @@ const SignIn: React.FC = () => {
     if (user && !loading && !mfaRequired && !mfaEnrollmentRequired && !emailVerificationRequired) {
       console.log('🎯 User already authenticated, checking for redirect');
       
-      // Normal sign-in flow - role-based navigation
+      // Check for pending submission first - this takes priority over normal redirects
+      const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
+      if (hasPendingSubmission) {
+        console.log('🎯 Pending submission detected, not redirecting to admin');
+        return;
+      }
+      
+      // Normal sign-in flow - role-based navigation only if no pending submission
       if (['admin', 'super admin', 'compliance', 'claims'].includes(user.role)) {
         console.log('🎯 Admin user already authenticated, redirecting to /admin');
         navigate('/admin', { replace: true });
