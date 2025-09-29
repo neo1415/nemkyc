@@ -306,14 +306,17 @@ export const FORM_MAPPINGS: FormMapping = {
       {
         title: 'Insured Details',
         fields: [
-          { key: 'nameCompany', label: 'Name / Company Name', type: 'text', editable: true },
-          { key: 'title', label: 'Title', type: 'text', editable: true },
-          { key: 'dateOfBirth', label: 'Date of Birth', type: 'date', editable: true },
-          // { key: 'gender', label: 'Gender', type: 'text', editable: true }, // REMOVED as requested
-          // { key: 'address', label: 'Address', type: 'text', editable: true }, // REMOVED as requested
+          { key: 'insuredSurname', label: 'Insured (Surname)', type: 'text', editable: true },
+          { key: 'insuredFirstName', label: 'Insured (First Name)', type: 'text', editable: true },
           { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
           { key: 'email', label: 'Email', type: 'email', editable: true },
-          { key: 'registrationNumber', label: 'Vehicle Registration Number', type: 'text', editable: true }, // MOVED from vehicle details
+        ]
+      },
+      {
+        title: 'Vehicle Details',
+        fields: [
+          { key: 'registrationNumber', label: 'Vehicle Registration Number', type: 'text', editable: true },
+          { key: 'trailerAttached', label: 'Trailer Attached', type: 'text', editable: true },
         ]
       },
       // VEHICLE DETAILS SECTION REMOVED ENTIRELY
