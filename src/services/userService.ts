@@ -1,4 +1,3 @@
-// Backend user service - migrated from direct Firebase to backend API calls
 import { toast } from 'sonner';
 
 const API_BASE_URL = 'https://nem-server-rhdb.onrender.com';
@@ -68,7 +67,7 @@ export const getAllUsers = async (): Promise<UserRole[]> => {
 };
 
 // Update user role via backend with event logging
-export const updateUserRole = async (userId: string, newRole: string): Promise<void> => {
+export const updateUserRole = async (userId: string, newRole: string, updaterUid?: string): Promise<void> => {
   try {
     console.log(`📤 Updating user role via backend: ${userId} to ${newRole}`);
     
@@ -77,7 +76,7 @@ export const updateUserRole = async (userId: string, newRole: string): Promise<v
       'PUT',
       { 
         role: newRole,
-        updaterUid: 'current-user' // This should be actual user UID from context
+        updaterUid: updaterUid || 'anonymous'
       }
     );
 
@@ -96,7 +95,7 @@ export const updateUserRole = async (userId: string, newRole: string): Promise<v
 };
 
 // Delete user via backend with event logging
-export const deleteUser = async (userId: string, userName: string): Promise<void> => {
+export const deleteUser = async (userId: string, userName: string, deleterUid?: string): Promise<void> => {
   try {
     console.log(`📤 Deleting user via backend: ${userId} (${userName})`);
     
@@ -104,7 +103,7 @@ export const deleteUser = async (userId: string, userName: string): Promise<void
       `${API_BASE_URL}/api/users/${userId}`,
       'DELETE',
       {
-        deleterUid: 'current-user', // This should be actual user UID from context
+        deleterUid: deleterUid || 'anonymous',
         userName
       }
     );
