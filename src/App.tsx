@@ -6,6 +6,7 @@ import Layout from './components/layout/Layout';
 import Index from './pages/Index';
 import SignIn from './pages/auth/SignIn';
 import SignUp from './pages/auth/SignUp';
+import ResetPassword from './pages/auth/ResetPassword';
 import UserDashboard from './pages/dashboard/UserDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import ClaimsForms from './pages/claims/ClaimsForms';
@@ -111,6 +112,7 @@ function App() {
               {/* Auth routes with /auth prefix */}
               <Route path="auth/signin" element={<SignIn />} />
               <Route path="auth/signup" element={<SignUp />} />
+              <Route path="auth/reset-password" element={<ResetPassword />} />
               
               {/* MFA Routes */}
               <Route path="auth/mfa/enroll" element={<MFAEnrollment />} />
