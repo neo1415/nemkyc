@@ -102,84 +102,8 @@ const AdminUsersTable: React.FC = () => {
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      console.log('Starting role change for user:', userId, 'to role:', newRole);
-      const serverUrl = 'https://nem-server-rhdb.onrender.com';
-      
-      // Get CSRF token
-      console.log('Fetching CSRF token...');
-      const csrfRes = await fetch(`${serverUrl}/csrf-token`, { 
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      
-      if (!csrfRes.ok) {
-        console.error('CSRF token fetch failed:', csrfRes.status, csrfRes.statusText);
-        throw new Error(`Failed to fetch CSRF token: ${csrfRes.status}`);
-      }
-      
-      const { csrfToken } = await csrfRes.json();
-      console.log('CSRF token fetched successfully');
-      
-      // Get Firebase ID token
-      if (!firebaseUser) {
-        throw new Error('User not authenticated');
-      }
-      
-      const firebaseToken = await firebaseUser.getIdToken();
-      
-      // Prepare headers with authentication and CSRF
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${firebaseToken}`,
-        'CSRF-Token': csrfToken,
-        'X-Timestamp': Date.now().toString(),
-      };
-      
-      // Update in Firestore via server
-      const updateResponse = await fetch(`${serverUrl}/update-user-role/${userId}`, {
-        method: 'POST',
-        credentials: 'include',
-        headers,
-        body: JSON.stringify({ role: newRole }),
-      });
-
-      if (!updateResponse.ok) {
-        throw new Error('Failed to update role in Firestore');
-      }
-
-      // Set custom claims via server based on role
-      let roleEndpoint = '';
-      switch (newRole) {
-        case 'super admin':
-          roleEndpoint = 'assign-super-admin-role';
-          break;
-        case 'admin':
-          roleEndpoint = 'assign-admin-role';
-          break;
-        case 'compliance':
-          roleEndpoint = 'assign-compliance-role';
-          break;
-        case 'claims':
-          roleEndpoint = 'assign-claims-role';
-          break;
-        case 'default':
-          roleEndpoint = 'assign-default-role';
-          break;
-        default:
-          roleEndpoint = 'assign-default-role';
-      }
-
-      const claimsResponse = await fetch(`${serverUrl}/${roleEndpoint}/${userId}`, {
-        method: 'POST',
-        credentials: 'include',
-        headers,
-      });
-
-      // Use backend service for role update
-      await updateUserRole(userId, newRole);
+      // Use backend service for role update - it handles CSRF, auth, and logging
+      await updateUserRole(userId, newRole, firebaseUser?.uid);
 
       // Update local state optimistically
       const now = new Date();
@@ -207,55 +131,9 @@ const AdminUsersTable: React.FC = () => {
   };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
-    // Show confirmation dialog
-    const confirmed = window.confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`);
-    
-    if (!confirmed) {
-      return;
-    }
-
     try {
-      const serverUrl = 'https://nem-server-rhdb.onrender.com';
-      
-      // Get CSRF token
-      const csrfRes = await fetch(`${serverUrl}/csrf-token`, { 
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      
-      if (!csrfRes.ok) {
-        throw new Error(`Failed to fetch CSRF token: ${csrfRes.status}`);
-      }
-      
-      const { csrfToken } = await csrfRes.json();
-      
-      // Get Firebase ID token
-      if (!firebaseUser) {
-        throw new Error('User not authenticated');
-      }
-      
-      const firebaseToken = await firebaseUser.getIdToken();
-      
-      // Prepare headers with authentication and CSRF
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${firebaseToken}`,
-        'CSRF-Token': csrfToken,
-        'X-Timestamp': Date.now().toString(),
-      };
-
-      // Delete from Firebase Auth via server
-      const deleteAuthResponse = await fetch(`${serverUrl}/delete-user/${userId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers,
-      });
-
-      // Use backend service for user deletion
-      await deleteUser(userId, user.name);
+      // Use backend service for user deletion - it handles CSRF, auth, and logging
+      await deleteUser(userId, userName, firebaseUser?.uid);
       
       // Update local state
       setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
