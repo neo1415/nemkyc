@@ -1,6 +1,5 @@
 # Project  Implementation Instructions
 
-# Overview
 
 This application is a highly professional, production-grade insurance form suite. You will be designing **multi-step** forms based on the specifications provided. Please read and respect every detail here to ensure the forms are functional, responsive, secure, and precise.
 
