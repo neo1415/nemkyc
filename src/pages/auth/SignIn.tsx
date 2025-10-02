@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -289,11 +288,18 @@ const SignIn: React.FC = () => {
             </Button>
           </div>
 
-          <div className="mt-4 text-center text-sm">
-            Don't have an account?{' '}
-            <Link to="/auth/signup" className="text-red-900 hover:underline font-medium">
-              Sign up
-            </Link>
+          <div className="mt-4 text-center text-sm space-y-2">
+            <div>
+              Don't have an account?{' '}
+              <Link to="/auth/signup" className="text-red-900 hover:underline font-medium">
+                Sign up
+              </Link>
+            </div>
+            <div>
+              <Link to="/auth/reset-password" className="text-red-900 hover:underline font-medium">
+                Forgot password?
+              </Link>
+            </div>
           </div>
         </CardContent>
       </Card>
