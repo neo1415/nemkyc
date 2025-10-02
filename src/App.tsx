@@ -7,6 +7,7 @@ import Index from './pages/Index';
 import SignIn from './pages/auth/SignIn';
 import SignUp from './pages/auth/SignUp';
 import ResetPassword from './pages/auth/ResetPassword';
+import ResetPasswordConfirm from './pages/auth/ResetPasswordConfirm';
 import UserDashboard from './pages/dashboard/UserDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import ClaimsForms from './pages/claims/ClaimsForms';
@@ -113,6 +114,9 @@ function App() {
               <Route path="auth/signin" element={<SignIn />} />
               <Route path="auth/signup" element={<SignUp />} />
               <Route path="auth/reset-password" element={<ResetPassword />} />
+              
+              {/* Password reset confirmation from email link */}
+              <Route path="resetpassword" element={<ResetPasswordConfirm />} />
               
               {/* MFA Routes */}
               <Route path="auth/mfa/enroll" element={<MFAEnrollment />} />
