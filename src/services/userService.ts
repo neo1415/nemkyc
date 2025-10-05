@@ -47,8 +47,9 @@ export const getAllUsers = async (): Promise<UserRole[]> => {
   try {
     console.log('📤 Fetching users from backend');
     
+    // Backend will verify session token from cookies - no need to pass viewerUid
     const response = await makeAuthenticatedRequest(
-      `${API_BASE_URL}/api/users?viewerUid=current-user`
+      `${API_BASE_URL}/api/users`
     );
 
     if (!response.ok) {
@@ -67,17 +68,15 @@ export const getAllUsers = async (): Promise<UserRole[]> => {
 };
 
 // Update user role via backend with event logging
-export const updateUserRole = async (userId: string, newRole: string, updaterUid?: string): Promise<void> => {
+export const updateUserRole = async (userId: string, newRole: string): Promise<void> => {
   try {
     console.log(`📤 Updating user role via backend: ${userId} to ${newRole}`);
     
+    // Backend will verify session token and extract updater UID from there
     const response = await makeAuthenticatedRequest(
       `${API_BASE_URL}/api/users/${userId}/role`,
       'PUT',
-      { 
-        role: newRole,
-        updaterUid: updaterUid || 'anonymous'
-      }
+      { role: newRole }
     );
 
     if (!response.ok) {
@@ -95,17 +94,15 @@ export const updateUserRole = async (userId: string, newRole: string, updaterUid
 };
 
 // Delete user via backend with event logging
-export const deleteUser = async (userId: string, userName: string, deleterUid?: string): Promise<void> => {
+export const deleteUser = async (userId: string, userName: string): Promise<void> => {
   try {
     console.log(`📤 Deleting user via backend: ${userId} (${userName})`);
     
+    // Backend will verify session token and extract deleter UID from there
     const response = await makeAuthenticatedRequest(
       `${API_BASE_URL}/api/users/${userId}`,
       'DELETE',
-      {
-        deleterUid: deleterUid || 'anonymous',
-        userName
-      }
+      { userName }
     );
 
     if (!response.ok) {
