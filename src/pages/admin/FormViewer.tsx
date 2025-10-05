@@ -449,21 +449,26 @@ const FormViewer: React.FC = () => {
       setStatus(pendingStatus);
       setFormData(prev => prev ? { ...prev, status: pendingStatus } : null);
       
-      // Send email notification if user email is available
+      // Send email notification to the person who submitted the form
       console.log('📧 Starting email notification process...');
-      console.log('📧 User email:', formData?.email);
+      console.log('📧 Submitted by:', formData?.submittedBy);
+      console.log('📧 Form email field:', formData?.email);
       console.log('📝 Collection:', collection);
       console.log('📊 Status:', pendingStatus);
       
-      if (formData?.email) {
+      // Use submittedBy first (the user who submitted), fallback to form email field
+      const recipientEmail = formData?.submittedBy || formData?.email;
+      
+      if (recipientEmail) {
         try {
           const formType = collection?.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
           console.log('📝 Form type formatted:', formType);
           console.log('👤 User name:', formData.fullName || formData.firstName || formData.name);
+          console.log('📧 Sending to:', recipientEmail);
           
           console.log('📤 Calling sendStatusUpdateNotification...');
           await sendStatusUpdateNotification(
-            formData.email, 
+            recipientEmail, 
             formType, 
             pendingStatus,
             formData.fullName || formData.firstName || formData.name
@@ -475,7 +480,7 @@ const FormViewer: React.FC = () => {
           // Don't fail the status update if email fails
         }
       } else {
-        console.log('⚠️ No email address found in form data');
+        console.log('⚠️ No submitter email found in form data');
         console.log('📋 Available form data keys:', Object.keys(formData));
       }
       
