@@ -1,4 +1,6 @@
 import { toast } from 'sonner';
+import { auth } from '../firebase/config';
+import { exchangeToken } from './authService';
 
 const API_BASE_URL = 'https://nem-server-rhdb.onrender.com';
 
@@ -20,26 +22,50 @@ const getCSRFToken = async (): Promise<string> => {
   return data.csrfToken;
 };
 
-// Helper function to make authenticated requests
+// Helper function to make authenticated requests (with auto session refresh)
 const makeAuthenticatedRequest = async (url: string, method: string = 'GET', data?: any) => {
-  const csrfToken = await getCSRFToken();
-  const timestamp = Date.now().toString();
-  
-  const config: RequestInit = {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      'CSRF-Token': csrfToken,
-      'x-timestamp': timestamp,
-    },
-    credentials: 'include',
+  const doFetch = async () => {
+    const csrfToken = await getCSRFToken();
+    const timestamp = Date.now().toString();
+
+    const config: RequestInit = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'CSRF-Token': csrfToken,
+        'x-timestamp': timestamp,
+      },
+      credentials: 'include',
+    };
+
+    if (data && method !== 'GET') {
+      config.body = JSON.stringify(data);
+    }
+
+    return fetch(url, config);
   };
 
-  if (data && method !== 'GET') {
-    config.body = JSON.stringify(data);
+  // First attempt
+  let response = await doFetch();
+  if (response.status !== 401) {
+    return response;
   }
 
-  return fetch(url, config);
+  // If unauthorized due to missing/expired session, refresh backend session once
+  try {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      return response; // Not logged in on client, propagate 401
+    }
+    const idToken = await currentUser.getIdToken(true);
+    await exchangeToken(idToken); // sets fresh httpOnly session cookie
+
+    // Retry once with a fresh CSRF token
+    response = await doFetch();
+    return response;
+  } catch (err) {
+    return response;
+  }
 };
 
 // Get all users from backend with event logging
