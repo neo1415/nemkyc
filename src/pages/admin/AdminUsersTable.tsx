@@ -102,8 +102,8 @@ const AdminUsersTable: React.FC = () => {
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      // Use backend service for role update - it handles CSRF, auth, and logging
-      await updateUserRole(userId, newRole, firebaseUser?.uid);
+      // Backend verifies session token and extracts updater UID automatically
+      await updateUserRole(userId, newRole);
 
       // Update local state optimistically
       const now = new Date();
@@ -132,8 +132,8 @@ const AdminUsersTable: React.FC = () => {
 
   const handleDeleteUser = async (userId: string, userName: string) => {
     try {
-      // Use backend service for user deletion - it handles CSRF, auth, and logging
-      await deleteUser(userId, userName, firebaseUser?.uid);
+      // Backend verifies session token and extracts deleter UID automatically
+      await deleteUser(userId, userName);
       
       // Update local state
       setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
