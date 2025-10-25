@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const API_BASE_URL = 'https://nem-server-rhdb.onrender.com';
 
@@ -12,27 +13,43 @@ interface PendingSubmission {
 
 // Helper function to get CSRF token
 const getCSRFToken = async (): Promise<string> => {
-  const response = await fetch(`${API_BASE_URL}/csrf-token`, {
-    credentials: 'include',
-  });
-  const data = await response.json();
-  return data.csrfToken;
+  const attempts = 3;
+  let lastError: any = null;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/csrf-token`, { credentials: 'include' });
+      if (!response.ok) throw new Error(`CSRF fetch failed: ${response.status}`);
+      const data = await response.json();
+      if (!data?.csrfToken) throw new Error('Missing CSRF token');
+      return data.csrfToken;
+    } catch (err) {
+      lastError = err;
+      await new Promise(res => setTimeout(res, 500 * Math.pow(2, i)));
+    }
+  }
+  throw lastError || new Error('Unable to fetch CSRF token');
 };
 
 // Helper function to make authenticated requests
 const makeAuthenticatedRequest = async (url: string, data: any, method: string = 'POST') => {
   const csrfToken = await getCSRFToken();
   const timestamp = Date.now().toString();
-  
+  const idempotencyKey =
+    data?.idempotencyKey ||
+    sessionStorage.getItem('pendingSubmissionKey') ||
+    `idemp_${timestamp}_${Math.random().toString(36).slice(2, 8)}`;
+
   return fetch(url, {
     method,
     headers: {
       'Content-Type': 'application/json',
       'CSRF-Token': csrfToken,
       'x-timestamp': timestamp,
+      'x-idempotency-key': idempotencyKey,
+      'x-request-id': idempotencyKey,
     },
     credentials: 'include',
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, idempotencyKey }),
   });
 };
 
