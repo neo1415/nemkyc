@@ -21,6 +21,41 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
     return value;
   };
 
+  // Helper function to format dates and timestamps
+  const formatDate = (timestamp: any): string => {
+    if (!timestamp) return 'N/A';
+    
+    try {
+      let dateObj: Date;
+      
+      // Handle Firebase Timestamp objects
+      if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+        dateObj = timestamp.toDate();
+      } else if (typeof timestamp === 'string') {
+        // If already formatted as DD/MM/YYYY, return as-is
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(timestamp)) {
+          return timestamp;
+        }
+        dateObj = new Date(timestamp);
+      } else if (timestamp instanceof Date) {
+        dateObj = timestamp;
+      } else if (timestamp.seconds) {
+        // Handle Firebase Timestamp-like objects with seconds property
+        dateObj = new Date(timestamp.seconds * 1000);
+      } else {
+        return 'N/A';
+      }
+
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = String(dateObj.getFullYear());
+      
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      return 'N/A';
+    }
+  };
+
   // Helper function to extract directors data (handles both legacy and new formats)
   const extractDirectorsData = (data: any) => {
     const directors: any[] = [];
@@ -244,7 +279,7 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Date of Incorporation</p>
-                <p className="font-medium">{formatValue(data.dateOfIncorporationRegistration)}</p>
+                <p className="font-medium">{formatDate(data.dateOfIncorporationRegistration)}</p>
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">BVN Number</p>
@@ -314,7 +349,7 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
                       </div>
                       <div>
                         <p className="font-medium text-sm text-muted-foreground">Date of Birth</p>
-                        <p className="font-medium">{formatValue(director.dob)}</p>
+                        <p className="font-medium">{formatDate(director.dob)}</p>
                       </div>
                       <div>
                         <p className="font-medium text-sm text-muted-foreground">Place of Birth</p>
@@ -374,11 +409,11 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
                       </div>
                       <div>
                         <p className="font-medium text-sm text-muted-foreground">Issued Date</p>
-                        <p className="font-medium">{formatValue(director.issuedDate)}</p>
+                        <p className="font-medium">{formatDate(director.issuedDate)}</p>
                       </div>
                       <div>
                         <p className="font-medium text-sm text-muted-foreground">Expiry Date</p>
-                        <p className="font-medium">{formatValue(director.expiryDate)}</p>
+                        <p className="font-medium">{formatDate(director.expiryDate)}</p>
                       </div>
                       <div>
                         <p className="font-medium text-sm text-muted-foreground">Source of Income</p>
@@ -450,7 +485,7 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Submitted At</p>
-                <p className="font-medium">{formatValue(data.submittedAt || data.createdAt)}</p>
+                <p className="font-medium">{formatDate(data.submittedAt || data.createdAt || data.timestamp)}</p>
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Signature</p>
