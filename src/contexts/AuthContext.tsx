@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User as FirebaseUser, 
@@ -12,7 +11,8 @@ import {
   PhoneAuthProvider,
   PhoneMultiFactorGenerator,
   sendEmailVerification as firebaseSendEmailVerification,
-  reload
+  reload,
+  RecaptchaVerifier
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
@@ -201,8 +201,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
     } catch (error: any) {
       console.error('Sign in error:', error);
+      // Reset all MFA/verification flags on error
       setMfaRequired(false);
       setMfaEnrollmentRequired(false);
+      setEmailVerificationRequired(false);
+      setFirebaseUser(null);
       
       // Handle MFA resolver if needed
       if (error.code === 'auth/multi-factor-auth-required') {
@@ -212,15 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      if (error.code === 'auth/user-not-found') {
-        throw new Error('No account found with this email address');
-      } else if (error.code === 'auth/wrong-password') {
-        throw new Error('Incorrect password');
-      } else if (error.code === 'auth/invalid-email') {
-        throw new Error('Invalid email address');
-      } else if (error.code === 'auth/too-many-requests') {
-        throw new Error('Too many failed attempts. Please try again later');
-      }
+      // Re-throw the error with proper structure so SignIn component can handle it
       throw error;
     } finally {
       setLoading(false);
@@ -412,14 +407,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const phoneNumber = userDoc.data().phone;
       
       // Initialize reCAPTCHA if not already done
-      if (!(window as any).recaptchaVerifier) {
-        (window as any).recaptchaVerifier = new (window as any).firebase.auth.RecaptchaVerifier('recaptcha-container', {
-          size: 'invisible',
-          callback: () => {
-            console.log('reCAPTCHA solved');
-          }
-        });
-      }
+        if (!(window as any).recaptchaVerifier) {
+          (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            size: 'invisible',
+            callback: () => {
+              console.log('reCAPTCHA solved');
+            }
+          });
+        }
 
       const session = await multiFactor(firebaseUser).getSession();
       const phoneInfoOptions = {
