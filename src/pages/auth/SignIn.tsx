@@ -9,10 +9,54 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Label } from '../../components/ui/label';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { LogIn, Mail, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import MFAModal from '../../components/auth/MFAModal';
 import logoImage from '../../assets/NEMs-Logo.jpg';
+
+// Helper function to translate Firebase errors to user-friendly messages
+const getErrorMessage = (error: any): string => {
+  // Handle nested error structure from Firebase
+  const errorCode = error?.code || error?.value?.code || '';
+  const errorMessage = error?.message || error?.value?.message || '';
+
+  console.log('Processing error:', { errorCode, errorMessage, fullError: error });
+
+  // Firebase Auth errors
+  if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/wrong-password') {
+    return 'The email or password you entered is incorrect. Please try again.';
+  }
+  if (errorCode === 'auth/user-not-found') {
+    return 'No account found with this email address. Please check your email or sign up for a new account.';
+  }
+  if (errorCode === 'auth/invalid-email') {
+    return 'Please enter a valid email address.';
+  }
+  if (errorCode === 'auth/user-disabled') {
+    return 'This account has been disabled. Please contact support for assistance.';
+  }
+  if (errorCode === 'auth/too-many-requests') {
+    return 'Too many failed login attempts. Please wait a few minutes and try again, or reset your password.';
+  }
+  if (errorCode === 'auth/network-request-failed') {
+    return 'Network connection error. Please check your internet connection and try again.';
+  }
+  if (errorCode === 'auth/operation-not-allowed') {
+    return 'This sign-in method is not enabled. Please contact support.';
+  }
+
+  // Network and server errors
+  if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('fetch')) {
+    return 'Unable to connect to the server. Please check your internet connection and try again.';
+  }
+  if (errorMessage.toLowerCase().includes('timeout')) {
+    return 'The request took too long. Please check your connection and try again.';
+  }
+
+  // Default user-friendly message
+  return 'Unable to sign in. Please check your credentials and try again. If the problem persists, contact support.';
+};
 
 const SignIn: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -20,6 +64,7 @@ const SignIn: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [shouldRedirect, setShouldRedirect] = useState(false);
+  const [loginError, setLoginError] = useState(false);
   
   const { user, signIn, signInWithGoogle, mfaRequired, mfaEnrollmentRequired, emailVerificationRequired } = useAuth();
   const navigate = useNavigate();
@@ -66,7 +111,8 @@ const SignIn: React.FC = () => {
 
   // Additional effect to handle immediate redirect when user is already authenticated
   useEffect(() => {
-    if (user && !loading && !mfaRequired && !mfaEnrollmentRequired && !emailVerificationRequired) {
+    // Don't redirect if there was a login error
+    if (user && !loading && !mfaRequired && !mfaEnrollmentRequired && !emailVerificationRequired && !loginError) {
       console.log('🎯 User already authenticated, checking for redirect');
       
       // Check for pending submission first - this takes priority over normal redirects
@@ -95,7 +141,21 @@ const SignIn: React.FC = () => {
         navigate('/admin', { replace: true });
       }
     }
-  }, [user, loading, mfaRequired, mfaEnrollmentRequired, emailVerificationRequired, navigate]);
+  }, [user, loading, mfaRequired, mfaEnrollmentRequired, emailVerificationRequired, loginError, navigate]);
+
+  // Persisted auth error handling - show after redirects
+  useEffect(() => {
+    const authErr = sessionStorage.getItem('authError');
+    const submissionErr = sessionStorage.getItem('submissionError');
+    const message = submissionErr || authErr;
+    if (message) {
+      setError(message);
+      setLoginError(true);
+      toast.error(message);
+      sessionStorage.removeItem('authError');
+      sessionStorage.removeItem('submissionError');
+    }
+  }, []);
 
   // Helper function to get form page URL from form type
   const getFormPageUrl = (formType: string) => {
@@ -150,7 +210,24 @@ const SignIn: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Clear any previous errors and reset error flag
     setError('');
+    setLoginError(false);
+    
+    // Client-side validation
+    if (!email || !password) {
+      setError('Please enter both email and password.');
+      setLoginError(true);
+      return;
+    }
+
+    if (!email.includes('@')) {
+      setError('Please enter a valid email address.');
+      setLoginError(true);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -161,22 +238,34 @@ const SignIn: React.FC = () => {
       // If we reach here and no MFA/email verification is required, authentication was successful
       if (!mfaRequired && !mfaEnrollmentRequired && !emailVerificationRequired) {
         console.log('🚀 Sign in successful, setting redirect flag');
+        // Clear error flag on successful login
+        setLoginError(false);
         // Set flag to trigger redirect after user state is updated
         setShouldRedirect(true);
       } else {
         console.log('🔒 MFA/Email verification required:', { mfaRequired, mfaEnrollmentRequired, emailVerificationRequired });
       }
+      setLoading(false);
       // If MFA or email verification is required, the modal will handle the flow
       
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in');
-    } finally {
       setLoading(false);
+      setLoginError(true); // Mark that a login error occurred
+      console.error('Sign in error:', err);
+      const friendlyError = getErrorMessage(err);
+      console.log('Friendly error message:', friendlyError);
+      setError(friendlyError);
+      // Persist error so it survives redirects
+      sessionStorage.setItem('authError', friendlyError);
+      
+      // Show toast notification as well for better visibility
+      toast.error(friendlyError);
     }
   };
 
   const handleGoogleSignIn = async () => {
     setError('');
+    setLoginError(false);
     setLoading(true);
 
     try {
@@ -185,13 +274,22 @@ const SignIn: React.FC = () => {
       
       // If no MFA or email verification is required, set flag to trigger redirect after user state is updated
       if (!mfaRequired && !mfaEnrollmentRequired && !emailVerificationRequired) {
+        setLoginError(false);
         setShouldRedirect(true);
       }
+      setLoading(false);
       
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google');
-    } finally {
       setLoading(false);
+      setLoginError(true);
+      console.error('Google sign in error:', err);
+      const friendlyError = getErrorMessage(err);
+      setError(friendlyError);
+      // Persist error so it survives redirects
+      sessionStorage.setItem('authError', friendlyError);
+      
+      // Show toast notification as well
+      toast.error(friendlyError);
     }
   };
 
@@ -214,7 +312,7 @@ const SignIn: React.FC = () => {
         <CardContent>
           {error && (
             <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription className="text-sm">{error}</AlertDescription>
             </Alert>
           )}
           
@@ -226,8 +324,12 @@ const SignIn: React.FC = () => {
                 type="email"
                 placeholder="Enter your email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) setError(''); // Clear error when user starts typing
+                }}
                 required
+                disabled={loading}
               />
             </div>
             
@@ -238,8 +340,12 @@ const SignIn: React.FC = () => {
                 type="password"
                 placeholder="Enter your password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (error) setError(''); // Clear error when user starts typing
+                }}
                 required
+                disabled={loading}
               />
             </div>
 
