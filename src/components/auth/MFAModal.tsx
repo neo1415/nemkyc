@@ -7,6 +7,8 @@ import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Loader2, Shield, Phone, KeyRound, Mail, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { RecaptchaVerifier } from 'firebase/auth';
+import { auth } from '../../firebase/config';
 
 interface MFAModalProps {
   isOpen: boolean;
@@ -30,22 +32,21 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
   // Initialize reCAPTCHA for phone auth
   useEffect(() => {
     if (isOpen && type === 'enrollment') {
-      const script = document.createElement('script');
-      script.src = 'https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js';
-      document.head.appendChild(script);
-
-      // Initialize invisible reCAPTCHA
-      (window as any).recaptchaVerifier = new (window as any).firebase.auth.RecaptchaVerifier('recaptcha-container', {
-        size: 'invisible',
-        callback: () => {
-          console.log('reCAPTCHA solved');
-        }
-      });
+      if (!(window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+          callback: () => {
+            console.log('reCAPTCHA solved');
+          }
+        });
+      }
 
       return () => {
-        if ((window as any).recaptchaVerifier) {
-          (window as any).recaptchaVerifier.clear();
+        const rv = (window as any).recaptchaVerifier;
+        if (rv?.clear) {
+          rv.clear();
         }
+        (window as any).recaptchaVerifier = null;
       };
     }
   }, [isOpen, type]);
