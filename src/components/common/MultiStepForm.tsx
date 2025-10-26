@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { FormProvider } from 'react-hook-form';
 import { Button } from '../ui/button';
@@ -20,6 +19,8 @@ interface MultiStepFormProps {
   formMethods: any; // react-hook-form methods
   stepFieldMappings?: Record<number, string[]> | Record<string, string[]>; // Optional field mappings for step validation
   validateStep?: (stepId: string) => Promise<boolean>; // Custom validation function
+  initialStep?: number; // Initial step to start from
+  onStepChange?: (step: number) => void; // Callback when step changes
 }
 
 const MultiStepForm: React.FC<MultiStepFormProps> = ({
@@ -29,9 +30,11 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
   submitButtonText = "Submit",
   formMethods,
   stepFieldMappings,
-  validateStep
+  validateStep,
+  initialStep = 0,
+  onStepChange
 }) => {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(initialStep);
 
   const nextStep = async () => {
     // Use custom validation function if provided
@@ -80,14 +83,18 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
     }
     
     if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
+      const newStep = currentStep + 1;
+      setCurrentStep(newStep);
+      onStepChange?.(newStep);
     }
   };
 
 
   const prevStep = () => {
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+      const newStep = currentStep - 1;
+      setCurrentStep(newStep);
+      onStepChange?.(newStep);
     }
   };
 
