@@ -17,7 +17,6 @@ import {
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { User } from '../types';
-import { processPendingSubmissionUtil } from '../hooks/useAuthRequiredSubmit';
 import { exchangeToken } from '../services/authService';
 import { toast } from 'sonner';
 
