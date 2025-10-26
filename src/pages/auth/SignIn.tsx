@@ -78,23 +78,23 @@ const SignIn: React.FC = () => {
       console.log('🎯 Redirecting user:', user.role);
       setShouldRedirect(false);
       
-      // Check if there's a pending submission
+      // Check if there's a pending submission - HIGHEST PRIORITY
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
-        console.log('🎯 Processing pending submission for authenticated user');
-        // Process pending submission and redirect back to original form page
+        console.log('🎯 Pending submission detected, redirecting IMMEDIATELY to form page');
         const pendingData = JSON.parse(hasPendingSubmission);
-        processPendingSubmissionUtil(user.email!, user.uid).then(() => {
-          console.log('🎯 Pending submission processed, redirecting to form page');
-          // Redirect to the specific form page based on form type
-          const formPageUrl = getFormPageUrl(pendingData.formType);
-          navigate(formPageUrl, { replace: true });
-        }).catch((error) => {
-          console.error('🚨 Error processing pending submission:', error);
-          // Still redirect to form page even if submission failed
-          const formPageUrl = getFormPageUrl(pendingData.formType);
-          navigate(formPageUrl, { replace: true });
-        });
+        const formPageUrl = getFormPageUrl(pendingData.formType);
+        
+        // Redirect IMMEDIATELY to form page - don't wait for submission
+        navigate(formPageUrl, { replace: true });
+        
+        // Process submission in background - will show loading/success modal on form page
+        setTimeout(() => {
+          processPendingSubmissionUtil(user.email!, user.uid).catch((error) => {
+            console.error('🚨 Error processing pending submission:', error);
+          });
+        }, 100);
+        
         return;
       }
 
@@ -115,23 +115,23 @@ const SignIn: React.FC = () => {
     if (user && !loading && !mfaRequired && !mfaEnrollmentRequired && !emailVerificationRequired && !loginError) {
       console.log('🎯 User already authenticated, checking for redirect');
       
-      // Check for pending submission first - this takes priority over normal redirects
+      // Check for pending submission first - HIGHEST PRIORITY
       const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
       if (hasPendingSubmission) {
-        console.log('🎯 Pending submission detected, processing now');
+        console.log('🎯 Pending submission detected, redirecting IMMEDIATELY to form page');
         const pendingData = JSON.parse(hasPendingSubmission);
+        const formPageUrl = getFormPageUrl(pendingData.formType);
         
-        processPendingSubmissionUtil(user.email!, user.uid).then(() => {
-          console.log('🎯 Pending submission processed from already authenticated user, redirecting to form page');
-          // Redirect to the specific form page based on form type
-          const formPageUrl = getFormPageUrl(pendingData.formType);
-          navigate(formPageUrl, { replace: true });
-        }).catch((error) => {
-          console.error('🚨 Error processing pending submission for authenticated user:', error);
-          // Still redirect to form page even if submission failed
-          const formPageUrl = getFormPageUrl(pendingData.formType);
-          navigate(formPageUrl, { replace: true });
-        });
+        // Redirect IMMEDIATELY to form page
+        navigate(formPageUrl, { replace: true });
+        
+        // Process submission in background - will show loading/success modal on form page
+        setTimeout(() => {
+          processPendingSubmissionUtil(user.email!, user.uid).catch((error) => {
+            console.error('🚨 Error processing pending submission for authenticated user:', error);
+          });
+        }, 100);
+        
         return;
       }
       
@@ -161,6 +161,38 @@ const SignIn: React.FC = () => {
   const getFormPageUrl = (formType: string) => {
     const formTypeLower = formType.toLowerCase();
     
+    // KYC Forms
+    if (formTypeLower.includes('individual kyc')) {
+      return '/kyc/individual';
+    }
+    if (formTypeLower.includes('corporate kyc')) {
+      return '/kyc/corporate';
+    }
+    
+    // CDD Forms
+    if (formTypeLower.includes('individual cdd')) {
+      return '/cdd/individual';
+    }
+    if (formTypeLower.includes('corporate cdd')) {
+      return '/cdd/corporate';
+    }
+    if (formTypeLower.includes('brokers cdd')) {
+      return '/cdd/brokers';
+    }
+    if (formTypeLower.includes('agents cdd')) {
+      return '/cdd/agents';
+    }
+    if (formTypeLower.includes('partners cdd')) {
+      return '/cdd/partners';
+    }
+    if (formTypeLower.includes('naicom corporate')) {
+      return '/cdd/naicom-corporate';
+    }
+    if (formTypeLower.includes('naicom partners')) {
+      return '/cdd/naicom-partners';
+    }
+    
+    // Claims Forms
     if (formTypeLower.includes('employers liability') && !formTypeLower.includes('combined')) {
       return '/claims/employers-liability';
     }
