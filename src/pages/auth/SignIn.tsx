@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { exchangeToken } from '../../services/authService';
-import { processPendingSubmissionUtil } from '../../hooks/useAuthRequiredSubmit';  
+import { getFormPageUrl, hasPendingSubmission } from '../../hooks/useAuthRequiredSubmit';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -79,22 +79,14 @@ const SignIn: React.FC = () => {
       setShouldRedirect(false);
       
       // Check if there's a pending submission - HIGHEST PRIORITY
-      const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
-      if (hasPendingSubmission) {
-        console.log('🎯 Pending submission detected, redirecting IMMEDIATELY to form page');
-        const pendingData = JSON.parse(hasPendingSubmission);
-        const formPageUrl = getFormPageUrl(pendingData.formType);
+      const pendingData = sessionStorage.getItem('pendingSubmission');
+      if (pendingData) {
+        console.log('🎯 Pending submission detected, redirecting to form page');
+        const { formType } = JSON.parse(pendingData);
+        const formPageUrl = getFormPageUrl(formType);
         
-        // Redirect IMMEDIATELY to form page - don't wait for submission
+        // Redirect to form page - the form will handle submission processing
         navigate(formPageUrl, { replace: true });
-        
-        // Process submission in background - will show loading/success modal on form page
-        setTimeout(() => {
-          processPendingSubmissionUtil(user.email!, user.uid).catch((error) => {
-            console.error('🚨 Error processing pending submission:', error);
-          });
-        }, 100);
-        
         return;
       }
 
@@ -116,22 +108,14 @@ const SignIn: React.FC = () => {
       console.log('🎯 User already authenticated, checking for redirect');
       
       // Check for pending submission first - HIGHEST PRIORITY
-      const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
-      if (hasPendingSubmission) {
-        console.log('🎯 Pending submission detected, redirecting IMMEDIATELY to form page');
-        const pendingData = JSON.parse(hasPendingSubmission);
-        const formPageUrl = getFormPageUrl(pendingData.formType);
+      const pendingData = sessionStorage.getItem('pendingSubmission');
+      if (pendingData) {
+        console.log('🎯 Pending submission detected, redirecting to form page');
+        const { formType } = JSON.parse(pendingData);
+        const formPageUrl = getFormPageUrl(formType);
         
-        // Redirect IMMEDIATELY to form page
+        // Redirect to form page - the form will handle submission processing
         navigate(formPageUrl, { replace: true });
-        
-        // Process submission in background - will show loading/success modal on form page
-        setTimeout(() => {
-          processPendingSubmissionUtil(user.email!, user.uid).catch((error) => {
-            console.error('🚨 Error processing pending submission for authenticated user:', error);
-          });
-        }, 100);
-        
         return;
       }
       
