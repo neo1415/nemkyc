@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { registerUser } from '../../services/authService';
-import { processPendingSubmissionUtil } from '../../hooks/useAuthRequiredSubmit';
+import { getFormPageUrl } from '../../hooks/useAuthRequiredSubmit';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -14,6 +13,48 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { UserPlus, Mail, CheckCircle2, Loader2 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import logoImage from '../../assets/NEMs-Logo.jpg';
+
+// Helper function to translate Firebase errors to user-friendly messages
+const getErrorMessage = (error: any): string => {
+  const errorCode = error?.code || '';
+  const errorMessage = error?.message || '';
+
+  // Firebase Auth errors
+  if (errorCode === 'auth/email-already-in-use') {
+    return 'An account with this email already exists. Please sign in instead or use a different email.';
+  }
+  if (errorCode === 'auth/invalid-email') {
+    return 'Please enter a valid email address.';
+  }
+  if (errorCode === 'auth/weak-password') {
+    return 'Password is too weak. Please use at least 6 characters with a mix of letters, numbers, and symbols.';
+  }
+  if (errorCode === 'auth/operation-not-allowed') {
+    return 'Account creation is currently disabled. Please contact support.';
+  }
+  if (errorCode === 'auth/network-request-failed') {
+    return 'Network connection error. Please check your internet connection and try again.';
+  }
+  if (errorCode === 'auth/too-many-requests') {
+    return 'Too many signup attempts. Please wait a few minutes and try again.';
+  }
+
+  // Network and server errors
+  if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('fetch')) {
+    return 'Unable to connect to the server. Please check your internet connection and try again.';
+  }
+  if (errorMessage.toLowerCase().includes('timeout')) {
+    return 'The request took too long. Please check your connection and try again.';
+  }
+
+  // Backend registration errors
+  if (errorMessage.toLowerCase().includes('already exists')) {
+    return 'An account with this email already exists. Please sign in instead.';
+  }
+
+  // Default user-friendly message
+  return 'Unable to create your account. Please try again. If the problem persists, contact support.';
+};
 
 const SignUp: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -59,20 +100,18 @@ const SignUp: React.FC = () => {
       );
       
       if (!result.success) {
-        setError(result.error || 'Failed to create account');
+        const errorObj = { message: result.error || 'Failed to create account' };
+        setError(getErrorMessage(errorObj));
         return;
       }
       
       // Check if there's a pending submission
-      const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
-      if (hasPendingSubmission) {
-        const { formData, formType } = JSON.parse(hasPendingSubmission);
-        console.log('🎯 Processing pending submission after signup');
+      const pendingData = sessionStorage.getItem('pendingSubmission');
+      if (pendingData) {
+        const { formType } = JSON.parse(pendingData);
+        console.log('🎯 Pending submission detected after signup, redirecting to form page');
         
-        // Process pending submission with the new user's email
-        await processPendingSubmissionUtil(formData.email, result.user?.uid);
-        
-        // Redirect back to the form page to show proper success modal
+        // Redirect to form page - the form will handle submission processing
         const formPageUrl = getFormPageUrl(formType);
         navigate(formPageUrl, { replace: true });
         return;
@@ -81,7 +120,8 @@ const SignUp: React.FC = () => {
         navigate('/dashboard');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+      console.error('Sign up error:', err);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -96,24 +136,15 @@ const SignUp: React.FC = () => {
       await signInWithGoogle();
       
       // Check if there's a pending submission
-      const hasPendingSubmission = sessionStorage.getItem('pendingSubmission');
-      if (hasPendingSubmission) {
-        const { formType } = JSON.parse(hasPendingSubmission);
-        setSubmittedFormType(formType);
+      const pendingData = sessionStorage.getItem('pendingSubmission');
+      if (pendingData) {
+        const { formType } = JSON.parse(pendingData);
+        console.log('🎯 Pending submission detected after Google signup, redirecting to form page');
         
-        // Process pending submission
-        const { getAuth } = await import('firebase/auth');
-        const currentUser = getAuth().currentUser;
-        
-        if (currentUser?.email) {
-          console.log('🎯 Processing pending submission after Google signup');
-          await processPendingSubmissionUtil(currentUser.email, currentUser.uid);
-          
-          // Redirect back to the form page to show proper success modal
-          const formPageUrl = getFormPageUrl(formType);
-          navigate(formPageUrl, { replace: true });
-          return;
-        }
+        // Redirect to form page - the form will handle submission processing
+        const formPageUrl = getFormPageUrl(formType);
+        navigate(formPageUrl, { replace: true });
+        return;
       } else {
         // Navigate based on user role from context
         if (user?.role && ['admin', 'super admin', 'compliance', 'claims'].includes(user.role)) {
@@ -123,7 +154,8 @@ const SignUp: React.FC = () => {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to sign up with Google');
+      console.error('Google sign up error:', err);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
