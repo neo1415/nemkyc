@@ -32,9 +32,7 @@ import {
   CheckCircle,
   Cancel,
   FilterList,
-  GetApp,
-  ThumbUp,
-  ThumbDown
+  GetApp
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -510,7 +508,7 @@ const fetchForms = async () => {
     dynamicColumns.push({
       field: 'actions',
       headerName: 'Actions',
-      width: isClaim ? 280 : 200,
+      width: 200,
       type: 'actions',
       getActions: (params) => {
         const actions = [
@@ -528,33 +526,7 @@ const fetchForms = async () => {
           />
         ];
 
-        // Add approval actions for claims with pending/processing status
-        if (isClaim && params.row.status && ['pending', 'processing'].includes(params.row.status.toLowerCase())) {
-          actions.push(
-            <GridActionsCellItem
-              key="approve"
-              icon={<ThumbUp />}
-              label="Approve"
-              onClick={() => setApprovalDialog({ 
-                open: true, 
-                action: 'approve', 
-                form: params.row, 
-                comment: '' 
-              })}
-            />,
-            <GridActionsCellItem
-              key="reject"
-              icon={<ThumbDown />}
-              label="Reject"
-              onClick={() => setApprovalDialog({ 
-                open: true, 
-                action: 'reject', 
-                form: params.row, 
-                comment: '' 
-              })}
-            />
-          );
-        }
+        // Removed approve/reject actions - functionality available in details page
 
         return actions;
       },
