@@ -150,6 +150,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Check if this is an admin role that needs MFA check
+      // COMMENTED OUT: MFA every 3rd login logic
+      /*
       const adminRoles = ['admin', 'super admin', 'compliance', 'claims'];
       const isAdminRole = adminRoles.includes(response.role || '');
       
@@ -193,6 +195,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           toast.success(`Login successful - MFA will be required on login #${nextMfaLogin}`);
         }
       }
+      */
       
       // Successful login without MFA required
       setMfaRequired(false);
