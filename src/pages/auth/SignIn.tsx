@@ -5,6 +5,7 @@ import { exchangeToken } from '../../services/authService';
 import { getFormPageUrl, hasPendingSubmission } from '../../hooks/useAuthRequiredSubmit';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { PasswordInput } from '../../components/common/PasswordInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Label } from '../../components/ui/label';
 import { Alert, AlertDescription } from '../../components/ui/alert';
@@ -351,9 +352,8 @@ const SignIn: React.FC = () => {
             
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => {
