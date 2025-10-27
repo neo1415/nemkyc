@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import { Box, Button, Chip, Typography, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
@@ -7,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { collection, query, getDocs, doc, updateDoc, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { Eye, Download, CheckCircle } from 'lucide-react';
+import { Eye, Download } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 
 const theme = createTheme({
@@ -177,16 +176,7 @@ const AdminClaimsTable: React.FC<AdminClaimsTableProps> = ({ formType }) => {
           >
             View
           </Button>
-          {user?.role === 'claims' && params.row.status === 'pending' && (
-            <Button
-              size="small"
-              color="success"
-              startIcon={<CheckCircle size={16} />}
-              onClick={() => setApprovalDialog({ open: true, claim: params.row })}
-            >
-              Approve
-            </Button>
-          )}
+          {/* Removed approve button - functionality available in details page */}
         </Box>
       ),
     },
