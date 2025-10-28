@@ -435,6 +435,66 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
           </CardContent>
         </Card>
 
+        {/* Account Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Account Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <h4 className="font-semibold text-md mb-3">Local Account</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Bank Name</p>
+                  <p className="font-medium">{formatValue(data.localBankName)}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Account Number</p>
+                  <p className="font-medium">{formatValue(data.localAccountNumber)}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Bank Branch</p>
+                  <p className="font-medium">{formatValue(data.localBankBranch)}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Account Opening Date</p>
+                  <p className="font-medium">{formatDate(data.localAccountOpeningDate)}</p>
+                </div>
+              </div>
+            </div>
+            
+            {(data.foreignBankName || data.foreignAccountNumber || data.foreignBankBranch || data.foreignAccountOpeningDate) && (
+              <>
+                <Separator className="my-4" />
+                <div>
+                  <h4 className="font-semibold text-md mb-3">Foreign Account</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground">Bank Name</p>
+                      <p className="font-medium">{formatValue(data.foreignBankName)}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground">Account Number</p>
+                      <p className="font-medium">{formatValue(data.foreignAccountNumber)}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground">Bank Branch</p>
+                      <p className="font-medium">{formatValue(data.foreignBankBranch)}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground">Account Opening Date</p>
+                      <p className="font-medium">{formatDate(data.foreignAccountOpeningDate)}</p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Verification Documents */}
         <Card>
           <CardHeader>
