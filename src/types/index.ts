@@ -205,7 +205,17 @@ export interface CorporateKYCData {
     sourceOfIncomeOther?: string;
   }>;
   
-  // Account Details & Verification
+  // Account Details
+  localBankName: string;
+  localAccountNumber: string;
+  localBankBranch: string;
+  localAccountOpeningDate: string;
+  foreignBankName?: string;
+  foreignAccountNumber?: string;
+  foreignBankBranch?: string;
+  foreignAccountOpeningDate?: string;
+  
+  // Verification
   companyVerificationDocument: 'incorporation' | 'cacStatus' | 'boardResolution' | 'powerOfAttorney';
   verificationDocumentUpload?: File;
   
