@@ -134,6 +134,47 @@ const corporateKYCSchema = yup.object().shape({
     })
   })).min(1, "At least one director is required"),
 
+  // Account Details
+  localBankName: yup.string()
+    .required("Bank name is required")
+    .min(2, "Bank name must be at least 2 characters")
+    .max(100, "Bank name cannot exceed 100 characters"),
+  localAccountNumber: yup.string()
+    .required("Account number is required")
+    .matches(/^\d+$/, "Account number must contain only numbers")
+    .min(10, "Account number must be at least 10 digits")
+    .max(10, "Account number must be exactly 10 digits"),
+  localBankBranch: yup.string()
+    .required("Bank branch is required")
+    .min(2, "Bank branch must be at least 2 characters")
+    .max(100, "Bank branch cannot exceed 100 characters"),
+  localAccountOpeningDate: yup.date()
+    .required("Account opening date is required")
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
+
+  // Foreign Account (optional)
+  foreignBankName: yup.string()
+    .max(100, "Bank name cannot exceed 100 characters"),
+  foreignAccountNumber: yup.string()
+    .matches(/^[\d\-]*$/, "Account number must contain only numbers and dashes")
+    .max(30, "Account number cannot exceed 30 characters"),
+  foreignBankBranch: yup.string()
+    .max(100, "Bank branch cannot exceed 100 characters"),
+  foreignAccountOpeningDate: yup.date()
+    .test('not-future', 'Date cannot be in the future', function(value) {
+      if (!value) return true; // Optional field
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return value <= today;
+    })
+    .typeError('Please select a valid date'),
+
   // Verification
   companyNameVerificationDoc: yup.string().required("Verification document type is required"),
   verificationDoc: yup.mixed().required("Verification document upload is required"),
@@ -185,6 +226,14 @@ const defaultValues = {
     sourceOfIncome: '',
     sourceOfIncomeOther: ''
   }],
+  localBankName: '',
+  localAccountNumber: '',
+  localBankBranch: '',
+  localAccountOpeningDate: undefined,
+  foreignBankName: '',
+  foreignAccountNumber: '',
+  foreignBankBranch: '',
+  foreignAccountOpeningDate: undefined,
   companyNameVerificationDoc: '',
   agreeToDataPrivacy: false,
   signature: ''
@@ -330,14 +379,15 @@ const FormDatePicker = ({ name, label, required = false }: any) => {
 const CorporateKYC: React.FC = () => {
   const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
-  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
   const { 
     handleSubmitWithAuth, 
     showSuccess: authShowSuccess, 
     setShowSuccess: setAuthShowSuccess,
-    isSubmitting: authSubmitting
-  } = useAuthRequiredSubmit();
+    isSubmitting: authSubmitting,
+    getSavedStep
+  } = useAuthRequiredSubmit(currentStep);
 
   const formMethods = useForm<any>({
     resolver: yupResolver(corporateKYCSchema),
@@ -352,24 +402,13 @@ const CorporateKYC: React.FC = () => {
   });
   const watchedValues = formMethods.watch();
 
-  // Check for pending submission when component mounts
+  // Restore saved step from pending submission
   useEffect(() => {
-    const checkPendingSubmission = () => {
-      const hasPending = sessionStorage.getItem('pendingSubmission');
-      if (hasPending) {
-        setShowPostAuthLoading(true);
-        setTimeout(() => setShowPostAuthLoading(false), 5000);
-      }
-    };
-    checkPendingSubmission();
-  }, []);
-
-  // Hide post-auth loading when success modal shows
-  useEffect(() => {
-    if (authShowSuccess) {
-      setShowPostAuthLoading(false);
+    const savedStep = getSavedStep();
+    if (savedStep > 0) {
+      setCurrentStep(savedStep);
     }
-  }, [authShowSuccess]);
+  }, []);
 
   // Auto-save draft
   useEffect(() => {
@@ -436,7 +475,11 @@ const CorporateKYC: React.FC = () => {
       'estimatedTurnover', 'premiumPaymentSource', 'premiumPaymentSourceOther'
     ],
     1: ['directors'],
-    2: ['companyNameVerificationDoc', 'verificationDoc'],
+    2: [
+      'localBankName', 'localAccountNumber', 'localBankBranch', 'localAccountOpeningDate',
+      'foreignBankName', 'foreignAccountNumber', 'foreignBankBranch', 'foreignAccountOpeningDate',
+      'companyNameVerificationDoc', 'verificationDoc'
+    ],
     3: ['agreeToDataPrivacy', 'signature']
   };
 
@@ -803,48 +846,114 @@ const CorporateKYC: React.FC = () => {
       )
     },
     {
-      id: 'verification',
+      id: 'accounts',
       title: 'Account Details & Verification Upload',
       component: (
-        <div className="space-y-4">
-          <FormSelect
-            name="companyNameVerificationDoc"
-            label="Company Name Verification Document"
-            required={true}
-            placeholder="Verification Document"
-            options={[
-              { value: "Certificate of Incorporation or Business Registration", label: "Certificate of Incorporation or Business Registration" },
-              { value: "CAC Status Report", label: "CAC Status Report" },
-              { value: "Board Resolution", label: "Board Resolution" },
-              { value: "Power of Attorney", label: "Power of Attorney" }
-            ]}
-          />
-
+        <div className="space-y-6">
+          {/* Local Account Details */}
           <div>
-            <Label>Upload Your Verification Document <span className="required-asterisk">*</span></Label>
-            <FileUpload
-              accept=".png,.jpg,.jpeg,.pdf"
-              onFileSelect={(file) => {
-                setUploadedFiles(prev => ({
-                  ...prev,
-                  verificationDoc: file
-                }));
-                formMethods.setValue('verificationDoc', file);
-                if (formMethods.formState.errors.verificationDoc) {
-                  formMethods.clearErrors('verificationDoc');
-                }
-              }}
-              maxSize={3 * 1024 * 1024}
+            <h3 className="text-lg font-medium mb-4">Local Account Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                name="localBankName"
+                label="Bank Name"
+                required={true}
+                maxLength={100}
+              />
+              <FormField
+                name="localAccountNumber"
+                label="Account Number"
+                required={true}
+                maxLength={10}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <FormField
+                name="localBankBranch"
+                label="Bank Branch"
+                required={true}
+                maxLength={100}
+              />
+              <FormDatePicker
+                name="localAccountOpeningDate"
+                label="Account Opening Date"
+                required={true}
+              />
+            </div>
+          </div>
+
+          {/* Foreign Account Details (Optional) */}
+          <div>
+            <h3 className="text-lg font-medium mb-4">Foreign Account Details (Optional)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                name="foreignBankName"
+                label="Bank Name"
+                maxLength={100}
+              />
+              <FormField
+                name="foreignAccountNumber"
+                label="Account Number"
+                maxLength={30}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <FormField
+                name="foreignBankBranch"
+                label="Bank Branch"
+                maxLength={100}
+              />
+              <FormDatePicker
+                name="foreignAccountOpeningDate"
+                label="Account Opening Date"
+              />
+            </div>
+          </div>
+
+          {/* Verification Document */}
+          <div className="pt-6 border-t">
+            <h3 className="text-lg font-medium mb-4">Verification Document</h3>
+            <FormSelect
+              name="companyNameVerificationDoc"
+              label="Company Name Verification Document"
+              required={true}
+              placeholder="Verification Document"
+              options={[
+                { value: "Certificate of Incorporation or Business Registration", label: "Certificate of Incorporation or Business Registration" },
+                { value: "CAC Status Report", label: "CAC Status Report" },
+                { value: "Board Resolution", label: "Board Resolution" },
+                { value: "Power of Attorney", label: "Power of Attorney" }
+              ]}
             />
-            {uploadedFiles.verificationDoc && (
-              <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                <Check className="h-4 w-4" />
-                {uploadedFiles.verificationDoc.name}
-              </div>
-            )}
-            {formMethods.formState.errors.verificationDoc && (
-              <p className="text-sm text-destructive">{formMethods.formState.errors.verificationDoc.message?.toString()}</p>
-            )}
+
+            <div className="mt-4">
+              <Label>Upload Your Verification Document <span className="required-asterisk">*</span></Label>
+              <FileUpload
+                accept=".png,.jpg,.jpeg,.pdf"
+                onFileSelect={(file) => {
+                  setUploadedFiles(prev => ({
+                    ...prev,
+                    verificationDoc: file
+                  }));
+                  formMethods.setValue('verificationDoc', file);
+                  if (formMethods.formState.errors.verificationDoc) {
+                    formMethods.clearErrors('verificationDoc');
+                  }
+                }}
+                maxSize={3 * 1024 * 1024}
+              />
+              {uploadedFiles.verificationDoc && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  {uploadedFiles.verificationDoc.name}
+                </div>
+              )}
+              {formMethods.formState.errors.verificationDoc && (
+                <p className="text-sm text-destructive">{formMethods.formState.errors.verificationDoc.message?.toString()}</p>
+              )}
+            </div>
           </div>
         </div>
       )
@@ -904,17 +1013,6 @@ const CorporateKYC: React.FC = () => {
   return (
     <FormProvider {...formMethods}>
       <div className="container mx-auto px-4 py-8">
-        {/* Post-auth loading overlay */}
-        {showPostAuthLoading && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-lg font-semibold">Completing your submission...</p>
-              <p className="text-sm text-muted-foreground">Please wait while we process your KYC form.</p>
-            </div>
-          </div>
-        )}
-
         <Card className="max-w-6xl mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -932,6 +1030,8 @@ const CorporateKYC: React.FC = () => {
               formMethods={formMethods}
               submitButtonText="Submit KYC Form"
               stepFieldMappings={stepFieldMappings}
+              initialStep={currentStep}
+              onStepChange={setCurrentStep}
             />
           </CardContent>
         </Card>
@@ -993,6 +1093,8 @@ const CorporateKYC: React.FC = () => {
         title="KYC Form Submitted Successfully!"
         message="Your Corporate KYC form has been submitted successfully. You will receive a confirmation email shortly."
         formType="Corporate KYC"
+        isLoading={authSubmitting}
+        loadingMessage="Submitting your form..."
       />
       </div>
     </FormProvider>
