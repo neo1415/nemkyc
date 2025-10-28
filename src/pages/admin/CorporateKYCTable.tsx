@@ -386,6 +386,56 @@ const CorporateKYCTable: React.FC = () => {
         return getValue(form, 'premiumPaymentSource');
       },
     },
+    // Account Details - Local
+    {
+      field: 'localBankName',
+      headerName: 'Local Bank Name',
+      width: 150,
+      renderCell: (params: any) => getValue(params.row, 'localBankName'),
+    },
+    {
+      field: 'localAccountNumber',
+      headerName: 'Local Account Number',
+      width: 150,
+      renderCell: (params: any) => getValue(params.row, 'localAccountNumber'),
+    },
+    {
+      field: 'localBankBranch',
+      headerName: 'Local Bank Branch',
+      width: 150,
+      renderCell: (params: any) => getValue(params.row, 'localBankBranch'),
+    },
+    {
+      field: 'localAccountOpeningDate',
+      headerName: 'Local Account Opening Date',
+      width: 180,
+      renderCell: (params: any) => formatDate(params.row.localAccountOpeningDate),
+    },
+    // Account Details - Foreign (if provided)
+    {
+      field: 'foreignBankName',
+      headerName: 'Foreign Bank Name',
+      width: 150,
+      renderCell: (params: any) => getValue(params.row, 'foreignBankName'),
+    },
+    {
+      field: 'foreignAccountNumber',
+      headerName: 'Foreign Account Number',
+      width: 180,
+      renderCell: (params: any) => getValue(params.row, 'foreignAccountNumber'),
+    },
+    {
+      field: 'foreignBankBranch',
+      headerName: 'Foreign Bank Branch',
+      width: 150,
+      renderCell: (params: any) => getValue(params.row, 'foreignBankBranch'),
+    },
+    {
+      field: 'foreignAccountOpeningDate',
+      headerName: 'Foreign Account Opening Date',
+      width: 200,
+      renderCell: (params: any) => formatDate(params.row.foreignAccountOpeningDate),
+    },
     // Directors Information - Director 1
     {
       field: 'director1FirstName',
