@@ -8,13 +8,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { useAdminDashboardStats, useMonthlySubmissionData } from '../../hooks/useAdminDashboard';
 import { useQueryClient } from '@tanstack/react-query';
+import { rolesMatch } from '../../utils/roleNormalization';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Redirect non-admin users
-  if (!user || user.role === 'default') {
+  // Redirect non-admin users (users with default role)
+  if (!user || rolesMatch(user.role, 'default')) {
     return <Navigate to="/dashboard" replace />;
   }
 
