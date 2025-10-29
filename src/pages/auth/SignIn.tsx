@@ -13,6 +13,7 @@ import { LogIn, Mail, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '../../firebase/config';
+import { isAdminRole } from '../../utils/roleNormalization';
 import MFAModal from '../../components/auth/MFAModal';
 import logoImage from '../../assets/NEMs-Logo.jpg';
 
@@ -92,11 +93,11 @@ const SignIn: React.FC = () => {
       }
 
       // Normal sign-in flow - role-based navigation
-      if (['admin', 'super admin', 'compliance', 'claims'].includes(user.role)) {
-        console.log('🎯 Admin user detected, redirecting to /admin');
+      if (isAdminRole(user.role)) {
+        console.log('🎯 Admin user detected, redirecting to /admin', { role: user.role });
         navigate('/admin', { replace: true });
       } else {
-        console.log('🎯 Regular user, redirecting to:', from);
+        console.log('🎯 Regular user, redirecting to:', from, { role: user.role });
         navigate(from, { replace: true });
       }
     }
@@ -121,8 +122,8 @@ const SignIn: React.FC = () => {
       }
       
       // Normal sign-in flow - role-based navigation only if no pending submission
-      if (['admin', 'super admin', 'compliance', 'claims'].includes(user.role)) {
-        console.log('🎯 Admin user already authenticated, redirecting to /admin');
+      if (isAdminRole(user.role)) {
+        console.log('🎯 Admin user already authenticated, redirecting to /admin', { role: user.role });
         navigate('/admin', { replace: true });
       }
     }
