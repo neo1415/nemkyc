@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import MFAEnrollment from './MFAEnrollment';
 import MFAVerification from './MFAVerification';
+import { hasAnyRole } from '../../utils/roleNormalization';
 
 interface RoleProtectedRouteProps {
   children: React.ReactNode;
@@ -20,7 +21,13 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({ children, allow
     return <Navigate to="/auth/signin" replace />;
   }
 
-  if (!allowedRoles.includes(user.role)) {
+  // Check if user has any of the allowed roles using normalization
+  if (!hasAnyRole(user.role, allowedRoles)) {
+    console.log('🚫 Role not allowed:', { 
+      userRole: user.role, 
+      allowedRoles,
+      message: 'User role does not match any allowed roles'
+    });
     return <Navigate to="/unauthorized" replace />;
   }
 
