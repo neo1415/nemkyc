@@ -17,6 +17,7 @@ import {
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { User } from '../types';
+import { normalizeRole, isAdminRole, rolesMatch } from '../utils/roleNormalization';
 import { exchangeToken } from '../services/authService';
 import { toast } from 'sonner';
 
@@ -77,8 +78,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const userData = userDoc.data();
             
             // Auto-assign super admin role to neowalker502@gmail.com
-            let userRole = userData.role || 'default';
-            if (firebaseUser.email === 'neowalker502@gmail.com' && userRole !== 'super admin') {
+            let userRole = normalizeRole(userData.role || 'default');
+            if (firebaseUser.email === 'neowalker502@gmail.com' && !rolesMatch(userRole, 'super admin')) {
               userRole = 'super admin';
               // Update in Firestore
               await setDoc(doc(db, 'userroles', firebaseUser.uid), {
@@ -542,11 +543,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const hasRole = (role: string): boolean => {
-    return user?.role === role;
+    return rolesMatch(user?.role, role);
   };
 
   const isAdmin = (): boolean => {
-    return user?.role === 'admin' || user?.role === 'compliance' || user?.role === 'super admin' || user?.role === 'claims';
+    return isAdminRole(user?.role);
   };
 
   // Local storage functions for form drafts
