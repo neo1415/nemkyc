@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { normalizeRole } from '../utils/roleNormalization';
 
 export interface DashboardStats {
   totalUsers: number;
@@ -17,17 +18,18 @@ export interface DashboardStats {
 // Helper function to get collections based on user role
 const getCollectionsForRole = (role: string) => {
   const collections: string[] = [];
+  const r = normalizeRole(role);
   
   // KYC and CDD collections for compliance, admin, and super admin
-  if (['compliance', 'admin', 'super admin'].includes(role)) {
+  if (['compliance', 'admin', 'super admin'].includes(r)) {
     collections.push(
       'Individual-kyc-form', 'corporate-kyc-form', // KYC
       'agents-kyc', 'brokers-kyc', 'corporate-kyc', 'individual-kyc', 'partners-kyc' // CDD
     );
   }
   
-  // Claims collections for claims, admin, and super admin
-  if (['claims', 'admin', 'super admin'].includes(role)) {
+// Claims collections for claims, admin, and super admin
+  if (['claims', 'admin', 'super admin'].includes(r)) {
     collections.push(
       'motor-claims', 'burglary-claims', 'all-risk-claims', 'money-insurance-claims',
       'fidelity-guarantee-claims', 'fire-special-perils-claims', 'goods-in-transit-claims',
@@ -41,9 +43,10 @@ const getCollectionsForRole = (role: string) => {
 
 // Fetch dashboard statistics with parallel requests for speed
 const fetchDashboardStats = async (userRole: string): Promise<DashboardStats> => {
-  const canViewUsers = userRole === 'super admin';
-  const canViewClaims = ['claims', 'admin', 'super admin'].includes(userRole);
-  const canViewKYCCDD = ['compliance', 'admin', 'super admin'].includes(userRole);
+  const role = normalizeRole(userRole);
+  const canViewUsers = role === 'super admin';
+  const canViewClaims = ['claims', 'admin', 'super admin'].includes(role);
+  const canViewKYCCDD = ['compliance', 'admin', 'super admin'].includes(role);
 
   // Create parallel requests array
   const parallelRequests: Promise<any>[] = [];
@@ -51,7 +54,7 @@ const fetchDashboardStats = async (userRole: string): Promise<DashboardStats> =>
   // 1. Users count (super admin only)
   if (canViewUsers) {
     parallelRequests.push(
-      getDocs(collection(db, 'userroles')).catch(() => ({ size: 0 }))
+      getDocs(collection(db, 'userroles'))
     );
   } else {
     parallelRequests.push(Promise.resolve({ size: 0 }));
@@ -69,7 +72,7 @@ const fetchDashboardStats = async (userRole: string): Promise<DashboardStats> =>
     parallelRequests.push(
       Promise.all(
         claimsCollections.map(collectionName =>
-          getDocs(collection(db, collectionName)).catch(() => ({ docs: [] }))
+          getDocs(collection(db, collectionName))
         )
       )
     );
@@ -84,7 +87,7 @@ const fetchDashboardStats = async (userRole: string): Promise<DashboardStats> =>
     parallelRequests.push(
       Promise.all(
         kycCollections.map(collectionName =>
-          getDocs(collection(db, collectionName)).catch(() => ({ size: 0 }))
+          getDocs(collection(db, collectionName))
         )
       )
     );
@@ -101,7 +104,7 @@ const fetchDashboardStats = async (userRole: string): Promise<DashboardStats> =>
     parallelRequests.push(
       Promise.all(
         cddCollections.map(collectionName =>
-          getDocs(collection(db, collectionName)).catch(() => ({ size: 0 }))
+          getDocs(collection(db, collectionName))
         )
       )
     );
@@ -126,7 +129,7 @@ const fetchDashboardStats = async (userRole: string): Promise<DashboardStats> =>
             collection(db, collectionName),
             // orderBy('timestamp', 'desc'), // Remove this to avoid requiring index
             // limit(3) // Limit per collection for speed
-          )).catch(() => ({ docs: [] }))
+          ))
         )
       )
     );
