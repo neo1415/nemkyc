@@ -33,6 +33,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { ChevronDown, Trash2 } from 'lucide-react';
+import { normalizeRole, isAdminRole } from '../../utils/roleNormalization';
 
 interface UserRole {
   id: string;
@@ -153,8 +154,11 @@ const AdminUsersTable: React.FC = () => {
     }
   };
 
-  const regularUsers = users.filter(u => u.role === 'default');
-  const adminUsers = users.filter(u => u.role !== 'default');
+  // Filter users by normalized roles
+  // Regular users: those with 'default' or 'user' roles (normalized to 'default')
+  // Admin users: those with admin, super admin, compliance, or claims roles
+  const regularUsers = users.filter(u => !isAdminRole(u.role));
+  const adminUsers = users.filter(u => isAdminRole(u.role));
 
   const UserTable = ({ usersList, title }: { usersList: UserRole[], title: string }) => (
     <Card>
