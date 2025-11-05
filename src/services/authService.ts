@@ -115,7 +115,8 @@ export const registerUser = async (
   email: string, 
   password: string, 
   displayName: string, 
-  role: string = 'user'
+  role: string = 'user',
+  dateOfBirth?: string
 ): Promise<AuthResponse> => {
   try {
     console.log('📤 Attempting registration via backend:', { email, displayName, role });
@@ -124,7 +125,8 @@ export const registerUser = async (
       email,
       password,
       displayName,
-      role
+      role,
+      dateOfBirth
     });
 
     const result = await response.json();
