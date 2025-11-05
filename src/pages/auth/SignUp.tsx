@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -64,7 +65,8 @@ const SignUp: React.FC = () => {
     password: '',
     confirmPassword: '',
     notificationPreference: 'email' as 'email' | 'sms',
-    phone: ''
+    phone: '',
+    dateOfBirth: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -97,7 +99,8 @@ const SignUp: React.FC = () => {
         formData.email,
         formData.password,
         formData.name,
-        'user' // default role
+        'user', // default role
+        formData.dateOfBirth
       );
       
       if (!result.success) {
@@ -240,6 +243,18 @@ const SignUp: React.FC = () => {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="dateOfBirth">Date of Birth</Label>
+              <Input
+                id="dateOfBirth"
+                type="date"
+                value={formData.dateOfBirth}
+                onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                required
+                max={new Date().toISOString().split('T')[0]}
               />
             </div>
             
