@@ -262,6 +262,10 @@ const IndividualCDDViewer: React.FC<IndividualCDDViewerProps> = ({ data, onClose
                 <p className="font-medium">{formatValue(data.BVNNumber)}</p>
               </div>
               <div>
+                <p className="font-medium text-sm text-muted-foreground">NIN Number</p>
+                <p className="font-medium">{formatValue(data.NINNumber)}</p>
+              </div>
+              <div>
                 <p className="font-medium text-sm text-muted-foreground">Identification Type</p>
                 <p className="font-medium">{formatValue(data.identificationType)}</p>
               </div>

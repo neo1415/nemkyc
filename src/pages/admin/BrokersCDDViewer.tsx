@@ -36,6 +36,7 @@ const BrokersCDDViewer: React.FC<BrokersCDDViewerProps> = ({ data }) => {
         email: data.email || '',
         phoneNumber: data.phoneNumber || '',
         BVNNumber: data.BVNNumber || '',
+        NINNumber: data.NINNumber || '',
         employersName: data.employersName || '',
         address: data.address || '',
         taxIDNumber: data.taxIDNumber || '',
@@ -302,6 +303,10 @@ const BrokersCDDViewer: React.FC<BrokersCDDViewerProps> = ({ data }) => {
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">BVN</label>
                     <p className="mt-1">{formatValue(director.BVNNumber)}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">NIN</label>
+                    <p className="mt-1">{formatValue(director.NINNumber)}</p>
                   </div>
                 </div>
 

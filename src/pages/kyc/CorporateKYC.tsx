@@ -10,19 +10,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { CalendarIcon, Plus, Trash2, Check, Loader2, FileText } from 'lucide-react';
+import { Plus, Trash2, Check, FileText } from 'lucide-react';
 import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { get } from 'lodash';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
+import FormLoadingModal from '@/components/common/FormLoadingModal';
+import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
+import DatePicker from '@/components/common/DatePicker';
 
 // Form validation schema
 const corporateKYCSchema = yup.object().shape({
@@ -48,6 +48,10 @@ const corporateKYCSchema = yup.object().shape({
     .required("BVN is required")
     .matches(/^\d+$/, "BVN must contain only numbers")
     .length(11, "BVN must be exactly 11 digits"),
+  NINNumber: yup.string()
+    .required("NIN is required")
+    .matches(/^\d+$/, "NIN must contain only numbers")
+    .length(11, "NIN must be exactly 11 digits"),
   contactPersonNo: yup.string()
     .required("Contact person mobile is required")
     .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
@@ -98,6 +102,10 @@ const corporateKYCSchema = yup.object().shape({
       .required("BVN is required")
       .matches(/^\d+$/, "BVN must contain only numbers")
       .length(11, "BVN must be exactly 11 digits"),
+    NINNumber: yup.string()
+      .required("NIN is required")
+      .matches(/^\d+$/, "NIN must contain only numbers")
+      .length(11, "NIN must be exactly 11 digits"),
     employersName: yup.string(),
     employersPhoneNumber: yup.string()
       .matches(/^[\d\s+\-()]*$/, "Invalid phone number format")
@@ -195,6 +203,7 @@ const defaultValues = {
   incorporationState: '',
   dateOfIncorporationRegistration: undefined,
   BVNNumber: '',
+  NINNumber: '',
   contactPersonNo: '',
   taxIDNo: '',
   emailAddress: '',
@@ -214,6 +223,7 @@ const defaultValues = {
     email: '',
     phoneNumber: '',
     BVNNumber: '',
+    NINNumber: '',
     employersName: '',
     employersPhoneNumber: '',
     residentialAddress: '',
@@ -345,49 +355,28 @@ const FormSelect = ({ name, label, required = false, options, placeholder, ...pr
   );
 };
 
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name);
-  
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={name}>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <Input
-        id={name}
-        type="date"
-        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
-        onChange={(e) => {
-          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-          setValue(name, dateValue);
-          if (error) {
-            clearErrors(name);
-          }
-        }}
-        className={error ? 'border-destructive' : ''}
-      />
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
+
 
 const CorporateKYC: React.FC = () => {
   const { toast } = useToast();
-  const [showSummary, setShowSummary] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const { 
-    handleSubmitWithAuth, 
-    showSuccess: authShowSuccess, 
-    setShowSuccess: setAuthShowSuccess,
-    isSubmitting: authSubmitting,
-    getSavedStep
-  } = useAuthRequiredSubmit(currentStep);
+  
+  const {
+    handleSubmit: handleEnhancedSubmit,
+    showSummary,
+    setShowSummary,
+    showLoading,
+    loadingMessage,
+    showSuccess,
+    confirmSubmit,
+    closeSuccess,
+    formData: submissionData,
+    isSubmitting
+  } = useEnhancedFormSubmit({
+    formType: 'Corporate KYC',
+    onSuccess: () => clearDraft()
+  });
 
   const formMethods = useForm<any>({
     resolver: yupResolver(corporateKYCSchema),
@@ -404,10 +393,8 @@ const CorporateKYC: React.FC = () => {
 
   // Restore saved step from pending submission
   useEffect(() => {
-    const savedStep = getSavedStep();
-    if (savedStep > 0) {
-      setCurrentStep(savedStep);
-    }
+    // Remove this functionality as getSavedStep is not defined
+    // If you need step restoration, implement it properly
   }, []);
 
   // Auto-save draft
@@ -418,41 +405,44 @@ const CorporateKYC: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
-  const handleSubmit = async (data: any) => {
-    console.log('Form data before sanitization:', data);
-    
-    // Sanitize data to remove undefined values
-    const sanitizedData = sanitizeData(data);
-    console.log('Sanitized data:', sanitizedData);
+  const onFinalSubmit = async (data: any) => {
+    try {
+      console.log('Form data before sanitization:', data);
+      
+      // Sanitize data to remove undefined values
+      const sanitizedData = sanitizeData(data);
+      console.log('Sanitized data:', sanitizedData);
 
-    // Prepare file upload data
-    const fileUploadPromises: Array<Promise<[string, string]>> = [];
-    
-    for (const [key, file] of Object.entries(uploadedFiles)) {
-      if (file) {
-        fileUploadPromises.push(
-          uploadFile(file, `corporate-kyc/${Date.now()}-${file.name}`).then(url => [key, url])
-        );
+      // Prepare file upload data
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      
+      for (const [key, file] of Object.entries(uploadedFiles)) {
+        if (file) {
+          fileUploadPromises.push(
+            uploadFile(file, `corporate-kyc/${Date.now()}-${file.name}`).then(url => [key, url])
+          );
+        }
       }
+
+      const fileResults = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(fileResults);
+
+      const finalData = {
+        ...sanitizedData,
+        ...fileUrls,
+        status: 'processing',
+        formType: 'Corporate KYC'
+      };
+
+      await handleEnhancedSubmit(finalData);
+    } catch (error) {
+      console.error('Error in onFinalSubmit:', error);
+      toast({
+        title: 'Submission Error',
+        description: error instanceof Error ? error.message : 'An error occurred',
+        variant: 'destructive'
+      });
     }
-
-    const fileResults = await Promise.all(fileUploadPromises);
-    const fileUrls = Object.fromEntries(fileResults);
-
-    const finalData = {
-      ...sanitizedData,
-      ...fileUrls,
-      status: 'processing',
-      formType: 'Corporate KYC'
-    };
-
-    await handleSubmitWithAuth(finalData, 'Corporate KYC');
-    clearDraft();
-    setShowSummary(false);
-  };
-
-  const onFinalSubmit = (data: any) => {
-    setShowSummary(true);
   };
 
   // Data sanitization function
@@ -471,7 +461,7 @@ const CorporateKYC: React.FC = () => {
     0: [
       'branchOffice', 'insured', 'officeAddress', 'ownershipOfCompany', 'contactPerson', 
       'website', 'incorporationNumber', 'incorporationState', 'dateOfIncorporationRegistration',
-      'BVNNumber', 'contactPersonNo', 'taxIDNo', 'emailAddress', 'natureOfBusiness', 
+      'BVNNumber', 'NINNumber', 'contactPersonNo', 'taxIDNo', 'emailAddress', 'natureOfBusiness', 
       'estimatedTurnover', 'premiumPaymentSource', 'premiumPaymentSourceOther'
     ],
     1: ['directors'],
@@ -546,7 +536,7 @@ const CorporateKYC: React.FC = () => {
             />
           </div>
 
-          <FormDatePicker
+          <DatePicker
             name="dateOfIncorporationRegistration"
             label="Date of Incorporation/Registration"
             required={true}
@@ -560,20 +550,29 @@ const CorporateKYC: React.FC = () => {
               maxLength={11}
             />
             <FormField
+              name="NINNumber"
+              label="NIN (National Identification Number)"
+              required={true}
+              maxLength={11}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
               name="contactPersonNo"
               label="Contact Person Mobile Number"
               required={true}
               maxLength={15}
             />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               name="taxIDNo"
               label="Tax Identification Number"
               required={false}
               maxLength={10}
             />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               name="emailAddress"
               label="Email Address"
@@ -664,7 +663,7 @@ const CorporateKYC: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <FormDatePicker
+                <DatePicker
                   name={`directors.${index}.dob`}
                   label="Date of Birth"
                   required={true}
@@ -720,10 +719,19 @@ const CorporateKYC: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <FormField
+                  name={`directors.${index}.NINNumber`}
+                  label="NIN (National Identification Number)"
+                  required={true}
+                  maxLength={11}
+                />
+                <FormField
                   name={`directors.${index}.employersName`}
                   label="Employers Name"
                   required={false}
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <FormField
                   name={`directors.${index}.employersPhoneNumber`}
                   label="Employers Phone Number"
@@ -773,12 +781,12 @@ const CorporateKYC: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <FormDatePicker
+                <DatePicker
                   name={`directors.${index}.issuedDate`}
                   label="Issued Date"
                   required={true}
                 />
-                <FormDatePicker
+                <DatePicker
                   name={`directors.${index}.expiryDate`}
                   label="Expiry Date"
                   required={false}
@@ -825,6 +833,7 @@ const CorporateKYC: React.FC = () => {
               email: '',
               phoneNumber: '',
               BVNNumber: '',
+              NINNumber: '',
               employersName: '',
               employersPhoneNumber: '',
               residentialAddress: '',
@@ -875,7 +884,7 @@ const CorporateKYC: React.FC = () => {
                 required={true}
                 maxLength={100}
               />
-              <FormDatePicker
+              <DatePicker
                 name="localAccountOpeningDate"
                 label="Account Opening Date"
                 required={true}
@@ -905,7 +914,7 @@ const CorporateKYC: React.FC = () => {
                 label="Bank Branch"
                 maxLength={100}
               />
-              <FormDatePicker
+              <DatePicker
                 name="foreignAccountOpeningDate"
                 label="Account Opening Date"
               />
@@ -1036,65 +1045,179 @@ const CorporateKYC: React.FC = () => {
           </CardContent>
         </Card>
 
-      {/* Summary Dialog */}
-      <Dialog open={showSummary} onOpenChange={setShowSummary}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Corporate KYC Form Summary</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><strong>Branch Office:</strong> {formMethods.watch('nemBranchOffice')}</div>
-              <div><strong>Insured:</strong> {formMethods.watch('insured')}</div>
-              <div><strong>Email:</strong> {formMethods.watch('email')}</div>
-              <div><strong>Contact Person:</strong> {formMethods.watch('contactPerson')}</div>
-              <div><strong>BVN:</strong> {formMethods.watch('bvn')}</div>
-              <div><strong>Business Type:</strong> {formMethods.watch('businessType')}</div>
-            </div>
-            <div>
-              <strong>Address:</strong>
-              <p className="text-sm mt-1">{formMethods.watch('officeAddress')}</p>
-            </div>
-            <div>
-              <strong>Directors:</strong>
-              <div className="text-sm mt-1 space-y-2">
-                {formMethods.watch('directors')?.map((director: any, index: number) => (
-                  <div key={index} className="bg-gray-50 p-2 rounded">
-                    {director.firstName} {director.lastName} - {director.occupation}
+      {/* Loading Modal */}
+      <FormLoadingModal
+        isOpen={showLoading}
+        message={loadingMessage}
+      />
+
+      {/* Summary Dialog - Auto-generated */}
+      <FormSummaryDialog
+        open={showSummary}
+        onOpenChange={setShowSummary}
+        formData={submissionData}
+        formType="Corporate KYC"
+        onConfirm={confirmSubmit}
+        isSubmitting={isSubmitting}
+        renderSummary={(data) => {
+          if (!data) return <div className="text-center py-8 text-gray-500">No data to display</div>;
+          
+          return (
+            <div className="space-y-6">
+              {/* Company Information */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Company Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">Branch Office:</span>
+                    <p className="text-gray-900">{data.branchOffice || 'Not provided'}</p>
                   </div>
-                ))}
+                  <div>
+                    <span className="font-medium text-gray-600">Insured:</span>
+                    <p className="text-gray-900">{data.insured || 'Not provided'}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <span className="font-medium text-gray-600">Office Address:</span>
+                    <p className="text-gray-900">{data.officeAddress || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Ownership:</span>
+                    <p className="text-gray-900">{data.ownershipOfCompany || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Contact Person:</span>
+                    <p className="text-gray-900">{data.contactPerson || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Website:</span>
+                    <p className="text-gray-900">{data.website || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Incorporation Number:</span>
+                    <p className="text-gray-900">{data.incorporationNumber || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">BVN:</span>
+                    <p className="text-gray-900">{data.BVNNumber || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">NIN:</span>
+                    <p className="text-gray-900">{data.NINNumber || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Email:</span>
+                    <p className="text-gray-900">{data.emailAddress || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Contact Mobile:</span>
+                    <p className="text-gray-900">{data.contactPersonNo || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Nature of Business:</span>
+                    <p className="text-gray-900">{data.natureOfBusiness || 'Not provided'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Directors Information */}
+              {data.directors && Array.isArray(data.directors) && data.directors.length > 0 && (
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Directors Information</h3>
+                  {data.directors.map((director: any, index: number) => (
+                    <div key={index} className={index > 0 ? 'mt-4 pt-4 border-t' : ''}>
+                      <h4 className="font-medium text-gray-800 mb-2">Director {index + 1}</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium text-gray-600">Name:</span>
+                          <p className="text-gray-900">{`${director.firstName || ''} ${director.middleName || ''} ${director.lastName || ''}`.trim() || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Date of Birth:</span>
+                          <p className="text-gray-900">{director.dob ? format(new Date(director.dob), 'dd/MM/yyyy') : 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Nationality:</span>
+                          <p className="text-gray-900">{director.nationality || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Email:</span>
+                          <p className="text-gray-900">{director.email || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Phone:</span>
+                          <p className="text-gray-900">{director.phoneNumber || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">BVN:</span>
+                          <p className="text-gray-900">{director.BVNNumber || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">NIN:</span>
+                          <p className="text-gray-900">{director.NINNumber || 'Not provided'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Bank Details */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Bank Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-gray-800 mb-2">Local Account</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-600">Bank Name:</span>
+                        <p className="text-gray-900">{data.localBankName || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">Account Number:</span>
+                        <p className="text-gray-900">{data.localAccountNumber || 'Not provided'}</p>
+                      </div>
+                    </div>
+                  </div>
+                  {data.foreignBankName && (
+                    <div className="border-t pt-4">
+                      <h4 className="font-medium text-gray-800 mb-2">Foreign Account</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium text-gray-600">Bank Name:</span>
+                          <p className="text-gray-900">{data.foreignBankName || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Account Number:</span>
+                          <p className="text-gray-900">{data.foreignAccountNumber || 'Not provided'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Documents */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Uploaded Documents</h3>
+                <div className="grid grid-cols-1 gap-2 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">Verification Document:</span>
+                    <p className="text-gray-900">{data.verificationDoc ? '✓ Uploaded' : 'Not uploaded'}</p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSummary(false)}>
-              Edit Form
-            </Button>
-            <Button 
-              onClick={() => handleSubmit(formMethods.getValues())}
-              disabled={authSubmitting}
-            >
-              {authSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                'Submit KYC Form'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          );
+        }}
+      />
 
+      {/* Success Modal */}
       <SuccessModal
-        isOpen={authShowSuccess}
-        onClose={() => setAuthShowSuccess()}
+        isOpen={showSuccess}
+        onClose={closeSuccess}
         title="KYC Form Submitted Successfully!"
         message="Your Corporate KYC form has been submitted successfully. You will receive a confirmation email shortly."
         formType="Corporate KYC"
-        isLoading={authSubmitting}
-        loadingMessage="Submitting your form..."
       />
       </div>
     </FormProvider>

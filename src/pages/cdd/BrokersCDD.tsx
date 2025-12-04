@@ -21,9 +21,12 @@ import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
+import FormLoadingModal from '@/components/common/FormLoadingModal';
+import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import DatePicker from '@/components/common/DatePicker';
 
 const brokersCDDSchema = yup.object().shape({
   // Company Info
@@ -94,6 +97,10 @@ const brokersCDDSchema = yup.object().shape({
       .required("BVN is required")
       .matches(/^\d+$/, "BVN must contain only numbers")
       .length(11, "BVN must be exactly 11 digits"),
+    NINNumber: yup.string()
+      .required("NIN is required")
+      .matches(/^\d+$/, "NIN must contain only numbers")
+      .length(11, "NIN must be exactly 11 digits"),
     employersName: yup.string().required("Employer's name is required"),
     address: yup.string().required("Address is required"),
     taxIDNumber: yup.string(),
@@ -198,6 +205,7 @@ const defaultValues = {
     email: '',
     phoneNumber: '',
     BVNNumber: '',
+    NINNumber: '',
     employersName: '',
     address: '',
     taxIDNumber: '',
@@ -334,91 +342,10 @@ const FormSelect = ({ name, label, required = false, options, placeholder, ...pr
   );
 };
 
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors, trigger } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name);
-  
-  const formatDateForInput = (date: any) => {
-    if (!date) return '';
-    if (typeof date === 'string') {
-      // If it's already a string, try to parse it and format
-      const parsedDate = new Date(date);
-      return !isNaN(parsedDate.getTime()) ? parsedDate.toISOString().split('T')[0] : '';
-    }
-    if (date instanceof Date && !isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
-    return '';
-  };
-  
-  const handleDateChange = async (dateValue: Date | undefined) => {
-    setValue(name, dateValue, { shouldValidate: true });
-    if (error) {
-      clearErrors(name);
-    }
-    // Trigger validation for this field
-    await trigger(name);
-  };
-  
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={name}>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <div className="relative">
-        <Input
-          id={name}
-          type="date"
-          value={formatDateForInput(value)}
-          onChange={async (e) => {
-            const dateValue = e.target.value ? new Date(e.target.value + 'T00:00:00') : undefined;
-            await handleDateChange(dateValue);
-          }}
-          className={error ? 'border-destructive' : ''}
-        />
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-              type="button"
-            >
-              <CalendarIcon className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <ReactCalendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={handleDateChange}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
+
 
 const BrokersCDD: React.FC = () => {
-  const [showSummary, setShowSummary] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
-  
-  const {
-    handleSubmitWithAuth,
-    showSuccess,
-    setShowSuccess,
-    isSubmitting
-  } = useAuthRequiredSubmit();
-
   const formMethods = useForm<any>({
     resolver: yupResolver(brokersCDDSchema),
     defaultValues,
@@ -430,8 +357,23 @@ const BrokersCDD: React.FC = () => {
     control: formMethods.control,
     name: 'directors'
   });
-
   const watchedValues = formMethods.watch();
+
+  const {
+    handleSubmit: handleEnhancedSubmit,
+    showSummary,
+    setShowSummary,
+    showLoading,
+    loadingMessage,
+    showSuccess,
+    confirmSubmit,
+    closeSuccess,
+    formData: submissionData,
+    isSubmitting
+  } = useEnhancedFormSubmit({
+    formType: 'Brokers CDD',
+    onSuccess: () => clearDraft()
+  });
 
   // Step field mappings for validation
   const stepFieldMappings = {
@@ -450,6 +392,7 @@ const BrokersCDD: React.FC = () => {
       `directors.${index}.email`,
       `directors.${index}.phoneNumber`,
       `directors.${index}.BVNNumber`,
+      `directors.${index}.NINNumber`,
       `directors.${index}.employersName`,
       `directors.${index}.address`,
       `directors.${index}.idType`,
@@ -512,40 +455,34 @@ const BrokersCDD: React.FC = () => {
     return sanitized;
   };
 
-  const handleSubmit = async (data: any) => {
-    console.log('Form data before sanitization:', data);
-    
-    const sanitizedData = sanitizeData(data);
-    console.log('Sanitized data:', sanitizedData);
-
-    // Handle file uploads
-    const fileUploadPromises: Array<Promise<[string, string]>> = [];
-    
-    for (const [key, file] of Object.entries(uploadedFiles)) {
-      if (file) {
-        fileUploadPromises.push(
-          uploadFile(file, `brokers-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
-        );
+  const onFinalSubmit = async (data: any) => {
+    try {
+      const sanitizedData = sanitizeData(data);
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      
+      for (const [key, file] of Object.entries(uploadedFiles)) {
+        if (file) {
+          fileUploadPromises.push(
+            uploadFile(file, `brokers-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
+          );
+        }
       }
+
+      const fileResults = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(fileResults);
+
+      const finalData = {
+        ...sanitizedData,
+        ...fileUrls,
+        status: 'processing',
+        formType: 'Brokers CDD'
+      };
+
+      await handleEnhancedSubmit(finalData);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Submission failed', variant: 'destructive' });
     }
-
-    const fileResults = await Promise.all(fileUploadPromises);
-    const fileUrls = Object.fromEntries(fileResults);
-
-    const finalData = {
-      ...sanitizedData,
-      ...fileUrls,
-      status: 'processing',
-      formType: 'Brokers-CDD'
-    };
-
-    await handleSubmitWithAuth(finalData, 'Brokers-CDD');
-    clearDraft();
-    setShowSummary(false);
-  };
-
-  const onFinalSubmit = (data: any) => {
-    setShowSummary(true);
   };
 
   const steps = [
@@ -625,7 +562,7 @@ const BrokersCDD: React.FC = () => {
             />
           )}
           
-          <FormDatePicker
+          <DatePicker
             name="dateOfIncorporationRegistration"
             label="Date Of Incorporation/Registration"
             required={true}
@@ -771,7 +708,7 @@ const BrokersCDD: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormDatePicker
+                  <DatePicker
                     name={`directors.${index}.dob`}
                     label="Date of Birth"
                     required={true}
@@ -825,12 +762,21 @@ const BrokersCDD: React.FC = () => {
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    name={`directors.${index}.NINNumber`}
+                    label="NIN (National Identification Number)"
+                    maxLength={11}
+                    required={true}
+                  />
                   <FormField
                     name={`directors.${index}.employersName`}
                     label="Employer's Name"
                     required={true}
                   />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     name={`directors.${index}.taxIDNumber`}
                     label="Tax ID Number"
@@ -876,14 +822,14 @@ const BrokersCDD: React.FC = () => {
                     label="Issued By (Issuing Country)"
                     required={true}
                   />
-                  <FormDatePicker
+                  <DatePicker
                     name={`directors.${index}.issuedDate`}
                     label="Issued Date"
                     required={true}
                   />
                 </div>
                 
-                <FormDatePicker
+                <DatePicker
                   name={`directors.${index}.expiryDate`}
                   label="Expiry Date"
                 />
@@ -939,7 +885,7 @@ const BrokersCDD: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mt-4">
-              <FormDatePicker
+              <DatePicker
                 name="accountOpeningDate"
                 label="Account Opening Date"
                 required={true}
@@ -969,7 +915,7 @@ const BrokersCDD: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mt-4">
-              <FormDatePicker
+              <DatePicker
                 name="accountOpeningDate2"
                 label="Account Opening Date"
               />
@@ -1149,16 +1095,6 @@ const BrokersCDD: React.FC = () => {
   return (
     <FormProvider {...formMethods}>
       <div className="container mx-auto px-4 py-8">
-        {/* Loading overlay */}
-        {showPostAuthLoading && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-lg font-semibold">Completing your submission...</p>
-            </div>
-          </div>
-        )}
-
         <Card className="max-w-6xl mx-auto">
           <CardHeader>
             <CardTitle>Brokers Customer Due Diligence (CDD)</CardTitle>
@@ -1177,152 +1113,340 @@ const BrokersCDD: React.FC = () => {
           </CardContent>
         </Card>
 
-      {/* Summary Dialog */}
-      <Dialog open={showSummary} onOpenChange={setShowSummary}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Review Your Brokers CDD Form</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6">
-            {/* Company Information */}
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold text-lg mb-4">Company Information</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>Company Name:</strong> {watchedValues.companyName}</div>
-                <div><strong>Email:</strong> {watchedValues.email}</div>
-                <div><strong>Website:</strong> {watchedValues.website}</div>
-                <div><strong>Contact Person:</strong> {watchedValues.contactPersonName}</div>
-                <div><strong>Contact Number:</strong> {watchedValues.contactPersonNumber}</div>
-                <div><strong>Tax ID:</strong> {watchedValues.taxId}</div>
-                <div><strong>VAT Number:</strong> {watchedValues.vatRegistrationNumber}</div>
-                <div><strong>RC Number:</strong> {watchedValues.incorporationNumber}</div>
-                <div><strong>Incorporation State:</strong> {watchedValues.incorporationState}</div>
-                <div><strong>BVN:</strong> {watchedValues.bvn}</div>
-                <div className="col-span-2"><strong>Address:</strong> {watchedValues.registeredAddress}</div>
-                <div className="col-span-2"><strong>Business Nature:</strong> {watchedValues.businessNature}</div>
-                <div><strong>Incorporation Date:</strong> {watchedValues.incorporationDate ? new Date(watchedValues.incorporationDate).toLocaleDateString() : 'Not set'}</div>
+      <FormLoadingModal isOpen={showLoading} message={loadingMessage} />
+      
+      <FormSummaryDialog
+        open={showSummary}
+        onOpenChange={setShowSummary}
+        formData={submissionData}
+        formType="Brokers CDD"
+        onConfirm={confirmSubmit}
+        isSubmitting={isSubmitting}
+        renderSummary={(data) => {
+          if (!data) return null;
+          
+          const formatDate = (date: any) => {
+            if (!date) return 'Not provided';
+            try {
+              return format(new Date(date), 'dd/MM/yyyy');
+            } catch {
+              return 'Invalid date';
+            }
+          };
+
+          return (
+            <>
+              {/* Company Information */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900">Company Information</h3>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Company Name:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.companyName}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Address:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.companyAddress}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">City:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.city}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">State:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.state}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Country:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.country}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Email:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.emailAddress}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Website:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.website}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Phone:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.telephoneNumber}</div>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* Directors */}
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold text-lg mb-4">Directors ({watchedValues.directors?.length || 0})</h3>
-              {watchedValues.directors?.map((director: any, index: number) => (
-                <div key={index} className="border rounded p-3 mb-3 bg-gray-50">
-                  <h4 className="font-medium mb-2">Director {index + 1}</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div><strong>Title:</strong> {director.title}</div>
-                    <div><strong>Gender:</strong> {director.gender}</div>
-                    <div><strong>Full Name:</strong> {director.firstName} {director.middleName} {director.lastName}</div>
-                    <div><strong>Email:</strong> {director.email}</div>
-                    <div><strong>Phone:</strong> {director.phoneNumber}</div>
-                    <div><strong>Nationality:</strong> {director.nationality}</div>
-                    <div><strong>Occupation:</strong> {director.occupation}</div>
-                    <div><strong>BVN:</strong> {director.bvn}</div>
-                    <div><strong>Date of Birth:</strong> {director.dateOfBirth}</div>
-                    <div><strong>Place of Birth:</strong> {director.placeOfBirth}</div>
-                    <div><strong>ID Type:</strong> {director.idType}</div>
-                    <div><strong>ID Number:</strong> {director.identificationNumber}</div>
-                    <div><strong>Issuing Body:</strong> {director.issuingBody}</div>
-                    <div><strong>Income Source:</strong> {director.incomeSource}</div>
-                    <div className="col-span-2"><strong>Address:</strong> {director.residentialAddress}</div>
-                    {director.incomeSource === 'other' && director.incomeSourceOther && (
-                      <div className="col-span-2"><strong>Other Income Source:</strong> {director.incomeSourceOther}</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+              <div className="border-t my-4" />
 
-            {/* Account Details */}
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold text-lg mb-4">Account Details</h3>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium mb-2">Local Account</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><strong>Account Number:</strong> {watchedValues.localAccountNumber}</div>
-                    <div><strong>Bank Name:</strong> {watchedValues.localBankName}</div>
-                    <div><strong>Bank Branch:</strong> {watchedValues.localBankBranch}</div>
-                    <div><strong>Opening Date:</strong> {watchedValues.localAccountOpeningDate ? new Date(watchedValues.localAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
+              {/* Registration Details */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900">Registration Details</h3>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Incorporation Number:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.incorporationNumber}</div>
                   </div>
-                </div>
-                {(watchedValues.foreignAccountNumber || watchedValues.foreignBankName) && (
-                  <div>
-                    <h4 className="font-medium mb-2">Foreign Account</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div><strong>Account Number:</strong> {watchedValues.foreignAccountNumber}</div>
-                      <div><strong>Bank Name:</strong> {watchedValues.foreignBankName}</div>
-                      <div><strong>Bank Branch:</strong> {watchedValues.foreignBankBranch}</div>
-                      <div><strong>Opening Date:</strong> {watchedValues.foreignAccountOpeningDate ? new Date(watchedValues.foreignAccountOpeningDate).toLocaleDateString() : 'Not set'}</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Registration Number:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.registrationNumber}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Incorporation State:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.incorporationState}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Company Legal Form:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">
+                      {data.companyLegalForm === 'other' && data.companyLegalFormOther 
+                        ? data.companyLegalFormOther 
+                        : data.companyLegalForm}
                     </div>
                   </div>
-                )}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Date of Incorporation:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{formatDate(data.dateOfIncorporationRegistration)}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Nature of Business:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.natureOfBusiness}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Tax ID:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.taxIdentificationNumber}</div>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* Uploaded Documents */}
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold text-lg mb-4">Uploaded Documents</h3>
-              <div className="grid grid-cols-1 gap-2 text-sm">
-                {Object.entries(uploadedFiles).map(([key, file]) => (
-                  <div key={key} className="flex justify-between items-center py-2 border-b">
-                    <span className="font-medium">
-                      {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
-                    </span>
-                    <span className="text-green-600">
-                      {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                    </span>
+              <div className="border-t my-4" />
+
+              {/* Directors */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900">Directors</h3>
+                {data.directors && data.directors.map((director: any, index: number) => (
+                  <div key={index} className="space-y-2 p-3 bg-gray-50 rounded-lg">
+                    <h4 className="text-md font-medium text-gray-800">Director {index + 1}</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Full Name:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">
+                        {[director.title, director.firstName, director.middleName, director.lastName].filter(Boolean).join(' ')}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Gender:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900 capitalize">{director.gender}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Date of Birth:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{formatDate(director.dob)}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Place of Birth:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{director.placeOfBirth}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Nationality:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{director.nationality}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Residence Country:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{director.residenceCountry}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Occupation:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{director.occupation}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Email:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{director.email}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Phone:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{director.phoneNumber}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">BVN:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{director.BVNNumber}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Employer:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{director.employersName}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Address:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{director.address}</div>
+                    </div>
+                    {director.taxIDNumber && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                        <div className="text-sm font-medium text-gray-600">Tax ID:</div>
+                        <div className="sm:col-span-2 text-sm text-gray-900">{director.taxIDNumber}</div>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">ID Type:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{director.idType}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">ID Number:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{director.idNumber}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Issued By:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{director.issuedBy}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Issued Date:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{formatDate(director.issuedDate)}</div>
+                    </div>
+                    {director.expiryDate && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                        <div className="text-sm font-medium text-gray-600">Expiry Date:</div>
+                        <div className="sm:col-span-2 text-sm text-gray-900">{formatDate(director.expiryDate)}</div>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Source of Income:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">
+                        {director.sourceOfIncome === 'other' && director.sourceOfIncomeOther 
+                          ? director.sourceOfIncomeOther 
+                          : director.sourceOfIncome}
+                      </div>
+                    </div>
                   </div>
                 ))}
-                {Object.keys(uploadedFiles).length === 0 && (
-                  <p className="text-muted-foreground">No documents uploaded yet</p>
-                )}
               </div>
-            </div>
 
-            {/* Declaration */}
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold text-lg mb-4">Declaration</h3>
-              <div className="text-sm">
-                <div><strong>Data Privacy Agreement:</strong> {watchedValues.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</div>
-                <div><strong>Digital Signature:</strong> {watchedValues.signature}</div>
+              <div className="border-t my-4" />
+
+              {/* Account Details */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900">Account Details</h3>
+                <div className="space-y-2">
+                  <h4 className="text-md font-medium text-gray-800 mt-2">Local Account</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Bank Name:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.localBankName}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Branch:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.bankBranch}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Account Number:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{data.currentAccountNumber}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Opening Date:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">{formatDate(data.accountOpeningDate)}</div>
+                  </div>
+
+                  {data.domAccountNumber2 && (
+                    <>
+                      <h4 className="text-md font-medium text-gray-800 mt-4">Foreign Account</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                        <div className="text-sm font-medium text-gray-600">Account Number:</div>
+                        <div className="sm:col-span-2 text-sm text-gray-900">{data.domAccountNumber2}</div>
+                      </div>
+                      {data.foreignBankName2 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                          <div className="text-sm font-medium text-gray-600">Bank Name:</div>
+                          <div className="sm:col-span-2 text-sm text-gray-900">{data.foreignBankName2}</div>
+                        </div>
+                      )}
+                      {data.bankBranchName2 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                          <div className="text-sm font-medium text-gray-600">Branch:</div>
+                          <div className="sm:col-span-2 text-sm text-gray-900">{data.bankBranchName2}</div>
+                        </div>
+                      )}
+                      {data.currency && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                          <div className="text-sm font-medium text-gray-600">Currency:</div>
+                          <div className="sm:col-span-2 text-sm text-gray-900">{data.currency}</div>
+                        </div>
+                      )}
+                      {data.accountOpeningDate2 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                          <div className="text-sm font-medium text-gray-600">Opening Date:</div>
+                          <div className="sm:col-span-2 text-sm text-gray-900">{formatDate(data.accountOpeningDate2)}</div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-            
-            <div className="flex gap-4 pt-4 border-t">
-              <Button
-                variant="outline"
-                onClick={() => setShowSummary(false)}
-              >
-                Edit Details
-              </Button>
-              <Button
-                onClick={() => {
-                  const formData = formMethods.getValues();
-                  handleSubmit(formData);
-                }}
-                disabled={isSubmitting}
-                className="bg-primary text-primary-foreground"
-              >
-                {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
-        {/* Success Modal */}
-        <SuccessModal
-          isOpen={showSuccess}
-          onClose={() => setShowSuccess()}
-          title="Brokers CDD Form Submitted Successfully!"
-          message="Your Brokers CDD form has been submitted successfully. We will review your information and get back to you soon."
-          formType="Brokers-CDD"
-        />
+              <div className="border-t my-4" />
+
+              {/* Documents */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900">Documents</h3>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Certificate of Incorporation:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">
+                      {typeof data.Incorporation === 'string' ? 'Uploaded' : data.Incorporation?.name || 'Uploaded'}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Director 1 ID:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">
+                      {typeof data.identification === 'string' ? 'Uploaded' : data.identification?.name || 'Uploaded'}
+                    </div>
+                  </div>
+                  {data.identification2 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Director 2 ID:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">
+                        {typeof data.identification2 === 'string' ? 'Uploaded' : data.identification2?.name || 'Uploaded'}
+                      </div>
+                    </div>
+                  )}
+                  {data.NAICOMForm && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">NAICOM Form:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">
+                        {typeof data.NAICOMForm === 'string' ? 'Uploaded' : data.NAICOMForm?.name || 'Uploaded'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t my-4" />
+
+              {/* Declaration */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900">Declaration</h3>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Data Privacy Agreement:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900">
+                      {data.agreeToDataPrivacy ? 'Agreed' : 'Not Agreed'}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                    <div className="text-sm font-medium text-gray-600">Digital Signature:</div>
+                    <div className="sm:col-span-2 text-sm text-gray-900 font-signature italic">
+                      {data.signature}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          );
+        }}
+      />
+
+      <SuccessModal
+        isOpen={showSuccess}
+        onClose={closeSuccess}
+        title="Brokers CDD Submitted Successfully!"
+        message="Your Brokers Customer Due Diligence form has been submitted successfully."
+      />
+
       </div>
     </FormProvider>
   );
 };
 
 export default BrokersCDD;
+

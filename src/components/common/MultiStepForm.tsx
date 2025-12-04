@@ -35,6 +35,7 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
   onStepChange
 }) => {
   const [currentStep, setCurrentStep] = useState(initialStep);
+  const [isValidating, setIsValidating] = useState(false);
 
   const nextStep = async () => {
     // Use custom validation function if provided
@@ -142,11 +143,60 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
           {isLastStep ? (
             <Button
               type="button"
-              onClick={() => formMethods.handleSubmit(onSubmit)()}
-              disabled={!canProceed || isSubmitting}
+              onClick={async () => {
+                console.log('Submit button clicked');
+                console.log('Form errors:', formMethods.formState.errors);
+                console.log('Form values:', formMethods.getValues());
+                
+                setIsValidating(true);
+                
+                try {
+                  await formMethods.handleSubmit(
+                    async (data) => {
+                      console.log('Form validation passed, calling onSubmit with data:', data);
+                      await onSubmit(data);
+                      setIsValidating(false);
+                    },
+                    (errors) => {
+                      console.error('Form validation failed with errors:', errors);
+                      setIsValidating(false);
+                      // Show toast for validation errors
+                      if ((window as any).toast) {
+                        (window as any).toast({
+                          title: 'Validation Error',
+                          description: 'Please fix the errors in the form before submitting.',
+                          variant: 'destructive'
+                        });
+                      }
+                    }
+                  )();
+                } catch (error) {
+                  console.error('Error during form submission:', error);
+                  setIsValidating(false);
+                }
+              }}
+              disabled={!canProceed || isSubmitting || isValidating}
               className="flex items-center space-x-2"
             >
-              <span>{isSubmitting ? 'Submitting...' : submitButtonText}</span>
+              {isValidating ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Validating...</span>
+                </>
+              ) : isSubmitting ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                <span>{submitButtonText}</span>
+              )}
             </Button>
           ) : (
             <Button

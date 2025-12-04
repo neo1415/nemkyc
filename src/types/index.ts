@@ -24,6 +24,7 @@ export interface Director {
   email: string;
   phoneNumber: string;
   bvn: string;
+  nin?: string;
   employerName?: string;
   employerPhone?: string;
   residentialAddress: string;
@@ -86,6 +87,7 @@ export interface PartnersCDDData {
   incorporationState: string;
   businessNature: string;
   bvn: string;
+  nin?: string;
   directors: Director[];
   localAccountNumber: string;
   localBankName: string;

@@ -22,6 +22,146 @@ const multer = require("multer");
 const { getStorage } = require("firebase-admin/storage");
 const crypto = require('crypto');
 
+// ============================================================================
+// SECURITY MIDDLEWARE
+// ============================================================================
+
+/**
+ * Authentication middleware - verifies Firebase ID tokens
+ * Use this on routes that require authentication
+ */
+const authenticate = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized - No token provided' });
+    }
+    
+    const token = authHeader.split('Bearer ')[1];
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    
+    req.user = {
+      uid: decodedToken.uid,
+      email: decodedToken.email,
+      role: decodedToken.role || 'user'
+    };
+    
+    // Get user role from Firestore
+    try {
+      const userDoc = await admin.firestore().collection('userroles').doc(decodedToken.uid).get();
+      if (userDoc.exists) {
+        req.user.role = userDoc.data().role || 'user';
+      }
+    } catch (error) {
+      console.warn('Could not fetch user role:', error.message);
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Authentication error:', error.message);
+    return res.status(401).json({ error: 'Unauthorized - Invalid token' });
+  }
+};
+
+/**
+ * Role-based access control middleware
+ * Usage: requireRole(['admin', 'super admin'])
+ */
+const requireRole = (allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized - Not authenticated' });
+    }
+    
+    const normalizeRole = (role) => {
+      if (!role) return 'user';
+      return role.toLowerCase().trim().replace(/[-_]/g, ' ');
+    };
+    
+    const userRole = normalizeRole(req.user.role);
+    const allowed = allowedRoles.map(r => normalizeRole(r));
+    
+    if (!allowed.includes(userRole)) {
+      return res.status(403).json({ 
+        error: 'Forbidden - Insufficient permissions',
+        required: allowedRoles,
+        current: req.user.role
+      });
+    }
+    
+    next();
+  };
+};
+
+/**
+ * Rate limiter for authentication endpoints
+ */
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: { error: 'Too many authentication attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+});
+
+/**
+ * Rate limiter for form submissions
+ */
+const submissionLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  message: { error: 'Too many form submissions. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * Sanitize data before logging - removes sensitive information
+ */
+const sanitizeForLog = (data) => {
+  if (!data || typeof data !== 'object') return data;
+  
+  const sanitized = { ...data };
+  const sensitiveFields = ['password', 'token', 'idToken', 'customToken', 'authorization', 'rawIP', 'bvn', 'nin', 'NIN', 'NINNumber', 'identificationNumber', 'accountNumber'];
+  
+  sensitiveFields.forEach(field => {
+    if (sanitized[field]) {
+      sanitized[field] = '[REDACTED]';
+    }
+  });
+  
+  if (sanitized.email && typeof sanitized.email === 'string') {
+    const parts = sanitized.email.split('@');
+    if (parts.length === 2) {
+      sanitized.email = `${parts[0].substring(0, 2)}***@${parts[1]}`;
+    }
+  }
+  
+  if (sanitized.phone && typeof sanitized.phone === 'string') {
+    const digits = sanitized.phone.replace(/\D/g, '');
+    if (digits.length > 4) {
+      sanitized.phone = `***${digits.slice(-4)}`;
+    }
+  }
+  
+  return sanitized;
+};
+
+/**
+ * Safe logging function - use instead of console.log for sensitive data
+ */
+const safeLog = (message, data) => {
+  if (data) {
+    console.log(message, sanitizeForLog(data));
+  } else {
+    console.log(message);
+  }
+};
+
+// ============================================================================
+
 let config = {
   type: process.env.TYPE,
   project_id: process.env.PROJECT_ID,
@@ -47,66 +187,55 @@ admin.initializeApp({
 
 const accessLogStream = fs.createWriteStream(path.join(__dirname, 'access.log'), { flags: 'a' });
 
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://nem-server-rhdb.onrender.com',
-  'https://nem-kyc.web.app',
-  "crypto-trade-template-591.lovable.app",
-  'https://preview--orangery-ventures-harmony-242.lovable.app',
-  'https://3463ce13-b353-49e7-b843-5d07a684b845.lovableproject.com',
-  "https://preview--psk-services-920.lovable.app",
-  "https://psk-services-920.lovable.app",
-  "https://glow-convert-sell-623.lovable.app",
-  "https://lovable.dev/projects/50464dab-8208-4baa-91a2-13d656b2f461",
-  "https://preview--glow-convert-sell-623.lovable.app",
-  "https://ai-tool-hub-449.lovable.app",
-  "https://lovable.dev/projects/55a3a495-1302-407f-b290-b3e36e458c6b",
-  "https://preview--ai-tool-hub-449.lovable.app",
-  "https://preview--fleetvision-dashboard-233.lovable.app",
-  "https://nem-demo.lovable.app",
-  "https://lovable.dev/projects/a070f70a-14d8-4f9a-a3c0-571ec1dec753",
-  "https://nem-forms-demo-app.lovable.app",
-  "https://lovable.dev/projects/ded87798-8f4c-493e-8dae-d7fa0ba10ef8",
-  "https://preview--wrlds-ai-integration-4349.lovable.app",
-  "https://wrlds-ai-integration-4349.lovable.app",
-  "https://lovable.dev/projects/288cf4b9-0920-44a5-b1a4-a69a5341d47f",
-  "https://preview--market-mosaic-online-4342.lovable.app",
-  "https://market-mosaic-online-4342.lovable.app",
-  "https://lovable.dev/projects/88f314bd-27da-41ea-9068-a49b2abcd1b4",
-  "https://88f314bd-27da-41ea-9068-a49b2abcd1b4.lovableproject.com",
-  "https://preview--nem-demo.lovable.app",
-  "https://bde588f1-c65e-e-859e-b330-72159ff17378.lovableproject.com",
-  'https://nem-kyc.firebaseapp.com',
-  'https://nemforms.com',
-  // Current project URLs - common NEM forms variations
-  "https://nem-forms-admin-portal.lovable.app",
-  "https://preview--nem-forms-admin-portal.lovable.app",
-  "https://nem-forms-portal.lovable.app",
-  "https://preview--nem-forms-portal.lovable.app",
-  "https://nem-insurance-forms.lovable.app",
-  "https://preview--nem-insurance-forms.lovable.app"
-];
+// ============================================================================
+// CORS CONFIGURATION - Improved Security
+// ============================================================================
+
+// Get allowed origins from environment variable or use defaults
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:8080',
+      'https://nemforms.com',
+      'https://nem-kyc.web.app',
+      'https://nem-kyc.firebaseapp.com',
+      'https://nem-forms-admin-portal.lovable.app',
+      'https://preview--nem-forms-admin-portal.lovable.app',
+      'https://nem-forms-portal.lovable.app',
+      'https://preview--nem-forms-portal.lovable.app',
+      'https://nem-insurance-forms.lovable.app',
+      'https://preview--nem-insurance-forms.lovable.app'
+    ];
+
+// Add Lovable patterns if in development
+const lovablePatterns = process.env.NODE_ENV !== 'production' ? [
+  /^https:\/\/.*\.lovable\.app$/,
+  /^https:\/\/preview--.*\.lovable\.app$/,
+  /^https:\/\/.*\.lovableproject\.com$/,
+] : [];
 
 const port = process.env.PORT || 3001;
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.)
+    // Allow requests with no origin (mobile apps, Postman, curl)
     if (!origin) return callback(null, true);
     
-    // Check exact matches first
+    // Check exact matches
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
     
-    // Check if it's a Lovable domain pattern
-    const lovablePatterns = [
-      /^https:\/\/.*\.lovable\.app$/,
-      /^https:\/\/preview--.*\.lovable\.app$/,
-      /^https:\/\/.*\.lovableproject\.com$/,
-      /^https:\/\/lovable\.dev\/projects\/.*$/
-    ];
+    // Check Lovable patterns (dev only)
+    if (lovablePatterns.length > 0) {
+      const isLovableDomain = lovablePatterns.some(pattern => pattern.test(origin));
+      if (isLovableDomain) {
+        console.log('✅ CORS: Allowing Lovable domain:', origin);
+        return callback(null, true);
+      }
+    }
     
     const isLovableDomain = lovablePatterns.some(pattern => pattern.test(origin));
     
@@ -502,7 +631,7 @@ async function sendEmail(to, subject, html, attachments = []) {
 }
 
 // ✅ NEW: Claims Approval/Rejection with Evidence Preservation + EVENT LOGGING
-app.post('/api/update-claim-status', async (req, res) => {
+app.post('/api/update-claim-status', authenticate, requireRole(['admin', 'super admin', 'claims']), async (req, res) => {
   try {
     const { 
       collectionName, 
@@ -975,7 +1104,7 @@ async function getFormData(req, res, collectionName){
 }
 
 // ✅ NEW: Form viewing with EVENT LOGGING
-app.get('/api/forms/:collection/:id', async (req, res) => {
+app.get('/api/forms/:collection/:id', authenticate, requireRole(['admin', 'super admin', 'claims', 'compliance']), async (req, res) => {
   try {
     const { collection, id } = req.params;
     const { viewerUid } = req.query; // Pass viewer UID as query param
@@ -1088,7 +1217,7 @@ app.post('/submit-claim-all-risk', async (req, res) => {
 });
 
 // ✅ User Registration with EVENT LOGGING
-app.post('/api/register-user', async (req, res) => {
+app.post('/api/register-user', authenticate, requireRole(['admin', 'super admin']), async (req, res) => {
   try {
     const { email, displayName, role = 'user' } = req.body;
     
@@ -1137,7 +1266,7 @@ app.post('/api/register-user', async (req, res) => {
 });
 
 // ✅ File Download Tracking with EVENT LOGGING
-app.get('/api/download/:fileType/:documentId', async (req, res) => {
+app.get('/api/download/:fileType/:documentId', authenticate, async (req, res) => {
   try {
     const { fileType, documentId } = req.params;
     const { downloaderUid, fileName } = req.query;
@@ -1410,7 +1539,7 @@ const setSuperAdminOnStartup = async () => {
 // ============= FORM SUBMISSION BACKEND ENDPOINTS =============
 
 // Centralized form submission endpoint with event logging
-app.post('/api/submit-form', async (req, res) => {
+app.post('/api/submit-form', submissionLimiter, async (req, res) => {
   try {
     const { formData, formType, userUid, userEmail } = req.body;
     
@@ -1624,7 +1753,7 @@ const generateAdminNotificationHTML = (formType, formData, documentId) => {
 // ============= AUTHENTICATION BACKEND ENDPOINTS =============
 
 // Login endpoint with event logging
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     
@@ -1807,6 +1936,41 @@ app.post('/api/exchange-token', async (req, res) => {
     
     console.log('✅ Token verified successfully for user:', email);
     
+    // ============================================================================
+    // EMAIL VERIFICATION CHECK - Block unverified users from logging in
+    const emailVerified = decodedToken.email_verified || false;
+    
+    if (!emailVerified) {
+      console.log('🚫 LOGIN BLOCKED: Email not verified');
+      
+      await logAction({
+        action: 'login-blocked-unverified-email',
+        actorUid: uid,
+        actorDisplayName: 'Unknown',
+        actorEmail: email,
+        actorRole: 'unverified',
+        targetType: 'user',
+        targetId: uid,
+        details: { 
+          reason: 'email-not-verified',
+          emailVerified: false
+        },
+        ipMasked: req.ipData?.masked,
+        ipHash: req.ipData?.hash,
+        rawIP: req.ipData?.raw,
+        location: await getLocationFromIP(req.ipData?.raw || '0.0.0.0'),
+        userAgent: req.headers['user-agent'] || 'Unknown',
+        meta: { loginTimestamp: new Date().toISOString() }
+      });
+      
+      return res.status(403).json({
+        success: false,
+        requireEmailVerification: true,
+        message: 'Please verify your email address before logging in. Check your inbox or spam folder for the verification link.',
+        email: email
+      });
+    }
+    
     // Get user from Firestore userroles collection
     const userDoc = await db.collection('userroles').doc(uid).get();
     
@@ -1816,11 +1980,13 @@ app.post('/api/exchange-token', async (req, res) => {
     }
 
     const userData = userDoc.data();
-    console.log('👤 User data retrieved:', { email, role: userData.role });
     
-    // Check for sensitive roles that require MFA
-    const sensitiveRoles = ['admin', 'super-admin', 'compliance', 'claims'];
-    const requiresMFA = sensitiveRoles.includes(userData.role);
+    // ============================================================================
+    // MANDATORY MFA FOR PRIVILEGED ROLES
+    // ============================================================================
+    // Roles that MUST have MFA: admin, super admin, compliance, claims
+    const privilegedRoles = ['admin', 'super admin', 'compliance', 'claims'];
+    const isPrivilegedRole = privilegedRoles.includes(userData.role);
     
     // Get or create login metadata document
     const loginMetaRef = db.collection('loginMetadata').doc(uid);
@@ -1828,11 +1994,13 @@ app.post('/api/exchange-token', async (req, res) => {
     
     let loginCount = 1;
     let lastLoginAt = new Date();
+    let mfaEnrollmentCompleted = false;
     
     if (loginMetaDoc.exists) {
       const metaData = loginMetaDoc.data();
       loginCount = (metaData.loginCount || 0) + 1;
       lastLoginAt = metaData.lastLoginAt?.toDate() || new Date();
+      mfaEnrollmentCompleted = metaData.mfaEnrollmentCompleted || false;
     }
     
     // Update login count
@@ -1840,28 +2008,42 @@ app.post('/api/exchange-token', async (req, res) => {
       loginCount: loginCount,
       lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
       email: email,
-      role: userData.role
+      role: userData.role,
+      mfaEnrollmentCompleted: mfaEnrollmentCompleted
     }, { merge: true });
     
-    console.log('📊 Login count updated:', { loginCount, requiresMFA });
-    
-    // Check if MFA is required (every 3rd login for sensitive roles)
-    const shouldRequireMFA = requiresMFA && (loginCount % 3 === 0);
-    
-    // Get user's current MFA enrollment status
+    // Check user's current MFA enrollment status in Firebase Auth
     let mfaEnrolled = false;
+    let enrolledFactors = [];
     try {
       const userRecord = await admin.auth().getUser(uid);
-      mfaEnrolled = userRecord.multiFactor?.enrolledFactors?.length > 0;
+      enrolledFactors = userRecord.multiFactor?.enrolledFactors || [];
+      mfaEnrolled = enrolledFactors.length > 0;
     } catch (error) {
       console.warn('⚠️ Error checking MFA enrollment:', error);
     }
     
-    console.log('🔐 MFA Status:', { shouldRequireMFA, mfaEnrolled });
+    // MFA Debug Logging
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔐 MFA CHECK - Login #' + loginCount);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('👤 User:', email);
+    console.log('👔 Role:', userData.role);
+    console.log('🎯 Is Privileged Role:', isPrivilegedRole);
+    console.log('📊 Login Count:', loginCount);
+    console.log('🔐 MFA Enrolled:', mfaEnrolled);
+    console.log('📱 Enrolled Factors:', enrolledFactors.length);
+    console.log('✅ MFA Enrollment Completed:', mfaEnrollmentCompleted);
+    console.log('🔢 Should Require MFA (every 3rd):', loginCount % 3 === 0);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    // If MFA is required but user is not enrolled, require enrollment first
-    if (shouldRequireMFA && !mfaEnrolled) {
-      console.log('📝 MFA enrollment required for user:', email);
+    // ============================================================================
+    // STEP 1: Force MFA enrollment for privileged roles (if not already enrolled)
+    // ============================================================================
+    if (isPrivilegedRole && !mfaEnrolled) {
+      console.log('🚨 MANDATORY MFA ENROLLMENT REQUIRED for privileged role:', userData.role);
+      console.log('👤 User:', email);
+      console.log('📝 User must enroll in MFA before accessing the application');
       
       await logAction({
         action: 'mfa-enrollment-required',
@@ -1873,7 +2055,8 @@ app.post('/api/exchange-token', async (req, res) => {
         targetId: uid,
         details: { 
           loginCount: loginCount,
-          reason: 'sensitive-role-login-threshold',
+          reason: 'mandatory-for-privileged-role',
+          privilegedRole: userData.role,
           mfaEnrolled: false
         },
         ipMasked: req.ipData?.masked,
@@ -1887,18 +2070,26 @@ app.post('/api/exchange-token', async (req, res) => {
       return res.json({
         success: false,
         requireMFAEnrollment: true,
-        message: 'Multi-factor authentication enrollment required for your role',
+        message: 'Multi-factor authentication is mandatory for your role. Please enroll to continue.',
         role: userData.role,
-        loginCount: loginCount
+        loginCount: loginCount,
+        mandatory: true
       });
     }
     
-    // If MFA is required and user is enrolled, require MFA verification
-    if (shouldRequireMFA && mfaEnrolled) {
-      console.log('🔐 MFA verification required for user:', email);
+    // ============================================================================
+    // STEP 2: Require MFA verification every 3rd login (for enrolled privileged users)
+    // ============================================================================
+    const shouldRequireMFAVerification = isPrivilegedRole && mfaEnrolled && (loginCount % 3 === 0);
+    
+    if (shouldRequireMFAVerification) {
+      console.log('🔐 MFA VERIFICATION REQUIRED (3rd login check)');
+      console.log('👤 User:', email);
+      console.log('📊 Login count:', loginCount);
+      console.log('🔢 Every 3rd login requires MFA verification');
       
       await logAction({
-        action: 'mfa-required',
+        action: 'mfa-verification-required',
         actorUid: uid,
         actorDisplayName: userData.name,
         actorEmail: email,
@@ -1907,8 +2098,10 @@ app.post('/api/exchange-token', async (req, res) => {
         targetId: uid,
         details: { 
           loginCount: loginCount,
-          reason: 'sensitive-role-login-threshold',
-          mfaEnrolled: true
+          reason: 'third-login-check',
+          privilegedRole: userData.role,
+          mfaEnrolled: true,
+          enrolledFactorsCount: enrolledFactors.length
         },
         ipMasked: req.ipData?.masked,
         ipHash: req.ipData?.hash,
@@ -1927,7 +2120,17 @@ app.post('/api/exchange-token', async (req, res) => {
       });
     }
     
-    // Log successful token exchange
+    // ============================================================================
+    // STEP 3: Mark MFA enrollment as complete (if privileged user has MFA enrolled)
+    // ============================================================================
+    if (isPrivilegedRole && mfaEnrolled && !mfaEnrollmentCompleted) {
+      console.log('✅ Marking MFA enrollment as complete');
+      await loginMetaRef.set({
+        mfaEnrollmentCompleted: true
+      }, { merge: true });
+    }
+    
+    // Log successful token exchange (minimal logging)
     const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
     await logAction({
       action: 'login-success',
@@ -1940,7 +2143,9 @@ app.post('/api/exchange-token', async (req, res) => {
       details: { 
         loginMethod: 'token-exchange',
         loginCount: loginCount,
-        mfaRequired: false
+        mfaRequired: false,
+        mfaEnrolled: mfaEnrolled,
+        isPrivilegedRole: isPrivilegedRole
       },
       ipMasked: req.ipData?.masked,
       ipHash: req.ipData?.hash,
@@ -1949,12 +2154,15 @@ app.post('/api/exchange-token', async (req, res) => {
       userAgent: req.headers['user-agent'] || 'Unknown',
       meta: { loginTimestamp: new Date().toISOString() }
     });
+    
+    console.log('✅ Login successful\n');
 
     res.json({
       success: true,
       role: userData.role,
       user: { uid, email, displayName: userData.name },
-      loginCount: loginCount
+      loginCount: loginCount,
+      mfaEnrolled: mfaEnrolled
     });
 
   } catch (error) {
@@ -2102,7 +2310,7 @@ const mfaAttemptLimit = rateLimit({
 app.use('/api/auth/verify-mfa', mfaAttemptLimit);
 
 // Register endpoint with event logging
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', authLimiter, async (req, res) => {
   try {
     const { email, password, displayName, role = 'user' } = req.body;
     
@@ -2179,7 +2387,7 @@ app.post('/api/register', async (req, res) => {
 // ============= DATA RETRIEVAL BACKEND ENDPOINTS =============
 
 // Get forms data with event logging
-app.get('/api/forms/:collection', async (req, res) => {
+app.get('/api/forms/:collection', authenticate, requireRole(['admin', 'super admin', 'claims', 'compliance']), async (req, res) => {
   try {
     const { collection } = req.params;
     const { viewerUid, page = 1, limit = 50 } = req.query;
@@ -2267,7 +2475,7 @@ app.get('/api/forms/:collection', async (req, res) => {
 });
 
 // Get specific form by ID with event logging  
-app.get('/api/forms/:collection/:id', async (req, res) => {
+app.get('/api/forms/:collection/:id', authenticate, requireRole(['admin', 'super admin', 'claims', 'compliance']), async (req, res) => {
   try {
     const { collection, id } = req.params;
     const { viewerUid } = req.query;
@@ -2325,7 +2533,7 @@ app.get('/api/forms/:collection/:id', async (req, res) => {
 // ============= FORM EDITING AND STATUS UPDATE ENDPOINTS =============
 
 // Update form status with event logging
-app.put('/api/forms/:collection/:id/status', async (req, res) => {
+app.put('/api/forms/:collection/:id/status', authenticate, requireRole(['admin', 'super admin', 'claims', 'compliance']), async (req, res) => {
   try {
     const { collection, id } = req.params;
     const { status, updaterUid, comment, userEmail, formType } = req.body;
@@ -2474,7 +2682,7 @@ app.put('/api/forms/:collection/:id/status', async (req, res) => {
 // ============= EVENTS LOG API ENDPOINTS =============
 
 // Get event logs with filtering and pagination (Admin only)
-app.get('/api/events-logs', async (req, res) => {
+app.get('/api/events-logs', authenticate, requireRole(['admin', 'super admin', 'compliance', 'claims']), async (req, res) => {
   try {
     console.log('🔍 /api/events-logs endpoint called');
     console.log('📤 Request query params:', req.query);
@@ -2683,9 +2891,8 @@ app.get('/api/events-logs', async (req, res) => {
 });
 
 // Get event details by ID (Admin only)
-app.get('/api/events-logs/:id', async (req, res) => {
+app.get('/api/events-logs/:id', authenticate, requireRole(['admin', 'super admin']), async (req, res) => {
   try {
-    // TODO: Add authentication middleware to verify admin role
     const { id } = req.params;
     
     const doc = await db.collection('eventLogs').doc(id).get();
@@ -2711,9 +2918,8 @@ app.get('/api/events-logs/:id', async (req, res) => {
 });
 
 // Clean up expired raw IPs (scheduled job - call this periodically)
-app.post('/api/cleanup-expired-ips', async (req, res) => {
+app.post('/api/cleanup-expired-ips', authenticate, requireRole(['admin', 'super admin']), async (req, res) => {
   try {
-    // TODO: Add authentication middleware to verify admin/system role
     
     const now = admin.firestore.Timestamp.now();
     const expiredQuery = db.collection('eventLogs')
@@ -2746,7 +2952,7 @@ app.post('/api/cleanup-expired-ips', async (req, res) => {
 });
 
 // ✅ Route to manually generate test events (for development/testing)
-app.post('/api/generate-test-events', async (req, res) => {
+app.post('/api/generate-test-events', authenticate, requireRole(['admin', 'super admin']), async (req, res) => {
   try {
     console.log('🧪 Manually generating test events...');
     
@@ -2870,7 +3076,7 @@ app.post('/api/generate-test-events', async (req, res) => {
 // ============= USER MANAGEMENT ENDPOINTS WITH EVENT LOGGING =============
 
 // ✅ NEW: Update user role with EVENT LOGGING
-app.put('/api/users/:userId/role', async (req, res) => {
+app.put('/api/users/:userId/role', authenticate, requireRole(['super admin']), async (req, res) => {
   try {
     const { userId } = req.params;
     const { role, updaterUid } = req.body;
@@ -2932,7 +3138,7 @@ app.put('/api/users/:userId/role', async (req, res) => {
 });
 
 // ✅ NEW: Get all users with EVENT LOGGING
-app.get('/api/users', async (req, res) => {
+app.get('/api/users', authenticate, requireRole(['admin', 'super admin']), async (req, res) => {
   try {
     const { viewerUid } = req.query;
     
@@ -2979,7 +3185,7 @@ app.get('/api/users', async (req, res) => {
 });
 
 // ✅ NEW: Delete user with EVENT LOGGING
-app.delete('/api/users/:userId', async (req, res) => {
+app.delete('/api/users/:userId', authenticate, requireRole(['super admin']), async (req, res) => {
   try {
     const { userId } = req.params;
     const { deleterUid, userName } = req.body;
@@ -3036,7 +3242,7 @@ app.delete('/api/users/:userId', async (req, res) => {
 // ============= ADDITIONAL FORMS BACKEND ENDPOINTS =============
 
 // Get forms from multiple collections (for CDD and Claims tables)
-app.post('/api/forms/multiple', async (req, res) => {
+app.post('/api/forms/multiple', authenticate, requireRole(['admin', 'super admin', 'claims', 'compliance']), async (req, res) => {
   try {
     const { collections } = req.body;
     const userAuth = req.headers.authorization;
@@ -3206,7 +3412,7 @@ app.patch('/api/forms/:collectionName/:formId/status', async (req, res) => {
 });
 
 // Delete form with event logging
-app.delete('/api/forms/:collectionName/:formId', async (req, res) => {
+app.delete('/api/forms/:collectionName/:formId', authenticate, requireRole(['admin', 'super admin']), async (req, res) => {
   try {
     const { collectionName, formId } = req.params;
     const userAuth = req.headers.authorization;
@@ -3273,7 +3479,7 @@ app.delete('/api/forms/:collectionName/:formId', async (req, res) => {
 });
 
 // ✅ NEW: Get forms data with EVENT LOGGING
-app.get('/api/forms/:collectionName', async (req, res) => {
+app.get('/api/forms/:collectionName', authenticate, requireRole(['admin', 'super admin', 'claims', 'compliance']), async (req, res) => {
   try {
     const { collectionName } = req.params;
     const { viewerUid } = req.query;
@@ -3325,7 +3531,7 @@ app.get('/api/forms/:collectionName', async (req, res) => {
 });
 
 // ✅ NEW: Update form status with EVENT LOGGING
-app.put('/api/forms/:collectionName/:docId/status', async (req, res) => {
+app.put('/api/forms/:collectionName/:docId/status', authenticate, requireRole(['admin', 'super admin', 'claims', 'compliance']), async (req, res) => {
   try {
     const { collectionName, docId } = req.params;
     const { status, updaterUid, userEmail, formType, comment } = req.body;
@@ -3384,7 +3590,7 @@ app.put('/api/forms/:collectionName/:docId/status', async (req, res) => {
 });
 
 // ✅ NEW: Download PDF with EVENT LOGGING
-app.post('/api/pdf/download', async (req, res) => {
+app.post('/api/pdf/download', authenticate, async (req, res) => {
   try {
     const { formData, formType, downloaderUid, fileName } = req.body;
     

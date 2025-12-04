@@ -344,6 +344,12 @@ const CorporateKYCTable: React.FC = () => {
       renderCell: (params: any) => getValue(params.row, 'BVNNumber'),
     },
     {
+      field: 'NINNumber',
+      headerName: 'NIN Number',
+      width: 130,
+      renderCell: (params: any) => getValue(params.row, 'NINNumber'),
+    },
+    {
       field: 'contactPersonNo',
       headerName: 'Contact Person Mobile',
       width: 150,
@@ -509,6 +515,12 @@ const CorporateKYCTable: React.FC = () => {
       renderCell: (params: any) => getDirectorValue(params.row, 0, 'BVNNumber'),
     },
     {
+      field: 'director1NIN',
+      headerName: 'Director 1 NIN',
+      width: 130,
+      renderCell: (params: any) => getDirectorValue(params.row, 0, 'NINNumber'),
+    },
+    {
       field: 'director1EmployersName',
       headerName: 'Director 1 Employers Name',
       width: 180,
@@ -662,6 +674,12 @@ const CorporateKYCTable: React.FC = () => {
       headerName: 'Director 2 BVN',
       width: 130,
       renderCell: (params: any) => getDirectorValue(params.row, 1, 'BVNNumber'),
+    },
+    {
+      field: 'director2NIN',
+      headerName: 'Director 2 NIN',
+      width: 130,
+      renderCell: (params: any) => getDirectorValue(params.row, 1, 'NINNumber'),
     },
     {
       field: 'director2EmployersName',
