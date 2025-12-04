@@ -21,7 +21,9 @@ import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
+import FormLoadingModal from '@/components/common/FormLoadingModal';
+import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SuccessModal from '@/components/common/SuccessModal';
 
@@ -310,39 +312,24 @@ const defaultValues: Partial<MotorClaimData> = {
 
 const MotorClaim: React.FC = () => {
   const { toast } = useToast();
-  const [showSummary, setShowSummary] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
   const [fileErrors, setFileErrors] = useState<Record<string, string>>({});
-  const { 
-    handleSubmitWithAuth, 
-    showSuccess: authShowSuccess, 
-    setShowSuccess: setAuthShowSuccess,
-    isSubmitting: authSubmitting
-  } = useAuthRequiredSubmit();
-
-  // Check for pending submission when component mounts
-  useEffect(() => {
-    const checkPendingSubmission = () => {
-      const hasPending = sessionStorage.getItem('pendingSubmission');
-      if (hasPending) {
-        setShowPostAuthLoading(true);
-        // Hide loading after 5 seconds max (in case something goes wrong)
-        setTimeout(() => setShowPostAuthLoading(false), 5000);
-      }
-    };
-
-    checkPendingSubmission();
-  }, []);
-
-  // Hide post-auth loading when success modal shows
-  useEffect(() => {
-    if (authShowSuccess) {
-      setShowPostAuthLoading(false);
-    }
-  }, [authShowSuccess]);
+  
+  const {
+    handleSubmit: handleEnhancedSubmit,
+    showSummary,
+    setShowSummary,
+    showLoading,
+    loadingMessage,
+    showSuccess,
+    confirmSubmit,
+    closeSuccess,
+    formData: submissionData,
+    isSubmitting
+  } = useEnhancedFormSubmit({
+    formType: 'Motor Claim',
+    onSuccess: () => clearDraft()
+  });
 
   const formMethods = useForm<any>({
     resolver: yupResolver(motorClaimSchema),
@@ -371,8 +358,8 @@ const MotorClaim: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
-  // Main submit handler that checks authentication
-  const handleSubmit = async (data: MotorClaimData) => {
+  // Main submit handler - shows summary after validation
+  const onFinalSubmit = async (data: MotorClaimData) => {
     // Prepare file upload data
     const fileUploadPromises: Array<Promise<[string, string]>> = [];
     
@@ -394,13 +381,8 @@ const MotorClaim: React.FC = () => {
       formType: 'Motor Claim'
     };
 
-    await handleSubmitWithAuth(finalData, 'Motor Claim');
-    clearDraft();
-    setShowSummary(false);
-  };
-
-  const onFinalSubmit = (data: MotorClaimData) => {
-    setShowSummary(true);
+    // Use enhanced submit which will show loading immediately
+    await handleEnhancedSubmit(finalData);
   };
 
   // Step field mappings for validation
@@ -682,43 +664,44 @@ const MotorClaim: React.FC = () => {
           />
         </div>
 
-        {/* Loading Overlay for Post-Auth Processing */}
-        {showPostAuthLoading && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-4">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-              <p className="text-lg">Processing your submission...</p>
-            </div>
-          </div>
-        )}
+        {/* Loading Modal */}
+        <FormLoadingModal
+          isOpen={showLoading}
+          message={loadingMessage}
+        />
 
-        {/* Confirmation Dialog */}
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Review Your Motor Claim Submission</DialogTitle>
-            </DialogHeader>
+        {/* Summary Dialog */}
+        <FormSummaryDialog
+          open={showSummary}
+          onOpenChange={setShowSummary}
+          formData={submissionData}
+          formType="Motor Claim"
+          onConfirm={confirmSubmit}
+          isSubmitting={isSubmitting}
+          renderSummary={(data) => {
+            if (!data) return <div className="text-center py-8 text-gray-500">No data to display</div>;
             
-            <div className="space-y-6">
-              {/* Section 1: Insured Details */}
-              <div className="border rounded-lg p-4">
+            return (
+              <div className="space-y-6">
+                {/* Section 1: Insured Details */}
+                <div className="border rounded-lg p-4">
                 <h3 className="font-semibold text-lg mb-3">Insured Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium text-gray-600">Surname:</span>
-                    <p className="text-gray-900">{watchedValues.insuredSurname || 'Not provided'}</p>
+                    <p className="text-gray-900">{data.insuredSurname || 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">First Name:</span>
-                    <p className="text-gray-900">{watchedValues.insuredFirstName || 'Not provided'}</p>
+                    <p className="text-gray-900">{data.insuredFirstName || 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">Phone Number:</span>
-                    <p className="text-gray-900">{watchedValues.phone || 'Not provided'}</p>
+                    <p className="text-gray-900">{data.phone || 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">Email:</span>
-                    <p className="text-gray-900">{watchedValues.email || 'Not provided'}</p>
+                    <p className="text-gray-900">{data.email || 'Not provided'}</p>
                   </div>
                 </div>
               </div>
@@ -729,23 +712,23 @@ const MotorClaim: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium text-gray-600">Registration Number:</span>
-                    <p className="text-gray-900">{watchedValues.registrationNumber || 'Not provided'}</p>
+                    <p className="text-gray-900">{data.registrationNumber || 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">Policy Number:</span>
-                    <p className="text-gray-900">{watchedValues.policyNumber || 'Not provided'}</p>
+                    <p className="text-gray-900">{data.policyNumber || 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">Cover Period From:</span>
-                    <p className="text-gray-900">{watchedValues.periodOfCoverFrom ? format(new Date(watchedValues.periodOfCoverFrom), 'dd/MM/yyyy') : 'Not provided'}</p>
+                    <p className="text-gray-900">{data.periodOfCoverFrom ? format(new Date(data.periodOfCoverFrom), 'dd/MM/yyyy') : 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">Cover Period To:</span>
-                    <p className="text-gray-900">{watchedValues.periodOfCoverTo ? format(new Date(watchedValues.periodOfCoverTo), 'dd/MM/yyyy') : 'Not provided'}</p>
+                    <p className="text-gray-900">{data.periodOfCoverTo ? format(new Date(data.periodOfCoverTo), 'dd/MM/yyyy') : 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">Trailer Attached:</span>
-                    <p className="text-gray-900 capitalize">{watchedValues.trailerAttached || 'Not provided'}</p>
+                    <p className="text-gray-900 capitalize">{data.trailerAttached || 'Not provided'}</p>
                   </div>
                 </div>
               </div>
@@ -756,25 +739,25 @@ const MotorClaim: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium text-gray-600">Incident Location:</span>
-                    <p className="text-gray-900">{watchedValues.incidentLocation || 'Not provided'}</p>
+                    <p className="text-gray-900">{data.incidentLocation || 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">Incident Date:</span>
-                    <p className="text-gray-900">{watchedValues.incidentDate ? format(new Date(watchedValues.incidentDate), 'dd/MM/yyyy') : 'Not provided'}</p>
+                    <p className="text-gray-900">{data.incidentDate ? format(new Date(data.incidentDate), 'dd/MM/yyyy') : 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">Incident Time:</span>
-                    <p className="text-gray-900">{watchedValues.incidentTime || 'Not provided'}</p>
+                    <p className="text-gray-900">{data.incidentTime || 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">Police Reported:</span>
-                    <p className="text-gray-900 capitalize">{watchedValues.policeReported || 'Not provided'}</p>
+                    <p className="text-gray-900 capitalize">{data.policeReported || 'Not provided'}</p>
                   </div>
-                  {watchedValues.policeReported === 'yes' && (
+                  {data.policeReported === 'yes' && (
                     <>
                       <div className="md:col-span-2">
                         <span className="font-medium text-gray-600">Police Station Details:</span>
-                        <p className="text-gray-900">{watchedValues.policeStationDetails || 'Not provided'}</p>
+                        <p className="text-gray-900">{data.policeStationDetails || 'Not provided'}</p>
                       </div>
                       {uploadedFiles.policeReport && (
                         <div className="md:col-span-2">
@@ -786,35 +769,35 @@ const MotorClaim: React.FC = () => {
                   )}
                   <div className="md:col-span-2">
                     <span className="font-medium text-gray-600">Incident Description:</span>
-                    <p className="text-gray-900">{watchedValues.incidentDescription || 'Not provided'}</p>
+                    <p className="text-gray-900">{data.incidentDescription || 'Not provided'}</p>
                   </div>
                 </div>
               </div>
 
               {/* Other Vehicle Details */}
-              {watchedValues.otherVehicleInvolved === 'yes' && (
+              {data.otherVehicleInvolved === 'yes' && (
                 <div className="border rounded-lg p-4">
                   <h3 className="font-semibold text-lg mb-3">Other Vehicle Details</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="font-medium text-gray-600">Registration Number:</span>
-                      <p className="text-gray-900">{watchedValues.otherVehicleRegNumber || 'Not provided'}</p>
+                      <p className="text-gray-900">{data.otherVehicleRegNumber || 'Not provided'}</p>
                     </div>
                     <div>
                       <span className="font-medium text-gray-600">Make:</span>
-                      <p className="text-gray-900">{watchedValues.otherVehicleMake || 'Not provided'}</p>
+                      <p className="text-gray-900">{data.otherVehicleMake || 'Not provided'}</p>
                     </div>
                     <div>
                       <span className="font-medium text-gray-600">Driver Name:</span>
-                      <p className="text-gray-900">{watchedValues.otherDriverName || 'Not provided'}</p>
+                      <p className="text-gray-900">{data.otherDriverName || 'Not provided'}</p>
                     </div>
                     <div className="md:col-span-2">
                       <span className="font-medium text-gray-600">Driver Address:</span>
-                      <p className="text-gray-900">{watchedValues.otherDriverAddress || 'Not provided'}</p>
+                      <p className="text-gray-900">{data.otherDriverAddress || 'Not provided'}</p>
                     </div>
                     <div className="md:col-span-2">
                       <span className="font-medium text-gray-600">Injury/Damage to Other Vehicle:</span>
-                      <p className="text-gray-900">{watchedValues.otherVehicleInjuryDamage || 'Not provided'}</p>
+                      <p className="text-gray-900">{data.otherVehicleInjuryDamage || 'Not provided'}</p>
                     </div>
                     {uploadedFiles.thirdPartyDamagePhotos && (
                       <div className="md:col-span-2">
@@ -827,10 +810,10 @@ const MotorClaim: React.FC = () => {
               )}
 
               {/* Witnesses */}
-              {watchedValues.witnesses && watchedValues.witnesses.length > 0 && (
+              {data.witnesses && data.witnesses.length > 0 && (
                 <div className="border rounded-lg p-4">
                   <h3 className="font-semibold text-lg mb-3">Eye Witnesses</h3>
-                  {watchedValues.witnesses.map((witness: any, index: number) => (
+                  {data.witnesses.map((witness: any, index: number) => (
                     <div key={index} className="border-l-4 border-blue-200 pl-4 mb-4">
                       <h4 className="font-medium text-gray-800 mb-2">Witness {index + 1}</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -858,15 +841,15 @@ const MotorClaim: React.FC = () => {
                 <div className="grid grid-cols-1 gap-4 text-sm">
                   <div>
                     <span className="font-medium text-gray-600">Data Privacy Agreement:</span>
-                    <p className="text-gray-900">{watchedValues.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</p>
+                    <p className="text-gray-900">{data.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">Declaration Acceptance:</span>
-                    <p className="text-gray-900">{watchedValues.declarationTrue ? 'Agreed' : 'Not agreed'}</p>
+                    <p className="text-gray-900">{data.declarationTrue ? 'Agreed' : 'Not agreed'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">Digital Signature:</span>
-                    <p className="text-gray-900">{watchedValues.signature || 'Not provided'}</p>
+                    <p className="text-gray-900">{data.signature || 'Not provided'}</p>
                   </div>
                 </div>
               </div>
@@ -883,44 +866,14 @@ const MotorClaim: React.FC = () => {
                 </div>
               </div>
             </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowSummary(false)}>
-                Review Again
-              </Button>
-              <Button 
-                onClick={() => handleSubmit(watchedValues)}
-                disabled={authSubmitting}
-                className="min-w-[120px]"
-              >
-                {authSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Claim'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Loading Modal */}
-        <SuccessModal
-          isOpen={authSubmitting}
-          onClose={() => {}}
-          title="Submitting Form..."
-          message="Please wait while your form is submitted"
-          formType="Motor Claim"
-          isLoading={true}
-          loadingMessage="Please wait while your form is submitted"
+            );
+          }}
         />
 
         {/* Success Modal */}
         <SuccessModal
-          isOpen={authShowSuccess}
-          onClose={() => setAuthShowSuccess()}
+          isOpen={showSuccess}
+          onClose={closeSuccess}
           title="Motor Claim Submitted Successfully!"
           message="Your entry is successful with a copy sent to your email address. Our claim team will contact you shortly through your email or phone number."
           formType="Motor Claim"

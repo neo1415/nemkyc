@@ -206,7 +206,13 @@ export const getFormPageUrl = (formType: string) => {
     return '/kyc/corporate';
   }
   
-  // CDD Forms
+  // CDD Forms - IMPORTANT: Check NAICOM forms FIRST before generic forms
+  if (formTypeLower.includes('naicom corporate')) {
+    return '/cdd/naicom-corporate';
+  }
+  if (formTypeLower.includes('naicom partners')) {
+    return '/cdd/naicom-partners';
+  }
   if (formTypeLower.includes('individual cdd')) {
     return '/cdd/individual';
   }
@@ -221,12 +227,6 @@ export const getFormPageUrl = (formType: string) => {
   }
   if (formTypeLower.includes('partners cdd')) {
     return '/cdd/partners';
-  }
-  if (formTypeLower.includes('naicom corporate')) {
-    return '/cdd/naicom-corporate';
-  }
-  if (formTypeLower.includes('naicom partners')) {
-    return '/cdd/naicom-partners';
   }
   
   // Claims Forms

@@ -10,18 +10,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { CalendarIcon, Check, Loader2 } from 'lucide-react';
+import { Check, Info } from 'lucide-react';
 import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
+import FormLoadingModal from '@/components/common/FormLoadingModal';
+import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
+import DatePicker from '@/components/common/DatePicker';
+
 
 // Form validation schema
 const individualKYCSchema = yup.object().shape({
@@ -52,6 +53,10 @@ const individualKYCSchema = yup.object().shape({
     .required("BVN is required")
     .matches(/^[0-9]+$/, "BVN can only contain numbers")
     .length(11, "BVN must be exactly 11 digits"),
+  NIN: yup.string()
+    .required("NIN is required")
+    .matches(/^[0-9]+$/, "NIN can only contain numbers")
+    .length(11, "NIN must be exactly 11 digits"),
   identificationType: yup.string().required("ID type is required"),
   idNumber: yup.string().required("Identification number is required"),
   issuingCountry: yup.string().required("Issuing country is required"),
@@ -133,6 +138,7 @@ const defaultValues = {
   emailAddress: '',
   taxIDNo: '',
   BVN: '',
+  NIN: '',
   identificationType: '',
   idNumber: '',
   issuingCountry: '',
@@ -251,63 +257,6 @@ const FormSelect = ({ name, label, required = false, placeholder, children, ...p
   );
 };
 
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, register, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = errors[name];
-  
-  return (
-    <div className="space-y-2">
-      <Label>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <div className="flex gap-2">
-        <Input
-          type="date"
-          {...register(name, {
-            onChange: () => {
-              if (error) {
-                clearErrors(name);
-              }
-            }
-          })}
-          className={cn("flex-1", error && "border-destructive")}
-        />
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className={cn(error && "border-destructive")}
-            >
-              <CalendarIcon className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <ReactCalendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={(date) => {
-                setValue(name, date);
-                if (error) {
-                  clearErrors(name);
-                }
-              }}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
-
 const IndividualKYC: React.FC = () => {
   const { toast } = useToast();
   
@@ -315,16 +264,8 @@ const IndividualKYC: React.FC = () => {
   useEffect(() => {
     (window as any).toast = toast;
   }, [toast]);
-  const [showSummary, setShowSummary] = useState(false);
-  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const { 
-    handleSubmitWithAuth, 
-    showSuccess: authShowSuccess, 
-    setShowSuccess: setAuthShowSuccess,
-    isSubmitting: authSubmitting
-  } = useAuthRequiredSubmit();
-
+  
   const formMethods = useForm<any>({
     resolver: yupResolver(individualKYCSchema),
     defaultValues,
@@ -333,24 +274,21 @@ const IndividualKYC: React.FC = () => {
 
   const { saveDraft, clearDraft } = useFormDraft('individualKYC', formMethods);
 
-  // Check for pending submission when component mounts
-  useEffect(() => {
-    const checkPendingSubmission = () => {
-      const hasPending = sessionStorage.getItem('pendingSubmission');
-      if (hasPending) {
-        setShowPostAuthLoading(true);
-        setTimeout(() => setShowPostAuthLoading(false), 5000);
-      }
-    };
-    checkPendingSubmission();
-  }, []);
-
-  // Hide post-auth loading when success modal shows
-  useEffect(() => {
-    if (authShowSuccess) {
-      setShowPostAuthLoading(false);
-    }
-  }, [authShowSuccess]);
+  const {
+    handleSubmit: handleEnhancedSubmit,
+    showSummary,
+    setShowSummary,
+    showLoading,
+    loadingMessage,
+    showSuccess,
+    confirmSubmit,
+    closeSuccess,
+    formData: submissionData,
+    isSubmitting
+  } = useEnhancedFormSubmit({
+    formType: 'Individual KYC',
+    onSuccess: () => clearDraft()
+  });
 
   // Auto-save draft
   useEffect(() => {
@@ -360,67 +298,43 @@ const IndividualKYC: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
-  const handleSubmit = async (data: any) => {
-    // Prepare file upload data
-    const fileUploadPromises: Array<Promise<[string, string]>> = [];
-    
-    for (const [key, file] of Object.entries(uploadedFiles)) {
-      if (file) {
-        fileUploadPromises.push(
-          uploadFile(file, `individual-kyc/${Date.now()}-${file.name}`).then(url => [key, url])
-        );
+  const onFinalSubmit = async (data: any) => {
+    try {
+      console.log('Individual KYC onFinalSubmit called with data:', data);
+      
+      // Prepare file upload data
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      
+      for (const [key, file] of Object.entries(uploadedFiles)) {
+        if (file) {
+          fileUploadPromises.push(
+            uploadFile(file, `individual-kyc/${Date.now()}-${file.name}`).then(url => [key, url])
+          );
+        }
       }
+
+      const fileResults = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(fileResults);
+
+      const finalData = {
+        ...data,
+        ...fileUrls,
+        status: 'processing',
+        formType: 'Individual KYC'
+      };
+
+      console.log('Calling handleEnhancedSubmit with finalData:', finalData);
+      
+      // Use enhanced submit which will show loading immediately
+      await handleEnhancedSubmit(finalData);
+    } catch (error) {
+      console.error('Error in onFinalSubmit:', error);
+      toast({
+        title: 'Submission Error',
+        description: error instanceof Error ? error.message : 'An error occurred during submission',
+        variant: 'destructive'
+      });
     }
-
-    const fileResults = await Promise.all(fileUploadPromises);
-    const fileUrls = Object.fromEntries(fileResults);
-
-    const finalData = {
-      ...data,
-      ...fileUrls,
-      status: 'processing',
-      formType: 'Individual KYC'
-    };
-
-    await handleSubmitWithAuth(finalData, 'Individual KYC');
-    clearDraft();
-    setShowSummary(false);
-  };
-
-  const onFinalSubmit = (data: any) => {
-    setShowSummary(true);
-  };
-
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const value = formMethods.watch(name);
-    return (
-      <div className="space-y-2">
-        <Label>{label}</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !value && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <ReactCalendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={(date) => formMethods.setValue(name, date)}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-    );
   };
 
   const steps = [
@@ -452,7 +366,7 @@ const IndividualKYC: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="dateOfBirth" label="Date of Birth" required />
+              <DatePicker name="dateOfBirth" label="Date of Birth" required />
               <FormField name="mothersMaidenName" label="Mother's Maiden Name" required />
             </div>
 
@@ -487,6 +401,10 @@ const IndividualKYC: React.FC = () => {
               <FormField name="BVN" label="BVN" required maxLength={11} />
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField name="NIN" label="NIN (National Identification Number)" required maxLength={11} />
+            </div>
+
             <FormSelect name="identificationType" label="ID Type" required placeholder="Choose ID Type">
               <SelectItem value="International Passport">International Passport</SelectItem>
               <SelectItem value="NIMC">NIMC</SelectItem>
@@ -501,8 +419,8 @@ const IndividualKYC: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="issuedDate" label="Issued Date" required />
-              <FormDatePicker name="expiryDate" label="Expiry Date" />
+              <DatePicker name="issuedDate" label="Issued Date" required />
+              <DatePicker name="expiryDate" label="Expiry Date" />
             </div>
 
             <FormSelect name="sourceOfIncome" label="Source of Income" required placeholder="Choose Income Source">
@@ -549,7 +467,7 @@ const IndividualKYC: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField name="bankBranch" label="Bank Branch" required />
-                <FormDatePicker name="accountOpeningDate" label="Account Opening Date" required />
+                <DatePicker name="accountOpeningDate" label="Account Opening Date" required />
               </div>
             </div>
 
@@ -561,7 +479,7 @@ const IndividualKYC: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField name="bankBranch2" label="Bank Branch" />
-                <FormDatePicker name="accountOpeningDate2" label="Account Opening Date" />
+                <DatePicker name="accountOpeningDate2" label="Account Opening Date" />
               </div>
             </div>
           </div>
@@ -694,7 +612,7 @@ const IndividualKYC: React.FC = () => {
 
   // Define field mappings for each step
   const stepFieldMappings = {
-    0: ['officeLocation', 'title', 'firstName', 'middleName', 'lastName', 'contactAddress', 'occupation', 'gender', 'dateOfBirth', 'mothersMaidenName', 'city', 'state', 'country', 'nationality', 'residentialAddress', 'GSMno', 'emailAddress', 'BVN', 'identificationType', 'idNumber', 'issuingCountry', 'issuedDate', 'sourceOfIncome', 'sourceOfIncomeOther', 'annualIncomeRange', 'premiumPaymentSource', 'premiumPaymentSourceOther'],
+    0: ['officeLocation', 'title', 'firstName', 'middleName', 'lastName', 'contactAddress', 'occupation', 'gender', 'dateOfBirth', 'mothersMaidenName', 'city', 'state', 'country', 'nationality', 'residentialAddress', 'GSMno', 'emailAddress', 'BVN', 'NIN', 'identificationType', 'idNumber', 'issuingCountry', 'issuedDate', 'sourceOfIncome', 'sourceOfIncomeOther', 'annualIncomeRange', 'premiumPaymentSource', 'premiumPaymentSourceOther'],
     1: ['bankName', 'accountNumber', 'bankBranch', 'accountOpeningDate'],
     2: ['identification'], // File upload validation
     3: ['agreeToDataPrivacy', 'signature']
@@ -702,17 +620,6 @@ const IndividualKYC: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Post-auth loading overlay */}
-      {showPostAuthLoading && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-lg font-semibold">Completing your submission...</p>
-            <p className="text-sm text-muted-foreground">Please wait while we process your KYC form.</p>
-          </div>
-        </div>
-      )}
-
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -733,54 +640,234 @@ const IndividualKYC: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Summary Dialog */}
-      <Dialog open={showSummary} onOpenChange={setShowSummary}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Individual KYC Form Summary</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><strong>Name:</strong> {formMethods.watch('firstName')} {formMethods.watch('lastName')}</div>
-              <div><strong>Email:</strong> {formMethods.watch('email')}</div>
-              <div><strong>Phone:</strong> {formMethods.watch('mobileNumber')}</div>
-              <div><strong>BVN:</strong> {formMethods.watch('bvn')}</div>
-              <div><strong>Occupation:</strong> {formMethods.watch('occupation')}</div>
-              <div><strong>Nationality:</strong> {formMethods.watch('nationality')}</div>
-            </div>
-            <div>
-              <strong>Contact Address:</strong>
-              <p className="text-sm mt-1">{formMethods.watch('contactAddress')}</p>
-            </div>
-            <div>
-              <strong>Residential Address:</strong>
-              <p className="text-sm mt-1">{formMethods.watch('residentialAddress')}</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSummary(false)}>
-              Edit Form
-            </Button>
-            <Button 
-              onClick={() => handleSubmit(formMethods.getValues())}
-              disabled={authSubmitting}
-            >
-              {authSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                'Submit KYC Form'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Loading Modal */}
+      <FormLoadingModal
+        isOpen={showLoading}
+        message={loadingMessage}
+      />
 
+      {/* Summary Dialog - Custom organized summary matching Motor Claims standard */}
+      <FormSummaryDialog
+        open={showSummary}
+        onOpenChange={setShowSummary}
+        formData={submissionData}
+        formType="Individual KYC"
+        onConfirm={confirmSubmit}
+        isSubmitting={isSubmitting}
+        renderSummary={(data) => {
+          if (!data) return <div className="text-center py-8 text-gray-500">No data to display</div>;
+          
+          return (
+            <div className="space-y-6">
+              {/* Section 1: Personal Information */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Personal Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">Title:</span>
+                    <p className="text-gray-900">{data.title || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">First Name:</span>
+                    <p className="text-gray-900">{data.firstName || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Middle Name:</span>
+                    <p className="text-gray-900">{data.middleName || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Last Name:</span>
+                    <p className="text-gray-900">{data.lastName || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Gender:</span>
+                    <p className="text-gray-900 capitalize">{data.gender || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Date of Birth:</span>
+                    <p className="text-gray-900">{data.dateOfBirth ? format(new Date(data.dateOfBirth), 'dd/MM/yyyy') : 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Mother's Maiden Name:</span>
+                    <p className="text-gray-900">{data.mothersMaidenName || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Nationality:</span>
+                    <p className="text-gray-900">{data.nationality || 'Not provided'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Contact Information */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Contact Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">Mobile Number:</span>
+                    <p className="text-gray-900">{data.GSMno || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Email Address:</span>
+                    <p className="text-gray-900">{data.emailAddress || 'Not provided'}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <span className="font-medium text-gray-600">Contact Address:</span>
+                    <p className="text-gray-900">{data.contactAddress || 'Not provided'}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <span className="font-medium text-gray-600">Residential Address:</span>
+                    <p className="text-gray-900">{data.residentialAddress || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">City:</span>
+                    <p className="text-gray-900">{data.city || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">State:</span>
+                    <p className="text-gray-900">{data.state || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Country:</span>
+                    <p className="text-gray-900">{data.country || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Occupation:</span>
+                    <p className="text-gray-900">{data.occupation || 'Not provided'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Identification */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Identification</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">BVN:</span>
+                    <p className="text-gray-900">{data.BVN || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">ID Type:</span>
+                    <p className="text-gray-900">{data.identificationType || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">ID Number:</span>
+                    <p className="text-gray-900">{data.idNumber || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Issuing Country:</span>
+                    <p className="text-gray-900">{data.issuingCountry || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Issue Date:</span>
+                    <p className="text-gray-900">{data.issuedDate ? format(new Date(data.issuedDate), 'dd/MM/yyyy') : 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Expiry Date:</span>
+                    <p className="text-gray-900">{data.expiryDate ? format(new Date(data.expiryDate), 'dd/MM/yyyy') : 'Not provided'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 4: Financial Information */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Financial Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">Source of Income:</span>
+                    <p className="text-gray-900">{data.sourceOfIncome === 'Other' ? data.sourceOfIncomeOther : data.sourceOfIncome || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Annual Income Range:</span>
+                    <p className="text-gray-900">{data.annualIncomeRange || 'Not provided'}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <span className="font-medium text-gray-600">Premium Payment Source:</span>
+                    <p className="text-gray-900">{data.premiumPaymentSource === 'Other' ? data.premiumPaymentSourceOther : data.premiumPaymentSource || 'Not provided'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 5: Bank Details */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Bank Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-gray-800 mb-2">Primary Bank Account</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-600">Bank Name:</span>
+                        <p className="text-gray-900">{data.bankName || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">Account Number:</span>
+                        <p className="text-gray-900">{data.accountNumber || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">Branch:</span>
+                        <p className="text-gray-900">{data.bankBranch || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">Account Opening Date:</span>
+                        <p className="text-gray-900">{data.accountOpeningDate ? format(new Date(data.accountOpeningDate), 'dd/MM/yyyy') : 'Not provided'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {data.bankName2 && (
+                    <div className="border-t pt-4">
+                      <h4 className="font-medium text-gray-800 mb-2">Secondary Bank Account</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium text-gray-600">Bank Name:</span>
+                          <p className="text-gray-900">{data.bankName2 || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Account Number:</span>
+                          <p className="text-gray-900">{data.accountNumber2 || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Branch:</span>
+                          <p className="text-gray-900">{data.bankBranch2 || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Account Opening Date:</span>
+                          <p className="text-gray-900">{data.accountOpeningDate2 ? format(new Date(data.accountOpeningDate2), 'dd/MM/yyyy') : 'Not provided'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Section 6: Office Location */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Office Location</h3>
+                <div className="text-sm">
+                  <span className="font-medium text-gray-600">Preferred Office:</span>
+                  <p className="text-gray-900">{data.officeLocation || 'Not provided'}</p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-yellow-800">Important Notice</h3>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Please review all information carefully before submitting. Once submitted, you cannot modify your KYC details.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }}
+      />
+
+      {/* Success Modal */}
       <SuccessModal
-        isOpen={authShowSuccess}
-        onClose={() => setAuthShowSuccess()}
+        isOpen={showSuccess}
+        onClose={closeSuccess}
         title="KYC Form Submitted Successfully!"
         message="Your Individual KYC form has been submitted successfully. You will receive a confirmation email shortly."
         formType="Individual KYC"

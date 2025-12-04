@@ -17,9 +17,12 @@ import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
+import FormLoadingModal from '@/components/common/FormLoadingModal';
+import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
-import LoadingSpinner from '@/components/common/LoadingSpinner';
+import DatePicker from '@/components/common/DatePicker';
+import { format } from 'date-fns';
 
 // FORM COMPONENTS DEFINED OUTSIDE TO PREVENT FOCUS LOSS
 const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
@@ -127,36 +130,7 @@ const FormSelect = ({ name, label, required = false, options, placeholder, ...pr
   );
 };
 
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name);
-  
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={name}>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <Input
-        id={name}
-        type="date"
-        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
-        onChange={(e) => {
-          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-          setValue(name, dateValue);
-          if (error) {
-            clearErrors(name);
-          }
-        }}
-        className={error ? 'border-destructive' : ''}
-      />
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
+
 
 // VALIDATION SCHEMA OUTSIDE COMPONENT
 const individualCDDSchema = yup.object().shape({
@@ -209,6 +183,10 @@ const individualCDDSchema = yup.object().shape({
     .required("BVN is required")
     .matches(/^\d+$/, "BVN must contain only numbers")
     .length(11, "BVN must be exactly 11 digits"),
+  NINNumber: yup.string()
+    .required("NIN is required")
+    .matches(/^\d+$/, "NIN must contain only numbers")
+    .length(11, "NIN must be exactly 11 digits"),
   identificationType: yup.string().required("ID type is required"),
   identificationNumber: yup.string().required("Identification number is required"),
   issuingCountry: yup.string().required("Issuing country is required"),
@@ -270,6 +248,7 @@ const defaultValues = {
   employersAddress: '',
   taxidentificationNumber: '',
   BVNNumber: '',
+  NINNumber: '',
   identificationType: '',
   identificationNumber: '',
   issuingCountry: '',
@@ -285,17 +264,8 @@ const defaultValues = {
 
 const IndividualCDD: React.FC = () => {
   const { toast } = useToast();
-  const [showSummary, setShowSummary] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   
-  const {
-    handleSubmitWithAuth,
-    showSuccess,
-    setShowSuccess,
-    isSubmitting
-  } = useAuthRequiredSubmit();
-
   const formMethods = useForm<any>({
     resolver: yupResolver(individualCDDSchema),
     defaultValues,
@@ -303,6 +273,24 @@ const IndividualCDD: React.FC = () => {
   });
 
   const { saveDraft, clearDraft } = useFormDraft('individual-cdd', formMethods);
+
+  const {
+    handleSubmit: handleEnhancedSubmit,
+    showSummary,
+    setShowSummary,
+    showLoading,
+    loadingMessage,
+    showSuccess,
+    confirmSubmit,
+    closeSuccess,
+    formData: submissionData,
+    isSubmitting
+  } = useEnhancedFormSubmit({
+    formType: 'Individual CDD',
+    onSuccess: () => clearDraft()
+  });
+
+  // Watch form values for conditional rendering
   const watchedValues = formMethods.watch();
 
   // Auto-save draft
@@ -312,15 +300,6 @@ const IndividualCDD: React.FC = () => {
     });
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
-
-  // Post-auth loading effect
-  useEffect(() => {
-    const submissionInProgress = sessionStorage.getItem('submissionInProgress');
-    if (submissionInProgress) {
-      setShowPostAuthLoading(true);
-      setShowSummary(false);
-    }
-  }, []);
 
   // Data sanitization
   const sanitizeData = (data: any) => {
@@ -338,46 +317,45 @@ const IndividualCDD: React.FC = () => {
     return sanitized;
   };
 
-  const handleSubmit = async (data: any) => {
-    console.log('Form data before sanitization:', data);
-    
-    const sanitizedData = sanitizeData(data);
-    console.log('Sanitized data:', sanitizedData);
+  const onFinalSubmit = async (data: any) => {
+    try {
+      console.log('Form data before sanitization:', data);
+      
+      const sanitizedData = sanitizeData(data);
+      console.log('Sanitized data:', sanitizedData);
 
-    // Handle file uploads
-    const fileUploadPromises: Array<Promise<[string, string]>> = [];
-    
-    for (const [key, file] of Object.entries(uploadedFiles)) {
-      if (file) {
-        fileUploadPromises.push(
-          uploadFile(file, `individual-cdd/${Date.now()}-${file.name}`).then(url => [key + 'Url', url])
-        );
+      // Handle file uploads
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      
+      for (const [key, file] of Object.entries(uploadedFiles)) {
+        if (file) {
+          fileUploadPromises.push(
+            uploadFile(file, `individual-cdd/${Date.now()}-${file.name}`).then(url => [key + 'Url', url])
+          );
+        }
       }
+
+      const fileResults = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(fileResults);
+
+      const finalData = {
+        ...sanitizedData,
+        ...fileUrls,
+        status: 'processing',
+        formType: 'Individual CDD'
+      };
+
+      await handleEnhancedSubmit(finalData);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Submission failed', variant: 'destructive' });
     }
-
-    const fileResults = await Promise.all(fileUploadPromises);
-    const fileUrls = Object.fromEntries(fileResults);
-
-    const finalData = {
-      ...sanitizedData,
-      ...fileUrls,
-      status: 'processing',
-      formType: 'Individual-CDD'
-    };
-
-    await handleSubmitWithAuth(finalData, 'Individual-CDD');
-    clearDraft();
-    setShowSummary(false);
-  };
-
-  const onFinalSubmit = (data: any) => {
-    setShowSummary(true);
   };
 
   // Step field mappings for validation
   const stepFieldMappings = {
     0: ['title', 'firstName', 'lastName', 'contactAddress', 'gender', 'country', 'dateOfBirth', 'placeOfBirth', 'emailAddress', 'GSMno', 'residentialAddress', 'nationality', 'occupation', 'position'],
-    1: ['businessType', 'businessTypeOther', 'employersEmail', 'employersName', 'employersTelephoneNumber', 'employersAddress', 'taxidentificationNumber', 'BVNNumber', 'identificationType', 'identificationNumber', 'issuingCountry', 'issuedDate', 'expiryDate'],
+    1: ['businessType', 'businessTypeOther', 'employersEmail', 'employersName', 'employersTelephoneNumber', 'employersAddress', 'taxidentificationNumber', 'BVNNumber', 'NINNumber', 'identificationType', 'identificationNumber', 'issuingCountry', 'issuedDate', 'expiryDate'],
     2: ['annualIncomeRange', 'premiumPaymentSource', 'premiumPaymentSourceOther', 'identification'],
     3: ['agreeToDataPrivacy', 'signature']
   };
@@ -412,7 +390,7 @@ const IndividualCDD: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormDatePicker name="dateOfBirth" label="Date Of Birth" required={true} />
+            <DatePicker name="dateOfBirth" label="Date Of Birth" required={true} />
             <FormField name="placeOfBirth" label="Place of Birth" required={true} />
           </div>
           
@@ -467,7 +445,10 @@ const IndividualCDD: React.FC = () => {
           
           <FormTextarea name="employersAddress" label="Employer's Address" />
           
-          <FormField name="BVNNumber" label="BVN" required={true} maxLength={11} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField name="BVNNumber" label="BVN" required={true} maxLength={11} />
+            <FormField name="NINNumber" label="NIN (National Identification Number)" required={true} maxLength={11} />
+          </div>
           
           <FormSelect
             name="identificationType"
@@ -486,10 +467,10 @@ const IndividualCDD: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField name="identificationNumber" label="Identification Number" required={true} />
             <FormField name="issuingCountry" label="Issuing Country" required={true} />
-            <FormDatePicker name="issuedDate" label="Issued Date" required={true} />
+            <DatePicker name="issuedDate" label="Issued Date" required={true} />
           </div>
           
-          <FormDatePicker name="expiryDate" label="Expiry Date" />
+          <DatePicker name="expiryDate" label="Expiry Date" />
         </div>
       )
     },
@@ -624,21 +605,6 @@ const IndividualCDD: React.FC = () => {
     }
   ];
 
-  if (showSuccess) {
-    return (
-      <SuccessModal
-        isOpen={showSuccess}
-        onClose={() => setShowSuccess()}
-        title="Individual CDD Submitted Successfully!"
-        message="Your Individual Customer Due Diligence form has been submitted and is being processed. You will receive a confirmation email shortly."
-      />
-    );
-  }
-
-  if (showPostAuthLoading) {
-    return <LoadingSpinner />;
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <div className="container mx-auto px-4 py-8">
@@ -651,8 +617,81 @@ const IndividualCDD: React.FC = () => {
           />
         </FormProvider>
 
-        {/* Summary Dialog */}
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        <FormLoadingModal isOpen={showLoading} message={loadingMessage} />
+        
+        <FormSummaryDialog
+          open={showSummary}
+          onOpenChange={setShowSummary}
+          formData={submissionData}
+          formType="Individual CDD"
+          onConfirm={confirmSubmit}
+          isSubmitting={isSubmitting}
+          renderSummary={(data) => {
+            if (!data) return <div className="text-center py-8 text-gray-500">No data to display</div>;
+            
+            return (
+              <div className="space-y-6">
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Personal Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Name:</span>
+                      <p className="text-gray-900">{`${data.title || ''} ${data.firstName || ''} ${data.middleName || ''} ${data.lastName || ''}`.trim() || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Date of Birth:</span>
+                      <p className="text-gray-900">{data.dateOfBirth ? format(new Date(data.dateOfBirth), 'dd/MM/yyyy') : 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Email:</span>
+                      <p className="text-gray-900">{data.emailAddress || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Mobile:</span>
+                      <p className="text-gray-900">{data.GSMno || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">BVN:</span>
+                      <p className="text-gray-900">{data.BVNNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">NIN:</span>
+                      <p className="text-gray-900">{data.NINNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Nationality:</span>
+                      <p className="text-gray-900">{data.nationality || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Occupation:</span>
+                      <p className="text-gray-900">{data.occupation || 'Not provided'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Uploaded Documents</h3>
+                  <div className="grid grid-cols-1 gap-2 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Identification:</span>
+                      <p className="text-gray-900">{data.identification ? '✓ Uploaded' : 'Not uploaded'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }}
+        />
+
+        <SuccessModal
+          isOpen={showSuccess}
+          onClose={closeSuccess}
+          title="Individual CDD Submitted Successfully!"
+          message="Your Individual Customer Due Diligence form has been submitted and is being processed. You will receive a confirmation email shortly."
+        />
+
+        {/* Old Dialog - Remove */}
+        <Dialog open={false} onOpenChange={() => {}}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Review Your Individual CDD Form</DialogTitle>
@@ -729,10 +768,7 @@ const IndividualCDD: React.FC = () => {
                   Edit Details
                 </Button>
                 <Button
-                  onClick={() => {
-                    const formData = formMethods.getValues();
-                    handleSubmit(formData);
-                  }}
+                  onClick={confirmSubmit}
                   disabled={isSubmitting}
                   className="bg-primary text-primary-foreground"
                 >

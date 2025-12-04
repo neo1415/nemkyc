@@ -3,6 +3,7 @@ import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash'; // CRITICAL for nested errors
+import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,8 +19,11 @@ import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
+import FormLoadingModal from '@/components/common/FormLoadingModal';
+import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
+import DatePicker from '@/components/common/DatePicker';
 
 // ========== FORM COMPONENTS (OUTSIDE Main Component) ==========
 const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
@@ -127,36 +131,7 @@ const FormSelect = ({ name, label, required = false, options, placeholder, ...pr
   );
 };
 
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name); // CRITICAL: Use lodash.get
-  
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={name}>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <Input
-        id={name}
-        type="date"
-        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
-        onChange={(e) => {
-          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-          setValue(name, dateValue);
-          if (error) {
-            clearErrors(name);
-          }
-        }}
-        className={error ? 'border-destructive' : ''}
-      />
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
+
 
 // ========== VALIDATION SCHEMA (OUTSIDE Component) ==========
 const naicomCorporateCDDSchema = yup.object().shape({
@@ -258,6 +233,10 @@ const naicomCorporateCDDSchema = yup.object().shape({
         .required("BVN is required")
         .matches(/^\d+$/, "BVN must contain only numbers")
         .length(11, "BVN must be exactly 11 digits"),
+      NINNumber: yup.string()
+        .required("NIN is required")
+        .matches(/^\d+$/, "NIN must contain only numbers")
+        .length(11, "NIN must be exactly 11 digits"),
       employersName: yup.string()
         .max(100, "Employer name cannot exceed 100 characters"),
       employersPhoneNumber: yup.string()
@@ -357,15 +336,7 @@ const naicomCorporateCDDSchema = yup.object().shape({
 
 const NaicomCorporateCDD: React.FC = () => {
   const { toast } = useToast();
-  const [showSummary, setShowSummary] = useState(false);
-  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const { 
-    handleSubmitWithAuth, 
-    showSuccess: authShowSuccess, 
-    setShowSuccess: setAuthShowSuccess,
-    isSubmitting: authSubmitting
-  } = useAuthRequiredSubmit();
 
   // CRITICAL: Include ALL fields with appropriate defaults
   const defaultValues = {
@@ -396,6 +367,7 @@ const NaicomCorporateCDD: React.FC = () => {
       email: '',
       phoneNumber: '',
       BVNNumber: '',
+      NINNumber: '',
       employersName: '',
       employersPhoneNumber: '',
       residentialAddress: '',
@@ -444,6 +416,23 @@ const NaicomCorporateCDD: React.FC = () => {
   });
 
   const { saveDraft, clearDraft } = useFormDraft('naicomCorporateCDD', formMethods);
+  const watchedValues = formMethods.watch();
+
+  const {
+    handleSubmit: handleEnhancedSubmit,
+    showSummary,
+    setShowSummary,
+    showLoading,
+    loadingMessage,
+    showSuccess,
+    confirmSubmit,
+    closeSuccess,
+    formData: submissionData,
+    isSubmitting
+  } = useEnhancedFormSubmit({
+    formType: 'NAICOM Corporate CDD',
+    onSuccess: () => clearDraft()
+  });
 
   // CRITICAL: Map exact field names to steps
   const stepFieldMappings = {
@@ -453,27 +442,6 @@ const NaicomCorporateCDD: React.FC = () => {
     3: ['cac', 'identification', 'cacForm'],
     4: ['agreeToDataPrivacy', 'signature']
   };
-
-  // Check for pending submission when component mounts
-  useEffect(() => {
-    const checkPendingSubmission = () => {
-      const hasPending = sessionStorage.getItem('pendingSubmission');
-      if (hasPending) {
-        setShowPostAuthLoading(true);
-        // Hide loading after 5 seconds max (in case something goes wrong)
-        setTimeout(() => setShowPostAuthLoading(false), 5000);
-      }
-    };
-
-    checkPendingSubmission();
-  }, []);
-
-  // Hide post-auth loading when success modal shows
-  useEffect(() => {
-    if (authShowSuccess) {
-      setShowPostAuthLoading(false);
-    }
-  }, [authShowSuccess]);
 
   // Auto-save draft
   useEffect(() => {
@@ -515,40 +483,44 @@ const NaicomCorporateCDD: React.FC = () => {
     return sanitized;
   };
 
-  const handleSubmit = async (data: any) => {
-    console.log('Form data before sanitization:', data);
-    
-    const sanitizedData = sanitizeData(data);
-    console.log('Sanitized data:', sanitizedData);
+  const onFinalSubmit = async (data: any) => {
+    try {
+      console.log('🔵 NAICOM Corporate CDD onFinalSubmit called with data:', data);
+      
+      const sanitizedData = sanitizeData(data);
+      console.log('🔵 Sanitized data:', sanitizedData);
 
-    // Handle file uploads
-    const fileUploadPromises: Array<Promise<[string, string]>> = [];
-    
-    for (const [key, file] of Object.entries(uploadedFiles)) {
-      if (file) {
-        fileUploadPromises.push(
-          uploadFile(file, `naicom-corporate-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
-        );
+      // Handle file uploads
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      
+      for (const [key, file] of Object.entries(uploadedFiles)) {
+        if (file) {
+          fileUploadPromises.push(
+            uploadFile(file, `naicom-corporate-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
+          );
+        }
       }
+
+      const fileResults = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(fileResults);
+
+      const finalData = {
+        ...sanitizedData,
+        ...fileUrls,
+        status: 'processing',
+        formType: 'NAICOM Corporate CDD'
+      };
+
+      console.log('🔵 Calling handleEnhancedSubmit with finalData:', finalData);
+      console.log('🔵 formType in finalData:', finalData.formType);
+      
+      await handleEnhancedSubmit(finalData);
+      
+      console.log('🔵 handleEnhancedSubmit completed');
+    } catch (error) {
+      console.error('🔴 Error in onFinalSubmit:', error);
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Submission failed', variant: 'destructive' });
     }
-
-    const fileResults = await Promise.all(fileUploadPromises);
-    const fileUrls = Object.fromEntries(fileResults);
-
-    const finalData = {
-      ...sanitizedData,
-      ...fileUrls,
-      status: 'processing',
-      formType: 'NAICOM Corporate CDD'
-    };
-
-    await handleSubmitWithAuth(finalData, 'NAICOM Corporate CDD');
-    clearDraft();
-    setShowSummary(false);
-  };
-
-  const onFinalSubmit = (data: any) => {
-    setShowSummary(true);
   };
 
   // Company type options
@@ -627,7 +599,7 @@ const NaicomCorporateCDD: React.FC = () => {
             />
           </div>
           
-          <FormDatePicker
+          <DatePicker
             name="dateOfIncorporationRegistration"
             label="Date of Incorporation/Registration"
             required={true}
@@ -712,6 +684,7 @@ const NaicomCorporateCDD: React.FC = () => {
                 email: '',
                 phoneNumber: '',
                 BVNNumber: '',
+                NINNumber: '',
                 employersName: '',
                 employersPhoneNumber: '',
                 residentialAddress: '',
@@ -770,7 +743,7 @@ const NaicomCorporateCDD: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormDatePicker 
+                  <DatePicker 
                     name={`directors.${index}.dob`} 
                     label="Date of Birth" 
                     required={true}
@@ -828,13 +801,22 @@ const NaicomCorporateCDD: React.FC = () => {
                     maxLength={11}
                   />
                 </div>
-
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    name={`directors.${index}.NINNumber`}
+                    label="NIN (National Identification Number)"
+                    required={true}
+                    maxLength={11}
+                  />
                   <FormField
                     name={`directors.${index}.employersName`}
                     label="Employers Name"
                     maxLength={100}
                   />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     name={`directors.${index}.employersPhoneNumber`}
                     label="Employers Phone Number"
@@ -878,12 +860,12 @@ const NaicomCorporateCDD: React.FC = () => {
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormDatePicker 
+                  <DatePicker 
                     name={`directors.${index}.issuedDate`} 
                     label="Issued Date" 
                     required={true}
                   />
-                  <FormDatePicker 
+                  <DatePicker 
                     name={`directors.${index}.expiryDate`} 
                     label="Expiry Date"
                   />
@@ -938,7 +920,7 @@ const NaicomCorporateCDD: React.FC = () => {
                 required={true}
                 maxLength={100}
               />
-              <FormDatePicker
+              <DatePicker
                 name="accountOpeningDate"
                 label="Account Opening Date"
                 required={true}
@@ -966,7 +948,7 @@ const NaicomCorporateCDD: React.FC = () => {
                 label="Bank Branch"
                 maxLength={100}
               />
-              <FormDatePicker
+              <DatePicker
                 name="accountOpeningDate2"
                 label="Account Opening Date"
               />
@@ -1123,15 +1105,7 @@ const NaicomCorporateCDD: React.FC = () => {
   return (
     <FormProvider {...formMethods}>
       <div className="container mx-auto px-4 py-8">
-        {/* Loading overlay */}
-        {showPostAuthLoading && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-lg font-semibold">Completing your submission...</p>
-            </div>
-          </div>
-        )}
+        {/* Loading overlay removed - showPostAuthLoading is not defined */}
 
         <Card className="max-w-6xl mx-auto">
           <CardHeader>
@@ -1149,45 +1123,168 @@ const NaicomCorporateCDD: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Summary Dialog */}
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Review Your NAICOM Corporate CDD Submission</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Please review all information carefully before submitting. Once submitted, changes cannot be made.
-              </p>
-              
-              {/* Summary content would go here */}
-              
-            </div>
-            <DialogFooter className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowSummary(false)}>
-                Back to Edit
-              </Button>
-              <Button onClick={() => formMethods.handleSubmit(handleSubmit)()} disabled={authSubmitting}>
-                {authSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Confirm & Submit'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Success Modal */}
-        <SuccessModal
-          isOpen={authShowSuccess}
-          onClose={() => setAuthShowSuccess()}
-          title="CDD Form Submitted Successfully!"
-          message="Your NAICOM Corporate CDD form has been submitted successfully and is now being processed."
+        <FormLoadingModal isOpen={showLoading} message={loadingMessage} />
+        
+        <FormSummaryDialog
+          open={showSummary}
+          onOpenChange={setShowSummary}
+          formData={submissionData}
           formType="NAICOM Corporate CDD"
+          onConfirm={confirmSubmit}
+          isSubmitting={isSubmitting}
+          renderSummary={(data) => {
+            if (!data) return <div className="text-center py-8 text-gray-500">No data to display</div>;
+            
+            return (
+              <div className="space-y-6">
+                {/* Company Information */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Company Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Company Name:</span>
+                      <p className="text-gray-900">{data.companyName || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Incorporation Number:</span>
+                      <p className="text-gray-900">{data.incorporationNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Incorporation State:</span>
+                      <p className="text-gray-900">{data.incorporationState || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Date of Incorporation:</span>
+                      <p className="text-gray-900">{data.dateOfIncorporationRegistration ? format(new Date(data.dateOfIncorporationRegistration), 'dd/MM/yyyy') : 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Company Legal Form:</span>
+                      <p className="text-gray-900">{data.companyLegalForm === 'Other' ? data.companyLegalFormOther : data.companyLegalForm || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Nature of Business:</span>
+                      <p className="text-gray-900">{data.natureOfBusiness || 'Not provided'}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <span className="font-medium text-gray-600">Registered Address:</span>
+                      <p className="text-gray-900">{data.registeredCompanyAddress || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Email:</span>
+                      <p className="text-gray-900">{data.emailAddress || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Telephone:</span>
+                      <p className="text-gray-900">{data.telephoneNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Website:</span>
+                      <p className="text-gray-900">{data.website || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Tax ID:</span>
+                      <p className="text-gray-900">{data.taxIdentificationNumber || 'Not provided'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Directors Information */}
+                {data.directors && Array.isArray(data.directors) && data.directors.length > 0 && (
+                  <div className="border rounded-lg p-4">
+                    <h3 className="font-semibold text-lg mb-3">Directors Information</h3>
+                    {data.directors.map((director: any, index: number) => (
+                      <div key={index} className={index > 0 ? 'mt-4 pt-4 border-t' : ''}>
+                        <h4 className="font-medium text-gray-800 mb-2">Director {index + 1}</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium text-gray-600">Name:</span>
+                            <p className="text-gray-900">{`${director.firstName || ''} ${director.middleName || ''} ${director.lastName || ''}`.trim() || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Date of Birth:</span>
+                            <p className="text-gray-900">{director.dob ? format(new Date(director.dob), 'dd/MM/yyyy') : 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Nationality:</span>
+                            <p className="text-gray-900">{director.nationality || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Email:</span>
+                            <p className="text-gray-900">{director.email || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Phone:</span>
+                            <p className="text-gray-900">{director.phoneNumber || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">BVN:</span>
+                            <p className="text-gray-900">{director.BVNNumber || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">NIN:</span>
+                            <p className="text-gray-900">{director.NINNumber || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">ID Type:</span>
+                            <p className="text-gray-900">{director.idType || 'Not provided'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Bank Details */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Bank Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Bank Name:</span>
+                      <p className="text-gray-900">{data.bankName || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Account Number:</span>
+                      <p className="text-gray-900">{data.accountNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Bank Branch:</span>
+                      <p className="text-gray-900">{data.bankBranch || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Account Opening Date:</span>
+                      <p className="text-gray-900">{data.accountOpeningDate ? format(new Date(data.accountOpeningDate), 'dd/MM/yyyy') : 'Not provided'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Documents */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Uploaded Documents</h3>
+                  <div className="grid grid-cols-1 gap-2 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">CAC Certificate:</span>
+                      <p className="text-gray-900">{data.cac ? '✓ Uploaded' : 'Not uploaded'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Identification Document:</span>
+                      <p className="text-gray-900">{data.identification ? '✓ Uploaded' : 'Not uploaded'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">CAC Form:</span>
+                      <p className="text-gray-900">{data.cacForm ? '✓ Uploaded' : 'Not uploaded'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }}
+        />
+
+        <SuccessModal
+          isOpen={showSuccess}
+          onClose={closeSuccess}
+          title="NAICOM Corporate CDD Submitted Successfully!"
+          message="Your NAICOM Corporate CDD form has been submitted successfully and is now being processed."
         />
       </div>
     </FormProvider>

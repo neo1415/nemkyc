@@ -14,7 +14,13 @@ import 'jspdf-autotable';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#7c2d12',
+      main: '#800020', // Burgundy
+    },
+    secondary: {
+      main: '#FFD700', // Gold
+    },
+    background: {
+      default: '#ffffff',
     },
   },
 });
@@ -37,7 +43,8 @@ const AdminIndividualKYCTable: React.FC = () => {
 
   const fetchKYCForms = async () => {
     try {
-      const q = query(collection(db, 'Individual-kyc-form'), orderBy('createdAt', 'desc'));
+      // Sort by timestamp descending (latest first)
+      const q = query(collection(db, 'Individual-kyc-form'), orderBy('timestamp', 'desc'));
       const querySnapshot = await getDocs(q);
       
       const forms = querySnapshot.docs.map((doc) => {
@@ -123,7 +130,7 @@ const AdminIndividualKYCTable: React.FC = () => {
       'Created At', 'Office Location', 'Title', 'First Name', 'Middle Name', 'Last Name',
       'Contact Address', 'Occupation', 'Gender', 'Date of Birth', 'Mothers Maiden Name',
       'City', 'State', 'Country', 'Nationality', 'Residential Address', 'Mobile Number',
-      'Email', 'BVN', 'ID Type', 'ID Number', 'Issuing Country', 'Source of Income',
+      'Email', 'BVN', 'NIN', 'ID Type', 'ID Number', 'Issuing Country', 'Source of Income',
       'Annual Income Range', 'Premium Payment Source', 'Bank Name', 'Account Number',
       'Bank Branch', 'Account Opening Date'
     ];
@@ -148,6 +155,7 @@ const AdminIndividualKYCTable: React.FC = () => {
       form.GSMno || 'N/A',
       form.emailAddress || 'N/A',
       form.BVN || 'N/A',
+      form.NIN || 'N/A',
       form.identificationType || 'N/A',
       form.idNumber || 'N/A',
       form.issuingCountry || 'N/A',
@@ -331,6 +339,12 @@ const AdminIndividualKYCTable: React.FC = () => {
       headerName: 'BVN',
       width: 130,
       renderCell: (params) => params.row.BVN || 'N/A',
+    },
+    {
+      field: 'NIN',
+      headerName: 'NIN',
+      width: 130,
+      renderCell: (params) => params.row.NIN || 'N/A',
     },
     {
       field: 'identificationType',

@@ -440,6 +440,10 @@ const AgentsCDDViewer: React.FC = () => {
                 <p className="font-medium">{formatValue(formData.BVNNumber)}</p>
               </div>
               <div>
+                <p className="font-medium text-sm text-muted-foreground">NIN</p>
+                <p className="font-medium">{formatValue(formData.NINNumber)}</p>
+              </div>
+              <div>
                 <p className="font-medium text-sm text-muted-foreground">Tax ID Number</p>
                 <p className="font-medium">{formatValue(formData.taxIDNumber)}</p>
               </div>
@@ -625,6 +629,7 @@ const AgentsCDDViewer: React.FC = () => {
             {renderEditableField("Nationality", "nationality", formData.nationality)}
             {renderEditableField("Phone Number", "GSMno", formData.GSMno)}
             {renderEditableField("BVN", "BVNNumber", formData.BVNNumber)}
+            {renderEditableField("NIN", "NINNumber", formData.NINNumber)}
             {renderEditableField("Tax ID Number", "taxIDNumber", formData.taxIDNumber)}
             {renderEditableField("Occupation", "occupation", formData.occupation)}
             {renderEditableField("Email", "emailAddress", formData.emailAddress)}

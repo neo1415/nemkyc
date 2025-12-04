@@ -21,9 +21,12 @@ import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
+import FormLoadingModal from '@/components/common/FormLoadingModal';
+import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import DatePicker from '@/components/common/DatePicker';
 
 const agentsCDDSchema = yup.object().shape({
   // Personal Info
@@ -58,6 +61,10 @@ const agentsCDDSchema = yup.object().shape({
     .required("BVN is required")
     .matches(/^\d+$/, "BVN must contain only numbers")
     .length(11, "BVN must be exactly 11 digits"),
+  NINNumber: yup.string()
+    .required("NIN is required")
+    .matches(/^\d+$/, "NIN must contain only numbers")
+    .length(11, "NIN must be exactly 11 digits"),
   taxIDNumber: yup.string(),
   occupation: yup.string().required("Occupation is required"),
   emailAddress: yup.string()
@@ -171,6 +178,7 @@ const defaultValues = {
   nationality: '',
   GSMno: '',
   BVNNumber: '',
+  NINNumber: '',
   taxIDNumber: '',
   occupation: '',
   emailAddress: '',
@@ -310,89 +318,10 @@ const FormSelect = ({ name, label, required = false, options, placeholder, ...pr
   );
 };
 
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors, trigger } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name);
-  
-  const formatDateForInput = (date: any) => {
-    if (!date) return '';
-    if (typeof date === 'string') {
-      const parsedDate = new Date(date);
-      return !isNaN(parsedDate.getTime()) ? parsedDate.toISOString().split('T')[0] : '';
-    }
-    if (date instanceof Date && !isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
-    return '';
-  };
-  
-  const handleDateChange = async (dateValue: Date | undefined) => {
-    setValue(name, dateValue, { shouldValidate: true });
-    if (error) {
-      clearErrors(name);
-    }
-    await trigger(name);
-  };
-  
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={name}>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <div className="relative">
-        <Input
-          id={name}
-          type="date"
-          value={formatDateForInput(value)}
-          onChange={async (e) => {
-            const dateValue = e.target.value ? new Date(e.target.value + 'T00:00:00') : undefined;
-            await handleDateChange(dateValue);
-          }}
-          className={error ? 'border-destructive' : ''}
-        />
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-              type="button"
-            >
-              <CalendarIcon className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <ReactCalendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={handleDateChange}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
+
 
 const AgentsCDD: React.FC = () => {
-  const [showSummary, setShowSummary] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
-  
-  const {
-    handleSubmitWithAuth,
-    showSuccess,
-    setShowSuccess,
-    isSubmitting
-  } = useAuthRequiredSubmit();
-
   const formMethods = useForm<any>({
     resolver: yupResolver(agentsCDDSchema),
     defaultValues,
@@ -402,29 +331,37 @@ const AgentsCDD: React.FC = () => {
   const { saveDraft, clearDraft } = useFormDraft('agents-cdd', formMethods);
   const watchedValues = formMethods.watch();
 
+  const {
+    handleSubmit: handleEnhancedSubmit,
+    showSummary,
+    setShowSummary,
+    showLoading,
+    loadingMessage,
+    showSuccess,
+    confirmSubmit,
+    closeSuccess,
+    formData: submissionData,
+    isSubmitting
+  } = useEnhancedFormSubmit({
+    formType: 'Agents CDD',
+    onSuccess: () => clearDraft()
+  });
+
   // Step field mappings for validation
   const stepFieldMappings = {
-    0: ['firstName', 'lastName', 'residentialAddress', 'gender', 'position', 'dateOfBirth', 'placeOfBirth', 'sourceOfIncome', 'nationality', 'GSMno', 'BVNNumber', 'occupation', 'emailAddress', 'idType', 'idNumber', 'issuedDate', 'issuingBody'],
+    0: ['firstName', 'lastName', 'residentialAddress', 'gender', 'position', 'dateOfBirth', 'placeOfBirth', 'sourceOfIncome', 'nationality', 'GSMno', 'BVNNumber', 'NINNumber', 'occupation', 'emailAddress', 'idType', 'idNumber', 'issuedDate', 'issuingBody'],
     1: ['agentsName', 'agentsAddress', 'naicomNo', 'lisenceIssuedDate', 'lisenceExpiryDate', 'agentsEmail', 'website', 'mobileNo', 'arian', 'listOfAgents'],
     2: ['accountNumber', 'bankName', 'bankBranch', 'accountOpeningDate', 'agentId', 'naicomCertificate'],
     3: ['agreeToDataPrivacy', 'signature']
   };
 
-  // Auto-save draft
-  React.useEffect(() => {
+  // Auto-save draft on form changes
+  useEffect(() => {
     const subscription = formMethods.watch((data) => {
       saveDraft(data);
     });
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
-
-  // Post-auth loading effect
-  useEffect(() => {
-    const submissionInProgress = sessionStorage.getItem('submissionInProgress');
-    if (submissionInProgress) {
-      setShowSummary(false);
-    }
-  }, []);
 
 
   // Data sanitization (remove undefined values and serialize dates)
@@ -443,40 +380,34 @@ const AgentsCDD: React.FC = () => {
     return sanitized;
   };
 
-  const handleSubmit = async (data: any) => {
-    console.log('Form data before sanitization:', data);
-    
-    const sanitizedData = sanitizeData(data);
-    console.log('Sanitized data:', sanitizedData);
-
-    // Handle file uploads
-    const fileUploadPromises: Array<Promise<[string, string]>> = [];
-    
-    for (const [key, file] of Object.entries(uploadedFiles)) {
-      if (file) {
-        fileUploadPromises.push(
-          uploadFile(file, `agents-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
-        );
+  const onFinalSubmit = async (data: any) => {
+    try {
+      const sanitizedData = sanitizeData(data);
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      
+      for (const [key, file] of Object.entries(uploadedFiles)) {
+        if (file) {
+          fileUploadPromises.push(
+            uploadFile(file, `agents-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
+          );
+        }
       }
+
+      const fileResults = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(fileResults);
+
+      const finalData = {
+        ...sanitizedData,
+        ...fileUrls,
+        status: 'processing',
+        formType: 'Agents CDD'
+      };
+
+      await handleEnhancedSubmit(finalData);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Submission failed', variant: 'destructive' });
     }
-
-    const fileResults = await Promise.all(fileUploadPromises);
-    const fileUrls = Object.fromEntries(fileResults);
-
-    const finalData = {
-      ...sanitizedData,
-      ...fileUrls,
-      status: 'processing',
-      formType: 'Agents-CDD'
-    };
-
-    await handleSubmitWithAuth(finalData, 'Agents-CDD');
-    clearDraft();
-    setShowSummary(false);
-  };
-
-  const onFinalSubmit = (data: any) => {
-    setShowSummary(true);
   };
 
   const DatePickerField = ({ name, label }: { name: string; label: string }) => {
@@ -558,7 +489,7 @@ const AgentsCDD: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormDatePicker name="dateOfBirth" label="Date of Birth" required={true} />
+            <DatePicker name="dateOfBirth" label="Date of Birth" required={true} />
             <FormField
               name="placeOfBirth"
               label="Place of Birth"
@@ -599,13 +530,22 @@ const AgentsCDD: React.FC = () => {
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               name="BVNNumber"
               label="BVN"
               required={true}
               maxLength={11}
             />
+            <FormField
+              name="NINNumber"
+              label="NIN (National Identification Number)"
+              required={true}
+              maxLength={11}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               name="taxIDNumber"
               label="Tax ID Number"
@@ -642,8 +582,8 @@ const AgentsCDD: React.FC = () => {
               label="Identification Number"
               required={true}
             />
-            <FormDatePicker name="issuedDate" label="Issued Date" required={true} />
-            <FormDatePicker name="expiryDate" label="Expiry Date" />
+            <DatePicker name="issuedDate" label="Issued Date" required={true} />
+            <DatePicker name="expiryDate" label="Expiry Date" />
             <FormField
               name="issuingBody"
               label="Issuing Body"
@@ -678,8 +618,8 @@ const AgentsCDD: React.FC = () => {
           />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormDatePicker name="lisenceIssuedDate" label="Lisence Issued Date" required={true} />
-            <FormDatePicker name="lisenceExpiryDate" label="Lisence Expiry Date" required={true} />
+            <DatePicker name="lisenceIssuedDate" label="Lisence Issued Date" required={true} />
+            <DatePicker name="lisenceExpiryDate" label="Lisence Expiry Date" required={true} />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -747,7 +687,7 @@ const AgentsCDD: React.FC = () => {
             />
           </div>
           
-          <FormDatePicker name="accountOpeningDate" label="Account Opening Date" required={true} />
+          <DatePicker name="accountOpeningDate" label="Account Opening Date" required={true} />
           
           <h3 className="text-lg font-semibold mt-6">Foreign Account Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -765,7 +705,7 @@ const AgentsCDD: React.FC = () => {
             />
           </div>
           
-          <FormDatePicker name="accountOpeningDate2" label="Account Opening Date" />
+          <DatePicker name="accountOpeningDate2" label="Account Opening Date" />
 
           <h3 className="text-lg font-semibold mt-6">Required Documents</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -894,21 +834,6 @@ const AgentsCDD: React.FC = () => {
     }
   ];
 
-  if (showSuccess) {
-    return (
-      <SuccessModal
-        isOpen={showSuccess}
-        onClose={() => setShowSuccess()}
-        title="Agents CDD Submitted Successfully!"
-        message="Your Agents Customer Due Diligence form has been submitted and is being processed. You will receive a confirmation email shortly."
-      />
-    );
-  }
-
-  if (showPostAuthLoading) {
-    return <LoadingSpinner />;
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <div className="container mx-auto px-4 py-8">
@@ -921,87 +846,301 @@ const AgentsCDD: React.FC = () => {
           />
         </FormProvider>
 
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Review Your Submission</DialogTitle>
-            </DialogHeader>
+        <FormLoadingModal isOpen={showLoading} message={loadingMessage} />
+        
+        <FormSummaryDialog
+          open={showSummary}
+          onOpenChange={setShowSummary}
+          formData={submissionData}
+          formType="Agents CDD"
+          onConfirm={confirmSubmit}
+          isSubmitting={isSubmitting}
+          renderSummary={(data) => {
+            if (!data) return null;
             
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Personal Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p><strong>Name:</strong> {watchedValues.firstName} {watchedValues.middleName} {watchedValues.lastName}</p>
-                  <p><strong>Address:</strong> {watchedValues.residentialAddress}</p>
-                  <p><strong>Gender:</strong> {watchedValues.gender}</p>
-                  <p><strong>Position:</strong> {watchedValues.position}</p>
-                  <p><strong>Date of Birth:</strong> {watchedValues.dateOfBirth ? format(new Date(watchedValues.dateOfBirth), 'PPP') : ''}</p>
-                  <p><strong>Place of Birth:</strong> {watchedValues.placeOfBirth}</p>
-                  <p><strong>Nationality:</strong> {watchedValues.nationality}</p>
-                  <p><strong>Phone:</strong> {watchedValues.GSMno}</p>
-                  <p><strong>Email:</strong> {watchedValues.emailAddress}</p>
-                  <p><strong>BVN:</strong> {watchedValues.BVNNumber}</p>
-                  <p><strong>Occupation:</strong> {watchedValues.occupation}</p>
-                </CardContent>
-              </Card>
+            const formatDate = (date: any) => {
+              if (!date) return 'Not provided';
+              try {
+                return format(new Date(date), 'dd/MM/yyyy');
+              } catch {
+                return 'Invalid date';
+              }
+            };
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Additional Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p><strong>Agent Name:</strong> {watchedValues.agentsName}</p>
-                  <p><strong>Office Address:</strong> {watchedValues.agentsAddress}</p>
-                  <p><strong>NAICOM License:</strong> {watchedValues.naicomNo}</p>
-                  <p><strong>Email Address:</strong> {watchedValues.agentsEmail}</p>
-                  <p><strong>Website:</strong> {watchedValues.website}</p>
-                  <p><strong>Mobile:</strong> {watchedValues.mobileNo}</p>
-                  <p><strong>ARIAN Membership:</strong> {watchedValues.arian}</p>
-                </CardContent>
-              </Card>
+            return (
+              <>
+                {/* Personal Information */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Full Name:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">
+                        {[data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ')}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Residential Address:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.residentialAddress}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Gender:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900 capitalize">{data.gender}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Position/Role:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.position}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Date of Birth:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{formatDate(data.dateOfBirth)}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Place of Birth:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.placeOfBirth}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Nationality:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.nationality}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Occupation:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.occupation}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Source of Income:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">
+                        {data.sourceOfIncome === 'other' && data.sourceOfIncomeOther 
+                          ? data.sourceOfIncomeOther 
+                          : data.sourceOfIncome}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Financial Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p><strong>Account Number:</strong> {watchedValues.localAccountNumber}</p>
-                  <p><strong>Bank Name:</strong> {watchedValues.localBankName}</p>
-                  <p><strong>Bank Branch:</strong> {watchedValues.localBankBranch}</p>
-                </CardContent>
-              </Card>
+                <div className="border-t my-4" />
 
-              <div className="flex gap-4 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowSummary(false)}
-                  className="flex-1"
-                >
-                  Back to Edit
-                </Button>
-                <Button
-                  onClick={() => formMethods.handleSubmit(handleSubmit)()}
-                  disabled={isSubmitting}
-                  className="flex-1"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    'Submit Form'
-                  )}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+                {/* Contact Information */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Email:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.emailAddress}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Phone Number:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.GSMno}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">BVN:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.BVNNumber}</div>
+                    </div>
+                    {data.taxIDNumber && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                        <div className="text-sm font-medium text-gray-600">Tax ID:</div>
+                        <div className="sm:col-span-2 text-sm text-gray-900">{data.taxIDNumber}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border-t my-4" />
+
+                {/* Identification */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-900">Identification</h3>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">ID Type:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.idType}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">ID Number:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.idNumber}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Issuing Body:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.issuingBody}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Issued Date:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{formatDate(data.issuedDate)}</div>
+                    </div>
+                    {data.expiryDate && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                        <div className="text-sm font-medium text-gray-600">Expiry Date:</div>
+                        <div className="sm:col-span-2 text-sm text-gray-900">{formatDate(data.expiryDate)}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border-t my-4" />
+
+                {/* Agent Information */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-900">Agent Information</h3>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Agent Name:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.agentsName}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Office Address:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.agentsAddress}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">NAICOM License No:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.naicomNo}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">License Issued:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{formatDate(data.lisenceIssuedDate)}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">License Expiry:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{formatDate(data.lisenceExpiryDate)}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Email:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.agentsEmail}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Website:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.website}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Mobile:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.mobileNo}</div>
+                    </div>
+                    {data.taxIDNo && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                        <div className="text-sm font-medium text-gray-600">Tax ID:</div>
+                        <div className="sm:col-span-2 text-sm text-gray-900">{data.taxIDNo}</div>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">ARIAN Membership:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.arian}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Approved Principals:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.listOfAgents}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t my-4" />
+
+                {/* Financial Information */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-900">Financial Information</h3>
+                  <div className="space-y-2">
+                    <h4 className="text-md font-medium text-gray-800 mt-2">Local Account</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Account Number:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.accountNumber}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Bank Name:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.bankName}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Branch:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{data.bankBranch}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Opening Date:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">{formatDate(data.accountOpeningDate)}</div>
+                    </div>
+
+                    {data.accountNumber2 && (
+                      <>
+                        <h4 className="text-md font-medium text-gray-800 mt-4">Foreign Account</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                          <div className="text-sm font-medium text-gray-600">Account Number:</div>
+                          <div className="sm:col-span-2 text-sm text-gray-900">{data.accountNumber2}</div>
+                        </div>
+                        {data.bankName2 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                            <div className="text-sm font-medium text-gray-600">Bank Name:</div>
+                            <div className="sm:col-span-2 text-sm text-gray-900">{data.bankName2}</div>
+                          </div>
+                        )}
+                        {data.bankBranch2 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                            <div className="text-sm font-medium text-gray-600">Branch:</div>
+                            <div className="sm:col-span-2 text-sm text-gray-900">{data.bankBranch2}</div>
+                          </div>
+                        )}
+                        {data.accountOpeningDate2 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                            <div className="text-sm font-medium text-gray-600">Opening Date:</div>
+                            <div className="sm:col-span-2 text-sm text-gray-900">{formatDate(data.accountOpeningDate2)}</div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border-t my-4" />
+
+                {/* Documents */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-900">Documents</h3>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Agent ID:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">
+                        {typeof data.agentId === 'string' ? 'Uploaded' : data.agentId?.name || 'Uploaded'}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">NAICOM Certificate:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">
+                        {typeof data.naicomCertificate === 'string' ? 'Uploaded' : data.naicomCertificate?.name || 'Uploaded'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t my-4" />
+
+                {/* Declaration */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-900">Declaration</h3>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Data Privacy Agreement:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900">
+                        {data.agreeToDataPrivacy ? 'Agreed' : 'Not Agreed'}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
+                      <div className="text-sm font-medium text-gray-600">Digital Signature:</div>
+                      <div className="sm:col-span-2 text-sm text-gray-900 font-signature italic">
+                        {data.signature}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            );
+          }}
+        />
+
+        <SuccessModal
+          isOpen={showSuccess}
+          onClose={closeSuccess}
+          title="Agents CDD Submitted Successfully!"
+          message="Your Agents Customer Due Diligence form has been submitted successfully."
+        />
       </div>
     </div>
   );
 };
 
 export default AgentsCDD;
+

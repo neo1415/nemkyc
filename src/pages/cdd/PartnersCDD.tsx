@@ -5,12 +5,16 @@ import * as yup from 'yup';
 import { get } from 'lodash'; // CRITICAL for nested errors
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
+import FormLoadingModal from '@/components/common/FormLoadingModal';
+import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
+import DatePicker from '@/components/common/DatePicker';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -128,36 +132,7 @@ const FormSelect = ({ name, label, required = false, options, placeholder, ...pr
   );
 };
 
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name); // CRITICAL: Use lodash.get
-  
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={name}>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <Input
-        id={name}
-        type="date"
-        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
-        onChange={(e) => {
-          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-          setValue(name, dateValue);
-          if (error) {
-            clearErrors(name);
-          }
-        }}
-        className={error ? 'border-destructive' : ''}
-      />
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
+
 
 // ========== VALIDATION SCHEMA (OUTSIDE Main Component) ==========
 const partnersCDDSchema = yup.object().shape({
@@ -195,6 +170,10 @@ const partnersCDDSchema = yup.object().shape({
     .required("BVN is required")
     .matches(/^\d+$/, "BVN must contain only numbers")
     .length(11, "BVN must be exactly 11 digits"),
+  nin: yup.string()
+    .required("NIN is required")
+    .matches(/^\d+$/, "NIN must contain only numbers")
+    .length(11, "NIN must be exactly 11 digits"),
   
   // Directors
   directors: yup.array().of(yup.object().shape({
@@ -228,6 +207,10 @@ const partnersCDDSchema = yup.object().shape({
       .required("BVN is required")
       .matches(/^\d+$/, "BVN must contain only numbers")
       .length(11, "BVN must be exactly 11 digits"),
+    nin: yup.string()
+      .required("NIN is required")
+      .matches(/^\d+$/, "NIN must contain only numbers")
+      .length(11, "NIN must be exactly 11 digits"),
     employerName: yup.string(),
     employerPhone: yup.string(),
     residentialAddress: yup.string().required("Residential address is required"),
@@ -316,6 +299,7 @@ const defaultValues: Partial<PartnersCDDData> = {
   incorporationState: '',
   businessNature: '',
   bvn: '',
+  nin: '',
   directors: [{
     title: '',
     gender: '',
@@ -330,6 +314,7 @@ const defaultValues: Partial<PartnersCDDData> = {
     email: '',
     phoneNumber: '',
     bvn: '',
+    nin: '',
     employerName: '',
     employerPhone: '',
     residentialAddress: '',
@@ -363,15 +348,6 @@ const defaultValues: Partial<PartnersCDDData> = {
 const PartnersCDD: React.FC = () => {
   const { toast } = useToast();
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const [showSummary, setShowSummary] = useState(false);
-  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
-  
-  const { 
-    handleSubmitWithAuth, 
-    showSuccess: authShowSuccess, 
-    setShowSuccess: setAuthShowSuccess,
-    isSubmitting: authSubmitting
-  } = useAuthRequiredSubmit();
 
   const formMethods = useForm<any>({
     resolver: yupResolver(partnersCDDSchema),
@@ -385,6 +361,23 @@ const PartnersCDD: React.FC = () => {
   });
 
   const { saveDraft, clearDraft } = useFormDraft('partners-cdd', formMethods);
+  const watchedValues = formMethods.watch();
+
+  const {
+    handleSubmit: handleEnhancedSubmit,
+    showSummary,
+    setShowSummary,
+    showLoading,
+    loadingMessage,
+    showSuccess,
+    confirmSubmit,
+    closeSuccess,
+    formData: submissionData,
+    isSubmitting
+  } = useEnhancedFormSubmit({
+    formType: 'Partners CDD',
+    onSuccess: () => clearDraft()
+  });
 
   // Step field mappings
   const stepFieldMappings = {
@@ -403,13 +396,6 @@ const PartnersCDD: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
-  // Hide post-auth loading when success modal shows
-  useEffect(() => {
-    if (authShowSuccess) {
-      setShowPostAuthLoading(false);
-    }
-  }, [authShowSuccess]);
-
   // Data sanitization
   const sanitizeData = (data: any) => {
     const sanitized: any = {};
@@ -421,40 +407,39 @@ const PartnersCDD: React.FC = () => {
     return sanitized;
   };
 
-  const handleSubmit = async (data: any) => {
-    console.log('Form data before sanitization:', data);
-    
-    const sanitizedData = sanitizeData(data);
-    console.log('Sanitized data:', sanitizedData);
+  const onFinalSubmit = async (data: any) => {
+    try {
+      console.log('Form data before sanitization:', data);
+      
+      const sanitizedData = sanitizeData(data);
+      console.log('Sanitized data:', sanitizedData);
 
-    // Handle file uploads
-    const fileUploadPromises: Array<Promise<[string, string]>> = [];
-    
-    for (const [key, file] of Object.entries(uploadedFiles)) {
-      if (file) {
-        fileUploadPromises.push(
-          uploadFile(file, `partners-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
-        );
+      // Handle file uploads
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      
+      for (const [key, file] of Object.entries(uploadedFiles)) {
+        if (file) {
+          fileUploadPromises.push(
+            uploadFile(file, `partners-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
+          );
+        }
       }
+
+      const fileResults = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(fileResults);
+
+      const finalData = {
+        ...sanitizedData,
+        ...fileUrls,
+        status: 'processing',
+        formType: 'Partners CDD'
+      };
+
+      await handleEnhancedSubmit(finalData);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Submission failed', variant: 'destructive' });
     }
-
-    const fileResults = await Promise.all(fileUploadPromises);
-    const fileUrls = Object.fromEntries(fileResults);
-
-    const finalData = {
-      ...sanitizedData,
-      ...fileUrls,
-      status: 'processing',
-      formType: 'Partners CDD'
-    };
-
-    await handleSubmitWithAuth(finalData, 'Partners CDD');
-    clearDraft();
-    setShowSummary(false);
-  };
-
-  const onFinalSubmit = (data: any) => {
-    setShowSummary(true);
   };
 
   const titleOptions = [
@@ -567,7 +552,7 @@ const PartnersCDD: React.FC = () => {
               label="Incorporation/RC Number"
               required={true}
             />
-            <FormDatePicker
+            <DatePicker
               name="incorporationDate"
               label="Date of Incorporation"
               required={true}
@@ -586,12 +571,20 @@ const PartnersCDD: React.FC = () => {
             maxLength={1000}
           />
           
-          <FormField
-            name="bvn"
-            label="BVN"
-            required={true}
-            maxLength={11}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              name="bvn"
+              label="BVN"
+              required={true}
+              maxLength={11}
+            />
+            <FormField
+              name="nin"
+              label="NIN (National Identification Number)"
+              required={true}
+              maxLength={11}
+            />
+          </div>
         </div>
       )
     },
@@ -618,6 +611,7 @@ const PartnersCDD: React.FC = () => {
                 email: '',
                 phoneNumber: '',
                 bvn: '',
+                nin: '',
                 employerName: '',
                 employerPhone: '',
                 residentialAddress: '',
@@ -689,7 +683,7 @@ const PartnersCDD: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormDatePicker
+                  <DatePicker
                     name={`directors.${index}.dateOfBirth`}
                     label="Date of Birth"
                     required={true}
@@ -725,7 +719,7 @@ const PartnersCDD: React.FC = () => {
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     name={`directors.${index}.phoneNumber`}
                     label="Phone Number"
@@ -735,6 +729,15 @@ const PartnersCDD: React.FC = () => {
                   <FormField
                     name={`directors.${index}.bvn`}
                     label="BVN"
+                    required={true}
+                    maxLength={11}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    name={`directors.${index}.nin`}
+                    label="NIN (National Identification Number)"
                     required={true}
                     maxLength={11}
                   />
@@ -767,12 +770,12 @@ const PartnersCDD: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormDatePicker
+                  <DatePicker
                     name={`directors.${index}.issuedDate`}
                     label="Issued Date"
                     required={true}
                   />
-                  <FormDatePicker
+                  <DatePicker
                     name={`directors.${index}.expiryDate`}
                     label="Expiry Date"
                   />
@@ -830,7 +833,7 @@ const PartnersCDD: React.FC = () => {
                 label="Bank Branch"
                 required={true}
               />
-              <FormDatePicker
+              <DatePicker
                 name="localAccountOpeningDate"
                 label="Account Opening Date"
                 required={true}
@@ -856,7 +859,7 @@ const PartnersCDD: React.FC = () => {
                 name="foreignBankBranch"
                 label="Bank Branch"
               />
-              <FormDatePicker
+              <DatePicker
                 name="foreignAccountOpeningDate"
                 label="Account Opening Date"
               />
@@ -1105,16 +1108,6 @@ const PartnersCDD: React.FC = () => {
   return (
     <FormProvider {...formMethods}>
       <div className="container mx-auto px-4 py-8">
-        {/* Loading overlay */}
-        {showPostAuthLoading && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-lg font-semibold">Completing your submission...</p>
-            </div>
-          </div>
-        )}
-
         <Card className="max-w-6xl mx-auto">
           <CardHeader>
             <CardTitle>Partners CDD Form</CardTitle>
@@ -1131,43 +1124,224 @@ const PartnersCDD: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Summary Dialog */}
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Review Your Partners CDD</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p>Please review your information before submitting.</p>
-              <div className="flex gap-4 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowSummary(false)}
-                >
-                  Edit Details
-                </Button>
-                <Button
-                  onClick={() => {
-                    const formData = formMethods.getValues();
-                    handleSubmit(formData);
-                  }}
-                  disabled={authSubmitting}
-                  className="bg-primary text-primary-foreground"
-                >
-                  {authSubmitting ? 'Submitting...' : 'Confirm & Submit'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <FormLoadingModal isOpen={showLoading} message={loadingMessage} />
+        
+        <FormSummaryDialog
+          open={showSummary}
+          onOpenChange={setShowSummary}
+          formData={submissionData}
+          formType="Partners CDD"
+          onConfirm={confirmSubmit}
+          isSubmitting={isSubmitting}
+          renderSummary={(data) => {
+            if (!data) return <div className="text-center py-8 text-gray-500">No data to display</div>;
+            
+            return (
+              <div className="space-y-6">
+                {/* Company Information */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Company Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Company Name:</span>
+                      <p className="text-gray-900">{data.companyName || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Incorporation Number:</span>
+                      <p className="text-gray-900">{data.incorporationNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Incorporation Date:</span>
+                      <p className="text-gray-900">{data.incorporationDate ? format(new Date(data.incorporationDate), 'dd/MM/yyyy') : 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Incorporation State:</span>
+                      <p className="text-gray-900">{data.incorporationState || 'Not provided'}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <span className="font-medium text-gray-600">Registered Address:</span>
+                      <p className="text-gray-900">{data.registeredAddress || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">City:</span>
+                      <p className="text-gray-900">{data.city || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">State:</span>
+                      <p className="text-gray-900">{data.state || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Country:</span>
+                      <p className="text-gray-900">{data.country || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Email:</span>
+                      <p className="text-gray-900">{data.email || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Website:</span>
+                      <p className="text-gray-900">{data.website || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Contact Person:</span>
+                      <p className="text-gray-900">{data.contactPersonName || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Contact Number:</span>
+                      <p className="text-gray-900">{data.contactPersonNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Tax ID:</span>
+                      <p className="text-gray-900">{data.taxId || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">VAT Registration:</span>
+                      <p className="text-gray-900">{data.vatRegistrationNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">BVN:</span>
+                      <p className="text-gray-900">{data.bvn || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">NIN:</span>
+                      <p className="text-gray-900">{data.nin || 'Not provided'}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <span className="font-medium text-gray-600">Nature of Business:</span>
+                      <p className="text-gray-900">{data.businessNature || 'Not provided'}</p>
+                    </div>
+                  </div>
+                </div>
 
-        {/* Success Modal */}
+                {/* Directors Information */}
+                {data.directors && Array.isArray(data.directors) && data.directors.length > 0 && (
+                  <div className="border rounded-lg p-4">
+                    <h3 className="font-semibold text-lg mb-3">Directors/Partners Information</h3>
+                    {data.directors.map((director: any, index: number) => (
+                      <div key={index} className={index > 0 ? 'mt-4 pt-4 border-t' : ''}>
+                        <h4 className="font-medium text-gray-800 mb-2">Director/Partner {index + 1}</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium text-gray-600">Name:</span>
+                            <p className="text-gray-900">{`${director.title || ''} ${director.firstName || ''} ${director.middleName || ''} ${director.lastName || ''}`.trim() || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Gender:</span>
+                            <p className="text-gray-900">{director.gender || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Date of Birth:</span>
+                            <p className="text-gray-900">{director.dateOfBirth ? format(new Date(director.dateOfBirth), 'dd/MM/yyyy') : 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Place of Birth:</span>
+                            <p className="text-gray-900">{director.placeOfBirth || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Nationality:</span>
+                            <p className="text-gray-900">{director.nationality || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Country:</span>
+                            <p className="text-gray-900">{director.country || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Occupation:</span>
+                            <p className="text-gray-900">{director.occupation || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Email:</span>
+                            <p className="text-gray-900">{director.email || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Phone:</span>
+                            <p className="text-gray-900">{director.phoneNumber || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">BVN:</span>
+                            <p className="text-gray-900">{director.bvn || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">NIN:</span>
+                            <p className="text-gray-900">{director.nin || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">ID Type:</span>
+                            <p className="text-gray-900">{director.idType || 'Not provided'}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <span className="font-medium text-gray-600">Residential Address:</span>
+                            <p className="text-gray-900">{director.residentialAddress || 'Not provided'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Bank Details */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Bank Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Bank Name:</span>
+                      <p className="text-gray-900">{data.localBankName || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Account Number:</span>
+                      <p className="text-gray-900">{data.localAccountNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Bank Branch:</span>
+                      <p className="text-gray-900">{data.localBankBranch || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Account Opening Date:</span>
+                      <p className="text-gray-900">{data.localAccountOpeningDate ? format(new Date(data.localAccountOpeningDate), 'dd/MM/yyyy') : 'Not provided'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Documents */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Uploaded Documents</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Certificate of Incorporation:</span>
+                      <p className="text-gray-900">{data.certificateOfIncorporation ? '✓ Uploaded' : 'Not uploaded'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Director 1 ID:</span>
+                      <p className="text-gray-900">{data.directorId1 ? '✓ Uploaded' : 'Not uploaded'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Director 2 ID:</span>
+                      <p className="text-gray-900">{data.directorId2 ? '✓ Uploaded' : 'Not uploaded'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">CAC Status Report:</span>
+                      <p className="text-gray-900">{data.cacStatusReport ? '✓ Uploaded' : 'Not uploaded'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">VAT Registration License:</span>
+                      <p className="text-gray-900">{data.vatRegistrationLicense ? '✓ Uploaded' : 'Not uploaded'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Tax Clearance Certificate:</span>
+                      <p className="text-gray-900">{data.taxClearanceCertificate ? '✓ Uploaded' : 'Not uploaded'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }}
+        />
+
         <SuccessModal
-          isOpen={authShowSuccess}
-          onClose={() => setAuthShowSuccess()}
+          isOpen={showSuccess}
+          onClose={closeSuccess}
           title="Partners CDD Submitted Successfully!"
           message="Your Partners CDD form has been submitted successfully."
-          formType="Partners CDD"
         />
       </div>
     </FormProvider>

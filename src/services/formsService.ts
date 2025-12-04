@@ -1,7 +1,6 @@
 // Backend forms service - migrated from direct Firebase to backend API calls
 import { toast } from 'sonner';
-
-const API_BASE_URL = 'https://nem-server-rhdb.onrender.com';
+import { API_BASE_URL, API_ENDPOINTS } from '../config/constants';
 
 export interface FormSubmission {
   id: string;
@@ -139,7 +138,7 @@ export const formsService = {
 
 // Helper function to get CSRF token
 const getCSRFToken = async (): Promise<string> => {
-  const response = await fetch(`${API_BASE_URL}/csrf-token`, {
+  const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CSRF_TOKEN}`, {
     credentials: 'include',
   });
   const data = await response.json();

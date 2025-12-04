@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/toaster';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import Layout from './components/layout/Layout';
 import Index from './pages/Index';
 import SignIn from './pages/auth/SignIn';
@@ -102,9 +103,10 @@ function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <Routes>
             <Route path="/" element={<Layout />}>
               <Route index element={<Index />} />
               <Route path="signin" element={<SignIn />} />
@@ -447,10 +449,11 @@ function App() {
              <Route path="unauthorized" element={<Unauthorized />} />
              <Route path="*" element={<NotFound />} />
             </Route>
-        </Routes>
-        <Toaster />
-      </Router>
-    </AuthProvider>
+          </Routes>
+          <Toaster />
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

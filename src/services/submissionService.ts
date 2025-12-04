@@ -1,7 +1,6 @@
 // Update the frontend submission service to use backend
 import { toast } from 'sonner';
-
-const API_BASE_URL = 'https://nem-server-rhdb.onrender.com';
+import { API_BASE_URL, API_ENDPOINTS } from '../config/constants';
 
 interface SubmissionData {
   [key: string]: any;
@@ -9,7 +8,7 @@ interface SubmissionData {
 
 // Helper function to get CSRF token
 const getCSRFToken = async (): Promise<string> => {
-  const response = await fetch(`${API_BASE_URL}/csrf-token`, {
+  const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CSRF_TOKEN}`, {
     credentials: 'include',
   });
   const data = await response.json();
@@ -46,7 +45,7 @@ export const submitFormWithNotifications = async (
   try {
     console.log('📤 Submitting form to backend:', { formType, userEmail, userUid });
     
-    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}${API_ENDPOINTS.SUBMIT_FORM}`, {
       formData,
       formType,
       userEmail,
