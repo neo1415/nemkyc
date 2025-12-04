@@ -170,6 +170,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('✅ AUTHENTICATION SUCCESSFUL - User can access application');
       
+      // Check if MFA enrollment is required (backend enforces this)
+      if (response.requireMFAEnrollment) {
+        console.log('📱 MFA enrollment required by backend');
+        setMfaEnrollmentRequired(true);
+        setFirebaseUser(userCredential.user);
+        toast.info(response.message || 'Please enroll in multi-factor authentication to continue');
+        return;
+      }
+      
+      // Check if MFA verification is required
+      if (response.requireMFA) {
+        console.log('🔐 MFA verification required by backend');
+        setMfaRequired(true);
+        setFirebaseUser(userCredential.user);
+        toast.info('Multi-factor authentication required');
+        return;
+      }
+      
       // Check if this is an admin role that needs MFA check
       // COMMENTED OUT: MFA every 3rd login logic
       /*
