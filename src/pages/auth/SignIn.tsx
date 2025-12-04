@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { exchangeToken } from '../../services/authService';
 import { getFormPageUrl, hasPendingSubmission } from '../../hooks/useAuthRequiredSubmit';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -11,10 +10,9 @@ import { Label } from '../../components/ui/label';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { LogIn, Mail, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { signInWithCustomToken } from 'firebase/auth';
-import { auth } from '../../firebase/config';
 import { isAdminRole } from '../../utils/roleNormalization';
 import MFAModal from '../../components/auth/MFAModal';
+import EmailVerificationModal from '../../components/auth/EmailVerificationModal';
 import logoImage from '../../assets/NEMs-Logo.jpg';
 
 // Helper function to translate Firebase errors to user-friendly messages
@@ -68,7 +66,16 @@ const SignIn: React.FC = () => {
   const [shouldRedirect, setShouldRedirect] = useState(false);
   const [loginError, setLoginError] = useState(false);
   
-  const { user, signIn, signInWithGoogle, mfaRequired, mfaEnrollmentRequired, emailVerificationRequired } = useAuth();
+  const { 
+    user, 
+    signIn, 
+    signInWithGoogle, 
+    mfaRequired, 
+    mfaEnrollmentRequired, 
+    emailVerificationRequired,
+    sendVerificationEmail,
+    checkEmailVerification
+  } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -143,88 +150,7 @@ const SignIn: React.FC = () => {
     }
   }, []);
 
-  // Helper function to get form page URL from form type
-  const getFormPageUrl = (formType: string) => {
-    const formTypeLower = formType.toLowerCase();
-    
-    // KYC Forms
-    if (formTypeLower.includes('individual kyc')) {
-      return '/kyc/individual';
-    }
-    if (formTypeLower.includes('corporate kyc')) {
-      return '/kyc/corporate';
-    }
-    
-    // CDD Forms
-    if (formTypeLower.includes('individual cdd')) {
-      return '/cdd/individual';
-    }
-    if (formTypeLower.includes('corporate cdd')) {
-      return '/cdd/corporate';
-    }
-    if (formTypeLower.includes('brokers cdd')) {
-      return '/cdd/brokers';
-    }
-    if (formTypeLower.includes('agents cdd')) {
-      return '/cdd/agents';
-    }
-    if (formTypeLower.includes('partners cdd')) {
-      return '/cdd/partners';
-    }
-    if (formTypeLower.includes('naicom corporate')) {
-      return '/cdd/naicom-corporate';
-    }
-    if (formTypeLower.includes('naicom partners')) {
-      return '/cdd/naicom-partners';
-    }
-    
-    // Claims Forms
-    if (formTypeLower.includes('employers liability') && !formTypeLower.includes('combined')) {
-      return '/claims/employers-liability';
-    }
-    if (formTypeLower.includes('combined') && formTypeLower.includes('gpa')) {
-      return '/claims/combined-gpa-employers-liability';
-    }
-    if (formTypeLower.includes('public liability')) {
-      return '/claims/public-liability';
-    }
-    if (formTypeLower.includes('professional indemnity')) {
-      return '/claims/professional-indemnity';
-    }
-    if (formTypeLower.includes('motor')) {
-      return '/claims/motor';
-    }
-    if (formTypeLower.includes('fire')) {
-      return '/claims/fire-special-perils';
-    }
-    if (formTypeLower.includes('burglary')) {
-      return '/claims/burglary';
-    }
-    if (formTypeLower.includes('all risk') || formTypeLower.includes('allrisk')) {
-      return '/claims/all-risk';
-    }
-    if (formTypeLower.includes('goods')) {
-      return '/claims/goods-in-transit';
-    }
-    if (formTypeLower.includes('money')) {
-      return '/claims/money-insurance';
-    }
-    if (formTypeLower.includes('fidelity')) {
-      return '/claims/fidelity-guarantee';
-    }
-    if (formTypeLower.includes('contractors')) {
-      return '/claims/contractors-plant-machinery';
-    }
-    if (formTypeLower.includes('group') && formTypeLower.includes('personal')) {
-      return '/claims/group-personal-accident';
-    }
-    if (formTypeLower.includes('rent')) {
-      return '/claims/rent-assurance';
-    }
-    
-    // Default fallback
-    return '/dashboard';
-  };
+  // Note: getFormPageUrl is imported from useAuthRequiredSubmit hook
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -427,11 +353,20 @@ const SignIn: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Email Verification Modal */}
+      <EmailVerificationModal
+        open={emailVerificationRequired}
+        onClose={() => {}}
+        email={email}
+        onResendVerification={sendVerificationEmail}
+        onCheckVerification={checkEmailVerification}
+      />
+
       {/* MFA Modal */}
       <MFAModal
-        isOpen={mfaRequired || mfaEnrollmentRequired || emailVerificationRequired}
+        isOpen={mfaRequired || mfaEnrollmentRequired}
         onClose={() => {}}
-        type={emailVerificationRequired ? 'email-verification' : (mfaEnrollmentRequired ? 'enrollment' : 'verification')}
+        type={mfaEnrollmentRequired ? 'enrollment' : 'verification'}
         onSuccess={() => {
           setShouldRedirect(true);
         }}

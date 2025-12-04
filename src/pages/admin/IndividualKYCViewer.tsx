@@ -256,6 +256,14 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
                 <p className="font-medium">{formatValue(data.premiumPaymentSource)}</p>
               </div>
               <div>
+                <p className="font-medium text-sm text-muted-foreground">BVN</p>
+                <p className="font-medium">{formatValue(data.BVN)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">NIN</p>
+                <p className="font-medium">{formatValue(data.NIN)}</p>
+              </div>
+              <div>
                 <p className="font-medium text-sm text-muted-foreground">Identification Type</p>
                 <p className="font-medium">{formatValue(data.identificationType)}</p>
               </div>

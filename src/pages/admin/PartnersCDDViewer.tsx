@@ -154,6 +154,7 @@ const PartnersCDDViewer: React.FC = () => {
         email: data.directorEmail || data.directorEmail1 || data.email1 || '',
         phoneNumber: data.phoneNumber || data.phoneNumber1 || '',
         BVNNumber: data.directorBvn || data.directorBvn1 || data.bvn1 || '',
+        NINNumber: data.NINNumber || data.NINNumber1 || '',
         employerName: data.employerName || data.employerName1 || '',
         employerPhone: data.employerPhone || data.employerPhone1 || '',
         residentialAddress: data.residentialAddress || data.residentialAddress1 || '',
@@ -183,6 +184,7 @@ const PartnersCDDViewer: React.FC = () => {
         email: data.directorEmail2 || data.email2 || '',
         phoneNumber: data.phoneNumber2 || '',
         BVNNumber: data.directorBvn2 || data.bvn2 || '',
+        NINNumber: data.NINNumber2 || '',
         employerName: data.employerName2 || '',
         employerPhone: data.employerPhone2 || '',
         residentialAddress: data.residentialAddress2 || '',
@@ -595,6 +597,10 @@ const PartnersCDDViewer: React.FC = () => {
                   <div>
                     <p className="font-medium text-sm text-muted-foreground">BVN Number</p>
                     <p className="font-medium">{formatValue(director.BVNNumber)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">NIN Number</p>
+                    <p className="font-medium">{formatValue(director.NINNumber)}</p>
                   </div>
                   <div>
                     <p className="font-medium text-sm text-muted-foreground">Tax ID Number</p>

@@ -142,13 +142,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const idToken = await userCredential.user.getIdToken();
       
-      // Exchange token with backend to check MFA requirements
+      // Exchange token with backend to check MFA and email verification requirements
       const response = await exchangeToken(idToken);
-      console.log('✅ Token exchange result:', response);
+      
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('🔐 FRONTEND: Token Exchange Response');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('✅ Success:', response.success);
+      console.log('📧 Email Verification Required:', response.requireEmailVerification || false);
+      console.log('🔐 MFA Required:', response.requireMFA || false);
+      console.log('📱 MFA Enrollment Required:', response.requireMFAEnrollment || false);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       
       if (!response.success) {
+        // Check if email verification is required
+        if (response.requireEmailVerification) {
+          console.log('🚫 LOGIN BLOCKED: Email verification required for:', email);
+          console.log('💡 Showing email verification modal to user');
+          setEmailVerificationRequired(true);
+          setFirebaseUser(userCredential.user);
+          toast.info('Please verify your email address to continue');
+          return;
+        }
+        
         throw new Error(response.error || 'Authentication failed');
       }
+      
+      console.log('✅ AUTHENTICATION SUCCESSFUL - User can access application');
       
       // Check if this is an admin role that needs MFA check
       // COMMENTED OUT: MFA every 3rd login logic
@@ -244,6 +264,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         dateCreated: new Date(),
         dateModified: new Date()
       });
+
+      // Automatically send email verification
+      try {
+        await firebaseSendEmailVerification(user);
+        toast.success('Account created! Please check your email to verify your account before logging in.');
+      } catch (verificationError) {
+        console.error('Failed to send verification email:', verificationError);
+        toast.warning('Account created, but verification email failed to send. Please request a new one when logging in.');
+      }
     } catch (error: any) {
       console.error('Sign up error:', error);
       if (error.code === 'auth/email-already-in-use') {
@@ -550,14 +579,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return isAdminRole(user?.role);
   };
 
-  // Local storage functions for form drafts
+  // Secure storage functions for form drafts
   const saveFormDraft = (formType: string, data: any) => {
     try {
-      const key = `formDraft_${formType}`;
-      localStorage.setItem(key, JSON.stringify({
-        data,
-        timestamp: new Date().toISOString()
-      }));
+      // Use dynamic import for secure storage
+      import('../utils/secureStorage').then(({ secureStorageSet }) => {
+        const key = `formDraft_${formType}`;
+        secureStorageSet(key, data);
+      });
     } catch (error) {
       console.error('Error saving form draft:', error);
     }
@@ -565,11 +594,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const getFormDraft = (formType: string) => {
     try {
+      // For now, use localStorage directly with basic encryption
       const key = `formDraft_${formType}`;
       const stored = localStorage.getItem(key);
       if (stored) {
-        const parsed = JSON.parse(stored);
-        return parsed.data;
+        try {
+          // Simple decryption (base64)
+          const decoded = atob(stored.split(':')[1] || stored);
+          const parsed = JSON.parse(decoded);
+          // Check expiry
+          if (parsed.expiry && Date.now() > parsed.expiry) {
+            localStorage.removeItem(key);
+            return null;
+          }
+          return parsed.data;
+        } catch {
+          return null;
+        }
       }
       return null;
     } catch (error) {

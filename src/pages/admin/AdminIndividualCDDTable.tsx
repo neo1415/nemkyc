@@ -318,6 +318,12 @@ const AdminIndividualCDDTable: React.FC = () => {
         renderCell: (params) => params.value || 'N/A'
       },
       {
+        field: 'NINNumber',
+        headerName: 'NIN',
+        width: 150,
+        renderCell: (params) => params.value || 'N/A'
+      },
+      {
         field: 'identificationType',
         headerName: 'ID Type',
         width: 120,

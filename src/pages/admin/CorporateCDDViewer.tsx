@@ -31,6 +31,7 @@ interface Director {
   email?: string;
   phoneNumber?: string;
   BVNNumber?: string;
+  NINNumber?: string;
   employersName?: string;
   employersPhoneNumber?: string;
   employerPhone?: string;
@@ -453,6 +454,10 @@ const CorporateCDDViewer: React.FC = () => {
                     <div>
                       <p className="font-medium text-sm text-muted-foreground">BVN Number</p>
                       <p className="font-medium">{formatValue(director.BVNNumber)}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground">NIN Number</p>
+                      <p className="font-medium">{formatValue(director.NINNumber)}</p>
                     </div>
                     <div>
                       <p className="font-medium text-sm text-muted-foreground">Tax ID Number</p>

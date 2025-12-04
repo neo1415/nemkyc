@@ -481,6 +481,18 @@ const CorporateCDDTable: React.FC = () => {
       }
     },
     {
+      field: 'director1NIN',
+      headerName: 'Director 1 NIN',
+      width: 140,
+      renderCell: (params) => {
+        const directors = params.row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].NINNumber || 'N/A';
+        }
+        return params.row.NINNumber || 'N/A';
+      }
+    },
+    {
       field: 'director1EmployersName',
       headerName: 'Director 1 Employers Name',
       width: 180,
@@ -730,6 +742,18 @@ const CorporateCDDTable: React.FC = () => {
         const directors = params.row.directors;
         if (Array.isArray(directors) && directors[1]) {
           return directors[1].BVNNumber || 'N/A';
+        }
+        return 'N/A';
+      }
+    },
+    {
+      field: 'director2NIN',
+      headerName: 'Director 2 NIN',
+      width: 140,
+      renderCell: (params) => {
+        const directors = params.row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].NINNumber || 'N/A';
         }
         return 'N/A';
       }

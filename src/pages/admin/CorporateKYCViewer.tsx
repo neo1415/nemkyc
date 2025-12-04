@@ -286,6 +286,10 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
                 <p className="font-medium">{formatValue(data.BVNNumber)}</p>
               </div>
               <div>
+                <p className="font-medium text-sm text-muted-foreground">NIN Number</p>
+                <p className="font-medium">{formatValue(data.NINNumber)}</p>
+              </div>
+              <div>
                 <p className="font-medium text-sm text-muted-foreground">Contact Person Mobile</p>
                 <p className="font-medium">{formatValue(data.contactPersonNo)}</p>
               </div>
@@ -378,6 +382,10 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
                       <div>
                         <p className="font-medium text-sm text-muted-foreground">BVN Number</p>
                         <p className="font-medium">{formatValue(director.BVNNumber)}</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm text-muted-foreground">NIN Number</p>
+                        <p className="font-medium">{formatValue(director.NINNumber)}</p>
                       </div>
                       <div>
                         <p className="font-medium text-sm text-muted-foreground">Employer Name</p>

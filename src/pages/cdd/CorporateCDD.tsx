@@ -12,17 +12,18 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { Calendar, CalendarIcon, Plus, Trash2, Edit2, Loader2, Check } from 'lucide-react';
+import { Plus, Trash2, Check } from 'lucide-react';
 import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
-import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
+import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
+import FormLoadingModal from '@/components/common/FormLoadingModal';
+import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
+import DatePicker from '@/components/common/DatePicker';
 
 // CRITICAL: Define form components OUTSIDE main component to prevent focus loss
 const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
@@ -130,52 +131,7 @@ const FormSelect = ({ name, label, required = false, options, placeholder, ...pr
   );
 };
 
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name); // CRITICAL: Use lodash.get for nested errors
-  
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={name}>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              "w-full justify-start text-left font-normal",
-              !value && "text-muted-foreground",
-              error && "border-destructive"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {value ? format(typeof value === 'string' ? new Date(value) : value, "PPP") : <span>Pick a date</span>}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0">
-          <ReactCalendar
-            mode="single"
-            selected={value ? (typeof value === 'string' ? new Date(value) : value) : undefined}
-            onSelect={(date) => {
-              setValue(name, date);
-              if (error) {
-                clearErrors(name);
-              }
-            }}
-            initialFocus
-            className="pointer-events-auto"
-          />
-        </PopoverContent>
-      </Popover>
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
+
 
 // Corporate CDD Schema with enhanced validation
 const corporateCDDSchema = yup.object().shape({
@@ -274,6 +230,10 @@ const corporateCDDSchema = yup.object().shape({
         .required("BVN is required")
         .matches(/^\d+$/, "BVN must contain only numbers")
         .length(11, "BVN must be exactly 11 digits"),
+      NINNumber: yup.string()
+        .required("NIN is required")
+        .matches(/^\d+$/, "NIN must contain only numbers")
+        .length(11, "NIN must be exactly 11 digits"),
       employersName: yup.string()
         .max(100, "Employer name cannot exceed 100 characters"),
       employersPhoneNumber: yup.string()
@@ -374,16 +334,7 @@ const corporateCDDSchema = yup.object().shape({
 });
 
 const CorporateCDD: React.FC = () => {
-  const [showSummary, setShowSummary] = useState(false);
-  const [showPostAuthLoading, setShowPostAuthLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const { 
-    handleSubmitWithAuth, 
-    showSuccess, 
-    setShowSuccess,
-    isSubmitting
-  } = useAuthRequiredSubmit();
 
   const defaultDirector = {
     firstName: '',
@@ -397,6 +348,7 @@ const CorporateCDD: React.FC = () => {
     email: '',
     phoneNumber: '',
     BVNNumber: '',
+    NINNumber: '',
     employersName: '',
     employersPhoneNumber: '',
     residentialAddress: '',
@@ -450,26 +402,21 @@ const CorporateCDD: React.FC = () => {
   const { saveDraft, clearDraft } = useFormDraft('corporateCDD', formMethods);
   const watchedValues = formMethods.watch();
 
-  // Check for pending submission when component mounts
-  useEffect(() => {
-    const checkPendingSubmission = () => {
-      const hasPending = sessionStorage.getItem('pendingSubmission');
-      if (hasPending) {
-        setShowPostAuthLoading(true);
-        // Hide loading after 5 seconds max (in case something goes wrong)
-        setTimeout(() => setShowPostAuthLoading(false), 5000);
-      }
-    };
-
-    checkPendingSubmission();
-  }, []);
-
-  // Hide post-auth loading when success modal shows
-  useEffect(() => {
-    if (showSuccess) {
-      setShowPostAuthLoading(false);
-    }
-  }, [showSuccess]);
+  const {
+    handleSubmit: handleEnhancedSubmit,
+    showSummary,
+    setShowSummary,
+    showLoading,
+    loadingMessage,
+    showSuccess,
+    confirmSubmit,
+    closeSuccess,
+    formData: submissionData,
+    isSubmitting
+  } = useEnhancedFormSubmit({
+    formType: 'Corporate CDD',
+    onSuccess: () => clearDraft()
+  });
 
   // Auto-save draft
   useEffect(() => {
@@ -514,41 +461,40 @@ const CorporateCDD: React.FC = () => {
     return sanitized;
   };
 
-  // Main submit handler that checks authentication
-  const handleSubmit = async (data: any) => {
-    console.log('Form data before sanitization:', data);
-    
-    const sanitizedData = sanitizeData(data);
-    console.log('Sanitized data:', sanitizedData);
+  // Main submit handler
+  const onFinalSubmit = async (data: any) => {
+    try {
+      console.log('Form data before sanitization:', data);
+      
+      const sanitizedData = sanitizeData(data);
+      console.log('Sanitized data:', sanitizedData);
 
-    // Prepare file upload data
-    const fileUploadPromises: Array<Promise<[string, string]>> = [];
-    
-    for (const [key, file] of Object.entries(uploadedFiles)) {
-      if (file) {
-        fileUploadPromises.push(
-          uploadFile(file, `corporate-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
-        );
+      // Prepare file upload data
+      const fileUploadPromises: Array<Promise<[string, string]>> = [];
+      
+      for (const [key, file] of Object.entries(uploadedFiles)) {
+        if (file) {
+          fileUploadPromises.push(
+            uploadFile(file, `corporate-cdd/${Date.now()}-${file.name}`).then(url => [key, url])
+          );
+        }
       }
+
+      const fileResults = await Promise.all(fileUploadPromises);
+      const fileUrls = Object.fromEntries(fileResults);
+
+      const finalData = {
+        ...sanitizedData,
+        ...fileUrls,
+        status: 'processing',
+        formType: 'Corporate CDD'
+      };
+
+      await handleEnhancedSubmit(finalData);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Submission failed', variant: 'destructive' });
     }
-
-    const fileResults = await Promise.all(fileUploadPromises);
-    const fileUrls = Object.fromEntries(fileResults);
-
-    const finalData = {
-      ...sanitizedData,
-      ...fileUrls,
-      status: 'processing',
-      formType: 'Corporate-CDD'
-    };
-
-    await handleSubmitWithAuth(finalData, 'Corporate-CDD');
-    clearDraft();
-    setShowSummary(false);
-  };
-
-  const onFinalSubmit = (data: any) => {
-    setShowSummary(true);
   };
 
   // Company type options
@@ -620,7 +566,7 @@ const CorporateCDD: React.FC = () => {
             />
           </div>
           
-          <FormDatePicker
+          <DatePicker
             name="dateOfIncorporationRegistration"
             label="Date of Incorporation/Registration"
             required={true}
@@ -738,7 +684,7 @@ const CorporateCDD: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormDatePicker 
+                  <DatePicker 
                     name={`directors.${index}.dob`} 
                     label="Date of Birth" 
                     required={true}
@@ -799,10 +745,19 @@ const CorporateCDD: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
+                    name={`directors.${index}.NINNumber`}
+                    label="NIN (National Identification Number)"
+                    required={true}
+                    maxLength={11}
+                  />
+                  <FormField
                     name={`directors.${index}.employersName`}
                     label="Employers Name"
                     maxLength={100}
                   />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     name={`directors.${index}.employersPhoneNumber`}
                     label="Employers Phone Number"
@@ -846,12 +801,12 @@ const CorporateCDD: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormDatePicker 
+                  <DatePicker 
                     name={`directors.${index}.issuedDate`} 
                     label="Issued Date" 
                     required={true}
                   />
-                  <FormDatePicker 
+                  <DatePicker 
                     name={`directors.${index}.expiryDate`} 
                     label="Expiry Date"
                   />
@@ -910,7 +865,7 @@ const CorporateCDD: React.FC = () => {
                 required={true}
                 maxLength={100}
               />
-              <FormDatePicker
+              <DatePicker
                 name="accountOpeningDate"
                 label="Account Opening Date"
                 required={true}
@@ -939,7 +894,7 @@ const CorporateCDD: React.FC = () => {
                 label="Bank Branch"
                 maxLength={100}
               />
-              <FormDatePicker
+              <DatePicker
                 name="accountOpeningDate2"
                 label="Account Opening Date"
               />
@@ -1071,15 +1026,7 @@ const CorporateCDD: React.FC = () => {
   return (
     <FormProvider {...formMethods}>
       <div className="container mx-auto px-4 py-8">
-        {/* Loading overlay */}
-        {showPostAuthLoading && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-lg font-semibold">Completing your submission...</p>
-            </div>
-          </div>
-        )}
+        {/* Loading overlay removed - showPostAuthLoading is not defined */}
 
         <Card className="max-w-6xl mx-auto">
           <CardHeader>
@@ -1097,59 +1044,164 @@ const CorporateCDD: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Summary Dialog */}
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Review Your Corporate CDD Submission</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>Company Name:</strong> {watchedValues.companyName}</div>
-                <div><strong>Incorporation Number:</strong> {watchedValues.incorporationNumber}</div>
-                <div><strong>Email:</strong> {watchedValues.emailAddress}</div>
-                <div><strong>Phone:</strong> {watchedValues.telephoneNumber}</div>
-                <div><strong>Company Type:</strong> {watchedValues.companyLegalForm}</div>
-                <div><strong>Nature of Business:</strong> {watchedValues.natureOfBusiness}</div>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-blue-800">
-                  Please review all information carefully before final submission
-                </p>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowSummary(false)}>
-                Back to Edit
-              </Button>
-              <Button
-                onClick={() => {
-                  const formData = formMethods.getValues();
-                  handleSubmit(formData);
-                }}
-                disabled={isSubmitting}
-                className="bg-primary text-primary-foreground"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Confirm & Submit'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <FormLoadingModal isOpen={showLoading} message={loadingMessage} />
+        
+        <FormSummaryDialog
+          open={showSummary}
+          onOpenChange={setShowSummary}
+          formData={submissionData}
+          formType="Corporate CDD"
+          onConfirm={confirmSubmit}
+          isSubmitting={isSubmitting}
+          renderSummary={(data) => {
+            if (!data) return <div className="text-center py-8 text-gray-500">No data to display</div>;
+            
+            return (
+              <div className="space-y-6">
+                {/* Company Information */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Company Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Company Name:</span>
+                      <p className="text-gray-900">{data.companyName || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Incorporation Number:</span>
+                      <p className="text-gray-900">{data.incorporationNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Incorporation State:</span>
+                      <p className="text-gray-900">{data.incorporationState || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Date of Incorporation:</span>
+                      <p className="text-gray-900">{data.dateOfIncorporationRegistration ? format(new Date(data.dateOfIncorporationRegistration), 'dd/MM/yyyy') : 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Company Legal Form:</span>
+                      <p className="text-gray-900">{data.companyLegalForm === 'Other' ? data.companyLegalFormOther : data.companyLegalForm || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Nature of Business:</span>
+                      <p className="text-gray-900">{data.natureOfBusiness || 'Not provided'}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <span className="font-medium text-gray-600">Registered Address:</span>
+                      <p className="text-gray-900">{data.registeredCompanyAddress || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Email:</span>
+                      <p className="text-gray-900">{data.emailAddress || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Telephone:</span>
+                      <p className="text-gray-900">{data.telephoneNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Website:</span>
+                      <p className="text-gray-900">{data.website || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Tax ID:</span>
+                      <p className="text-gray-900">{data.taxIdentificationNumber || 'Not provided'}</p>
+                    </div>
+                  </div>
+                </div>
 
-        {/* Success Modal */}
+                {/* Directors Information */}
+                {data.directors && Array.isArray(data.directors) && data.directors.length > 0 && (
+                  <div className="border rounded-lg p-4">
+                    <h3 className="font-semibold text-lg mb-3">Directors Information</h3>
+                    {data.directors.map((director: any, index: number) => (
+                      <div key={index} className={index > 0 ? 'mt-4 pt-4 border-t' : ''}>
+                        <h4 className="font-medium text-gray-800 mb-2">Director {index + 1}</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium text-gray-600">Name:</span>
+                            <p className="text-gray-900">{`${director.firstName || ''} ${director.middleName || ''} ${director.lastName || ''}`.trim() || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Date of Birth:</span>
+                            <p className="text-gray-900">{director.dob ? format(new Date(director.dob), 'dd/MM/yyyy') : 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Nationality:</span>
+                            <p className="text-gray-900">{director.nationality || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Email:</span>
+                            <p className="text-gray-900">{director.email || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Phone:</span>
+                            <p className="text-gray-900">{director.phoneNumber || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">BVN:</span>
+                            <p className="text-gray-900">{director.BVNNumber || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">NIN:</span>
+                            <p className="text-gray-900">{director.NINNumber || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">ID Type:</span>
+                            <p className="text-gray-900">{director.idType || 'Not provided'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Bank Details */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Bank Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Bank Name:</span>
+                      <p className="text-gray-900">{data.bankName || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Account Number:</span>
+                      <p className="text-gray-900">{data.accountNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Bank Branch:</span>
+                      <p className="text-gray-900">{data.bankBranch || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Account Opening Date:</span>
+                      <p className="text-gray-900">{data.accountOpeningDate ? format(new Date(data.accountOpeningDate), 'dd/MM/yyyy') : 'Not provided'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Documents */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Uploaded Documents</h3>
+                  <div className="grid grid-cols-1 gap-2 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">CAC Certificate:</span>
+                      <p className="text-gray-900">{data.cac ? '✓ Uploaded' : 'Not uploaded'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Identification Document:</span>
+                      <p className="text-gray-900">{data.identification ? '✓ Uploaded' : 'Not uploaded'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }}
+        />
+
         <SuccessModal
           isOpen={showSuccess}
-          onClose={() => setShowSuccess()}
+          onClose={closeSuccess}
           title="Corporate CDD Submitted Successfully!"
           message="Your Corporate CDD form has been submitted successfully."
-          formType="Corporate CDD"
         />
       </div>
     </FormProvider>

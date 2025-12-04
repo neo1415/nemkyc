@@ -1,7 +1,6 @@
 // Authentication service - moved from direct Firebase to backend API calls
 import { toast } from 'sonner';
-
-const API_BASE_URL = 'https://nem-server-rhdb.onrender.com';
+import { API_BASE_URL, API_ENDPOINTS } from '../config/constants';
 
 export interface AuthResponse {
   success: boolean;
@@ -9,8 +8,10 @@ export interface AuthResponse {
   role?: string;
   requireMFA?: boolean;
   requireMFAEnrollment?: boolean;
+  requireEmailVerification?: boolean;
   message?: string;
   loginCount?: number;
+  email?: string;
   user?: {
     uid: string;
     email: string;
@@ -21,7 +22,7 @@ export interface AuthResponse {
 
 // Helper function to get CSRF token
 const getCSRFToken = async (): Promise<string> => {
-  const response = await fetch(`${API_BASE_URL}/csrf-token`, {
+  const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CSRF_TOKEN}`, {
     credentials: 'include',
   });
   const data = await response.json();
@@ -51,7 +52,7 @@ export const exchangeToken = async (idToken: string): Promise<AuthResponse> => {
     console.log('📤 Exchanging token with backend');
     
     // For token exchange, we don't need CSRF token since user isn't authenticated yet
-    const response = await fetch(`${API_BASE_URL}/api/exchange-token`, {
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EXCHANGE_TOKEN}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -121,7 +122,7 @@ export const registerUser = async (
   try {
     console.log('📤 Attempting registration via backend:', { email, displayName, role });
     
-    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/register`, {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}${API_ENDPOINTS.REGISTER}`, {
       email,
       password,
       displayName,
