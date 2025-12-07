@@ -2292,8 +2292,11 @@ app.post('/api/exchange-token', async (req, res) => {
     // ============================================================================
     // STEP 2: Require MFA verification every 3rd login (for enrolled privileged users)
     // ============================================================================
-    // Only check every 3rd login AFTER enrollment is completed
-    const shouldRequireMFAVerification = isPrivilegedRole && mfaEnrolled && mfaEnrollmentCompleted && (loginCount % 3 === 0);
+    // STEP 2: MFA handled by Firebase automatically after enrollment
+    // ============================================================================
+    // Once enrolled, Firebase handles MFA challenges automatically.
+    // We don't manually trigger MFA every 3rd login because Firebase doesn't support that flow.
+    const shouldRequireMFAVerification = false; // Disabled - Firebase handles MFA automatically
     
     if (shouldRequireMFAVerification) {
       console.log('�  MFA VERIFICATION REQUIRED (3rd login check)');

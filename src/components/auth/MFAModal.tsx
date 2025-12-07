@@ -51,14 +51,6 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
     }
   }, [isOpen, type]);
 
-  // Auto-send verification code when modal opens for verification type
-  useEffect(() => {
-    if (isOpen && type === 'verification' && !codeSent && !loading) {
-      console.log('🚀 Auto-initiating MFA verification on modal open');
-      handleInitiateMFA();
-    }
-  }, [isOpen, type]);
-
   const handleSendEmailVerification = async () => {
     setError('');
     setLoading(true);
