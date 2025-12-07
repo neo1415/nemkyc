@@ -68,18 +68,9 @@ const allowedOrigins = [
   "https://nem-demo.lovable.app",
   "https://lovable.dev/projects/a070f70a-14d8-4f9a-a3c0-571ec1dec753",
   "https://nem-forms-demo-app.lovable.app",
-  "https://lovable.dev/projects/ded87798-8f4c-493e-8dae-d7fa0ba10ef8",
-  "https://preview--wrlds-ai-integration-4349.lovable.app",
-  "https://wrlds-ai-integration-4349.lovable.app",
-  "https://lovable.dev/projects/288cf4b9-0920-44a5-b1a4-a69a5341d47f",
-  "https://preview--market-mosaic-online-4342.lovable.app",
-  "https://market-mosaic-online-4342.lovable.app",
-  "https://lovable.dev/projects/88f314bd-27da-41ea-9068-a49b2abcd1b4",
-  "https://88f314bd-27da-41ea-9068-a49b2abcd1b4.lovableproject.com",
-  "https://preview--nem-demo.lovable.app",
-  "https://bde588f1-c65e-e-859e-b330-72159ff17378.lovableproject.com",
   'https://nem-kyc.firebaseapp.com',
   'https://nemforms.com',
+  "http://localhost:8080",
   // Current project URLs - common NEM forms variations
   "https://nem-forms-admin-portal.lovable.app",
   "https://preview--nem-forms-admin-portal.lovable.app",
@@ -1077,79 +1068,79 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// ========== NEW: Token Exchange Endpoint (Sets Session Cookie) ==========
-app.post('/api/exchange-token', async (req, res) => {
-  const { idToken } = req.body;
-
-  if (!idToken) {
-    return res.status(400).json({ error: 'ID token is required' });
-  }
-
-  try {
-    // Verify Firebase ID token
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    const uid = decodedToken.uid;
-
-    // Fetch user role from Firestore
-    const userDoc = await db.collection('userroles').doc(uid).get();
-    const userData = userDoc.exists ? userDoc.data() : {};
-    const role = userData.role || 'default';
-
-    // Increment login count
-    const loginCount = (userData.loginCount || 0) + 1;
-    await db.collection('userroles').doc(uid).set(
-      { loginCount, dateModified: new Date() },
-      { merge: true }
-    );
-
-    // Set httpOnly session cookie with user UID
-    res.cookie('__session', uid, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 3600000, // 1 hour
-      path: '/',
-    });
-
-    // 📝 LOG TOKEN EXCHANGE EVENT
-    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
-    await logAction({
-      action: 'token-exchange',
-      actorUid: uid,
-      actorDisplayName: userData.name || decodedToken.name || decodedToken.email?.split('@')[0] || 'Unknown',
-      actorEmail: decodedToken.email,
-      actorRole: role,
-      targetType: 'session',
-      targetId: uid,
-      details: {
-        loginCount: loginCount,
-        sessionCreated: true
-      },
-      ipMasked: req.ipData?.masked,
-      ipHash: req.ipData?.hash,
-      rawIP: req.ipData?.raw,
-      location: location,
-      userAgent: req.headers['user-agent'] || 'Unknown',
-      meta: {
-        exchangeTimestamp: new Date().toISOString()
-      }
-    });
-
-    res.status(200).json({
-      success: true,
-      role,
-      loginCount,
-      user: {
-        uid,
-        email: decodedToken.email,
-        displayName: userData.name || decodedToken.name || '',
-      },
-    });
-  } catch (error) {
-    console.error('Error exchanging token:', error);
-    res.status(401).json({ error: 'Authentication failed' });
-  }
-});
+// ========== OLD: Token Exchange Endpoint - DISABLED (replaced by version with MFA checks below) ==========
+// app.post('/api/exchange-token', async (req, res) => {
+//   const { idToken } = req.body;
+//
+//   if (!idToken) {
+//     return res.status(400).json({ error: 'ID token is required' });
+//   }
+//
+//   try {
+//     // Verify Firebase ID token
+//     const decodedToken = await admin.auth().verifyIdToken(idToken);
+//     const uid = decodedToken.uid;
+//
+//     // Fetch user role from Firestore
+//     const userDoc = await db.collection('userroles').doc(uid).get();
+//     const userData = userDoc.exists ? userDoc.data() : {};
+//     const role = userData.role || 'default';
+//
+//     // Increment login count
+//     const loginCount = (userData.loginCount || 0) + 1;
+//     await db.collection('userroles').doc(uid).set(
+//       { loginCount, dateModified: new Date() },
+//       { merge: true }
+//     );
+//
+//     // Set httpOnly session cookie with user UID
+//     res.cookie('__session', uid, {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === 'production',
+//       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+//       maxAge: 3600000, // 1 hour
+//       path: '/',
+//     });
+//
+//     // 📝 LOG TOKEN EXCHANGE EVENT
+//     const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+//     await logAction({
+//       action: 'token-exchange',
+//       actorUid: uid,
+//       actorDisplayName: userData.name || decodedToken.name || decodedToken.email?.split('@')[0] || 'Unknown',
+//       actorEmail: decodedToken.email,
+//       actorRole: role,
+//       targetType: 'session',
+//       targetId: uid,
+//       details: {
+//         loginCount: loginCount,
+//         sessionCreated: true
+//       },
+//       ipMasked: req.ipData?.masked,
+//       ipHash: req.ipData?.hash,
+//       rawIP: req.ipData?.raw,
+//       location: location,
+//       userAgent: req.headers['user-agent'] || 'Unknown',
+//       meta: {
+//         exchangeTimestamp: new Date().toISOString()
+//       }
+//     });
+//
+//     res.status(200).json({
+//       success: true,
+//       role,
+//       loginCount,
+//       user: {
+//         uid,
+//         email: decodedToken.email,
+//         displayName: userData.name || decodedToken.name || '',
+//       },
+//     });
+//   } catch (error) {
+//     console.error('Error exchanging token:', error);
+//     res.status(401).json({ error: 'Authentication failed' });
+//   }
+// });
 
 // ========== NEW: Get All Users (Super Admin Only) ==========
 app.get('/api/users', async (req, res) => {
@@ -2168,6 +2159,7 @@ app.post('/api/login', async (req, res) => {
 // Token exchange endpoint with MFA checking - frontend does Firebase auth, backend verifies token and returns user info
 app.post('/api/exchange-token', async (req, res) => {
   try {
+    console.log('�🚨🚨 NEW ENDnPOINT WITH MFA CHECKS IS BEING USED 🚨🚨🚨');
     console.log('🔄 Token exchange request received from origin:', req.headers.origin);
     console.log('🔄 Request headers:', {
       'user-agent': req.headers['user-agent'],
@@ -2200,11 +2192,13 @@ app.post('/api/exchange-token', async (req, res) => {
     }
 
     const userData = userDoc.data();
-    console.log('👤 User data retrieved:', { email, role: userData.role });
     
-    // Check for sensitive roles that require MFA
-    const sensitiveRoles = ['admin', 'super-admin', 'compliance', 'claims'];
-    const requiresMFA = sensitiveRoles.includes(userData.role);
+    // ============================================================================
+    // MANDATORY MFA FOR PRIVILEGED ROLES
+    // ============================================================================
+    // Roles that MUST have MFA: admin, super admin, compliance, claims
+    const privilegedRoles = ['admin', 'super admin', 'compliance', 'claims'];
+    const isPrivilegedRole = privilegedRoles.includes(userData.role);
     
     // Get or create login metadata document
     const loginMetaRef = db.collection('loginMetadata').doc(uid);
@@ -2212,11 +2206,13 @@ app.post('/api/exchange-token', async (req, res) => {
     
     let loginCount = 1;
     let lastLoginAt = new Date();
+    let mfaEnrollmentCompleted = false;
     
     if (loginMetaDoc.exists) {
       const metaData = loginMetaDoc.data();
       loginCount = (metaData.loginCount || 0) + 1;
       lastLoginAt = metaData.lastLoginAt?.toDate() || new Date();
+      mfaEnrollmentCompleted = metaData.mfaEnrollmentCompleted || false;
     }
     
     // Update login count
@@ -2224,28 +2220,42 @@ app.post('/api/exchange-token', async (req, res) => {
       loginCount: loginCount,
       lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
       email: email,
-      role: userData.role
+      role: userData.role,
+      mfaEnrollmentCompleted: mfaEnrollmentCompleted
     }, { merge: true });
     
-    console.log('📊 Login count updated:', { loginCount, requiresMFA });
-    
-    // Check if MFA is required (every 3rd login for sensitive roles)
-    const shouldRequireMFA = requiresMFA && (loginCount % 3 === 0);
-    
-    // Get user's current MFA enrollment status
+    // Check user's current MFA enrollment status in Firebase Auth
     let mfaEnrolled = false;
+    let enrolledFactors = [];
     try {
       const userRecord = await admin.auth().getUser(uid);
-      mfaEnrolled = userRecord.multiFactor?.enrolledFactors?.length > 0;
+      enrolledFactors = userRecord.multiFactor?.enrolledFactors || [];
+      mfaEnrolled = enrolledFactors.length > 0;
     } catch (error) {
       console.warn('⚠️ Error checking MFA enrollment:', error);
     }
     
-    console.log('🔐 MFA Status:', { shouldRequireMFA, mfaEnrolled });
+    // MFA Debug Logging
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔐 MFA CHECK - Login #' + loginCount);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('👤 User:', email);
+    console.log('👔 Role:', userData.role);
+    console.log('🎯 Is Privileged Role:', isPrivilegedRole);
+    console.log('📊 Login Count:', loginCount);
+    console.log('🔐 MFA Enrolled:', mfaEnrolled);
+    console.log('📱 Enrolled Factors:', enrolledFactors.length);
+    console.log('✅ MFA Enrollment Completed:', mfaEnrollmentCompleted);
+    console.log('🔢 Should Require MFA (every 3rd):', loginCount % 3 === 0);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    // If MFA is required but user is not enrolled, require enrollment first
-    if (shouldRequireMFA && !mfaEnrolled) {
-      console.log('📝 MFA enrollment required for user:', email);
+    // ============================================================================
+    // STEP 1: Force MFA enrollment for privileged roles (if not already enrolled)
+    // ============================================================================
+    if (isPrivilegedRole && !mfaEnrolled) {
+      console.log('🚨 MANDATORY MFA ENROLLMENT REQUIRED for privileged role:', userData.role);
+      console.log('👤 User:', email);
+      console.log('📝 User must enroll in MFA before accessing the application');
       
       await logAction({
         action: 'mfa-enrollment-required',
@@ -2257,7 +2267,8 @@ app.post('/api/exchange-token', async (req, res) => {
         targetId: uid,
         details: { 
           loginCount: loginCount,
-          reason: 'sensitive-role-login-threshold',
+          reason: 'mandatory-for-privileged-role',
+          privilegedRole: userData.role,
           mfaEnrolled: false
         },
         ipMasked: req.ipData?.masked,
@@ -2271,15 +2282,23 @@ app.post('/api/exchange-token', async (req, res) => {
       return res.json({
         success: false,
         requireMFAEnrollment: true,
-        message: 'Multi-factor authentication enrollment required for your role',
+        message: 'Multi-factor authentication is mandatory for your role. Please enroll to continue.',
         role: userData.role,
-        loginCount: loginCount
+        loginCount: loginCount,
+        mandatory: true
       });
     }
     
-    // If MFA is required and user is enrolled, require MFA verification
-    if (shouldRequireMFA && mfaEnrolled) {
-      console.log('🔐 MFA verification required for user:', email);
+    // ============================================================================
+    // STEP 2: Require MFA verification every 3rd login (for enrolled privileged users)
+    // ============================================================================
+    const shouldRequireMFAVerification = isPrivilegedRole && mfaEnrolled && (loginCount % 3 === 0);
+    
+    if (shouldRequireMFAVerification) {
+      console.log('🔐 MFA VERIFICATION REQUIRED (3rd login check)');
+      console.log('👤 User:', email);
+      console.log('📊 Login count:', loginCount);
+      console.log('🔢 Every 3rd login requires MFA verification');
       
       await logAction({
         action: 'mfa-required',

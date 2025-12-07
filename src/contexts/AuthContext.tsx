@@ -142,6 +142,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const idToken = await userCredential.user.getIdToken();
       
+      // Check MFA enrollment status from Firebase client
+      const mfaUser = multiFactor(userCredential.user);
+      const enrolledFactors = mfaUser.enrolledFactors;
+      console.log('🔍 FRONTEND: Checking MFA status from Firebase');
+      console.log('📱 Enrolled MFA Factors:', enrolledFactors.length);
+      console.log('📋 Factor details:', enrolledFactors);
+      
       // Exchange token with backend to check MFA and email verification requirements
       const response = await exchangeToken(idToken);
       
@@ -152,6 +159,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('📧 Email Verification Required:', response.requireEmailVerification || false);
       console.log('🔐 MFA Required:', response.requireMFA || false);
       console.log('📱 MFA Enrollment Required:', response.requireMFAEnrollment || false);
+      console.log('👔 Role from backend:', response.role);
+      console.log('📊 Login Count:', response.loginCount);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       
       if (!response.success) {
@@ -165,28 +174,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
         
+        // Check if MFA enrollment is required (backend enforces this)
+        if (response.requireMFAEnrollment) {
+          console.log('📱 MFA enrollment required by backend');
+          setMfaEnrollmentRequired(true);
+          setFirebaseUser(userCredential.user);
+          toast.info(response.message || 'Please enroll in multi-factor authentication to continue');
+          return;
+        }
+        
+        // Check if MFA verification is required
+        if (response.requireMFA) {
+          console.log('🔐 MFA verification required by backend');
+          setMfaRequired(true);
+          setFirebaseUser(userCredential.user);
+          toast.info('Multi-factor authentication required');
+          return;
+        }
+        
         throw new Error(response.error || 'Authentication failed');
       }
       
       console.log('✅ AUTHENTICATION SUCCESSFUL - User can access application');
-      
-      // Check if MFA enrollment is required (backend enforces this)
-      if (response.requireMFAEnrollment) {
-        console.log('📱 MFA enrollment required by backend');
-        setMfaEnrollmentRequired(true);
-        setFirebaseUser(userCredential.user);
-        toast.info(response.message || 'Please enroll in multi-factor authentication to continue');
-        return;
-      }
-      
-      // Check if MFA verification is required
-      if (response.requireMFA) {
-        console.log('🔐 MFA verification required by backend');
-        setMfaRequired(true);
-        setFirebaseUser(userCredential.user);
-        toast.info('Multi-factor authentication required');
-        return;
-      }
       
       // Check if this is an admin role that needs MFA check
       // COMMENTED OUT: MFA every 3rd login logic
