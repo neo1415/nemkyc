@@ -28,6 +28,7 @@ interface AuthContextType {
   mfaRequired: boolean;
   mfaEnrollmentRequired: boolean;
   emailVerificationRequired: boolean;
+  mfaResolver: any;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string, notificationPreference: 'email' | 'sms', phone?: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -44,6 +45,7 @@ interface AuthContextType {
   verifyMFA: (verificationCode: string) => Promise<void>;
   resendMFACode: () => Promise<void>;
   initiateMFAVerification: () => Promise<void>;
+  setVerificationId: (id: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -251,16 +253,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
     } catch (error: any) {
       console.error('Sign in error:', error);
+      console.log('🔍 Full error object:', error);
+      console.log('🔍 Error code:', error.code);
+      console.log('🔍 Error customData:', error.customData);
+      console.log('🔍 Error customData._serverResponse:', error.customData?._serverResponse);
+      console.log('🔍 Error._tokenResponse:', error._tokenResponse);
       
       // Handle MFA resolver if needed (do this FIRST before resetting state)
       if (error.code === 'auth/multi-factor-auth-required') {
-        console.log('🔐 MFA required - setting up resolver');
-        setMfaRequired(true);
-        setMfaResolver(error.resolver);
-        // Keep firebaseUser as null since user isn't fully authenticated yet
-        // The resolver will handle the authentication
-        toast.info('Multi-factor authentication required');
-        return;
+        console.log('🔐 MFA required - extracting MFA data from server response');
+        
+        const serverResponse = error.customData?._serverResponse;
+        if (serverResponse?.mfaInfo && serverResponse?.mfaPendingCredential) {
+          console.log('✅ MFA data found in server response');
+          console.log('📱 MFA Info:', serverResponse.mfaInfo);
+          console.log('🔑 Pending Credential:', serverResponse.mfaPendingCredential);
+          
+          // Store the MFA data we need for verification
+          const mfaData = {
+            mfaInfo: serverResponse.mfaInfo,
+            mfaPendingCredential: serverResponse.mfaPendingCredential,
+            phoneInfo: serverResponse.mfaInfo[0]?.phoneInfo,
+            mfaEnrollmentId: serverResponse.mfaInfo[0]?.mfaEnrollmentId
+          };
+          
+          setMfaRequired(true);
+          setMfaResolver(mfaData); // Store our custom MFA data object
+          toast.info('Multi-factor authentication required');
+          return;
+        } else {
+          console.error('❌ MFA required but no MFA data in server response');
+          throw new Error('MFA verification failed - please contact support');
+        }
       }
       
       // Reset all MFA/verification flags on other errors
@@ -666,6 +690,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     mfaRequired,
     mfaEnrollmentRequired,
     emailVerificationRequired,
+    mfaResolver,
     signIn,
     signUp,
     signInWithGoogle,
@@ -681,7 +706,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     verifyMFAEnrollment,
     verifyMFA,
     resendMFACode,
-    initiateMFAVerification
+    initiateMFAVerification,
+    setVerificationId
   };
 
   return (
