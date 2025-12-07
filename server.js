@@ -2334,6 +2334,16 @@ app.post('/api/exchange-token', async (req, res) => {
       });
     }
     
+    // ============================================================================
+    // STEP 3: Mark MFA enrollment as complete (if privileged user has MFA enrolled)
+    // ============================================================================
+    if (isPrivilegedRole && mfaEnrolled && !mfaEnrollmentCompleted) {
+      console.log('✅ Marking MFA enrollment as complete for:', email);
+      await loginMetaRef.set({
+        mfaEnrollmentCompleted: true
+      }, { merge: true });
+    }
+    
     // Log successful token exchange
     const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
     await logAction({
@@ -2347,7 +2357,9 @@ app.post('/api/exchange-token', async (req, res) => {
       details: { 
         loginMethod: 'token-exchange',
         loginCount: loginCount,
-        mfaRequired: false
+        mfaRequired: false,
+        mfaEnrolled: mfaEnrolled,
+        isPrivilegedRole: isPrivilegedRole
       },
       ipMasked: req.ipData?.masked,
       ipHash: req.ipData?.hash,
@@ -2356,12 +2368,15 @@ app.post('/api/exchange-token', async (req, res) => {
       userAgent: req.headers['user-agent'] || 'Unknown',
       meta: { loginTimestamp: new Date().toISOString() }
     });
+    
+    console.log('✅ Login successful\n');
 
     res.json({
       success: true,
       role: userData.role,
       user: { uid, email, displayName: userData.name },
-      loginCount: loginCount
+      loginCount: loginCount,
+      mfaEnrolled: mfaEnrolled
     });
 
   } catch (error) {
@@ -2461,6 +2476,97 @@ app.post('/api/auth/verify-mfa', async (req, res) => {
     }
     
     res.status(500).json({ error: 'MFA verification failed', details: error.message });
+  }
+});
+
+// Send MFA code via email (in addition to SMS)
+app.post('/api/auth/send-mfa-email', async (req, res) => {
+  try {
+    const { code } = req.body;
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized - No token provided' });
+    }
+    
+    const token = authHeader.split('Bearer ')[1];
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const uid = decodedToken.uid;
+    const email = decodedToken.email;
+    
+    if (!code) {
+      return res.status(400).json({ error: 'Verification code is required' });
+    }
+
+    // Get user details
+    const userDoc = await db.collection('userroles').doc(uid).get();
+    const userData = userDoc.exists ? userDoc.data() : {};
+    const userName = userData.name || email.split('@')[0];
+
+    // Send email with MFA code
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(90deg, #8B4513, #DAA520); padding: 20px; text-align: center;">
+          <h1 style="color: white; margin: 0;">NEM Insurance</h1>
+        </div>
+        <div style="padding: 20px; background: #f9f9f9;">
+          <h2 style="color: #8B4513;">Your Verification Code</h2>
+          
+          <p>Hello ${userName},</p>
+          
+          <p>You are signing in to your NEM Insurance account. Please use the verification code below:</p>
+          
+          <div style="background: #fff; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px solid #8B4513;">
+            <h1 style="color: #8B4513; font-size: 36px; letter-spacing: 8px; margin: 0;">${code}</h1>
+          </div>
+          
+          <p><strong>This code will expire in 10 minutes.</strong></p>
+          
+          <p>If you didn't request this code, please ignore this email or contact support if you're concerned about your account security.</p>
+          
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <p style="color: #666; font-size: 12px;">
+              This is an automated message from NEM Insurance. Please do not reply to this email.
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    await sendEmail(email, 'Your NEM Insurance Verification Code', emailHtml);
+
+    // Log the email sent
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'mfa-code-email-sent',
+      actorUid: uid,
+      actorDisplayName: userName,
+      actorEmail: email,
+      actorRole: userData.role,
+      targetType: 'email',
+      targetId: email,
+      details: { 
+        emailType: 'mfa-verification-code',
+        codeSent: true
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: { timestamp: new Date().toISOString() }
+    });
+
+    console.log(`✅ MFA code email sent to: ${email}`);
+
+    res.json({
+      success: true,
+      message: 'Verification code sent to your email'
+    });
+
+  } catch (error) {
+    console.error('Error sending MFA email:', error);
+    res.status(500).json({ error: 'Failed to send verification email', details: error.message });
   }
 });
 
