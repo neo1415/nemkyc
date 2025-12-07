@@ -25,7 +25,7 @@ const MFAEnrollment: React.FC = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Initialize reCAPTCHA
+    // Initialize reCAPTCHA (only used during MFA enrollment, not for verification)
     const initRecaptcha = async () => {
       try {
         if (!window.recaptchaVerifier) {
@@ -33,6 +33,9 @@ const MFAEnrollment: React.FC = () => {
             size: 'invisible',
             callback: () => {
               console.log('reCAPTCHA solved');
+            },
+            'expired-callback': () => {
+              console.log('reCAPTCHA expired');
             }
           });
         }
@@ -45,7 +48,11 @@ const MFAEnrollment: React.FC = () => {
 
     return () => {
       if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
+        try {
+          window.recaptchaVerifier.clear();
+        } catch (e) {
+          console.error('Error clearing reCAPTCHA:', e);
+        }
         window.recaptchaVerifier = null;
       }
     };
@@ -120,15 +127,26 @@ const MFAEnrollment: React.FC = () => {
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="+1234567890"
+                    placeholder="+2348141252812"
                     value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      // Auto-add + if not present
+                      if (value && !value.startsWith('+')) {
+                        value = '+' + value;
+                      }
+                      // Auto-convert Nigerian numbers starting with 0
+                      if (value.startsWith('+0')) {
+                        value = '+234' + value.substring(2);
+                      }
+                      setPhoneNumber(value);
+                    }}
                     className="pl-10"
                     required
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Include country code (e.g., +1 for US, +44 for UK)
+                  Enter with country code. For Nigeria: +234 followed by your number (e.g., +2348141252812)
                 </p>
               </div>
 
