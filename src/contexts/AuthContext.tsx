@@ -264,35 +264,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🔍 Error customData._serverResponse:', error.customData?._serverResponse);
       console.log('🔍 Error._tokenResponse:', error._tokenResponse);
       
-      /* MFA ERROR HANDLING DISABLED
-      // Handle MFA resolver if needed (do this FIRST before resetting state)
+      // MFA ERROR HANDLING - Catch and provide helpful message
       if (error.code === 'auth/multi-factor-auth-required') {
-        console.log('🔐 MFA required - extracting MFA data from server response');
-        
-        const serverResponse = error.customData?._serverResponse;
-        if (serverResponse?.mfaInfo && serverResponse?.mfaPendingCredential) {
-          console.log('✅ MFA data found in server response');
-          console.log('📱 MFA Info:', serverResponse.mfaInfo);
-          console.log('🔑 Pending Credential:', serverResponse.mfaPendingCredential);
-          
-          // Store the MFA data we need for verification
-          const mfaData = {
-            mfaInfo: serverResponse.mfaInfo,
-            mfaPendingCredential: serverResponse.mfaPendingCredential,
-            phoneInfo: serverResponse.mfaInfo[0]?.phoneInfo,
-            mfaEnrollmentId: serverResponse.mfaInfo[0]?.mfaEnrollmentId
-          };
-          
-          setMfaRequired(true);
-          setMfaResolver(mfaData); // Store our custom MFA data object
-          toast.info('Multi-factor authentication required');
-          return;
-        } else {
-          console.error('❌ MFA required but no MFA data in server response');
-          throw new Error('MFA verification failed - please contact support');
-        }
+        console.error('❌ Firebase MFA is still enrolled for this user');
+        console.error('❌ MFA must be removed from Firebase Console or via Admin SDK');
+        toast.error('Your account has MFA enrolled. Please contact an administrator to remove MFA enrollment before logging in.');
+        throw new Error('MFA is enrolled on this account. Please contact support to have it removed.');
       }
-      */
       
       // Reset all MFA/verification flags on other errors
       setMfaRequired(false);
