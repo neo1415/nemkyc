@@ -12,7 +12,8 @@ import {
   PhoneMultiFactorGenerator,
   sendEmailVerification as firebaseSendEmailVerification,
   reload,
-  RecaptchaVerifier
+  RecaptchaVerifier,
+  signInWithCustomToken
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
@@ -526,43 +527,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyMFA = async (verificationCode: string) => {
     try {
-      if (!firebaseUser) {
-        throw new Error('User not authenticated');
-      }
-
-      let phoneAuthCredential;
-      let multiFactorAssertion;
-
-      if (mfaResolver) {
-        // Using MFA resolver for multi-factor challenge
-        if (!verificationId) {
-          throw new Error('No verification ID found');
-        }
-        phoneAuthCredential = PhoneAuthProvider.credential(verificationId, verificationCode);
-        multiFactorAssertion = PhoneMultiFactorGenerator.assertion(phoneAuthCredential);
+      if (mfaResolver && mfaResolver.mfaPendingCredential) {
+        // Using our custom MFA data with REST API
+        console.log('🔐 Verifying MFA code with REST API');
         
-        const userCredential = await mfaResolver.resolveSignIn(multiFactorAssertion);
-        const idToken = await userCredential.user.getIdToken();
-        
-        // Verify with backend
-        const response = await fetch('https://nem-server-rhdb.onrender.com/api/auth/verify-mfa', {
+        const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
+        const response = await fetch(`https://identitytoolkit.googleapis.com/v2/accounts/mfaSignIn:finalize?key=${apiKey}`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({ 
-            idToken,
-            mfaAssertion: 'verified'
-          }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mfaPendingCredential: mfaResolver.mfaPendingCredential,
+            phoneVerificationInfo: {
+              sessionInfo: verificationId,
+              code: verificationCode
+            }
+          })
         });
 
-        const result = await response.json();
+        const data = await response.json();
         
-        if (!result.success) {
-          throw new Error(result.error || 'MFA verification failed');
+        if (!response.ok) {
+          throw new Error(data.error?.message || 'Invalid verification code');
         }
-      } else {
+        
+        console.log('✅ MFA verification successful');
+        
+        // Sign in with the ID token we got back
+        const idToken = data.idToken;
+        const credential = await signInWithCustomToken(auth, idToken);
+        
+        setMfaRequired(false);
+        setMfaResolver(null);
+        setVerificationId(null);
+        setFirebaseUser(credential.user);
+        toast.success('MFA verification successful');
+        
+      } else if (firebaseUser) {
         // Direct verification for users already signed in but need MFA
         if (!verificationId) {
           await initiateMFAVerification();
