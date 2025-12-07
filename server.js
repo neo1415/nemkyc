@@ -2194,11 +2194,13 @@ app.post('/api/exchange-token', async (req, res) => {
     const userData = userDoc.data();
     
     // ============================================================================
-    // MANDATORY MFA FOR PRIVILEGED ROLES
+    // MANDATORY MFA FOR PRIVILEGED ROLES - **DISABLED**
     // ============================================================================
-    // Roles that MUST have MFA: admin, super admin, compliance, claims
+    // MFA functionality has been temporarily disabled per user request
+    /*
     const privilegedRoles = ['admin', 'super admin', 'compliance', 'claims'];
     const isPrivilegedRole = privilegedRoles.includes(userData.role);
+    */
     
     // Get or create login metadata document
     const loginMetaRef = db.collection('loginMetadata').doc(uid);
@@ -2356,10 +2358,7 @@ app.post('/api/exchange-token', async (req, res) => {
       targetId: uid,
       details: { 
         loginMethod: 'token-exchange',
-        loginCount: loginCount,
-        mfaRequired: false,
-        mfaEnrolled: mfaEnrolled,
-        isPrivilegedRole: isPrivilegedRole
+        loginCount: loginCount
       },
       ipMasked: req.ipData?.masked,
       ipHash: req.ipData?.hash,
@@ -2369,14 +2368,13 @@ app.post('/api/exchange-token', async (req, res) => {
       meta: { loginTimestamp: new Date().toISOString() }
     });
     
-    console.log('✅ Login successful\n');
+    console.log('✅ Login successful (MFA disabled)\n');
 
     res.json({
       success: true,
       role: userData.role,
       user: { uid, email, displayName: userData.name },
-      loginCount: loginCount,
-      mfaEnrolled: mfaEnrolled
+      loginCount: loginCount
     });
 
   } catch (error) {
@@ -2386,7 +2384,8 @@ app.post('/api/exchange-token', async (req, res) => {
 });
 
 
-// MFA verification endpoint
+// MFA verification endpoint - DISABLED
+/*
 app.post('/api/auth/verify-mfa', async (req, res) => {
   try {
     const { idToken, mfaAssertion } = req.body;
@@ -2479,7 +2478,8 @@ app.post('/api/auth/verify-mfa', async (req, res) => {
   }
 });
 
-// Send MFA code via email (in addition to SMS)
+// Send MFA code via email (in addition to SMS) - DISABLED
+/* COMMENTED OUT - MFA EMAIL ENDPOINT
 app.post('/api/auth/send-mfa-email', async (req, res) => {
   try {
     const { code } = req.body;
@@ -2569,6 +2569,7 @@ app.post('/api/auth/send-mfa-email', async (req, res) => {
     res.status(500).json({ error: 'Failed to send verification email', details: error.message });
   }
 });
+END OF MFA EMAIL ENDPOINT COMMENT */
 
 // MFA enrollment check endpoint
 app.get('/api/auth/mfa-status/:uid', async (req, res) => {

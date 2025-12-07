@@ -194,6 +194,7 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
         
         const data = await response.json();
         if (!response.ok) {
+          console.error('❌ Firebase API error:', data);
           throw new Error(data.error?.message || 'Failed to send verification code');
         }
         
