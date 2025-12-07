@@ -51,17 +51,7 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
     }
   }, [isOpen, type]);
 
-  // Auto-send verification code when modal opens for verification type
-  useEffect(() => {
-    console.log('🔍 MFA Modal useEffect:', { isOpen, type, codeSent, loading, hasMfaResolver: !!mfaResolver });
-    if (isOpen && type === 'verification' && !codeSent && !loading && mfaResolver) {
-      console.log('🚀 Auto-sending MFA verification code on modal open');
-      // Use setTimeout to ensure the component is fully mounted
-      setTimeout(() => {
-        handleInitiateMFA();
-      }, 100);
-    }
-  }, [isOpen, type, mfaResolver, codeSent, loading]);
+  // No auto-send - user clicks button for reliable delivery
 
   const handleSendEmailVerification = async () => {
     setError('');
@@ -170,9 +160,11 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
     setLoading(true);
 
     try {
-      // If we have a resolver (from auth/multi-factor-auth-required error), use it
-      if (mfaResolver) {
-        console.log('🔐 Using MFA resolver to send verification code');
+      // If we have MFA data (from auth/multi-factor-auth-required error), use it
+      if (mfaResolver && mfaResolver.mfaEnrollmentId) {
+        console.log('🔐 Using MFA data to send verification code');
+        console.log('📱 Phone:', mfaResolver.phoneInfo);
+        console.log('🆔 Enrollment ID:', mfaResolver.mfaEnrollmentId);
         
         // Initialize reCAPTCHA if not already done
         if (!(window as any).recaptchaVerifier) {
@@ -182,20 +174,33 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
           });
         }
         
-        // Use the resolver to send verification code via SMS
-        const phoneInfoOptions = {
-          multiFactorHint: mfaResolver.hints[0],
-          session: mfaResolver.session
-        };
+        // Use Firebase REST API to start MFA sign-in
+        const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
         
-        const phoneAuthProvider = new PhoneAuthProvider(auth);
-        const vid = await phoneAuthProvider.verifyPhoneNumber(
-          phoneInfoOptions,
-          (window as any).recaptchaVerifier
-        );
+        // First, we need to get a reCAPTCHA token
+        const recaptchaToken = await (window as any).recaptchaVerifier.verify();
         
-        // Store verification ID in AuthContext
-        setVerificationId(vid);
+        const response = await fetch(`https://identitytoolkit.googleapis.com/v2/accounts/mfaSignIn:start?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mfaPendingCredential: mfaResolver.mfaPendingCredential,
+            mfaEnrollmentId: mfaResolver.mfaEnrollmentId,
+            phoneSignInInfo: {
+              recaptchaToken: recaptchaToken
+            }
+          })
+        });
+        
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error?.message || 'Failed to send verification code');
+        }
+        
+        console.log('✅ Verification code sent via Firebase REST API');
+        
+        // Store the session info for verification
+        setVerificationId(data.sessionInfo || 'mfa-session');
         
         // Also send code via email (we'll generate a 6-digit code)
         // Note: Firebase generates the SMS code, so we'll send the same instructions via email
@@ -224,10 +229,9 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
         setCodeSent(true);
         toast.success('Verification code sent to your phone and email');
       } else {
-        // Fallback to regular initiation
-        await initiateMFAVerification();
-        setCodeSent(true);
-        toast.success('Verification code sent to your registered phone');
+        // No resolver available - this shouldn't happen for verification type
+        console.error('❌ No MFA resolver available for verification');
+        throw new Error('MFA verification not properly initialized. Please try logging in again.');
       }
     } catch (err: any) {
       console.error('Error initiating MFA:', err);
@@ -364,15 +368,22 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
 
                 {showInitiateMFA && (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Phone className="h-4 w-4" />
-                      <span>Get verification code sent to your registered phone</span>
-                    </div>
+                    <Alert>
+                      <Shield className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Security Verification Required</strong>
+                        <p className="mt-1 text-sm">
+                          For your security, we'll send a verification code to your registered phone number. 
+                          You'll also receive an email notification.
+                        </p>
+                      </AlertDescription>
+                    </Alert>
                     
                     <Button 
                       onClick={handleInitiateMFA} 
                       disabled={loading}
                       className="w-full"
+                      size="lg"
                     >
                       {loading ? (
                         <>
@@ -386,6 +397,10 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
                         </>
                       )}
                     </Button>
+                    
+                    <p className="text-xs text-center text-muted-foreground">
+                      This helps protect your account from unauthorized access
+                    </p>
                   </div>
                 )}
 
