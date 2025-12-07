@@ -251,19 +251,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
     } catch (error: any) {
       console.error('Sign in error:', error);
-      // Reset all MFA/verification flags on error
+      
+      // Handle MFA resolver if needed (do this FIRST before resetting state)
+      if (error.code === 'auth/multi-factor-auth-required') {
+        console.log('🔐 MFA required - setting up resolver');
+        setMfaRequired(true);
+        setMfaResolver(error.resolver);
+        // Keep firebaseUser as null since user isn't fully authenticated yet
+        // The resolver will handle the authentication
+        toast.info('Multi-factor authentication required');
+        return;
+      }
+      
+      // Reset all MFA/verification flags on other errors
       setMfaRequired(false);
       setMfaEnrollmentRequired(false);
       setEmailVerificationRequired(false);
       setFirebaseUser(null);
-      
-      // Handle MFA resolver if needed
-      if (error.code === 'auth/multi-factor-auth-required') {
-        setMfaRequired(true);
-        setMfaResolver(error.resolver);
-        toast.info('Multi-factor authentication required');
-        return;
-      }
       
       // Re-throw the error with proper structure so SignIn component can handle it
       throw error;

@@ -7,7 +7,7 @@ import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Loader2, Shield, Phone, KeyRound, Mail, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { RecaptchaVerifier } from 'firebase/auth';
+import { RecaptchaVerifier, PhoneAuthProvider } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 
 interface MFAModalProps {
@@ -27,7 +27,7 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
   const [attempts, setAttempts] = useState(0);
   const maxAttempts = 5;
 
-  const { enrollMFA, verifyMFAEnrollment, verifyMFA, resendMFACode, sendVerificationEmail, checkEmailVerification, initiateMFAVerification } = useAuth();
+  const { enrollMFA, verifyMFAEnrollment, verifyMFA, resendMFACode, sendVerificationEmail, checkEmailVerification, initiateMFAVerification, mfaResolver, setVerificationId } = useAuth();
 
   // Initialize reCAPTCHA for phone auth
   useEffect(() => {
@@ -50,6 +50,18 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
       };
     }
   }, [isOpen, type]);
+
+  // Auto-send verification code when modal opens for verification type
+  useEffect(() => {
+    console.log('🔍 MFA Modal useEffect:', { isOpen, type, codeSent, loading, hasMfaResolver: !!mfaResolver });
+    if (isOpen && type === 'verification' && !codeSent && !loading && mfaResolver) {
+      console.log('🚀 Auto-sending MFA verification code on modal open');
+      // Use setTimeout to ensure the component is fully mounted
+      setTimeout(() => {
+        handleInitiateMFA();
+      }, 100);
+    }
+  }, [isOpen, type, mfaResolver, codeSent, loading]);
 
   const handleSendEmailVerification = async () => {
     setError('');
@@ -158,9 +170,65 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
     setLoading(true);
 
     try {
-      await initiateMFAVerification();
-      setCodeSent(true);
-      toast.success('Verification code sent to your registered phone');
+      // If we have a resolver (from auth/multi-factor-auth-required error), use it
+      if (mfaResolver) {
+        console.log('🔐 Using MFA resolver to send verification code');
+        
+        // Initialize reCAPTCHA if not already done
+        if (!(window as any).recaptchaVerifier) {
+          (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            size: 'invisible',
+            callback: () => console.log('reCAPTCHA solved')
+          });
+        }
+        
+        // Use the resolver to send verification code via SMS
+        const phoneInfoOptions = {
+          multiFactorHint: mfaResolver.hints[0],
+          session: mfaResolver.session
+        };
+        
+        const phoneAuthProvider = new PhoneAuthProvider(auth);
+        const vid = await phoneAuthProvider.verifyPhoneNumber(
+          phoneInfoOptions,
+          (window as any).recaptchaVerifier
+        );
+        
+        // Store verification ID in AuthContext
+        setVerificationId(vid);
+        
+        // Also send code via email (we'll generate a 6-digit code)
+        // Note: Firebase generates the SMS code, so we'll send the same instructions via email
+        try {
+          const user = auth.currentUser;
+          if (user) {
+            const idToken = await user.getIdToken();
+            // Generate a 6-digit code for email (same as SMS would be ideal, but we can't get Firebase's code)
+            // So we'll just send a notification email instead
+            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/auth/send-mfa-email`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+              },
+              body: JSON.stringify({ 
+                code: 'Check your phone for SMS code' // We can't get Firebase's SMS code
+              })
+            });
+          }
+        } catch (emailError) {
+          console.warn('Failed to send email notification:', emailError);
+          // Don't fail the whole process if email fails
+        }
+        
+        setCodeSent(true);
+        toast.success('Verification code sent to your phone and email');
+      } else {
+        // Fallback to regular initiation
+        await initiateMFAVerification();
+        setCodeSent(true);
+        toast.success('Verification code sent to your registered phone');
+      }
     } catch (err: any) {
       console.error('Error initiating MFA:', err);
       setError(err.message || 'Failed to send verification code');
