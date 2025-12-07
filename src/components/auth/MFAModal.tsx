@@ -250,8 +250,8 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
         // For enrollment, resend using phone number
         await enrollMFA(phoneNumber);
       } else {
-        // For verification, re-initiate MFA
-        await initiateMFAVerification();
+        // For verification, call handleInitiateMFA again
+        await handleInitiateMFA();
       }
       toast.success('Verification code resent');
       setAttempts(0); // Reset attempts on resend
