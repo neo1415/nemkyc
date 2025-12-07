@@ -2,7 +2,7 @@ import { toast } from 'sonner';
 import { auth } from '../firebase/config';
 import { exchangeToken } from './authService';
 
-const API_BASE_URL = 'https://nem-server-rhdb.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 export interface UserRole {
   id: string;
