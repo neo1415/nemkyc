@@ -199,13 +199,17 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
         
         console.log('✅ Verification code sent via Firebase REST API');
         console.log('📋 Response data:', data);
-        console.log('🔑 Session Info:', data.sessionInfo);
         
-        // Store the session info for verification
-        if (!data.sessionInfo) {
+        // The sessionInfo is in phoneResponseInfo
+        const sessionInfo = data.phoneResponseInfo?.sessionInfo || data.sessionInfo;
+        console.log('🔑 Session Info:', sessionInfo);
+        
+        if (!sessionInfo) {
           console.error('❌ No sessionInfo in response!');
+          throw new Error('Failed to get session info from Firebase');
         }
-        setVerificationId(data.sessionInfo);
+        
+        setVerificationId(sessionInfo);
         
         // Also send code via email (we'll generate a 6-digit code)
         // Note: Firebase generates the SMS code, so we'll send the same instructions via email
