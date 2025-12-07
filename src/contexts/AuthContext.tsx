@@ -64,9 +64,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mfaRequired, setMfaRequired] = useState(false);
-  const [mfaEnrollmentRequired, setMfaEnrollmentRequired] = useState(false);
-  const [emailVerificationRequired, setEmailVerificationRequired] = useState(false);
+  // MFA DISABLED - All MFA state variables commented out
+  const [mfaRequired, setMfaRequired] = useState(false); // Always false
+  const [mfaEnrollmentRequired, setMfaEnrollmentRequired] = useState(false); // Always false
+  const [emailVerificationRequired, setEmailVerificationRequired] = useState(false); // Always false
   const [pendingCredential, setPendingCredential] = useState<any>(null);
   const [mfaResolver, setMfaResolver] = useState<any>(null);
   const [verificationId, setVerificationId] = useState<string | null>(null);
@@ -156,16 +157,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await exchangeToken(idToken);
       
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('🔐 FRONTEND: Token Exchange Response');
+      console.log('🔐 FRONTEND: Token Exchange Response (MFA DISABLED)');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('✅ Success:', response.success);
-      console.log('📧 Email Verification Required:', response.requireEmailVerification || false);
-      console.log('🔐 MFA Required:', response.requireMFA || false);
-      console.log('📱 MFA Enrollment Required:', response.requireMFAEnrollment || false);
       console.log('👔 Role from backend:', response.role);
       console.log('📊 Login Count:', response.loginCount);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       
+      /* MFA CHECKS DISABLED
       if (!response.success) {
         // Check if email verification is required
         if (response.requireEmailVerification) {
@@ -197,8 +196,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         throw new Error(response.error || 'Authentication failed');
       }
+      */
       
-      console.log('✅ AUTHENTICATION SUCCESSFUL - User can access application');
+      if (!response.success) {
+        throw new Error(response.error || 'Authentication failed');
+      }
+      
+      console.log('✅ AUTHENTICATION SUCCESSFUL - User can access application (MFA disabled)');
       
       // Check if this is an admin role that needs MFA check
       // COMMENTED OUT: MFA every 3rd login logic
@@ -260,6 +264,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🔍 Error customData._serverResponse:', error.customData?._serverResponse);
       console.log('🔍 Error._tokenResponse:', error._tokenResponse);
       
+      /* MFA ERROR HANDLING DISABLED
       // Handle MFA resolver if needed (do this FIRST before resetting state)
       if (error.code === 'auth/multi-factor-auth-required') {
         console.log('🔐 MFA required - extracting MFA data from server response');
@@ -287,6 +292,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw new Error('MFA verification failed - please contact support');
         }
       }
+      */
       
       // Reset all MFA/verification flags on other errors
       setMfaRequired(false);
