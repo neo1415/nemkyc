@@ -198,9 +198,14 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
         }
         
         console.log('✅ Verification code sent via Firebase REST API');
+        console.log('📋 Response data:', data);
+        console.log('🔑 Session Info:', data.sessionInfo);
         
         // Store the session info for verification
-        setVerificationId(data.sessionInfo || 'mfa-session');
+        if (!data.sessionInfo) {
+          console.error('❌ No sessionInfo in response!');
+        }
+        setVerificationId(data.sessionInfo);
         
         // Also send code via email (we'll generate a 6-digit code)
         // Note: Firebase generates the SMS code, so we'll send the same instructions via email
