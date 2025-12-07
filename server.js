@@ -2194,157 +2194,29 @@ app.post('/api/exchange-token', async (req, res) => {
     const userData = userDoc.data();
     
     // ============================================================================
-    // MANDATORY MFA FOR PRIVILEGED ROLES - **DISABLED**
+    // MFA DISABLED - Simple login tracking only
     // ============================================================================
-    // MFA functionality has been temporarily disabled per user request
-    /*
-    const privilegedRoles = ['admin', 'super admin', 'compliance', 'claims'];
-    const isPrivilegedRole = privilegedRoles.includes(userData.role);
-    */
     
     // Get or create login metadata document
     const loginMetaRef = db.collection('loginMetadata').doc(uid);
     const loginMetaDoc = await loginMetaRef.get();
     
     let loginCount = 1;
-    let lastLoginAt = new Date();
-    let mfaEnrollmentCompleted = false;
     
     if (loginMetaDoc.exists) {
       const metaData = loginMetaDoc.data();
       loginCount = (metaData.loginCount || 0) + 1;
-      lastLoginAt = metaData.lastLoginAt?.toDate() || new Date();
-      mfaEnrollmentCompleted = metaData.mfaEnrollmentCompleted || false;
     }
     
-    // Update login count
+    // Update login count only (no MFA fields)
     await loginMetaRef.set({
       loginCount: loginCount,
       lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
       email: email,
-      role: userData.role,
-      mfaEnrollmentCompleted: mfaEnrollmentCompleted
+      role: userData.role
     }, { merge: true });
     
-    // Check user's current MFA enrollment status in Firebase Auth
-    let mfaEnrolled = false;
-    let enrolledFactors = [];
-    try {
-      const userRecord = await admin.auth().getUser(uid);
-      enrolledFactors = userRecord.multiFactor?.enrolledFactors || [];
-      mfaEnrolled = enrolledFactors.length > 0;
-    } catch (error) {
-      console.warn('⚠️ Error checking MFA enrollment:', error);
-    }
-    
-    // MFA Debug Logging
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔐 MFA CHECK - Login #' + loginCount);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('👤 User:', email);
-    console.log('👔 Role:', userData.role);
-    console.log('🎯 Is Privileged Role:', isPrivilegedRole);
-    console.log('📊 Login Count:', loginCount);
-    console.log('🔐 MFA Enrolled:', mfaEnrolled);
-    console.log('📱 Enrolled Factors:', enrolledFactors.length);
-    console.log('✅ MFA Enrollment Completed:', mfaEnrollmentCompleted);
-    console.log('🔢 Should Require MFA (every 3rd):', loginCount % 3 === 0);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
-    // ============================================================================
-    // STEP 1: Force MFA enrollment for privileged roles (if not already enrolled)
-    // ============================================================================
-    if (isPrivilegedRole && !mfaEnrolled) {
-      console.log('🚨 MANDATORY MFA ENROLLMENT REQUIRED for privileged role:', userData.role);
-      console.log('👤 User:', email);
-      console.log('📝 User must enroll in MFA before accessing the application');
-      
-      await logAction({
-        action: 'mfa-enrollment-required',
-        actorUid: uid,
-        actorDisplayName: userData.name,
-        actorEmail: email,
-        actorRole: userData.role,
-        targetType: 'user',
-        targetId: uid,
-        details: { 
-          loginCount: loginCount,
-          reason: 'mandatory-for-privileged-role',
-          privilegedRole: userData.role,
-          mfaEnrolled: false
-        },
-        ipMasked: req.ipData?.masked,
-        ipHash: req.ipData?.hash,
-        rawIP: req.ipData?.raw,
-        location: await getLocationFromIP(req.ipData?.raw || '0.0.0.0'),
-        userAgent: req.headers['user-agent'] || 'Unknown',
-        meta: { loginTimestamp: new Date().toISOString() }
-      });
-      
-      return res.json({
-        success: false,
-        requireMFAEnrollment: true,
-        message: 'Multi-factor authentication is mandatory for your role. Please enroll to continue.',
-        role: userData.role,
-        loginCount: loginCount,
-        mandatory: true
-      });
-    }
-    
-    // ============================================================================
-    // STEP 2: Require MFA verification every 3rd login (for enrolled privileged users)
-    // ============================================================================
-    // STEP 2: MFA handled by Firebase automatically after enrollment
-    // ============================================================================
-    // Once enrolled, Firebase handles MFA challenges automatically.
-    // We don't manually trigger MFA every 3rd login because Firebase doesn't support that flow.
-    const shouldRequireMFAVerification = false; // Disabled - Firebase handles MFA automatically
-    
-    if (shouldRequireMFAVerification) {
-      console.log('�  MFA VERIFICATION REQUIRED (3rd login check)');
-      console.log('� LUser:', email);
-      console.log('� Login codunt:', loginCount);
-      console.log('🔢 Every 3rd login requires MFA verification');
-      
-      await logAction({
-        action: 'mfa-required',
-        actorUid: uid,
-        actorDisplayName: userData.name,
-        actorEmail: email,
-        actorRole: userData.role,
-        targetType: 'user',
-        targetId: uid,
-        details: { 
-          loginCount: loginCount,
-          reason: 'sensitive-role-login-threshold',
-          mfaEnrolled: true
-        },
-        ipMasked: req.ipData?.masked,
-        ipHash: req.ipData?.hash,
-        rawIP: req.ipData?.raw,
-        location: await getLocationFromIP(req.ipData?.raw || '0.0.0.0'),
-        userAgent: req.headers['user-agent'] || 'Unknown',
-        meta: { loginTimestamp: new Date().toISOString() }
-      });
-      
-      return res.json({
-        success: false,
-        requireMFA: true,
-        message: 'Multi-factor authentication required',
-        role: userData.role,
-        loginCount: loginCount
-      });
-    }
-    
-    // ============================================================================
-    // STEP 3: Mark MFA enrollment as complete (if privileged user has MFA enrolled)
-    // ============================================================================
-    if (isPrivilegedRole && mfaEnrolled && !mfaEnrollmentCompleted) {
-      console.log('✅ Marking MFA enrollment as complete for:', email);
-      await loginMetaRef.set({
-        mfaEnrollmentCompleted: true
-      }, { merge: true });
-    }
+    console.log('✅ Login #' + loginCount + ' for user:', email);
     
     // Log successful token exchange
     const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
@@ -2370,6 +2242,14 @@ app.post('/api/exchange-token', async (req, res) => {
     
     console.log('✅ Login successful (MFA disabled)\n');
 
+    // Set httpOnly session cookie with user UID for subsequent authenticated requests
+    res.cookie('__session', uid, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
     res.json({
       success: true,
       role: userData.role,
@@ -2383,193 +2263,6 @@ app.post('/api/exchange-token', async (req, res) => {
   }
 });
 
-
-// MFA verification endpoint - DISABLED
-/*
-app.post('/api/auth/verify-mfa', async (req, res) => {
-  try {
-    const { idToken, mfaAssertion } = req.body;
-    
-    if (!idToken || !mfaAssertion) {
-      return res.status(400).json({ error: 'ID token and MFA assertion are required' });
-    }
-
-    // Verify the Firebase ID token first
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    const uid = decodedToken.uid;
-    const email = decodedToken.email;
-    
-    // Get user details
-    const userDoc = await db.collection('userroles').doc(uid).get();
-    if (!userDoc.exists) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-    
-    const userData = userDoc.data();
-    
-    // Log successful MFA verification
-    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
-    await logAction({
-      action: 'mfa-success',
-      actorUid: uid,
-      actorDisplayName: userData.name,
-      actorEmail: email,
-      actorRole: userData.role,
-      targetType: 'user',
-      targetId: uid,
-      details: { 
-        mfaMethod: 'firebase-native',
-        verificationSuccessful: true
-      },
-      ipMasked: req.ipData?.masked,
-      ipHash: req.ipData?.hash,
-      rawIP: req.ipData?.raw,
-      location: location,
-      userAgent: req.headers['user-agent'] || 'Unknown',
-      meta: { 
-        mfaTimestamp: new Date().toISOString(),
-        sessionFinalized: true
-      }
-    });
-
-    res.json({
-      success: true,
-      message: 'MFA verification successful',
-      role: userData.role,
-      user: { uid, email, displayName: userData.name }
-    });
-
-  } catch (error) {
-    console.error('MFA verification error:', error);
-    
-    // Log failed MFA attempt
-    try {
-      if (req.body.idToken) {
-        const decodedToken = await admin.auth().verifyIdToken(req.body.idToken);
-        const userDoc = await db.collection('userroles').doc(decodedToken.uid).get();
-        const userData = userDoc.exists ? userDoc.data() : {};
-        
-        await logAction({
-          action: 'mfa-failed',
-          actorUid: decodedToken.uid,
-          actorDisplayName: userData.name,
-          actorEmail: decodedToken.email,
-          actorRole: userData.role,
-          targetType: 'user',
-          targetId: decodedToken.uid,
-          details: { 
-            mfaMethod: 'firebase-native',
-            verificationSuccessful: false,
-            error: error.message
-          },
-          ipMasked: req.ipData?.masked,
-          ipHash: req.ipData?.hash,
-          rawIP: req.ipData?.raw,
-          location: await getLocationFromIP(req.ipData?.raw || '0.0.0.0'),
-          userAgent: req.headers['user-agent'] || 'Unknown',
-          meta: { mfaTimestamp: new Date().toISOString() }
-        });
-      }
-    } catch (logError) {
-      console.error('Error logging failed MFA attempt:', logError);
-    }
-    
-    res.status(500).json({ error: 'MFA verification failed', details: error.message });
-  }
-});
-
-// Send MFA code via email (in addition to SMS) - DISABLED
-/* COMMENTED OUT - MFA EMAIL ENDPOINT
-app.post('/api/auth/send-mfa-email', async (req, res) => {
-  try {
-    const { code } = req.body;
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized - No token provided' });
-    }
-    
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    const uid = decodedToken.uid;
-    const email = decodedToken.email;
-    
-    if (!code) {
-      return res.status(400).json({ error: 'Verification code is required' });
-    }
-
-    // Get user details
-    const userDoc = await db.collection('userroles').doc(uid).get();
-    const userData = userDoc.exists ? userDoc.data() : {};
-    const userName = userData.name || email.split('@')[0];
-
-    // Send email with MFA code
-    const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(90deg, #8B4513, #DAA520); padding: 20px; text-align: center;">
-          <h1 style="color: white; margin: 0;">NEM Insurance</h1>
-        </div>
-        <div style="padding: 20px; background: #f9f9f9;">
-          <h2 style="color: #8B4513;">Your Verification Code</h2>
-          
-          <p>Hello ${userName},</p>
-          
-          <p>You are signing in to your NEM Insurance account. Please use the verification code below:</p>
-          
-          <div style="background: #fff; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px solid #8B4513;">
-            <h1 style="color: #8B4513; font-size: 36px; letter-spacing: 8px; margin: 0;">${code}</h1>
-          </div>
-          
-          <p><strong>This code will expire in 10 minutes.</strong></p>
-          
-          <p>If you didn't request this code, please ignore this email or contact support if you're concerned about your account security.</p>
-          
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
-            <p style="color: #666; font-size: 12px;">
-              This is an automated message from NEM Insurance. Please do not reply to this email.
-            </p>
-          </div>
-        </div>
-      </div>
-    `;
-
-    await sendEmail(email, 'Your NEM Insurance Verification Code', emailHtml);
-
-    // Log the email sent
-    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
-    await logAction({
-      action: 'mfa-code-email-sent',
-      actorUid: uid,
-      actorDisplayName: userName,
-      actorEmail: email,
-      actorRole: userData.role,
-      targetType: 'email',
-      targetId: email,
-      details: { 
-        emailType: 'mfa-verification-code',
-        codeSent: true
-      },
-      ipMasked: req.ipData?.masked,
-      ipHash: req.ipData?.hash,
-      rawIP: req.ipData?.raw,
-      location: location,
-      userAgent: req.headers['user-agent'] || 'Unknown',
-      meta: { timestamp: new Date().toISOString() }
-    });
-
-    console.log(`✅ MFA code email sent to: ${email}`);
-
-    res.json({
-      success: true,
-      message: 'Verification code sent to your email'
-    });
-
-  } catch (error) {
-    console.error('Error sending MFA email:', error);
-    res.status(500).json({ error: 'Failed to send verification email', details: error.message });
-  }
-});
-END OF MFA EMAIL ENDPOINT COMMENT */
 
 // MFA enrollment check endpoint
 app.get('/api/auth/mfa-status/:uid', async (req, res) => {
