@@ -551,16 +551,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         console.log('✅ MFA verification successful');
+        console.log('📋 MFA finalize response:', data);
         
-        // Sign in with the ID token we got back
-        const idToken = data.idToken;
-        const credential = await signInWithCustomToken(auth, idToken);
-        
-        setMfaRequired(false);
-        setMfaResolver(null);
-        setVerificationId(null);
-        setFirebaseUser(credential.user);
-        toast.success('MFA verification successful');
+        // Firebase returns idToken and refreshToken
+        // We need to use the refreshToken to get a proper Firebase auth session
+        if (data.refreshToken) {
+          // Use the refresh token to sign in
+          const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
+          const tokenResponse = await fetch(`https://securetoken.googleapis.com/v1/token?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              grant_type: 'refresh_token',
+              refresh_token: data.refreshToken
+            })
+          });
+          
+          const tokenData = await tokenResponse.json();
+          console.log('🔄 Got new tokens from refresh');
+          
+          // Now we have a valid ID token, exchange with backend
+          const backendResponse = await exchangeToken(tokenData.id_token);
+          
+          if (backendResponse.success) {
+            console.log('✅ Authentication complete');
+            setMfaRequired(false);
+            setMfaResolver(null);
+            setVerificationId(null);
+            toast.success('Login successful!');
+            
+            // Reload to let Firebase auth pick up the session
+            window.location.reload();
+          } else {
+            throw new Error(backendResponse.error || 'Authentication failed');
+          }
+        } else {
+          throw new Error('No refresh token in response');
+        }
         
       } else if (firebaseUser) {
         // Direct verification for users already signed in but need MFA
