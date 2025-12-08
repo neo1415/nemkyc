@@ -161,6 +161,9 @@ const corporateCDDSchema = yup.object().shape({
       return value <= today;
     })
     .typeError('Please select a valid date'),
+  cacNumber: yup.string()
+    .required("CAC number is required")
+    .matches(/^[A-Za-z0-9]+$/, "CAC number must contain only letters and numbers"),
   natureOfBusiness: yup.string()
     .required("Nature of business is required")
     .min(10, "Nature of business must be at least 10 characters")
@@ -370,6 +373,7 @@ const CorporateCDD: React.FC = () => {
       incorporationNumber: '',
       incorporationState: '',
       dateOfIncorporationRegistration: undefined,
+      cacNumber: '',
       natureOfBusiness: '',
       companyLegalForm: '',
       companyLegalFormOther: '',
@@ -524,7 +528,7 @@ const CorporateCDD: React.FC = () => {
 
   // Step field mappings for validation
   const stepFieldMappings = {
-    0: ['companyName', 'registeredCompanyAddress', 'incorporationNumber', 'incorporationState', 'dateOfIncorporationRegistration', 'natureOfBusiness', 'companyLegalForm', 'companyLegalFormOther', 'emailAddress', 'website', 'taxIdentificationNumber', 'telephoneNumber'],
+    0: ['companyName', 'registeredCompanyAddress', 'incorporationNumber', 'incorporationState', 'dateOfIncorporationRegistration', 'cacNumber', 'natureOfBusiness', 'companyLegalForm', 'companyLegalFormOther', 'emailAddress', 'website', 'taxIdentificationNumber', 'telephoneNumber'],
     1: ['directors'],
     2: ['bankName', 'accountNumber', 'bankBranch', 'accountOpeningDate', 'bankName2', 'accountNumber2', 'bankBranch2', 'accountOpeningDate2'],
     3: ['cac', 'identification'],
@@ -569,6 +573,12 @@ const CorporateCDD: React.FC = () => {
           <DatePicker
             name="dateOfIncorporationRegistration"
             label="Date of Incorporation/Registration"
+            required={true}
+          />
+
+          <FormField
+            name="cacNumber"
+            label="CAC Number"
             required={true}
           />
           
@@ -1077,6 +1087,10 @@ const CorporateCDD: React.FC = () => {
                     <div>
                       <span className="font-medium text-gray-600">Date of Incorporation:</span>
                       <p className="text-gray-900">{data.dateOfIncorporationRegistration ? format(new Date(data.dateOfIncorporationRegistration), 'dd/MM/yyyy') : 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">CAC Number:</span>
+                      <p className="text-gray-900">{data.cacNumber || 'Not provided'}</p>
                     </div>
                     <div>
                       <span className="font-medium text-gray-600">Company Legal Form:</span>

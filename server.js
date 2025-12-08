@@ -1786,6 +1786,9 @@ const setSuperAdminOnStartup = async () => {
 
 // Centralized form submission endpoint with event logging
 app.post('/api/submit-form', async (req, res) => {
+  console.log('🚀🚀🚀 /api/submit-form ENDPOINT HIT! 🚀🚀🚀');
+  console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+  
   try {
     const { formData, formType, userUid, userEmail } = req.body;
     
@@ -1804,6 +1807,7 @@ app.post('/api/submit-form', async (req, res) => {
     // Determine Firestore collection based on form type
     const collectionName = getFirestoreCollection(formType);
     console.log('📂 Using collection:', collectionName);
+    console.log('💾 ABOUT TO SAVE TO FIRESTORE COLLECTION:', collectionName);
 
     // Add metadata to form data
     const submissionData = {
@@ -1816,8 +1820,10 @@ app.post('/api/submit-form', async (req, res) => {
     };
 
     // Submit to Firestore
+    console.log('🔥 CALLING db.collection(' + collectionName + ').add()');
     const docRef = await db.collection(collectionName).add(submissionData);
     console.log('✅ Document written with ID:', docRef.id);
+    console.log('✅ SAVED TO COLLECTION:', collectionName);
 
     // 📝 LOG THE FORM SUBMISSION EVENT
     const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
@@ -1917,6 +1923,8 @@ app.post('/api/submit-form', async (req, res) => {
 // Helper function to determine Firestore collection based on form type
 const getFirestoreCollection = (formType) => {
   const formTypeLower = formType.toLowerCase();
+  console.log('🔍 getFirestoreCollection called with formType:', formType);
+  console.log('🔍 formTypeLower:', formTypeLower);
   
   // Claims forms
   if (formTypeLower.includes('combined')) return 'combined-gpa-employers-liability-claims';
@@ -1935,16 +1943,29 @@ const getFirestoreCollection = (formType) => {
   if (formTypeLower.includes('rent')) return 'rent-assurance-claims';
   
   // KYC forms
-  if (formTypeLower.includes('individual') && formTypeLower.includes('kyc')) return 'Individual-kyc-form';
-  if (formTypeLower.includes('corporate') && formTypeLower.includes('kyc')) return 'corporate-kyc-form';
+  if (formTypeLower.includes('individual') && formTypeLower.includes('kyc')) {
+    console.log('✅ Matched: Individual KYC -> Individual-kyc-form');
+    return 'Individual-kyc-form';
+  }
+  if (formTypeLower.includes('corporate') && formTypeLower.includes('kyc')) {
+    console.log('✅ Matched: Corporate KYC -> corporate-kyc-form');
+    return 'corporate-kyc-form';
+  }
   
   // CDD forms
-  if (formTypeLower.includes('individual') && formTypeLower.includes('cdd')) return 'individualCDD';
-  if (formTypeLower.includes('corporate') && formTypeLower.includes('cdd')) return 'corporateCDD';
+  if (formTypeLower.includes('individual') && formTypeLower.includes('cdd')) {
+    console.log('✅ Matched: Individual CDD -> individual-kyc');
+    return 'individual-kyc';
+  }
+  if (formTypeLower.includes('corporate') && formTypeLower.includes('cdd')) {
+    console.log('✅ Matched: Corporate CDD (or NAICOM Corporate CDD) -> corporate-kyc');
+    return 'corporate-kyc';
+  }
   if (formTypeLower.includes('agents') && formTypeLower.includes('cdd')) return 'agentsCDD';
   if (formTypeLower.includes('brokers') && formTypeLower.includes('cdd')) return 'brokersCDD';
   if (formTypeLower.includes('partners') && formTypeLower.includes('cdd')) return 'partnersCDD';
   
+  console.log('⚠️ No match found, using default: formSubmissions');
   return 'formSubmissions';
 };
 
@@ -3805,9 +3826,12 @@ app.post('/api/test-birthday-email', async (req, res) => {
 // ============= END BIRTHDAY EMAIL SYSTEM =============
 
 app.listen(port, async () => {
+  console.log('='.repeat(80));
+  console.log(`� SERnVER STARTED - UPDATED VERSION WITH COLLECTION MAPPING FIX`);
   console.log(`Server running on port ${port}`);
   console.log(`📝 Events logging: ${EVENTS_CONFIG.ENABLE_EVENTS_LOGGING ? 'ENABLED' : 'DISABLED'}`);
   console.log(`🌐 IP geolocation: ${EVENTS_CONFIG.ENABLE_IP_GEOLOCATION ? 'ENABLED' : 'DISABLED'}`);
+  console.log('='.repeat(80));
   console.log(`⏰ Raw IP retention: ${EVENTS_CONFIG.RAW_IP_RETENTION_DAYS} days`);
   
   // Force generate sample events on every startup for testing
