@@ -368,6 +368,10 @@ const CorporateCDDViewer: React.FC = () => {
                 <p className="font-medium">{formatValue(formData.dateOfIncorporationRegistration)}</p>
               </div>
               <div>
+                <p className="font-medium text-sm text-muted-foreground">CAC Number</p>
+                <p className="font-medium">{formatValue(formData.cacNumber)}</p>
+              </div>
+              <div>
                 <p className="font-medium text-sm text-muted-foreground">Company Type</p>
                 <p className="font-medium">{formatValue(formData.companyLegalForm)}</p>
               </div>

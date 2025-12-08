@@ -282,6 +282,10 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
                 <p className="font-medium">{formatDate(data.dateOfIncorporationRegistration)}</p>
               </div>
               <div>
+                <p className="font-medium text-sm text-muted-foreground">CAC Number</p>
+                <p className="font-medium">{formatValue(data.cacNumber)}</p>
+              </div>
+              <div>
                 <p className="font-medium text-sm text-muted-foreground">BVN Number</p>
                 <p className="font-medium">{formatValue(data.BVNNumber)}</p>
               </div>
