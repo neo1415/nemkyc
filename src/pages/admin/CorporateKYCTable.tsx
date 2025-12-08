@@ -73,6 +73,7 @@ interface FormData {
   incorporationNumber?: string;
   incorporationState?: string;
   dateOfIncorporationRegistration?: any;
+  cacNumber?: string;
   BVNNumber?: string;
   contactPersonNo?: string;
   taxIDNo?: string;
@@ -336,6 +337,12 @@ const CorporateKYCTable: React.FC = () => {
       headerName: 'Date of Incorporation',
       width: 150,
       renderCell: (params: any) => formatDate(params.row.dateOfIncorporationRegistration),
+    },
+    {
+      field: 'cacNumber',
+      headerName: 'CAC Number',
+      width: 150,
+      renderCell: (params: any) => getValue(params.row, 'cacNumber'),
     },
     {
       field: 'BVNNumber',

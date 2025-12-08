@@ -44,6 +44,9 @@ const corporateKYCSchema = yup.object().shape({
       return value <= today;
     })
     .typeError('Please select a valid date'),
+  cacNumber: yup.string()
+    .required("CAC number is required")
+    .matches(/^[A-Za-z0-9]+$/, "CAC number must contain only letters and numbers"),
   BVNNumber: yup.string()
     .required("BVN is required")
     .matches(/^\d+$/, "BVN must contain only numbers")
@@ -202,6 +205,7 @@ const defaultValues = {
   incorporationNumber: '',
   incorporationState: '',
   dateOfIncorporationRegistration: undefined,
+  cacNumber: '',
   BVNNumber: '',
   NINNumber: '',
   contactPersonNo: '',
@@ -461,7 +465,7 @@ const CorporateKYC: React.FC = () => {
     0: [
       'branchOffice', 'insured', 'officeAddress', 'ownershipOfCompany', 'contactPerson', 
       'website', 'incorporationNumber', 'incorporationState', 'dateOfIncorporationRegistration',
-      'BVNNumber', 'NINNumber', 'contactPersonNo', 'taxIDNo', 'emailAddress', 'natureOfBusiness', 
+      'cacNumber', 'BVNNumber', 'NINNumber', 'contactPersonNo', 'taxIDNo', 'emailAddress', 'natureOfBusiness', 
       'estimatedTurnover', 'premiumPaymentSource', 'premiumPaymentSourceOther'
     ],
     1: ['directors'],
@@ -539,6 +543,12 @@ const CorporateKYC: React.FC = () => {
           <DatePicker
             name="dateOfIncorporationRegistration"
             label="Date of Incorporation/Registration"
+            required={true}
+          />
+
+          <FormField
+            name="cacNumber"
+            label="CAC Number"
             required={true}
           />
 
@@ -1095,6 +1105,10 @@ const CorporateKYC: React.FC = () => {
                   <div>
                     <span className="font-medium text-gray-600">Incorporation Number:</span>
                     <p className="text-gray-900">{data.incorporationNumber || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">CAC Number:</span>
+                    <p className="text-gray-900">{data.cacNumber || 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">BVN:</span>

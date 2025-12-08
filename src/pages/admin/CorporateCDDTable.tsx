@@ -240,7 +240,8 @@ const CorporateCDDTable: React.FC = () => {
     const matchesSearch = searchText === '' || 
       form.companyName?.toLowerCase().includes(searchText.toLowerCase()) ||
       form.emailAddress?.toLowerCase().includes(searchText.toLowerCase()) ||
-      form.incorporationNumber?.toLowerCase().includes(searchText.toLowerCase());
+      form.incorporationNumber?.toLowerCase().includes(searchText.toLowerCase()) ||
+      form.cacNumber?.toLowerCase().includes(searchText.toLowerCase());
     
     return matchesStatus && matchesSearch;
   });
@@ -307,6 +308,12 @@ const CorporateCDDTable: React.FC = () => {
       headerName: 'Date of Incorporation/Registration',
       width: 160,
       renderCell: (params) => formatDate(params.row.dateOfIncorporationRegistration),
+    },
+    {
+      field: 'cacNumber',
+      headerName: 'CAC Number',
+      width: 150,
+      renderCell: (params) => params.row.cacNumber || 'N/A',
     },
     {
       field: 'natureOfBusiness',
@@ -957,7 +964,7 @@ const CorporateCDDTable: React.FC = () => {
               size="small"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Search by company name, email, or incorporation number..."
+              placeholder="Search by company name, email, incorporation number, or CAC number..."
               sx={{ minWidth: 300 }}
             />
             <FormControl size="small" sx={{ minWidth: 150 }}>
