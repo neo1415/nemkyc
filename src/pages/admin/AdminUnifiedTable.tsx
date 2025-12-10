@@ -451,7 +451,8 @@ const fetchForms = async () => {
     const { form, action, comment } = approvalDialog;
     
     try {
-      const response = await fetch('https://nem-server-rhdb.onrender.com/api/update-claim-status', {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_BASE_URL}/api/update-claim-status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

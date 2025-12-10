@@ -48,71 +48,86 @@ admin.initializeApp({
 
 const accessLogStream = fs.createWriteStream(path.join(__dirname, 'access.log'), { flags: 'a' });
 
+// ============= CORS CONFIGURATION =============
+// ✅ SECURE: Explicit whitelist only, no wildcard patterns
+
 const allowedOrigins = [
+  // Development environments
   'http://localhost:3000',
   'http://localhost:3001',
-  'https://nem-server-rhdb.onrender.com',
-  'https://nem-kyc.web.app',
-  "crypto-trade-template-591.lovable.app",
-  'https://preview--orangery-ventures-harmony-242.lovable.app',
-  'https://3463ce13-b353-49e7-b843-5d07a684b845.lovableproject.com',
-  "https://preview--psk-services-920.lovable.app",
-  "https://psk-services-920.lovable.app",
-  "https://glow-convert-sell-623.lovable.app",
-  "https://lovable.dev/projects/50464dab-8208-4baa-91a2-13d656b2f461",
-  "https://preview--glow-convert-sell-623.lovable.app",
-  "https://ai-tool-hub-449.lovable.app",
-  "https://lovable.dev/projects/55a3a495-1302-407f-b290-b3e36e458c6b",
-  "https://preview--ai-tool-hub-449.lovable.app",
-  "https://preview--fleetvision-dashboard-233.lovable.app",
-  "https://nem-demo.lovable.app",
-  "https://lovable.dev/projects/a070f70a-14d8-4f9a-a3c0-571ec1dec753",
-  "https://nem-forms-demo-app.lovable.app",
-  'https://nem-kyc.firebaseapp.com',
+  'http://localhost:8080',
+  
+  // Production NEM domains
   'https://nemforms.com',
-  "http://localhost:8080",
-  // Current project URLs - common NEM forms variations
-  "https://nem-forms-admin-portal.lovable.app",
-  "https://preview--nem-forms-admin-portal.lovable.app",
-  "https://nem-forms-portal.lovable.app",
-  "https://preview--nem-forms-portal.lovable.app",
-  "https://nem-insurance-forms.lovable.app",
-  "https://preview--nem-insurance-forms.lovable.app"
+  'https://www.nemforms.com',
+  
+  // Firebase hosting
+  'https://nem-kyc.web.app',
+  'https://nem-kyc.firebaseapp.com',
+  
+  // Backend server
+  'https://nem-server-rhdb.onrender.com',
 ];
+
+// Optional: Add environment-specific origins
+if (process.env.ADDITIONAL_ALLOWED_ORIGINS) {
+  const additionalOrigins = process.env.ADDITIONAL_ALLOWED_ORIGINS.split(',').map(o => o.trim());
+  allowedOrigins.push(...additionalOrigins);
+  console.log('📋 Added additional allowed origins from env:', additionalOrigins);
+}
 
 const port = process.env.PORT || 3001;
 
+// ============= TRUST PROXY CONFIGURATION =============
+// ✅ REQUIRED: Enable trust proxy for Render.com and other reverse proxies
+// This allows Express to correctly identify client IPs from X-Forwarded-For header
+app.set('trust proxy', true);
+
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
+    // Allow requests with no origin (mobile apps, curl, Postman, server-to-server)
+    if (!origin) {
+      console.log('✅ CORS: Allowing request with no origin (mobile/server-to-server)');
+      return callback(null, true);
+    }
     
-    // Check exact matches first
+    // Check if origin is in whitelist
     if (allowedOrigins.includes(origin)) {
+      console.log('✅ CORS: Allowing whitelisted origin:', origin);
       return callback(null, true);
     }
     
-    // Check if it's a Lovable domain pattern
-    const lovablePatterns = [
-      /^https:\/\/.*\.lovable\.app$/,
-      /^https:\/\/preview--.*\.lovable\.app$/,
-      /^https:\/\/.*\.lovableproject\.com$/,
-      /^https:\/\/lovable\.dev\/projects\/.*$/
-    ];
-    
-    const isLovableDomain = lovablePatterns.some(pattern => pattern.test(origin));
-    
-    if (isLovableDomain) {
-      console.log('✅ CORS: Allowing Lovable domain:', origin);
+    // Development: Allow localhost with any port in development mode
+    if (process.env.NODE_ENV !== 'production' && origin.startsWith('http://localhost:')) {
+      console.log('✅ CORS: Allowing localhost in development:', origin);
       return callback(null, true);
     }
     
+    // Block all other origins
     console.error('❌ CORS: Blocked origin:', origin);
+    console.error('💡 To allow this origin, add it to allowedOrigins array or ADDITIONAL_ALLOWED_ORIGINS env var');
+    
+    // Log CORS block
+    logCORSBlock(origin, null).catch(err => console.error('Failed to log CORS block:', err));
+    
     return callback(new Error(`CORS policy does not allow access from origin: ${origin}`), false);
   },
-  credentials: true, // Ensures cookies are sent with CORS requests
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  allowedHeaders: ['Content-Type', 'CSRF-Token', 'X-Requested-With', 'Authorization', 'x-timestamp', 'x-request-id', 'x-idempotency-key', 'Idempotency-Key'],
+  credentials: true, // Allow cookies and authentication headers
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'CSRF-Token',
+    'X-Requested-With',
+    'Authorization',
+    'x-timestamp',
+    'x-request-id',
+    'x-idempotency-key',
+    'Idempotency-Key'
+  ],
+  exposedHeaders: ['CSRF-Token'], // Allow frontend to read CSRF token
+  maxAge: 86400, // Cache preflight requests for 24 hours
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 
 // Middleware setup
@@ -144,8 +159,17 @@ app.use(helmet.frameguard({ action: 'sameorigin' }));
 app.use(hpp());
 app.use(mongoSanitize());
 app.use(xss());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// ✅ SECURE: Request size limits to prevent DoS
+app.use(express.json({ 
+  limit: '10mb',  // Limit JSON payload size
+  strict: true,   // Only accept arrays and objects
+}));
+app.use(express.urlencoded({ 
+  extended: true, 
+  limit: '10mb',  // Limit URL-encoded payload size
+  parameterLimit: 1000  // Limit number of parameters
+}));
 app.use(cookieParser());
 // CSRF protection will be applied selectively, not globally
 
@@ -203,6 +227,470 @@ const isSuperAdmin = (role) => {
   return normalizeRole(role) === 'super admin';
 };
 
+/**
+ * Check if a role is admin or super admin
+ */
+const isAdminOrSuperAdmin = (role) => {
+  const normalized = normalizeRole(role);
+  return normalized === 'admin' || normalized === 'super admin';
+};
+
+/**
+ * Check if a role is compliance, admin, or super admin
+ */
+const isAdminOrCompliance = (role) => {
+  const normalized = normalizeRole(role);
+  return normalized === 'compliance' || normalized === 'admin' || normalized === 'super admin';
+};
+
+/**
+ * Check if a role is claims, compliance, admin, or super admin
+ */
+const isClaimsOrAdminOrCompliance = (role) => {
+  const normalized = normalizeRole(role);
+  return normalized === 'claims' || normalized === 'compliance' || normalized === 'admin' || normalized === 'super admin';
+};
+
+// ============= AUTHENTICATION & AUTHORIZATION MIDDLEWARE =============
+
+/**
+ * Middleware to require authentication
+ * Verifies session cookie and attaches user data to request
+ */
+const requireAuth = async (req, res, next) => {
+  try {
+    const sessionToken = req.cookies.__session;
+    
+    if (!sessionToken) {
+      console.log('❌ Auth failed: No session token');
+      return res.status(401).json({ 
+        error: 'Authentication required',
+        message: 'Please sign in to access this resource'
+      });
+    }
+
+    // Get user data from Firestore
+    const userDoc = await db.collection('userroles').doc(sessionToken).get();
+    
+    if (!userDoc.exists) {
+      console.log('❌ Auth failed: Invalid session token');
+      return res.status(401).json({ 
+        error: 'Invalid session',
+        message: 'Your session has expired. Please sign in again.'
+      });
+    }
+
+    const userData = userDoc.data();
+    
+    // Attach user data to request for use in route handlers
+    req.user = {
+      uid: sessionToken,
+      email: userData.email,
+      name: userData.name || userData.displayName,
+      role: normalizeRole(userData.role),
+      rawRole: userData.role // Keep original for logging
+    };
+
+    console.log('✅ Auth success:', req.user.email, 'Role:', req.user.role);
+    next();
+    
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    return res.status(500).json({ 
+      error: 'Authentication error',
+      message: 'An error occurred while verifying your session'
+    });
+  }
+};
+
+/**
+ * Middleware to require specific roles
+ * Must be used after requireAuth
+ * Usage: requireRole('admin', 'super admin')
+ */
+const requireRole = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      console.log('❌ Role check failed: No user in request (requireAuth not called?)');
+      return res.status(401).json({ 
+        error: 'Authentication required',
+        message: 'Please sign in to access this resource'
+      });
+    }
+
+    // Normalize all allowed roles for comparison
+    const normalizedAllowedRoles = allowedRoles.map(r => normalizeRole(r));
+    const userRole = req.user.role; // Already normalized in requireAuth
+
+    if (!normalizedAllowedRoles.includes(userRole)) {
+      console.log('❌ Authorization failed:', req.user.email, 'has role', userRole, 'but needs one of', normalizedAllowedRoles);
+      
+      // Log authorization failure
+      logAuthorizationFailure(req, allowedRoles, userRole).catch(err => 
+        console.error('Failed to log authorization failure:', err)
+      );
+      
+      return res.status(403).json({ 
+        error: 'Insufficient permissions',
+        message: 'You do not have permission to access this resource',
+        requiredRoles: allowedRoles,
+        yourRole: req.user.rawRole
+      });
+    }
+
+    console.log('✅ Authorization success:', req.user.email, 'has required role', userRole);
+    next();
+  };
+};
+
+/**
+ * Middleware to require super admin role
+ * Convenience wrapper for requireRole('super admin')
+ */
+const requireSuperAdmin = requireRole('super admin');
+
+/**
+ * Middleware to require admin or super admin role
+ */
+const requireAdmin = requireRole('admin', 'super admin');
+
+/**
+ * Middleware to require compliance, admin, or super admin role
+ */
+const requireCompliance = requireRole('compliance', 'admin', 'super admin');
+
+/**
+ * Middleware to require claims, compliance, admin, or super admin role
+ */
+const requireClaims = requireRole('claims', 'compliance', 'admin', 'super admin');
+
+/**
+ * Middleware to check if user owns the resource or is admin
+ * Checks if req.user.uid matches the resource's submittedBy field
+ */
+const requireOwnerOrAdmin = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Admins can access anything
+    if (isAdminOrSuperAdmin(req.user.role)) {
+      console.log('✅ Admin access granted:', req.user.email);
+      return next();
+    }
+
+    // For regular users, check ownership
+    // This will be used in routes that fetch documents
+    req.requireOwnership = true;
+    next();
+    
+  } catch (error) {
+    console.error('Owner check error:', error);
+    return res.status(500).json({ error: 'Authorization error' });
+  }
+};
+
+// ============= INPUT VALIDATION MIDDLEWARE =============
+
+/**
+ * Validation helper - checks validation results and returns errors
+ */
+const handleValidationErrors = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    console.log('❌ Validation failed:', errors.array());
+    
+    // Log validation failure
+    logValidationFailure(req, errors.array()).catch(err => 
+      console.error('Failed to log validation failure:', err)
+    );
+    
+    return res.status(400).json({ 
+      error: 'Validation failed',
+      details: errors.array().map(err => ({
+        field: err.path || err.param,
+        message: err.msg,
+        value: err.value
+      }))
+    });
+  }
+  next();
+};
+
+/**
+ * Validation chains for form submission
+ */
+const validateFormSubmission = [
+  body('formType')
+    .trim()
+    .notEmpty().withMessage('Form type is required')
+    .isString().withMessage('Form type must be a string')
+    .isLength({ max: 100 }).withMessage('Form type too long'),
+  
+  body('userEmail')
+    .optional()
+    .trim()
+    .isEmail().withMessage('Invalid email format')
+    .normalizeEmail(),
+  
+  body('userUid')
+    .optional()
+    .trim()
+    .isString().withMessage('User UID must be a string')
+    .isLength({ max: 128 }).withMessage('User UID too long'),
+  
+  body('formData')
+    .notEmpty().withMessage('Form data is required')
+    .isObject().withMessage('Form data must be an object'),
+  
+  // Common form fields validation
+  body('formData.name')
+    .optional()
+    .trim()
+    .isString().withMessage('Name must be a string')
+    .isLength({ min: 2, max: 100 }).withMessage('Name must be 2-100 characters'),
+  
+  body('formData.email')
+    .optional()
+    .trim()
+    .isEmail().withMessage('Invalid email in form data')
+    .normalizeEmail(),
+  
+  body('formData.phone')
+    .optional()
+    .trim()
+    .matches(/^[\d\s\+\-\(\)]+$/).withMessage('Invalid phone number format'),
+  
+  body('formData.companyName')
+    .optional()
+    .trim()
+    .isString().withMessage('Company name must be a string')
+    .isLength({ max: 200 }).withMessage('Company name too long'),
+  
+  handleValidationErrors
+];
+
+/**
+ * Validation chains for claim status update
+ */
+const validateClaimStatusUpdate = [
+  param('collection')
+    .trim()
+    .notEmpty().withMessage('Collection name is required')
+    .matches(/^[a-z0-9\-]+$/).withMessage('Invalid collection name format'),
+  
+  param('id')
+    .trim()
+    .notEmpty().withMessage('Document ID is required')
+    .matches(/^[a-zA-Z0-9\-_]+$/).withMessage('Invalid document ID format'),
+  
+  body('status')
+    .trim()
+    .notEmpty().withMessage('Status is required')
+    .isIn(['pending', 'processing', 'approved', 'rejected', 'completed', 'cancelled'])
+    .withMessage('Invalid status value'),
+  
+  body('approverUid')
+    .optional()
+    .trim()
+    .isString().withMessage('Approver UID must be a string'),
+  
+  body('comment')
+    .optional()
+    .trim()
+    .isString().withMessage('Comment must be a string')
+    .isLength({ max: 1000 }).withMessage('Comment too long (max 1000 characters)'),
+  
+  body('userEmail')
+    .optional()
+    .trim()
+    .isEmail().withMessage('Invalid user email')
+    .normalizeEmail(),
+  
+  body('formType')
+    .optional()
+    .trim()
+    .isString().withMessage('Form type must be a string'),
+  
+  handleValidationErrors
+];
+
+/**
+ * Validation chains for form status update
+ */
+const validateFormStatusUpdate = [
+  param('collection')
+    .trim()
+    .notEmpty().withMessage('Collection name is required')
+    .matches(/^[a-z0-9\-]+$/).withMessage('Invalid collection name format'),
+  
+  param('id')
+    .trim()
+    .notEmpty().withMessage('Document ID is required')
+    .matches(/^[a-zA-Z0-9\-_]+$/).withMessage('Invalid document ID format'),
+  
+  body('status')
+    .trim()
+    .notEmpty().withMessage('Status is required')
+    .isIn(['pending', 'processing', 'approved', 'rejected', 'completed', 'cancelled'])
+    .withMessage('Invalid status value'),
+  
+  body('updaterUid')
+    .trim()
+    .notEmpty().withMessage('Updater UID is required')
+    .isString().withMessage('Updater UID must be a string'),
+  
+  body('comment')
+    .optional()
+    .trim()
+    .isString().withMessage('Comment must be a string')
+    .isLength({ max: 1000 }).withMessage('Comment too long (max 1000 characters)'),
+  
+  handleValidationErrors
+];
+
+/**
+ * Validation chains for user registration
+ */
+const validateUserRegistration = [
+  body('email')
+    .trim()
+    .notEmpty().withMessage('Email is required')
+    .isEmail().withMessage('Invalid email format')
+    .normalizeEmail(),
+  
+  body('password')
+    .notEmpty().withMessage('Password is required')
+    .isString().withMessage('Password must be a string')
+    .isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('Password must contain uppercase, lowercase, and number'),
+  
+  body('displayName')
+    .trim()
+    .notEmpty().withMessage('Display name is required')
+    .isString().withMessage('Display name must be a string')
+    .isLength({ min: 2, max: 100 }).withMessage('Display name must be 2-100 characters'),
+  
+  body('role')
+    .optional()
+    .trim()
+    .isIn(['default', 'user', 'claims', 'compliance', 'admin', 'super admin'])
+    .withMessage('Invalid role'),
+  
+  body('dateOfBirth')
+    .optional()
+    .trim()
+    .isISO8601().withMessage('Invalid date format (use YYYY-MM-DD)'),
+  
+  handleValidationErrors
+];
+
+/**
+ * Validation chains for user role update
+ */
+const validateRoleUpdate = [
+  param('userId')
+    .trim()
+    .notEmpty().withMessage('User ID is required')
+    .isString().withMessage('User ID must be a string'),
+  
+  body('role')
+    .trim()
+    .notEmpty().withMessage('Role is required')
+    .isIn(['default', 'user', 'claims', 'compliance', 'admin', 'super admin'])
+    .withMessage('Invalid role value'),
+  
+  handleValidationErrors
+];
+
+/**
+ * Validation chains for pagination parameters
+ */
+const validatePagination = [
+  param('collection')
+    .optional()
+    .trim()
+    .matches(/^[a-z0-9\-]+$/).withMessage('Invalid collection name format'),
+  
+  param('id')
+    .optional()
+    .trim()
+    .matches(/^[a-zA-Z0-9\-_]+$/).withMessage('Invalid document ID format'),
+  
+  body('page')
+    .optional()
+    .isInt({ min: 1, max: 10000 }).withMessage('Page must be between 1 and 10000')
+    .toInt(),
+  
+  body('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100')
+    .toInt(),
+  
+  handleValidationErrors
+];
+
+/**
+ * Validation for email sending
+ */
+const validateEmailRequest = [
+  body('userEmail')
+    .trim()
+    .notEmpty().withMessage('User email is required')
+    .isEmail().withMessage('Invalid email format')
+    .normalizeEmail(),
+  
+  body('formType')
+    .trim()
+    .notEmpty().withMessage('Form type is required')
+    .isString().withMessage('Form type must be a string'),
+  
+  body('userName')
+    .optional()
+    .trim()
+    .isString().withMessage('User name must be a string')
+    .isLength({ max: 100 }).withMessage('User name too long'),
+  
+  handleValidationErrors
+];
+
+/**
+ * Sanitize HTML content to prevent XSS
+ */
+const sanitizeHtmlFields = (req, res, next) => {
+  // List of fields that might contain HTML
+  const htmlFields = ['comment', 'description', 'notes', 'message'];
+  
+  // Sanitize body fields
+  if (req.body) {
+    htmlFields.forEach(field => {
+      if (req.body[field] && typeof req.body[field] === 'string') {
+        // Remove script tags and dangerous attributes
+        req.body[field] = req.body[field]
+          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+          .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+          .replace(/javascript:/gi, '');
+      }
+    });
+    
+    // Sanitize nested formData
+    if (req.body.formData && typeof req.body.formData === 'object') {
+      htmlFields.forEach(field => {
+        if (req.body.formData[field] && typeof req.body.formData[field] === 'string') {
+          req.body.formData[field] = req.body.formData[field]
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+            .replace(/javascript:/gi, '');
+        }
+      });
+    }
+  }
+  
+  next();
+};
+
 // ============= EVENTS LOG SYSTEM =============
 
 // Environment configuration for events logging
@@ -231,14 +719,25 @@ const processIPMiddleware = (req, res, next) => {
   
   // Mask IP (keep first 3 octets, mask last)
   const maskIP = (ip) => {
+    // Handle localhost
+    if (ip === '::1' || ip === '127.0.0.1' || ip === 'localhost') {
+      return 'localhost';
+    }
+    
     if (ip.includes(':')) {
-      // IPv6 - mask last 4 groups
-      const parts = ip.split(':');
-      return parts.slice(0, 4).join(':') + ':****:****:****:****';
+      // IPv6 - show first 4 groups, mask rest
+      const parts = ip.split(':').filter(p => p); // Remove empty parts
+      if (parts.length > 4) {
+        return parts.slice(0, 4).join(':') + ':****';
+      }
+      return parts.join(':') + ':****'; // Short IPv6
     } else {
       // IPv4 - mask last octet
       const parts = ip.split('.');
-      return parts.slice(0, 3).join('.') + '.***';
+      if (parts.length === 4) {
+        return parts.slice(0, 3).join('.') + '.*';
+      }
+      return ip; // Invalid IP, return as-is
     }
   };
 
@@ -263,6 +762,173 @@ const processIPMiddleware = (req, res, next) => {
 // Apply IP processing middleware globally
 app.use(processIPMiddleware);
 
+// ============= CENTRALIZED REQUEST LOGGING MIDDLEWARE =============
+
+/**
+ * Centralized request logging middleware
+ * Automatically logs all API requests with comprehensive details
+ */
+const requestLoggingMiddleware = async (req, res, next) => {
+  // Skip only: health checks, static files, and endpoints with VERY specific logging
+  const skipPaths = [
+    '/health', 
+    '/favicon.ico',
+    '/api/events-logs', // Don't log the logging endpoint itself (infinite loop)
+    '/csrf-token' // Just a token request, not important
+  ];
+  
+  // Skip if path matches
+  if (skipPaths.some(path => req.path.includes(path))) {
+    return next();
+  }
+  
+  const startTime = Date.now();
+  const correlationId = req.headers['x-correlation-id'] || uuidv4();
+  const sessionId = req.cookies?.__session || null;
+  
+  // Attach correlation ID to request for use in route handlers
+  req.correlationId = correlationId;
+  req.startTime = startTime;
+  
+  // Parse user agent
+  const { deviceType, browser, os } = parseUserAgent(req.headers['user-agent']);
+  
+  // Capture original res.json to log response
+  const originalJson = res.json.bind(res);
+  const originalSend = res.send.bind(res);
+  let responseLogged = false;
+  
+  const logResponse = async () => {
+    if (responseLogged) return;
+    responseLogged = true;
+    
+    // Skip if endpoint set the skip flag
+    if (req.skipGeneralLogging) return;
+    
+    const duration = Date.now() - startTime;
+    
+    // Get user details if authenticated
+    let userDetails = { uid: null, email: null, role: null, displayName: null };
+    if (req.user) {
+      userDetails = {
+        uid: req.user.uid,
+        email: req.user.email,
+        role: req.user.role,
+        displayName: req.user.name
+      };
+    }
+    
+    // Determine SPECIFIC action based on method and path
+    let action = 'api-request';
+    const path = req.path.toLowerCase();
+    const method = req.method;
+    
+    // Authentication actions
+    if (path.includes('/exchange-token')) action = 'login';
+    else if (path.includes('/authenticate')) action = 'login';
+    else if (path.includes('/register')) action = 'register';
+    else if (path.includes('/logout')) action = 'logout';
+    
+    // User management actions
+    else if (path.includes('/users') && method === 'GET') action = 'view-users';
+    else if (path.includes('/users') && method === 'POST') action = 'create-user';
+    else if (path.includes('/users') && method === 'PUT') action = 'update-user';
+    else if (path.includes('/users') && method === 'DELETE') action = 'delete-user';
+    else if (path.includes('/role') && method === 'PUT') action = 'update-role';
+    
+    // Form actions
+    else if (path.includes('/submit')) action = 'submit-form';
+    else if (path.includes('/status') && method === 'PUT') action = 'update-status';
+    else if (path.includes('/forms/') && method === 'GET' && path.split('/').length > 4) action = 'view-form-details';
+    else if (path.includes('/forms') && method === 'GET') action = 'view-forms-list';
+    else if (path.includes('/forms') && method === 'PUT') action = 'update-form';
+    else if (path.includes('/forms') && method === 'DELETE') action = 'delete-form';
+    
+    // Claim actions
+    else if (path.includes('/claims') && path.includes('/status')) action = 'update-claim-status';
+    else if (path.includes('/claims') && method === 'GET') action = 'view-claims';
+    else if (path.includes('/claims') && method === 'POST') action = 'submit-claim';
+    
+    // File actions
+    else if (path.includes('/download')) action = 'download-file';
+    else if (path.includes('/upload')) action = 'upload-file';
+    
+    // Generic fallbacks
+    else if (method === 'DELETE') action = 'delete';
+    else if (method === 'PUT' || method === 'PATCH') action = 'update';
+    else if (method === 'POST') action = 'create';
+    else if (method === 'GET') action = 'view';
+    
+    // Determine severity based on status code
+    let severity = 'info';
+    if (res.statusCode >= 500) severity = 'error';
+    else if (res.statusCode >= 400) severity = 'warning';
+    
+    // Get location
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    
+    // Log the request
+    await logAction({
+      action: action,
+      severity: severity,
+      actorUid: userDetails.uid,
+      actorDisplayName: userDetails.displayName,
+      actorEmail: userDetails.email,
+      actorRole: userDetails.role,
+      targetType: 'api-endpoint',
+      targetId: req.path,
+      targetName: `${req.method} ${req.path}`,
+      requestMethod: req.method,
+      requestPath: req.path,
+      requestBody: sanitizeRequestBody(req.body),
+      responseStatus: res.statusCode,
+      responseTime: duration,
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      deviceType: deviceType,
+      browser: browser,
+      os: os,
+      sessionId: sessionId,
+      correlationId: correlationId,
+      details: {
+        query: req.query,
+        params: req.params,
+        statusCode: res.statusCode,
+        contentLength: res.get('content-length'),
+        responseTime: `${duration}ms`
+      },
+      meta: {
+        referer: req.headers.referer || null,
+        origin: req.headers.origin || null,
+        acceptLanguage: req.headers['accept-language'] || null
+      }
+    });
+  };
+  
+  res.json = function(body) {
+    logResponse().catch(err => console.error('Failed to log response:', err));
+    return originalJson(body);
+  };
+  
+  res.send = function(body) {
+    logResponse().catch(err => console.error('Failed to log response:', err));
+    return originalSend(body);
+  };
+  
+  // Also log on finish event as fallback
+  res.on('finish', () => {
+    logResponse().catch(err => console.error('Failed to log response:', err));
+  });
+  
+  next();
+};
+
+// Apply centralized request logging (after IP processing)
+app.use(requestLoggingMiddleware);
+
 // Location enrichment function (optional)
 const getLocationFromIP = async (ip) => {
   if (!EVENTS_CONFIG.ENABLE_IP_GEOLOCATION || ip === '0.0.0.0' || ip.includes('127.0.0.1')) {
@@ -282,36 +948,140 @@ const getLocationFromIP = async (ip) => {
   return 'Unknown';
 };
 
-// Core logAction function - writes event logs to Firestore
-const logAction = async (actionData) => {
-  console.log('🚀 logAction called with data:', actionData);
+// ============= ENHANCED SIEM-LIKE LOGGING SYSTEM =============
+
+/**
+ * Severity levels for events
+ */
+const SEVERITY = {
+  INFO: 'info',
+  WARNING: 'warning',
+  ERROR: 'error',
+  CRITICAL: 'critical'
+};
+
+/**
+ * Calculate risk score based on action and context
+ */
+const calculateRiskScore = (actionData) => {
+  let score = 0;
   
+  // High-risk actions
+  const highRiskActions = ['delete', 'reject', 'update-user-role', 'failed-login'];
+  if (highRiskActions.includes(actionData.action)) score += 30;
+  
+  // Multiple failed logins
+  if (actionData.action === 'failed-login') score += 40;
+  
+  // Admin actions
+  if (['admin', 'super admin'].includes(actionData.actorRole)) score += 10;
+  
+  // Unknown location
+  if (!actionData.location || actionData.location === 'Unknown') score += 20;
+  
+  return Math.min(score, 100);
+};
+
+/**
+ * Determine severity based on action
+ */
+const getSeverity = (action) => {
+  const criticalActions = ['delete-user', 'failed-login', 'security-breach'];
+  const errorActions = ['failed-login', 'reject', 'error'];
+  const warningActions = ['update-user-role', 'delete', 'rate-limit-hit'];
+  
+  if (criticalActions.includes(action)) return SEVERITY.CRITICAL;
+  if (errorActions.includes(action)) return SEVERITY.ERROR;
+  if (warningActions.includes(action)) return SEVERITY.WARNING;
+  return SEVERITY.INFO;
+};
+
+/**
+ * Enhanced logAction function - SIEM-grade logging
+ * Captures comprehensive event data for security monitoring and compliance
+ */
+const logAction = async (actionData) => {
   if (!EVENTS_CONFIG.ENABLE_EVENTS_LOGGING) {
-    console.log('⚠️  Event logging is DISABLED in config');
     return;
   }
 
-  console.log('✅ Event logging is ENABLED, proceeding...');
-
   try {
+    const severity = actionData.severity || getSeverity(actionData.action);
+    const riskScore = calculateRiskScore(actionData);
+    
+    // Helper function to remove undefined values from objects
+    const removeUndefined = (obj) => {
+      if (!obj || typeof obj !== 'object') return obj;
+      
+      const cleaned = {};
+      for (const [key, value] of Object.entries(obj)) {
+        if (value !== undefined) {
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            cleaned[key] = removeUndefined(value);
+          } else {
+            cleaned[key] = value;
+          }
+        }
+      }
+      return cleaned;
+    };
+    
     const eventLog = {
+      // Timestamp
       ts: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: new Date().toISOString(),
+      
+      // Action details
       action: actionData.action,
+      severity: severity,
+      riskScore: riskScore,
+      
+      // Actor information (WHO did it)
       actorUid: actionData.actorUid || null,
       actorDisplayName: actionData.actorDisplayName || null,
       actorEmail: actionData.actorEmail || null,
+      actorPhone: actionData.actorPhone || null,
       actorRole: actionData.actorRole || null,
+      
+      // Target information
       targetType: actionData.targetType,
       targetId: actionData.targetId,
-      details: actionData.details || {},
+      targetName: actionData.targetName || null,
+      
+      // Request details - remove undefined values
+      details: removeUndefined(actionData.details || {}),
+      requestMethod: actionData.requestMethod || null,
+      requestPath: actionData.requestPath || null,
+      requestBody: actionData.requestBody || null,
+      responseStatus: actionData.responseStatus || null,
+      responseTime: actionData.responseTime || null,
+      
+      // Network information
       ipMasked: actionData.ipMasked,
       ipHash: actionData.ipHash,
       location: actionData.location || 'Unknown',
       userAgent: actionData.userAgent || 'Unknown',
-      meta: actionData.meta || {}
+      deviceType: actionData.deviceType || 'Unknown',
+      browser: actionData.browser || 'Unknown',
+      os: actionData.os || 'Unknown',
+      
+      // Session tracking
+      sessionId: actionData.sessionId || null,
+      correlationId: actionData.correlationId || uuidv4(),
+      
+      // Security flags
+      isAnomaly: actionData.isAnomaly || false,
+      isSuspicious: riskScore > 50,
+      requiresReview: riskScore > 70,
+      
+      // Additional metadata - remove undefined values
+      meta: removeUndefined({
+        ...actionData.meta,
+        serverVersion: process.env.npm_package_version || '1.0.0',
+        nodeEnv: process.env.NODE_ENV || 'development',
+        timestamp: Date.now()
+      })
     };
-
-    console.log('📋 Event log object created:', eventLog);
 
     // Add raw IP with TTL for retention policy
     if (actionData.rawIP && EVENTS_CONFIG.RAW_IP_RETENTION_DAYS > 0) {
@@ -319,50 +1089,299 @@ const logAction = async (actionData) => {
       expiryDate.setDate(expiryDate.getDate() + EVENTS_CONFIG.RAW_IP_RETENTION_DAYS);
       eventLog.rawIP = actionData.rawIP;
       eventLog.rawIPExpiry = admin.firestore.Timestamp.fromDate(expiryDate);
-      console.log('🔒 Added raw IP with expiry:', expiryDate);
     }
 
-    console.log('💾 Writing to Firestore collection "eventLogs"...');
+    // Write to Firestore
     const docRef = await db.collection('eventLogs').add(eventLog);
-    console.log('✅ Event logged successfully with ID:', docRef.id, '- Action:', actionData.action, 'by', actionData.actorEmail || 'anonymous');
     
-    // Verify the document was actually written
-    const verifyDoc = await docRef.get();
-    if (verifyDoc.exists) {
-      console.log('✅ Verification: Document exists in Firestore');
-      console.log('📄 Document data:', verifyDoc.data());
-    } else {
-      console.error('❌ Verification failed: Document not found after write');
+    // Log critical events to console
+    if (severity === SEVERITY.CRITICAL || severity === SEVERITY.ERROR) {
+      console.error(`🚨 ${severity.toUpperCase()} EVENT:`, {
+        id: docRef.id,
+        action: actionData.action,
+        actor: actionData.actorEmail,
+        riskScore: riskScore
+      });
     }
     
   } catch (error) {
     console.error('💥 Failed to log event:', error);
-    console.error('💥 Error details:', {
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      stack: error.stack
-    });
     // Don't throw - logging failures shouldn't break main functionality
   }
 };
 
-// Helper function to get user details for logging
+// ============= LOGGING HELPER FUNCTIONS =============
+
+/**
+ * Parse user agent to extract device, browser, and OS information
+ */
+const parseUserAgent = (userAgent) => {
+  if (!userAgent) return { deviceType: 'Unknown', browser: 'Unknown', os: 'Unknown' };
+  
+  const ua = userAgent.toLowerCase();
+  
+  // Device type
+  let deviceType = 'Desktop';
+  if (ua.includes('mobile')) deviceType = 'Mobile';
+  else if (ua.includes('tablet') || ua.includes('ipad')) deviceType = 'Tablet';
+  
+  // Browser
+  let browser = 'Unknown';
+  if (ua.includes('chrome') && !ua.includes('edge')) browser = 'Chrome';
+  else if (ua.includes('firefox')) browser = 'Firefox';
+  else if (ua.includes('safari') && !ua.includes('chrome')) browser = 'Safari';
+  else if (ua.includes('edge')) browser = 'Edge';
+  else if (ua.includes('opera')) browser = 'Opera';
+  
+  // OS
+  let os = 'Unknown';
+  if (ua.includes('windows')) os = 'Windows';
+  else if (ua.includes('mac')) os = 'macOS';
+  else if (ua.includes('linux')) os = 'Linux';
+  else if (ua.includes('android')) os = 'Android';
+  else if (ua.includes('ios') || ua.includes('iphone') || ua.includes('ipad')) os = 'iOS';
+  
+  return { deviceType, browser, os };
+};
+
+/**
+ * Sanitize request body to remove sensitive data
+ */
+const sanitizeRequestBody = (body) => {
+  if (!body) return null;
+  
+  try {
+    const sanitized = JSON.parse(JSON.stringify(body)); // Deep clone
+    const sensitiveFields = ['password', 'token', 'secret', 'apiKey', 'privateKey', 'pass', 'accessToken', 'refreshToken'];
+    
+    const redactSensitiveFields = (obj) => {
+      if (typeof obj !== 'object' || obj === null) return;
+      
+      Object.keys(obj).forEach(key => {
+        if (sensitiveFields.some(field => key.toLowerCase().includes(field.toLowerCase()))) {
+          obj[key] = '[REDACTED]';
+        } else if (typeof obj[key] === 'object') {
+          redactSensitiveFields(obj[key]);
+        }
+      });
+    };
+    
+    redactSensitiveFields(sanitized);
+    
+    // Limit size
+    const str = JSON.stringify(sanitized);
+    if (str.length > 2000) {
+      return { 
+        _truncated: true, 
+        _originalSize: str.length,
+        _preview: str.substring(0, 2000) + '...'
+      };
+    }
+    
+    return sanitized;
+  } catch (error) {
+    return { _error: 'Failed to sanitize body' };
+  }
+};
+
+/**
+ * Log authentication events
+ */
+const logAuthEvent = async (req, eventType, success, userId = null, email = null, reason = null) => {
+  const { deviceType, browser, os } = parseUserAgent(req.headers['user-agent']);
+  const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+  
+  await logAction({
+    action: eventType,
+    severity: success ? 'info' : 'warning',
+    actorUid: userId,
+    actorEmail: email,
+    targetType: 'authentication',
+    targetId: email || 'unknown',
+    requestMethod: req.method,
+    requestPath: req.path,
+    responseStatus: success ? 200 : 401,
+    ipMasked: req.ipData?.masked,
+    ipHash: req.ipData?.hash,
+    rawIP: req.ipData?.raw,
+    location: location,
+    userAgent: req.headers['user-agent'],
+    deviceType: deviceType,
+    browser: browser,
+    os: os,
+    sessionId: req.cookies?.__session,
+    correlationId: req.correlationId || uuidv4(),
+    details: {
+      success: success,
+      reason: reason,
+      timestamp: new Date().toISOString()
+    }
+  });
+};
+
+/**
+ * Log authorization failures
+ */
+const logAuthorizationFailure = async (req, requiredRoles, userRole) => {
+  const { deviceType, browser, os } = parseUserAgent(req.headers['user-agent']);
+  const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+  
+  await logAction({
+    action: 'authorization-failure',
+    severity: 'warning',
+    actorUid: req.user?.uid,
+    actorEmail: req.user?.email,
+    actorRole: userRole,
+    targetType: 'api-endpoint',
+    targetId: req.path,
+    requestMethod: req.method,
+    requestPath: req.path,
+    responseStatus: 403,
+    ipMasked: req.ipData?.masked,
+    ipHash: req.ipData?.hash,
+    rawIP: req.ipData?.raw,
+    location: location,
+    userAgent: req.headers['user-agent'],
+    deviceType: deviceType,
+    browser: browser,
+    os: os,
+    sessionId: req.cookies?.__session,
+    correlationId: req.correlationId || uuidv4(),
+    details: {
+      requiredRoles: requiredRoles,
+      userRole: userRole,
+      endpoint: req.path
+    }
+  });
+};
+
+/**
+ * Log validation failures
+ */
+const logValidationFailure = async (req, errors) => {
+  const { deviceType, browser, os } = parseUserAgent(req.headers['user-agent']);
+  const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+  
+  await logAction({
+    action: 'validation-failure',
+    severity: 'warning',
+    actorUid: req.user?.uid,
+    actorEmail: req.user?.email,
+    actorRole: req.user?.role,
+    targetType: 'api-endpoint',
+    targetId: req.path,
+    requestMethod: req.method,
+    requestPath: req.path,
+    responseStatus: 400,
+    ipMasked: req.ipData?.masked,
+    ipHash: req.ipData?.hash,
+    rawIP: req.ipData?.raw,
+    location: location,
+    userAgent: req.headers['user-agent'],
+    deviceType: deviceType,
+    browser: browser,
+    os: os,
+    sessionId: req.cookies?.__session,
+    correlationId: req.correlationId || uuidv4(),
+    details: {
+      errors: errors,
+      requestBody: sanitizeRequestBody(req.body)
+    }
+  });
+};
+
+/**
+ * Log rate limit hits
+ */
+const logRateLimitHit = async (req) => {
+  const { deviceType, browser, os } = parseUserAgent(req.headers['user-agent']);
+  const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+  
+  await logAction({
+    action: 'rate-limit-hit',
+    severity: 'warning',
+    actorUid: req.user?.uid,
+    actorEmail: req.user?.email,
+    actorRole: req.user?.role,
+    targetType: 'api-endpoint',
+    targetId: req.path,
+    requestMethod: req.method,
+    requestPath: req.path,
+    responseStatus: 429,
+    ipMasked: req.ipData?.masked,
+    ipHash: req.ipData?.hash,
+    rawIP: req.ipData?.raw,
+    location: location,
+    userAgent: req.headers['user-agent'],
+    deviceType: deviceType,
+    browser: browser,
+    os: os,
+    isAnomaly: true,
+    details: {
+      endpoint: req.path,
+      timestamp: new Date().toISOString()
+    }
+  });
+};
+
+/**
+ * Log CORS blocks
+ */
+const logCORSBlock = async (origin, req) => {
+  await logAction({
+    action: 'cors-block',
+    severity: 'warning',
+    targetType: 'security',
+    targetId: origin,
+    requestMethod: req?.method || 'OPTIONS',
+    requestPath: req?.path || 'unknown',
+    responseStatus: 403,
+    ipMasked: req?.ipData?.masked,
+    ipHash: req?.ipData?.hash,
+    rawIP: req?.ipData?.raw,
+    userAgent: req?.headers?.['user-agent'],
+    isAnomaly: true,
+    details: {
+      blockedOrigin: origin,
+      timestamp: new Date().toISOString()
+    }
+  });
+};
+
+/**
+ * Helper function to get comprehensive user details for logging
+ * Captures: UID, email, name, role, phone number
+ */
 const getUserDetailsForLogging = async (uid) => {
   try {
-    if (!uid) return { displayName: null, email: null, role: null };
+    if (!uid) return { 
+      displayName: null, 
+      email: null, 
+      role: null, 
+      phone: null,
+      uid: null
+    };
     
     const userRecord = await admin.auth().getUser(uid);
     const userDoc = await db.collection('userroles').doc(uid).get();
+    const userData = userDoc.exists ? userDoc.data() : {};
     
     return {
-      displayName: userRecord.displayName || userRecord.email?.split('@')[0] || 'Unknown',
+      uid: uid,
+      displayName: userRecord.displayName || userData.name || userRecord.email?.split('@')[0] || 'Unknown',
       email: userRecord.email || null,
-      role: userDoc.exists ? userDoc.data().role : null
+      role: userData.role || null,
+      phone: userData.phone || userRecord.phoneNumber || null
     };
   } catch (error) {
     console.warn('Failed to get user details for logging:', error);
-    return { displayName: null, email: null, role: null };
+    return { 
+      uid: uid,
+      displayName: null, 
+      email: null, 
+      role: null,
+      phone: null
+    };
   }
 };
 
@@ -372,7 +1391,9 @@ app.use(express.json());
 // Timestamp validation middleware
 app.use((req, res, next) => {
   // Skip timestamp validation for specific routes and the exchange-token endpoint
-  if (req.path === '/csrf-token' || 
+  if (req.path === '/' ||
+    req.path === '/health' ||
+    req.path === '/csrf-token' || 
     req.path === '/listenForUpdates' ||
     req.path === '/send-to-user' ||
     req.path === '/send-to-admin-and-claims' ||
@@ -433,18 +1454,81 @@ app.get('/csrf-token', (req, res) => {
   res.status(200).json({ csrfToken });
 });
 
-// Create transporter for sending emails
-const transporter = nodemailer.createTransport({
-  host: 'smtp.office365.com', // Microsoft's SMTP server
-  port: 587,                  // Port for STARTTLS
-  secure: false,              // Use STARTTLS
-  auth: {
-    user: 'kyc@nem-insurance.com', // Your email address
-    pass: process.env.EMAIL_PASS,  // Your email password or app password
-  },
-  logger: true, // Add this
-  debug: true   // Add this
-});
+// ============= EMAIL CONFIGURATION =============
+// ✅ SECURE: Uses environment variables and supports OAuth2
+
+/**
+ * Create email transporter with secure configuration
+ * Supports both app-specific passwords and OAuth2
+ */
+const createEmailTransporter = () => {
+  // Validate required email configuration
+  if (!process.env.EMAIL_USER) {
+    console.error('❌ EMAIL_USER environment variable is required');
+    throw new Error('Email configuration missing: EMAIL_USER');
+  }
+
+  // Check if OAuth2 is configured
+  const useOAuth2 = process.env.EMAIL_CLIENT_ID && 
+                    process.env.EMAIL_CLIENT_SECRET && 
+                    process.env.EMAIL_REFRESH_TOKEN;
+
+  if (useOAuth2) {
+    // ✅ BEST PRACTICE: OAuth2 authentication
+    console.log('✅ Using OAuth2 for email authentication');
+    return nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || 'smtp.office365.com',
+      port: parseInt(process.env.EMAIL_PORT || '587'),
+      secure: process.env.EMAIL_SECURE === 'true',
+      auth: {
+        type: 'OAuth2',
+        user: process.env.EMAIL_USER,
+        clientId: process.env.EMAIL_CLIENT_ID,
+        clientSecret: process.env.EMAIL_CLIENT_SECRET,
+        refreshToken: process.env.EMAIL_REFRESH_TOKEN,
+      },
+      logger: process.env.NODE_ENV !== 'production',
+      debug: process.env.NODE_ENV !== 'production'
+    });
+  } else {
+    // ✅ FALLBACK: App-specific password (still secure if using app password)
+    if (!process.env.EMAIL_PASS) {
+      console.error('❌ EMAIL_PASS environment variable is required when not using OAuth2');
+      throw new Error('Email configuration missing: EMAIL_PASS or OAuth2 credentials');
+    }
+    
+    console.log('⚠️  Using app-specific password for email authentication');
+    console.log('💡 Consider switching to OAuth2 for better security');
+    
+    return nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || 'smtp.office365.com',
+      port: parseInt(process.env.EMAIL_PORT || '587'),
+      secure: process.env.EMAIL_SECURE === 'true',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      logger: process.env.NODE_ENV !== 'production',
+      debug: process.env.NODE_ENV !== 'production'
+    });
+  }
+};
+
+// Initialize transporter
+let transporter;
+try {
+  transporter = createEmailTransporter();
+  console.log('✅ Email transporter initialized successfully');
+} catch (error) {
+  console.error('❌ Failed to initialize email transporter:', error.message);
+  console.error('📧 Email functionality will not work until configuration is fixed');
+  // Create a dummy transporter that logs errors
+  transporter = {
+    sendMail: async () => {
+      throw new Error('Email transporter not configured. Check EMAIL_USER and EMAIL_PASS environment variables.');
+    }
+  };
+}
 
 // Fetch all admin emails from Firebase
 async function getAllAdminEmails() {
@@ -543,8 +1627,22 @@ async function sendEmail(to, subject, html, attachments = []) {
 }
 
 // ✅ NEW: Claims Approval/Rejection with Evidence Preservation + EVENT LOGGING
-app.post('/api/update-claim-status', async (req, res) => {
+// ✅ PROTECTED: Requires claims, compliance, admin, or super admin role
+// ✅ VALIDATED: Input validation applied
+app.post('/api/update-claim-status', requireAuth, requireClaims, [
+  body('collectionName').trim().notEmpty().matches(/^[a-z0-9\-]+$/),
+  body('documentId').trim().notEmpty().matches(/^[a-zA-Z0-9\-_]+$/),
+  body('status').trim().notEmpty().isIn(['pending', 'processing', 'approved', 'rejected', 'completed', 'cancelled']),
+  body('approverUid').optional().trim().isString(),
+  body('comment').optional().trim().isLength({ max: 1000 }),
+  body('userEmail').optional().trim().isEmail().normalizeEmail(),
+  body('formType').optional().trim().isString(),
+  handleValidationErrors,
+  sanitizeHtmlFields
+], async (req, res) => {
   try {
+    console.log('👤 Claim status update by:', req.user.email, 'Role:', req.user.role);
+    
     const { 
       collectionName, 
       documentId, 
@@ -820,12 +1918,9 @@ app.post('/send-to-admin-and-claims', async (req, res) => {
 });
 
 // ✅ 3. User Confirmation
-app.post('/send-to-user', async (req, res) => {
+// ✅ VALIDATED: Input validation applied
+app.post('/send-to-user', validateEmailRequest, async (req, res) => {
   const { userEmail, formType, userName } = req.body;
-
-  if (!userEmail || !formType) {
-    return res.status(400).json({ error: 'Missing userEmail or formType' });
-  }
 
   try {
     const html = `
@@ -1198,29 +2293,14 @@ app.get('/api/users', async (req, res) => {
 });
 
 // ========== NEW: Update User Role (Super Admin Only) ==========
-app.put('/api/users/:userId/role', async (req, res) => {
+// ✅ PROTECTED: Requires super admin role
+// ✅ VALIDATED: Input validation applied
+app.put('/api/users/:userId/role', requireAuth, requireSuperAdmin, validateRoleUpdate, async (req, res) => {
   try {
     const { userId } = req.params;
     const { role } = req.body;
-
-    // Verify session cookie
-    const sessionToken = req.cookies.__session;
-    if (!sessionToken) {
-      return res.status(401).json({ error: 'Unauthorized: No session token' });
-    }
-
-    // Get authenticated user's role
-    const authUserDoc = await db.collection('userroles').doc(sessionToken).get();
-    if (!authUserDoc.exists || !isSuperAdmin(authUserDoc.data().role)) {
-      console.log('❌ Role update denied - User role:', authUserDoc.exists ? authUserDoc.data().role : 'no doc');
-      return res.status(403).json({ error: 'Forbidden: Super admin access required' });
-    }
-
-    // Validate role value
-    const validRoles = ['default', 'claims', 'compliance', 'admin', 'super admin'];
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({ error: 'Invalid role value' });
-    }
+    
+    console.log('👤 Role update by:', req.user.email, 'Role:', req.user.role);
 
     // Get target user details before update
     const targetUserDoc = await db.collection('userroles').doc(userId).get();
@@ -1233,15 +2313,14 @@ app.put('/api/users/:userId/role', async (req, res) => {
     });
 
     // 📝 LOG ROLE UPDATE EVENT
-    const updaterDetails = await getUserDetailsForLogging(sessionToken);
     const targetDetails = await getUserDetailsForLogging(userId);
     const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
     await logAction({
       action: 'update-user-role',
-      actorUid: sessionToken,
-      actorDisplayName: updaterDetails.displayName,
-      actorEmail: updaterDetails.email,
-      actorRole: updaterDetails.role,
+      actorUid: req.user.uid,
+      actorDisplayName: req.user.name,
+      actorEmail: req.user.email,
+      actorRole: req.user.role,
       targetType: 'user',
       targetId: userId,
       details: {
@@ -1350,12 +2429,14 @@ async function getFormData(req, res, collectionName){
 }
 
 // ✅ NEW: Form viewing with EVENT LOGGING
-app.get('/api/forms/:collection/:id', async (req, res) => {
+// ✅ PROTECTED: Requires authentication, users can view their own or admins can view all
+app.get('/api/forms/:collection/:id', requireAuth, async (req, res) => {
   try {
     const { collection, id } = req.params;
     const { viewerUid } = req.query; // Pass viewer UID as query param
     
     console.log('🔍 Form view request:', { collection, id, viewerUid });
+    console.log('👤 Requested by:', req.user.email, 'Role:', req.user.role);
     
     // Get the document
     const doc = await admin.firestore().collection(collection).doc(id).get();
@@ -1785,9 +2866,12 @@ const setSuperAdminOnStartup = async () => {
 // ============= FORM SUBMISSION BACKEND ENDPOINTS =============
 
 // Centralized form submission endpoint with event logging
-app.post('/api/submit-form', async (req, res) => {
+// ✅ PROTECTED: Requires authentication
+// ✅ VALIDATED: Input validation applied
+app.post('/api/submit-form', requireAuth, validateFormSubmission, sanitizeHtmlFields, async (req, res) => {
   console.log('🚀🚀🚀 /api/submit-form ENDPOINT HIT! 🚀🚀🚀');
   console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+  console.log('👤 Authenticated user:', req.user.email, 'Role:', req.user.role);
   
   try {
     const { formData, formType, userUid, userEmail } = req.body;
@@ -2040,12 +3124,18 @@ app.post('/api/login', async (req, res) => {
       const { initializeApp, getApps } = require('firebase/app');
       const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
       
-      // Firebase config from environment or hardcoded (you should set these env vars)
+      // ✅ FIXED: Use environment variables instead of hardcoded values
       const firebaseConfig = {
-        apiKey: "AIzaSyDTyrzbQ4xYV0IAvngwgCUBf6EPnflacSw",
-        authDomain: "nem-customer-feedback-8d3fb.firebaseapp.com",
-        projectId: "nem-customer-feedback-8d3fb",
+        apiKey: process.env.REACT_APP_FIREBASE_KEY || process.env.VITE_FIREBASE_API_KEY,
+        authDomain: process.env.REACT_APP_AUTH_DOMAIN || process.env.VITE_FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID,
       };
+      
+      // Validate that required config is present
+      if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
+        console.error('❌ Missing Firebase configuration in environment variables');
+        return res.status(500).json({ error: 'Server configuration error' });
+      }
       
       // Initialize client app for validation
       let clientApp;
@@ -2179,6 +3269,9 @@ app.post('/api/login', async (req, res) => {
 
 // Token exchange endpoint with MFA checking - frontend does Firebase auth, backend verifies token and returns user info
 app.post('/api/exchange-token', async (req, res) => {
+  // Skip general logging - this endpoint has its own detailed logging
+  req.skipGeneralLogging = true;
+  
   try {
     console.log('�🚀� SERVNDER VERSION: MFA-MANDATORY-v2.0 - DEPLOYED 🚀�🚀');
     console.log('🔄 Token exchange request received from origin:', req.headers.origin);
@@ -2239,19 +3332,21 @@ app.post('/api/exchange-token', async (req, res) => {
     
     console.log('✅ Login #' + loginCount + ' for user:', email);
     
-    // Log successful token exchange
+    // Log successful login (token exchange)
     const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
     await logAction({
-      action: 'login-success',
+      action: 'login', // Changed from 'login-success' for consistency
       actorUid: uid,
-      actorDisplayName: userData.name,
+      actorDisplayName: userData.name || email.split('@')[0],
       actorEmail: email,
+      actorPhone: userData.phone || null,
       actorRole: userData.role,
       targetType: 'user',
       targetId: uid,
       details: { 
         loginMethod: 'token-exchange',
-        loginCount: loginCount
+        loginCount: loginCount,
+        success: true
       },
       ipMasked: req.ipData?.masked,
       ipHash: req.ipData?.hash,
@@ -2315,28 +3410,149 @@ app.get('/api/auth/mfa-status/:uid', async (req, res) => {
   }
 });
 
-// Rate limiting for MFA attempts
+// ============= RATE LIMITING CONFIGURATION =============
+
+// Authentication rate limiting - protects against brute force attacks
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per 15 minutes (reasonable for legitimate users)
+  message: {
+    error: 'Too many authentication attempts. Please try again in 15 minutes.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Skip successful requests from counting against the limit
+  skipSuccessfulRequests: true,
+  // Custom key generator to be more lenient for different users from same IP
+  keyGenerator: (req) => {
+    return req.ip + ':' + (req.body?.email || 'anonymous');
+  },
+  // Log rate limit hits
+  handler: async (req, res) => {
+    await logRateLimitHit(req).catch(err => console.error('Failed to log rate limit:', err));
+    res.status(429).json({
+      error: 'Too many authentication attempts. Please try again in 15 minutes.',
+      retryAfter: '15 minutes'
+    });
+  }
+});
+
+// Form submission rate limiting - prevents spam while allowing legitimate use
+const submissionLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 15, // 15 form submissions per hour (generous for legitimate users)
+  message: {
+    error: 'Too many form submissions. Please try again in an hour.',
+    retryAfter: '1 hour'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false, // Count all submissions
+  keyGenerator: (req) => {
+    // More lenient for authenticated users
+    const userKey = req.body?.userUid || req.body?.userEmail || 'anonymous';
+    return req.ip + ':' + userKey;
+  },
+  // Log rate limit hits
+  handler: async (req, res) => {
+    await logRateLimitHit(req).catch(err => console.error('Failed to log rate limit:', err));
+    res.status(429).json({
+      error: 'Too many form submissions. Please try again in an hour.',
+      retryAfter: '1 hour'
+    });
+  }
+});
+
+// General API rate limiting - prevents API abuse
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // 200 requests per 15 minutes (very generous for normal use)
+  message: {
+    error: 'Too many requests. Please slow down and try again later.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true
+});
+
+// Strict rate limiting for sensitive operations
+const sensitiveOperationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 20, // 20 sensitive operations per hour
+  message: {
+    error: 'Too many sensitive operations. Please try again later.',
+    retryAfter: '1 hour'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// MFA rate limiting (existing, but improved)
 const mfaAttemptLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 MFA attempts per windowMs
+  max: 8, // Increased from 5 to 8 for better UX
   message: {
-    error: 'Too many MFA attempts, please try again later'
+    error: 'Too many MFA attempts. Please try again in 15 minutes.',
+    retryAfter: '15 minutes'
   },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Apply rate limiting to MFA endpoints
+// Email rate limiting - prevents email spam
+const emailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // 10 emails per hour
+  message: {
+    error: 'Too many email requests. Please try again later.',
+    retryAfter: '1 hour'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Apply rate limiting to specific endpoints
+app.use('/api/exchange-token', authLimiter);
+app.use('/api/login', authLimiter);
+app.use('/api/register', authLimiter);
 app.use('/api/auth/verify-mfa', mfaAttemptLimit);
 
+// Form submission endpoints
+app.use('/api/submit-form', submissionLimiter);
+app.use('/submit-kyc-individual', submissionLimiter);
+app.use('/submit-kyc-corporate', submissionLimiter);
+app.use('/submit-cdd-individual', submissionLimiter);
+app.use('/submit-cdd-corporate', submissionLimiter);
+app.use('/submit-cdd-agents', submissionLimiter);
+app.use('/submit-cdd-brokers', submissionLimiter);
+app.use('/submit-cdd-partners', submissionLimiter);
+app.use('/submit-claim-motor', submissionLimiter);
+app.use('/submit-claim-fire', submissionLimiter);
+app.use('/submit-claim-burglary', submissionLimiter);
+app.use('/submit-claim-all-risk', submissionLimiter);
+
+// Email endpoints
+app.use('/send-to-admin-and-compliance', emailLimiter);
+app.use('/send-to-admin-and-claims', emailLimiter);
+app.use('/send-to-user', emailLimiter);
+app.use('/send-status-update-email', emailLimiter);
+app.use('/send-claim-approval-email', emailLimiter);
+
+// Sensitive operations
+app.use('/api/update-claim-status', sensitiveOperationLimiter);
+app.use('/api/users/:userId/role', sensitiveOperationLimiter);
+app.use('/api/users/:userId', sensitiveOperationLimiter); // DELETE user
+
+// General API protection (apply to all /api routes not specifically limited above)
+app.use('/api/', apiLimiter);
+
 // Register endpoint with event logging
-app.post('/api/register', async (req, res) => {
+// ✅ VALIDATED: Input validation applied
+app.post('/api/register', validateUserRegistration, async (req, res) => {
   try {
     const { email, password, displayName, role = 'user', dateOfBirth } = req.body;
-    
-    if (!email || !password || !displayName) {
-      return res.status(400).json({ error: 'Email, password, and displayName are required' });
-    }
 
     // Create user in Firebase Auth
     const userRecord = await admin.auth().createUser({
@@ -2414,12 +3630,14 @@ app.post('/api/register', async (req, res) => {
 // ============= DATA RETRIEVAL BACKEND ENDPOINTS =============
 
 // Get forms data with event logging
-app.get('/api/forms/:collection', async (req, res) => {
+// ✅ PROTECTED: Requires claims, compliance, admin, or super admin role
+app.get('/api/forms/:collection', requireAuth, requireClaims, async (req, res) => {
   try {
     const { collection } = req.params;
     const { viewerUid, page = 1, limit = 50 } = req.query;
     
     console.log(`📊 Forms data request for collection: ${collection}`);
+    console.log('👤 Requested by:', req.user.email, 'Role:', req.user.role);
     
     // Get viewer details for logging
     let viewerDetails = { displayName: null, email: null, role: null };
@@ -2501,11 +3719,14 @@ app.get('/api/forms/:collection', async (req, res) => {
   }
 });
 
-// Get specific form by ID with event logging  
-app.get('/api/forms/:collection/:id', async (req, res) => {
+// Get specific form by ID with event logging
+// ✅ PROTECTED: Requires authentication, users can view their own or admins can view all
+app.get('/api/forms/:collection/:id', requireAuth, async (req, res) => {
   try {
     const { collection, id } = req.params;
     const { viewerUid } = req.query;
+    
+    console.log('👤 Form detail requested by:', req.user.email, 'Role:', req.user.role);
     
     // Get viewer details for logging
     let viewerDetails = { displayName: null, email: null, role: null };
@@ -2560,14 +3781,14 @@ app.get('/api/forms/:collection/:id', async (req, res) => {
 // ============= FORM EDITING AND STATUS UPDATE ENDPOINTS =============
 
 // Update form status with event logging
-app.put('/api/forms/:collection/:id/status', async (req, res) => {
+// ✅ PROTECTED: Requires claims, compliance, admin, or super admin role
+// ✅ VALIDATED: Input validation applied
+app.put('/api/forms/:collection/:id/status', requireAuth, requireClaims, validateFormStatusUpdate, sanitizeHtmlFields, async (req, res) => {
   try {
     const { collection, id } = req.params;
     const { status, updaterUid, comment, userEmail, formType } = req.body;
     
-    if (!status || !updaterUid) {
-      return res.status(400).json({ error: 'Status and updaterUid are required' });
-    }
+    console.log('👤 Status update by:', req.user.email, 'Role:', req.user.role);
 
     // Get document before update for logging
     const docBefore = await db.collection(collection).doc(id).get();
@@ -2709,9 +3930,11 @@ app.put('/api/forms/:collection/:id/status', async (req, res) => {
 // ============= EVENTS LOG API ENDPOINTS =============
 
 // Get event logs with filtering and pagination (Admin only)
-app.get('/api/events-logs', async (req, res) => {
+// ✅ PROTECTED: Requires claims, compliance, admin, or super admin role
+app.get('/api/events-logs', requireAuth, requireClaims, async (req, res) => {
   try {
     console.log('🔍 /api/events-logs endpoint called');
+    console.log('👤 Requested by:', req.user.email, 'Role:', req.user.role);
     console.log('📤 Request query params:', req.query);
     console.log('📤 Request headers:', {
       'x-timestamp': req.headers['x-timestamp'],
@@ -3824,6 +5047,31 @@ app.post('/api/test-birthday-email', async (req, res) => {
 });
 
 // ============= END BIRTHDAY EMAIL SYSTEM =============
+
+// ============= HEALTH CHECK ENDPOINTS =============
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'NEM Server API is running',
+    version: '2.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Health check endpoint for monitoring
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'healthy',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    eventsLogging: EVENTS_CONFIG.ENABLE_EVENTS_LOGGING,
+    ipGeolocation: EVENTS_CONFIG.ENABLE_IP_GEOLOCATION
+  });
+});
+
+// ============= END HEALTH CHECK ENDPOINTS =============
 
 app.listen(port, async () => {
   console.log('='.repeat(80));

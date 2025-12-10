@@ -22,7 +22,7 @@ export const downloadDynamicPDF = async (
   try {
     // Log the download action to backend first
     try {
-      const API_BASE_URL = 'https://nem-server-rhdb.onrender.com';
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
       const csrfResponse = await fetch(`${API_BASE_URL}/csrf-token`, {
         credentials: 'include',
       });
