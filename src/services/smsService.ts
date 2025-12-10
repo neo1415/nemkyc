@@ -8,7 +8,8 @@ export interface SMSOptions {
 
 export const sendSMS = async (options: SMSOptions): Promise<void> => {
   try {
-    await axios.post('https://nem-server-rhdb.onrender.com/api/send-sms', options);
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+    await axios.post(`${API_BASE_URL}/api/send-sms`, options);
   } catch (error) {
     console.error('Failed to send SMS:', error);
     throw new Error('Failed to send SMS notification');

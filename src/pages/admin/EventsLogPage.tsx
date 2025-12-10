@@ -126,7 +126,8 @@ const EventsLogPage: React.FC = () => {
       if (endDate) params.append('endDate', endDate);
       if (searchTerm) params.append('searchTerm', searchTerm);
 
-      const finalUrl = `https://nem-server-rhdb.onrender.com/api/events-logs?${params}`;
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+      const finalUrl = `${API_BASE_URL}/api/events-logs?${params}`;
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
