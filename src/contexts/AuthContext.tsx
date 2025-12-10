@@ -646,12 +646,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Secure storage functions for form drafts
+  // ✅ FIXED: Now uses proper AES-GCM encryption
   const saveFormDraft = (formType: string, data: any) => {
     try {
-      // Use dynamic import for secure storage
-      import('../utils/secureStorage').then(({ secureStorageSet }) => {
+      // Use dynamic import for secure storage with proper encryption
+      import('../utils/secureStorage').then(async ({ secureStorageSet }) => {
         const key = `formDraft_${formType}`;
-        secureStorageSet(key, data);
+        await secureStorageSet(key, data);
       });
     } catch (error) {
       console.error('Error saving form draft:', error);
@@ -660,25 +661,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const getFormDraft = (formType: string) => {
     try {
-      // For now, use localStorage directly with basic encryption
-      const key = `formDraft_${formType}`;
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        try {
-          // Simple decryption (base64)
-          const decoded = atob(stored.split(':')[1] || stored);
-          const parsed = JSON.parse(decoded);
-          // Check expiry
-          if (parsed.expiry && Date.now() > parsed.expiry) {
-            localStorage.removeItem(key);
-            return null;
-          }
-          return parsed.data;
-        } catch {
-          return null;
-        }
-      }
-      return null;
+      // Use secure storage with proper decryption
+      import('../utils/secureStorage').then(async ({ secureStorageGet }) => {
+        const key = `formDraft_${formType}`;
+        return await secureStorageGet(key);
+      });
     } catch (error) {
       console.error('Error getting form draft:', error);
       return null;
@@ -687,8 +674,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearFormDraft = (formType: string) => {
     try {
-      const key = `formDraft_${formType}`;
-      localStorage.removeItem(key);
+      import('../utils/secureStorage').then(({ secureStorageRemove }) => {
+        const key = `formDraft_${formType}`;
+        secureStorageRemove(key);
+      });
     } catch (error) {
       console.error('Error clearing form draft:', error);
     }

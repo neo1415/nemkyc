@@ -4,7 +4,8 @@
  */
 
 // API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://nem-server-rhdb.onrender.com';
+// ✅ Default to localhost for development, production URL should be in .env.production
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 // Environment
 export const IS_PRODUCTION = import.meta.env.VITE_NODE_ENV === 'production';
