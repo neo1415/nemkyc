@@ -8,8 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { collection, query, getDocs, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useToast } from '../../hooks/use-toast';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+// CSV export - no PDF library needed
 
 const theme = createTheme({
   palette: {
@@ -122,21 +121,23 @@ const AdminIndividualKYCTable: React.FC = () => {
     }
   };
 
-  const exportToPDF = () => {
-    const doc = new jsPDF('l', 'mm', 'a4');
-    doc.text('Individual KYC Forms Report', 14, 22);
-    
-    const tableColumn = [
-      'Created At', 'Office Location', 'Title', 'First Name', 'Middle Name', 'Last Name',
+  const exportToCSV = () => {
+    // CSV headers - all fields in exact form order
+    const headers = [
+      'ID', 'Created At', 'Office Location', 'Title', 'First Name', 'Middle Name', 'Last Name',
       'Contact Address', 'Occupation', 'Gender', 'Date of Birth', 'Mothers Maiden Name',
+      'Employers Name', 'Employers Telephone', 'Employers Address',
       'City', 'State', 'Country', 'Nationality', 'Residential Address', 'Mobile Number',
-      'Email', 'BVN', 'NIN', 'ID Type', 'ID Number', 'Issuing Country', 'Source of Income',
-      'Annual Income Range', 'Premium Payment Source', 'Bank Name', 'Account Number',
-      'Bank Branch', 'Account Opening Date'
+      'Email Address', 'Tax ID Number', 'BVN', 'NIN', 'ID Type', 'ID Number', 'Issuing Country',
+      'Issued Date', 'Expiry Date', 'Source of Income', 'Annual Income Range', 'Premium Payment Source',
+      'Bank Name', 'Account Number', 'Bank Branch', 'Account Opening Date',
+      'Foreign Bank Name', 'Foreign Account Number', 'Foreign Bank Branch', 'Foreign Account Opening Date'
     ];
-    
-    const tableRows = kycForms.map(form => [
-      form.createdAt?.toLocaleDateString() || 'N/A',
+
+    // CSV rows - all data
+    const rows = kycForms.map(form => [
+      form.id || 'N/A',
+      form.createdAt?.toLocaleDateString() || formatDate(form.createdAt || form.timestamp || form.submittedAt),
       form.officeLocation || 'N/A',
       form.title || 'N/A',
       form.firstName || 'N/A',
@@ -147,6 +148,9 @@ const AdminIndividualKYCTable: React.FC = () => {
       form.gender || 'N/A',
       form.dateOfBirth || 'N/A',
       form.mothersMaidenName || 'N/A',
+      form.employersName || 'N/A',
+      form.employersTelephoneNumber || 'N/A',
+      form.employersAddress || 'N/A',
       form.city || 'N/A',
       form.state || 'N/A',
       form.country || 'N/A',
@@ -154,27 +158,44 @@ const AdminIndividualKYCTable: React.FC = () => {
       form.residentialAddress || 'N/A',
       form.GSMno || 'N/A',
       form.emailAddress || 'N/A',
+      form.taxIDNo || 'N/A',
       form.BVN || 'N/A',
       form.NIN || 'N/A',
       form.identificationType || 'N/A',
       form.idNumber || 'N/A',
       form.issuingCountry || 'N/A',
+      form.issuedDate || 'N/A',
+      form.expiryDate || 'N/A',
       form.sourceOfIncome || form.sourceOfIncomeOther || 'N/A',
       form.annualIncomeRange || 'N/A',
       form.premiumPaymentSource || form.premiumPaymentSourceOther || 'N/A',
       form.bankName || 'N/A',
       form.accountNumber || 'N/A',
       form.bankBranch || 'N/A',
-      form.accountOpeningDate || 'N/A'
+      form.accountOpeningDate || 'N/A',
+      form.bankName2 || 'N/A',
+      form.accountNumber2 || 'N/A',
+      form.bankBranch2 || 'N/A',
+      form.accountOpeningDate2 || 'N/A'
     ]);
 
-    (doc as any).autoTable({
-      head: [tableColumn],
-      body: tableRows,
-      startY: 30,
-    });
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
 
-    doc.save('individual-kyc-forms.pdf');
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `individual-kyc-forms-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    
+    toast({
+      title: 'Success',
+      description: 'CSV exported successfully',
+    });
   };
 
   // Column definitions in exact form order - following the changelog methodology
@@ -190,13 +211,13 @@ const AdminIndividualKYCTable: React.FC = () => {
           key="view"
           icon={<Visibility />}
           label="View"
-          onClick={() => navigate(`/admin/form/Individual-kyc-form/${params.id}`)}
+          onClick={() => navigate(`/admin/form/Individual-kyc-form/${params.row.id}`)}
         />,
         <GridActionsCellItem
           key="delete"
           icon={<Delete />}
           label="Delete"
-          onClick={() => setDeleteDialog({ open: true, id: params.id as string })}
+          onClick={() => setDeleteDialog({ open: true, id: params.row.id as string })}
         />,
       ],
     },
@@ -466,9 +487,9 @@ const AdminIndividualKYCTable: React.FC = () => {
             <Button
               variant="outlined"
               startIcon={<GetApp />}
-              onClick={exportToPDF}
+              onClick={exportToCSV}
             >
-              Export PDF
+              Export CSV
             </Button>
           </div>
         </div>

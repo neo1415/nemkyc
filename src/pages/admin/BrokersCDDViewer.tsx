@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Calendar, Download, FileText, User, Building, CreditCard } from 'lucide-react';
-import { generateFormPDF, downloadPDF } from '@/services/pdfService';
-import logoImage from '../../assets/NEMs-Logo.jpg';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface BrokersCDDViewerProps {
   data: any;
@@ -76,17 +76,90 @@ const BrokersCDDViewer: React.FC<BrokersCDDViewerProps> = ({ data }) => {
   const directors = extractDirectorsData(data);
 
   const generatePDF = async () => {
+    const element = document.getElementById('brokers-cdd-pdf-content');
+    if (!element) return;
+
     setIsGeneratingPDF(true);
     try {
-      const pdfBlob = await generateFormPDF({
-        title: 'Brokers Customer Due Diligence (CDD) Form',
-        subtitle: 'NEM Insurance Company Limited',
-        data: data,
-        logoUrl: logoImage,
-        attachments: []
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
       });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
       
-      downloadPDF(pdfBlob, `brokers-cdd-${data.companyName || 'form'}.pdf`, data, 'Brokers-CDD');
+      // NEM Insurance Header
+      pdf.setFontSize(20);
+      pdf.setTextColor(128, 0, 32); // Burgundy color
+      pdf.text('NEM INSURANCE PLC', 20, 25);
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('Corporate Head Office: 10 Lokogoma Close, Zone 1, Federal Capital Territory, Abuja', 20, 35);
+      pdf.text('Lagos Head Office: 100 NNL Building, Ralph Shodeinde Street, Central Business District, Lagos', 20, 42);
+      
+      // Burgundy line
+      pdf.setDrawColor(128, 0, 32);
+      pdf.setLineWidth(0.5);
+      pdf.line(20, 50, 190, 50);
+      
+      // Title
+      pdf.setFontSize(16);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('Brokers CDD Form', 20, 65);
+      
+      // Add the form content
+      const imgWidth = 170;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      let yPosition = 75;
+      
+      if (imgHeight > 220) {
+        // If content is too long, split across pages
+        const pageHeight = 220;
+        let remainingHeight = imgHeight;
+        let currentY = 0;
+        
+        while (remainingHeight > 0) {
+          const heightToAdd = Math.min(pageHeight, remainingHeight);
+          
+          const tempCanvas = document.createElement('canvas');
+          const tempCtx = tempCanvas.getContext('2d');
+          tempCanvas.width = canvas.width;
+          tempCanvas.height = (heightToAdd * canvas.width) / imgWidth;
+          
+          tempCtx?.drawImage(
+            canvas,
+            0,
+            (currentY * canvas.width) / imgWidth,
+            canvas.width,
+            tempCanvas.height,
+            0,
+            0,
+            canvas.width,
+            tempCanvas.height
+          );
+          
+          const tempImgData = tempCanvas.toDataURL('image/png');
+          
+          if (currentY > 0) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+          
+          pdf.addImage(tempImgData, 'PNG', 20, yPosition, imgWidth, heightToAdd);
+          
+          currentY += heightToAdd;
+          remainingHeight -= heightToAdd;
+        }
+      } else {
+        pdf.addImage(imgData, 'PNG', 20, yPosition, imgWidth, imgHeight);
+      }
+      
+      pdf.save(`Brokers_CDD_${data.companyName || 'form'}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
     } finally {
@@ -127,6 +200,7 @@ const BrokersCDDViewer: React.FC<BrokersCDDViewerProps> = ({ data }) => {
 
       <Separator />
 
+      <div id="brokers-cdd-pdf-content" className="space-y-6 bg-white p-6">
       {/* Company Information */}
       <Card>
         <CardHeader>
@@ -547,6 +621,7 @@ const BrokersCDDViewer: React.FC<BrokersCDDViewerProps> = ({ data }) => {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };

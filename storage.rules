@@ -1,0 +1,314 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // ========== Helper Functions ==========
+    
+    // Get user role from Firestore (only works if authenticated)
+    function getUserRole() {
+      return request.auth != null 
+        ? firestore.get(/databases/(default)/documents/userroles/$(request.auth.uid)).data.role
+        : null;
+    }
+    
+    // Normalize role variants to canonical values
+    function normalizedRole() {
+      let role = getUserRole();
+      return role == null ? null
+        : role == 'superAdmin' || role == 'super-admin' || role == 'super_admin' || role == 'Super Admin' || role == 'SuperAdmin'
+        ? 'super admin'
+        : (role == 'user' || role == 'User')
+        ? 'default'
+        : role;
+    }
+    
+    function isSuperAdmin() {
+      return request.auth != null && normalizedRole() == 'super admin';
+    }
+    
+    function isAdmin() {
+      return request.auth != null && normalizedRole() == 'admin';
+    }
+    
+    function isCompliance() {
+      return request.auth != null && normalizedRole() == 'compliance';
+    }
+    
+    function isClaims() {
+      return request.auth != null && normalizedRole() == 'claims';
+    }
+    
+    function isAdminOrSuperAdmin() {
+      return isAdmin() || isSuperAdmin();
+    }
+    
+    function isAdminOrCompliance() {
+      return isAdmin() || isCompliance() || isSuperAdmin();
+    }
+    
+    function isClaimsOrAdminOrCompliance() {
+      return isClaims() || isAdmin() || isCompliance() || isSuperAdmin();
+    }
+    
+    // Validate file type - STRICT
+    function isValidFileType() {
+      return request.resource.contentType.matches('image/jpeg')
+          || request.resource.contentType.matches('image/jpg')
+          || request.resource.contentType.matches('image/png')
+          || request.resource.contentType.matches('image/gif')
+          || request.resource.contentType == 'application/pdf'
+          || request.resource.contentType == 'application/msword'
+          || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+    
+    // Validate file size (5MB max)
+    function isValidFileSize() {
+      return request.resource.size <= 5 * 1024 * 1024;
+    }
+    
+    // ========== KYC Forms ==========
+    // Pattern: individual-kyc/{folder}/{fileName}
+    // The fileService creates nested paths: path/timestamp_filename
+    match /individual-kyc/{folder}/{fileName} {
+      // Upload: Allow unauthenticated (for form submission flow)
+      // Security: File type and size validation enforced
+      allow create: if isValidFileType() && isValidFileSize();
+      
+      // Read: Allow anyone (needed for getDownloadURL after upload)
+      // Note: URLs are not guessable (contain timestamp + random filename)
+      // Files are only linked from authenticated form submissions in Firestore
+      allow read: if true;
+      
+      // Update: No one (files are immutable once uploaded)
+      allow update: if false;
+      
+      // Delete: Only admins (cleanup)
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /Individual-kyc-form/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /corporate-kyc/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /corporate-kyc-form/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /agents-kyc/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /brokers-kyc/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /partners-kyc/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    // ========== CDD Forms ==========
+    match /individual-cdd/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /corporate-cdd/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /naicom-corporate-cdd/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /naicom-partners-cdd/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /agents-cdd/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /brokers-cdd/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /partners-cdd/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    // ========== Claims Forms ==========
+    match /motor-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /burglary-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /fire-special-perils-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /all-risk-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /goods-in-transit-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /money-insurance-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /employers-liability-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /public-liability-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /professional-indemnity-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /fidelity-guarantee-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /contractors-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /group-personal-accident-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /rent-assurance-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /combined-gpa-employers-liability-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    // ========== Admin Uploads ==========
+    // Pattern: admin-uploads/{fileName}
+    match /admin-uploads/{fileName} {
+      allow create: if isAdminOrSuperAdmin()
+                    && isValidFileSize();
+      
+      allow read: if isAdminOrSuperAdmin();
+      
+      allow update: if isAdminOrSuperAdmin()
+                    && isValidFileSize();
+      
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    // ========== Public Assets (logos, etc.) ==========
+    // Pattern: public/{fileName}
+    match /public/{fileName} {
+      // Only admins can upload public assets
+      allow create: if isAdminOrSuperAdmin()
+                    && isValidFileSize();
+      
+      // Anyone can read public assets
+      allow read: if true;
+      
+      // Only admins can update/delete
+      allow update, delete: if isAdminOrSuperAdmin();
+    }
+    
+    // ========== Deny Everything Else ==========
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

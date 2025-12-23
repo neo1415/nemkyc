@@ -16,12 +16,39 @@ const helmet = require('helmet');
 const { body, param,validationResult } = require('express-validator');
 const fs = require('fs');
 const path = require('path');
+const compression = require('compression');
 const app = express();
 const axios = require('axios');
 const bcrypt = require('bcrypt'); 
 const multer = require("multer");
 const { getStorage } = require("firebase-admin/storage");
 const crypto = require('crypto');
+
+// ============= LOGGING UTILITY =============
+
+/**
+ * Logging utility with log levels
+ * Reduces verbose logging in production
+ */
+const logger = {
+  debug: (msg, ...args) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`🔍 [DEBUG] ${msg}`, ...args);
+    }
+  },
+  info: (msg, ...args) => {
+    console.log(`ℹ️  [INFO] ${msg}`, ...args);
+  },
+  warn: (msg, ...args) => {
+    console.warn(`⚠️  [WARN] ${msg}`, ...args);
+  },
+  error: (msg, ...args) => {
+    console.error(`❌ [ERROR] ${msg}`, ...args);
+  },
+  success: (msg, ...args) => {
+    console.log(`✅ [SUCCESS] ${msg}`, ...args);
+  }
+};
 
 let config = {
   type: process.env.TYPE,
@@ -42,7 +69,7 @@ let config = {
 // Initialize Firebase Admin SDK
 admin.initializeApp({
   credential: admin.credential.cert(config),
-  storageBucket:"nem-customer-feedback-8d3fb.appspot.com",
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
   databaseURL: process.env.FIREBASE_DATABASE_URL,
 });
 
@@ -81,14 +108,44 @@ const port = process.env.PORT || 3001;
 // ============= TRUST PROXY CONFIGURATION =============
 // ✅ REQUIRED: Enable trust proxy for Render.com and other reverse proxies
 // This allows Express to correctly identify client IPs from X-Forwarded-For header
-app.set('trust proxy', true);
+// Use specific trust proxy configuration instead of 'true' for security
+// Trust the first proxy (Render.com, Vercel, etc.)
+app.set('trust proxy', 1);
+
+// ============= COMPRESSION MIDDLEWARE =============
+// ✅ Compress all responses (70-80% size reduction)
+app.use(compression({
+  filter: (req, res) => {
+    // Don't compress if client doesn't support it
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    // Use compression for all responses
+    return compression.filter(req, res);
+  },
+  level: 6, // Balance between speed and compression ratio
+  threshold: 1024 // Only compress responses larger than 1KB
+}));
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, Postman, server-to-server)
+    // Allow requests with no origin ONLY if they have valid API key or are authenticated
     if (!origin) {
-      console.log('✅ CORS: Allowing request with no origin (mobile/server-to-server)');
-      return callback(null, true);
+      // Check for API key in header (for server-to-server communication)
+      const apiKey = this.req?.headers?.['x-api-key'];
+      if (apiKey && apiKey === process.env.SERVER_API_KEY) {
+        console.log('✅ CORS: Allowing authenticated no-origin request with API key');
+        return callback(null, true);
+      }
+      
+      // Allow no-origin requests in development only
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ CORS: Allowing no-origin request in development');
+        return callback(null, true);
+      }
+      
+      console.log('❌ CORS: Blocked no-origin request without API key');
+      return callback(new Error('API key required for no-origin requests'), false);
     }
     
     // Check if origin is in whitelist
@@ -120,6 +177,7 @@ app.use(cors({
     'X-Requested-With',
     'Authorization',
     'x-timestamp',
+    'x-nonce',
     'x-request-id',
     'x-idempotency-key',
     'Idempotency-Key'
@@ -133,29 +191,45 @@ app.use(cors({
 // Middleware setup
 app.use(morgan('combined', { stream: accessLogStream }));
 app.use(helmet());
+
+// Enhanced security headers
 app.use(helmet.hsts({
   maxAge: 31536000, // 1 year in seconds
   includeSubDomains: true,
   preload: true
 }));
 app.use(helmet.referrerPolicy({ policy: 'no-referrer' }));
+app.use(helmet.permittedCrossDomainPolicies({ permittedPolicies: 'none' }));
+app.use(helmet.dnsPrefetchControl({ allow: false }));
 
+// Expect-CT header (Certificate Transparency)
+if (process.env.NODE_ENV === 'production') {
+  app.use(helmet.expectCt({ 
+    maxAge: 86400, 
+    enforce: true 
+  }));
+}
+
+// Enhanced Content Security Policy
 app.use(helmet.contentSecurityPolicy({
   directives: {
     defaultSrc: ["'self'"],
     scriptSrc: ["'self'"],
-    styleSrc: ["'self'"],
-    imgSrc: ["'self'", "data:"],
-    connectSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline only if absolutely necessary
+    imgSrc: ["'self'", "data:", "https:"],
+    connectSrc: ["'self'", "https://nem-server-rhdb.onrender.com", "https://identitytoolkit.googleapis.com"],
     fontSrc: ["'self'"],
     objectSrc: ["'none'"],
+    mediaSrc: ["'self'"],
+    frameSrc: ["'none'"],
     frameAncestors: ["'none'"],
     baseUri: ["'self'"],
-    formAction: ["'self'"]
+    formAction: ["'self'"],
+    upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
   }
 }));
 
-app.use(helmet.frameguard({ action: 'sameorigin' }));
+app.use(helmet.frameguard({ action: 'deny' })); // Changed from sameorigin to deny for better security
 app.use(hpp());
 app.use(mongoSanitize());
 app.use(xss());
@@ -193,7 +267,36 @@ app.use((req, res, next) => {
 });
 
 const db = admin.firestore();
-const upload = multer({ storage: multer.memoryStorage() });
+
+// ✅ SECURITY: Enhanced multer configuration with size limits and file type validation
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max file size
+    files: 5, // Max 5 files per request
+    fields: 50, // Max 50 fields
+    parts: 100 // Max 100 parts (fields + files)
+  },
+  fileFilter: (req, file, cb) => {
+    // Allowed MIME types
+    const allowedMimes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Invalid file type: ${file.mimetype}. Allowed types: ${allowedMimes.join(', ')}`));
+    }
+  }
+});
+
 const bucket = getStorage().bucket();
 
 // ============= ROLE NORMALIZATION HELPER =============
@@ -259,10 +362,20 @@ const isClaimsOrAdminOrCompliance = (role) => {
  */
 const requireAuth = async (req, res, next) => {
   try {
-    const sessionToken = req.cookies.__session;
+    // Accept session token from cookie OR Authorization header (for localhost cross-port)
+    let sessionToken = req.cookies.__session;
+    
+    // Fallback: Check Authorization header for localhost development
+    if (!sessionToken && req.headers.authorization) {
+      const authHeader = req.headers.authorization;
+      if (authHeader.startsWith('Bearer ')) {
+        sessionToken = authHeader.substring(7);
+        console.log('🔑 Using session token from Authorization header (localhost fallback)');
+      }
+    }
     
     if (!sessionToken) {
-      console.log('❌ Auth failed: No session token');
+      console.log('❌ No session token found in cookie or Authorization header');
       return res.status(401).json({ 
         error: 'Authentication required',
         message: 'Please sign in to access this resource'
@@ -281,6 +394,35 @@ const requireAuth = async (req, res, next) => {
     }
 
     const userData = userDoc.data();
+    
+    // ✅ SESSION TIMEOUT CHECK (2 hours of inactivity)
+    const SESSION_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours (increased from 30 minutes)
+    
+    // Check timeout if lastActivity exists
+    if (userData.lastActivity) {
+      const timeSinceLastActivity = Date.now() - userData.lastActivity;
+      
+      if (timeSinceLastActivity > SESSION_TIMEOUT) {
+        logger.warn(`Session expired due to inactivity: ${userData.email}`);
+        // Don't delete the userroles document! Just clear the session cookie
+        res.clearCookie('__session');
+        return res.status(401).json({ 
+          error: 'Session expired',
+          message: 'Your session has expired due to inactivity. Please sign in again.'
+        });
+      }
+    } else {
+      // ✅ MIGRATION: If lastActivity doesn't exist, set it now (for existing sessions)
+      logger.info(`Initializing lastActivity for existing session: ${userData.email}`);
+      await db.collection('userroles').doc(sessionToken).update({
+        lastActivity: Date.now()
+      }).catch(err => logger.error('Failed to initialize lastActivity:', err));
+    }
+    
+    // Update last activity timestamp (don't await to avoid slowing down requests)
+    db.collection('userroles').doc(sessionToken).update({
+      lastActivity: Date.now()
+    }).catch(err => logger.error('Failed to update lastActivity:', err));
     
     // Attach user data to request for use in route handlers
     req.user = {
@@ -563,9 +705,9 @@ const validateUserRegistration = [
   body('password')
     .notEmpty().withMessage('Password is required')
     .isString().withMessage('Password must be a string')
-    .isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain uppercase, lowercase, and number'),
+    .isLength({ min: 12 }).withMessage('Password must be at least 12 characters')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
+    .withMessage('Password must contain uppercase, lowercase, number, and special character (@$!%*?&)'),
   
   body('displayName')
     .trim()
@@ -695,7 +837,14 @@ const sanitizeHtmlFields = (req, res, next) => {
 
 // Environment configuration for events logging
 const EVENTS_CONFIG = {
-  IP_HASH_SALT: process.env.EVENTS_IP_SALT || 'nem-events-default-salt-2024',
+  IP_HASH_SALT: (() => {
+    if (!process.env.EVENTS_IP_SALT) {
+      console.error('❌ CRITICAL SECURITY ERROR: EVENTS_IP_SALT environment variable is not set!');
+      console.error('💡 Generate a secure salt: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+      throw new Error('EVENTS_IP_SALT environment variable is required for security');
+    }
+    return process.env.EVENTS_IP_SALT;
+  })(),
   ENABLE_IP_GEOLOCATION: process.env.ENABLE_IP_GEOLOCATION === 'true',
   RAW_IP_RETENTION_DAYS: parseInt(process.env.RAW_IP_RETENTION_DAYS) || 30,
   ENABLE_EVENTS_LOGGING: process.env.ENABLE_EVENTS_LOGGING !== 'false' // Default to enabled
@@ -761,6 +910,62 @@ const processIPMiddleware = (req, res, next) => {
 
 // Apply IP processing middleware globally
 app.use(processIPMiddleware);
+
+// ============= REQUEST ID TRACKING =============
+
+/**
+ * Request ID middleware - adds unique ID to each request for tracking
+ */
+app.use((req, res, next) => {
+  // Use existing request ID from header or generate new one
+  req.id = req.headers['x-request-id'] || uuidv4();
+  req.correlationId = req.headers['x-correlation-id'] || req.id;
+  
+  // Add request ID to response headers for client tracking
+  res.setHeader('X-Request-ID', req.id);
+  res.setHeader('X-Correlation-ID', req.correlationId);
+  
+  next();
+});
+
+// ============= CONTENT-TYPE VALIDATION =============
+
+/**
+ * Content-Type validation middleware
+ * Ensures requests with body have correct Content-Type header
+ */
+app.use((req, res, next) => {
+  // Skip for GET, HEAD, OPTIONS requests (no body expected)
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return next();
+  }
+  
+  // Skip for specific routes that might not send JSON
+  const skipPaths = ['/health', '/csrf-token'];
+  if (skipPaths.includes(req.path)) {
+    return next();
+  }
+  
+  const contentType = req.headers['content-type'];
+  
+  // Require Content-Type header for requests with body
+  if (!contentType) {
+    return res.status(415).json({ 
+      error: 'Unsupported Media Type',
+      message: 'Content-Type header is required. Please set Content-Type to application/json.'
+    });
+  }
+  
+  // Validate Content-Type is application/json
+  if (!contentType.includes('application/json')) {
+    return res.status(415).json({ 
+      error: 'Unsupported Media Type',
+      message: 'Content-Type must be application/json. Received: ' + contentType
+    });
+  }
+  
+  next();
+});
 
 // ============= CENTRALIZED REQUEST LOGGING MIDDLEWARE =============
 
@@ -1145,23 +1350,66 @@ const parseUserAgent = (userAgent) => {
 };
 
 /**
+ * Sensitive field patterns for data sanitization
+ */
+const SENSITIVE_PATTERNS = [
+  /password/i,
+  /token/i,
+  /secret/i,
+  /api[_-]?key/i,
+  /private[_-]?key/i,
+  /auth/i,
+  /credential/i,
+  /ssn/i,
+  /nin/i,
+  /bvn/i,
+  /card[_-]?number/i,
+  /cvv/i,
+  /cvc/i,
+  /pin/i,
+  /otp/i,
+  /pass/i,
+  /refresh[_-]?token/i,
+  /access[_-]?token/i,
+  /id[_-]?token/i,
+  /session/i,
+  /cookie/i
+];
+
+/**
  * Sanitize request body to remove sensitive data
+ * Enhanced with pattern matching and recursive deep sanitization
  */
 const sanitizeRequestBody = (body) => {
   if (!body) return null;
   
   try {
     const sanitized = JSON.parse(JSON.stringify(body)); // Deep clone
-    const sensitiveFields = ['password', 'token', 'secret', 'apiKey', 'privateKey', 'pass', 'accessToken', 'refreshToken'];
     
-    const redactSensitiveFields = (obj) => {
+    const redactSensitiveFields = (obj, path = '') => {
       if (typeof obj !== 'object' || obj === null) return;
       
       Object.keys(obj).forEach(key => {
-        if (sensitiveFields.some(field => key.toLowerCase().includes(field.toLowerCase()))) {
+        const fullPath = path ? `${path}.${key}` : key;
+        
+        // Check if key matches any sensitive pattern
+        const isSensitive = SENSITIVE_PATTERNS.some(pattern => pattern.test(key));
+        
+        if (isSensitive) {
           obj[key] = '[REDACTED]';
-        } else if (typeof obj[key] === 'object') {
-          redactSensitiveFields(obj[key]);
+        } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+          // Recursively sanitize nested objects
+          redactSensitiveFields(obj[key], fullPath);
+        } else if (typeof obj[key] === 'string') {
+          // Check for potential sensitive data in string values (e.g., credit card numbers)
+          // Redact credit card patterns
+          if (/\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/.test(obj[key])) {
+            obj[key] = '[REDACTED-CARD]';
+          }
+          // Redact email patterns in non-email fields
+          else if (!key.toLowerCase().includes('email') && /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/.test(obj[key])) {
+            obj[key] = obj[key].replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[REDACTED-EMAIL]');
+          }
         }
       });
     };
@@ -1180,6 +1428,7 @@ const sanitizeRequestBody = (body) => {
     
     return sanitized;
   } catch (error) {
+    console.error('Error sanitizing request body:', error);
     return { _error: 'Failed to sanitize body' };
   }
 };
@@ -1387,40 +1636,104 @@ const getUserDetailsForLogging = async (uid) => {
 
 app.use(express.json());
 
+// ============= REPLAY ATTACK PROTECTION =============
 
-// Timestamp validation middleware
+// Nonce tracking for replay attack prevention
+const usedNonces = new Map(); // Map of nonce -> timestamp
+const NONCE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+
+// Clean up expired nonces every minute
+setInterval(() => {
+  const now = Date.now();
+  for (const [nonce, timestamp] of usedNonces.entries()) {
+    if (now - timestamp > NONCE_EXPIRY) {
+      usedNonces.delete(nonce);
+    }
+  }
+}, 60 * 1000);
+
+// Enhanced timestamp and nonce validation middleware
 app.use((req, res, next) => {
-  // Skip timestamp validation for specific routes and the exchange-token endpoint
-  if (req.path === '/' ||
-    req.path === '/health' ||
-    req.path === '/csrf-token' || 
-    req.path === '/listenForUpdates' ||
-    req.path === '/send-to-user' ||
-    req.path === '/send-to-admin-and-claims' ||
-    req.path === '/send-to-admin-and-compliance' ||
-    req.path === '/api/update-claim-status' ||
-    req.path === '/api/exchange-token' ||
-    req.path === '/api/check-birthdays' ||
-    req.path === '/api/test-birthday-email') {  // ✅ Add birthday endpoints to exempted routes
-    return next(); // Skip timestamp validation for these routes
+  // Skip validation for public routes and authentication endpoints
+  const publicPaths = ['/', '/health', '/csrf-token', '/api/exchange-token', '/api/login', '/api/register'];
+  if (publicPaths.includes(req.path)) {
+    return next();
   }
 
   const timestamp = req.headers['x-timestamp'];
+  const nonce = req.headers['x-nonce'];
+  
+  // Require both timestamp and nonce for all non-public routes
   if (!timestamp) {
     console.error('❌ Timestamp validation failed: Timestamp is required for', req.path);
-    return res.status(400).json({ error: 'Timestamp is required' });
+    return res.status(400).json({ 
+      error: 'Request validation failed',
+      message: 'Request timestamp is required. Please ensure your client is sending the x-timestamp header.'
+    });
   }
 
+  if (!nonce) {
+    console.error('❌ Nonce validation failed: Nonce is required for', req.path);
+    return res.status(400).json({ 
+      error: 'Request validation failed',
+      message: 'Request nonce is required. Please ensure your client is sending the x-nonce header.'
+    });
+  }
+
+  // Check nonce uniqueness (replay attack prevention)
+  if (usedNonces.has(nonce)) {
+    console.error('❌ Replay attack detected: Nonce already used', nonce, 'for', req.path);
+    
+    // Log potential replay attack
+    logAction({
+      action: 'replay-attack-detected',
+      severity: 'critical',
+      targetType: 'security',
+      targetId: req.path,
+      requestMethod: req.method,
+      requestPath: req.path,
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      userAgent: req.headers['user-agent'],
+      isAnomaly: true,
+      details: {
+        nonce: nonce,
+        timestamp: timestamp,
+        path: req.path
+      }
+    }).catch(err => console.error('Failed to log replay attack:', err));
+    
+    return res.status(400).json({ 
+      error: 'Request validation failed',
+      message: 'This request has already been processed. Please generate a new request.'
+    });
+  }
+
+  // Validate timestamp
   const requestTime = new Date(parseInt(timestamp, 10));
   const currentTime = new Date();
-
   const timeDiff = currentTime - requestTime;
   const maxAllowedTime = 5 * 60 * 1000; // 5 minutes
 
-  if (timeDiff > maxAllowedTime) {
-    console.error('❌ Timestamp validation failed: Request too old for', req.path, 'Time diff:', timeDiff);
-    return res.status(400).json({ error: 'Request too old' });
+  if (isNaN(requestTime.getTime())) {
+    console.error('❌ Timestamp validation failed: Invalid timestamp format for', req.path);
+    return res.status(400).json({ 
+      error: 'Request validation failed',
+      message: 'Invalid timestamp format. Please ensure the timestamp is a valid Unix timestamp in milliseconds.'
+    });
   }
+
+  if (timeDiff > maxAllowedTime || timeDiff < -60000) { // Allow 1 minute clock skew
+    console.error('❌ Timestamp validation failed: Request timestamp out of range for', req.path, 'Time diff:', timeDiff);
+    return res.status(400).json({ 
+      error: 'Request validation failed',
+      message: 'Request timestamp is too old or too far in the future. Please check your system clock.'
+    });
+  }
+
+  // Store nonce with timestamp
+  usedNonces.set(nonce, Date.now());
 
   next();
 });
@@ -2438,6 +2751,16 @@ app.get('/api/forms/:collection/:id', requireAuth, async (req, res) => {
     console.log('🔍 Form view request:', { collection, id, viewerUid });
     console.log('👤 Requested by:', req.user.email, 'Role:', req.user.role);
     
+    // Validate collection name
+    try {
+      validateCollectionName(collection);
+    } catch (error) {
+      return res.status(400).json({ 
+        error: 'Invalid collection',
+        message: 'The specified collection is not valid or accessible.'
+      });
+    }
+    
     // Get the document
     const doc = await admin.firestore().collection(collection).doc(id).get();
     
@@ -2825,7 +3148,13 @@ async function handleFormSubmission(req, res, formType, collectionName, userUid 
 
 const setSuperAdminOnStartup = async () => {
   try {
-    const email = 'neowalker502@gmail.com';
+    const email = process.env.SUPER_ADMIN_EMAIL;
+    
+    if (!email) {
+      console.warn('⚠️  SUPER_ADMIN_EMAIL environment variable not set. Skipping auto super admin assignment.');
+      console.warn('💡 Set SUPER_ADMIN_EMAIL in your .env file to enable automatic super admin setup.');
+      return;
+    }
 
     // Get user by email
     const user = await admin.auth().getUserByEmail(email);
@@ -2837,9 +3166,9 @@ const setSuperAdminOnStartup = async () => {
         ...user.customClaims,
         superAdmin: true,
       });
-      console.log(`Custom claim set: ${email} is now a superAdmin`);
+      console.log(`✅ Custom claim set: ${email} is now a superAdmin`);
     } else {
-      console.log(`Custom claim already exists for ${email}`);
+      console.log(`✅ Custom claim already exists for ${email}`);
     }
 
     // Also set Firestore role
@@ -2854,12 +3183,15 @@ const setSuperAdminOnStartup = async () => {
         },
         { merge: true }
       );
-      console.log(`Firestore role set: ${email} is now a superAdmin`);
+      console.log(`✅ Firestore role set: ${email} is now a superAdmin`);
     } else {
-      console.log(`Firestore role already set for ${email}`);
+      console.log(`✅ Firestore role already set for ${email}`);
     }
   } catch (error) {
-    console.error(`Failed to assign super admin:`, error);
+    console.error(`❌ Failed to assign super admin:`, error.message);
+    if (error.code === 'auth/user-not-found') {
+      console.error('💡 User not found. Please create the user account first, then restart the server.');
+    }
   }
 };
 
@@ -3004,53 +3336,110 @@ app.post('/api/submit-form', requireAuth, validateFormSubmission, sanitizeHtmlFi
   }
 });
 
+// ✅ SECURITY: Whitelist of allowed Firestore collections
+const ALLOWED_COLLECTIONS = [
+  // KYC Forms
+  'Individual-kyc-form',
+  'corporate-kyc-form',
+  
+  // CDD Forms
+  'individual-kyc',
+  'corporate-kyc',
+  'agentsCDD',
+  'brokersCDD',
+  'partnersCDD',
+  
+  // Claims Forms
+  'combined-gpa-employers-liability-claims',
+  'motor-claims',
+  'burglary-claims',
+  'fire-special-perils-claims',
+  'all-risk-claims',
+  'goods-in-transit-claims',
+  'money-insurance-claims',
+  'employers-liability-claims',
+  'public-liability-claims',
+  'professional-indemnity-claims',
+  'fidelity-guarantee-claims',
+  'contractors-claims',
+  'group-personal-accident-claims',
+  'rent-assurance-claims',
+  
+  // General
+  'formSubmissions'
+];
+
+/**
+ * Validate collection name against whitelist
+ * @throws {Error} if collection is not in whitelist
+ */
+const validateCollectionName = (collection) => {
+  if (!collection || typeof collection !== 'string') {
+    throw new Error('Invalid collection name');
+  }
+  
+  if (!ALLOWED_COLLECTIONS.includes(collection)) {
+    console.error('❌ Attempted access to unauthorized collection:', collection);
+    throw new Error('Unauthorized collection access');
+  }
+  
+  return collection;
+};
+
 // Helper function to determine Firestore collection based on form type
 const getFirestoreCollection = (formType) => {
   const formTypeLower = formType.toLowerCase();
   console.log('🔍 getFirestoreCollection called with formType:', formType);
   console.log('🔍 formTypeLower:', formTypeLower);
   
+  let collection;
+  
   // Claims forms
-  if (formTypeLower.includes('combined')) return 'combined-gpa-employers-liability-claims';
-  if (formTypeLower.includes('motor')) return 'motor-claims';
-  if (formTypeLower.includes('burglary')) return 'burglary-claims';
-  if (formTypeLower.includes('fire')) return 'fire-special-perils-claims';
-  if (formTypeLower.includes('allrisk') || formTypeLower.includes('all risk')) return 'all-risk-claims';
-  if (formTypeLower.includes('goods')) return 'goods-in-transit-claims';
-  if (formTypeLower.includes('money')) return 'money-insurance-claims';
-  if (formTypeLower.includes('employers')) return 'employers-liability-claims';
-  if (formTypeLower.includes('public')) return 'public-liability-claims';
-  if (formTypeLower.includes('professional')) return 'professional-indemnity-claims';
-  if (formTypeLower.includes('fidelity')) return 'fidelity-guarantee-claims';
-  if (formTypeLower.includes('contractors')) return 'contractors-claims';
-  if (formTypeLower.includes('group')) return 'group-personal-accident-claims';
-  if (formTypeLower.includes('rent')) return 'rent-assurance-claims';
+  if (formTypeLower.includes('combined')) collection = 'combined-gpa-employers-liability-claims';
+  else if (formTypeLower.includes('motor')) collection = 'motor-claims';
+  else if (formTypeLower.includes('burglary')) collection = 'burglary-claims';
+  else if (formTypeLower.includes('fire')) collection = 'fire-special-perils-claims';
+  else if (formTypeLower.includes('allrisk') || formTypeLower.includes('all risk')) collection = 'all-risk-claims';
+  else if (formTypeLower.includes('goods')) collection = 'goods-in-transit-claims';
+  else if (formTypeLower.includes('money')) collection = 'money-insurance-claims';
+  else if (formTypeLower.includes('employers')) collection = 'employers-liability-claims';
+  else if (formTypeLower.includes('public')) collection = 'public-liability-claims';
+  else if (formTypeLower.includes('professional')) collection = 'professional-indemnity-claims';
+  else if (formTypeLower.includes('fidelity')) collection = 'fidelity-guarantee-claims';
+  else if (formTypeLower.includes('contractors')) collection = 'contractors-claims';
+  else if (formTypeLower.includes('group')) collection = 'group-personal-accident-claims';
+  else if (formTypeLower.includes('rent')) collection = 'rent-assurance-claims';
   
   // KYC forms
-  if (formTypeLower.includes('individual') && formTypeLower.includes('kyc')) {
+  else if (formTypeLower.includes('individual') && formTypeLower.includes('kyc')) {
     console.log('✅ Matched: Individual KYC -> Individual-kyc-form');
-    return 'Individual-kyc-form';
+    collection = 'Individual-kyc-form';
   }
-  if (formTypeLower.includes('corporate') && formTypeLower.includes('kyc')) {
+  else if (formTypeLower.includes('corporate') && formTypeLower.includes('kyc')) {
     console.log('✅ Matched: Corporate KYC -> corporate-kyc-form');
-    return 'corporate-kyc-form';
+    collection = 'corporate-kyc-form';
   }
   
   // CDD forms
-  if (formTypeLower.includes('individual') && formTypeLower.includes('cdd')) {
+  else if (formTypeLower.includes('individual') && formTypeLower.includes('cdd')) {
     console.log('✅ Matched: Individual CDD -> individual-kyc');
-    return 'individual-kyc';
+    collection = 'individual-kyc';
   }
-  if (formTypeLower.includes('corporate') && formTypeLower.includes('cdd')) {
+  else if (formTypeLower.includes('corporate') && formTypeLower.includes('cdd')) {
     console.log('✅ Matched: Corporate CDD (or NAICOM Corporate CDD) -> corporate-kyc');
-    return 'corporate-kyc';
+    collection = 'corporate-kyc';
   }
-  if (formTypeLower.includes('agents') && formTypeLower.includes('cdd')) return 'agentsCDD';
-  if (formTypeLower.includes('brokers') && formTypeLower.includes('cdd')) return 'brokersCDD';
-  if (formTypeLower.includes('partners') && formTypeLower.includes('cdd')) return 'partnersCDD';
+  else if (formTypeLower.includes('agents') && formTypeLower.includes('cdd')) collection = 'agentsCDD';
+  else if (formTypeLower.includes('brokers') && formTypeLower.includes('cdd')) collection = 'brokersCDD';
+  else if (formTypeLower.includes('partners') && formTypeLower.includes('cdd')) collection = 'partnersCDD';
   
-  console.log('⚠️ No match found, using default: formSubmissions');
-  return 'formSubmissions';
+  else {
+    console.log('⚠️ No match found, using default: formSubmissions');
+    collection = 'formSubmissions';
+  }
+  
+  // Validate against whitelist
+  return validateCollectionName(collection);
 };
 
 // Helper functions for email HTML generation
@@ -3112,51 +3501,46 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Validate credentials using Firebase Admin SDK approach
+    // Validate credentials using Firebase Admin SDK
     try {
-      // First check if user exists
+      // Check if user exists
       const userRecord = await admin.auth().getUserByEmail(email);
       
-      // For Firebase Auth, we need to validate the password by attempting sign-in
-      // Since we can't directly verify passwords with Admin SDK, we use a different approach
+      // ✅ SECURE: Use Firebase Auth REST API for password validation
+      // This is the recommended approach for server-side password validation
+      const apiKey = process.env.REACT_APP_FIREBASE_KEY || process.env.VITE_FIREBASE_API_KEY;
       
-      // Create a temporary Firebase client auth instance for validation
-      const { initializeApp, getApps } = require('firebase/app');
-      const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
-      
-      // ✅ FIXED: Use environment variables instead of hardcoded values
-      const firebaseConfig = {
-        apiKey: process.env.REACT_APP_FIREBASE_KEY || process.env.VITE_FIREBASE_API_KEY,
-        authDomain: process.env.REACT_APP_AUTH_DOMAIN || process.env.VITE_FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID,
-      };
-      
-      // Validate that required config is present
-      if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
-        console.error('❌ Missing Firebase configuration in environment variables');
-        return res.status(500).json({ error: 'Server configuration error' });
+      if (!apiKey) {
+        console.error('❌ Firebase API key not configured');
+        return res.status(500).json({ 
+          error: 'Server configuration error',
+          message: 'Authentication service is not properly configured. Please contact support.'
+        });
       }
       
-      // Initialize client app for validation
-      let clientApp;
-      const existingApps = getApps();
-      if (existingApps.length > 0) {
-        clientApp = existingApps.find(app => app.name === 'validation-app') || existingApps[0];
-      } else {
-        clientApp = initializeApp(firebaseConfig, 'validation-app');
+      // Use Firebase Auth REST API to verify password
+      const authResponse = await axios.post(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+        {
+          email: email,
+          password: password,
+          returnSecureToken: true
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 10000
+        }
+      );
+      
+      // If we get here, credentials are valid
+      if (!authResponse.data || !authResponse.data.idToken) {
+        throw new Error('Invalid authentication response');
       }
-      
-      const clientAuth = getAuth(clientApp);
-      
-      // Validate credentials - this will throw if password is wrong
-      const userCredential = await signInWithEmailAndPassword(clientAuth, email, password);
-      
-      // Sign out immediately after validation
-      await clientAuth.signOut();
       
     } catch (authError) {
       // Password validation failed or user doesn't exist
-      console.error('Authentication failed:', authError.code, authError.message);
+      const errorCode = authError.response?.data?.error?.message || authError.code || 'UNKNOWN_ERROR';
+      console.error('Authentication failed:', errorCode);
       
       // Log failed attempt
       const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
@@ -3171,7 +3555,7 @@ app.post('/api/login', async (req, res) => {
         details: {
           loginMethod: 'email-password',
           success: false,
-          error: authError.code || 'Invalid credentials',
+          error: errorCode,
           errorMessage: authError.message
         },
         ipMasked: req.ipData?.masked,
@@ -3184,7 +3568,22 @@ app.post('/api/login', async (req, res) => {
         }
       });
       
-      return res.status(401).json({ error: 'Invalid email or password' });
+      // User-friendly error messages
+      let userMessage = 'Invalid email or password. Please check your credentials and try again.';
+      if (errorCode === 'EMAIL_NOT_FOUND') {
+        userMessage = 'No account found with this email address.';
+      } else if (errorCode === 'INVALID_PASSWORD') {
+        userMessage = 'Incorrect password. Please try again.';
+      } else if (errorCode === 'USER_DISABLED') {
+        userMessage = 'This account has been disabled. Please contact support.';
+      } else if (errorCode === 'TOO_MANY_ATTEMPTS_TRY_LATER') {
+        userMessage = 'Too many failed login attempts. Please try again later.';
+      }
+      
+      return res.status(401).json({ 
+        error: 'Authentication failed',
+        message: userMessage
+      });
     }
 
     // Now get user record after successful authentication
@@ -3330,6 +3729,11 @@ app.post('/api/exchange-token', async (req, res) => {
       role: userData.role
     }, { merge: true });
     
+    // ✅ CRITICAL: Update lastActivity in userroles to prevent immediate session expiration
+    await db.collection('userroles').doc(uid).update({
+      lastActivity: Date.now()
+    }).catch(err => logger.error('Failed to update lastActivity on login:', err));
+    
     console.log('✅ Login #' + loginCount + ' for user:', email);
     
     // Log successful login (token exchange)
@@ -3359,18 +3763,31 @@ app.post('/api/exchange-token', async (req, res) => {
     console.log('✅ Login successful (MFA disabled)\n');
 
     // Set httpOnly session cookie with user UID for subsequent authenticated requests
+    // Note: For localhost cross-port (8080 -> 3001), we use 'lax' which works for same-site different ports
     res.cookie('__session', uid, {
       httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Secure only in production (HTTPS required)
+      sameSite: 'lax', // Lax works for localhost different ports
+      maxAge: 2 * 60 * 60 * 1000, // 2 hours (reduced from 24 hours for better security)
+      path: '/',
+      // Don't set domain for localhost - let browser handle it
+    });
+
+    console.log('🍪 Session cookie set for UID:', uid);
+    console.log('🔧 Cookie config:', {
+      httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      sameSite: 'lax',
+      maxAge: '2 hours',
+      path: '/'
     });
 
     res.json({
       success: true,
       role: userData.role,
       user: { uid, email, displayName: userData.name },
-      loginCount: loginCount
+      loginCount: loginCount,
+      sessionToken: uid // Send token in response for localStorage fallback
     });
 
   } catch (error) {
@@ -3426,7 +3843,8 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
   // Custom key generator to be more lenient for different users from same IP
   keyGenerator: (req) => {
-    return req.ip + ':' + (req.body?.email || 'anonymous');
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    return ip + ':' + (req.body?.email || 'anonymous');
   },
   // Log rate limit hits
   handler: async (req, res) => {
@@ -3451,8 +3869,9 @@ const submissionLimiter = rateLimit({
   skipSuccessfulRequests: false, // Count all submissions
   keyGenerator: (req) => {
     // More lenient for authenticated users
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
     const userKey = req.body?.userUid || req.body?.userEmail || 'anonymous';
-    return req.ip + ':' + userKey;
+    return ip + ':' + userKey;
   },
   // Log rate limit hits
   handler: async (req, res) => {
@@ -3544,6 +3963,13 @@ app.use('/send-claim-approval-email', emailLimiter);
 app.use('/api/update-claim-status', sensitiveOperationLimiter);
 app.use('/api/users/:userId/role', sensitiveOperationLimiter);
 app.use('/api/users/:userId', sensitiveOperationLimiter); // DELETE user
+app.use('/api/cleanup-expired-ips', sensitiveOperationLimiter);
+
+// Event logs endpoints
+app.use('/api/events-logs', apiLimiter);
+
+// User management endpoints
+app.use('/api/users', apiLimiter);
 
 // General API protection (apply to all /api routes not specifically limited above)
 app.use('/api/', apiLimiter);
@@ -3974,6 +4400,8 @@ app.get('/api/events-logs', requireAuth, requireClaims, async (req, res) => {
     }
 
     console.log('🔍 Checking if eventLogs collection exists...');
+    
+    // Always use eventLogs collection for this endpoint
     let query = db.collection('eventLogs');
 
     // Check if collection exists and has documents
@@ -4141,15 +4569,20 @@ app.get('/api/events-logs', requireAuth, requireClaims, async (req, res) => {
 });
 
 // Get event details by ID (Admin only)
-app.get('/api/events-logs/:id', async (req, res) => {
+// ✅ PROTECTED: Requires claims, compliance, admin, or super admin role
+app.get('/api/events-logs/:id', requireAuth, requireClaims, async (req, res) => {
   try {
-    // TODO: Add authentication middleware to verify admin role
     const { id } = req.params;
+    
+    console.log('🔍 Event log detail request by:', req.user.email, 'Role:', req.user.role);
     
     const doc = await db.collection('eventLogs').doc(id).get();
     
     if (!doc.exists) {
-      return res.status(404).json({ error: 'Event log not found' });
+      return res.status(404).json({ 
+        error: 'Event log not found',
+        message: 'The requested event log does not exist or has been deleted.'
+      });
     }
 
     const data = doc.data();
@@ -4164,14 +4597,18 @@ app.get('/api/events-logs/:id', async (req, res) => {
     
   } catch (error) {
     console.error('Error fetching event log details:', error);
-    res.status(500).json({ error: 'Failed to fetch event log details' });
+    res.status(500).json({ 
+      error: 'Unable to retrieve event log',
+      message: 'An error occurred while fetching the event log details. Please try again.'
+    });
   }
 });
 
 // Clean up expired raw IPs (scheduled job - call this periodically)
-app.post('/api/cleanup-expired-ips', async (req, res) => {
+// ✅ PROTECTED: Requires super admin role
+app.post('/api/cleanup-expired-ips', requireAuth, requireSuperAdmin, async (req, res) => {
   try {
-    // TODO: Add authentication middleware to verify admin/system role
+    console.log('🧹 IP cleanup initiated by:', req.user.email, 'Role:', req.user.role);
     
     const now = admin.firestore.Timestamp.now();
     const expiredQuery = db.collection('eventLogs')
@@ -4181,7 +4618,11 @@ app.post('/api/cleanup-expired-ips', async (req, res) => {
     const snapshot = await expiredQuery.get();
     
     if (snapshot.empty) {
-      return res.json({ message: 'No expired IPs to clean up', cleaned: 0 });
+      return res.json({ 
+        success: true,
+        message: 'No expired IP addresses found',
+        cleaned: 0 
+      });
     }
 
     const batch = db.batch();
@@ -4194,21 +4635,51 @@ app.post('/api/cleanup-expired-ips', async (req, res) => {
 
     await batch.commit();
     
-    console.log(`🧹 Cleaned up ${cleanedCount} expired raw IPs`);
-    res.json({ message: `Cleaned up ${cleanedCount} expired raw IPs`, cleaned: cleanedCount });
+    console.log(`✅ Cleaned up ${cleanedCount} expired raw IPs by ${req.user.email}`);
+    
+    // Log the cleanup action
+    await logAction({
+      action: 'cleanup-expired-ips',
+      actorUid: req.user.uid,
+      actorDisplayName: req.user.name,
+      actorEmail: req.user.email,
+      actorRole: req.user.role,
+      targetType: 'system',
+      targetId: 'event-logs',
+      details: {
+        cleanedCount: cleanedCount,
+        timestamp: new Date().toISOString()
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      userAgent: req.headers['user-agent'] || 'Unknown'
+    });
+    
+    res.json({ 
+      success: true,
+      message: `Successfully cleaned up ${cleanedCount} expired IP addresses`,
+      cleaned: cleanedCount 
+    });
     
   } catch (error) {
     console.error('Error cleaning up expired IPs:', error);
-    res.status(500).json({ error: 'Failed to clean up expired IPs' });
+    res.status(500).json({ 
+      error: 'Cleanup failed',
+      message: 'Unable to clean up expired IP addresses. Please try again or contact support.'
+    });
   }
 });
 
-// ✅ Route to manually generate test events (for development/testing)
-app.post('/api/generate-test-events', async (req, res) => {
-  try {
-    console.log('🧪 Manually generating test events...');
-    
-    const sampleEvents = [
+// ✅ Route to manually generate test events (for development/testing only)
+// ✅ PROTECTED: Only available in non-production environments
+if (process.env.NODE_ENV !== 'production') {
+  app.post('/api/generate-test-events', requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      console.log('🧪 Manually generating test events...');
+      console.log('👤 Requested by:', req.user.email, 'Role:', req.user.role);
+      
+      const sampleEvents = [
       {
         action: 'submit',
         actorUid: 'sample-user-1',
@@ -4309,21 +4780,31 @@ app.post('/api/generate-test-events', async (req, res) => {
       }
     }
     
-    console.log(`✅ Generated ${successCount}/${sampleEvents.length} test events`);
-    res.status(200).json({ 
-      message: `Successfully generated ${successCount} test events`,
-      success: successCount,
-      total: sampleEvents.length
+      console.log(`✅ Generated ${successCount}/${sampleEvents.length} test events`);
+      res.status(200).json({ 
+        success: true,
+        message: `Successfully generated ${successCount} test events`,
+        generated: successCount,
+        total: sampleEvents.length
+      });
+      
+    } catch (error) {
+      console.error('Error generating test events:', error);
+      res.status(500).json({ 
+        error: 'Failed to generate test events',
+        message: 'Unable to generate test events. Please check server logs for details.'
+      });
+    }
+  });
+} else {
+  // In production, return 404 for this endpoint
+  app.post('/api/generate-test-events', (req, res) => {
+    res.status(404).json({ 
+      error: 'Not found',
+      message: 'This endpoint is not available in production.'
     });
-    
-  } catch (error) {
-    console.error('Error generating test events:', error);
-    res.status(500).json({ 
-      error: 'Failed to generate test events',
-      details: error.message 
-    });
-  }
-});
+  });
+}
 
 // ============= USER MANAGEMENT ENDPOINTS WITH EVENT LOGGING =============
 
@@ -5072,6 +5553,89 @@ app.get('/health', (req, res) => {
 });
 
 // ============= END HEALTH CHECK ENDPOINTS =============
+
+// ============= CENTRALIZED ERROR HANDLER =============
+
+/**
+ * Centralized error handling middleware
+ * Must be defined after all routes
+ */
+app.use((err, req, res, next) => {
+  // Log error details
+  console.error('❌ Error occurred:', {
+    message: err.message,
+    code: err.code,
+    path: req.path,
+    method: req.method,
+    user: req.user?.email || 'unauthenticated'
+  });
+
+  // Log error to events system
+  logAction({
+    action: 'error',
+    severity: 'error',
+    actorUid: req.user?.uid || null,
+    actorEmail: req.user?.email || null,
+    actorRole: req.user?.role || null,
+    targetType: 'api-endpoint',
+    targetId: req.path,
+    requestMethod: req.method,
+    requestPath: req.path,
+    responseStatus: err.statusCode || 500,
+    ipMasked: req.ipData?.masked,
+    ipHash: req.ipData?.hash,
+    rawIP: req.ipData?.raw,
+    userAgent: req.headers['user-agent'] || 'Unknown',
+    details: {
+      errorMessage: err.message,
+      errorCode: err.code,
+      errorStack: process.env.NODE_ENV !== 'production' ? err.stack : undefined
+    }
+  }).catch(logErr => console.error('Failed to log error:', logErr));
+
+  // Determine status code
+  const statusCode = err.statusCode || err.status || 500;
+
+  // User-friendly error messages
+  let userMessage = 'An unexpected error occurred. Please try again.';
+  
+  if (statusCode === 400) {
+    userMessage = 'Invalid request. Please check your input and try again.';
+  } else if (statusCode === 401) {
+    userMessage = 'Authentication required. Please sign in and try again.';
+  } else if (statusCode === 403) {
+    userMessage = 'You do not have permission to perform this action.';
+  } else if (statusCode === 404) {
+    userMessage = 'The requested resource was not found.';
+  } else if (statusCode === 429) {
+    userMessage = 'Too many requests. Please slow down and try again later.';
+  } else if (statusCode === 500) {
+    userMessage = 'A server error occurred. Our team has been notified. Please try again later.';
+  } else if (statusCode === 503) {
+    userMessage = 'Service temporarily unavailable. Please try again in a few moments.';
+  }
+
+  // Send error response
+  res.status(statusCode).json({
+    error: err.name || 'Error',
+    message: userMessage,
+    ...(process.env.NODE_ENV !== 'production' && {
+      details: err.message,
+      stack: err.stack
+    })
+  });
+});
+
+// Handle 404 - Route not found
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Not found',
+    message: 'The requested endpoint does not exist.',
+    path: req.path
+  });
+});
+
+// ============= END ERROR HANDLER =============
 
 app.listen(port, async () => {
   console.log('='.repeat(80));
