@@ -30,10 +30,16 @@ const getCSRFToken = async (): Promise<string> => {
   throw lastError || new Error('Unable to fetch CSRF token');
 };
 
+// Helper function to generate nonce
+const generateNonce = (): string => {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+};
+
 // Helper function to make authenticated requests
 const makeAuthenticatedRequest = async (url: string, data: any, method: string = 'POST') => {
   const csrfToken = await getCSRFToken();
   const timestamp = Date.now().toString();
+  const nonce = generateNonce();
   const idempotencyKey =
     data?.idempotencyKey ||
     sessionStorage.getItem('pendingSubmissionKey') ||
@@ -45,6 +51,7 @@ const makeAuthenticatedRequest = async (url: string, data: any, method: string =
       'Content-Type': 'application/json',
       'CSRF-Token': csrfToken,
       'x-timestamp': timestamp,
+      'x-nonce': nonce,
       'x-idempotency-key': idempotencyKey,
       'x-request-id': idempotencyKey,
     },

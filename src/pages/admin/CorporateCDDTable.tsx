@@ -41,8 +41,8 @@ import {
   where
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
+// CSV export - no PDF library needed
 import { format } from 'date-fns';
-import jsPDF from 'jspdf';
 
 // Custom theme
 const theme = createTheme({
@@ -176,62 +176,107 @@ const CorporateCDDTable: React.FC = () => {
     }
   };
 
-  const exportToPDF = () => {
-    const pdf = new jsPDF();
-    let yPosition = 20;
-    
-    pdf.setFontSize(16);
-    pdf.setFont(undefined, 'bold');
-    pdf.text('Corporate CDD Forms Report', 20, yPosition);
-    yPosition += 20;
-    
-    pdf.setFontSize(10);
-    pdf.setFont(undefined, 'normal');
-    pdf.text(`Generated on: ${format(new Date(), 'PPp')}`, 20, yPosition);
-    pdf.text(`Total Forms: ${filteredForms.length}`, 20, yPosition + 10);
-    yPosition += 30;
-    
-    // Table headers
-    const headers = ['Company Name', 'Email', 'Status', 'Submitted'];
-    const columnWidths = [45, 45, 30, 40];
-    let xPosition = 20;
-    
-    pdf.setFont(undefined, 'bold');
-    headers.forEach((header, index) => {
-      pdf.text(header, xPosition, yPosition);
-      xPosition += columnWidths[index];
-    });
-    yPosition += 10;
-    
-    // Table data
-    pdf.setFont(undefined, 'normal');
-    filteredForms.slice(0, 50).forEach(form => { // Limit to 50 entries
-      if (yPosition > 270) {
-        pdf.addPage();
-        yPosition = 20;
-      }
-      
-      xPosition = 20;
-      const rowData = [
+  const exportToCSV = () => {
+    // CSV headers - all fields in exact form order
+    const headers = [
+      'ID', 'Created At', 'Company Name', 'Registered Company Address', 'Incorporation Number',
+      'Incorporation State', 'Date of Incorporation/Registration', 'CAC Number', 'Nature of Business',
+      'Company Legal Form', 'Email Address', 'Website', 'Tax Identification Number', 'Telephone Number',
+      'Director 1 First Name', 'Director 1 Middle Name', 'Director 1 Last Name', 'Director 1 DOB',
+      'Director 1 Place of Birth', 'Director 1 Nationality', 'Director 1 Country', 'Director 1 Occupation',
+      'Director 1 Email', 'Director 1 Phone', 'Director 1 BVN', 'Director 1 NIN',
+      'Director 1 Employers Name', 'Director 1 Employers Phone', 'Director 1 Residential Address',
+      'Director 1 Tax ID', 'Director 1 ID Type', 'Director 1 ID Number', 'Director 1 Issuing Body',
+      'Director 1 Issued Date', 'Director 1 Expiry Date', 'Director 1 Source of Income',
+      'Director 2 First Name', 'Director 2 Middle Name', 'Director 2 Last Name', 'Director 2 DOB',
+      'Director 2 Place of Birth', 'Director 2 Nationality', 'Director 2 Country', 'Director 2 Occupation',
+      'Director 2 Email', 'Director 2 Phone', 'Director 2 BVN', 'Director 2 NIN',
+      'Director 2 Employers Name', 'Director 2 Employers Phone', 'Director 2 Residential Address',
+      'Director 2 Tax ID', 'Director 2 ID Type', 'Director 2 ID Number', 'Director 2 Issuing Body',
+      'Director 2 Issued Date', 'Director 2 Expiry Date', 'Director 2 Source of Income',
+      'Bank Name', 'Account Number', 'Bank Branch', 'Account Opening Date',
+      'Foreign Bank Name', 'Foreign Account Number', 'Foreign Bank Branch', 'Foreign Account Opening Date'
+    ];
+
+    // CSV rows - all data
+    const rows = filteredForms.map(form => {
+      const getDir = (index: number, field: string) => {
+        const directors = form.directors;
+        if (Array.isArray(directors) && directors[index]) {
+          return directors[index][field] || 'N/A';
+        }
+        return index === 0 ? (form[field] || 'N/A') : 'N/A';
+      };
+      const getDirDate = (index: number, field: string) => {
+        const directors = form.directors;
+        if (Array.isArray(directors) && directors[index]) {
+          return formatDate(directors[index][field]) || 'N/A';
+        }
+        return index === 0 ? (formatDate(form[field]) || 'N/A') : 'N/A';
+      };
+      const getDirIncome = (index: number) => {
+        const directors = form.directors;
+        if (Array.isArray(directors) && directors[index]) {
+          const dir = directors[index];
+          return dir.sourceOfIncome || dir.sourceOfIncomeOther || 'N/A';
+        }
+        return index === 0 ? (form.sourceOfIncome || form.sourceOfIncomeOther || 'N/A') : 'N/A';
+      };
+
+      return [
+        form.id || 'N/A',
+        formatDate(form.createdAt || form.timestamp || form.submittedAt),
         form.companyName || 'N/A',
+        form.registeredCompanyAddress || 'N/A',
+        form.incorporationNumber || 'N/A',
+        form.incorporationState || 'N/A',
+        formatDate(form.dateOfIncorporationRegistration),
+        form.cacNumber || 'N/A',
+        form.natureOfBusiness || 'N/A',
+        form.companyLegalForm || form.companyLegalFormOther || 'N/A',
         form.emailAddress || 'N/A',
-        form.status || 'pending',
-        formatDate(form.timestamp)
+        form.website || 'N/A',
+        form.taxIdentificationNumber || 'N/A',
+        form.telephoneNumber || 'N/A',
+        getDir(0, 'firstName'), getDir(0, 'middleName'), getDir(0, 'lastName'), getDirDate(0, 'dob'),
+        getDir(0, 'placeOfBirth'), getDir(0, 'nationality'), getDir(0, 'country'), getDir(0, 'occupation'),
+        getDir(0, 'email'), getDir(0, 'phoneNumber'), getDir(0, 'BVNNumber'), getDir(0, 'NINNumber'),
+        getDir(0, 'employersName'), getDir(0, 'employersPhoneNumber'), getDir(0, 'residentialAddress'),
+        getDir(0, 'taxIDNumber'), getDir(0, 'idType'), getDir(0, 'idNumber'), getDir(0, 'issuingBody'),
+        getDirDate(0, 'issuedDate'), getDirDate(0, 'expiryDate'), getDirIncome(0),
+        getDir(1, 'firstName'), getDir(1, 'middleName'), getDir(1, 'lastName'), getDirDate(1, 'dob'),
+        getDir(1, 'placeOfBirth'), getDir(1, 'nationality'), getDir(1, 'country'), getDir(1, 'occupation'),
+        getDir(1, 'email'), getDir(1, 'phoneNumber'), getDir(1, 'BVNNumber'), getDir(1, 'NINNumber'),
+        getDir(1, 'employersName'), getDir(1, 'employersPhoneNumber'), getDir(1, 'residentialAddress'),
+        getDir(1, 'taxIDNumber'), getDir(1, 'idType'), getDir(1, 'idNumber'), getDir(1, 'issuingBody'),
+        getDirDate(1, 'issuedDate'), getDirDate(1, 'expiryDate'), getDirIncome(1),
+        form.bankName || 'N/A',
+        form.accountNumber || 'N/A',
+        form.bankBranch || 'N/A',
+        formatDate(form.accountOpeningDate),
+        form.bankName2 || 'N/A',
+        form.accountNumber2 || 'N/A',
+        form.bankBranch2 || 'N/A',
+        formatDate(form.accountOpeningDate2)
       ];
-      
-      rowData.forEach((data, index) => {
-        const text = String(data).substring(0, 25); // Truncate long text
-        pdf.text(text, xPosition, yPosition);
-        xPosition += columnWidths[index];
-      });
-      yPosition += 8;
     });
-    
-    pdf.save('Corporate_CDD_Report.pdf');
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `corporate-cdd-forms-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
     
     toast({
       title: "Success",
-      description: "Report exported successfully"
+      description: "CSV exported successfully"
     });
   };
 
@@ -950,9 +995,9 @@ const CorporateCDDTable: React.FC = () => {
             <Button
               variant="outlined"
               startIcon={<GetApp />}
-              onClick={exportToPDF}
+              onClick={exportToCSV}
             >
-              Export PDF
+              Export CSV
             </Button>
           </div>
           

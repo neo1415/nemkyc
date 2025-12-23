@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/toaster';
@@ -10,70 +10,99 @@ import SignUp from './pages/auth/SignUp';
 import ResetPassword from './pages/auth/ResetPassword';
 import ResetPasswordConfirm from './pages/auth/ResetPasswordConfirm';
 import UserDashboard from './pages/dashboard/UserDashboard';
-import AdminDashboard from './pages/dashboard/AdminDashboard';
-import ClaimsForms from './pages/claims/ClaimsForms';
-import MotorClaim from './pages/claims/MotorClaim';
-import ProfessionalIndemnityClaimForm from './pages/claims/ProfessionalIndemnityClaimForm';
-import RentAssuranceClaim from './pages/claims/RentAssuranceClaim';
-import MoneyInsuranceClaim from './pages/claims/MoneyInsuranceClaim';
-import PublicLiabilityClaimForm from './pages/claims/PublicLiabilityClaimForm';
-import EmployersLiabilityClaim from './pages/claims/EmployersLiabilityClaim';
-import KYCForms from './pages/kyc/KYCForms';
-import IndividualKYC from './pages/kyc/IndividualKYC';
-import CorporateKYC from './pages/kyc/CorporateKYC';
-import CDDForms from './pages/cdd/CDDForms';
-import CorporateCDD from './pages/cdd/CorporateCDD';
-import NaicomCorporateCDD from './pages/cdd/NaicomCorporateCDD';
-import PartnersCDD from './pages/cdd/PartnersCDD';
+
+// ============= CRITICAL PATH COMPONENTS (Eager Loaded) =============
+// These load immediately for best first-time user experience
 import NotFound from './pages/NotFound';
 import Unauthorized from './pages/Unauthorized';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import CombinedGPAEmployersLiabilityClaim from './pages/claims/CombinedGPAEmployersLiabilityClaim';
-import BurglaryClaimForm from './pages/claims/BurglaryClaimForm';
-import GroupPersonalAccidentClaim from './pages/claims/GroupPersonalAccidentClaim';
-import FireSpecialPerilsClaim from './pages/claims/FireSpecialPerilsClaim';
-import GoodsInTransitClaim from './pages/claims/GoodsInTransitClaim';
-import ContractorsPlantMachineryClaim from './pages/claims/ContractorsPlantMachineryClaim';
-import AllRiskClaim from './pages/claims/AllRiskClaim';
-import NaicomPartnersCDD from './pages/cdd/NaicomPartnersCDD';
-import IndividualCDD from './pages/cdd/IndividualCDD';
-import AgentsCDD from './pages/cdd/AgentsCDD';
-import BrokersCDD from './pages/cdd/BrokersCDD';
-import FidelityGuaranteeClaim from './pages/claims/FidelityGuaranteeClaim';
-import AdminClaimsTable from './pages/admin/AdminClaimsTable';
-import AdminCDDTable from './pages/admin/AdminCDDTable';
-import AdminKYCTable from './pages/admin/AdminKYCTable';
-import AdminUsersTable from './pages/admin/AdminUsersTable';
-import FormViewer from './pages/admin/FormViewer';
-import EventsLogPage from './pages/admin/EventsLogPage';
-import AdminMotorClaimsTable from './pages/admin/AdminMotorClaimsTable';
-
-import AdminAgentsCDDTable from './pages/admin/AdminAgentsCDDTable';
-import AdminIndividualCDDTable from './pages/admin/AdminIndividualCDDTable';
-import AdminRentAssuranceClaimsTable from './pages/admin/AdminRentAssuranceClaimsTable';
-import AdminMoneyInsuranceClaimsTable from './pages/admin/AdminMoneyInsuranceClaimsTable';
-import AdminBurglaryClaimsTable from './pages/admin/AdminBurglaryClaimsTable';
-import AdminContractorsPlantMachineryClaimsTable from './pages/admin/AdminContractorsPlantMachineryClaimsTable';
-import AdminFidelityGuaranteeClaimsTable from './pages/admin/AdminFidelityGuaranteeClaimsTable';
-import AdminFireSpecialPerilsClaimsTable from './pages/admin/AdminFireSpecialPerilsClaimsTable';
-import AdminEmployersLiabilityClaimsTable from './pages/admin/AdminEmployersLiabilityClaimsTable';
-import AdminAllRiskClaimsTable from './pages/admin/AdminAllRiskClaimsTable';
-import AdminProfessionalIndemnityClaimsTable from './pages/admin/AdminProfessionalIndemnityClaimsTable';
-import AdminPublicLiabilityClaimsTable from './pages/admin/AdminPublicLiabilityClaimsTable';
-import AdminCombinedGPAEmployersLiabilityClaimsTable from './pages/admin/AdminCombinedGPAEmployersLiabilityClaimsTable';
-import AdminGroupPersonalAccidentClaimsTable from './pages/admin/AdminGroupPersonalAccidentClaimsTable';
-import AdminGoodsInTransitClaimsTable from './pages/admin/AdminGoodsInTransitClaimsTable';
-import AdminIndividualKYCTable from './pages/admin/AdminIndividualKYCTable';
-import AdminCorporateKYCTable from './pages/admin/AdminCorporateKYCTable';
-import AdminCorporateCDDTable from './pages/admin/AdminCorporateCDDTable';
-import AdminPartnersCDDTable from './pages/admin/AdminPartnersCDDTable';
-import AdminBrokersCDDTable from './pages/admin/AdminBrokersCDDTable';
-import AdminProfile from './pages/admin/AdminProfile';
 import RoleProtectedRoute from './components/auth/RoleProtectedRoute';
-import CorporateCDDViewer from './pages/admin/CorporateCDDViewer';
-import PartnersCDDViewer from './pages/admin/PartnersCDDViewer';
 import MFAEnrollment from './components/auth/MFAEnrollment';
 import MFAVerification from './components/auth/MFAVerification';
+
+// ============= LAZY LOADED COMPONENTS =============
+// These load on-demand for better performance
+
+// Admin Dashboard & Pages
+const AdminDashboard = lazy(() => import('./pages/dashboard/AdminDashboard'));
+const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'));
+const FormViewer = lazy(() => import('./pages/admin/FormViewer'));
+const EventsLogPage = lazy(() => import('./pages/admin/EventsLogPage'));
+const CorporateCDDViewer = lazy(() => import('./pages/admin/CorporateCDDViewer'));
+const PartnersCDDViewer = lazy(() => import('./pages/admin/PartnersCDDViewer'));
+
+// Admin Tables - KYC
+const AdminKYCTable = lazy(() => import('./pages/admin/AdminKYCTable'));
+const AdminIndividualKYCTable = lazy(() => import('./pages/admin/AdminIndividualKYCTable'));
+const AdminCorporateKYCTable = lazy(() => import('./pages/admin/AdminCorporateKYCTable'));
+
+// Admin Tables - CDD
+const AdminCDDTable = lazy(() => import('./pages/admin/AdminCDDTable'));
+const AdminIndividualCDDTable = lazy(() => import('./pages/admin/AdminIndividualCDDTable'));
+const AdminCorporateCDDTable = lazy(() => import('./pages/admin/AdminCorporateCDDTable'));
+const AdminAgentsCDDTable = lazy(() => import('./pages/admin/AdminAgentsCDDTable'));
+const AdminPartnersCDDTable = lazy(() => import('./pages/admin/AdminPartnersCDDTable'));
+const AdminBrokersCDDTable = lazy(() => import('./pages/admin/AdminBrokersCDDTable'));
+
+// Admin Tables - Claims
+const AdminClaimsTable = lazy(() => import('./pages/admin/AdminClaimsTable'));
+const AdminMotorClaimsTable = lazy(() => import('./pages/admin/AdminMotorClaimsTable'));
+const AdminRentAssuranceClaimsTable = lazy(() => import('./pages/admin/AdminRentAssuranceClaimsTable'));
+const AdminMoneyInsuranceClaimsTable = lazy(() => import('./pages/admin/AdminMoneyInsuranceClaimsTable'));
+const AdminBurglaryClaimsTable = lazy(() => import('./pages/admin/AdminBurglaryClaimsTable'));
+const AdminContractorsPlantMachineryClaimsTable = lazy(() => import('./pages/admin/AdminContractorsPlantMachineryClaimsTable'));
+const AdminFidelityGuaranteeClaimsTable = lazy(() => import('./pages/admin/AdminFidelityGuaranteeClaimsTable'));
+const AdminFireSpecialPerilsClaimsTable = lazy(() => import('./pages/admin/AdminFireSpecialPerilsClaimsTable'));
+const AdminEmployersLiabilityClaimsTable = lazy(() => import('./pages/admin/AdminEmployersLiabilityClaimsTable'));
+const AdminAllRiskClaimsTable = lazy(() => import('./pages/admin/AdminAllRiskClaimsTable'));
+const AdminProfessionalIndemnityClaimsTable = lazy(() => import('./pages/admin/AdminProfessionalIndemnityClaimsTable'));
+const AdminPublicLiabilityClaimsTable = lazy(() => import('./pages/admin/AdminPublicLiabilityClaimsTable'));
+const AdminCombinedGPAEmployersLiabilityClaimsTable = lazy(() => import('./pages/admin/AdminCombinedGPAEmployersLiabilityClaimsTable'));
+const AdminGroupPersonalAccidentClaimsTable = lazy(() => import('./pages/admin/AdminGroupPersonalAccidentClaimsTable'));
+const AdminGoodsInTransitClaimsTable = lazy(() => import('./pages/admin/AdminGoodsInTransitClaimsTable'));
+const AdminUsersTable = lazy(() => import('./pages/admin/AdminUsersTable'));
+
+// KYC Forms
+const KYCForms = lazy(() => import('./pages/kyc/KYCForms'));
+const IndividualKYC = lazy(() => import('./pages/kyc/IndividualKYC'));
+const CorporateKYC = lazy(() => import('./pages/kyc/CorporateKYC'));
+
+// CDD Forms
+const CDDForms = lazy(() => import('./pages/cdd/CDDForms'));
+const IndividualCDD = lazy(() => import('./pages/cdd/IndividualCDD'));
+const CorporateCDD = lazy(() => import('./pages/cdd/CorporateCDD'));
+const NaicomCorporateCDD = lazy(() => import('./pages/cdd/NaicomCorporateCDD'));
+const PartnersCDD = lazy(() => import('./pages/cdd/PartnersCDD'));
+const NaicomPartnersCDD = lazy(() => import('./pages/cdd/NaicomPartnersCDD'));
+const AgentsCDD = lazy(() => import('./pages/cdd/AgentsCDD'));
+const BrokersCDD = lazy(() => import('./pages/cdd/BrokersCDD'));
+
+// Claims Forms
+const ClaimsForms = lazy(() => import('./pages/claims/ClaimsForms'));
+const MotorClaim = lazy(() => import('./pages/claims/MotorClaim'));
+const ProfessionalIndemnityClaimForm = lazy(() => import('./pages/claims/ProfessionalIndemnityClaimForm'));
+const PublicLiabilityClaimForm = lazy(() => import('./pages/claims/PublicLiabilityClaimForm'));
+const EmployersLiabilityClaim = lazy(() => import('./pages/claims/EmployersLiabilityClaim'));
+const CombinedGPAEmployersLiabilityClaim = lazy(() => import('./pages/claims/CombinedGPAEmployersLiabilityClaim'));
+const BurglaryClaimForm = lazy(() => import('./pages/claims/BurglaryClaimForm'));
+const GroupPersonalAccidentClaim = lazy(() => import('./pages/claims/GroupPersonalAccidentClaim'));
+const FireSpecialPerilsClaim = lazy(() => import('./pages/claims/FireSpecialPerilsClaim'));
+const RentAssuranceClaim = lazy(() => import('./pages/claims/RentAssuranceClaim'));
+const MoneyInsuranceClaim = lazy(() => import('./pages/claims/MoneyInsuranceClaim'));
+const GoodsInTransitClaim = lazy(() => import('./pages/claims/GoodsInTransitClaim'));
+const ContractorsPlantMachineryClaim = lazy(() => import('./pages/claims/ContractorsPlantMachineryClaim'));
+const AllRiskClaim = lazy(() => import('./pages/claims/AllRiskClaim'));
+const FidelityGuaranteeClaim = lazy(() => import('./pages/claims/FidelityGuaranteeClaim'));
+
+// Loading component for lazy-loaded pages
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="flex flex-col items-center gap-4">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-900"></div>
+      <p className="text-sm text-gray-600">Loading...</p>
+    </div>
+  </div>
+);
 
 
 function App() {
@@ -106,7 +135,8 @@ function App() {
     <ErrorBoundary>
       <AuthProvider>
         <Router>
-          <Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
             <Route path="/" element={<Layout />}>
               <Route index element={<Index />} />
               <Route path="signin" element={<SignIn />} />
@@ -449,7 +479,8 @@ function App() {
              <Route path="unauthorized" element={<Unauthorized />} />
              <Route path="*" element={<NotFound />} />
             </Route>
-          </Routes>
+            </Routes>
+          </Suspense>
           <Toaster />
         </Router>
       </AuthProvider>

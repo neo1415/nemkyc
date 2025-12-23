@@ -33,6 +33,7 @@ const getCSRFToken = async (): Promise<string> => {
 const makeAuthenticatedRequest = async (url: string, data: any, method: string = 'POST') => {
   const csrfToken = await getCSRFToken();
   const timestamp = Date.now().toString();
+  const nonce = generateNonce();
   
   return fetch(url, {
     method,
@@ -40,10 +41,16 @@ const makeAuthenticatedRequest = async (url: string, data: any, method: string =
       'Content-Type': 'application/json',
       'CSRF-Token': csrfToken,
       'x-timestamp': timestamp,
+      'x-nonce': nonce,
     },
     credentials: 'include',
     body: JSON.stringify(data),
   });
+};
+
+// Helper function to generate nonce
+const generateNonce = (): string => {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
 };
 
 // Token exchange with backend - frontend handles Firebase auth, backend verifies and logs
@@ -51,11 +58,16 @@ export const exchangeToken = async (idToken: string): Promise<AuthResponse> => {
   try {
     console.log('📤 Exchanging token with backend');
     
+    const timestamp = Date.now().toString();
+    const nonce = generateNonce();
+    
     // For token exchange, we don't need CSRF token since user isn't authenticated yet
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EXCHANGE_TOKEN}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-timestamp': timestamp,
+        'x-nonce': nonce,
         // No CSRF token needed for initial authentication
       },
       credentials: 'include', // Important for session cookies
@@ -92,6 +104,12 @@ export const exchangeToken = async (idToken: string): Promise<AuthResponse> => {
 
     const result = await response.json();
     console.log('✅ Token exchange result:', result);
+    
+    // Store session token in localStorage for localhost cross-port authentication
+    if (result.success && result.sessionToken) {
+      localStorage.setItem('__session', result.sessionToken);
+      console.log('🔑 Session token stored in localStorage for cross-port auth');
+    }
     
     // Return the complete result from backend
     return result;

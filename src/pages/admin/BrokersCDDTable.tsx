@@ -41,8 +41,8 @@ import {
   where
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
+// CSV export - no PDF library needed
 import { format } from 'date-fns';
-import jsPDF from 'jspdf';
 
 // Custom theme
 const theme = createTheme({
@@ -168,62 +168,121 @@ const BrokersCDDTable: React.FC = () => {
   };
 
 
-  const exportToPDF = () => {
-    const pdf = new jsPDF();
-    let yPosition = 20;
-    
-    pdf.setFontSize(16);
-    pdf.setFont(undefined, 'bold');
-    pdf.text('Corporate CDD Forms Report', 20, yPosition);
-    yPosition += 20;
-    
-    pdf.setFontSize(10);
-    pdf.setFont(undefined, 'normal');
-    pdf.text(`Generated on: ${format(new Date(), 'PPp')}`, 20, yPosition);
-    pdf.text(`Total Forms: ${filteredForms.length}`, 20, yPosition + 10);
-    yPosition += 30;
-    
-    // Table headers
-    const headers = ['Company Name', 'Email', 'Status', 'Submitted'];
-    const columnWidths = [45, 45, 30, 40];
-    let xPosition = 20;
-    
-    pdf.setFont(undefined, 'bold');
-    headers.forEach((header, index) => {
-      pdf.text(header, xPosition, yPosition);
-      xPosition += columnWidths[index];
-    });
-    yPosition += 10;
-    
-    // Table data
-    pdf.setFont(undefined, 'normal');
-    filteredForms.slice(0, 50).forEach(form => { // Limit to 50 entries
-      if (yPosition > 270) {
-        pdf.addPage();
-        yPosition = 20;
-      }
-      
-      xPosition = 20;
-      const rowData = [
+  const exportToCSV = () => {
+    // CSV headers - all fields matching BrokersCDDViewer exactly
+    const headers = [
+      'ID', 'Created At', 'Company Name', 'Company Address', 'City', 'State', 'Country',
+      'Email Address', 'Website', 'Incorporation Number', 'Registration Number', 'Incorporation State',
+      'Company Legal Form', 'Date of Incorporation/Registration', 'Nature of Business',
+      'Tax Identification Number', 'Telephone Number',
+      'Director 1 Title', 'Director 1 Gender', 'Director 1 First Name', 'Director 1 Middle Name', 'Director 1 Last Name', 'Director 1 DOB',
+      'Director 1 Place of Birth', 'Director 1 Nationality', 'Director 1 Residence Country', 'Director 1 Occupation',
+      'Director 1 Email', 'Director 1 Phone', 'Director 1 BVN', 'Director 1 NIN',
+      'Director 1 Address', 'Director 1 Employers Name', 'Director 1 Tax ID',
+      'Director 1 International Passport Number', 'Director 1 Passport Issued Country',
+      'Director 1 ID Type', 'Director 1 ID Number', 'Director 1 Issued By',
+      'Director 1 Issued Date', 'Director 1 Expiry Date', 'Director 1 Source of Income',
+      'Director 2 Title', 'Director 2 Gender', 'Director 2 First Name', 'Director 2 Middle Name', 'Director 2 Last Name', 'Director 2 DOB',
+      'Director 2 Place of Birth', 'Director 2 Nationality', 'Director 2 Residence Country', 'Director 2 Occupation',
+      'Director 2 Email', 'Director 2 Phone', 'Director 2 BVN', 'Director 2 NIN',
+      'Director 2 Address', 'Director 2 Employers Name', 'Director 2 Tax ID',
+      'Director 2 International Passport Number', 'Director 2 Passport Issued Country',
+      'Director 2 ID Type', 'Director 2 ID Number', 'Director 2 Issued By',
+      'Director 2 Issued Date', 'Director 2 Expiry Date', 'Director 2 Source of Income',
+      'Local Bank Name', 'Bank Branch', 'Current Account Number', 'Account Opening Date',
+      'Domicilliary Account Number', 'Foreign Bank Name', 'Bank Branch Name', 'Currency', 'Foreign Account Opening Date'
+    ];
+
+    // CSV rows - all data matching viewer field names
+    const rows = filteredForms.map(form => {
+      const getDir = (index: number, field: string) => {
+        const directors = form.directors;
+        if (Array.isArray(directors) && directors[index]) {
+          return directors[index][field] || 'N/A';
+        }
+        return index === 0 ? (form[field] || 'N/A') : 'N/A';
+      };
+      const getDirDate = (index: number, field: string) => {
+        const directors = form.directors;
+        if (Array.isArray(directors) && directors[index]) {
+          return formatDate(directors[index][field]) || 'N/A';
+        }
+        return index === 0 ? (formatDate(form[field]) || 'N/A') : 'N/A';
+      };
+      const getDirIncome = (index: number) => {
+        const directors = form.directors;
+        if (Array.isArray(directors) && directors[index]) {
+          const dir = directors[index];
+          return dir.sourceOfIncome || dir.sourceOfIncomeOther || 'N/A';
+        }
+        return index === 0 ? (form.sourceOfIncome || form.sourceOfIncomeOther || 'N/A') : 'N/A';
+      };
+
+      return [
+        form.id || 'N/A',
+        formatDate(form.createdAt || form.timestamp || form.submittedAt),
         form.companyName || 'N/A',
+        form.companyAddress || 'N/A',
+        form.city || 'N/A',
+        form.state || 'N/A',
+        form.country || 'N/A',
         form.emailAddress || 'N/A',
-        form.status || 'pending',
-        formatDate(form.timestamp)
+        form.website || 'N/A',
+        form.incorporationNumber || 'N/A',
+        form.registrationNumber || 'N/A',
+        form.incorporationState || 'N/A',
+        form.companyLegalForm || form.companyLegalFormOther || 'N/A',
+        formatDate(form.dateOfIncorporationRegistration),
+        form.natureOfBusiness || 'N/A',
+        form.taxIdentificationNumber || 'N/A',
+        form.telephoneNumber || 'N/A',
+        // Director 1 - using exact field names from viewer
+        getDir(0, 'title'), getDir(0, 'gender'),
+        getDir(0, 'firstName'), getDir(0, 'middleName'), getDir(0, 'lastName'), getDirDate(0, 'dob'),
+        getDir(0, 'placeOfBirth'), getDir(0, 'nationality'), getDir(0, 'residenceCountry'), getDir(0, 'occupation'),
+        getDir(0, 'email'), getDir(0, 'phoneNumber'), getDir(0, 'BVNNumber'), getDir(0, 'NINNumber'),
+        getDir(0, 'address'), getDir(0, 'employersName'), getDir(0, 'taxIDNumber'),
+        getDir(0, 'intPassNo'), getDir(0, 'passIssuedCountry'),
+        getDir(0, 'idType'), getDir(0, 'idNumber'), getDir(0, 'issuedBy'),
+        getDirDate(0, 'issuedDate'), getDirDate(0, 'expiryDate'), getDirIncome(0),
+        // Director 2 - using exact field names from viewer
+        getDir(1, 'title'), getDir(1, 'gender'),
+        getDir(1, 'firstName'), getDir(1, 'middleName'), getDir(1, 'lastName'), getDirDate(1, 'dob'),
+        getDir(1, 'placeOfBirth'), getDir(1, 'nationality'), getDir(1, 'residenceCountry'), getDir(1, 'occupation'),
+        getDir(1, 'email'), getDir(1, 'phoneNumber'), getDir(1, 'BVNNumber'), getDir(1, 'NINNumber'),
+        getDir(1, 'address'), getDir(1, 'employersName'), getDir(1, 'taxIDNumber'),
+        getDir(1, 'intPassNo'), getDir(1, 'passIssuedCountry'),
+        getDir(1, 'idType'), getDir(1, 'idNumber'), getDir(1, 'issuedBy'),
+        getDirDate(1, 'issuedDate'), getDirDate(1, 'expiryDate'), getDirIncome(1),
+        // Account details - using exact field names from viewer
+        form.localBankName || 'N/A',
+        form.bankBranch || 'N/A',
+        form.currentAccountNumber || 'N/A',
+        formatDate(form.accountOpeningDate),
+        form.domAccountNumber2 || 'N/A',
+        form.foreignBankName2 || 'N/A',
+        form.bankBranchName2 || 'N/A',
+        form.currency || 'N/A',
+        formatDate(form.accountOpeningDate2)
       ];
-      
-      rowData.forEach((data, index) => {
-        const text = String(data).substring(0, 25); // Truncate long text
-        pdf.text(text, xPosition, yPosition);
-        xPosition += columnWidths[index];
-      });
-      yPosition += 8;
     });
-    
-    pdf.save('Corporate_CDD_Report.pdf');
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `brokers-cdd-forms-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
     
     toast({
       title: "Success",
-      description: "Report exported successfully"
+      description: "CSV exported successfully"
     });
   };
 
@@ -366,6 +425,30 @@ const BrokersCDDTable: React.FC = () => {
     
     // Directors Information - Director 1 (using renderCell as per changelog)
     {
+      field: 'director1Title',
+      headerName: 'Director 1 Title',
+      width: 100,
+      renderCell: (params) => {
+        const directors = params.row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].title || 'N/A';
+        }
+        return params.row.title || 'N/A';
+      }
+    },
+    {
+      field: 'director1Gender',
+      headerName: 'Director 1 Gender',
+      width: 100,
+      renderCell: (params) => {
+        const directors = params.row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].gender || 'N/A';
+        }
+        return params.row.gender || 'N/A';
+      }
+    },
+    {
       field: 'director1FirstName',
       headerName: 'Director 1 First Name',
       width: 150,
@@ -438,15 +521,15 @@ const BrokersCDDTable: React.FC = () => {
       }
     },
     {
-      field: 'director1Country',
-      headerName: 'Director 1 Country',
+      field: 'director1ResidenceCountry',
+      headerName: 'Director 1 Residence Country',
       width: 140,
       renderCell: (params) => {
         const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
-          return directors[0].country || 'N/A';
+          return directors[0].residenceCountry || 'N/A';
         }
-        return params.row.country || 'N/A';
+        return params.row.residenceCountry || 'N/A';
       }
     },
     {
@@ -534,15 +617,15 @@ const BrokersCDDTable: React.FC = () => {
       }
     },
     {
-      field: 'director1ResidentialAddress',
-      headerName: 'Director 1 Residential Address',
+      field: 'director1Address',
+      headerName: 'Director 1 Address',
       width: 200,
       renderCell: (params) => {
         const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
-          return directors[0].residentialAddress || 'N/A';
+          return directors[0].address || 'N/A';
         }
-        return params.row.residentialAddress || 'N/A';
+        return params.row.address || 'N/A';
       }
     },
     {
@@ -555,6 +638,30 @@ const BrokersCDDTable: React.FC = () => {
           return directors[0].taxIDNumber || 'N/A';
         }
         return params.row.taxIDNumber || 'N/A';
+      }
+    },
+    {
+      field: 'director1IntPassNo',
+      headerName: 'Director 1 International Passport Number',
+      width: 200,
+      renderCell: (params) => {
+        const directors = params.row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].intPassNo || 'N/A';
+        }
+        return params.row.intPassNo || 'N/A';
+      }
+    },
+    {
+      field: 'director1PassIssuedCountry',
+      headerName: 'Director 1 Passport Issued Country',
+      width: 180,
+      renderCell: (params) => {
+        const directors = params.row.directors;
+        if (Array.isArray(directors) && directors[0]) {
+          return directors[0].passIssuedCountry || 'N/A';
+        }
+        return params.row.passIssuedCountry || 'N/A';
       }
     },
     {
@@ -582,15 +689,15 @@ const BrokersCDDTable: React.FC = () => {
       }
     },
     {
-      field: 'director1IssuingBody',
-      headerName: 'Director 1 Issuing Body',
+      field: 'director1IssuedBy',
+      headerName: 'Director 1 Issued By',
       width: 160,
       renderCell: (params) => {
         const directors = params.row.directors;
         if (Array.isArray(directors) && directors[0]) {
-          return directors[0].issuingBody || 'N/A';
+          return directors[0].issuedBy || 'N/A';
         }
-        return params.row.issuingBody || 'N/A';
+        return params.row.issuedBy || 'N/A';
       }
     },
     {
@@ -631,6 +738,30 @@ const BrokersCDDTable: React.FC = () => {
     },
     
     // Directors Information - Director 2 (using renderCell as per changelog)
+    {
+      field: 'director2Title',
+      headerName: 'Director 2 Title',
+      width: 100,
+      renderCell: (params) => {
+        const directors = params.row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].title || 'N/A';
+        }
+        return 'N/A';
+      }
+    },
+    {
+      field: 'director2Gender',
+      headerName: 'Director 2 Gender',
+      width: 100,
+      renderCell: (params) => {
+        const directors = params.row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].gender || 'N/A';
+        }
+        return 'N/A';
+      }
+    },
     {
       field: 'director2FirstName',
       headerName: 'Director 2 First Name',
@@ -704,13 +835,13 @@ const BrokersCDDTable: React.FC = () => {
       }
     },
     {
-      field: 'director2Country',
-      headerName: 'Director 2 Country',
+      field: 'director2ResidenceCountry',
+      headerName: 'Director 2 Residence Country',
       width: 140,
       renderCell: (params) => {
         const directors = params.row.directors;
         if (Array.isArray(directors) && directors[1]) {
-          return directors[1].country || 'N/A';
+          return directors[1].residenceCountry || 'N/A';
         }
         return 'N/A';
       }
@@ -800,13 +931,13 @@ const BrokersCDDTable: React.FC = () => {
       }
     },
     {
-      field: 'director2ResidentialAddress',
-      headerName: 'Director 2 Residential Address',
+      field: 'director2Address',
+      headerName: 'Director 2 Address',
       width: 200,
       renderCell: (params) => {
         const directors = params.row.directors;
         if (Array.isArray(directors) && directors[1]) {
-          return directors[1].residentialAddress || 'N/A';
+          return directors[1].address || 'N/A';
         }
         return 'N/A';
       }
@@ -819,6 +950,30 @@ const BrokersCDDTable: React.FC = () => {
         const directors = params.row.directors;
         if (Array.isArray(directors) && directors[1]) {
           return directors[1].taxIDNumber || 'N/A';
+        }
+        return 'N/A';
+      }
+    },
+    {
+      field: 'director2IntPassNo',
+      headerName: 'Director 2 International Passport Number',
+      width: 200,
+      renderCell: (params) => {
+        const directors = params.row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].intPassNo || 'N/A';
+        }
+        return 'N/A';
+      }
+    },
+    {
+      field: 'director2PassIssuedCountry',
+      headerName: 'Director 2 Passport Issued Country',
+      width: 180,
+      renderCell: (params) => {
+        const directors = params.row.directors;
+        if (Array.isArray(directors) && directors[1]) {
+          return directors[1].passIssuedCountry || 'N/A';
         }
         return 'N/A';
       }
@@ -848,13 +1003,13 @@ const BrokersCDDTable: React.FC = () => {
       }
     },
     {
-      field: 'director2IssuingBody',
-      headerName: 'Director 2 Issuing Body',
+      field: 'director2IssuedBy',
+      headerName: 'Director 2 Issued By',
       width: 160,
       renderCell: (params) => {
         const directors = params.row.directors;
         if (Array.isArray(directors) && directors[1]) {
-          return directors[1].issuingBody || 'N/A';
+          return directors[1].issuedBy || 'N/A';
         }
         return 'N/A';
       }
@@ -966,9 +1121,9 @@ const BrokersCDDTable: React.FC = () => {
             <Button
               variant="outlined"
               startIcon={<GetApp />}
-              onClick={exportToPDF}
+              onClick={exportToCSV}
             >
-              Export PDF
+              Export CSV
             </Button>
           </div>
           

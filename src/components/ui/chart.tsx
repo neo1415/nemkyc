@@ -74,27 +74,31 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
+  // ✅ SECURITY: Generate CSS safely without dangerouslySetInnerHTML
+  // Create CSS custom properties for each theme
+  const cssText = Object.entries(THEMES)
+    .map(([theme, prefix]) => {
+      const selector = prefix ? `${prefix} [data-chart="${id}"]` : `[data-chart="${id}"]`;
+      const properties = colorConfig
+        .map(([key, itemConfig]) => {
+          const color =
+            itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
+            itemConfig.color;
+          // Sanitize color value to prevent CSS injection
+          if (color && /^[a-zA-Z0-9#(),.\s%-]+$/.test(color)) {
+            return `  --color-${key}: ${color};`;
+          }
+          return null;
+        })
+        .filter(Boolean)
+        .join("\n");
+      
+      return `${selector} {\n${properties}\n}`;
+    })
+    .join("\n");
+
   return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
-  })
-  .join("\n")}
-}
-`
-          )
-          .join("\n"),
-      }}
-    />
+    <style>{cssText}</style>
   )
 }
 

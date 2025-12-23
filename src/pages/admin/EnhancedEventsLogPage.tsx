@@ -153,11 +153,17 @@ const EnhancedEventsLogPage: React.FC = () => {
       if (endDate) params.append('endDate', endDate);
       if (searchTerm) params.append('searchTerm', searchTerm);
 
+      const timestamp = Date.now().toString();
+      const nonce = `${timestamp}-${Math.random().toString(36).substring(2, 15)}`;
+
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/events-logs?${params}`,
         {
           credentials: 'include',
-          headers: { 'x-timestamp': Date.now().toString() }
+          headers: { 
+            'x-timestamp': timestamp,
+            'x-nonce': nonce
+          }
         }
       );
 

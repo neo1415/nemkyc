@@ -66,8 +66,19 @@ const individualKYCSchema = yup.object().shape({
     .max(new Date(), "Issue date cannot be in the future"),
   expiryDate: yup.date()
     .nullable()
+    .transform((value, originalValue) => {
+      // Handle empty string case for optional date field
+      if (originalValue === '' || originalValue === null || originalValue === undefined) {
+        return null;
+      }
+      return value;
+    })
     .typeError("Please enter a valid date")
-    .min(new Date(), "Expiry date cannot be in the past"),
+    .test('future-date', 'Expiry date cannot be in the past', function(value) {
+      // Only validate if a value is provided
+      if (!value) return true;
+      return value >= new Date();
+    }),
   sourceOfIncome: yup.string().required("Income source is required"),
   sourceOfIncomeOther: yup.string().when('sourceOfIncome', {
     is: 'Other',
