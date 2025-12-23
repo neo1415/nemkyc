@@ -8,24 +8,33 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/userroles/$(request.auth.uid)).data.role;
     }
 
+    // Normalize known role variants to canonical values using ternary expressions
+    function normalizedRole() {
+      return getUserRole() == 'superAdmin' || getUserRole() == 'super-admin' || getUserRole() == 'super_admin' || getUserRole() == 'Super Admin' || getUserRole() == 'SuperAdmin'
+        ? 'super admin'
+        : (getUserRole() == 'user' || getUserRole() == 'User')
+          ? 'default'
+          : getUserRole();
+    }
+
     function isSuperAdmin() {
-      return request.auth != null && getUserRole() == 'super admin';
+      return request.auth != null && normalizedRole() == 'super admin';
     }
 
     function isAdmin() {
-      return request.auth != null && getUserRole() == 'admin';
+      return request.auth != null && normalizedRole() == 'admin';
     }
 
     function isCompliance() {
-      return request.auth != null && getUserRole() == 'compliance';
+      return request.auth != null && normalizedRole() == 'compliance';
     }
 
     function isClaims() {
-      return request.auth != null && getUserRole() == 'claims';
+      return request.auth != null && normalizedRole() == 'claims';
     }
 
     function isDefault() {
-      return request.auth != null && (getUserRole() == 'default' || !exists(/databases/$(database)/documents/userroles/$(request.auth.uid)));
+      return request.auth != null && (normalizedRole() == 'default' || !exists(/databases/$(database)/documents/userroles/$(request.auth.uid)));
     }
 
     function isAdminOrSuperAdmin() {
@@ -47,19 +56,15 @@ service cloud.firestore {
     // ========== /userroles/{userId} ==========
 
     match /userroles/{userId} {
-      // Allow everyone (even unauthenticated) to create their own doc, but not with restricted fields
-      allow create: if request.auth == null || (
+      allow create: if request.auth != null && 
         request.auth.uid == userId &&
         !("role" in request.resource.data) &&
         !("dateCreated" in request.resource.data) &&
         !("dateModified" in request.resource.data) &&
-        !("email" in request.resource.data)
-      );
+        !("email" in request.resource.data);
 
-      // Allow users to read their own document, superAdmin can read all
       allow read: if request.auth.uid == userId || isSuperAdmin();
       
-      // Only superAdmin can update, delete
       allow update, delete: if isSuperAdmin();
     }
 
@@ -67,141 +72,221 @@ service cloud.firestore {
 
     match /partners-kyc/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /individual-kyc/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /individual-kyc-forms/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /Individual-kyc-form/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /corporate-kyc/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /corporate-kyc-form/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /corporate-kyc-forms/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /agents-kyc/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /brokers-kyc/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /naicom-partners-cdd/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /naicom-corporate-cdd/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /brokers-cdd/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     // ========== Claims Collections ==========
 
     match /motor-claims/{docId} {
-      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /public-liability-claims/{docId} {
-      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /rent-assurance-claims/{docId} {
-      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /professional-indemnity-claims/{docId} {
-      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /employers-liability-claims/{docId} {
-      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /goodsInTransitClaims/{docId} {
-      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /fireAndSpecialPerilsClaims/{docId} {
-      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /groupPersonalAccidentClaims/{docId} {
-      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /combined-gpa-employers-liability-claims/{docId} {
-      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /burglary-claims/{docId} {
-      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /all-risk-claims/{docId} {
-      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /money-insurance-claims/{docId} {
-      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     match /fidelityGuaranteeClaims/{docId} {
-      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
     
     match /contractors-claims/{docId} {
-      allow read: if isClaimsOrAdminOrCompliance() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow create: if isAuthenticatedUser() && request.resource.data.submittedBy == request.auth.uid;
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && resource.data.submittedBy == request.auth.uid);
+      allow delete: if isAdminOrSuperAdmin();
     }
 
     // ========== General fallback ==========
 
     match /{document=**} {
-      allow read: if isAdminOrSuperAdmin() || isDefault();
-      allow write: if isAuthenticatedUser();
+      allow read: if isAdminOrSuperAdmin();
+      allow write: if false;
     }
   }
 }

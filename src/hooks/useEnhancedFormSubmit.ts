@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -50,10 +50,16 @@ const getCSRFToken = async (): Promise<string> => {
   throw lastError || new Error('Unable to fetch CSRF token');
 };
 
+// Helper function to generate nonce
+const generateNonce = (): string => {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+};
+
 // Helper function to make authenticated requests
 const makeAuthenticatedRequest = async (url: string, data: any, method: string = 'POST') => {
   const csrfToken = await getCSRFToken();
   const timestamp = Date.now().toString();
+  const nonce = generateNonce();
   const idempotencyKey =
     data?.idempotencyKey ||
     sessionStorage.getItem('pendingSubmissionKey') ||
@@ -65,6 +71,7 @@ const makeAuthenticatedRequest = async (url: string, data: any, method: string =
       'Content-Type': 'application/json',
       'CSRF-Token': csrfToken,
       'x-timestamp': timestamp,
+      'x-nonce': nonce,
       'x-idempotency-key': idempotencyKey,
       'x-request-id': idempotencyKey,
     },
@@ -116,10 +123,19 @@ export const useEnhancedFormSubmit = (
 
   // Computed state
   const showLoading = isValidating || isSubmitting;
+  
+  // Ref to track if we've already processed a pending submission
+  const hasProcessedPending = useRef(false);
 
   // Check for pending submission on mount and process it
   useEffect(() => {
     const checkAndProcessPendingSubmission = async () => {
+      // Prevent duplicate processing using ref
+      if (hasProcessedPending.current) {
+        console.log('⏭️  Skipping duplicate pending submission check');
+        return;
+      }
+      
       const pendingData = sessionStorage.getItem('pendingSubmission');
       
       if (pendingData && user) {
@@ -127,6 +143,9 @@ export const useEnhancedFormSubmit = (
         
         // Only process if it's for this form type and not expired (30 minutes)
         if (savedFormType === formType && Date.now() - timestamp < 30 * 60 * 1000) {
+          // Mark as processed to prevent duplicates
+          hasProcessedPending.current = true;
+          
           console.log('🎯 Processing pending submission for', formType);
           setLoadingMessage('Processing your submission...');
           setIsSubmitting(true);

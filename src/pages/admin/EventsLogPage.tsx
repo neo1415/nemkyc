@@ -116,6 +116,11 @@ const EventsLogPage: React.FC = () => {
     try {
       setLoading(true);
       
+      // Debug: Check if session cookie exists
+      const cookies = document.cookie;
+      console.log('🍪 Current cookies:', cookies);
+      console.log('🔍 Has __session cookie:', cookies.includes('__session'));
+      
       const params = new URLSearchParams({
         page: (paginationModel.page + 1).toString(),
         limit: paginationModel.pageSize.toString(),
@@ -129,10 +134,23 @@ const EventsLogPage: React.FC = () => {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
       const finalUrl = `${API_BASE_URL}/api/events-logs?${params}`;
 
+      console.log('📤 Fetching events from:', finalUrl);
+
+      const timestamp = Date.now().toString();
+      const nonce = `${timestamp}-${Math.random().toString(36).substring(2, 15)}`;
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        'X-Timestamp': Date.now().toString(),
+        'x-timestamp': timestamp,
+        'x-nonce': nonce,
       };
+
+      // Add session token from localStorage for localhost cross-port auth
+      const sessionToken = localStorage.getItem('__session');
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+        console.log('🔑 Added session token to Authorization header');
+      }
 
       const response = await fetch(finalUrl, {
         method: 'GET',
@@ -141,6 +159,16 @@ const EventsLogPage: React.FC = () => {
       });
       
       if (!response.ok) {
+        // Handle session expiry - redirect to signin
+        if (response.status === 401) {
+          toast({ 
+            title: 'Session Expired', 
+            description: 'Please log in again',
+            variant: 'destructive' 
+          });
+          navigate('/signin');
+          return;
+        }
         throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
       }
 

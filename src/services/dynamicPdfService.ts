@@ -28,12 +28,16 @@ export const downloadDynamicPDF = async (
       });
       const { csrfToken } = await csrfResponse.json();
 
+      const timestamp = Date.now().toString();
+      const nonce = `${timestamp}-${Math.random().toString(36).substring(2, 15)}`;
+
       await fetch(`${API_BASE_URL}/api/pdf/download`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'CSRF-Token': csrfToken,
-          'x-timestamp': Date.now().toString(),
+          'x-timestamp': timestamp,
+          'x-nonce': nonce,
         },
         credentials: 'include',
         body: JSON.stringify({

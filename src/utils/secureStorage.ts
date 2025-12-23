@@ -17,7 +17,17 @@ interface EncryptedData {
 }
 
 const STORAGE_KEY = 'nem_forms_key';
-const SALT = 'nem-forms-secure-salt-2024'; // In production, this should be in env
+
+// ✅ SECURITY: Use environment-specific salt
+const SALT = (() => {
+  const envSalt = import.meta.env.VITE_STORAGE_SALT;
+  if (!envSalt) {
+    console.error('❌ VITE_STORAGE_SALT not set! Using fallback (not recommended for production)');
+    // Generate a session-specific salt as fallback
+    return `nem-forms-${Date.now()}-${Math.random().toString(36)}`;
+  }
+  return envSalt;
+})();
 
 /**
  * Derive an encryption key from a password/user ID

@@ -22,11 +22,17 @@ const getCSRFToken = async (): Promise<string> => {
   return data.csrfToken;
 };
 
+// Helper function to generate nonce
+const generateNonce = (): string => {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+};
+
 // Helper function to make authenticated requests (with auto session refresh)
 const makeAuthenticatedRequest = async (url: string, method: string = 'GET', data?: any) => {
   const doFetch = async () => {
     const csrfToken = await getCSRFToken();
     const timestamp = Date.now().toString();
+    const nonce = generateNonce();
 
     const config: RequestInit = {
       method,
@@ -34,6 +40,7 @@ const makeAuthenticatedRequest = async (url: string, method: string = 'GET', dat
         'Content-Type': 'application/json',
         'CSRF-Token': csrfToken,
         'x-timestamp': timestamp,
+        'x-nonce': nonce,
       },
       credentials: 'include',
     };
