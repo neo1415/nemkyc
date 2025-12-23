@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -1109,8 +1110,15 @@ const BrokersCDDTable: React.FC = () => {
       renderCell: (params) => formatDate(params.row.accountOpeningDate2),
     }
   ];
+=======
 
+import React from 'react';
+import AdminUnifiedTable from './AdminUnifiedTable';
+>>>>>>> a7c1465986cfbb72d81a424afe48557581a3e17a
+
+const AdminBrokersCDDTable: React.FC = () => {
   return (
+<<<<<<< HEAD
     <ThemeProvider theme={theme}>
       <div className="p-6">
         <div className="mb-6">
@@ -1192,7 +1200,14 @@ const BrokersCDDTable: React.FC = () => {
         </Dialog>
       </div>
     </ThemeProvider>
+=======
+    <AdminUnifiedTable 
+      collectionName="brokers-kyc"
+      title="Brokers CDD Management"
+      isClaim={false}
+    />
+>>>>>>> a7c1465986cfbb72d81a424afe48557581a3e17a
   );
 };
 
-export default BrokersCDDTable;
+export default AdminBrokersCDDTable;
