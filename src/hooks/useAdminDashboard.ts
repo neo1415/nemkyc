@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { normalizeRole } from '../utils/roleNormalization';
 
@@ -24,11 +24,11 @@ const getCollectionsForRole = (role: string) => {
   if (['compliance', 'admin', 'super admin'].includes(r)) {
     collections.push(
       'Individual-kyc-form', 'corporate-kyc-form', // KYC
-      'agents-kyc', 'brokers-kyc', 'corporate-kyc', 'individual-kyc', 'partners-kyc' // CDD
+      'agentsCDD', 'brokersCDD', 'partnersCDD', 'individual-kyc', 'corporate-kyc' // CDD - using actual collection names
     );
   }
   
-// Claims collections for claims, admin, and super admin
+  // Claims collections for claims, admin, and super admin
   if (['claims', 'admin', 'super admin'].includes(r)) {
     collections.push(
       'motor-claims', 'burglary-claims', 'all-risk-claims', 'money-insurance-claims',
@@ -48,14 +48,22 @@ const fetchDashboardStats = async (userRole: string): Promise<DashboardStats> =>
   const canViewClaims = ['claims', 'admin', 'super admin'].includes(role);
   const canViewKYCCDD = ['compliance', 'admin', 'super admin'].includes(role);
 
+  // Helper function to safely fetch a collection (returns empty if collection doesn't exist)
+  const safeGetDocs = async (collectionName: string) => {
+    try {
+      return await getDocs(collection(db, collectionName));
+    } catch (error) {
+      console.log(`Collection ${collectionName} not found or error:`, error);
+      return { size: 0, docs: [] };
+    }
+  };
+
   // Create parallel requests array
   const parallelRequests: Promise<any>[] = [];
   
   // 1. Users count (super admin only)
   if (canViewUsers) {
-    parallelRequests.push(
-      getDocs(collection(db, 'userroles'))
-    );
+    parallelRequests.push(safeGetDocs('userroles'));
   } else {
     parallelRequests.push(Promise.resolve({ size: 0 }));
   }
@@ -70,11 +78,7 @@ const fetchDashboardStats = async (userRole: string): Promise<DashboardStats> =>
 
   if (canViewClaims) {
     parallelRequests.push(
-      Promise.all(
-        claimsCollections.map(collectionName =>
-          getDocs(collection(db, collectionName))
-        )
-      )
+      Promise.all(claimsCollections.map(collectionName => safeGetDocs(collectionName)))
     );
   } else {
     parallelRequests.push(Promise.resolve([]));
@@ -85,11 +89,7 @@ const fetchDashboardStats = async (userRole: string): Promise<DashboardStats> =>
   
   if (canViewKYCCDD) {
     parallelRequests.push(
-      Promise.all(
-        kycCollections.map(collectionName =>
-          getDocs(collection(db, collectionName))
-        )
-      )
+      Promise.all(kycCollections.map(collectionName => safeGetDocs(collectionName)))
     );
   } else {
     parallelRequests.push(Promise.resolve([]));
@@ -97,16 +97,12 @@ const fetchDashboardStats = async (userRole: string): Promise<DashboardStats> =>
 
   // 4. CDD collections (parallel)
   const cddCollections = canViewKYCCDD ? [
-    'agentsCDD', 'brokersCDD', 'corporateCDD', 'individualCDD', 'partnersCDD'
+    'agentsCDD', 'brokersCDD', 'partnersCDD', 'individual-kyc', 'corporate-kyc'
   ] : [];
   
   if (canViewKYCCDD) {
     parallelRequests.push(
-      Promise.all(
-        cddCollections.map(collectionName =>
-          getDocs(collection(db, collectionName))
-        )
-      )
+      Promise.all(cddCollections.map(collectionName => safeGetDocs(collectionName)))
     );
   } else {
     parallelRequests.push(Promise.resolve([]));
@@ -123,15 +119,7 @@ const fetchDashboardStats = async (userRole: string): Promise<DashboardStats> =>
 
   if (recentCollections.length > 0) {
     parallelRequests.push(
-      Promise.all(
-        recentCollections.map(collectionName =>
-          getDocs(query(
-            collection(db, collectionName),
-            // orderBy('timestamp', 'desc'), // Remove this to avoid requiring index
-            // limit(3) // Limit per collection for speed
-          ))
-        )
-      )
+      Promise.all(recentCollections.map(collectionName => safeGetDocs(collectionName)))
     );
   } else {
     parallelRequests.push(Promise.resolve([]));

@@ -119,6 +119,14 @@ const brokersCDDSchema = yup.object().shape({
       })
       .typeError('Please select a valid date'),
     expiryDate: yup.date()
+      .nullable()
+      .transform((value, originalValue) => {
+        // Handle empty string or null
+        if (originalValue === '' || originalValue === null || originalValue === undefined) {
+          return null;
+        }
+        return value;
+      })
       .test('not-past', 'Expiry date cannot be in the past', function(value) {
         if (!value) return true; // Optional field
         const today = new Date();
@@ -399,6 +407,7 @@ const BrokersCDD: React.FC = () => {
       `directors.${index}.idNumber`,
       `directors.${index}.issuedBy`,
       `directors.${index}.issuedDate`,
+      `directors.${index}.expiryDate`,
       `directors.${index}.sourceOfIncome`
     ]),
     2: ['localBankName', 'bankBranch', 'currentAccountNumber', 'accountOpeningDate', 'Incorporation', 'identification'],
@@ -982,7 +991,7 @@ const BrokersCDD: React.FC = () => {
             </div>
             
             <div>
-              <Label>Identification Means for Director 2 <span className="required-asterisk">*</span></Label>
+              <Label>Identification Means for Director 2 (Optional)</Label>
               <FileUpload
                 accept=".png,.jpg,.jpeg,.pdf"
                 onFileSelect={(file) => {
@@ -1002,11 +1011,6 @@ const BrokersCDD: React.FC = () => {
                   <Check className="h-4 w-4" />
                   {uploadedFiles.identification2.name}
                 </div>
-              )}
-              {formMethods.formState.errors.identification2 && (
-                <p className="text-sm text-destructive">
-                  {formMethods.formState.errors.identification2.message?.toString()}
-                </p>
               )}
             </div>
             

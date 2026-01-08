@@ -10,6 +10,7 @@ import SignUp from './pages/auth/SignUp';
 import ResetPassword from './pages/auth/ResetPassword';
 import ResetPasswordConfirm from './pages/auth/ResetPasswordConfirm';
 import UserDashboard from './pages/dashboard/UserDashboard';
+import { useInactivityTimeout } from './hooks/useInactivityTimeout';
 
 // ============= CRITICAL PATH COMPONENTS (Eager Loaded) =============
 // These load immediately for best first-time user experience
@@ -19,6 +20,12 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import RoleProtectedRoute from './components/auth/RoleProtectedRoute';
 import MFAEnrollment from './components/auth/MFAEnrollment';
 import MFAVerification from './components/auth/MFAVerification';
+
+// Component to handle inactivity timeout (must be inside AuthProvider)
+const InactivityHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  useInactivityTimeout();
+  return <>{children}</>;
+};
 
 // ============= LAZY LOADED COMPONENTS =============
 // These load on-demand for better performance
@@ -134,9 +141,10 @@ function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <Router>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
+        <InactivityHandler>
+          <Router>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
             <Route path="/" element={<Layout />}>
               <Route index element={<Index />} />
               <Route path="signin" element={<SignIn />} />
@@ -483,6 +491,7 @@ function App() {
           </Suspense>
           <Toaster />
         </Router>
+        </InactivityHandler>
       </AuthProvider>
     </ErrorBoundary>
   );
