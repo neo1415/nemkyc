@@ -1,9 +1,0 @@
-[33mcommit d3081a85a46ec14addd999fb266e2176b7b8b98d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
-Author: neo1415 <adedaniel502@gmail.com>
-Date:   Thu Dec 4 22:43:06 2025 +0100
-
-    new package
-
- package-lock.json | 107 [32m++++++++++++++++++++++++++++++[m[31m------------------------[m
- package.json      |   1 [32m+[m
- 2 files changed, 60 insertions(+), 48 deletions(-)

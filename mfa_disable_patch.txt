@@ -1,7 +1,0 @@
-This file documents the MFA code that was disabled in server.js
-
-All MFA-related code in /api/exchange-token endpoint has been commented out.
-All MFA verification endpoints have been commented out.
-
-Date: December 7, 2025
-Reason: User requested to disable MFA functionality temporarily

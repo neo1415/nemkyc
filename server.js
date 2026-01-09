@@ -1659,7 +1659,9 @@ app.use((req, res, next) => {
     req.path === '/send-to-admin-and-claims' ||
     req.path === '/send-to-admin-and-compliance' ||
     req.path === '/api/update-claim-status' ||
-    req.path === '/api/exchange-token') {  // ✅ Add exchange-token to CSRF exemptions
+    req.path === '/api/exchange-token' ||
+    req.path === '/api/verify/nin' ||    // Demo NIN verification
+    req.path === '/api/verify/cac') {    // Demo CAC verification
     console.log('🔓 Skipping CSRF protection for:', req.path);
     return next(); // Skip CSRF for this route
   }
@@ -3897,6 +3899,177 @@ app.use('/api/exchange-token', authLimiter);
 app.use('/api/login', authLimiter);
 app.use('/api/register', authLimiter);
 app.use('/api/auth/verify-mfa', mfaAttemptLimit);
+
+// ============= PAYSTACK IDENTITY VERIFICATION PROXY =============
+// These endpoints proxy requests to Paystack to avoid CORS issues
+
+// BVN Verification Proxy (Paystack Resolve BVN)
+app.post('/api/verify/nin', async (req, res) => {
+  try {
+    const { nin, secretKey, demoMode } = req.body;
+    
+    // DEMO MODE - Return mock successful verification
+    if (demoMode) {
+      console.log('🎭 DEMO MODE: Simulating BVN verification for:', nin.substring(0, 4) + '***');
+      
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Mock successful response
+      return res.json({
+        status: true,
+        message: 'BVN verified successfully (Demo Mode)',
+        data: {
+          first_name: 'JOHN',
+          last_name: 'DOE',
+          middle_name: 'DEMO',
+          dob: '1990-01-15',
+          formatted_dob: '15-Jan-1990',
+          mobile: '080****5678',
+          bvn: nin.substring(0, 4) + '*******',
+        }
+      });
+    }
+    
+    if (!nin || !secretKey) {
+      return res.status(400).json({ 
+        status: false, 
+        message: 'BVN and API key are required' 
+      });
+    }
+
+    // Validate BVN format (11 digits)
+    if (!/^\d{11}$/.test(nin)) {
+      return res.status(400).json({ 
+        status: false, 
+        message: 'BVN must be exactly 11 digits' 
+      });
+    }
+
+    console.log('🔍 BVN Verification request for:', nin.substring(0, 4) + '***');
+
+    // Paystack Resolve BVN endpoint
+    const response = await fetch(`https://api.paystack.co/bank/resolve_bvn/${nin}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${secretKey}`,
+      },
+    });
+
+    console.log('📋 Paystack response status:', response.status);
+    
+    const responseText = await response.text();
+    console.log('📋 Paystack response:', responseText.substring(0, 300));
+    
+    let data;
+    try {
+      data = responseText ? JSON.parse(responseText) : { status: false, message: 'Empty response from Paystack' };
+    } catch (parseError) {
+      console.error('❌ Failed to parse Paystack response:', parseError);
+      data = { status: false, message: 'Invalid response from verification service' };
+    }
+    
+    if (response.ok && data.status) {
+      console.log('✅ BVN verification successful');
+      return res.json({
+        status: true,
+        message: 'BVN verified successfully',
+        data: data.data
+      });
+    } else {
+      console.log('❌ BVN verification failed:', data.message);
+      return res.json({
+        status: false,
+        message: data.message || 'Verification failed. Please check your BVN and try again.'
+      });
+    }
+  } catch (error) {
+    console.error('❌ BVN verification error:', error);
+    return res.status(500).json({ 
+      status: false, 
+      message: 'Verification service error. Please try again.' 
+    });
+  }
+});
+
+// CAC Verification Proxy
+app.post('/api/verify/cac', async (req, res) => {
+  try {
+    const { rc_number, company_name, secretKey, demoMode } = req.body;
+    
+    // DEMO MODE - Return mock successful verification
+    if (demoMode) {
+      console.log('🎭 DEMO MODE: Simulating CAC verification for:', rc_number);
+      
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Mock successful response
+      return res.json({
+        status: true,
+        message: 'CAC verified successfully (Demo Mode)',
+        data: {
+          company_name: company_name.toUpperCase(),
+          rc_number: rc_number,
+          company_type: 'LIMITED LIABILITY COMPANY',
+          date_of_registration: '2015-03-20',
+          address: '123 Business District, Lagos',
+          status: 'ACTIVE',
+          email: 'info@' + company_name.toLowerCase().replace(/\s+/g, '') + '.com',
+        }
+      });
+    }
+    
+    if (!rc_number || !company_name || !secretKey) {
+      return res.status(400).json({ 
+        status: false, 
+        message: 'RC number, company name, and API key are required' 
+      });
+    }
+
+    console.log('🔍 CAC Verification request for:', rc_number);
+
+    const response = await fetch('https://api.paystack.co/identity/cac', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${secretKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ rc_number, company_name }),
+    });
+
+    const responseText = await response.text();
+    console.log('📋 Paystack CAC response:', responseText.substring(0, 300));
+    
+    let data;
+    try {
+      data = responseText ? JSON.parse(responseText) : { status: false, message: 'Empty response' };
+    } catch (parseError) {
+      data = { status: false, message: 'Invalid response from verification service' };
+    }
+    
+    if (response.ok && data.status) {
+      console.log('✅ CAC verification successful');
+      return res.json({
+        status: true,
+        message: 'CAC verified successfully',
+        data: data.data
+      });
+    } else {
+      console.log('❌ CAC verification failed:', data.message);
+      return res.json({
+        status: false,
+        message: data.message || 'Verification failed'
+      });
+    }
+  } catch (error) {
+    console.error('❌ CAC verification error:', error);
+    return res.status(500).json({ 
+      status: false, 
+      message: 'Verification service error. Please try again.' 
+    });
+  }
+});
 
 // Form submission endpoints
 app.use('/api/submit-form', submissionLimiter);
