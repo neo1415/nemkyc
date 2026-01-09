@@ -96,8 +96,8 @@ const SignUp: React.FC = () => {
         return;
       }
       
-      // No pending submission - go to dashboard
-      navigate('/dashboard', { replace: true });
+      // No pending submission - go to homepage after signup
+      navigate('/', { replace: true });
     }
   }, [user, shouldRedirect, navigate]);
 

@@ -101,6 +101,11 @@ const ContractorsPlantMachineryClaim = lazy(() => import('./pages/claims/Contrac
 const AllRiskClaim = lazy(() => import('./pages/claims/AllRiskClaim'));
 const FidelityGuaranteeClaim = lazy(() => import('./pages/claims/FidelityGuaranteeClaim'));
 
+// Demo Pages - Identity Verification
+const DemoConfig = lazy(() => import('./pages/demo/DemoConfig'));
+const NINVerification = lazy(() => import('./pages/demo/NINVerification'));
+const CACVerification = lazy(() => import('./pages/demo/CACVerification'));
+
 // Loading component for lazy-loaded pages
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -193,6 +198,11 @@ function App() {
              <Route path="cdd/individual" element={<IndividualCDD />} />
              <Route path="cdd/agents" element={<AgentsCDD />} />
              <Route path="cdd/brokers" element={<BrokersCDD />} />
+
+             {/* Demo Routes - Identity Verification Demo (No Auth Required) */}
+             <Route path="demo/config" element={<DemoConfig />} />
+             <Route path="demo/verify/nin" element={<NINVerification />} />
+             <Route path="demo/verify/cac" element={<CACVerification />} />
              
              {/* Protected Routes */}
              <Route path="dashboard" element={

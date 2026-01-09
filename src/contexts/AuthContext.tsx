@@ -198,9 +198,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
           
-          // Set user to null on error to prevent infinite loading
-          setUser(null);
-          setFirebaseUser(null);
+          // Even if Firestore read fails, the user IS authenticated in Firebase
+          // Set a minimal user object so they're not kicked out
+          console.log('⚠️ Auth: Setting minimal user from Firebase Auth data');
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email!,
+            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
+            role: 'default', // Default role until Firestore is accessible
+            notificationPreference: 'email',
+            phone: null,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+          setFirebaseUser(firebaseUser);
         }
       } else {
         console.log('🔒 Auth: No Firebase user, clearing state');
