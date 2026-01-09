@@ -56,6 +56,7 @@ service cloud.firestore {
     // ========== /userroles/{userId} ==========
 
     match /userroles/{userId} {
+      // Users can create their own document (but not set role, dateCreated, dateModified, email - those are set by backend)
       allow create: if request.auth != null && 
         request.auth.uid == userId &&
         !("role" in request.resource.data) &&
@@ -63,9 +64,18 @@ service cloud.firestore {
         !("dateModified" in request.resource.data) &&
         !("email" in request.resource.data);
 
-      allow read: if request.auth.uid == userId || isSuperAdmin();
+      // Users can read their own document, super admins can read any
+      // Note: We check super admin role directly here to avoid circular dependency
+      allow read: if request.auth != null && (
+        request.auth.uid == userId || 
+        (exists(/databases/$(database)/documents/userroles/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/userroles/$(request.auth.uid)).data.role in ['super admin', 'superAdmin', 'super-admin', 'SuperAdmin'])
+      );
       
-      allow update, delete: if isSuperAdmin();
+      // Only super admins can update or delete
+      allow update, delete: if request.auth != null &&
+        exists(/databases/$(database)/documents/userroles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/userroles/$(request.auth.uid)).data.role in ['super admin', 'superAdmin', 'super-admin', 'SuperAdmin'];
     }
 
     // ========== KYC & CDD Collections ==========
