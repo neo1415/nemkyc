@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { registerUser } from '../../services/authService';
@@ -69,13 +69,55 @@ const SignUp: React.FC = () => {
     dateOfBirth: ''
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [submittedFormType, setSubmittedFormType] = useState('');
+  const [shouldRedirect, setShouldRedirect] = useState(false);
   
-  const { user, signUp, signInWithGoogle } = useAuth();
+  const { user, loading: authLoading, signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Handle redirect after successful authentication (similar to SignIn)
+  useEffect(() => {
+    if (shouldRedirect && user) {
+      console.log('🎯 User authenticated after signup, checking for pending submission');
+      console.log('🎯 User state:', { uid: user.uid, email: user.email, role: user.role });
+      setShouldRedirect(false);
+      
+      // Check if there's a pending submission - HIGHEST PRIORITY
+      const pendingData = sessionStorage.getItem('pendingSubmission');
+      if (pendingData) {
+        const { formType } = JSON.parse(pendingData);
+        console.log('🎯 Pending submission detected, redirecting to form page:', formType);
+        
+        const formPageUrl = getFormPageUrl(formType);
+        navigate(formPageUrl, { replace: true });
+        return;
+      }
+      
+      // No pending submission - go to dashboard
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, shouldRedirect, navigate]);
+
+  // Additional effect to handle when user is already authenticated (e.g., after page refresh)
+  // This mirrors the SignIn component behavior
+  useEffect(() => {
+    if (user && !authLoading) {
+      console.log('🎯 User already authenticated on SignUp page, checking for pending submission');
+      
+      // Check for pending submission first - HIGHEST PRIORITY
+      const pendingData = sessionStorage.getItem('pendingSubmission');
+      if (pendingData) {
+        console.log('🎯 Pending submission detected, redirecting to form page');
+        const { formType } = JSON.parse(pendingData);
+        const formPageUrl = getFormPageUrl(formType);
+        navigate(formPageUrl, { replace: true });
+        return;
+      }
+    }
+  }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,10 +133,10 @@ const SignUp: React.FC = () => {
       return;
     }
 
-    setLoading(true);
+    setIsSubmitting(true);
 
     try {
-      // Use backend registration service
+      // Use backend registration service to create the account
       const result = await registerUser(
         formData.email,
         formData.password,
@@ -106,63 +148,49 @@ const SignUp: React.FC = () => {
       if (!result.success) {
         // Show the actual error from the backend (already user-friendly)
         setError(result.error || 'Failed to create account');
+        setIsSubmitting(false);
         return;
       }
       
-      // Check if there's a pending submission
-      const pendingData = sessionStorage.getItem('pendingSubmission');
-      if (pendingData) {
-        const { formType } = JSON.parse(pendingData);
-        console.log('🎯 Pending submission detected after signup, redirecting to form page');
-        
-        // Redirect to form page - the form will handle submission processing
-        const formPageUrl = getFormPageUrl(formType);
-        navigate(formPageUrl, { replace: true });
-        return;
-      } else {
-        // Navigate to dashboard for default users
-        navigate('/dashboard');
-      }
+      // Account created successfully - now sign in the user
+      // This is crucial for the pending submission flow to work
+      console.log('✅ Account created, now signing in...');
+      
+      // Small delay to ensure Firestore document is fully written before signing in
+      // This prevents race conditions where onAuthStateChanged fires before the document exists
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      await signIn(formData.email, formData.password);
+      
+      // Set flag to trigger redirect after user state updates
+      // Don't set isSubmitting to false here - let the redirect happen first
+      setShouldRedirect(true);
+      
     } catch (err: any) {
       console.error('Sign up error:', err);
       // For unexpected errors, use the error translator
       setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
     setError('');
-    setLoading(true);
+    setIsSubmitting(true);
 
     try {
       // Keep using direct Firebase for Google sign-in (as it's already secure)
       await signInWithGoogle();
       
-      // Check if there's a pending submission
-      const pendingData = sessionStorage.getItem('pendingSubmission');
-      if (pendingData) {
-        const { formType } = JSON.parse(pendingData);
-        console.log('🎯 Pending submission detected after Google signup, redirecting to form page');
-        
-        // Redirect to form page - the form will handle submission processing
-        const formPageUrl = getFormPageUrl(formType);
-        navigate(formPageUrl, { replace: true });
-        return;
-      } else {
-        // Navigate based on user role from context
-        if (user?.role && ['admin', 'super admin', 'compliance', 'claims'].includes(user.role)) {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
-      }
+      // Set flag to trigger redirect after user state updates
+      // The useEffect will handle checking for pending submissions
+      // Don't set isSubmitting to false here - let the redirect happen first
+      setShouldRedirect(true);
+      
     } catch (err: any) {
       console.error('Google sign up error:', err);
       setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -279,8 +307,8 @@ const SignUp: React.FC = () => {
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating account...
@@ -307,10 +335,10 @@ const SignUp: React.FC = () => {
             <Button
               variant="outline"
               onClick={handleGoogleSignIn}
-              disabled={loading}
+              disabled={isSubmitting}
               className="w-full mt-4"
             >
-              {loading ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Signing up...

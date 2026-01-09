@@ -158,8 +158,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
           }
           setFirebaseUser(firebaseUser);
-        } catch (error) {
+        } catch (error: any) {
           console.error('❌ Auth: Error fetching user data:', error);
+          console.error('❌ Auth: Error code:', error?.code);
+          console.error('❌ Auth: Error message:', error?.message);
+          
+          // If it's a permission error, the user might be newly registered
+          // and the backend hasn't created their document yet, or there's a rules issue
+          if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+            console.log('⚠️ Auth: Permission denied - this might be a timing issue for new users');
+            console.log('⚠️ Auth: Retrying in 1 second...');
+            
+            // Wait a bit and retry once (for new user registration timing)
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            try {
+              const retryDoc = await getDoc(doc(db, 'userroles', firebaseUser.uid));
+              if (retryDoc.exists()) {
+                const userData = retryDoc.data();
+                console.log('✅ Auth: Retry successful, found user data');
+                const userRole = normalizeRole(userData.role || 'default');
+                
+                setUser({
+                  uid: firebaseUser.uid,
+                  email: firebaseUser.email!,
+                  name: userData.name || userData.displayName || '',
+                  role: userRole,
+                  notificationPreference: userData.notificationPreference || 'email',
+                  phone: userData.phone || null,
+                  createdAt: userData.dateCreated?.toDate() || new Date(),
+                  updatedAt: userData.dateModified?.toDate() || new Date()
+                });
+                setFirebaseUser(firebaseUser);
+                setLoading(false);
+                return;
+              }
+            } catch (retryError) {
+              console.error('❌ Auth: Retry also failed:', retryError);
+            }
+          }
+          
           // Set user to null on error to prevent infinite loading
           setUser(null);
           setFirebaseUser(null);
@@ -617,8 +655,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw new Error('Verification code sent. Please enter the code.');
         }
         
-        phoneAuthCredential = PhoneAuthProvider.credential(verificationId, verificationCode);
-        multiFactorAssertion = PhoneMultiFactorGenerator.assertion(phoneAuthCredential);
+        const phoneAuthCredential = PhoneAuthProvider.credential(verificationId, verificationCode);
+        const multiFactorAssertion = PhoneMultiFactorGenerator.assertion(phoneAuthCredential);
         
         // Complete MFA verification
         await multiFactor(firebaseUser).enroll(multiFactorAssertion, 'Phone Number');
