@@ -151,9 +151,30 @@ export const registerUser = async (
     const result = await response.json();
 
     if (!response.ok) {
-      console.error('❌ Registration failed:', result.error);
-      toast.error(result.error || 'Registration failed');
-      return { success: false, error: result.error };
+      console.error('❌ Registration failed:', result);
+      
+      // Extract user-friendly error message from backend response
+      let errorMessage = 'Registration failed';
+      
+      if (result.details && Array.isArray(result.details) && result.details.length > 0) {
+        // Format validation errors into a readable message
+        // Show the first error message (most relevant)
+        errorMessage = result.details[0].message;
+        
+        // If there are multiple errors, append count
+        if (result.details.length > 1) {
+          errorMessage += ` (and ${result.details.length - 1} more issue${result.details.length > 2 ? 's' : ''})`;
+        }
+        
+        console.log('📋 Validation errors:', result.details.map((d: any) => d.message));
+      } else if (result.error) {
+        errorMessage = result.error;
+      } else if (result.message) {
+        errorMessage = result.message;
+      }
+      
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
     }
 
     console.log('✅ Registration successful:', { email, displayName, role });
@@ -166,7 +187,14 @@ export const registerUser = async (
 
   } catch (error) {
     console.error('Registration error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+    let errorMessage = 'Registration failed';
+    
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      errorMessage = 'Unable to connect to server. Please check your internet connection.';
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    
     toast.error(errorMessage);
     return { success: false, error: errorMessage };
   }

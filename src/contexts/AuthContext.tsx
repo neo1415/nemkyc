@@ -76,13 +76,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
+          console.log('🔍 Auth: Checking user data for UID:', firebaseUser.uid, 'Email:', firebaseUser.email);
+          
           // Get user data from Firestore userroles collection
           const userDoc = await getDoc(doc(db, 'userroles', firebaseUser.uid));
+          
           if (userDoc.exists()) {
             const userData = userDoc.data();
             
+            // Debug logging for role normalization
+            console.log('🔍 Auth: Found user in userroles collection');
+            console.log('🔍 Auth: Raw role from Firestore:', userData.role);
+            
             // Auto-assign super admin role to neowalker502@gmail.com
             let userRole = normalizeRole(userData.role || 'default');
+            console.log('🔍 Auth: Normalized role:', userRole);
+            
             if (firebaseUser.email === 'neowalker502@gmail.com' && !rolesMatch(userRole, 'super admin')) {
               userRole = 'super admin';
               // Update in Firestore
@@ -91,7 +100,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 role: 'super admin',
                 dateModified: new Date()
               }, { merge: true });
+              console.log('🔍 Auth: Auto-assigned super admin role to neowalker502@gmail.com');
             }
+            
+            console.log('✅ Auth: Setting user with role:', userRole, 'for email:', firebaseUser.email);
             
             setUser({
               uid: firebaseUser.uid,
@@ -104,20 +116,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               updatedAt: userData.dateModified?.toDate()
             });
           } else {
-            // Create user record in userroles collection if it doesn't exist
+            console.log('⚠️ Auth: User NOT found in userroles collection, checking users collection...');
+            
+            // Fallback: Check 'users' collection for role
+            const usersDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+            let existingRole = 'default';
+            let existingName = firebaseUser.displayName || '';
+            
+            if (usersDoc.exists()) {
+              const usersData = usersDoc.data();
+              existingRole = usersData.role || 'default';
+              existingName = usersData.name || usersData.displayName || existingName;
+              console.log('🔍 Auth: Found user in users collection with role:', existingRole);
+            } else {
+              console.log('⚠️ Auth: User NOT found in users collection either');
+            }
+            
+            // Normalize the role
+            const normalizedRole = normalizeRole(existingRole);
+            console.log('🔍 Auth: Normalized role:', normalizedRole);
+            
+            // Create user record in userroles collection with the existing role (or default)
             await setDoc(doc(db, 'userroles', firebaseUser.uid), {
-              name: firebaseUser.displayName || '',
+              name: existingName,
               email: firebaseUser.email,
-              role: 'default',
+              role: normalizedRole, // Use normalized role
               dateCreated: new Date(),
               dateModified: new Date()
             });
+            console.log('✅ Auth: Created userroles document with role:', normalizedRole);
             
             setUser({
               uid: firebaseUser.uid,
               email: firebaseUser.email!,
-              name: firebaseUser.displayName || '',
-              role: 'default',
+              name: existingName,
+              role: normalizedRole,
               notificationPreference: 'email',
               phone: null,
               createdAt: new Date(),
@@ -126,9 +159,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           setFirebaseUser(firebaseUser);
         } catch (error) {
-          console.error('Error fetching user data:', error);
+          console.error('❌ Auth: Error fetching user data:', error);
+          // Set user to null on error to prevent infinite loading
+          setUser(null);
+          setFirebaseUser(null);
         }
       } else {
+        console.log('🔒 Auth: No Firebase user, clearing state');
         setUser(null);
         setFirebaseUser(null);
       }

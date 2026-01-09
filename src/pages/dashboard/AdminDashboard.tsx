@@ -8,7 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { useAdminDashboardStats, useMonthlySubmissionData } from '../../hooks/useAdminDashboard';
 import { useQueryClient } from '@tanstack/react-query';
-import { rolesMatch } from '../../utils/roleNormalization';
+import { rolesMatch, normalizeRole, hasAnyRole } from '../../utils/roleNormalization';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -42,15 +42,21 @@ const AdminDashboard: React.FC = () => {
     refetchMonthly();
   };
 
+  // Role-based access helpers using normalization
+  const userRole = user?.role;
+  const isSuperAdmin = normalizeRole(userRole) === 'super admin';
+  const canViewKYCCDD = hasAnyRole(userRole, ['compliance', 'admin', 'super admin']);
+  const canViewClaims = hasAnyRole(userRole, ['claims', 'admin', 'super admin']);
+
   // Role-based chart data with colors
   const chartData = [];
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
   
-  if (stats && ['compliance', 'admin', 'super admin'].includes(user?.role || '')) {
+  if (stats && canViewKYCCDD) {
     chartData.push({ name: 'KYC Forms', value: stats.kycForms, color: COLORS[0] });
     chartData.push({ name: 'CDD Forms', value: stats.cddForms, color: COLORS[1] });
   }
-  if (stats && ['claims', 'admin', 'super admin'].includes(user?.role || '')) {
+  if (stats && canViewClaims) {
     chartData.push({ name: 'Claims Forms', value: stats.claimsForms, color: COLORS[2] });
   }
 
@@ -117,7 +123,7 @@ const AdminDashboard: React.FC = () => {
       {/* Statistics Cards */}
       <div className="flex flex-wrap gap-6">
         {/* Show Total Users only for super admin */}
-        {user?.role === 'super admin' && (
+        {isSuperAdmin && (
           <Card className="flex-1 min-w-[250px]">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -153,7 +159,7 @@ const AdminDashboard: React.FC = () => {
         </Card>
 
         {/* Show KYC Forms for compliance, admin, and super admin */}
-        {['compliance', 'admin', 'super admin'].includes(user?.role || '') && (
+        {canViewKYCCDD && (
           <Card className="flex-1 min-w-[250px]">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -172,7 +178,7 @@ const AdminDashboard: React.FC = () => {
         )}
 
         {/* Show CDD Forms for compliance, admin, and super admin */}
-        {['compliance', 'admin', 'super admin'].includes(user?.role || '') && (
+        {canViewKYCCDD && (
           <Card className="flex-1 min-w-[250px]">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -191,7 +197,7 @@ const AdminDashboard: React.FC = () => {
         )}
 
         {/* Show Claims statistics only for claims, admin, and super admin */}
-        {['claims', 'admin', 'super admin'].includes(user?.role || '') && (
+        {canViewClaims && (
           <>
             <Card className="flex-1 min-w-[250px]">
               <CardContent className="p-6">
@@ -263,7 +269,7 @@ const AdminDashboard: React.FC = () => {
         {/* Form Distribution Cards in Flex Layout */}
         <div className="flex flex-wrap gap-4">
           {/* Show KYC Forms for compliance, admin, and super admin */}
-          {['compliance', 'admin', 'super admin'].includes(user?.role || '') && (
+          {canViewKYCCDD && (
             <Card className="flex-1 min-w-[200px]">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -279,7 +285,7 @@ const AdminDashboard: React.FC = () => {
           )}
 
           {/* Show CDD Forms for compliance, admin, and super admin */}
-          {['compliance', 'admin', 'super admin'].includes(user?.role || '') && (
+          {canViewKYCCDD && (
             <Card className="flex-1 min-w-[200px]">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -295,7 +301,7 @@ const AdminDashboard: React.FC = () => {
           )}
 
           {/* Show Claims Forms for claims, admin, and super admin */}
-          {['claims', 'admin', 'super admin'].includes(user?.role || '') && (
+          {canViewClaims && (
             <Card className="flex-1 min-w-[200px]">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
