@@ -1660,6 +1660,7 @@ app.use((req, res, next) => {
     req.path === '/send-to-admin-and-compliance' ||
     req.path === '/api/update-claim-status' ||
     req.path === '/api/exchange-token' ||
+    req.path === '/api/register' ||       // Registration doesn't need CSRF (user not authenticated yet)
     req.path === '/api/verify/nin' ||    // Demo NIN verification
     req.path === '/api/verify/cac') {    // Demo CAC verification
     console.log('🔓 Skipping CSRF protection for:', req.path);

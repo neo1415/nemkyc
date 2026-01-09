@@ -22,27 +22,59 @@ export interface AuthResponse {
 
 // Helper function to get CSRF token
 const getCSRFToken = async (): Promise<string> => {
-  const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CSRF_TOKEN}`, {
-    credentials: 'include',
-  });
-  const data = await response.json();
-  return data.csrfToken;
+  try {
+    console.log('🔑 Fetching CSRF token from:', `${API_BASE_URL}${API_ENDPOINTS.CSRF_TOKEN}`);
+    
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CSRF_TOKEN}`, {
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      console.error('❌ CSRF token fetch failed:', response.status, response.statusText);
+      throw new Error(`Failed to get security token (${response.status})`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.csrfToken) {
+      console.error('❌ CSRF token missing from response:', data);
+      throw new Error('Security token not received from server');
+    }
+    
+    console.log('✅ CSRF token received successfully');
+    return data.csrfToken;
+  } catch (error) {
+    console.error('❌ CSRF token error:', error);
+    
+    // Provide more specific error messages
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      throw new Error('Unable to connect to server. Please check your internet connection or try again later.');
+    }
+    
+    throw error;
+  }
 };
 
 // Helper function to make authenticated requests
-const makeAuthenticatedRequest = async (url: string, data: any, method: string = 'POST') => {
-  const csrfToken = await getCSRFToken();
+const makeAuthenticatedRequest = async (url: string, data: any, method: string = 'POST', skipCSRF: boolean = false) => {
   const timestamp = Date.now().toString();
   const nonce = generateNonce();
   
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-timestamp': timestamp,
+    'x-nonce': nonce,
+  };
+  
+  // Only fetch CSRF token if not skipped
+  if (!skipCSRF) {
+    const csrfToken = await getCSRFToken();
+    headers['CSRF-Token'] = csrfToken;
+  }
+  
   return fetch(url, {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      'CSRF-Token': csrfToken,
-      'x-timestamp': timestamp,
-      'x-nonce': nonce,
-    },
+    headers,
     credentials: 'include',
     body: JSON.stringify(data),
   });
@@ -140,13 +172,14 @@ export const registerUser = async (
   try {
     console.log('📤 Attempting registration via backend:', { email, displayName, role });
     
+    // Skip CSRF for registration - it's a public endpoint and user isn't authenticated yet
     const response = await makeAuthenticatedRequest(`${API_BASE_URL}${API_ENDPOINTS.REGISTER}`, {
       email,
       password,
       displayName,
       role,
       dateOfBirth
-    });
+    }, 'POST', true); // skipCSRF = true
 
     const result = await response.json();
 
