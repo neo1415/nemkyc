@@ -104,8 +104,8 @@ const SignUp: React.FC = () => {
       );
       
       if (!result.success) {
-        const errorObj = { message: result.error || 'Failed to create account' };
-        setError(getErrorMessage(errorObj));
+        // Show the actual error from the backend (already user-friendly)
+        setError(result.error || 'Failed to create account');
         return;
       }
       
@@ -125,6 +125,7 @@ const SignUp: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Sign up error:', err);
+      // For unexpected errors, use the error translator
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
@@ -163,39 +164,6 @@ const SignUp: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Helper function to get form page URL from form type
-  const getFormPageUrl = (formType: string) => {
-    const formTypeLower = formType.toLowerCase();
-    
-    if (formTypeLower.includes('motor')) {
-      return '/claims/motor';
-    }
-    if (formTypeLower.includes('employers liability') && !formTypeLower.includes('combined')) {
-      return '/claims/employers-liability';
-    }
-    if (formTypeLower.includes('combined') && formTypeLower.includes('gpa')) {
-      return '/claims/combined-gpa-employers-liability';
-    }
-    if (formTypeLower.includes('public liability')) {
-      return '/claims/public-liability';
-    }
-    if (formTypeLower.includes('professional indemnity')) {
-      return '/claims/professional-indemnity';
-    }
-    if (formTypeLower.includes('fire')) {
-      return '/claims/fire-special-perils';
-    }
-    if (formTypeLower.includes('burglary')) {
-      return '/claims/burglary';
-    }
-    if (formTypeLower.includes('all risk') || formTypeLower.includes('allrisk')) {
-      return '/claims/all-risk';
-    }
-    
-    // Default fallback
-    return '/claims/motor';
   };
 
   return (

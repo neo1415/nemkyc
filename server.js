@@ -3079,26 +3079,44 @@ const setSuperAdminOnStartup = async () => {
         ...user.customClaims,
         superAdmin: true,
       });
-      console.log(`✅ Custom claim set: ${email} is now a superAdmin`);
+      console.log(`✅ Custom claim set: ${email} is now a super admin`);
     } else {
       console.log(`✅ Custom claim already exists for ${email}`);
     }
 
-    // Also set Firestore role
+    // Also set Firestore role - use normalized 'super admin' format
     const userDocRef = admin.firestore().collection('users').doc(uid);
     const userDoc = await userDocRef.get();
-
-    if (!userDoc.exists || userDoc.data()?.role !== 'superAdmin') {
+    
+    // Check if role needs to be set or updated (normalize existing role for comparison)
+    const existingRole = userDoc.exists ? normalizeRole(userDoc.data()?.role) : null;
+    
+    if (!userDoc.exists || existingRole !== 'super admin') {
       await userDocRef.set(
         {
-          role: 'superAdmin',
+          role: 'super admin', // Use normalized format
           updatedAt: new Date(),
         },
         { merge: true }
       );
-      console.log(`✅ Firestore role set: ${email} is now a superAdmin`);
+      console.log(`✅ Firestore role set: ${email} is now a super admin`);
     } else {
       console.log(`✅ Firestore role already set for ${email}`);
+    }
+    
+    // Also update userroles collection if it exists
+    const userRolesDocRef = admin.firestore().collection('userroles').doc(uid);
+    const userRolesDoc = await userRolesDocRef.get();
+    
+    if (userRolesDoc.exists) {
+      const existingUserRole = normalizeRole(userRolesDoc.data()?.role);
+      if (existingUserRole !== 'super admin') {
+        await userRolesDocRef.update({
+          role: 'super admin',
+          dateModified: new Date()
+        });
+        console.log(`✅ userroles collection updated: ${email} is now a super admin`);
+      }
     }
   } catch (error) {
     console.error(`❌ Failed to assign super admin:`, error.message);
@@ -3259,7 +3277,7 @@ const ALLOWED_COLLECTIONS = [
   'individual-kyc',
   'corporate-kyc',
   'agentsCDD',
-  'brokersCDD',
+  'brokers-kyc',  // Brokers CDD form goes to brokers-kyc collection
   'partnersCDD',
   
   // Claims Forms
@@ -3343,7 +3361,10 @@ const getFirestoreCollection = (formType) => {
     collection = 'corporate-kyc';
   }
   else if (formTypeLower.includes('agents') && formTypeLower.includes('cdd')) collection = 'agentsCDD';
-  else if (formTypeLower.includes('brokers') && formTypeLower.includes('cdd')) collection = 'brokersCDD';
+  else if (formTypeLower.includes('brokers') && formTypeLower.includes('cdd')) {
+    console.log('✅ Matched: Brokers CDD -> brokers-kyc');
+    collection = 'brokers-kyc';
+  }
   else if (formTypeLower.includes('partners') && formTypeLower.includes('cdd')) collection = 'partnersCDD';
   
   else {
@@ -3610,14 +3631,40 @@ app.post('/api/exchange-token', async (req, res) => {
     console.log('✅ Token verified successfully for user:', email);
     
     // Get user from Firestore userroles collection
-    const userDoc = await db.collection('userroles').doc(uid).get();
+    let userDoc = await db.collection('userroles').doc(uid).get();
+    let userData;
     
     if (!userDoc.exists) {
-      console.error('❌ User not found in userroles collection:', uid);
-      return res.status(401).json({ error: 'User not found' });
+      console.log('⚠️ User not found in userroles collection, checking users collection...');
+      
+      // Fallback: Check 'users' collection for role
+      const usersDoc = await db.collection('users').doc(uid).get();
+      
+      if (usersDoc.exists) {
+        const usersData = usersDoc.data();
+        console.log('🔍 Found user in users collection with role:', usersData.role);
+        
+        // Create userroles document from users data
+        const normalizedRole = normalizeRole(usersData.role || 'default');
+        userData = {
+          name: usersData.name || usersData.displayName || email.split('@')[0],
+          email: email,
+          role: normalizedRole,
+          phone: usersData.phone || null,
+          dateCreated: new Date(),
+          dateModified: new Date(),
+          lastActivity: Date.now()
+        };
+        
+        await db.collection('userroles').doc(uid).set(userData);
+        console.log('✅ Created userroles document with role:', normalizedRole);
+      } else {
+        console.error('❌ User not found in userroles or users collection:', uid);
+        return res.status(401).json({ error: 'User not found. Please contact administrator.' });
+      }
+    } else {
+      userData = userDoc.data();
     }
-
-    const userData = userDoc.data();
     
     // ============================================================================
     // MFA DISABLED - Simple login tracking only

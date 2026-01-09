@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import MFAEnrollment from './MFAEnrollment';
 import MFAVerification from './MFAVerification';
-import { hasAnyRole } from '../../utils/roleNormalization';
+import { hasAnyRole, normalizeRole } from '../../utils/roleNormalization';
 
 interface RoleProtectedRouteProps {
   children: React.ReactNode;
@@ -18,18 +18,31 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({ children, allow
   }
 
   if (!user) {
+    console.log('🔒 RoleProtectedRoute: No user found, redirecting to signin');
     return <Navigate to="/auth/signin" replace />;
   }
 
+  // Debug logging for role check
+  const normalizedUserRole = normalizeRole(user.role);
+  console.log('🔍 RoleProtectedRoute: Checking access', {
+    rawUserRole: user.role,
+    normalizedUserRole,
+    allowedRoles,
+    hasAccess: hasAnyRole(user.role, allowedRoles)
+  });
+
   // Check if user has any of the allowed roles using normalization
   if (!hasAnyRole(user.role, allowedRoles)) {
-    console.log('🚫 Role not allowed:', { 
-      userRole: user.role, 
+    console.log('🚫 RoleProtectedRoute: Access denied', { 
+      userRole: user.role,
+      normalizedRole: normalizedUserRole,
       allowedRoles,
       message: 'User role does not match any allowed roles'
     });
     return <Navigate to="/unauthorized" replace />;
   }
+
+  console.log('✅ RoleProtectedRoute: Access granted for role:', normalizedUserRole);
 
   // Show MFA enrollment if required for sensitive roles
   if (mfaEnrollmentRequired) {

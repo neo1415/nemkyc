@@ -24,7 +24,7 @@ const getCollectionsForRole = (role: string) => {
   if (['compliance', 'admin', 'super admin'].includes(r)) {
     collections.push(
       'Individual-kyc-form', 'corporate-kyc-form', // KYC
-      'agentsCDD', 'brokersCDD', 'partnersCDD', 'individual-kyc', 'corporate-kyc' // CDD - using actual collection names
+      'agentsCDD', 'brokers-kyc', 'partnersCDD', 'individual-kyc', 'corporate-kyc' // CDD - using actual collection names
     );
   }
   
@@ -97,7 +97,7 @@ const fetchDashboardStats = async (userRole: string): Promise<DashboardStats> =>
 
   // 4. CDD collections (parallel)
   const cddCollections = canViewKYCCDD ? [
-    'agentsCDD', 'brokersCDD', 'partnersCDD', 'individual-kyc', 'corporate-kyc'
+    'agentsCDD', 'brokers-kyc', 'partnersCDD', 'individual-kyc', 'corporate-kyc'
   ] : [];
   
   if (canViewKYCCDD) {
