@@ -56,13 +56,11 @@ service cloud.firestore {
     // ========== /userroles/{userId} ==========
 
     match /userroles/{userId} {
-      // Users can create their own document (but not set role, dateCreated, dateModified, email - those are set by backend)
+      // Users can create their own document with basic fields
+      // Role is restricted to 'default' or 'user' on client-side creation for security
       allow create: if request.auth != null && 
         request.auth.uid == userId &&
-        !("role" in request.resource.data) &&
-        !("dateCreated" in request.resource.data) &&
-        !("dateModified" in request.resource.data) &&
-        !("email" in request.resource.data);
+        (!("role" in request.resource.data) || request.resource.data.role in ['default', 'user']);
 
       // Users can read their own document, super admins can read any
       // Note: We check super admin role directly here to avoid circular dependency
