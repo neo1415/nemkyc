@@ -17,6 +17,7 @@ import { cn } from '../../lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { normalizeRole, hasAnyRole } from '../../utils/roleNormalization';
 
 interface AdminSidebarProps {
   open: boolean;
@@ -30,10 +31,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
   const [cddOpen, setCddOpen] = useState(false);
   const [claimsOpen, setClaimsOpen] = useState(false);
 
-  // Role-based access control
-  const canViewUsers = user?.role === 'super admin';
-  const canViewClaims = ['claims', 'admin', 'super admin'].includes(user?.role || '');
-  const canViewKYCCDD = ['compliance', 'admin', 'super admin'].includes(user?.role || '');
+  // Role-based access control - using normalized role comparison
+  const userRole = user?.role;
+  const canViewUsers = normalizeRole(userRole) === 'super admin';
+  const canViewClaims = hasAnyRole(userRole, ['claims', 'admin', 'super admin']);
+  const canViewKYCCDD = hasAnyRole(userRole, ['compliance', 'admin', 'super admin']);
 
   const navigationItems = [
     {

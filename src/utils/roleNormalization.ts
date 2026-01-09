@@ -3,26 +3,39 @@
  */
 
 // Map of role variations to standardized role names
+// All keys should be lowercase since we normalize input to lowercase before lookup
 const ROLE_MAPPINGS: Record<string, string> = {
-  // Super admin variations
+  // Super admin variations (all lowercase - input is lowercased before lookup)
   'superadmin': 'super admin',
   'super-admin': 'super admin',
   'super_admin': 'super admin',
   'super admin': 'super admin',
+  'super  admin': 'super admin', // Double space variant
+  'superadministrator': 'super admin',
+  'super administrator': 'super admin',
+  'super-administrator': 'super admin',
+  'super_administrator': 'super admin',
+  'sa': 'super admin', // Common abbreviation
   
   // Admin variations
   'admin': 'admin',
+  'administrator': 'admin',
+  'adm': 'admin',
   
   // Compliance variations
   'compliance': 'compliance',
+  'comp': 'compliance',
   
   // Claims variations
   'claims': 'claims',
+  'claim': 'claims',
   
   // Default/user variations
   'default': 'default',
   'user': 'default',
   'regular': 'default',
+  'standard': 'default',
+  'basic': 'default',
 };
 
 // Standard admin roles
