@@ -104,8 +104,8 @@ const SignIn: React.FC = () => {
         console.log('🎯 Admin user detected, redirecting to /admin', { role: user.role });
         navigate('/admin', { replace: true });
       } else {
-        console.log('🎯 Regular user, redirecting to:', from, { role: user.role });
-        navigate(from, { replace: true });
+        console.log('🎯 Regular user, redirecting to homepage', { role: user.role });
+        navigate('/', { replace: true });
       }
     }
   }, [user, shouldRedirect, navigate, from]);
@@ -128,10 +128,13 @@ const SignIn: React.FC = () => {
         return;
       }
       
-      // Normal sign-in flow - role-based navigation only if no pending submission
+      // Normal sign-in flow - role-based navigation
       if (isAdminRole(user.role)) {
         console.log('🎯 Admin user already authenticated, redirecting to /admin', { role: user.role });
         navigate('/admin', { replace: true });
+      } else {
+        console.log('🎯 Regular user already authenticated, redirecting to homepage', { role: user.role });
+        navigate('/', { replace: true });
       }
     }
   }, [user, loading, mfaRequired, mfaEnrollmentRequired, emailVerificationRequired, loginError, navigate]);
