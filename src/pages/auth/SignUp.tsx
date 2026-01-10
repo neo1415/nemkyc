@@ -1,9 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { registerUser } from '../../services/authService';
 import { getFormPageUrl } from '../../hooks/useAuthRequiredSubmit';
+import { isAdminRole } from '../../utils/roleNormalization';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { PasswordInput } from '../../components/common/PasswordInput';
@@ -12,9 +13,35 @@ import { Label } from '../../components/ui/label';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/dialog';
-import { UserPlus, Mail, CheckCircle2, Loader2 } from 'lucide-react';
+import { UserPlus, Mail, CheckCircle2, Loader2, Check, X } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import logoImage from '../../assets/NEMs-Logo.jpg';
+
+// Password validation rules (must match server-side validation)
+const PASSWORD_RULES = {
+  minLength: 12,
+  requireUppercase: true,
+  requireLowercase: true,
+  requireNumber: true,
+  requireSpecial: true,
+  specialChars: '@$!%*?&'
+};
+
+// Password validation helper
+const validatePassword = (password: string) => {
+  return {
+    minLength: password.length >= PASSWORD_RULES.minLength,
+    hasUppercase: /[A-Z]/.test(password),
+    hasLowercase: /[a-z]/.test(password),
+    hasNumber: /\d/.test(password),
+    hasSpecial: /[@$!%*?&]/.test(password),
+  };
+};
+
+const isPasswordValid = (password: string) => {
+  const checks = validatePassword(password);
+  return Object.values(checks).every(Boolean);
+};
 
 // Helper function to translate Firebase errors to user-friendly messages
 const getErrorMessage = (error: any): string => {
@@ -29,7 +56,7 @@ const getErrorMessage = (error: any): string => {
     return 'Please enter a valid email address.';
   }
   if (errorCode === 'auth/weak-password') {
-    return 'Password is too weak. Please use at least 6 characters with a mix of letters, numbers, and symbols.';
+    return 'Password is too weak. Please use at least 12 characters with uppercase, lowercase, number, and special character.';
   }
   if (errorCode === 'auth/operation-not-allowed') {
     return 'Account creation is currently disabled. Please contact support.';
@@ -50,12 +77,51 @@ const getErrorMessage = (error: any): string => {
   }
 
   // Backend registration errors
-  if (errorMessage.toLowerCase().includes('already exists')) {
+  if (errorMessage.toLowerCase().includes('already exists') || errorMessage.toLowerCase().includes('already in use')) {
     return 'An account with this email already exists. Please sign in instead.';
+  }
+
+  // Return the error message as-is if it's already user-friendly (from backend validation)
+  if (errorMessage && errorMessage.length > 0 && errorMessage !== 'Registration failed') {
+    return errorMessage;
   }
 
   // Default user-friendly message
   return 'Unable to create your account. Please try again. If the problem persists, contact support.';
+};
+
+// Password requirements component
+const PasswordRequirements: React.FC<{ password: string; show: boolean }> = ({ password, show }) => {
+  const checks = validatePassword(password);
+  const allValid = Object.values(checks).every(Boolean);
+  
+  if (!show || allValid) return null;
+  
+  const requirements = [
+    { key: 'minLength', label: `At least ${PASSWORD_RULES.minLength} characters`, valid: checks.minLength },
+    { key: 'hasUppercase', label: 'One uppercase letter (A-Z)', valid: checks.hasUppercase },
+    { key: 'hasLowercase', label: 'One lowercase letter (a-z)', valid: checks.hasLowercase },
+    { key: 'hasNumber', label: 'One number (0-9)', valid: checks.hasNumber },
+    { key: 'hasSpecial', label: `One special character (${PASSWORD_RULES.specialChars})`, valid: checks.hasSpecial },
+  ];
+  
+  return (
+    <div className="mt-2 p-3 bg-slate-50 rounded-lg border border-slate-200 text-sm">
+      <p className="text-slate-600 font-medium mb-2">Password must contain:</p>
+      <ul className="space-y-1">
+        {requirements.map(req => (
+          <li key={req.key} className={`flex items-center gap-2 ${req.valid ? 'text-green-600' : 'text-slate-500'}`}>
+            {req.valid ? (
+              <Check className="w-4 h-4 text-green-500" />
+            ) : (
+              <X className="w-4 h-4 text-slate-400" />
+            )}
+            <span>{req.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 };
 
 const SignUp: React.FC = () => {
@@ -69,14 +135,20 @@ const SignUp: React.FC = () => {
     dateOfBirth: ''
   });
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [submittedFormType, setSubmittedFormType] = useState('');
   const [shouldRedirect, setShouldRedirect] = useState(false);
+  const [showPasswordRules, setShowPasswordRules] = useState(false);
   
   const { user, loading: authLoading, signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Memoized password validation
+  const passwordValidation = useMemo(() => validatePassword(formData.password), [formData.password]);
+  const isPasswordStrong = useMemo(() => isPasswordValid(formData.password), [formData.password]);
 
   // Handle redirect after successful authentication (similar to SignIn)
   useEffect(() => {
@@ -96,8 +168,14 @@ const SignUp: React.FC = () => {
         return;
       }
       
-      // No pending submission - go to homepage after signup
-      navigate('/', { replace: true });
+      // No pending submission - role-based navigation
+      if (isAdminRole(user.role)) {
+        console.log('🎯 Admin user detected, redirecting to /admin', { role: user.role });
+        navigate('/admin', { replace: true });
+      } else {
+        console.log('🎯 Regular user, redirecting to homepage', { role: user.role });
+        navigate('/', { replace: true });
+      }
     }
   }, [user, shouldRedirect, navigate]);
 
@@ -116,20 +194,79 @@ const SignUp: React.FC = () => {
         navigate(formPageUrl, { replace: true });
         return;
       }
+      
+      // No pending submission - role-based navigation
+      if (isAdminRole(user.role)) {
+        console.log('🎯 Admin user already authenticated, redirecting to /admin', { role: user.role });
+        navigate('/admin', { replace: true });
+      } else {
+        console.log('🎯 Regular user already authenticated, redirecting to homepage', { role: user.role });
+        navigate('/', { replace: true });
+      }
     }
   }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
 
+    // Client-side validation
+    const errors: Record<string, string> = {};
+    
+    // Name validation
+    if (!formData.name.trim()) {
+      errors.name = 'Full name is required';
+    } else if (formData.name.trim().length < 2) {
+      errors.name = 'Name must be at least 2 characters';
+    }
+    
+    // Email validation
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    // Password validation
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (!isPasswordStrong) {
+      errors.password = 'Password does not meet the requirements';
+    }
+    
+    // Confirm password
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
+      errors.confirmPassword = 'Passwords do not match';
+    }
+    
+    // Date of birth validation - must be 18+
+    if (!formData.dateOfBirth) {
+      errors.dateOfBirth = 'Date of birth is required';
+    } else {
+      const birthDate = new Date(formData.dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      if (age < 18) {
+        errors.dateOfBirth = 'You must be at least 18 years old to register';
+      }
     }
 
+    // Phone validation for SMS preference
     if (formData.notificationPreference === 'sms' && !formData.phone) {
-      setError('Phone number is required for SMS notifications');
+      errors.phone = 'Phone number is required for SMS notifications';
+    }
+    
+    // If there are validation errors, show them and stop
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      // Show the first error as the main error message
+      const firstError = Object.values(errors)[0];
+      setError(firstError);
       return;
     }
 
@@ -147,7 +284,8 @@ const SignUp: React.FC = () => {
       
       if (!result.success) {
         // Show the actual error from the backend (already user-friendly)
-        setError(result.error || 'Failed to create account');
+        const errorMsg = getErrorMessage({ message: result.error });
+        setError(errorMsg);
         setIsSubmitting(false);
         return;
       }
@@ -225,9 +363,16 @@ const SignUp: React.FC = () => {
                 type="text"
                 placeholder="Enter your full name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value });
+                  if (fieldErrors.name) setFieldErrors(prev => ({ ...prev, name: '' }));
+                }}
+                className={fieldErrors.name ? 'border-red-500' : ''}
                 required
               />
+              {fieldErrors.name && (
+                <p className="text-sm text-red-500">{fieldErrors.name}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -237,9 +382,16 @@ const SignUp: React.FC = () => {
                 type="email"
                 placeholder="Enter your email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value });
+                  if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: '' }));
+                }}
+                className={fieldErrors.email ? 'border-red-500' : ''}
                 required
               />
+              {fieldErrors.email && (
+                <p className="text-sm text-red-500">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -248,21 +400,42 @@ const SignUp: React.FC = () => {
                 id="dateOfBirth"
                 type="date"
                 value={formData.dateOfBirth}
-                onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, dateOfBirth: e.target.value });
+                  if (fieldErrors.dateOfBirth) setFieldErrors(prev => ({ ...prev, dateOfBirth: '' }));
+                }}
+                className={fieldErrors.dateOfBirth ? 'border-red-500' : ''}
                 required
-                max={new Date().toISOString().split('T')[0]}
+                max={(() => {
+                  const date = new Date();
+                  date.setFullYear(date.getFullYear() - 18);
+                  return date.toISOString().split('T')[0];
+                })()}
               />
+              <p className="text-xs text-slate-500">You must be at least 18 years old</p>
+              {fieldErrors.dateOfBirth && (
+                <p className="text-sm text-red-500">{fieldErrors.dateOfBirth}</p>
+              )}
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <PasswordInput
                 id="password"
-                placeholder="Create a password"
+                placeholder="Create a strong password"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, password: e.target.value });
+                  if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: '' }));
+                }}
+                onFocus={() => setShowPasswordRules(true)}
+                className={fieldErrors.password ? 'border-red-500' : ''}
                 required
               />
+              <PasswordRequirements password={formData.password} show={showPasswordRules} />
+              {fieldErrors.password && (
+                <p className="text-sm text-red-500">{fieldErrors.password}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -271,9 +444,21 @@ const SignUp: React.FC = () => {
                 id="confirmPassword"
                 placeholder="Confirm your password"
                 value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, confirmPassword: e.target.value });
+                  if (fieldErrors.confirmPassword) setFieldErrors(prev => ({ ...prev, confirmPassword: '' }));
+                }}
+                className={fieldErrors.confirmPassword ? 'border-red-500' : ''}
                 required
               />
+              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                <p className="text-sm text-red-500">Passwords do not match</p>
+              )}
+              {formData.confirmPassword && formData.password === formData.confirmPassword && formData.confirmPassword.length > 0 && (
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <Check className="w-4 h-4" /> Passwords match
+                </p>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -301,9 +486,16 @@ const SignUp: React.FC = () => {
                   type="tel"
                   placeholder="Enter your phone number"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, phone: e.target.value });
+                    if (fieldErrors.phone) setFieldErrors(prev => ({ ...prev, phone: '' }));
+                  }}
+                  className={fieldErrors.phone ? 'border-red-500' : ''}
                   required
                 />
+                {fieldErrors.phone && (
+                  <p className="text-sm text-red-500">{fieldErrors.phone}</p>
+                )}
               </div>
             )}
 

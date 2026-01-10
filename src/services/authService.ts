@@ -189,21 +189,28 @@ export const registerUser = async (
       // Extract user-friendly error message from backend response
       let errorMessage = 'Registration failed';
       
-      if (result.details && Array.isArray(result.details) && result.details.length > 0) {
-        // Format validation errors into a readable message
-        // Show the first error message (most relevant)
-        errorMessage = result.details[0].message;
-        
-        // If there are multiple errors, append count
-        if (result.details.length > 1) {
-          errorMessage += ` (and ${result.details.length - 1} more issue${result.details.length > 2 ? 's' : ''})`;
+      // Check for details first - can be string or array
+      if (result.details) {
+        if (typeof result.details === 'string') {
+          // Details is a string (e.g., Firebase error message)
+          errorMessage = result.details;
+        } else if (Array.isArray(result.details) && result.details.length > 0) {
+          // Details is an array of validation errors
+          errorMessage = result.details[0].message;
+          
+          // If there are multiple errors, append count
+          if (result.details.length > 1) {
+            errorMessage += ` (and ${result.details.length - 1} more issue${result.details.length > 2 ? 's' : ''})`;
+          }
+          
+          console.log('📋 Validation errors:', result.details.map((d: any) => d.message));
         }
-        
-        console.log('📋 Validation errors:', result.details.map((d: any) => d.message));
-      } else if (result.error) {
-        errorMessage = result.error;
       } else if (result.message) {
+        // Use message field if available
         errorMessage = result.message;
+      } else if (result.error && result.error !== 'Registration failed') {
+        // Use error field only if it's not the generic message
+        errorMessage = result.error;
       }
       
       toast.error(errorMessage);
