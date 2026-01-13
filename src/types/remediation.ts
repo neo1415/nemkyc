@@ -58,6 +58,8 @@ export interface IdentityList {
   // Schema info (preserves original file structure)
   columns: string[];             // Original column names in order
   emailColumn: string;           // Which column contains email addresses
+  nameColumns?: NameColumns;     // Auto-detected name columns
+  policyColumn?: string;         // Auto-detected policy number column
   
   // Statistics
   totalEntries: number;
@@ -87,8 +89,10 @@ export interface IdentityEntry {
   // Original data (dynamic - all columns from uploaded file)
   data: Record<string, any>;     // { "Column A": "value", "Column B": "value", ... }
   
-  // Extracted email (from the detected/selected email column)
-  email: string;
+  // Extracted fields
+  email: string;                 // From the detected/selected email column
+  displayName?: string;          // Combined name from name columns
+  policyNumber?: string;         // Extracted policy number if available
   
   // Verification tracking
   verificationType?: VerificationType;
@@ -213,8 +217,31 @@ export interface FileParseResult {
   columns: string[];             // All column names in order
   rows: Record<string, any>[];   // All rows with original data
   detectedEmailColumn: string | null;  // Auto-detected email column or null
+  detectedNameColumns?: NameColumns;   // Auto-detected name columns
+  detectedPolicyColumn?: string | null; // Auto-detected policy column
+  detectedFileType?: FileType;   // Auto-detected file type (corporate/individual)
   totalRows: number;
 }
+
+/**
+ * Auto-detected name columns from file parsing
+ * Used to build displayName for each entry
+ */
+export interface NameColumns {
+  firstName?: string;            // Column name for first name
+  middleName?: string;           // Column name for middle name
+  lastName?: string;             // Column name for last name
+  fullName?: string;             // Column name for full/combined name
+  insured?: string;              // Column name for insured name
+  companyName?: string;          // Column name for company/corporate name
+}
+
+/**
+ * File type detection result
+ * Corporate files have company names, directors, etc.
+ * Individual files have first/last names
+ */
+export type FileType = 'corporate' | 'individual' | 'unknown';
 
 // ========== API Request/Response Types ==========
 

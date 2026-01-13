@@ -1718,6 +1718,9 @@ const createEmailTransporter = () => {
         clientSecret: process.env.EMAIL_CLIENT_SECRET,
         refreshToken: process.env.EMAIL_REFRESH_TOKEN,
       },
+      connectionTimeout: 60000, // 60 seconds
+      greetingTimeout: 30000,   // 30 seconds
+      socketTimeout: 60000,     // 60 seconds
       logger: process.env.NODE_ENV !== 'production',
       debug: process.env.NODE_ENV !== 'production'
     });
@@ -1739,6 +1742,9 @@ const createEmailTransporter = () => {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
+      connectionTimeout: 60000, // 60 seconds
+      greetingTimeout: 30000,   // 30 seconds
+      socketTimeout: 60000,     // 60 seconds
       logger: process.env.NODE_ENV !== 'production',
       debug: process.env.NODE_ENV !== 'production'
     });
@@ -7576,16 +7582,19 @@ const createIdentityActivityLog = async (logData) => {
  * - name: string - Admin-provided name for the list
  * - columns: string[] - Original column names in order
  * - emailColumn: string - Which column contains email addresses
+ * - nameColumns: object - Auto-detected name columns { firstName?, lastName?, middleName?, fullName?, insured?, companyName? }
+ * - policyColumn: string - Auto-detected policy number column
+ * - fileType: string - Auto-detected file type ('corporate', 'individual', or 'unknown')
  * - entries: object[] - Array of row data objects
  * - originalFileName: string - Original uploaded file name
  * 
- * Requirements: 1.6, 1.7
+ * Requirements: 1.5, 1.6, 1.7
  */
 app.post('/api/identity/lists', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { name, columns, emailColumn, entries, originalFileName } = req.body;
+    const { name, columns, emailColumn, nameColumns, policyColumn, fileType, entries, originalFileName } = req.body;
     
-    console.log(`📋 Creating identity list: ${name}`);
+    console.log(`📋 Creating identity list: ${name} (type: ${fileType || 'unknown'})`);
     
     // Validate required fields
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -7633,6 +7642,9 @@ app.post('/api/identity/lists', requireAuth, requireAdmin, async (req, res) => {
       name: name.trim(),
       columns: columns,
       emailColumn: emailColumn,
+      nameColumns: nameColumns || null,
+      policyColumn: policyColumn || null,
+      fileType: fileType || 'unknown',
       totalEntries: entries.length,
       verifiedCount: 0,
       pendingCount: entries.length,
@@ -7646,6 +7658,64 @@ app.post('/api/identity/lists', requireAuth, requireAdmin, async (req, res) => {
     
     await listRef.set(listData);
     
+    // Helper function to check if a value is effectively empty (N/A, blank, etc.)
+    const isEmptyValue = (val) => {
+      if (!val) return true;
+      const str = String(val).trim().toLowerCase();
+      return str === '' || str === 'n/a' || str === 'na' || str === '-' || str === 'nil' || str === 'none';
+    };
+    
+    // Helper function to get clean value (returns null if empty)
+    const getCleanValue = (val) => {
+      if (isEmptyValue(val)) return null;
+      return String(val).trim();
+    };
+    
+    // Helper function to build display name from entry data
+    const buildDisplayName = (entryData, nameCols) => {
+      if (!nameCols) return null;
+      
+      // If we have firstName/lastName, combine them
+      if (nameCols.firstName || nameCols.lastName) {
+        const parts = [];
+        if (nameCols.firstName) {
+          const val = getCleanValue(entryData[nameCols.firstName]);
+          if (val) parts.push(val);
+        }
+        if (nameCols.middleName) {
+          const val = getCleanValue(entryData[nameCols.middleName]);
+          if (val) parts.push(val); // Only add if not N/A or empty
+        }
+        if (nameCols.lastName) {
+          const val = getCleanValue(entryData[nameCols.lastName]);
+          if (val) parts.push(val);
+        }
+        if (parts.length > 0) {
+          return parts.join(' ');
+        }
+      }
+      
+      // Try fullName
+      if (nameCols.fullName) {
+        const val = getCleanValue(entryData[nameCols.fullName]);
+        if (val) return val;
+      }
+      
+      // Try insured
+      if (nameCols.insured) {
+        const val = getCleanValue(entryData[nameCols.insured]);
+        if (val) return val;
+      }
+      
+      // Try companyName (for corporate entries)
+      if (nameCols.companyName) {
+        const val = getCleanValue(entryData[nameCols.companyName]);
+        if (val) return val;
+      }
+      
+      return null;
+    };
+    
     // Create entry documents
     const entryPromises = entries.map(async (entryData, index) => {
       const entryRef = db.collection('identity-entries').doc();
@@ -7658,11 +7728,21 @@ app.post('/api/identity/lists', requireAuth, requireAdmin, async (req, res) => {
         console.warn(`⚠️ Invalid or missing email in row ${index + 1}: ${email}`);
       }
       
+      // Extract display name from name columns
+      const displayName = buildDisplayName(entryData, nameColumns);
+      
+      // Extract policy number if policy column is specified
+      const policyNumber = policyColumn && entryData[policyColumn] 
+        ? String(entryData[policyColumn]).trim() 
+        : null;
+      
       const entry = {
         id: entryId,
         listId: listId,
         data: entryData, // Store all original columns
         email: (email || '').toString().trim().toLowerCase(),
+        displayName: displayName,
+        policyNumber: policyNumber,
         status: 'pending',
         resendCount: 0,
         verificationAttempts: 0,
@@ -7687,6 +7767,8 @@ app.post('/api/identity/lists', requireAuth, requireAdmin, async (req, res) => {
         entryCount: entries.length,
         columns: columns,
         emailColumn: emailColumn,
+        nameColumns: nameColumns,
+        policyColumn: policyColumn,
         originalFileName: originalFileName,
         createdBy: req.user.email
       },
@@ -8390,7 +8472,7 @@ function escapeHtmlServer(text) {
  * - expired: boolean - True if token has expired
  * - used: boolean - True if already verified
  * 
- * Requirements: 4.4, 4.5, 6.1, 6.2
+ * Requirements: 4.4, 4.5, 6.1, 6.2, 6.3, 6.4
  */
 app.get('/api/identity/verify/:token', async (req, res) => {
   try {
@@ -8453,30 +8535,119 @@ app.get('/api/identity/verify/:token', async (req, res) => {
       });
     }
     
-    // Extract name and policy number from entry data if available
-    const data = entry.data || {};
-    let name = null;
-    let policyNumber = null;
+    // Use stored displayName and policyNumber first, then fall back to data extraction
+    let name = entry.displayName || null;
+    let policyNumber = entry.policyNumber || null;
     
-    // Try to find name field (common variations)
-    const nameFields = ['name', 'Name', 'NAME', 'customer_name', 'customerName', 'Customer Name', 'full_name', 'fullName', 'Full Name'];
-    for (const field of nameFields) {
-      if (data[field]) {
-        name = data[field];
-        break;
+    // Helper to check if a value is effectively empty (N/A, blank, etc.)
+    const isEmptyValue = (val) => {
+      if (!val) return true;
+      const str = String(val).trim().toLowerCase();
+      return str === '' || str === 'n/a' || str === 'na' || str === '-' || str === 'nil' || str === 'none';
+    };
+    
+    // Helper to get clean value (returns null if empty)
+    const getCleanValue = (val) => {
+      if (isEmptyValue(val)) return null;
+      return String(val).trim();
+    };
+    
+    // If no stored displayName, try to extract from data (backward compatibility)
+    if (!name && entry.data) {
+      const data = entry.data;
+      
+      // Check if this is a corporate entry (has director-related columns)
+      const isCorporate = Object.keys(data).some(key => 
+        key.toLowerCase().includes('director')
+      );
+      
+      if (isCorporate) {
+        // CORPORATE: Look for company name variations
+        const companyNameFields = [
+          'companyName', 'company_name', 'Company Name', 'CompanyName', 'COMPANY_NAME',
+          'company', 'Company', 'COMPANY',
+          'businessName', 'business_name', 'Business Name', 'BusinessName',
+          'corporateName', 'corporate_name', 'Corporate Name',
+          'registeredName', 'registered_name', 'Registered Name',
+          'entityName', 'entity_name', 'Entity Name',
+          'organizationName', 'organisation_name', 'Organization Name', 'Organisation Name',
+          'firmName', 'firm_name', 'Firm Name'
+        ];
+        
+        for (const field of companyNameFields) {
+          const val = getCleanValue(data[field]);
+          if (val) {
+            name = val;
+            break;
+          }
+        }
+      } else {
+        // INDIVIDUAL: Look for personal name fields
+        // First try full name fields
+        const fullNameFields = [
+          'insured', 'Insured', 'INSURED', 'insuredName', 'Insured Name', 'insured_name',
+          'name', 'Name', 'NAME',
+          'fullName', 'full_name', 'Full Name', 'FullName', 'FULL_NAME',
+          'customerName', 'customer_name', 'Customer Name', 'CustomerName',
+          'clientName', 'client_name', 'Client Name',
+          'policyHolder', 'policy_holder', 'Policy Holder', 'PolicyHolder'
+        ];
+        
+        for (const field of fullNameFields) {
+          const val = getCleanValue(data[field]);
+          if (val) {
+            name = val;
+            break;
+          }
+        }
+        
+        // If no full name found, try to combine firstName + middleName + lastName
+        if (!name) {
+          const firstNameFields = ['firstName', 'first_name', 'First Name', 'FirstName', 'FIRST_NAME', 'first', 'First'];
+          const middleNameFields = ['middleName', 'middle_name', 'Middle Name', 'MiddleName', 'MIDDLE_NAME', 'middle', 'Middle', 'otherName', 'other_name', 'Other Name'];
+          const lastNameFields = ['lastName', 'last_name', 'Last Name', 'LastName', 'LAST_NAME', 'surname', 'Surname', 'SURNAME', 'last', 'Last'];
+          
+          let firstName = null;
+          let middleName = null;
+          let lastName = null;
+          
+          for (const field of firstNameFields) {
+            const val = getCleanValue(data[field]);
+            if (val) { firstName = val; break; }
+          }
+          
+          for (const field of middleNameFields) {
+            const val = getCleanValue(data[field]);
+            if (val) { middleName = val; break; }
+          }
+          
+          for (const field of lastNameFields) {
+            const val = getCleanValue(data[field]);
+            if (val) { lastName = val; break; }
+          }
+          
+          // Combine name parts (skip middle name if it was N/A or empty)
+          const nameParts = [firstName, middleName, lastName].filter(Boolean);
+          if (nameParts.length > 0) {
+            name = nameParts.join(' ');
+          }
+        }
       }
     }
     
-    // Try to find policy number field (common variations)
-    const policyFields = ['policy_number', 'policyNumber', 'Policy Number', 'policy', 'Policy', 'POLICY', 'policy_no', 'policyNo'];
-    for (const field of policyFields) {
-      if (data[field]) {
-        policyNumber = data[field];
-        break;
+    // If no stored policyNumber, try to extract from data (backward compatibility)
+    if (!policyNumber && entry.data) {
+      const data = entry.data;
+      const policyFields = ['policy_number', 'policyNumber', 'Policy Number', 'policy', 'Policy', 'POLICY', 'policy_no', 'policyNo'];
+      for (const field of policyFields) {
+        if (data[field]) {
+          policyNumber = data[field];
+          break;
+        }
       }
     }
     
-    console.log(`✅ Token valid for entry ${entryDoc.id}, verificationType: ${entry.verificationType}`);
+    console.log(`✅ Token valid for entry ${entryDoc.id}, verificationType: ${entry.verificationType}, name: ${name || 'N/A'}`);
     
     res.json({
       valid: true,
