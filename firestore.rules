@@ -290,6 +290,74 @@ service cloud.firestore {
       allow delete: if isAdminOrSuperAdmin();
     }
 
+    // ========== Identity Collection System ==========
+
+    // Identity lists - Admin only access (uploaded customer lists)
+    match /identity-lists/{docId} {
+      // Admins, super admins, and compliance can read lists
+      allow read: if isAdminOrSuperAdmin() || isCompliance();
+      // Only admins and super admins can create lists
+      allow create: if isAdminOrSuperAdmin() && 
+        request.resource.data.createdBy == request.auth.uid;
+      // Only admins and super admins can update lists
+      allow update: if isAdminOrSuperAdmin();
+      // Admins and super admins can delete lists
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    // Identity entries - Admin write, public read handled by backend via token
+    match /identity-entries/{docId} {
+      // Admins, super admins, and compliance can read all entries
+      allow read: if isAdminOrSuperAdmin() || isCompliance();
+      // Only admins and super admins can create entries (via list creation)
+      allow create: if isAdminOrSuperAdmin();
+      // Only admins and super admins can update entries
+      // Note: Customer verification updates are handled by backend API
+      allow update: if isAdminOrSuperAdmin();
+      // Admins and super admins can delete entries
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    // Identity activity logs - Append-only for system, read for admins
+    match /identity-logs/{docId} {
+      // Admins, super admins, and compliance can read activity logs
+      allow read: if isAdminOrSuperAdmin() || isCompliance();
+      // Activity logs are created by the backend system only
+      // No direct client writes allowed - all writes go through backend API
+      allow create: if false;
+      // Activity logs are immutable - no updates allowed
+      allow update: if false;
+      // Activity logs cannot be deleted
+      allow delete: if false;
+    }
+
+    // ========== Legacy Remediation Collections (backward compatibility) ==========
+
+    // Remediation batches - Admin only access
+    match /remediation-batches/{docId} {
+      allow read: if isAdminOrSuperAdmin() || isCompliance();
+      allow create: if isAdminOrSuperAdmin() && 
+        request.resource.data.createdBy == request.auth.uid;
+      allow update: if isAdminOrSuperAdmin();
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    // Remediation records
+    match /remediation-records/{docId} {
+      allow read: if isAdminOrSuperAdmin() || isCompliance();
+      allow create: if isAdminOrSuperAdmin();
+      allow update: if isAdminOrSuperAdmin();
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    // Remediation audit logs
+    match /remediation-audit-logs/{docId} {
+      allow read: if isAdminOrSuperAdmin() || isCompliance();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
     // ========== General fallback ==========
 
     match /{document=**} {
