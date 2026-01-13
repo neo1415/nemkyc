@@ -106,6 +106,18 @@ const DemoConfig = lazy(() => import('./pages/demo/DemoConfig'));
 const NINVerification = lazy(() => import('./pages/demo/NINVerification'));
 const CACVerification = lazy(() => import('./pages/demo/CACVerification'));
 
+// Remediation Pages
+const AdminRemediationBatches = lazy(() => import('./pages/admin/AdminRemediationBatches'));
+const AdminRemediationRecords = lazy(() => import('./pages/admin/AdminRemediationRecords'));
+const RemediationAuditLogs = lazy(() => import('./pages/admin/RemediationAuditLogs'));
+
+// Identity Collection Pages (New flexible system)
+const IdentityListsDashboard = lazy(() => import('./pages/admin/IdentityListsDashboard'));
+const IdentityListDetail = lazy(() => import('./pages/admin/IdentityListDetail'));
+
+// Public Verification Page (no auth required)
+const CustomerVerificationPage = lazy(() => import('./pages/public/CustomerVerificationPage'));
+
 // Loading component for lazy-loaded pages
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -203,6 +215,9 @@ function App() {
              <Route path="demo/config" element={<DemoConfig />} />
              <Route path="demo/verify/nin" element={<NINVerification />} />
              <Route path="demo/verify/cac" element={<CACVerification />} />
+             
+             {/* Public Verification Route - Customer Identity Remediation (No Auth Required) */}
+             <Route path="verify/:token" element={<CustomerVerificationPage />} />
              
              {/* Protected Routes */}
              <Route path="dashboard" element={
@@ -493,6 +508,38 @@ function App() {
                   <EventsLogPage />
                 </RoleProtectedRoute>
               } />
+
+          {/* Identity Remediation Routes */}
+          <Route path="admin/remediation" element={
+            <RoleProtectedRoute allowedRoles={['admin', 'compliance', 'super admin']}>
+              <AdminRemediationBatches />
+            </RoleProtectedRoute>
+          } />
+          
+          <Route path="admin/remediation/audit-logs" element={
+            <RoleProtectedRoute allowedRoles={['admin', 'compliance', 'super admin']}>
+              <RemediationAuditLogs />
+            </RoleProtectedRoute>
+          } />
+          
+          <Route path="admin/remediation/:batchId" element={
+            <RoleProtectedRoute allowedRoles={['admin', 'compliance', 'super admin']}>
+              <AdminRemediationRecords />
+            </RoleProtectedRoute>
+          } />
+
+          {/* Identity Collection Routes (New flexible system) */}
+          <Route path="admin/identity" element={
+            <RoleProtectedRoute allowedRoles={['admin', 'compliance', 'super admin']}>
+              <IdentityListsDashboard />
+            </RoleProtectedRoute>
+          } />
+          
+          <Route path="admin/identity/:listId" element={
+            <RoleProtectedRoute allowedRoles={['admin', 'compliance', 'super admin']}>
+              <IdentityListDetail />
+            </RoleProtectedRoute>
+          } />
              
              <Route path="unauthorized" element={<Unauthorized />} />
              <Route path="*" element={<NotFound />} />
