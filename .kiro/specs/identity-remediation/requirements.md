@@ -25,9 +25,12 @@ The Identity Collection System enables NEM Insurance to collect missing National
 2. THE System SHALL preserve all original column names and data exactly as they appear in the uploaded file
 3. WHEN the file is parsed, THE System SHALL automatically detect the first column containing "email" (case-insensitive) reading left to right
 4. IF no email column is found, THEN THE Admin_Portal SHALL prompt the administrator to select which column contains email addresses
-5. WHEN a Customer_List is created, THE System SHALL add tracking columns: "Verification Status", "NIN", "CAC", "Verified At", "Link Sent At"
-6. THE System SHALL save the Customer_List to Firestore with a unique ID and admin-provided name
-7. WHEN an administrator uploads a file, THE Admin_Portal SHALL show a preview before confirming the upload
+5. WHEN the file is parsed, THE System SHALL automatically detect name columns by searching left to right for columns containing: "first" AND "name", "last" AND "name", "middle" AND "name", "insured", "full" AND "name", or just "name" (case-insensitive)
+6. THE System SHALL combine detected name parts (firstName, middleName, lastName) into a single displayName field, or use the first matching name column value
+7. WHEN a Customer_List is created, THE System SHALL add tracking columns: "Status", "NIN", "CAC", "Verified At", "Link Sent At"
+8. THE System SHALL NOT add duplicate tracking columns if they already exist in the original file
+9. THE System SHALL save the Customer_List to Firestore with a unique ID and admin-provided name
+10. WHEN an administrator uploads a file, THE Admin_Portal SHALL show a preview before confirming the upload
 
 ### Requirement 2: Customer List Management
 
@@ -87,13 +90,15 @@ The Identity Collection System enables NEM Insurance to collect missing National
 #### Acceptance Criteria
 
 1. WHEN a customer accesses a valid link, THE Customer_Page SHALL display a branded page with NEM Insurance logo
-2. THE Customer_Page SHALL show any identifying information from the entry (name, policy number if available) for confirmation
-3. WHEN the verification type is NIN, THE Customer_Page SHALL display an input field for 11-digit NIN with validation
-4. WHEN the verification type is CAC, THE Customer_Page SHALL display input fields for CAC/RC number and registered company name
-5. WHEN the customer submits valid information, THE System SHALL call the Paystack verification API
-6. IF verification succeeds, THEN THE System SHALL update the entry with the verified NIN or CAC and set status to "Verified"
-7. IF verification fails, THEN THE Customer_Page SHALL display a friendly error and allow retry (maximum 3 attempts)
-8. WHEN maximum attempts are exceeded, THE System SHALL mark the entry as "Verification Failed"
+2. THE Customer_Page SHALL prominently display the customer's name (from auto-detected name columns) for identity confirmation
+3. THE Customer_Page SHALL display the policy number if available in the entry data
+4. THE Customer_Page SHALL inform the customer that the NIN/CAC will be validated against the displayed name
+5. WHEN the verification type is NIN, THE Customer_Page SHALL display an input field for 11-digit NIN with validation
+6. WHEN the verification type is CAC, THE Customer_Page SHALL display input fields for CAC/RC number and registered company name
+7. WHEN the customer submits valid information, THE System SHALL call the Paystack verification API
+8. IF verification succeeds, THEN THE System SHALL update the entry with the verified NIN or CAC and set status to "Verified"
+9. IF verification fails, THEN THE Customer_Page SHALL display a friendly error and allow retry (maximum 3 attempts)
+10. WHEN maximum attempts are exceeded, THE System SHALL mark the entry as "Verification Failed"
 
 ### Requirement 7: Data Appending and Export
 

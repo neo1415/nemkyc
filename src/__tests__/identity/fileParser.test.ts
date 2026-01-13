@@ -288,3 +288,230 @@ describe('Feature: identity-remediation, Property 2: Email Auto-Detection', () =
     );
   });
 });
+
+
+import { detectFileType, detectNameColumns, buildDisplayName, isEmptyValue, getCleanValue } from '../../utils/fileParser';
+
+describe('Feature: identity-remediation, Property 3: File Type Detection (Corporate vs Individual)', () => {
+  /**
+   * Property: Corporate File Detection
+   * Files with director columns, company name, RC number should be detected as corporate
+   */
+  it('should detect corporate files by director columns', () => {
+    const corporateColumns = [
+      ['Director 1', 'Director 2', 'Company Name', 'Email'],
+      ['director_name', 'director_1', 'company', 'email'],
+      ['DIRECTOR', 'RC Number', 'Business Name', 'contact_email'],
+    ];
+    
+    for (const columns of corporateColumns) {
+      const result = detectFileType(columns);
+      expect(result).toBe('corporate');
+    }
+  });
+
+  it('should detect corporate files by company name columns', () => {
+    const corporateColumns = [
+      ['Company Name', 'Registration Number', 'Email'],
+      ['company_name', 'cac_number', 'email'],
+      ['CompanyName', 'RC_Number', 'contact'],
+    ];
+    
+    for (const columns of corporateColumns) {
+      const result = detectFileType(columns);
+      expect(result).toBe('corporate');
+    }
+  });
+
+  /**
+   * Property: Individual File Detection
+   * Files with firstName, lastName, middleName should be detected as individual
+   */
+  it('should detect individual files by first/last name columns', () => {
+    const individualColumns = [
+      ['First Name', 'Last Name', 'Email', 'Policy Number'],
+      ['firstName', 'lastName', 'middleName', 'email'],
+      ['first_name', 'surname', 'other_name', 'contact_email'],
+      ['FIRST', 'LAST', 'MIDDLE', 'EMAIL'],
+    ];
+    
+    for (const columns of individualColumns) {
+      const result = detectFileType(columns);
+      expect(result).toBe('individual');
+    }
+  });
+
+  /**
+   * Property: Unknown File Type
+   * Files without clear indicators should return 'unknown'
+   */
+  it('should return unknown for ambiguous files', () => {
+    const ambiguousColumns = [
+      ['Name', 'Email', 'Phone'],
+      ['Insured', 'Policy', 'Amount'],
+      ['ID', 'Value', 'Date'],
+    ];
+    
+    for (const columns of ambiguousColumns) {
+      const result = detectFileType(columns);
+      expect(result).toBe('unknown');
+    }
+  });
+
+  /**
+   * Property: Corporate Score Beats Individual Score
+   * When both indicators exist, the higher score wins
+   */
+  it('should prioritize corporate when corporate indicators are stronger', () => {
+    // Director + Company Name = 6 points corporate
+    // vs just "name" which doesn't score for individual
+    const columns = ['Director 1', 'Company Name', 'Name', 'Email'];
+    const result = detectFileType(columns);
+    expect(result).toBe('corporate');
+  });
+
+  it('should prioritize individual when individual indicators are stronger', () => {
+    // First Name + Last Name + Middle Name = 8 points individual
+    // vs just "business" = 1 point corporate
+    const columns = ['First Name', 'Last Name', 'Middle Name', 'Business Type', 'Email'];
+    const result = detectFileType(columns);
+    expect(result).toBe('individual');
+  });
+});
+
+describe('Feature: identity-remediation, Property 4: Name Column Detection by File Type', () => {
+  /**
+   * Property: Corporate files should detect companyName
+   */
+  it('should detect companyName for corporate files', () => {
+    const columns = ['Director 1', 'Company Name', 'Email', 'RC Number'];
+    const fileType = detectFileType(columns);
+    const nameColumns = detectNameColumns(columns, fileType);
+    
+    expect(fileType).toBe('corporate');
+    expect(nameColumns.companyName).toBe('Company Name');
+    expect(nameColumns.firstName).toBeUndefined();
+    expect(nameColumns.lastName).toBeUndefined();
+  });
+
+  it('should use insured as companyName for corporate files', () => {
+    const columns = ['Director 1', 'Insured', 'Email', 'RC Number'];
+    const fileType = detectFileType(columns);
+    const nameColumns = detectNameColumns(columns, fileType);
+    
+    expect(fileType).toBe('corporate');
+    expect(nameColumns.companyName).toBe('Insured');
+  });
+
+  /**
+   * Property: Individual files should detect firstName/lastName
+   */
+  it('should detect firstName/lastName for individual files', () => {
+    const columns = ['First Name', 'Middle Name', 'Last Name', 'Email', 'Policy'];
+    const fileType = detectFileType(columns);
+    const nameColumns = detectNameColumns(columns, fileType);
+    
+    expect(fileType).toBe('individual');
+    expect(nameColumns.firstName).toBe('First Name');
+    expect(nameColumns.middleName).toBe('Middle Name');
+    expect(nameColumns.lastName).toBe('Last Name');
+    expect(nameColumns.companyName).toBeUndefined();
+  });
+
+  /**
+   * Property: Unknown files should fall back to individual detection
+   */
+  it('should detect name columns for unknown file types', () => {
+    const columns = ['Name', 'Email', 'Phone'];
+    const fileType = detectFileType(columns);
+    const nameColumns = detectNameColumns(columns, fileType);
+    
+    expect(fileType).toBe('unknown');
+    expect(nameColumns.fullName).toBe('Name');
+  });
+});
+
+describe('Feature: identity-remediation, Property 5: N/A and Empty Value Handling', () => {
+  /**
+   * Property: N/A values should be treated as empty
+   */
+  it('should treat N/A as empty', () => {
+    expect(isEmptyValue('N/A')).toBe(true);
+    expect(isEmptyValue('n/a')).toBe(true);
+    expect(isEmptyValue('NA')).toBe(true);
+    expect(isEmptyValue('na')).toBe(true);
+    expect(isEmptyValue('-')).toBe(true);
+    expect(isEmptyValue('nil')).toBe(true);
+    expect(isEmptyValue('none')).toBe(true);
+    expect(isEmptyValue('')).toBe(true);
+    expect(isEmptyValue(null)).toBe(true);
+    expect(isEmptyValue(undefined)).toBe(true);
+  });
+
+  it('should not treat actual values as empty', () => {
+    expect(isEmptyValue('John')).toBe(false);
+    expect(isEmptyValue('Doe')).toBe(false);
+    expect(isEmptyValue('ABC Company')).toBe(false);
+    expect(isEmptyValue('0')).toBe(false);
+  });
+
+  /**
+   * Property: getCleanValue should return null for empty values
+   */
+  it('should return null for empty values', () => {
+    expect(getCleanValue('N/A')).toBeNull();
+    expect(getCleanValue('n/a')).toBeNull();
+    expect(getCleanValue('')).toBeNull();
+    expect(getCleanValue(null)).toBeNull();
+  });
+
+  it('should return trimmed value for non-empty values', () => {
+    expect(getCleanValue('  John  ')).toBe('John');
+    expect(getCleanValue('Doe')).toBe('Doe');
+  });
+
+  /**
+   * Property: buildDisplayName should skip N/A middle names
+   */
+  it('should skip N/A middle names when building display name', () => {
+    const nameColumns = {
+      firstName: 'First Name',
+      middleName: 'Middle Name',
+      lastName: 'Last Name'
+    };
+    
+    // With N/A middle name
+    const entry1 = { 'First Name': 'John', 'Middle Name': 'N/A', 'Last Name': 'Doe' };
+    expect(buildDisplayName(entry1, nameColumns)).toBe('John Doe');
+    
+    // With actual middle name
+    const entry2 = { 'First Name': 'John', 'Middle Name': 'Michael', 'Last Name': 'Doe' };
+    expect(buildDisplayName(entry2, nameColumns)).toBe('John Michael Doe');
+    
+    // With empty middle name
+    const entry3 = { 'First Name': 'John', 'Middle Name': '', 'Last Name': 'Doe' };
+    expect(buildDisplayName(entry3, nameColumns)).toBe('John Doe');
+  });
+
+  /**
+   * Property: buildDisplayName should work with companyName for corporate
+   */
+  it('should use companyName for corporate entries', () => {
+    const nameColumns = {
+      companyName: 'Company Name'
+    };
+    
+    const entry = { 'Company Name': 'ABC Corporation Ltd' };
+    expect(buildDisplayName(entry, nameColumns)).toBe('ABC Corporation Ltd');
+  });
+
+  it('should return undefined when no name is available', () => {
+    const nameColumns = {
+      firstName: 'First Name',
+      lastName: 'Last Name'
+    };
+    
+    const entry = { 'First Name': 'N/A', 'Last Name': '' };
+    expect(buildDisplayName(entry, nameColumns)).toBeUndefined();
+  });
+});
