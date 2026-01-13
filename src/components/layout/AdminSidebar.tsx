@@ -11,7 +11,9 @@ import {
   X,
   User,
   Home,
-  Shield
+  Shield,
+  ClipboardCheck,
+  IdCard
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
@@ -51,6 +53,15 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       name: 'Events Log',
       href: '/admin/events-log',
       icon: Users
+    }] : []),
+    ...(canViewKYCCDD ? [{
+      name: 'Identity Collection',
+      href: '/admin/identity',
+      icon: IdCard
+    }, {
+      name: 'Identity Remediation',
+      href: '/admin/remediation',
+      icon: ClipboardCheck
     }] : []),
     {
       name: 'Profile',
