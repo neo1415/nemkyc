@@ -138,7 +138,9 @@ Public page for customers to submit their identity.
 ```typescript
 // Features:
 // - NEM Insurance branding
-// - Shows customer info from entry (name, policy if available)
+// - Prominently displays customer name (from auto-detected name columns)
+// - Shows policy number if available
+// - Informs customer that NIN/CAC will be validated against displayed name
 // - NIN input (11 digits) OR CAC input (number + company name)
 // - Submit button
 // - Success/error/expired states
@@ -214,6 +216,14 @@ interface IdentityList {
   // Schema info (preserves original structure)
   columns: string[];             // Original column names in order
   emailColumn: string;           // Which column contains emails
+  nameColumns: {                 // Auto-detected name columns
+    firstName?: string;          // Column name for first name
+    middleName?: string;         // Column name for middle name
+    lastName?: string;           // Column name for last name
+    fullName?: string;           // Column name for full/combined name
+    insured?: string;            // Column name for insured name
+  };
+  policyColumn?: string;         // Auto-detected policy number column
   
   // Stats
   totalEntries: number;
@@ -238,8 +248,10 @@ interface IdentityEntry {
   // Original data (dynamic - all columns from file)
   data: Record<string, any>;     // { "Column A": "value", "Column B": "value", ... }
   
-  // Extracted email
+  // Extracted fields
   email: string;                 // Extracted from emailColumn
+  displayName?: string;          // Combined name from name columns
+  policyNumber?: string;         // Extracted policy number if available
   
   // Verification tracking
   verificationType?: 'NIN' | 'CAC';
@@ -304,6 +316,17 @@ interface ActivityLog {
 *For any* uploaded file with a column containing "email" (case-insensitive), the system must correctly identify and extract that column as the email source.
 
 **Validates: Requirements 1.3**
+
+### Property 2.1: Name Auto-Detection
+*For any* uploaded file, the system must correctly identify name columns by searching left to right for:
+- Columns containing "first" AND "name" (case-insensitive)
+- Columns containing "last" AND "name" (case-insensitive)
+- Columns containing "middle" AND "name" (case-insensitive)
+- Columns containing "insured" (case-insensitive)
+- Columns containing "full" AND "name" (case-insensitive)
+- Columns containing just "name" (case-insensitive, as fallback)
+
+**Validates: Requirements 1.5, 1.6**
 
 ### Property 3: Token Uniqueness and Security
 *For any* generated verification token:

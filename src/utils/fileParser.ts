@@ -3,11 +3,13 @@
  * 
  * Parses CSV and Excel files while preserving all original columns.
  * Auto-detects email columns by finding the first column containing "email" (case-insensitive).
+ * Auto-detects name columns by searching left to right for common name patterns.
+ * Auto-detects file type (corporate vs individual) based on column patterns.
  */
 
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import type { FileParseResult } from '../types/remediation';
+import type { FileParseResult, NameColumns, FileType } from '../types/remediation';
 
 /**
  * Parse a CSV file and return all columns and rows
@@ -30,11 +32,17 @@ export function parseCSV(file: File): Promise<FileParseResult> {
         const columns = results.meta.fields || [];
         const rows = results.data as Record<string, any>[];
         const detectedEmailColumn = detectEmailColumn(columns);
+        const detectedFileType = detectFileType(columns);
+        const detectedNameColumns = detectNameColumns(columns, detectedFileType);
+        const detectedPolicyColumn = detectPolicyColumn(columns);
 
         resolve({
           columns,
           rows,
           detectedEmailColumn,
+          detectedNameColumns,
+          detectedPolicyColumn,
+          detectedFileType,
           totalRows: rows.length
         });
       },
@@ -79,11 +87,17 @@ export function parseExcel(file: File): Promise<FileParseResult> {
         // Extract columns from the first row's keys
         const columns = Object.keys(jsonData[0]);
         const detectedEmailColumn = detectEmailColumn(columns);
+        const detectedFileType = detectFileType(columns);
+        const detectedNameColumns = detectNameColumns(columns, detectedFileType);
+        const detectedPolicyColumn = detectPolicyColumn(columns);
 
         resolve({
           columns,
           rows: jsonData,
           detectedEmailColumn,
+          detectedNameColumns,
+          detectedPolicyColumn,
+          detectedFileType,
           totalRows: jsonData.length
         });
       } catch (error) {
@@ -129,6 +143,277 @@ export function detectEmailColumn(columns: string[]): string | null {
 
   // No email column found
   return null;
+}
+
+/**
+ * Auto-detect file type (corporate vs individual) based on column patterns
+ * 
+ * Corporate indicators:
+ * - "director" (director 1, director name, etc.)
+ * - "company" (company name, company)
+ * - "rc number", "cac", "registration"
+ * - Absence of firstName/lastName columns
+ * 
+ * Individual indicators:
+ * - "first name", "last name", "surname"
+ * - "middle name", "other name"
+ * - Personal identifiers without corporate markers
+ */
+export function detectFileType(columns: string[]): FileType {
+  let corporateScore = 0;
+  let individualScore = 0;
+  
+  for (const column of columns) {
+    const lowerColumn = column.toLowerCase().replace(/[_\s-]/g, '');
+    
+    // Corporate indicators
+    if (lowerColumn.includes('director')) {
+      corporateScore += 3; // Strong indicator
+    }
+    if (lowerColumn.includes('company') && lowerColumn.includes('name')) {
+      corporateScore += 3;
+    }
+    if (lowerColumn === 'company' || lowerColumn === 'companyname') {
+      corporateScore += 3;
+    }
+    if (lowerColumn.includes('rcnumber') || lowerColumn.includes('rc') && lowerColumn.includes('number')) {
+      corporateScore += 2;
+    }
+    if (lowerColumn.includes('cac') && !lowerColumn.includes('cacnumber')) {
+      corporateScore += 2;
+    }
+    if (lowerColumn.includes('registration') && lowerColumn.includes('number')) {
+      corporateScore += 2;
+    }
+    if (lowerColumn.includes('corporate') || lowerColumn.includes('business')) {
+      corporateScore += 1;
+    }
+    
+    // Individual indicators
+    if (lowerColumn === 'firstname' || lowerColumn === 'first' || 
+        (lowerColumn.includes('first') && lowerColumn.includes('name'))) {
+      individualScore += 3;
+    }
+    if (lowerColumn === 'lastname' || lowerColumn === 'surname' || lowerColumn === 'last' ||
+        (lowerColumn.includes('last') && lowerColumn.includes('name'))) {
+      individualScore += 3;
+    }
+    if (lowerColumn === 'middlename' || lowerColumn === 'middle' || 
+        lowerColumn === 'othername' || lowerColumn === 'othernames') {
+      individualScore += 2;
+    }
+    if (lowerColumn === 'nin' || lowerColumn.includes('nationalid')) {
+      individualScore += 1;
+    }
+  }
+  
+  // Determine file type based on scores
+  if (corporateScore > individualScore && corporateScore >= 2) {
+    return 'corporate';
+  } else if (individualScore > corporateScore && individualScore >= 2) {
+    return 'individual';
+  }
+  
+  return 'unknown';
+}
+
+/**
+ * Auto-detect name columns by searching left to right for common name patterns
+ * Detects: firstName, lastName, middleName, insured, fullName, name, companyName
+ * Behavior changes based on detected file type (corporate vs individual)
+ * 
+ * Requirements: 1.5, 1.6
+ */
+export function detectNameColumns(columns: string[], fileType: FileType = 'unknown'): NameColumns {
+  const nameColumns: NameColumns = {};
+  
+  // For corporate files, prioritize company name detection
+  if (fileType === 'corporate') {
+    for (const column of columns) {
+      const lowerColumn = column.toLowerCase().replace(/[_\s-]/g, '');
+      
+      // Check for company name
+      if (!nameColumns.companyName) {
+        if (lowerColumn === 'companyname' || 
+            lowerColumn === 'company' ||
+            (lowerColumn.includes('company') && lowerColumn.includes('name'))) {
+          nameColumns.companyName = column;
+          continue;
+        }
+        // Also check for "insured" in corporate context - it's likely the company name
+        if (lowerColumn === 'insured' || lowerColumn === 'insuredname') {
+          nameColumns.companyName = column;
+          continue;
+        }
+      }
+    }
+    
+    // If we found a company name, return early for corporate files
+    if (nameColumns.companyName) {
+      return nameColumns;
+    }
+  }
+  
+  // Search for each name type from left to right (for individual files or fallback)
+  for (const column of columns) {
+    const lowerColumn = column.toLowerCase().replace(/[_\s-]/g, '');
+    
+    // Check for firstName (first + name)
+    if (!nameColumns.firstName) {
+      if (lowerColumn === 'firstname' || 
+          lowerColumn === 'first' ||
+          (lowerColumn.includes('first') && lowerColumn.includes('name'))) {
+        nameColumns.firstName = column;
+        continue;
+      }
+    }
+    
+    // Check for lastName (last + name)
+    if (!nameColumns.lastName) {
+      if (lowerColumn === 'lastname' || 
+          lowerColumn === 'surname' ||
+          lowerColumn === 'last' ||
+          (lowerColumn.includes('last') && lowerColumn.includes('name'))) {
+        nameColumns.lastName = column;
+        continue;
+      }
+    }
+    
+    // Check for middleName (middle + name)
+    if (!nameColumns.middleName) {
+      if (lowerColumn === 'middlename' || 
+          lowerColumn === 'middle' ||
+          lowerColumn === 'othername' ||
+          lowerColumn === 'othernames' ||
+          (lowerColumn.includes('middle') && lowerColumn.includes('name'))) {
+        nameColumns.middleName = column;
+        continue;
+      }
+    }
+    
+    // Check for insured
+    if (!nameColumns.insured) {
+      if (lowerColumn === 'insured' || 
+          lowerColumn === 'insuredname' ||
+          lowerColumn.includes('insured')) {
+        nameColumns.insured = column;
+        continue;
+      }
+    }
+    
+    // Check for fullName (full + name)
+    if (!nameColumns.fullName) {
+      if (lowerColumn === 'fullname' || 
+          (lowerColumn.includes('full') && lowerColumn.includes('name'))) {
+        nameColumns.fullName = column;
+        continue;
+      }
+    }
+    
+    // Check for generic "name" column (only if no other name columns found yet)
+    // This is a fallback - only use if it's exactly "name" or "customer name"
+    if (!nameColumns.fullName && !nameColumns.firstName && !nameColumns.insured) {
+      if (lowerColumn === 'name' || 
+          lowerColumn === 'customername' ||
+          lowerColumn === 'customer') {
+        nameColumns.fullName = column;
+        continue;
+      }
+    }
+  }
+  
+  return nameColumns;
+}
+
+/**
+ * Auto-detect policy number column by searching for columns containing "policy"
+ * Searches from left to right
+ */
+export function detectPolicyColumn(columns: string[]): string | null {
+  // First pass: look for exact matches
+  for (const column of columns) {
+    const lowerColumn = column.toLowerCase().replace(/[_\s-]/g, '');
+    if (lowerColumn === 'policynumber' || 
+        lowerColumn === 'policyno' || 
+        lowerColumn === 'policy') {
+      return column;
+    }
+  }
+  
+  // Second pass: any column containing "policy"
+  for (const column of columns) {
+    if (column.toLowerCase().includes('policy')) {
+      return column;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Helper to check if a value is effectively empty (N/A, blank, etc.)
+ */
+export function isEmptyValue(val: any): boolean {
+  if (!val) return true;
+  const str = String(val).trim().toLowerCase();
+  return str === '' || str === 'n/a' || str === 'na' || str === '-' || str === 'nil' || str === 'none';
+}
+
+/**
+ * Helper to get clean value (returns null if empty)
+ */
+export function getCleanValue(val: any): string | null {
+  if (isEmptyValue(val)) return null;
+  return String(val).trim();
+}
+
+/**
+ * Build a display name from detected name columns and entry data
+ * Combines firstName + middleName + lastName, or uses fullName/insured
+ * Handles N/A and empty values properly
+ */
+export function buildDisplayName(entry: Record<string, any>, nameColumns: NameColumns): string | undefined {
+  // If we have firstName/lastName, combine them
+  if (nameColumns.firstName || nameColumns.lastName) {
+    const parts: string[] = [];
+    
+    if (nameColumns.firstName) {
+      const val = getCleanValue(entry[nameColumns.firstName]);
+      if (val) parts.push(val);
+    }
+    if (nameColumns.middleName) {
+      const val = getCleanValue(entry[nameColumns.middleName]);
+      if (val) parts.push(val); // Only add if not N/A or empty
+    }
+    if (nameColumns.lastName) {
+      const val = getCleanValue(entry[nameColumns.lastName]);
+      if (val) parts.push(val);
+    }
+    
+    if (parts.length > 0) {
+      return parts.join(' ');
+    }
+  }
+  
+  // Try fullName
+  if (nameColumns.fullName) {
+    const val = getCleanValue(entry[nameColumns.fullName]);
+    if (val) return val;
+  }
+  
+  // Try insured
+  if (nameColumns.insured) {
+    const val = getCleanValue(entry[nameColumns.insured]);
+    if (val) return val;
+  }
+  
+  // Try companyName (for corporate entries)
+  if (nameColumns.companyName) {
+    const val = getCleanValue(entry[nameColumns.companyName]);
+    if (val) return val;
+  }
+  
+  return undefined;
 }
 
 /**

@@ -228,9 +228,26 @@ export default function IdentityListDetail() {
     if (!list) return [];
 
     const columns: GridColDef[] = [];
+    
+    // Reserved column names that we add as verification columns
+    // Skip these from original data to prevent duplicates
+    const reservedColumns = new Set([
+      'status', 'Status', 'STATUS',
+      'nin', 'NIN', 'Nin',
+      'cac', 'CAC', 'Cac',
+      'verifiedAt', 'verified_at', 'Verified At', 'VerifiedAt',
+      'linkSentAt', 'link_sent_at', 'Link Sent At', 'LinkSentAt',
+      'resendCount', 'resend_count', 'Resend Count', 'ResendCount',
+      'verificationStatus', 'verification_status', 'Verification Status', 'VerificationStatus'
+    ]);
 
-    // Add original columns from the uploaded file
+    // Add original columns from the uploaded file (excluding reserved columns)
     list.columns.forEach((col) => {
+      // Skip reserved columns to prevent duplicates
+      if (reservedColumns.has(col)) {
+        return;
+      }
+      
       columns.push({
         field: `data.${col}`,
         headerName: col,
@@ -274,6 +291,21 @@ export default function IdentityListDetail() {
       },
     });
 
+    // Add Link Sent At column
+    columns.push({
+      field: 'linkSentAt',
+      headerName: 'Link Sent',
+      width: 150,
+      valueGetter: (value) => {
+        if (!value) return '-';
+        // Handle both Date objects and Firestore timestamps
+        const date = typeof value === 'object' && value !== null && 'toDate' in value 
+          ? (value as { toDate: () => Date }).toDate() 
+          : new Date(value as string | number | Date);
+        return isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
+      },
+    });
+
     // Add NIN column
     columns.push({
       field: 'nin',
@@ -295,7 +327,14 @@ export default function IdentityListDetail() {
       field: 'verifiedAt',
       headerName: 'Verified At',
       width: 150,
-      valueGetter: (value) => value ? new Date(value).toLocaleDateString() : '-',
+      valueGetter: (value) => {
+        if (!value) return '-';
+        // Handle both Date objects and Firestore timestamps
+        const date = typeof value === 'object' && value !== null && 'toDate' in value 
+          ? (value as { toDate: () => Date }).toDate() 
+          : new Date(value as string | number | Date);
+        return isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
+      },
     });
 
     // Add resend count column

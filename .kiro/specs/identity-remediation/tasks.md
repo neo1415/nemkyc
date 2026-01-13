@@ -201,6 +201,40 @@ This plan implements a flexible identity collection system that accepts any CSV/
 - [ ] 16. Final checkpoint
   - Ensure all tests pass, ask user if questions arise.
 
+- [x] 17. Bug fixes and enhancements
+  - [x] 17.1 Add name auto-detection to file parser
+    - Update `src/utils/fileParser.ts` to detect name columns
+    - Search left to right for: firstName, lastName, middleName, insured, fullName, name
+    - Return detected name columns in parse result
+    - _Requirements: 1.5, 1.6_
+
+  - [x] 17.2 Update list creation to store name columns
+    - Update `POST /api/identity/lists` to accept and store nameColumns
+    - Extract and store displayName for each entry
+    - Auto-detect policy number column (contains "policy")
+    - _Requirements: 1.5, 1.6_
+
+  - [x] 17.3 Fix duplicate columns in list detail view
+    - Remove duplicate Status/Verification Status columns (use only "status")
+    - Remove duplicate NIN/CAC columns if they exist in original data
+    - Ensure linkSentAt timestamp displays correctly
+    - _Requirements: 1.7, 1.8_
+
+  - [x] 17.4 Update customer verification page to display name and policy
+    - Update `GET /api/identity/verify/:token` to return displayName and policyNumber
+    - Update `CustomerVerificationPage.tsx` to prominently display customer name
+    - Show policy number if available
+    - Add message that NIN/CAC will be validated against displayed name
+    - _Requirements: 6.2, 6.3, 6.4_
+
+  - [x] 17.5 Update upload dialog to show detected name columns
+    - Highlight auto-detected name columns in preview
+    - Show which columns will be used for customer name
+    - _Requirements: 1.5, 1.6_
+
+- [ ] 18. Final verification checkpoint
+  - Ensure all bug fixes work correctly, ask user if questions arise.
+
 ## Notes
 
 - Tasks marked with `*` are optional property-based tests

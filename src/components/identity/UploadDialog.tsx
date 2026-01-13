@@ -6,6 +6,7 @@
  * - Drag & drop file upload
  * - Preview of first 10 rows
  * - Auto-detection of email column (highlighted)
+ * - Auto-detection of name columns (highlighted)
  * - Manual email column selection if not detected
  * - List name input
  */
@@ -39,6 +40,7 @@ import {
   CloudUpload as UploadIcon,
   CheckCircle as CheckIcon,
   Email as EmailIcon,
+  Person as PersonIcon,
 } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
 import { parseFile, isValidFileType, isFileSizeValid, formatFileSize } from '../../utils/fileParser';
@@ -148,6 +150,9 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
           name: listName.trim(),
           columns: parseResult.columns,
           emailColumn,
+          nameColumns: parseResult.detectedNameColumns || null,
+          policyColumn: parseResult.detectedPolicyColumn || null,
+          fileType: parseResult.detectedFileType || 'unknown',
           entries: parseResult.rows,
           originalFileName: file?.name || 'unknown',
         }),
@@ -171,6 +176,18 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
 
   // Get preview rows (first 10)
   const previewRows = parseResult?.rows.slice(0, 10) || [];
+
+  // Helper to check if a column is a detected name column
+  const isNameColumn = (col: string): boolean => {
+    if (!parseResult?.detectedNameColumns) return false;
+    const nameCols = parseResult.detectedNameColumns;
+    return col === nameCols.firstName || 
+           col === nameCols.middleName || 
+           col === nameCols.lastName || 
+           col === nameCols.fullName || 
+           col === nameCols.insured ||
+           col === nameCols.companyName;
+  };
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
@@ -279,6 +296,66 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
               )}
             </FormControl>
 
+            {/* File Type Detection Info */}
+            {parseResult.detectedFileType && parseResult.detectedFileType !== 'unknown' && (
+              <Alert 
+                severity={parseResult.detectedFileType === 'corporate' ? 'warning' : 'info'} 
+                sx={{ mb: 2 }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                  {parseResult.detectedFileType === 'corporate' 
+                    ? '🏢 Corporate file detected' 
+                    : '👤 Individual file detected'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {parseResult.detectedFileType === 'corporate'
+                    ? 'This file appears to contain corporate/company data. Company names will be used for identification.'
+                    : 'This file appears to contain individual customer data. Personal names will be used for identification.'}
+                </Typography>
+              </Alert>
+            )}
+
+            {/* Name Columns Detection Info */}
+            {parseResult.detectedNameColumns && Object.keys(parseResult.detectedNameColumns).length > 0 && (
+              <Alert severity="info" sx={{ mb: 2 }} icon={<PersonIcon />}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                  Name columns auto-detected:
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {parseResult.detectedNameColumns.companyName && (
+                    <Chip label={`Company Name: ${parseResult.detectedNameColumns.companyName}`} size="small" color="warning" variant="outlined" />
+                  )}
+                  {parseResult.detectedNameColumns.firstName && (
+                    <Chip label={`First Name: ${parseResult.detectedNameColumns.firstName}`} size="small" color="primary" variant="outlined" />
+                  )}
+                  {parseResult.detectedNameColumns.middleName && (
+                    <Chip label={`Middle Name: ${parseResult.detectedNameColumns.middleName}`} size="small" color="primary" variant="outlined" />
+                  )}
+                  {parseResult.detectedNameColumns.lastName && (
+                    <Chip label={`Last Name: ${parseResult.detectedNameColumns.lastName}`} size="small" color="primary" variant="outlined" />
+                  )}
+                  {parseResult.detectedNameColumns.fullName && (
+                    <Chip label={`Full Name: ${parseResult.detectedNameColumns.fullName}`} size="small" color="primary" variant="outlined" />
+                  )}
+                  {parseResult.detectedNameColumns.insured && !parseResult.detectedNameColumns.companyName && (
+                    <Chip label={`Insured: ${parseResult.detectedNameColumns.insured}`} size="small" color="primary" variant="outlined" />
+                  )}
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  {parseResult.detectedFileType === 'corporate'
+                    ? 'Company names will be displayed on the verification page for identity confirmation.'
+                    : 'Customer names will be displayed on the verification page for identity confirmation.'}
+                </Typography>
+              </Alert>
+            )}
+
+            {/* Policy Column Detection Info */}
+            {parseResult.detectedPolicyColumn && (
+              <Typography variant="caption" color="info.main" sx={{ mb: 2, display: 'block' }}>
+                📋 Policy column auto-detected: "{parseResult.detectedPolicyColumn}"
+              </Typography>
+            )}
+
             {/* Preview Table */}
             <Typography variant="subtitle2" gutterBottom>
               Preview (first {previewRows.length} rows)
@@ -291,13 +368,20 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
                       <TableCell
                         key={col}
                         sx={{
-                          bgcolor: col === emailColumn ? 'success.light' : 'background.paper',
+                          bgcolor: col === emailColumn 
+                            ? 'success.light' 
+                            : isNameColumn(col) 
+                              ? '#e3f2fd' 
+                              : 'background.paper',
                           fontWeight: 'bold',
                         }}
                       >
                         {col}
                         {col === emailColumn && (
                           <EmailIcon sx={{ fontSize: 14, ml: 0.5, verticalAlign: 'middle' }} />
+                        )}
+                        {isNameColumn(col) && (
+                          <PersonIcon sx={{ fontSize: 14, ml: 0.5, verticalAlign: 'middle', color: '#1976d2' }} />
                         )}
                       </TableCell>
                     ))}
@@ -310,7 +394,11 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
                         <TableCell
                           key={col}
                           sx={{
-                            bgcolor: col === emailColumn ? 'success.lighter' : 'inherit',
+                            bgcolor: col === emailColumn 
+                              ? 'success.lighter' 
+                              : isNameColumn(col) 
+                                ? '#f5f9ff' 
+                                : 'inherit',
                             maxWidth: 200,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',

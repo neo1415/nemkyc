@@ -428,19 +428,32 @@ const CustomerVerificationPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Customer Info Card - Only show if we have info to display */}
-        {entryInfo && (entryInfo.name || entryInfo.policyNumber || entryInfo.brokerName) && (
+        {/* Customer Info Card - Prominently display name for identity confirmation */}
+        {entryInfo && (
           <Card className="mb-6 shadow-lg border-0 bg-white">
             <CardContent className="p-6">
+              {/* Prominent Name Display */}
+              {entryInfo.name && (
+                <div className="text-center mb-6 pb-4 border-b border-slate-200">
+                  <p className="text-sm text-slate-500 mb-1">Verifying identity for</p>
+                  <h2 className="text-2xl font-bold text-slate-900">{entryInfo.name}</h2>
+                  <p className="text-xs text-slate-400 mt-2">
+                    Please ensure this name matches your {isNIN ? 'NIN' : 'CAC'} registration
+                  </p>
+                </div>
+              )}
+              
               <h3 className="text-sm font-semibold text-slate-500 mb-4 uppercase tracking-wide">
-                Please Confirm Your Details
+                {entryInfo.name ? 'Additional Details' : 'Please Confirm Your Details'}
               </h3>
               <div className="space-y-3">
-                {entryInfo.name && (
-                  <div className="flex justify-between items-center py-2 border-b border-slate-100">
-                    <span className="text-slate-500">Name</span>
-                    <span className="font-semibold text-slate-900">{entryInfo.name}</span>
-                  </div>
+                {!entryInfo.name && (
+                  <Alert className="bg-amber-50 border-amber-200 mb-4">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800 text-sm">
+                      No name information available. Please ensure you are the intended recipient of this verification request.
+                    </AlertDescription>
+                  </Alert>
                 )}
                 {entryInfo.policyNumber && (
                   <div className="flex justify-between items-center py-2 border-b border-slate-100">
@@ -461,6 +474,17 @@ const CustomerVerificationPage: React.FC = () => {
                   </Badge>
                 </div>
               </div>
+              
+              {/* Identity Validation Notice */}
+              {entryInfo.name && (
+                <Alert className="mt-4 bg-blue-50 border-blue-200">
+                  <Info className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800 text-sm">
+                    Your {isNIN ? 'NIN' : 'CAC'} will be validated against the name shown above. 
+                    Please ensure the information matches your official records.
+                  </AlertDescription>
+                </Alert>
+              )}
             </CardContent>
           </Card>
         )}
