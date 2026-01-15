@@ -172,31 +172,42 @@ const fetchForms = async () => {
   }
 };
 
-  const formatComplexValue = (value: any, fieldKey: string): string => {
-    if (value === null || value === undefined) return 'N/A';
+  const formatComplexValue = (value: any, fieldKey: string): string | null => {
+    if (value === null || value === undefined) return null;
     
     // Handle arrays of objects (like witnesses, directors, etc.)
     if (Array.isArray(value)) {
-      if (value.length === 0) return 'N/A';
+      if (value.length === 0) return null;
       
-      return value.map((item, index) => {
+      // Filter out empty objects (objects with no meaningful data)
+      const validItems = value.filter(item => {
+        if (typeof item !== 'object' || item === null) return true;
+        const hasData = Object.entries(item).some(([key, val]) => 
+          val !== null && val !== undefined && String(val).trim() !== ''
+        );
+        return hasData;
+      });
+      
+      if (validItems.length === 0) return null;
+      
+      return validItems.map((item, index) => {
         if (typeof item === 'object' && item !== null) {
           // Format object properties into readable text
           const entries = Object.entries(item)
-            .filter(([key, val]) => val !== null && val !== undefined && val !== '')
+            .filter(([key, val]) => val !== null && val !== undefined && String(val).trim() !== '')
             .map(([key, val]) => `${formatFieldLabel(key)}: ${val}`)
             .join(', ');
           
-          return `${formatFieldLabel(fieldKey)} ${index + 1} - ${entries}`;
+          return entries ? `${formatFieldLabel(fieldKey)} ${index + 1} - ${entries}` : null;
         }
         return `${formatFieldLabel(fieldKey)} ${index + 1}: ${item}`;
-      }).join(' | ');
+      }).filter(Boolean).join(' | ');
     }
     
     // Handle single objects
     if (typeof value === 'object' && value !== null) {
       const entries = Object.entries(value)
-        .filter(([key, val]) => val !== null && val !== undefined && val !== '')
+        .filter(([key, val]) => val !== null && val !== undefined && String(val).trim() !== '')
         .map(([key, val]) => `${formatFieldLabel(key)}: ${val}`)
         .join(', ');
       
@@ -219,11 +230,10 @@ const fetchForms = async () => {
   };
 
   const formatDate = (date: any): string => {
-    
     try {
       let dateObj: Date;
       
-      if (date.toDate && typeof date.toDate === 'function') {
+      if (date && typeof date.toDate === 'function') {
         // Firebase Timestamp
         dateObj = date.toDate();
       } else if (typeof date === 'string') {
@@ -234,7 +244,15 @@ const fetchForms = async () => {
         dateObj = new Date(date);
       } else if (date instanceof Date) {
         dateObj = date;
+      } else if (typeof date === 'number') {
+        // Handle timestamp
+        dateObj = new Date(date);
       } else {
+        return '';
+      }
+
+      // Check if date is valid
+      if (isNaN(dateObj.getTime())) {
         return '';
       }
 
@@ -247,6 +265,39 @@ const fetchForms = async () => {
       console.error('Error formatting date:', error);
       return '';
     }
+  };
+
+  const formatTime = (time: any): string => {
+    if (!time) return 'N/A';
+    
+    if (typeof time === 'string') {
+      // Handle HH:MM format
+      if (/^\d{2}:\d{2}$/.test(time)) return time;
+      
+      // Handle ISO date string
+      try {
+        const date = new Date(time);
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+      } catch (e) {
+        return time;
+      }
+    }
+    
+    if (typeof time === 'number') {
+      // Handle timestamp
+      try {
+        const date = new Date(time);
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+      } catch (e) {
+        return 'N/A';
+      }
+    }
+    
+    return String(time);
   };
 
   const getFieldValue = (data: any, field: string): any => {
@@ -608,11 +659,12 @@ const fetchForms = async () => {
             width: 300,
             renderCell: (params) => {
               const value = params.value;
-              if (!value || (Array.isArray(value) && value.length === 0)) {
+              const formatted = formatComplexValue(value, field.key);
+              
+              if (formatted === null) {
                 return <span style={{ color: '#666' }}>N/A</span>;
               }
               
-              const formatted = formatComplexValue(value, field.key);
               return (
                 <div style={{ 
                   whiteSpace: 'pre-wrap', 
@@ -626,6 +678,16 @@ const fetchForms = async () => {
               );
             },
           });
+        } else if (field.key.toLowerCase().includes('time') && 
+                   !field.key.toLowerCase().includes('date') &&
+                   !field.key.toLowerCase().includes('period')) {
+          // Handle time fields specifically
+          dynamicColumns.push({
+            field: field.key,
+            headerName: field.label,
+            width: 130,
+            valueFormatter: (params) => formatTime(params),
+          });
         } else if (field.key.toLowerCase().includes('date') || 
                    field.key === 'dateOfBirth' || 
                    field.key === 'dob' ||
@@ -638,7 +700,6 @@ const fetchForms = async () => {
                    field.key.toLowerCase().includes('expiry') ||
                    field.key.toLowerCase().includes('issued') ||
                    field.key.toLowerCase().includes('birth') ||
-                   field.key.toLowerCase().includes('time') ||
                    field.key.toLowerCase().includes('when')) {
           dynamicColumns.push({
             field: field.key,
@@ -653,8 +714,21 @@ const fetchForms = async () => {
             width: 150,
             renderCell: (params) => {
               const value = params.value;
+              
+              // Check if value is truly empty
+              if (value === null || value === undefined || 
+                  (typeof value === 'string' && value.trim() === '') ||
+                  (Array.isArray(value) && value.length === 0)) {
+                return 'N/A';
+              }
+              
               if (typeof value === 'object' && value !== null) {
                 const formatted = formatComplexValue(value, field.key);
+                
+                if (formatted === null) {
+                  return 'N/A';
+                }
+                
                 return (
                   <div style={{ 
                     whiteSpace: 'pre-wrap', 
@@ -670,7 +744,8 @@ const fetchForms = async () => {
               if (typeof value === 'string' && value.length > 50) {
                 return value.substring(0, 50) + '...';
               }
-              return value || 'N/A';
+              
+              return value;
             },
           });
         }
@@ -696,11 +771,12 @@ const fetchForms = async () => {
             width: 300,
             renderCell: (params) => {
               const arr = params.value;
-              if (!Array.isArray(arr) || arr.length === 0) {
+              const formatted = formatComplexValue(arr, key);
+              
+              if (formatted === null) {
                 return <span style={{ color: '#666' }}>N/A</span>;
               }
               
-              const formatted = formatComplexValue(arr, key);
               return (
                 <div style={{ 
                   whiteSpace: 'pre-wrap', 
@@ -729,13 +805,25 @@ const fetchForms = async () => {
             key.toLowerCase().includes('expiry') ||
             key.toLowerCase().includes('issued') ||
             key.toLowerCase().includes('birth') ||
-            key.toLowerCase().includes('time') ||
             key.toLowerCase().includes('when')) {
           dynamicColumns.push({
             field: key,
             headerName: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'),
             width: 130,
             valueFormatter: (params) => formatDate(params),
+          });
+          return;
+        }
+
+        // Handle time fields specifically (not date-time)
+        if (key.toLowerCase().includes('time') && 
+            !key.toLowerCase().includes('date') &&
+            !key.toLowerCase().includes('period')) {
+          dynamicColumns.push({
+            field: key,
+            headerName: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'),
+            width: 130,
+            valueFormatter: (params) => formatTime(params),
           });
           return;
         }
@@ -749,11 +837,12 @@ const fetchForms = async () => {
             width: 250,
             renderCell: (params) => {
               const obj = params.value;
-              if (!obj || typeof obj !== 'object') {
+              const formatted = formatComplexValue(obj, key);
+              
+              if (formatted === null) {
                 return <span style={{ color: '#666' }}>N/A</span>;
               }
               
-              const formatted = formatComplexValue(obj, key);
               return (
                 <div style={{ 
                   whiteSpace: 'pre-wrap', 
@@ -775,12 +864,21 @@ const fetchForms = async () => {
           field: key,
           headerName: fieldName,
           width: 150,
-          valueFormatter: (params) => {
-            const value = params as any;
+          renderCell: (params) => {
+            const value = params.value;
+            
+            // Check if value is truly empty
+            if (value === null || value === undefined || 
+                (typeof value === 'string' && value.trim() === '') ||
+                (Array.isArray(value) && value.length === 0)) {
+              return 'N/A';
+            }
+            
             if (typeof value === 'string' && value.length > 50) {
               return value.substring(0, 50) + '...';
             }
-            return value || '';
+            
+            return value;
           },
         });
       });

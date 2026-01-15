@@ -24,6 +24,10 @@
 .env.production.local
 .env.example
 
+# Firebase rules (security-sensitive)
+firestore.rules
+storage.rules
+
 # misc
 .DS_Store
 *.log

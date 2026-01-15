@@ -375,6 +375,16 @@ const AgentsCDDViewer: React.FC = () => {
         </div>
       </div>
 
+      {/* Ticket ID Display - Prominent */}
+      {formData.ticketId && (
+        <Card className="bg-[#800020] text-white">
+          <CardContent className="pt-6 pb-6 text-center">
+            <p className="text-sm opacity-90 mb-1">Ticket ID</p>
+            <p className="text-3xl font-bold tracking-wider">{formData.ticketId}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* PDF Content Wrapper */}
       <div id="agents-cdd-pdf-content" className="space-y-6 bg-white p-6">
         {/* Personal Information */}

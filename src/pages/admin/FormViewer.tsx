@@ -339,6 +339,7 @@ const FormViewer: React.FC = () => {
     if (typeof value === 'number') return 'number';
     if (key.toLowerCase().includes('email')) return 'email';
     if (key.toLowerCase().includes('url') || key.toLowerCase().includes('link')) return 'url';
+    if (key.toLowerCase().includes('time')) return 'time';
     if (key.toLowerCase().includes('date')) return 'date';
     if (key.toLowerCase().includes('amount') || key.toLowerCase().includes('value') || key.toLowerCase().includes('cost')) return 'currency';
     if (typeof value === 'string' && value.length > 100) return 'textarea';
@@ -346,20 +347,85 @@ const FormViewer: React.FC = () => {
   };
 
   const formatDate = (date: any): string => {
-    if (!date) return '';
+    if (!date) return 'N/A';
+    
+    // Handle Firestore Timestamp objects
     if (date.toDate && typeof date.toDate === 'function') {
-      return date.toDate().toLocaleDateString();
+      try {
+        const dateObj = date.toDate();
+        if (isNaN(dateObj.getTime())) {
+          return 'N/A';
+        }
+        return dateObj.toLocaleDateString();
+      } catch (e) {
+        return 'N/A';
+      }
     }
+    
+    // Handle Date objects
     if (date instanceof Date) {
+      if (isNaN(date.getTime())) {
+        return 'N/A';
+      }
       return date.toLocaleDateString();
     }
+    
+    // Handle string dates
     if (typeof date === 'string') {
       const parsedDate = new Date(date);
       if (!isNaN(parsedDate.getTime())) {
         return parsedDate.toLocaleDateString();
       }
+      return 'N/A';
     }
+    
     return String(date);
+  };
+
+  const formatTime = (time: any): string => {
+    if (!time) return 'N/A';
+    
+    // Handle HH:MM format strings
+    if (typeof time === 'string') {
+      if (/^\d{2}:\d{2}$/.test(time)) return time;
+      
+      // Try to parse as ISO date string
+      try {
+        const date = new Date(time);
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+      } catch (e) {
+        return time;
+      }
+    }
+    
+    // Handle Date objects
+    if (time instanceof Date) {
+      if (isNaN(time.getTime())) {
+        return 'N/A';
+      }
+      try {
+        return time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        return 'N/A';
+      }
+    }
+    
+    // Handle Firestore Timestamp objects
+    if (time && typeof time === 'object' && typeof time.toDate === 'function') {
+      try {
+        const dateObj = time.toDate();
+        if (isNaN(dateObj.getTime())) {
+          return 'N/A';
+        }
+        return dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        return 'N/A';
+      }
+    }
+    
+    return String(time);
   };
 
   const handleDownloadFile = async (url: string, fileName: string) => {
@@ -640,6 +706,9 @@ const FormViewer: React.FC = () => {
       
       case 'date':
         return <Typography variant="body1">{formatDate(value)}</Typography>;
+      
+      case 'time':
+        return <Typography variant="body1">{formatTime(value)}</Typography>;
       
       case 'currency':
         return (
@@ -962,6 +1031,43 @@ const FormViewer: React.FC = () => {
             <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
               Form Details
             </Typography>
+            
+            {/* Ticket ID Display - Prominent */}
+            {formData.ticketId && (
+              <Box sx={{ 
+                mb: 2, 
+                p: 2, 
+                bgcolor: 'primary.main', 
+                borderRadius: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: 'white', 
+                    opacity: 0.9,
+                    fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                  }}
+                >
+                  Ticket ID
+                </Typography>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    color: 'white', 
+                    fontWeight: 'bold',
+                    letterSpacing: 1,
+                    fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                  }}
+                >
+                  {formData.ticketId}
+                </Typography>
+              </Box>
+            )}
+            
             <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
               <Chip 
                 label={`ID: ${formData.id}`} 
