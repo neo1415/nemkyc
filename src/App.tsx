@@ -34,6 +34,7 @@ const InactivityHandler: React.FC<{ children: React.ReactNode }> = ({ children }
 const AdminDashboard = lazy(() => import('./pages/dashboard/AdminDashboard'));
 const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'));
 const FormViewer = lazy(() => import('./pages/admin/FormViewer'));
+const UserFormViewer = lazy(() => import('./pages/dashboard/UserFormViewer'));
 const EventsLogPage = lazy(() => import('./pages/admin/EventsLogPage'));
 const CorporateCDDViewer = lazy(() => import('./pages/admin/CorporateCDDViewer'));
 const PartnersCDDViewer = lazy(() => import('./pages/admin/PartnersCDDViewer'));
@@ -223,6 +224,13 @@ function App() {
              <Route path="dashboard" element={
                <ProtectedRoute>
                  <UserDashboard />
+               </ProtectedRoute>
+             } />
+             
+             {/* User Form Viewer Route */}
+             <Route path="submission/:collection/:id" element={
+               <ProtectedRoute>
+                 <UserFormViewer />
                </ProtectedRoute>
              } />
              

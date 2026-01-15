@@ -79,6 +79,10 @@ const SignIn: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
+  // Check for redirect parameter from URL (e.g., from email link)
+  const searchParams = new URLSearchParams(location.search);
+  const redirectParam = searchParams.get('redirect');
+  
   const from = location.state?.from?.pathname || '/dashboard';
 
   // Handle redirect after successful authentication and user state update
@@ -99,16 +103,23 @@ const SignIn: React.FC = () => {
         return;
       }
 
+      // Check for redirect parameter (e.g., from email link)
+      if (redirectParam === 'dashboard') {
+        console.log('🎯 Redirect parameter detected, redirecting to /dashboard');
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+
       // Normal sign-in flow - role-based navigation
       if (isAdminRole(user.role)) {
         console.log('🎯 Admin user detected, redirecting to /admin', { role: user.role });
         navigate('/admin', { replace: true });
       } else {
-        console.log('🎯 Regular user, redirecting to homepage', { role: user.role });
-        navigate('/', { replace: true });
+        console.log('🎯 Regular user, redirecting to /dashboard', { role: user.role });
+        navigate('/dashboard', { replace: true });
       }
     }
-  }, [user, shouldRedirect, navigate, from]);
+  }, [user, shouldRedirect, navigate, from, redirectParam]);
 
   // Additional effect to handle immediate redirect when user is already authenticated
   useEffect(() => {
@@ -128,16 +139,23 @@ const SignIn: React.FC = () => {
         return;
       }
       
+      // Check for redirect parameter (e.g., from email link)
+      if (redirectParam === 'dashboard') {
+        console.log('🎯 Redirect parameter detected, redirecting to /dashboard');
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+      
       // Normal sign-in flow - role-based navigation
       if (isAdminRole(user.role)) {
         console.log('🎯 Admin user already authenticated, redirecting to /admin', { role: user.role });
         navigate('/admin', { replace: true });
       } else {
-        console.log('🎯 Regular user already authenticated, redirecting to homepage', { role: user.role });
-        navigate('/', { replace: true });
+        console.log('🎯 Regular user already authenticated, redirecting to /dashboard', { role: user.role });
+        navigate('/dashboard', { replace: true });
       }
     }
-  }, [user, loading, mfaRequired, mfaEnrollmentRequired, emailVerificationRequired, loginError, navigate]);
+  }, [user, loading, mfaRequired, mfaEnrollmentRequired, emailVerificationRequired, loginError, navigate, redirectParam]);
 
   // Persisted auth error handling - show after redirects
   useEffect(() => {

@@ -76,6 +76,13 @@ const motorClaimSchema = yup.object().shape({
     then: (schema) => schema.required("Other driver address required"),
     otherwise: (schema) => schema.notRequired()
   }),
+  otherDriverPhone: yup.string().when('otherVehicleInvolved', {
+    is: 'yes',
+    then: (schema) => schema
+      .required("Other driver phone number is required")
+      .matches(/^\+?[\d\s\-\(\)]{10,}$/, 'Please enter a valid phone number'),
+    otherwise: (schema) => schema.notRequired()
+  }),
   otherVehicleInjuryDamage: yup.string().when('otherVehicleInvolved', {
     is: 'yes',
     then: (schema) => schema.required("Injury or damage to the other vehicle is required"),
@@ -131,6 +138,7 @@ interface MotorClaimData {
   otherVehicleMake?: string;
   otherDriverName?: string;
   otherDriverAddress?: string;
+  otherDriverPhone?: string;
   otherVehicleInjuryDamage?: string;
   
   // Eye witness details (part of incident)
@@ -299,6 +307,7 @@ const defaultValues: Partial<MotorClaimData> = {
   otherVehicleMake: '',
   otherDriverName: '',
   otherDriverAddress: '',
+  otherDriverPhone: '',
   otherVehicleInjuryDamage: '',
   
   // Eye witness details
@@ -389,7 +398,7 @@ const MotorClaim: React.FC = () => {
   const stepFieldMappings = {
     0: ['insuredSurname', 'insuredFirstName', 'phone', 'email'], // Section 1: Insured Detail
     1: ['registrationNumber', 'policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'trailerAttached'], // Section 2: Vehicle Details  
-    2: ['incidentLocation', 'incidentDate', 'incidentTime', 'policeReported', 'policeStationDetails', 'incidentDescription', 'otherVehicleInvolved', 'otherVehicleRegNumber', 'otherVehicleMake', 'otherDriverName', 'otherDriverAddress', 'otherVehicleInjuryDamage', 'witnesses'], // Section 3: Incident Details
+    2: ['incidentLocation', 'incidentDate', 'incidentTime', 'policeReported', 'policeStationDetails', 'incidentDescription', 'otherVehicleInvolved', 'otherVehicleRegNumber', 'otherVehicleMake', 'otherDriverName', 'otherDriverAddress', 'otherDriverPhone', 'otherVehicleInjuryDamage', 'witnesses'], // Section 3: Incident Details
     3: ['agreeToDataPrivacy', 'declarationTrue', 'signature'] // Declaration
   };
 
@@ -475,6 +484,12 @@ const MotorClaim: React.FC = () => {
                 <p className="text-sm text-muted-foreground">
                   Upload police report if available (Optional - PDF, JPG, PNG up to 5MB)
                 </p>
+                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                  <Info className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-amber-700">
+                    Please note that police report is required for accidents involving bodily injury or death.
+                  </p>
+                </div>
               </div>
             )}
             
@@ -496,6 +511,7 @@ const MotorClaim: React.FC = () => {
                 
                 <FormField name="otherDriverName" label="Driver's Name" required />
                 <FormTextarea name="otherDriverAddress" label="Driver Address" required />
+                <FormField name="otherDriverPhone" label="Driver's Phone Number" required type="tel" />
                 <FormTextarea name="otherVehicleInjuryDamage" label="Injury or damage to the other vehicle" required />
                 
                 <div className="mt-6">
@@ -790,6 +806,10 @@ const MotorClaim: React.FC = () => {
                     <div>
                       <span className="font-medium text-gray-600">Driver Name:</span>
                       <p className="text-gray-900">{data.otherDriverName || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Driver Phone:</span>
+                      <p className="text-gray-900">{data.otherDriverPhone || 'Not provided'}</p>
                     </div>
                     <div className="md:col-span-2">
                       <span className="font-medium text-gray-600">Driver Address:</span>

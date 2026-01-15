@@ -350,7 +350,7 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'otherVehicleInvolved', label: 'Other Vehicle Involved', type: 'text', editable: true },
           { key: 'otherVehicleRegNumber', label: 'Other Vehicle Registration', type: 'text', editable: true },
-          { key: 'otherVehicleMakeModel', label: 'Other Vehicle Make/Model', type: 'text', editable: true },
+          { key: 'otherVehicleMake', label: 'Other Vehicle Make', type: 'text', editable: true },
           { key: 'otherDriverName', label: 'Other Driver Name', type: 'text', editable: true },
           { key: 'otherDriverPhone', label: 'Other Driver Phone', type: 'text', editable: true },
           { key: 'otherDriverAddress', label: 'Other Driver Address', type: 'text', editable: true },
@@ -371,7 +371,7 @@ export const FORM_MAPPINGS: FormMapping = {
         fields: [
           { key: 'status', label: 'Status', type: 'text', editable: true },
           { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
-          { key: 'submittedby', label: 'Submitted By', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
           { key: 'createdAt', label: 'Created At', type: 'text', editable: false },
           { key: 'formType', label: 'Form Type', type: 'text', editable: false },
         ]

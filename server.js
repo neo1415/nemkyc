@@ -50,6 +50,208 @@ const logger = {
   }
 };
 
+// ============= TICKET ID GENERATOR =============
+/**
+ * Ticket ID Generator Utility (Server-side)
+ * 
+ * Generates unique ticket IDs for form submissions with format: PREFIX-XXXXXXXX
+ * where PREFIX is a 3-letter form type code and XXXXXXXX is an 8-digit number.
+ * 
+ * Requirements: 3.1, 3.2, 3.3, 3.4
+ */
+
+/**
+ * Form type to prefix mapping
+ * Requirements: 3.2 - Use specific prefixes for each form type
+ */
+const FORM_TYPE_PREFIXES = {
+  'Motor Claim': 'MOT',
+  'Fire Special Perils Claim': 'FIR',
+  'Fire & Special Perils Claim': 'FIR',
+  'Burglary Claim': 'BUR',
+  'All Risk Claim': 'ALL',
+  'Goods In Transit Claim': 'GIT',
+  'Money Insurance Claim': 'MON',
+  'Public Liability Claim': 'PUB',
+  'Employers Liability Claim': 'EMP',
+  'Group Personal Accident Claim': 'GPA',
+  'Fidelity Guarantee Claim': 'FID',
+  'Rent Assurance Claim': 'REN',
+  'Contractors Plant Machinery Claim': 'CPM',
+  'Combined GPA Employers Liability Claim': 'COM',
+  'Professional Indemnity Claim': 'PRO',
+  'Individual KYC': 'IKY',
+  'Corporate KYC': 'CKY',
+  'Individual CDD': 'ICD',
+  'Corporate CDD': 'CCD',
+  'Brokers CDD': 'BCD',
+  'Agents CDD': 'ACD',
+  'Partners CDD': 'PCD'
+};
+
+const DEFAULT_PREFIX = 'GEN';
+const TICKET_ID_PATTERN = /^[A-Z]{3}-\d{8}$/;
+
+/**
+ * Gets the prefix for a given form type
+ * @param {string} formType - The form type name
+ * @returns {string} The 3-letter prefix for the form type
+ */
+function getFormTypePrefix(formType) {
+  if (formType && Object.prototype.hasOwnProperty.call(FORM_TYPE_PREFIXES, formType)) {
+    return FORM_TYPE_PREFIXES[formType];
+  }
+  return DEFAULT_PREFIX;
+}
+
+/**
+ * Generates a random 8-digit number string
+ * @returns {string} An 8-digit string (10000000 to 99999999)
+ */
+function generateRandomNumber() {
+  const min = 10000000;
+  const max = 99999999;
+  const randomNumber = Math.floor(min + Math.random() * (max - min + 1));
+  return randomNumber.toString();
+}
+
+/**
+ * Creates a ticket ID from prefix and number
+ * @param {string} prefix - The 3-letter prefix
+ * @param {string} number - The 8-digit number string
+ * @returns {string} The formatted ticket ID
+ */
+function formatTicketId(prefix, number) {
+  return `${prefix}-${number}`;
+}
+
+/**
+ * Validates if a string matches the ticket ID format
+ * @param {string} ticketId - The string to validate
+ * @returns {boolean} True if the string matches the ticket ID format
+ */
+function isValidTicketIdFormat(ticketId) {
+  return TICKET_ID_PATTERN.test(ticketId);
+}
+
+/**
+ * Generates a ticket ID result object (without uniqueness check)
+ * @param {string} formType - The form type name
+ * @returns {{ticketId: string, prefix: string, number: string}} TicketIdResult
+ */
+function generateTicketIdSync(formType) {
+  const prefix = getFormTypePrefix(formType);
+  const number = generateRandomNumber();
+  const ticketId = formatTicketId(prefix, number);
+  
+  return {
+    ticketId,
+    prefix,
+    number
+  };
+}
+
+/**
+ * Collection names to check for ticket ID uniqueness
+ */
+const COLLECTIONS_TO_CHECK = [
+  'claims-motor',
+  'claims-fire-special-perils',
+  'claims-burglary',
+  'claims-all-risk',
+  'claims-goods-in-transit',
+  'claims-money-insurance',
+  'claims-public-liability',
+  'claims-employers-liability',
+  'claims-group-personal-accident',
+  'claims-fidelity-guarantee',
+  'claims-rent-assurance',
+  'claims-contractors-plant-machinery',
+  'claims-combined-gpa-employers-liability',
+  'claims-professional-indemnity',
+  'kyc-individual',
+  'kyc-corporate',
+  'cdd-individual',
+  'cdd-corporate',
+  'cdd-brokers',
+  'cdd-agents',
+  'cdd-partners'
+];
+
+/**
+ * Checks if a ticket ID already exists in Firestore (server-side)
+ * @param {string} ticketId - The ticket ID to check
+ * @returns {Promise<boolean>} True if the ticket ID exists, false otherwise
+ */
+async function checkTicketIdExists(ticketId) {
+  for (const collectionName of COLLECTIONS_TO_CHECK) {
+    try {
+      const snapshot = await admin.firestore()
+        .collection(collectionName)
+        .where('ticketId', '==', ticketId)
+        .limit(1)
+        .get();
+      
+      if (!snapshot.empty) {
+        return true;
+      }
+    } catch (error) {
+      // Collection might not exist, continue checking others
+      logger.warn(`Error checking collection ${collectionName}:`, error.message);
+    }
+  }
+  return false;
+}
+
+const MAX_RETRY_ATTEMPTS = 10;
+
+/**
+ * Generates a unique ticket ID for a form submission
+ * Checks against Firestore to ensure uniqueness
+ * 
+ * Requirements: 3.1, 3.2, 3.3, 3.4
+ * 
+ * @param {string} formType - The form type name
+ * @returns {Promise<{ticketId: string, prefix: string, number: string}>} TicketIdResult
+ * @throws {Error} If unable to generate unique ID after max retries
+ */
+async function generateTicketId(formType) {
+  let attempts = 0;
+  
+  while (attempts < MAX_RETRY_ATTEMPTS) {
+    const result = generateTicketIdSync(formType);
+    
+    // Check if this ticket ID already exists
+    const exists = await checkTicketIdExists(result.ticketId);
+    
+    if (!exists) {
+      logger.info(`Generated unique ticket ID: ${result.ticketId} for form type: ${formType}`);
+      return result;
+    }
+    
+    attempts++;
+    logger.warn(`Ticket ID ${result.ticketId} already exists, retrying... (attempt ${attempts})`);
+  }
+  
+  throw new Error(`Failed to generate unique ticket ID after ${MAX_RETRY_ATTEMPTS} attempts`);
+}
+
+// Export for testing (if needed)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    FORM_TYPE_PREFIXES,
+    DEFAULT_PREFIX,
+    TICKET_ID_PATTERN,
+    getFormTypePrefix,
+    generateRandomNumber,
+    formatTicketId,
+    isValidTicketIdFormat,
+    generateTicketIdSync,
+    generateTicketId,
+    checkTicketIdExists
+  };
+}
+
 let config = {
   type: process.env.TYPE,
   project_id: process.env.PROJECT_ID,
@@ -1821,15 +2023,17 @@ async function sendEmailToAdmins(adminEmails, formType, formData) {
 //  Reusable helper
 async function getEmailsByRoles(rolesArray) {
   try {
-    // Always include admin and super-admin roles
-    const allRoles = [...new Set([...rolesArray, 'admin', 'super-admin'])];
+    // Always include admin and super admin roles (with both variants)
+    const allRoles = [...new Set([...rolesArray, 'admin', 'super admin', 'super-admin', 'superadmin'])];
     
     const usersSnapshot = await admin.firestore()
       .collection('userroles')
       .where('role', 'in', allRoles)
       .get();
 
-    return usersSnapshot.docs.map(doc => doc.data().email);
+    const emails = usersSnapshot.docs.map(doc => doc.data().email).filter(email => email);
+    console.log(`📧 Found ${emails.length} emails for roles:`, allRoles);
+    return emails;
   } catch (error) {
     console.error('Error fetching emails by roles:', error);
     return [];
@@ -2966,7 +3170,7 @@ app.post('/api/generate-sample-events', async (req, res) => {
   }
 });
 
-// Enhanced form submission function with EVENT LOGGING
+// Enhanced form submission function with EVENT LOGGING and TICKET ID
 async function handleFormSubmission(req, res, formType, collectionName, userUid = null) {
   const formData = req.body;
 
@@ -2974,10 +3178,27 @@ async function handleFormSubmission(req, res, formType, collectionName, userUid 
 
   try {
     const docId = uuidv4();
+    
+    // Generate unique ticket ID for this submission
+    // Requirements: 3.1, 3.2, 3.3, 3.4
+    let ticketIdResult;
+    try {
+      ticketIdResult = await generateTicketId(formType);
+      logger.info(`Generated ticket ID ${ticketIdResult.ticketId} for ${formType} submission`);
+    } catch (ticketError) {
+      // Fallback: use UUID-based ID if ticket generation fails
+      logger.error('Failed to generate ticket ID, using fallback:', ticketError.message);
+      ticketIdResult = {
+        ticketId: `GEN-${Date.now().toString().slice(-8)}`,
+        prefix: 'GEN',
+        number: Date.now().toString().slice(-8)
+      };
+    }
 
-    // Add form to the Firestore collection
+    // Add form to the Firestore collection with ticket ID
     await admin.firestore().collection(collectionName).doc(docId).set({
       ...formData,
+      ticketId: ticketIdResult.ticketId, // Store the ticket ID
       status: 'processing',   
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
       submittedBy: userUid, // Track who submitted it
@@ -3000,6 +3221,7 @@ async function handleFormSubmission(req, res, formType, collectionName, userUid 
       targetId: docId,
       details: {
         formType: formType,
+        ticketId: ticketIdResult.ticketId, // Include ticket ID in log
         status: 'processing',
         submitterName: formData?.name || formData?.companyName || 'Unknown',
         submitterEmail: formData?.email || 'Unknown'
@@ -3011,6 +3233,7 @@ async function handleFormSubmission(req, res, formType, collectionName, userUid 
       userAgent: req.headers['user-agent'] || 'Unknown',
       meta: {
         formType: formType,
+        ticketId: ticketIdResult.ticketId, // Include ticket ID in meta
         collectionName: collectionName,
         submissionId: docId
       }
@@ -3062,7 +3285,8 @@ async function handleFormSubmission(req, res, formType, collectionName, userUid 
 
     res.status(201).json({ 
       message: 'Form submitted successfully',
-      documentId: docId
+      documentId: docId,
+      ticketId: ticketIdResult.ticketId // Return ticket ID in response (Requirements: 3.4)
     });
   } catch (err) {
     console.error('Error during form submission:', err);
@@ -3167,13 +3391,26 @@ app.post('/api/submit-form', requireAuth, validateFormSubmission, sanitizeHtmlFi
     console.log('📂 Using collection:', collectionName);
     console.log('💾 ABOUT TO SAVE TO FIRESTORE COLLECTION:', collectionName);
 
+    // Generate unique ticket ID for this submission
+    const ticketIdResult = await generateTicketId(formType);
+    const ticketId = ticketIdResult.ticketId;
+    console.log('🎫 Generated ticket ID:', ticketId);
+
+    // Get the submitter's email (prioritize userEmail, then userDetails, then formData)
+    // Normalize to lowercase for consistent querying
+    const rawEmail = userEmail || userDetails.email || formData?.email;
+    const submitterEmail = rawEmail ? rawEmail.toLowerCase().trim() : null;
+    const submitterName = formData?.name || formData?.insuredFirstName || formData?.companyName || userDetails.displayName || 'Valued Customer';
+
     // Add metadata to form data
     const submissionData = {
       ...formData,
+      ticketId: ticketId,
+      formType: formType,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
       createdAt: new Date().toLocaleDateString('en-GB'),
       submittedAt: admin.firestore.FieldValue.serverTimestamp(),
-      submittedBy: userEmail || userDetails.email,
+      submittedBy: submitterEmail,
       status: 'pending'
     };
 
@@ -3195,6 +3432,7 @@ app.post('/api/submit-form', requireAuth, validateFormSubmission, sanitizeHtmlFi
       targetId: docRef.id,
       details: {
         formType: formType,
+        ticketId: ticketId,
         status: 'pending',
         submitterName: formData?.name || formData?.companyName || 'Unknown',
         submitterEmail: formData?.email || userEmail || 'Unknown'
@@ -3206,6 +3444,7 @@ app.post('/api/submit-form', requireAuth, validateFormSubmission, sanitizeHtmlFi
       userAgent: req.headers['user-agent'] || 'Unknown',
       meta: {
         formType: formType,
+        ticketId: ticketId,
         collectionName: collectionName,
         submissionId: docRef.id
       }
@@ -3215,10 +3454,13 @@ app.post('/api/submit-form', requireAuth, validateFormSubmission, sanitizeHtmlFi
     try {
       const finalSubmissionData = { ...submissionData, documentId: docRef.id, collectionName };
       
-      // Send user confirmation email
-      await sendEmail(userEmail || userDetails.email || formData?.email, 
-        `${formType} Submission Confirmation`, 
-        generateConfirmationEmailHTML(formType));
+      // Send user confirmation email with ticket ID
+      if (submitterEmail) {
+        await sendEmail(submitterEmail, 
+          `${formType} Submission Confirmation - Ticket #${ticketId}`, 
+          generateConfirmationEmailHTML(formType, ticketId, submitterName));
+        console.log('📧 User confirmation email sent to:', submitterEmail);
+      }
 
       // Send admin notification with PDF
       const isClaimsForm = ['claim', 'motor', 'burglary', 'fire', 'allrisk', 'goods', 'money',
@@ -3230,8 +3472,11 @@ app.post('/api/submit-form', requireAuth, validateFormSubmission, sanitizeHtmlFi
       
       if (adminEmails.length > 0) {
         await sendEmail(adminEmails, 
-          `New ${formType} Submission - Review Required`,
-          generateAdminNotificationHTML(formType, formData, docRef.id));
+          `New ${formType} Submission - Ticket #${ticketId} - Review Required`,
+          generateAdminNotificationHTML(formType, formData, docRef.id, ticketId, submitterName, submitterEmail));
+        console.log('📧 Admin notification email sent to:', adminEmails);
+      } else {
+        console.warn('⚠️ No admin emails found for roles:', adminRoles);
       }
 
       // 📝 LOG EMAIL NOTIFICATIONS
@@ -3242,11 +3487,12 @@ app.post('/api/submit-form', requireAuth, validateFormSubmission, sanitizeHtmlFi
         actorEmail: 'system@nem-insurance.com',
         actorRole: 'system',
         targetType: 'email',
-        targetId: (userEmail || userDetails.email || formData?.email) + ',' + adminEmails.join(','),
+        targetId: (submitterEmail || 'unknown') + ',' + adminEmails.join(','),
         details: {
           emailType: 'submission-notification',
           formType: formType,
-          userEmail: userEmail || userDetails.email || formData?.email,
+          ticketId: ticketId,
+          userEmail: submitterEmail,
           adminEmails: adminEmails
         },
         ipMasked: req.ipData?.masked,
@@ -3256,6 +3502,7 @@ app.post('/api/submit-form', requireAuth, validateFormSubmission, sanitizeHtmlFi
         userAgent: req.headers['user-agent'] || 'Unknown',
         meta: {
           relatedSubmission: docRef.id,
+          ticketId: ticketId,
           emailCount: adminEmails.length + 1
         }
       });
@@ -3269,6 +3516,7 @@ app.post('/api/submit-form', requireAuth, validateFormSubmission, sanitizeHtmlFi
       success: true,
       message: 'Form submitted successfully',
       documentId: docRef.id,
+      ticketId: ticketId,
       collectionName: collectionName
     });
 
@@ -3388,48 +3636,96 @@ const getFirestoreCollection = (formType) => {
 };
 
 // Helper functions for email HTML generation
-const generateConfirmationEmailHTML = (formType) => {
+const generateConfirmationEmailHTML = (formType, ticketId, userName = 'Valued Customer') => {
+  const dashboardUrl = process.env.FRONTEND_URL || 'https://nemforms.com';
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: linear-gradient(90deg, #8B4513, #DAA520); padding: 20px; text-align: center;">
+      <div style="background: linear-gradient(90deg, #800020, #DAA520); padding: 20px; text-align: center;">
         <h1 style="color: white; margin: 0;">NEM Insurance</h1>
       </div>
       <div style="padding: 20px; background: #f9f9f9;">
-        <h2 style="color: #8B4513;">Form Submission Confirmed</h2>
-        <p>Thank you for submitting your <strong>${formType}</strong> form. We have received your submission and it is currently being processed.</p>
-        <p>You can track your submission status by logging in:</p>
-        <p>
-          <a href="https://nemforms.com/signin" style="display: inline-block; padding: 10px 20px; background-color: #800020; color: #FFD700; text-decoration: none; border-radius: 5%;">Track Your Submission</a>
-        </p>
+        <h2 style="color: #800020;">Thank you for your submission!</h2>
+        <p>Dear ${userName},</p>
+        <p>We have successfully received your <strong>${formType}</strong> form.</p>
+        
+        <div style="background: #fff; border: 2px solid #800020; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
+          <p style="margin: 0; color: #666;">Your Ticket ID</p>
+          <h2 style="margin: 10px 0; color: #800020; font-size: 28px; letter-spacing: 2px;">${ticketId}</h2>
+          <p style="margin: 0; font-size: 12px; color: #666;">Please reference this ID in all future correspondence</p>
+        </div>
+        
+        <p>Our team will review your submission and get back to you shortly.</p>
+        <p>You can track your submission status by logging into your dashboard:</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${dashboardUrl}/signin?redirect=dashboard" style="background: #800020; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+            View or Track Submission
+          </a>
+        </div>
+        
         <p>We will notify you via email once your submission has been reviewed.</p>
-        <p>Best regards,<br>NEM Insurance Team</p>
+        
+        <hr style="border: 1px solid #ddd; margin: 20px 0;">
+        <p style="color: #666; font-size: 12px;">
+          This is an automated email. Please do not reply to this message.<br>
+          If you have any questions, please contact our support team.
+        </p>
+        <p>Best regards,<br><strong>NEM Insurance Team</strong></p>
       </div>
     </div>
   `;
 };
 
-const generateAdminNotificationHTML = (formType, formData, documentId) => {
+const generateAdminNotificationHTML = (formType, formData, documentId, ticketId, submitterName, submitterEmail) => {
+  const adminDashboardUrl = process.env.FRONTEND_URL || 'https://nemforms.com';
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: linear-gradient(90deg, #8B4513, #DAA520); padding: 20px; text-align: center;">
+      <div style="background: linear-gradient(90deg, #800020, #DAA520); padding: 20px; text-align: center;">
         <h1 style="color: white; margin: 0;">NEM Insurance</h1>
       </div>
       <div style="padding: 20px; background: #f9f9f9;">
-        <h2 style="color: #8B4513;">New ${formType} Submission</h2>
+        <h2 style="color: #800020;">New ${formType} Submission</h2>
         <p>A new <strong>${formType}</strong> form has been submitted and requires review.</p>
-        <p><strong>Submitter:</strong> ${formData?.name || formData?.companyName || 'N/A'}</p>
-        <p><strong>Email:</strong> ${formData?.email || 'N/A'}</p>
-        <p><strong>Document ID:</strong> ${documentId}</p>
         
-        <div style="margin: 20px 0; padding: 15px; background: #f0f8ff; border-left: 4px solid #8B4513;">
-          <p style="margin: 0;"><strong>Action Required:</strong> Please review this submission in the admin dashboard.</p>
+        <div style="background: #fff; border: 2px solid #800020; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
+          <p style="margin: 0; color: #666;">Ticket ID</p>
+          <h2 style="margin: 10px 0; color: #800020; font-size: 24px; letter-spacing: 2px;">${ticketId}</h2>
         </div>
         
-        <p>
-          <a href="https://nemforms.com/signin" style="display: inline-block; padding: 10px 20px; background-color: #800020; color: #FFD700; text-decoration: none; border-radius: 5%;">Access Admin Dashboard</a>
-        </p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; color: #666;">Submitter Name:</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${submitterName || 'N/A'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; color: #666;">Email:</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${submitterEmail || 'N/A'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; color: #666;">Document ID:</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; font-family: monospace;">${documentId}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; color: #666;">Phone:</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${formData?.phone || formData?.phoneNumber || 'N/A'}</td>
+          </tr>
+        </table>
         
-        <p>Best regards,<br>NEM Forms System</p>
+        <div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #DAA520; border-radius: 4px;">
+          <p style="margin: 0; color: #856404;"><strong>⚠️ Action Required:</strong> Please review this submission in the admin dashboard.</p>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${adminDashboardUrl}/signin" style="background: #800020; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+            Access Admin Dashboard
+          </a>
+        </div>
+        
+        <hr style="border: 1px solid #ddd; margin: 20px 0;">
+        <p style="color: #666; font-size: 12px;">
+          This is an automated notification from NEM Forms System.
+        </p>
+        <p>Best regards,<br><strong>NEM Forms System</strong></p>
       </div>
     </div>
   `;

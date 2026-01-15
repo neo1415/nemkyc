@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 export interface EmailOptions {
@@ -48,18 +46,49 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
   }
 };
 
-export const sendSubmissionConfirmation = async (userEmail: string, formType: string) => {
-  const subject = `Form Submission Confirmation - ${formType}`;
-  const html = `
+/**
+ * Interface for submission email data
+ */
+export interface SubmissionEmailData {
+  userName: string;
+  formType: string;
+  ticketId: string;
+  submissionDate: string;
+  dashboardUrl: string;
+}
+
+/**
+ * Generates the HTML template for submission confirmation emails
+ * Includes ticket ID prominently and a "View or Track Submission" button
+ * 
+ * @param data - The submission email data
+ * @returns HTML string for the email
+ */
+export const generateSubmissionConfirmationTemplate = (data: SubmissionEmailData): string => {
+  return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: linear-gradient(90deg, #8B4513, #DAA520); padding: 20px; text-align: center;">
+      <div style="background: linear-gradient(90deg, #800020, #DAA520); padding: 20px; text-align: center;">
         <h1 style="color: white; margin: 0;">NEM Insurance</h1>
       </div>
       <div style="padding: 20px; background: #f9f9f9;">
-        <h2 style="color: #8B4513;">Thank you for your submission!</h2>
-        <p>We have successfully received your <strong>${formType}</strong> form.</p>
+        <h2 style="color: #800020;">Thank you for your submission!</h2>
+        <p>Dear ${data.userName},</p>
+        <p>We have successfully received your <strong>${data.formType}</strong> form.</p>
+        
+        <div style="background: #fff; border: 2px solid #800020; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
+          <p style="margin: 0; color: #666;">Your Ticket ID</p>
+          <h2 style="margin: 10px 0; color: #800020; font-size: 28px;">${data.ticketId}</h2>
+          <p style="margin: 0; font-size: 12px; color: #666;">Please reference this ID in all future correspondence</p>
+        </div>
+        
         <p>Our team will review your submission and get back to you shortly.</p>
-        <p>You can track the status of your submission in your dashboard.</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${data.dashboardUrl}" style="background: #800020; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            View or Track Submission
+          </a>
+        </div>
+        
         <hr style="border: 1px solid #ddd; margin: 20px 0;">
         <p style="color: #666; font-size: 12px;">
           This is an automated email. Please do not reply to this message.
@@ -67,6 +96,44 @@ export const sendSubmissionConfirmation = async (userEmail: string, formType: st
       </div>
     </div>
   `;
+};
+
+/**
+ * Sends a submission confirmation email with ticket ID
+ * 
+ * @param userEmail - The recipient's email address
+ * @param formType - The type of form submitted
+ * @param ticketId - The unique ticket ID for the submission
+ * @param userName - The user's name (optional, defaults to 'Valued Customer')
+ */
+export const sendSubmissionConfirmation = async (
+  userEmail: string, 
+  formType: string,
+  ticketId?: string,
+  userName?: string
+) => {
+  const subject = `Form Submission Confirmation - ${formType}${ticketId ? ` [${ticketId}]` : ''}`;
+  
+  // Get the dashboard URL from environment or use default
+  const baseUrl = typeof window !== 'undefined' 
+    ? window.location.origin 
+    : (import.meta.env.VITE_APP_URL || 'http://localhost:5173');
+  // Add redirect parameter to ensure users are redirected to dashboard after sign-in
+  const dashboardUrl = `${baseUrl}/auth/signin?redirect=dashboard`;
+  
+  const emailData: SubmissionEmailData = {
+    userName: userName || 'Valued Customer',
+    formType,
+    ticketId: ticketId || 'N/A',
+    submissionDate: new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }),
+    dashboardUrl
+  };
+  
+  const html = generateSubmissionConfirmationTemplate(emailData);
   
   await sendEmail({ to: userEmail, subject, html });
 };
@@ -120,5 +187,6 @@ export const emailService = {
   sendEmail,
   sendSubmissionConfirmation,
   sendClaimApprovedNotification,
-  sendStatusUpdateNotification
+  sendStatusUpdateNotification,
+  generateSubmissionConfirmationTemplate
 };
