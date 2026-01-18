@@ -5,11 +5,229 @@
  * Auto-detects email columns by finding the first column containing "email" (case-insensitive).
  * Auto-detects name columns by searching left to right for common name patterns.
  * Auto-detects file type (corporate vs individual) based on column patterns.
+ * Supports template mode with structured validation for Individual and Corporate templates.
  */
 
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import type { FileParseResult, NameColumns, FileType } from '../types/remediation';
+import type { FileParseResult, NameColumns, FileType, TemplateValidationResult } from '../types/remediation';
+
+// ========== Template Schemas ==========
+
+/**
+ * Individual Client Template Schema
+ * Requirements: 15.1, 15.2
+ */
+export interface IndividualTemplateSchema {
+  required: string[];
+  optional: string[];
+}
+
+export const INDIVIDUAL_TEMPLATE: IndividualTemplateSchema = {
+  required: [
+    'title',
+    'first name',
+    'last name',
+    'phone number',
+    'email',
+    'address',
+    'gender'
+  ],
+  optional: [
+    'date of birth',
+    'occupation',
+    'nationality'
+  ]
+};
+
+/**
+ * Corporate Client Template Schema
+ * Requirements: 15.3
+ */
+export interface CorporateTemplateSchema {
+  required: string[];
+}
+
+export const CORPORATE_TEMPLATE: CorporateTemplateSchema = {
+  required: [
+    'company name',
+    'company address',
+    'email address',
+    'company type',
+    'phone number'
+  ]
+};
+
+// ========== Template Validation Functions ==========
+
+/**
+ * Normalize column name for comparison
+ * Removes spaces, underscores, hyphens and converts to lowercase
+ */
+function normalizeColumnName(columnName: string): string {
+  return columnName.toLowerCase().replace(/[_\s-]/g, '');
+}
+
+/**
+ * Check if a column name matches a template field name
+ * Handles variations like "First Name", "first_name", "firstName", etc.
+ */
+function columnMatchesField(columnName: string, fieldName: string): boolean {
+  const normalizedColumn = normalizeColumnName(columnName);
+  const normalizedField = normalizeColumnName(fieldName);
+  return normalizedColumn === normalizedField;
+}
+
+/**
+ * Find a matching column for a template field
+ * Returns the actual column name from the file if found
+ */
+function findMatchingColumn(columns: string[], fieldName: string): string | null {
+  for (const column of columns) {
+    if (columnMatchesField(column, fieldName)) {
+      return column;
+    }
+  }
+  return null;
+}
+
+/**
+ * Validate if file matches Individual template
+ * Requirements: 15.5, 15.8, 15.9
+ * 
+ * @param columns - Column names from the uploaded file
+ * @returns Validation result with missing columns if invalid
+ */
+export function validateIndividualTemplate(columns: string[]): TemplateValidationResult {
+  const missingColumns: string[] = [];
+  const errors: string[] = [];
+  
+  // Check each required field
+  for (const requiredField of INDIVIDUAL_TEMPLATE.required) {
+    const matchingColumn = findMatchingColumn(columns, requiredField);
+    if (!matchingColumn) {
+      missingColumns.push(requiredField);
+    }
+  }
+  
+  if (missingColumns.length > 0) {
+    errors.push(`Missing required columns: ${missingColumns.join(', ')}`);
+    return {
+      valid: false,
+      detectedType: 'individual',
+      missingColumns,
+      errors
+    };
+  }
+  
+  return {
+    valid: true,
+    detectedType: 'individual',
+    missingColumns: [],
+    errors: []
+  };
+}
+
+/**
+ * Validate if file matches Corporate template
+ * Requirements: 15.6, 15.8, 15.9
+ * 
+ * @param columns - Column names from the uploaded file
+ * @returns Validation result with missing columns if invalid
+ */
+export function validateCorporateTemplate(columns: string[]): TemplateValidationResult {
+  const missingColumns: string[] = [];
+  const errors: string[] = [];
+  
+  // Check each required field
+  for (const requiredField of CORPORATE_TEMPLATE.required) {
+    const matchingColumn = findMatchingColumn(columns, requiredField);
+    if (!matchingColumn) {
+      missingColumns.push(requiredField);
+    }
+  }
+  
+  if (missingColumns.length > 0) {
+    errors.push(`Missing required columns: ${missingColumns.join(', ')}`);
+    return {
+      valid: false,
+      detectedType: 'corporate',
+      missingColumns,
+      errors
+    };
+  }
+  
+  return {
+    valid: true,
+    detectedType: 'corporate',
+    missingColumns: [],
+    errors: []
+  };
+}
+
+/**
+ * Detect which template the file matches (if any)
+ * Requirements: 15.5, 15.6, 15.7
+ * 
+ * Checks if the file has columns matching Individual or Corporate template.
+ * Returns the detected type and validation result.
+ * 
+ * @param columns - Column names from the uploaded file
+ * @returns Template validation result with detected type
+ */
+export function detectTemplateType(columns: string[]): TemplateValidationResult {
+  // First, check if it looks like an Individual template
+  // by checking for key individual indicators
+  const hasFirstName = findMatchingColumn(columns, 'first name') !== null;
+  const hasLastName = findMatchingColumn(columns, 'last name') !== null;
+  const hasGender = findMatchingColumn(columns, 'gender') !== null;
+  
+  // Check if it looks like a Corporate template
+  const hasCompanyName = findMatchingColumn(columns, 'company name') !== null;
+  const hasCompanyType = findMatchingColumn(columns, 'company type') !== null;
+  
+  // Determine which template to validate against
+  if ((hasFirstName || hasLastName || hasGender) && !hasCompanyName) {
+    // Looks like Individual template
+    return validateIndividualTemplate(columns);
+  } else if (hasCompanyName || hasCompanyType) {
+    // Looks like Corporate template
+    return validateCorporateTemplate(columns);
+  }
+  
+  // Ambiguous - try both and return the one with fewer missing columns
+  const individualResult = validateIndividualTemplate(columns);
+  const corporateResult = validateCorporateTemplate(columns);
+  
+  if (individualResult.valid) {
+    return individualResult;
+  }
+  
+  if (corporateResult.valid) {
+    return corporateResult;
+  }
+  
+  // Neither is valid - return the one with fewer missing columns
+  if (individualResult.missingColumns.length <= corporateResult.missingColumns.length) {
+    return individualResult;
+  } else {
+    return corporateResult;
+  }
+}
+
+/**
+ * Validate file against template requirements
+ * Requirements: 15.5, 15.6, 15.7, 15.8, 15.9
+ * 
+ * This is the main validation function that should be called when in template mode.
+ * It detects the template type and validates required columns.
+ * 
+ * @param columns - Column names from the uploaded file
+ * @returns Validation result with detected type and any errors
+ */
+export function validateTemplate(columns: string[]): TemplateValidationResult {
+  return detectTemplateType(columns);
+}
 
 /**
  * Parse a CSV file and return all columns and rows

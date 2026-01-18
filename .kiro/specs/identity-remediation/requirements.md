@@ -6,12 +6,15 @@ The Identity Collection System enables NEM Insurance to collect missing National
 
 ## Glossary
 
-- **Upload**: A file (CSV/Excel) uploaded by an admin containing customer data with any structure
+- **Upload**: A file (CSV/Excel) uploaded by an admin or broker containing customer data with any structure
 - **Customer_List**: The table created from an uploaded file, preserving all original columns plus verification status columns
 - **Entry**: A single row/customer in a Customer_List
 - **Verification_Link**: A secure one-time URL sent to customers to collect their NIN or CAC
 - **Admin_Portal**: The administrative interface where staff manage uploads, view lists, and track progress
+- **Broker_Portal**: The broker interface where brokers manage their own uploads and view only their lists
 - **Customer_Page**: The public-facing page where customers submit their NIN or CAC via their unique link
+- **Broker**: A user with the "broker" role who can upload lists and send verification requests, but can only see their own data
+- **User_Role**: The role assigned to a user (default, broker, compliance, claims, admin, super_admin)
 
 ## Requirements
 
@@ -145,4 +148,79 @@ The Identity Collection System enables NEM Insurance to collect missing National
 2. THE dashboard SHALL show a progress chart or percentage for overall completion
 3. WHEN viewing a Customer_List, THE Admin_Portal SHALL show that list's specific progress (verified/total)
 4. THE System SHALL calculate and display average time from link sent to verification
+
+### Requirement 11: Broker Role and Access Control
+
+**User Story:** As a broker, I want to register, upload customer lists, and send verification requests, but only see my own data, so that I can manage my clients independently while maintaining data privacy.
+
+#### Acceptance Criteria
+
+1. THE System SHALL support a new user role called "broker"
+2. WHEN a user has the "broker" role, THEN they SHALL have access to the Identity Collection page
+3. WHEN a broker views the Identity Lists Dashboard, THEN they SHALL only see lists they uploaded themselves
+4. WHEN a broker views a Customer_List, THEN they SHALL only see entries from lists they created
+5. WHEN a user has the "admin", "super_admin", or "compliance" role, THEN they SHALL see ALL lists and entries from all users
+6. THE System SHALL store the creator's UID (createdBy) with each Customer_List
+7. THE System SHALL filter lists and entries based on user role and createdBy field
+8. WHEN a broker sends verification requests, THE System SHALL only allow sending to entries in their own lists
+9. THE System SHALL prevent brokers from viewing, editing, or deleting lists created by other users
+
+### Requirement 12: Broker Registration and Role Assignment
+
+**User Story:** As a new user, I want to optionally register as a broker during sign-up, so that my account is automatically configured with the correct permissions.
+
+#### Acceptance Criteria
+
+1. THE registration page SHALL include a field to select user type: "Regular User" or "Broker"
+2. WHEN a user selects "Broker" during registration, THEN their user role SHALL be set to "broker" after successful registration
+3. WHEN a user selects "Regular User" or does not make a selection, THEN their user role SHALL be set to "default"
+4. THE user type selection field SHALL be commented out in the UI but the logic SHALL remain functional
+5. THE user type selection field SHALL NOT be required
+6. THE System SHALL store the user role in the user's Firestore document
+7. THE registration logic SHALL handle role assignment before completing the registration process
+
+### Requirement 13: Admin User Role Management
+
+**User Story:** As an administrator, I want to change user roles including assigning the broker role, so that I can manage user permissions as needed.
+
+#### Acceptance Criteria
+
+1. THE Admin User Management page SHALL display a role dropdown for each user
+2. THE role dropdown SHALL include options: "default", "broker", "compliance", "claims", "admin", "super_admin"
+3. WHEN an admin changes a user's role, THE System SHALL update the user's role in Firestore
+4. WHEN an admin changes a user's role to "broker", THEN that user SHALL only see their own identity lists on next login
+5. WHEN an admin changes a user's role from "broker" to another role, THEN that user SHALL see all lists (if admin/compliance) or no identity access (if default/claims)
+6. THE System SHALL require admin or super_admin role to change user roles
+
+### Requirement 14: Dynamic Email Template
+
+**User Story:** As a customer, I want to receive a personalized email that mentions the correct identity document type (NIN or CAC) based on my client type, so that the instructions are clear and relevant.
+
+#### Acceptance Criteria
+
+1. WHEN the verification type is "NIN", THE email SHALL mention "National Identification Number (NIN)" and "Individual Clients"
+2. WHEN the verification type is "CAC", THE email SHALL mention "Corporate Affairs Commission (CAC) Registration Number" and "Corporate Clients"
+3. THE email SHALL use "Dear Client" as the greeting
+4. THE email SHALL include the full regulatory text about NAICOM directives and KYC requirements
+5. THE email SHALL include the secured verification link
+6. THE email SHALL include contact information: nemsupport@nem-insurance.com and 0201-4489570-2
+7. THE email template SHALL dynamically adjust content based on verificationType parameter
+
+### Requirement 15: Structured Upload Templates
+
+**User Story:** As a broker or administrator, I want to follow a specific template format when uploading customer data, so that the system can automatically detect whether the data is for individual or corporate clients.
+
+#### Acceptance Criteria
+
+1. THE System SHALL define a template for Individual clients with required columns: title, first name, last name, phone number, email, address, gender
+2. THE System SHALL define a template for Individual clients with optional columns: date of birth, occupation, nationality
+3. THE System SHALL define a template for Corporate clients with required columns: company name, company address, email address, company type, phone number
+4. THE Upload Dialog SHALL display template information showing required columns for both Individual and Corporate formats
+5. WHEN a file is uploaded, THE System SHALL analyze column names to determine if it matches Individual template (has first name, last name, email, phone number, address, gender)
+6. WHEN a file is uploaded, THE System SHALL analyze column names to determine if it matches Corporate template (has company name, company address, email address, company type, phone number)
+7. THE System SHALL auto-detect the list type (Individual or Corporate) based on which template the columns match
+8. THE System SHALL validate that all required columns for the detected template are present
+9. IF required columns are missing, THEN THE System SHALL display an error listing the missing columns
+10. THE System SHALL maintain backward compatibility with the existing flexible format (no specific template required)
+11. THE System SHALL allow administrators to toggle between "Template Mode" and "Flexible Mode" in settings or upload dialog
 

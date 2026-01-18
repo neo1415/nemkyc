@@ -38,6 +38,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
   const canViewUsers = normalizeRole(userRole) === 'super admin';
   const canViewClaims = hasAnyRole(userRole, ['claims', 'admin', 'super admin']);
   const canViewKYCCDD = hasAnyRole(userRole, ['compliance', 'admin', 'super admin']);
+  const canViewIdentityCollection = hasAnyRole(userRole, ['broker', 'compliance', 'admin', 'super admin']);
 
   const navigationItems = [
     {
@@ -54,14 +55,10 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       href: '/admin/events-log',
       icon: Users
     }] : []),
-    ...(canViewKYCCDD ? [{
+    ...(canViewIdentityCollection ? [{
       name: 'Identity Collection',
       href: '/admin/identity',
       icon: IdCard
-    }, {
-      name: 'Identity Remediation',
-      href: '/admin/remediation',
-      icon: ClipboardCheck
     }] : []),
     {
       name: 'Profile',

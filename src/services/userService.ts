@@ -106,9 +106,10 @@ export const updateUserRole = async (userId: string, newRole: string): Promise<v
     console.log(`📤 Updating user role via backend: ${userId} to ${newRole}`);
     
     // Backend will verify session token and extract updater UID from there
+    // Using PATCH as specified in requirements, but PUT also works (both endpoints exist)
     const response = await makeAuthenticatedRequest(
       `${API_BASE_URL}/api/users/${userId}/role`,
-      'PUT',
+      'PATCH',
       { role: newRole }
     );
 

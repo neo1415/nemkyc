@@ -51,6 +51,20 @@ const AdminUsersTable: React.FC = () => {
   const [users, setUsers] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [roleChangeDialog, setRoleChangeDialog] = useState<{
+    open: boolean;
+    userId: string;
+    userName: string;
+    currentRole: string;
+    newRole: string;
+  }>({
+    open: false,
+    userId: '',
+    userName: '',
+    currentRole: '',
+    newRole: '',
+  });
+
   useEffect(() => {
     console.log('AdminUsersTable useEffect - Current user:', user);
     console.log('AdminUsersTable useEffect - hasRole(super admin):', hasRole('super admin'));
@@ -102,6 +116,22 @@ const AdminUsersTable: React.FC = () => {
   };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    // Open confirmation dialog
+    setRoleChangeDialog({
+      open: true,
+      userId,
+      userName: user.name,
+      currentRole: user.role,
+      newRole,
+    });
+  };
+
+  const confirmRoleChange = async () => {
+    const { userId, newRole } = roleChangeDialog;
+    
     try {
       // Backend verifies session token and extracts updater UID automatically
       await updateUserRole(userId, newRole);
@@ -127,6 +157,14 @@ const AdminUsersTable: React.FC = () => {
         title: "Error",
         description: "Failed to update user role",
         variant: "destructive",
+      });
+    } finally {
+      setRoleChangeDialog({
+        open: false,
+        userId: '',
+        userName: '',
+        currentRole: '',
+        newRole: '',
       });
     }
   };
@@ -198,6 +236,7 @@ const AdminUsersTable: React.FC = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="default">Default</SelectItem>
+                          <SelectItem value="broker">Broker</SelectItem>
                           <SelectItem value="claims">Claims</SelectItem>
                           <SelectItem value="compliance">Compliance</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
@@ -273,6 +312,38 @@ const AdminUsersTable: React.FC = () => {
           <UserTable usersList={adminUsers} title="Admin Users" />
         </TabsContent>
       </Tabs>
+
+      {/* Role Change Confirmation Dialog */}
+      <AlertDialog open={roleChangeDialog.open} onOpenChange={(open) => {
+        if (!open) {
+          setRoleChangeDialog({
+            open: false,
+            userId: '',
+            userName: '',
+            currentRole: '',
+            newRole: '',
+          });
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Role Change</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to change the role of <strong>{roleChangeDialog.userName}</strong> from{' '}
+              <strong className="capitalize">{roleChangeDialog.currentRole}</strong> to{' '}
+              <strong className="capitalize">{roleChangeDialog.newRole}</strong>?
+              <br /><br />
+              This will immediately affect their access permissions across the application.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRoleChange}>
+              Confirm Change
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

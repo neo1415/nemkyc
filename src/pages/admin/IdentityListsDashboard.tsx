@@ -37,18 +37,24 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { UploadDialog } from '../../components/identity/UploadDialog';
+import IdentityListDetail from './IdentityListDetail';
 import type { ListSummary } from '../../types/remediation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
-export default function IdentityListsDashboard() {
+interface IdentityListsDashboardProps {
+  isEmbedded?: boolean;
+}
+
+export default function IdentityListsDashboard({ isEmbedded = false }: IdentityListsDashboardProps) {
   const navigate = useNavigate();
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [lists, setLists] = useState<ListSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [deleteListId, setDeleteListId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   // Calculate overall stats
@@ -87,21 +93,25 @@ export default function IdentityListsDashboard() {
   const handleUploadSuccess = (listId: string) => {
     setUploadDialogOpen(false);
     fetchLists();
-    // Navigate to the new list
-    navigate(`/admin/identity/${listId}`);
+    // Navigate to the new list - use embedded mode if applicable
+    if (isEmbedded) {
+      setSelectedListId(listId);
+    } else {
+      navigate(`/admin/identity/${listId}`);
+    }
   };
 
   const handleDeleteClick = (listId: string) => {
-    setSelectedListId(listId);
+    setDeleteListId(listId);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedListId) return;
+    if (!deleteListId) return;
 
     try {
       setDeleting(true);
-      const response = await fetch(`${API_BASE_URL}/api/identity/lists/${selectedListId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/identity/lists/${deleteListId}`, {
         method: 'DELETE',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -112,7 +122,7 @@ export default function IdentityListsDashboard() {
       }
 
       setDeleteDialogOpen(false);
-      setSelectedListId(null);
+      setDeleteListId(null);
       fetchLists();
     } catch (err) {
       console.error('Error deleting list:', err);
@@ -121,6 +131,24 @@ export default function IdentityListsDashboard() {
       setDeleting(false);
     }
   };
+
+  const handleListClick = (listId: string) => {
+    if (isEmbedded) {
+      setSelectedListId(listId);
+    } else {
+      navigate(`/admin/identity/${listId}`);
+    }
+  };
+
+  const handleBackToList = () => {
+    setSelectedListId(null);
+    fetchLists();
+  };
+
+  // If embedded and a list is selected, show the detail view
+  if (isEmbedded && selectedListId) {
+    return <IdentityListDetail listId={selectedListId} onBack={handleBackToList} isEmbedded />;
+  }
 
   const getStatusColor = (progress: number) => {
     if (progress >= 100) return 'success';
@@ -272,7 +300,7 @@ export default function IdentityListsDashboard() {
                   transition: 'box-shadow 0.2s',
                   '&:hover': { boxShadow: 4 }
                 }}
-                onClick={() => navigate(`/admin/identity/${list.id}`)}
+                onClick={() => handleListClick(list.id)}
               >
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>

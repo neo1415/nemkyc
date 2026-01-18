@@ -3,7 +3,9 @@
  * 
  * Modal dialog for uploading CSV/Excel files and creating customer lists.
  * Features:
+ * - Template Mode / Flexible Mode selector
  * - Drag & drop file upload
+ * - Template validation with error display
  * - Preview of first 10 rows
  * - Auto-detection of email column (highlighted)
  * - Auto-detection of name columns (highlighted)
@@ -11,7 +13,7 @@
  * - List name input
  */
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -35,16 +37,34 @@ import {
   Select,
   MenuItem,
   Chip,
+  ToggleButtonGroup,
+  ToggleButton,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
 } from '@mui/material';
 import {
   CloudUpload as UploadIcon,
   CheckCircle as CheckIcon,
   Email as EmailIcon,
   Person as PersonIcon,
+  Business as BusinessIcon,
+  Description as TemplateIcon,
+  DynamicFeed as FlexibleIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
-import { parseFile, isValidFileType, isFileSizeValid, formatFileSize } from '../../utils/fileParser';
-import type { FileParseResult } from '../../types/remediation';
+import { 
+  parseFile, 
+  isValidFileType, 
+  isFileSizeValid, 
+  formatFileSize,
+  validateTemplate,
+  INDIVIDUAL_TEMPLATE,
+  CORPORATE_TEMPLATE,
+} from '../../utils/fileParser';
+import type { FileParseResult, UploadMode, ListType, TemplateValidationResult } from '../../types/remediation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -55,8 +75,10 @@ interface UploadDialogProps {
 }
 
 export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
+  const [uploadMode, setUploadMode] = useState<UploadMode>('flexible');
   const [file, setFile] = useState<File | null>(null);
   const [parseResult, setParseResult] = useState<FileParseResult | null>(null);
+  const [templateValidation, setTemplateValidation] = useState<TemplateValidationResult | null>(null);
   const [listName, setListName] = useState('');
   const [emailColumn, setEmailColumn] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -66,6 +88,7 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
   const resetState = () => {
     setFile(null);
     setParseResult(null);
+    setTemplateValidation(null);
     setListName('');
     setEmailColumn('');
     setError(null);
@@ -74,6 +97,16 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
   const handleClose = () => {
     resetState();
     onClose();
+  };
+
+  const handleModeChange = (_event: React.MouseEvent<HTMLElement>, newMode: UploadMode | null) => {
+    if (newMode !== null) {
+      setUploadMode(newMode);
+      // Reset file when changing modes
+      if (file) {
+        resetState();
+      }
+    }
   };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -110,6 +143,18 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
       } else {
         setEmailColumn('');
       }
+
+      // Validate template if in template mode
+      if (uploadMode === 'template') {
+        const validation = validateTemplate(result.columns);
+        setTemplateValidation(validation);
+        
+        if (!validation.valid) {
+          setError(`Template validation failed: ${validation.errors.join(', ')}`);
+        }
+      } else {
+        setTemplateValidation(null);
+      }
     } catch (err) {
       console.error('Parse error:', err);
       setError(err instanceof Error ? err.message : 'Failed to parse file');
@@ -117,7 +162,7 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
     } finally {
       setParsing(false);
     }
-  }, []);
+  }, [uploadMode]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -136,10 +181,22 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
       return;
     }
 
+    // In template mode, check validation
+    if (uploadMode === 'template' && templateValidation && !templateValidation.valid) {
+      setError('Cannot create list: template validation failed');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
+      // Determine list type
+      let listType: ListType = 'flexible';
+      if (uploadMode === 'template' && templateValidation?.detectedType) {
+        listType = templateValidation.detectedType;
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/identity/lists`, {
         method: 'POST',
         credentials: 'include',
@@ -155,6 +212,8 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
           fileType: parseResult.detectedFileType || 'unknown',
           entries: parseResult.rows,
           originalFileName: file?.name || 'unknown',
+          listType,
+          uploadMode,
         }),
       });
 
@@ -193,10 +252,114 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
     <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
       <DialogTitle>Upload Customer List</DialogTitle>
       <DialogContent>
+        {/* Upload Mode Selector */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Upload Mode
+          </Typography>
+          <ToggleButtonGroup
+            value={uploadMode}
+            exclusive
+            onChange={handleModeChange}
+            aria-label="upload mode"
+            fullWidth
+            sx={{ mb: 1 }}
+          >
+            <ToggleButton value="flexible" aria-label="flexible mode">
+              <FlexibleIcon sx={{ mr: 1 }} />
+              Flexible Mode
+            </ToggleButton>
+            <ToggleButton value="template" aria-label="template mode">
+              <TemplateIcon sx={{ mr: 1 }} />
+              Template Mode
+            </ToggleButton>
+          </ToggleButtonGroup>
+          <Typography variant="caption" color="textSecondary">
+            {uploadMode === 'flexible' 
+              ? 'Accepts any column structure. Email and name columns will be auto-detected.'
+              : 'Validates file against Individual or Corporate template requirements.'}
+          </Typography>
+        </Box>
+
+        {/* Template Requirements (shown in template mode) */}
+        {uploadMode === 'template' && !parseResult && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+              Template Requirements
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                  <PersonIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                  Individual Template
+                </Typography>
+                <Typography variant="caption" component="div">
+                  <strong>Required:</strong> {INDIVIDUAL_TEMPLATE.required.join(', ')}
+                </Typography>
+                <Typography variant="caption" component="div" color="textSecondary">
+                  <strong>Optional:</strong> {INDIVIDUAL_TEMPLATE.optional.join(', ')}
+                </Typography>
+              </Box>
+              <Divider orientation="vertical" flexItem />
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                  <BusinessIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                  Corporate Template
+                </Typography>
+                <Typography variant="caption" component="div">
+                  <strong>Required:</strong> {CORPORATE_TEMPLATE.required.join(', ')}
+                </Typography>
+              </Box>
+            </Box>
+          </Alert>
+        )}
+
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
             {error}
           </Alert>
+        )}
+
+        {/* Template Validation Results */}
+        {uploadMode === 'template' && templateValidation && parseResult && (
+          <>
+            {templateValidation.valid ? (
+              <Alert severity="success" sx={{ mb: 2 }} icon={<CheckIcon />}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                  {templateValidation.detectedType === 'individual' ? '👤 Individual' : '🏢 Corporate'} Template Validated
+                </Typography>
+                <Typography variant="caption">
+                  All required columns are present. List type: {templateValidation.detectedType}
+                </Typography>
+              </Alert>
+            ) : (
+              <Alert severity="error" sx={{ mb: 2 }} icon={<WarningIcon />}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  Template Validation Failed
+                </Typography>
+                <Typography variant="caption" component="div" sx={{ mb: 1 }}>
+                  Detected type: {templateValidation.detectedType}
+                </Typography>
+                {templateValidation.missingColumns.length > 0 && (
+                  <>
+                    <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                      Missing required columns:
+                    </Typography>
+                    <List dense sx={{ py: 0 }}>
+                      {templateValidation.missingColumns.map((col) => (
+                        <ListItem key={col} sx={{ py: 0, px: 1 }}>
+                          <ListItemText 
+                            primary={col} 
+                            primaryTypographyProps={{ variant: 'caption' }}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </>
+                )}
+              </Alert>
+            )}
+          </>
         )}
 
         {!parseResult ? (
@@ -296,8 +459,8 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
               )}
             </FormControl>
 
-            {/* File Type Detection Info */}
-            {parseResult.detectedFileType && parseResult.detectedFileType !== 'unknown' && (
+            {/* File Type Detection Info (only in flexible mode) */}
+            {uploadMode === 'flexible' && parseResult.detectedFileType && parseResult.detectedFileType !== 'unknown' && (
               <Alert 
                 severity={parseResult.detectedFileType === 'corporate' ? 'warning' : 'info'} 
                 sx={{ mb: 2 }}
@@ -428,7 +591,13 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
         <Button
           onClick={handleSubmit}
           variant="contained"
-          disabled={!parseResult || !listName.trim() || !emailColumn || loading}
+          disabled={
+            !parseResult || 
+            !listName.trim() || 
+            !emailColumn || 
+            loading ||
+            (uploadMode === 'template' && templateValidation && !templateValidation.valid)
+          }
         >
           {loading ? 'Creating...' : 'Create List'}
         </Button>
