@@ -235,6 +235,176 @@ This plan implements a flexible identity collection system that accepts any CSV/
 - [ ] 18. Final verification checkpoint
   - Ensure all bug fixes work correctly, ask user if questions arise.
 
+- [x] 19. Implement broker role and access control
+  - [x] 19.1 Update user data model
+    - Add `role` field to users collection in Firestore
+    - Update `src/types/index.ts` with UserRole type
+    - Valid roles: 'default', 'broker', 'compliance', 'claims', 'admin', 'super_admin'
+    - _Requirements: 11.1, 12.6_
+
+  - [x] 19.2 Update authentication context
+    - Update `src/contexts/AuthContext.tsx` to include user role
+    - Fetch and store role from Firestore on login
+    - Provide role in context for components to use
+    - _Requirements: 11.1_
+
+  - [x] 19.3 Update Firestore security rules for role-based access
+    - Update `firestore.rules` for identity-lists collection
+    - Brokers can only read/write lists where `createdBy == request.auth.uid`
+    - Admin/compliance/super_admin can read/write all lists
+    - Update rules for identity-entries collection similarly
+    - _Requirements: 11.3, 11.4, 11.5, 11.7, 11.9_
+
+  - [x] 19.4 Update backend API with role filtering
+    - Add role check middleware to identity endpoints
+    - Filter lists by `createdBy` for broker role
+    - Return 403 for unauthorized access attempts
+    - Update `GET /api/identity/lists` to filter by role
+    - Update `GET /api/identity/lists/:listId` to check ownership
+    - Update `POST /api/identity/lists/:listId/send` to check ownership
+    - Update `DELETE /api/identity/lists/:listId` to check ownership
+    - _Requirements: 11.3, 11.4, 11.5, 11.7, 11.8, 11.9_
+
+  - [x] 19.5 Write property tests for broker access isolation
+
+    - **Property 13: Broker Access Isolation**
+    - **Property 14: Admin Access Universality**
+    - **Validates: Requirements 11.3, 11.4, 11.5, 11.7, 11.9**
+
+- [x] 20. Implement broker registration
+  - [x] 20.1 Update registration form
+    - Add userType field to `src/pages/auth/SignUp.tsx`
+    - Options: "Regular User" or "Broker"
+    - Comment out the UI for this field (keep logic)
+    - Make field not required
+    - _Requirements: 12.1, 12.4, 12.5_
+
+  - [x] 20.2 Update registration logic
+    - Update `src/services/authService.ts` registration function
+    - If userType is "broker", set role to "broker" in Firestore
+    - If userType is "regular" or undefined, set role to "default"
+    - Store role in users collection document
+    - _Requirements: 12.2, 12.3, 12.6, 12.7_
+
+  - [x] 20.3 Write property test for role assignment
+
+    - **Property 15: Role Assignment on Registration**
+    - **Validates: Requirements 12.2, 12.3, 12.6, 12.7**
+
+- [x] 21. Implement admin user role management
+  - [x] 21.1 Update admin users table
+    - Update `src/pages/admin/AdminUsersTable.tsx`
+    - Add role dropdown column
+    - Include all roles: default, broker, compliance, claims, admin, super_admin
+    - _Requirements: 13.1, 13.2_
+
+  - [x] 21.2 Create role update endpoint
+    - Add `PATCH /api/users/:userId/role` endpoint in server.js
+    - Require admin or super_admin role to access
+    - Update user's role in Firestore
+    - Return 403 if non-admin attempts to change roles
+    - _Requirements: 13.3, 13.4, 13.5, 13.6_
+
+  - [x] 21.3 Update frontend to call role update endpoint
+    - Add role change handler in AdminUsersTable
+    - Show confirmation dialog before changing role
+    - Display success/error messages
+    - _Requirements: 13.3_
+
+- [x] 22. Implement dynamic email template
+  - [x] 22.1 Update email template
+    - Update `src/templates/verificationEmail.ts`
+    - Make template dynamic based on verificationType
+    - Use "Dear Client" as greeting
+    - Include conditional text for NIN vs CAC
+    - Include full regulatory text from requirements
+    - Include contact information
+    - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.7_
+
+  - [x] 22.2 Write property test for email template
+
+    - **Property 19: Email Template Dynamic Content**
+    - **Validates: Requirements 14.1, 14.2, 14.4, 14.7**
+
+- [x] 23. Implement upload templates
+  - [x] 23.1 Define template schemas
+    - Create template definitions in `src/utils/fileParser.ts`
+    - Individual template: title, first name, last name, phone number, email, address, gender (required) + optional fields
+    - Corporate template: company name, company address, email address, company type, phone number (required)
+    - _Requirements: 15.1, 15.2, 15.3_
+
+  - [x] 23.2 Add template validation logic
+    - Add function to detect if file matches Individual template
+    - Add function to detect if file matches Corporate template
+    - Add function to validate required columns are present
+    - Return validation errors listing missing columns
+    - _Requirements: 15.5, 15.6, 15.7, 15.8, 15.9_
+
+  - [x] 23.3 Update upload dialog with template mode
+    - Add mode selector: "Template Mode" / "Flexible Mode"
+    - Display template requirements when in template mode
+    - Show detected list type (Individual/Corporate)
+    - Display validation errors if required columns missing
+    - Maintain flexible mode for backward compatibility
+    - _Requirements: 15.4, 15.10, 15.11_
+
+  - [x] 23.4 Update list creation to store template info
+    - Update `POST /api/identity/lists` to accept listType and uploadMode
+    - Store listType ('individual', 'corporate', 'flexible') in list document
+    - Store uploadMode ('template', 'flexible') in list document
+    - _Requirements: 15.7_
+
+  - [x] 23.5 Write property tests for template validation
+
+    - **Property 16: Template Validation - Individual**
+    - **Property 17: Template Validation - Corporate**
+    - **Property 18: List Type Auto-Detection**
+    - **Property 20: Backward Compatibility**
+    - **Validates: Requirements 15.1, 15.3, 15.5, 15.6, 15.7, 15.8, 15.9, 15.10**
+
+- [x] 24. Update navigation and routing
+  - [x] 24.1 Update route protection
+    - Update `src/App.tsx` to check role for identity routes
+    - Allow broker, admin, compliance, super_admin roles
+    - Redirect others to unauthorized page
+    - _Requirements: 11.2_
+
+  - [x] 24.2 Update sidebar navigation
+    - Show "Identity Collection" link for broker, admin, compliance, super_admin
+    - Hide for default and claims roles
+    - _Requirements: 11.2_
+
+- [x] 25. Integration testing for new features
+  - [x] 25.1 Test broker workflow
+    - Broker registers → role set to broker
+    - Broker uploads list → createdBy set correctly
+    - Broker sees only own lists
+    - Broker cannot access other users' lists
+    - Admin can see all lists including broker lists
+    - _Requirements: 11, 12_
+
+  - [x] 25.2 Test template mode
+    - Upload Individual template file → validates and creates list
+    - Upload Corporate template file → validates and creates list
+    - Upload file missing required columns → shows error
+    - Upload in flexible mode → accepts any structure
+    - _Requirements: 15_
+
+  - [x] 25.3 Test dynamic email
+    - Send NIN verification → email contains "Individual Clients" and "NIN"
+    - Send CAC verification → email contains "Corporate Clients" and "CAC"
+    - Email contains full regulatory text
+    - _Requirements: 14_
+
+  - [x] 25.4 Test role management
+    - Admin changes user role to broker → user sees only own lists
+    - Admin changes broker role to admin → user sees all lists
+    - Non-admin cannot change roles
+    - _Requirements: 13_
+
+- [-] 26. Final checkpoint - All features complete
+  - Ensure all new features work correctly, ask user if questions arise.
+
 ## Notes
 
 - Tasks marked with `*` are optional property-based tests

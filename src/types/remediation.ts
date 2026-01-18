@@ -61,6 +61,10 @@ export interface IdentityList {
   nameColumns?: NameColumns;     // Auto-detected name columns
   policyColumn?: string;         // Auto-detected policy number column
   
+  // Template info
+  listType?: ListType;           // Type of list (individual, corporate, flexible)
+  uploadMode?: UploadMode;       // Upload mode used (template, flexible)
+  
   // Statistics
   totalEntries: number;
   verifiedCount: number;
@@ -243,6 +247,29 @@ export interface NameColumns {
  */
 export type FileType = 'corporate' | 'individual' | 'unknown';
 
+/**
+ * Upload mode for file processing
+ * Template mode enforces specific column requirements
+ * Flexible mode accepts any structure (legacy behavior)
+ */
+export type UploadMode = 'template' | 'flexible';
+
+/**
+ * List type for template-based uploads
+ * Determines which template schema was used
+ */
+export type ListType = 'individual' | 'corporate' | 'flexible';
+
+/**
+ * Template validation result
+ */
+export interface TemplateValidationResult {
+  valid: boolean;
+  detectedType?: 'individual' | 'corporate';
+  missingColumns: string[];
+  errors: string[];
+}
+
 // ========== API Request/Response Types ==========
 
 /**
@@ -254,6 +281,8 @@ export interface CreateListRequest {
   emailColumn: string;
   entries: Record<string, any>[];
   originalFileName: string;
+  listType?: ListType;           // Type of list (individual, corporate, flexible)
+  uploadMode?: UploadMode;       // Upload mode used (template, flexible)
 }
 
 /**

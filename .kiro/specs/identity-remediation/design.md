@@ -2,36 +2,45 @@
 
 ## Overview
 
-The Identity Collection System is a flexible solution for collecting missing NIN/CAC information from legacy insurance customers. It accepts any CSV/Excel file structure, creates dynamic tables, and appends verified identity data back to the original data.
+The Identity Collection System is a flexible solution for collecting missing NIN/CAC information from legacy insurance customers. It accepts any CSV/Excel file structure, creates dynamic tables, and appends verified identity data back to the original data. The system supports role-based access control with a dedicated broker role for external partners.
 
 Key design principles:
-1. **Flexibility** - Accept any file structure, auto-detect emails
+1. **Flexibility** - Accept any file structure, auto-detect emails, support template and flexible modes
 2. **Simplicity** - User-friendly naming, intuitive workflow
 3. **Data integrity** - Preserve original data, append verification results
 4. **Enterprise features** - Audit logging, progress tracking, secure links
+5. **Access Control** - Role-based permissions with broker isolation
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         Admin Portal                                 │
+│                    Admin/Broker Portal (Role-Based)                  │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐     │
 │  │  Upload Page    │  │  List Dashboard │  │  List Detail    │     │
-│  │  (Any CSV/Excel)│  │  (All Lists)    │  │  (Dynamic Table)│     │
+│  │  (Any CSV/Excel)│  │  (Filtered)     │  │  (Dynamic Table)│     │
+│  │  + Templates    │  │  by Role        │  │  + Actions      │     │
 │  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘     │
+│           │                    │                    │               │
+│  ┌────────┴────────────────────┴────────────────────┴────────┐     │
+│  │              Role Check Middleware                         │     │
+│  │  - Broker: sees only own lists (createdBy = uid)          │     │
+│  │  - Admin/Compliance/Super Admin: sees all lists           │     │
+│  └────────────────────────────────────────────────────────────┘     │
 └───────────┼────────────────────┼────────────────────┼───────────────┘
             │                    │                    │
             ▼                    ▼                    ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         Backend API (server.js)                      │
+│                    Backend API (server.js)                           │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐     │
 │  │ /api/identity/  │  │ /api/identity/  │  │ /api/identity/  │     │
 │  │ lists           │  │ entries         │  │ verify/:token   │     │
+│  │ + Role Filter   │  │ + Role Filter   │  │ (Public)        │     │
 │  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘     │
 │           │                    │                    │               │
 │  ┌────────┴────────────────────┴────────────────────┴────────┐     │
-│  │                    Email Service                           │     │
-│  │              (Nodemailer + Rate Limiting)                  │     │
+│  │              Email Service (Dynamic Templates)             │     │
+│  │        (Nodemailer + Rate Limiting + NIN/CAC Logic)        │     │
 │  └────────────────────────────────────────────────────────────┘     │
 └───────────┼────────────────────┼────────────────────┼───────────────┘
             │                    │                    │
@@ -40,8 +49,13 @@ Key design principles:
 │                         Firestore Database                           │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐     │
 │  │ identity-lists  │  │ identity-entries│  │ identity-logs   │     │
-│  │ (metadata)      │  │ (dynamic data)  │  │ (activity)      │     │
+│  │ (+ createdBy)   │  │ (dynamic data)  │  │ (activity)      │     │
+│  │ (+ listType)    │  │ (+ listType)    │  │                 │     │
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘     │
+│  ┌─────────────────┐                                                │
+│  │ users           │  (role: default, broker, compliance, claims,   │
+│  │ (+ role field)  │   admin, super_admin)                          │
+│  └─────────────────┘                                                │
 └─────────────────────────────────────────────────────────────────────┘
             │
             ▼
@@ -60,7 +74,57 @@ Key design principles:
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+## Role-Based Access Control
+
+### User Roles
+1. **default** - Regular users, no identity collection access
+2. **broker** - Can upload lists, send verification requests, view only own data
+3. **compliance** - Can view all lists and entries, full identity collection access
+4. **claims** - No identity collection access
+5. **admin** - Full access to all lists, entries, and user management
+6. **super_admin** - Full system access
+
+### Access Matrix
+
+| Role | View Own Lists | View All Lists | Upload Lists | Send Verification | Manage Users | Delete Lists |
+|------|---------------|----------------|--------------|-------------------|--------------|--------------|
+| default | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| broker | ✅ | ❌ | ✅ | ✅ (own only) | ❌ | ✅ (own only) |
+| compliance | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| claims | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| admin | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| super_admin | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+### Implementation Strategy
+- Backend endpoints filter queries by `createdBy` field when user role is "broker"
+- Frontend conditionally renders features based on user role
+- Firestore security rules enforce role-based access at database level
+
 ## Components and Interfaces
+
+### Upload Templates
+
+The system supports two upload modes:
+
+#### Template Mode (Structured)
+Enforces specific column requirements for automatic client type detection.
+
+**Individual Client Template:**
+- **Required columns:** title, first name, last name, phone number, email, address, gender
+- **Optional columns:** date of birth, occupation, nationality
+- **Detection:** System checks for presence of "first name", "last name", "gender" columns
+
+**Corporate Client Template:**
+- **Required columns:** company name, company address, email address, company type, phone number
+- **Detection:** System checks for presence of "company name", "company type" columns
+
+#### Flexible Mode (Legacy)
+Accepts any column structure, auto-detects email and name columns dynamically.
+
+**Mode Selection:**
+- Template mode validates required columns and auto-detects list type (Individual/Corporate)
+- Flexible mode preserves all columns without validation
+- System maintains backward compatibility with existing flexible uploads
 
 ### Frontend Components
 
@@ -77,7 +141,7 @@ Main page showing all uploaded customer lists.
 ```
 
 #### 2. UploadDialog.tsx
-Modal for uploading and previewing files.
+Modal for uploading and previewing files with template support.
 
 ```typescript
 interface UploadDialogProps {
@@ -88,15 +152,19 @@ interface UploadDialogProps {
 
 // Features:
 // - Drag & drop or click to upload
+// - Mode selector: Template Mode / Flexible Mode
+// - Template info display showing required columns
 // - Preview table with first 10 rows
 // - Auto-detected email column highlighted
+// - Auto-detected list type (Individual/Corporate) in template mode
+// - Validation errors for missing required columns
 // - Option to manually select email column if not detected
 // - Name input for the list
 // - Confirm/Cancel buttons
 ```
 
 #### 3. ListDetailPage.tsx
-Full view of a customer list with all functionality.
+Full view of a customer list with all functionality (role-filtered).
 
 ```typescript
 interface ListDetailPageProps {
@@ -112,6 +180,8 @@ interface ListDetailPageProps {
 // - Filter by status dropdown
 // - Export button
 // - Activity log panel
+// - Role-based filtering: brokers see only their lists
+// - List type indicator (Individual/Corporate/Flexible)
 ```
 
 #### 4. SendConfirmDialog.tsx
@@ -149,46 +219,83 @@ Public page for customers to submit their identity.
 
 ### Backend API Endpoints
 
+#### Authentication & Authorization
+All identity endpoints require authentication. Role-based filtering applied:
+- **Broker role:** Can only access lists where `createdBy === user.uid`
+- **Admin/Compliance/Super Admin:** Can access all lists
+- **Default/Claims:** No access to identity endpoints
+
 #### List Management
 ```typescript
 // Create list from uploaded file
 POST /api/identity/lists
-Body: { name, columns: string[], entries: object[], emailColumn: string }
+Headers: { Authorization: Bearer <token> }
+Body: { 
+  name, 
+  columns: string[], 
+  entries: object[], 
+  emailColumn: string,
+  listType?: 'individual' | 'corporate' | 'flexible',
+  uploadMode: 'template' | 'flexible'
+}
 Response: { listId, entryCount }
+// Sets createdBy to authenticated user's UID
 
-// Get all lists with stats
+// Get all lists with stats (role-filtered)
 GET /api/identity/lists
+Headers: { Authorization: Bearer <token> }
 Response: { lists: ListSummary[] }
+// Brokers see only their lists, admins see all
 
-// Get single list with all entries
+// Get single list with all entries (role-filtered)
 GET /api/identity/lists/:listId
+Headers: { Authorization: Bearer <token> }
 Query: { status?, search?, page?, limit? }
 Response: { list: ListDetail, entries: Entry[], total }
+// Returns 403 if broker tries to access another user's list
 
-// Delete list
+// Delete list (role-filtered)
 DELETE /api/identity/lists/:listId
+Headers: { Authorization: Bearer <token> }
 Response: { success: boolean }
+// Returns 403 if broker tries to delete another user's list
 
-// Export list to CSV
+// Export list to CSV (role-filtered)
 GET /api/identity/lists/:listId/export
+Headers: { Authorization: Bearer <token> }
 Response: CSV file download
 ```
 
 #### Entry Operations
 ```typescript
-// Send verification links to selected entries
+// Send verification links to selected entries (role-filtered)
 POST /api/identity/lists/:listId/send
+Headers: { Authorization: Bearer <token> }
 Body: { entryIds: string[], verificationType: 'NIN' | 'CAC' }
 Response: { sent: number, failed: number, errors: Error[] }
+// Returns 403 if broker tries to send for another user's list
 
-// Resend link for single entry
+// Resend link for single entry (role-filtered)
 POST /api/identity/entries/:entryId/resend
+Headers: { Authorization: Bearer <token> }
 Response: { success, newExpiresAt }
+// Returns 403 if broker tries to resend for another user's entry
 
-// Get activity log
+// Get activity log (role-filtered)
 GET /api/identity/lists/:listId/activity
+Headers: { Authorization: Bearer <token> }
 Query: { action?, startDate?, endDate?, page?, limit? }
 Response: { logs: ActivityLog[] }
+```
+
+#### User Management (Admin only)
+```typescript
+// Update user role
+PATCH /api/users/:userId/role
+Headers: { Authorization: Bearer <token> }
+Body: { role: 'default' | 'broker' | 'compliance' | 'claims' | 'admin' | 'super_admin' }
+Response: { success: boolean }
+// Requires admin or super_admin role
 ```
 
 #### Customer Verification (Public)
@@ -225,6 +332,10 @@ interface IdentityList {
   };
   policyColumn?: string;         // Auto-detected policy number column
   
+  // Template info
+  listType: 'individual' | 'corporate' | 'flexible';  // Detected or flexible
+  uploadMode: 'template' | 'flexible';                // Upload mode used
+  
   // Stats
   totalEntries: number;
   verifiedCount: number;
@@ -232,7 +343,7 @@ interface IdentityList {
   failedCount: number;
   
   // Metadata
-  createdBy: string;             // Admin UID
+  createdBy: string;             // Creator UID (for broker filtering)
   createdAt: Timestamp;
   updatedAt: Timestamp;
   originalFileName: string;
@@ -391,6 +502,46 @@ interface ActivityLog {
 
 **Validates: Requirements 9.1, 9.3**
 
+### Property 13: Broker Access Isolation
+*For any* user with role "broker", they must only be able to access lists where `createdBy` equals their UID. Attempts to access other lists must return 403 Forbidden.
+
+**Validates: Requirements 11.3, 11.4, 11.7, 11.9**
+
+### Property 14: Admin Access Universality
+*For any* user with role "admin", "super_admin", or "compliance", they must be able to access all lists regardless of `createdBy` value.
+
+**Validates: Requirements 11.5**
+
+### Property 15: Role Assignment on Registration
+*For any* new user registration where userType is "broker", the user's role field must be set to "broker". For any registration where userType is "regular" or undefined, the role must be set to "default".
+
+**Validates: Requirements 12.2, 12.3, 12.6, 12.7**
+
+### Property 16: Template Validation - Individual
+*For any* file uploaded in template mode, if it contains columns matching Individual template (first name, last name, email, phone number, address, gender), then all 7 required columns must be present or validation must fail.
+
+**Validates: Requirements 15.1, 15.5, 15.8, 15.9**
+
+### Property 17: Template Validation - Corporate
+*For any* file uploaded in template mode, if it contains columns matching Corporate template (company name, company address, email address, company type, phone number), then all 5 required columns must be present or validation must fail.
+
+**Validates: Requirements 15.3, 15.6, 15.8, 15.9**
+
+### Property 18: List Type Auto-Detection
+*For any* file uploaded in template mode, the system must correctly identify listType as "individual" if Individual template columns are present, "corporate" if Corporate template columns are present, or return an error if neither match.
+
+**Validates: Requirements 15.5, 15.6, 15.7**
+
+### Property 19: Email Template Dynamic Content
+*For any* verification email sent, if verificationType is "NIN", the email must contain "Individual Clients" and "National Identification Number (NIN)". If verificationType is "CAC", the email must contain "Corporate Clients" and "Corporate Affairs Commission (CAC) Registration Number".
+
+**Validates: Requirements 14.1, 14.2, 14.4, 14.7**
+
+### Property 20: Backward Compatibility
+*For any* file uploaded in flexible mode, the system must accept any column structure and not enforce template validation, maintaining compatibility with existing uploads.
+
+**Validates: Requirements 15.10**
+
 ## Error Handling
 
 ### File Upload Errors
@@ -398,6 +549,8 @@ interface ActivityLog {
 - File too large (>10MB): "File size exceeds 10MB limit"
 - Empty file: "The uploaded file contains no data"
 - No email column detected: Prompt to manually select email column
+- Missing required columns (template mode): "Missing required columns: [list]. Please ensure your file matches the template."
+- Ambiguous list type (template mode): "Could not determine if this is Individual or Corporate data. Please check column names."
 
 ### Token Errors
 - Expired: "This link has expired. Please contact your insurance provider for a new link."
@@ -410,10 +563,75 @@ interface ActivityLog {
 - API error: "Verification service temporarily unavailable. Please try again."
 - Max attempts: "Maximum attempts reached. Please contact your insurance provider."
 
+### Authorization Errors
+- Broker accessing another user's list: "403 Forbidden - You do not have permission to access this resource"
+- Non-admin changing user roles: "403 Forbidden - Only administrators can change user roles"
+
 ### Email Errors
 - Invalid email: Mark entry as "email_failed"
 - SMTP error: Retry up to 3 times, then mark as "email_failed"
 - Rate limit: Queue remaining emails
+
+## Email Template
+
+The system uses a dynamic email template that adjusts based on verification type:
+
+```typescript
+interface EmailTemplateParams {
+  verificationType: 'NIN' | 'CAC';
+  customerName?: string;
+  verificationLink: string;
+  expiresAt: Date;
+}
+
+function generateEmailContent(params: EmailTemplateParams): string {
+  const { verificationType, customerName, verificationLink, expiresAt } = params;
+  
+  const greeting = "Dear Client";
+  
+  const clientTypeText = verificationType === 'NIN' 
+    ? "For Individual Clients: National Identification Number (NIN)"
+    : "For Corporate Clients: Corporate Affairs Commission (CAC) Registration Number";
+  
+  const documentType = verificationType === 'NIN' ? 'NIN' : 'CAC Registration Number';
+  
+  return `
+${greeting},
+
+We write to inform you that, in line with the directives of the National Insurance Commission (NAICOM) and ongoing regulatory requirements on Know Your Customer (KYC) and data integrity, all insurance companies are mandated to obtain and update the identification details of their clients.
+
+Accordingly, we kindly request your cooperation in providing the following, as applicable:
+
+${clientTypeText}
+
+To ensure confidentiality and data protection, we have provided a secured link through which the required information can be safely submitted. Kindly access the link below and complete the request at your earliest convenience:
+
+${verificationLink}
+
+This link will expire on ${expiresAt.toLocaleDateString()}.
+
+Please note that failure to update these details may affect the continued administration of your policy, in line with regulatory guidelines.
+
+We appreciate your understanding and continued support as we work to remain fully compliant with NAICOM regulations. Should you require any clarification or assistance, please do not hesitate to contact us via:
+
+Email: nemsupport@nem-insurance.com
+Telephone: 0201-4489570-2
+
+Thank you for your cooperation.
+
+Yours faithfully,
+NEM Insurance
+  `;
+}
+```
+
+**Key Features:**
+- Dynamic greeting: "Dear Client"
+- Conditional client type text based on NIN vs CAC
+- Includes full regulatory context
+- Secure link with expiration date
+- Contact information for support
+- Professional closing
 
 ## Testing Strategy
 

@@ -132,7 +132,8 @@ const SignUp: React.FC = () => {
     confirmPassword: '',
     notificationPreference: 'email' as 'email' | 'sms',
     phone: '',
-    dateOfBirth: ''
+    dateOfBirth: '',
+    userType: '' as '' | 'regular' | 'broker'
   });
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -279,7 +280,8 @@ const SignUp: React.FC = () => {
         formData.password,
         formData.name,
         'user', // default role
-        formData.dateOfBirth
+        formData.dateOfBirth,
+        formData.userType // Pass userType to backend
       );
       
       if (!result.success) {
@@ -417,6 +419,24 @@ const SignUp: React.FC = () => {
                 <p className="text-sm text-red-500">{fieldErrors.dateOfBirth}</p>
               )}
             </div>
+
+            {/* User Type Selection - Commented out UI but logic remains functional */}
+            {/* <div className="space-y-3">
+              <Label>User Type</Label>
+              <RadioGroup
+                value={formData.userType}
+                onValueChange={(value) => setFormData({ ...formData, userType: value as 'regular' | 'broker' })}
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="regular" id="regular-user" />
+                  <Label htmlFor="regular-user">Regular User</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="broker" id="broker-user" />
+                  <Label htmlFor="broker-user">Broker</Label>
+                </div>
+              </RadioGroup>
+            </div> */}
             
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>

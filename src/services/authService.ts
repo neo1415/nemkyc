@@ -167,10 +167,11 @@ export const registerUser = async (
   password: string, 
   displayName: string, 
   role: string = 'user',
-  dateOfBirth?: string
+  dateOfBirth?: string,
+  userType?: '' | 'regular' | 'broker'
 ): Promise<AuthResponse> => {
   try {
-    console.log('📤 Attempting registration via backend:', { email, displayName, role });
+    console.log('📤 Attempting registration via backend:', { email, displayName, role, userType });
     
     // Skip CSRF for registration - it's a public endpoint and user isn't authenticated yet
     const response = await makeAuthenticatedRequest(`${API_BASE_URL}${API_ENDPOINTS.REGISTER}`, {
@@ -178,7 +179,8 @@ export const registerUser = async (
       password,
       displayName,
       role,
-      dateOfBirth
+      dateOfBirth,
+      userType // Pass userType to backend
     }, 'POST', true); // skipCSRF = true
 
     const result = await response.json();

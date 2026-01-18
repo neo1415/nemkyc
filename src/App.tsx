@@ -538,13 +538,13 @@ function App() {
 
           {/* Identity Collection Routes (New flexible system) */}
           <Route path="admin/identity" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'compliance', 'super admin']}>
+            <RoleProtectedRoute allowedRoles={['broker', 'admin', 'compliance', 'super admin']}>
               <IdentityListsDashboard />
             </RoleProtectedRoute>
           } />
           
           <Route path="admin/identity/:listId" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'compliance', 'super admin']}>
+            <RoleProtectedRoute allowedRoles={['broker', 'admin', 'compliance', 'super admin']}>
               <IdentityListDetail />
             </RoleProtectedRoute>
           } />

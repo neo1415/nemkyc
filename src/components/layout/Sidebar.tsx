@@ -12,10 +12,13 @@ import {
   ChevronRight,
   UserCheck,
   Building2,
-  Car
+  Car,
+  Fingerprint
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasAnyRole } from '../../utils/roleNormalization';
 
 interface SidebarProps {
   open: boolean;
@@ -24,9 +27,13 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
   const location = useLocation();
+  const { user } = useAuth();
   const [kycOpen, setKycOpen] = React.useState(false);
   const [cddOpen, setCddOpen] = React.useState(false);
   const [claimsOpen, setClaimsOpen] = React.useState(false);
+
+  // Check if user has access to Identity Collection
+  const hasIdentityAccess = user && hasAnyRole(user.role, ['broker', 'admin', 'compliance', 'super admin']);
 
   const navigation = [
     {
@@ -194,6 +201,22 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
               ))}
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Identity Collection - Only for broker, admin, compliance, super_admin */}
+          {hasIdentityAccess && (
+            <Link
+              to="/admin/identity"
+              className={cn(
+                'flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                location.pathname.startsWith('/admin/identity')
+                  ? 'bg-red-50 text-red-700'
+                  : 'text-gray-700 hover:bg-gray-100'
+              )}
+            >
+              <Fingerprint className="h-5 w-5" />
+              <span>Identity Collection</span>
+            </Link>
+          )}
         </nav>
       </div>
     </>

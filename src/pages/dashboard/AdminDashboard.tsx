@@ -14,8 +14,8 @@ const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Redirect non-admin users (users with default role)
-  if (!user || rolesMatch(user.role, 'default')) {
+  // Redirect non-admin users (users with default role or broker role)
+  if (!user || rolesMatch(user.role, 'default') || rolesMatch(user.role, 'broker')) {
     return <Navigate to="/dashboard" replace />;
   }
 
