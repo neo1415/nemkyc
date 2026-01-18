@@ -30,6 +30,10 @@ const ROLE_MAPPINGS: Record<string, string> = {
   'claims': 'claims',
   'claim': 'claims',
   
+  // Broker variations
+  'broker': 'broker',
+  'brokers': 'broker',
+  
   // Default/user variations
   'default': 'default',
   'user': 'default',

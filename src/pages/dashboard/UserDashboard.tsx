@@ -1,16 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { User, Calendar, Mail, Phone, Lock, FileText } from 'lucide-react';
+import { User, Calendar, Mail, Phone, Lock, FileText, IdCard } from 'lucide-react';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { useToast } from '../../hooks/use-toast';
 import AnalyticsDashboard from '../../components/dashboard/AnalyticsDashboard';
 import SubmissionCard from '../../components/dashboard/SubmissionCard';
 import { getUserSubmissions, getUserAnalytics, subscribeToUserSubmissions, SubmissionCard as SubmissionCardType, UserAnalytics } from '../../services/userSubmissionsService';
+import { rolesMatch } from '../../utils/roleNormalization';
+
+// Lazy load Identity Collection components for brokers
+const IdentityListsDashboard = lazy(() => import('../admin/IdentityListsDashboard'));
 
 const UserDashboard: React.FC = () => {
   const { user, firebaseUser } = useAuth();
@@ -33,6 +37,9 @@ const UserDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   if (!user) return null;
+
+  // Check if user is a broker
+  const isBroker = rolesMatch(user.role, 'broker');
 
   // Load user submissions on mount and subscribe to real-time updates
   useEffect(() => {
@@ -142,11 +149,17 @@ const UserDashboard: React.FC = () => {
 
         {/* Main Content with Tabs */}
         <Tabs defaultValue="submissions" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsList className={`grid w-full ${isBroker ? 'grid-cols-3' : 'grid-cols-2'} max-w-2xl`}>
             <TabsTrigger value="submissions" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               My Submissions
             </TabsTrigger>
+            {isBroker && (
+              <TabsTrigger value="identity" className="flex items-center gap-2">
+                <IdCard className="h-4 w-4" />
+                Identity Collection
+              </TabsTrigger>
+            )}
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               Profile & Settings
@@ -186,6 +199,20 @@ const UserDashboard: React.FC = () => {
               )}
             </div>
           </TabsContent>
+
+          {/* Identity Collection Tab (Brokers Only) */}
+          {isBroker && (
+            <TabsContent value="identity" className="space-y-6">
+              <Suspense fallback={
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#800020]"></div>
+                  <p className="mt-4 text-gray-600">Loading Identity Collection...</p>
+                </div>
+              }>
+                <IdentityListsDashboard isEmbedded={true} />
+              </Suspense>
+            </TabsContent>
+          )}
 
           {/* Profile & Settings Tab */}
           <TabsContent value="profile" className="space-y-6">

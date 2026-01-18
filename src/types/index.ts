@@ -1,8 +1,11 @@
+// User role types
+export type UserRole = 'default' | 'broker' | 'compliance' | 'claims' | 'admin' | 'super_admin';
+
 export interface User {
   uid: string;
   email: string;
   name: string;
-  role: string;
+  role: UserRole;
   notificationPreference: 'email' | 'sms';
   phone?: string;
   createdAt?: Date;

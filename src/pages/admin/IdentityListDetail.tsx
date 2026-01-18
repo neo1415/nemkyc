@@ -66,9 +66,22 @@ import type { IdentityEntry, ListDetails, EntryStatus, VerificationType, Activit
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
-export default function IdentityListDetail() {
-  const { listId } = useParams<{ listId: string }>();
+interface IdentityListDetailProps {
+  listId?: string;
+  onBack?: () => void;
+  isEmbedded?: boolean;
+}
+
+export default function IdentityListDetail({ 
+  listId: propListId, 
+  onBack, 
+  isEmbedded = false 
+}: IdentityListDetailProps = {}) {
+  const { listId: paramListId } = useParams<{ listId: string }>();
   const navigate = useNavigate();
+  
+  // Use prop listId if provided (embedded mode), otherwise use URL param
+  const listId = propListId || paramListId;
   
   const [list, setList] = useState<ListDetails | null>(null);
   const [entries, setEntries] = useState<IdentityEntry[]>([]);
@@ -534,7 +547,7 @@ export default function IdentityListDetail() {
     <Box sx={{ p: 3 }}>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-        <IconButton onClick={() => navigate('/admin/identity')}>
+        <IconButton onClick={() => isEmbedded && onBack ? onBack() : navigate('/admin/identity')}>
           <BackIcon />
         </IconButton>
         <Box sx={{ flexGrow: 1 }}>

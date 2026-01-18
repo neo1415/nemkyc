@@ -515,3 +515,511 @@ describe('Feature: identity-remediation, Property 5: N/A and Empty Value Handlin
     expect(buildDisplayName(entry, nameColumns)).toBeUndefined();
   });
 });
+
+describe('Feature: identity-remediation, Property 16: Template Validation - Individual', () => {
+  /**
+   * Property: Individual Template with All Required Columns
+   * For any file with all 7 required Individual template columns,
+   * validation must pass
+   * 
+   * **Validates: Requirements 15.1, 15.5, 15.8**
+   */
+  it('should validate successfully when all required Individual columns are present', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(
+          ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender'],
+          ['Title', 'First Name', 'Last Name', 'Phone Number', 'Email', 'Address', 'Gender'],
+          ['TITLE', 'FIRST NAME', 'LAST NAME', 'PHONE NUMBER', 'EMAIL', 'ADDRESS', 'GENDER'],
+          ['title', 'firstName', 'lastName', 'phoneNumber', 'email', 'address', 'gender'],
+          ['Title', 'First_Name', 'Last_Name', 'Phone_Number', 'Email', 'Address', 'Gender']
+        ),
+        fc.array(fc.string({ minLength: 1, maxLength: 20 }), { minLength: 0, maxLength: 5 }),
+        (requiredColumns, optionalColumns) => {
+          const columns = [...requiredColumns, ...optionalColumns];
+          const result = validateIndividualTemplate(columns);
+          
+          expect(result.valid).toBe(true);
+          expect(result.detectedType).toBe('individual');
+          expect(result.missingColumns).toHaveLength(0);
+          expect(result.errors).toHaveLength(0);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  /**
+   * Property: Individual Template with Missing Required Columns
+   * For any file missing one or more required Individual columns,
+   * validation must fail and list the missing columns
+   * 
+   * **Validates: Requirements 15.8, 15.9**
+   */
+  it('should fail validation when required Individual columns are missing', () => {
+    const requiredColumns = ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender'];
+    
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 7 }),
+        fc.shuffledSubarray(requiredColumns, { minLength: 0, maxLength: 6 }),
+        (numToRemove, columnsToKeep) => {
+          // Ensure we're actually removing at least one column
+          if (columnsToKeep.length === requiredColumns.length) {
+            columnsToKeep = columnsToKeep.slice(0, -1);
+          }
+          
+          const result = validateIndividualTemplate(columnsToKeep);
+          
+          expect(result.valid).toBe(false);
+          expect(result.detectedType).toBe('individual');
+          expect(result.missingColumns.length).toBeGreaterThan(0);
+          expect(result.errors.length).toBeGreaterThan(0);
+          
+          // Verify that all missing columns are actually required
+          for (const missing of result.missingColumns) {
+            expect(requiredColumns).toContain(missing);
+          }
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  /**
+   * Property: Individual Template Column Name Variations
+   * For any valid column name variations (spaces, underscores, case),
+   * validation should recognize them as matching
+   * 
+   * **Validates: Requirements 15.5**
+   */
+  it('should recognize column name variations for Individual template', () => {
+    const variations = [
+      ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender'],
+      ['Title', 'First Name', 'Last Name', 'Phone Number', 'Email', 'Address', 'Gender'],
+      ['TITLE', 'FIRST_NAME', 'LAST_NAME', 'PHONE_NUMBER', 'EMAIL', 'ADDRESS', 'GENDER'],
+      ['title', 'firstName', 'lastName', 'phoneNumber', 'email', 'address', 'gender'],
+      ['Title', 'First-Name', 'Last-Name', 'Phone-Number', 'Email', 'Address', 'Gender']
+    ];
+    
+    for (const columns of variations) {
+      const result = validateIndividualTemplate(columns);
+      
+      expect(result.valid).toBe(true);
+      expect(result.detectedType).toBe('individual');
+      expect(result.missingColumns).toHaveLength(0);
+    }
+  });
+
+  /**
+   * Property: Individual Template with Optional Columns
+   * For any file with all required columns plus optional columns,
+   * validation must pass
+   * 
+   * **Validates: Requirements 15.1, 15.2**
+   */
+  it('should validate successfully with optional Individual columns', () => {
+    const requiredColumns = ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender'];
+    const optionalColumns = ['date of birth', 'occupation', 'nationality'];
+    
+    fc.assert(
+      fc.property(
+        fc.shuffledSubarray(optionalColumns, { minLength: 0, maxLength: 3 }),
+        (selectedOptional) => {
+          const columns = [...requiredColumns, ...selectedOptional];
+          const result = validateIndividualTemplate(columns);
+          
+          expect(result.valid).toBe(true);
+          expect(result.detectedType).toBe('individual');
+          expect(result.missingColumns).toHaveLength(0);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+});
+
+describe('Feature: identity-remediation, Property 17: Template Validation - Corporate', () => {
+  /**
+   * Property: Corporate Template with All Required Columns
+   * For any file with all 5 required Corporate template columns,
+   * validation must pass
+   * 
+   * **Validates: Requirements 15.3, 15.6, 15.8**
+   */
+  it('should validate successfully when all required Corporate columns are present', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(
+          ['company name', 'company address', 'email address', 'company type', 'phone number'],
+          ['Company Name', 'Company Address', 'Email Address', 'Company Type', 'Phone Number'],
+          ['COMPANY NAME', 'COMPANY ADDRESS', 'EMAIL ADDRESS', 'COMPANY TYPE', 'PHONE NUMBER'],
+          ['companyName', 'companyAddress', 'emailAddress', 'companyType', 'phoneNumber'],
+          ['Company_Name', 'Company_Address', 'Email_Address', 'Company_Type', 'Phone_Number']
+        ),
+        fc.array(fc.string({ minLength: 1, maxLength: 20 }), { minLength: 0, maxLength: 5 }),
+        (requiredColumns, optionalColumns) => {
+          const columns = [...requiredColumns, ...optionalColumns];
+          const result = validateCorporateTemplate(columns);
+          
+          expect(result.valid).toBe(true);
+          expect(result.detectedType).toBe('corporate');
+          expect(result.missingColumns).toHaveLength(0);
+          expect(result.errors).toHaveLength(0);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  /**
+   * Property: Corporate Template with Missing Required Columns
+   * For any file missing one or more required Corporate columns,
+   * validation must fail and list the missing columns
+   * 
+   * **Validates: Requirements 15.8, 15.9**
+   */
+  it('should fail validation when required Corporate columns are missing', () => {
+    const requiredColumns = ['company name', 'company address', 'email address', 'company type', 'phone number'];
+    
+    fc.assert(
+      fc.property(
+        fc.shuffledSubarray(requiredColumns, { minLength: 0, maxLength: 4 }),
+        (columnsToKeep) => {
+          // Ensure we're actually removing at least one column
+          if (columnsToKeep.length === requiredColumns.length) {
+            columnsToKeep = columnsToKeep.slice(0, -1);
+          }
+          
+          const result = validateCorporateTemplate(columnsToKeep);
+          
+          expect(result.valid).toBe(false);
+          expect(result.detectedType).toBe('corporate');
+          expect(result.missingColumns.length).toBeGreaterThan(0);
+          expect(result.errors.length).toBeGreaterThan(0);
+          
+          // Verify that all missing columns are actually required
+          for (const missing of result.missingColumns) {
+            expect(requiredColumns).toContain(missing);
+          }
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  /**
+   * Property: Corporate Template Column Name Variations
+   * For any valid column name variations (spaces, underscores, case),
+   * validation should recognize them as matching
+   * 
+   * **Validates: Requirements 15.6**
+   */
+  it('should recognize column name variations for Corporate template', () => {
+    const variations = [
+      ['company name', 'company address', 'email address', 'company type', 'phone number'],
+      ['Company Name', 'Company Address', 'Email Address', 'Company Type', 'Phone Number'],
+      ['COMPANY_NAME', 'COMPANY_ADDRESS', 'EMAIL_ADDRESS', 'COMPANY_TYPE', 'PHONE_NUMBER'],
+      ['companyName', 'companyAddress', 'emailAddress', 'companyType', 'phoneNumber'],
+      ['Company-Name', 'Company-Address', 'Email-Address', 'Company-Type', 'Phone-Number']
+    ];
+    
+    for (const columns of variations) {
+      const result = validateCorporateTemplate(columns);
+      
+      expect(result.valid).toBe(true);
+      expect(result.detectedType).toBe('corporate');
+      expect(result.missingColumns).toHaveLength(0);
+    }
+  });
+});
+
+describe('Feature: identity-remediation, Property 18: List Type Auto-Detection', () => {
+  /**
+   * Property: Auto-detect Individual Template
+   * For any file with Individual template indicators (first name, last name, gender),
+   * the system must detect it as Individual type
+   * 
+   * **Validates: Requirements 15.5, 15.7**
+   */
+  it('should auto-detect Individual template from column patterns', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(
+          ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender'],
+          ['Title', 'First Name', 'Last Name', 'Phone Number', 'Email', 'Address', 'Gender', 'Date of Birth'],
+          ['first name', 'last name', 'email', 'phone number', 'address', 'gender', 'title', 'occupation']
+        ),
+        (columns) => {
+          const result = detectTemplateType(columns);
+          
+          expect(result.detectedType).toBe('individual');
+          
+          // If all required columns are present, validation should pass
+          const hasAllRequired = ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender']
+            .every(required => columns.some(col => col.toLowerCase().replace(/[_\s-]/g, '') === required.replace(/[_\s-]/g, '')));
+          
+          if (hasAllRequired) {
+            expect(result.valid).toBe(true);
+          }
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  /**
+   * Property: Auto-detect Corporate Template
+   * For any file with Corporate template indicators (company name, company type),
+   * the system must detect it as Corporate type
+   * 
+   * **Validates: Requirements 15.6, 15.7**
+   */
+  it('should auto-detect Corporate template from column patterns', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(
+          ['company name', 'company address', 'email address', 'company type', 'phone number'],
+          ['Company Name', 'Company Address', 'Email Address', 'Company Type', 'Phone Number', 'RC Number'],
+          ['company name', 'company type', 'email address', 'phone number', 'company address', 'director 1']
+        ),
+        (columns) => {
+          const result = detectTemplateType(columns);
+          
+          expect(result.detectedType).toBe('corporate');
+          
+          // If all required columns are present, validation should pass
+          const hasAllRequired = ['company name', 'company address', 'email address', 'company type', 'phone number']
+            .every(required => columns.some(col => col.toLowerCase().replace(/[_\s-]/g, '') === required.replace(/[_\s-]/g, '')));
+          
+          if (hasAllRequired) {
+            expect(result.valid).toBe(true);
+          }
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  /**
+   * Property: Prioritize Individual over Corporate when Individual indicators present
+   * For any file with first name/last name/gender but no company type,
+   * Individual should be detected
+   * 
+   * **Validates: Requirements 15.7**
+   */
+  it('should prioritize Individual when Individual indicators are present without company type', () => {
+    const columns = ['first name', 'last name', 'email', 'phone number', 'address', 'gender', 'title'];
+    const result = detectTemplateType(columns);
+    
+    // Should detect as Individual because it has first/last name and gender
+    expect(result.detectedType).toBe('individual');
+  });
+
+  /**
+   * Property: Prioritize Corporate when company type is present
+   * For any file with company name AND company type,
+   * Corporate should be detected
+   * 
+   * **Validates: Requirements 15.7**
+   */
+  it('should prioritize Corporate when company type is present', () => {
+    const columns = ['company name', 'company type', 'email address', 'phone number', 'company address'];
+    const result = detectTemplateType(columns);
+    
+    expect(result.detectedType).toBe('corporate');
+  });
+
+  /**
+   * Property: Return best match when neither template is complete
+   * For any file that doesn't fully match either template,
+   * return the one with fewer missing columns
+   * 
+   * **Validates: Requirements 15.7**
+   */
+  it('should return template with fewer missing columns when neither is complete', () => {
+    // Has 3 Individual columns but only 1 Corporate column
+    const columns1 = ['first name', 'last name', 'email', 'phone number'];
+    const result1 = detectTemplateType(columns1);
+    expect(result1.detectedType).toBe('individual');
+    expect(result1.valid).toBe(false);
+    
+    // Has 3 Corporate columns but only 1 Individual column
+    const columns2 = ['company name', 'company address', 'email address', 'phone number'];
+    const result2 = detectTemplateType(columns2);
+    expect(result2.detectedType).toBe('corporate');
+    expect(result2.valid).toBe(false);
+  });
+
+  /**
+   * Property: Validation errors list missing columns
+   * For any invalid template, the errors array must contain information
+   * about missing columns
+   * 
+   * **Validates: Requirements 15.9**
+   */
+  it('should list missing columns in validation errors', () => {
+    fc.assert(
+      fc.property(
+        fc.shuffledSubarray(['first name', 'last name', 'email'], { minLength: 1, maxLength: 3 }),
+        (partialColumns) => {
+          const result = detectTemplateType(partialColumns);
+          
+          if (!result.valid) {
+            expect(result.errors.length).toBeGreaterThan(0);
+            expect(result.missingColumns.length).toBeGreaterThan(0);
+            
+            // Error message should mention missing columns
+            const errorMessage = result.errors[0];
+            expect(errorMessage).toContain('Missing required columns');
+          }
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+});
+
+describe('Feature: identity-remediation, Property 20: Backward Compatibility', () => {
+  /**
+   * Property: Flexible Mode Accepts Any Structure
+   * For any arbitrary column structure, the system should accept it
+   * when not in template validation mode
+   * 
+   * **Validates: Requirements 15.10**
+   */
+  it('should accept any column structure in flexible mode', () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.string({ minLength: 1, maxLength: 30 }),
+          { minLength: 1, maxLength: 20 }
+        ),
+        (columns) => {
+          // In flexible mode, we just parse without validation
+          // The parseFile functions don't enforce template validation
+          // They only detect email and name columns
+          
+          const emailColumn = detectEmailColumn(columns);
+          const fileType = detectFileType(columns);
+          const nameColumns = detectNameColumns(columns, fileType);
+          
+          // These should never throw errors, regardless of structure
+          expect(emailColumn === null || typeof emailColumn === 'string').toBe(true);
+          expect(['corporate', 'individual', 'unknown']).toContain(fileType);
+          expect(typeof nameColumns).toBe('object');
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  /**
+   * Property: Template Validation is Opt-In
+   * For any file, template validation only occurs when explicitly called
+   * The basic parsing functions (detectEmailColumn, detectNameColumns) work
+   * independently of template validation
+   * 
+   * **Validates: Requirements 15.10**
+   */
+  it('should allow parsing without template validation', () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.string({ minLength: 1, maxLength: 30 }),
+          { minLength: 1, maxLength: 15 }
+        ),
+        (columns) => {
+          // These functions should work regardless of template compliance
+          const emailColumn = detectEmailColumn(columns);
+          const fileType = detectFileType(columns);
+          const nameColumns = detectNameColumns(columns, fileType);
+          
+          // Should not throw errors
+          expect(() => detectEmailColumn(columns)).not.toThrow();
+          expect(() => detectFileType(columns)).not.toThrow();
+          expect(() => detectNameColumns(columns, fileType)).not.toThrow();
+          
+          // Template validation is separate and opt-in
+          const templateResult = validateTemplate(columns);
+          expect(typeof templateResult.valid).toBe('boolean');
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  /**
+   * Property: Non-Template Files Still Work
+   * For any file that doesn't match either template,
+   * the system should still parse it successfully in flexible mode
+   * 
+   * **Validates: Requirements 15.10**
+   */
+  it('should successfully parse non-template files', () => {
+    const nonTemplateColumns = [
+      ['Name', 'Email', 'Phone', 'Policy'],
+      ['Customer', 'Contact', 'ID', 'Status'],
+      ['Insured', 'Policy Number', 'Email', 'Amount'],
+      ['Field1', 'Field2', 'Field3', 'Field4']
+    ];
+    
+    for (const columns of nonTemplateColumns) {
+      // These should all work without errors
+      const emailColumn = detectEmailColumn(columns);
+      const fileType = detectFileType(columns);
+      const nameColumns = detectNameColumns(columns, fileType);
+      
+      // Should detect email if present
+      if (columns.some(col => col.toLowerCase().includes('email'))) {
+        expect(emailColumn).not.toBeNull();
+      }
+      
+      // Should detect file type (even if unknown)
+      expect(['corporate', 'individual', 'unknown']).toContain(fileType);
+      
+      // Should detect name columns if present
+      expect(typeof nameColumns).toBe('object');
+    }
+  });
+
+  /**
+   * Property: Template Validation Doesn't Break Existing Functionality
+   * For any columns array, calling validateTemplate should not affect
+   * the results of other detection functions
+   * 
+   * **Validates: Requirements 15.10**
+   */
+  it('should not affect other detection functions when template validation is used', () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.string({ minLength: 1, maxLength: 30 }),
+          { minLength: 1, maxLength: 15 }
+        ),
+        (columns) => {
+          // Get results before template validation
+          const emailBefore = detectEmailColumn(columns);
+          const fileTypeBefore = detectFileType(columns);
+          const nameColumnsBefore = detectNameColumns(columns, fileTypeBefore);
+          
+          // Call template validation
+          validateTemplate(columns);
+          
+          // Get results after template validation
+          const emailAfter = detectEmailColumn(columns);
+          const fileTypeAfter = detectFileType(columns);
+          const nameColumnsAfter = detectNameColumns(columns, fileTypeAfter);
+          
+          // Results should be identical
+          expect(emailAfter).toBe(emailBefore);
+          expect(fileTypeAfter).toBe(fileTypeBefore);
+          expect(nameColumnsAfter).toEqual(nameColumnsBefore);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+});
+
+import { validateIndividualTemplate, validateCorporateTemplate, detectTemplateType, validateTemplate } from '../../utils/fileParser';

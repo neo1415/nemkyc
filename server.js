@@ -695,6 +695,40 @@ const requireCompliance = requireRole('compliance', 'admin', 'super admin');
 const requireClaims = requireRole('claims', 'compliance', 'admin', 'super admin');
 
 /**
+ * Middleware to require broker, compliance, admin, or super admin role
+ * Used for identity collection endpoints
+ */
+const requireBrokerOrAdmin = requireRole('broker', 'compliance', 'admin', 'super admin');
+
+/**
+ * Helper function to check if user can access a specific identity list
+ * Brokers can only access their own lists, admins can access all
+ */
+const canAccessIdentityList = async (userId, userRole, listId) => {
+  // Admins, super admins, and compliance can access all lists
+  if (isAdminOrSuperAdmin(userRole) || normalizeRole(userRole) === 'compliance') {
+    return true;
+  }
+  
+  // Brokers can only access their own lists
+  if (normalizeRole(userRole) === 'broker') {
+    try {
+      const listDoc = await db.collection('identity-lists').doc(listId).get();
+      if (!listDoc.exists) {
+        return false;
+      }
+      return listDoc.data().createdBy === userId;
+    } catch (error) {
+      console.error('Error checking list access:', error);
+      return false;
+    }
+  }
+  
+  // Other roles cannot access identity lists
+  return false;
+};
+
+/**
  * Middleware to check if user owns the resource or is admin
  * Checks if req.user.uid matches the resource's submittedBy field
  */
@@ -906,7 +940,7 @@ const validateUserRegistration = [
   body('role')
     .optional()
     .trim()
-    .isIn(['default', 'user', 'claims', 'compliance', 'admin', 'super admin'])
+    .isIn(['default', 'user', 'broker', 'claims', 'compliance', 'admin', 'super admin'])
     .withMessage('Invalid role'),
   
   body('dateOfBirth')
@@ -929,7 +963,7 @@ const validateRoleUpdate = [
   body('role')
     .trim()
     .notEmpty().withMessage('Role is required')
-    .isIn(['default', 'user', 'claims', 'compliance', 'admin', 'super admin'])
+    .isIn(['default', 'user', 'broker', 'claims', 'compliance', 'admin', 'super admin'])
     .withMessage('Invalid role value'),
   
   handleValidationErrors
@@ -2734,14 +2768,67 @@ app.get('/api/users', async (req, res) => {
 });
 
 // ========== NEW: Update User Role (Super Admin Only) ==========
-// ✅ PROTECTED: Requires super admin role
+// ✅ PROTECTED: Requires admin or super admin role
 // ✅ VALIDATED: Input validation applied
-app.put('/api/users/:userId/role', requireAuth, requireSuperAdmin, validateRoleUpdate, async (req, res) => {
+app.put('/api/users/:userId/role', requireAuth, requireRole('admin', 'super admin'), validateRoleUpdate, async (req, res) => {
   try {
     const { userId } = req.params;
     const { role } = req.body;
     
     console.log('👤 Role update by:', req.user.email, 'Role:', req.user.role);
+
+    // Get target user details before update
+    const targetUserDoc = await db.collection('userroles').doc(userId).get();
+    const oldRole = targetUserDoc.exists ? targetUserDoc.data().role : 'unknown';
+
+    // Update user role
+    await db.collection('userroles').doc(userId).update({
+      role,
+      dateModified: new Date(),
+    });
+
+    // 📝 LOG ROLE UPDATE EVENT
+    const targetDetails = await getUserDetailsForLogging(userId);
+    const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
+    await logAction({
+      action: 'update-user-role',
+      actorUid: req.user.uid,
+      actorDisplayName: req.user.name,
+      actorEmail: req.user.email,
+      actorRole: req.user.role,
+      targetType: 'user',
+      targetId: userId,
+      details: {
+        from: { role: oldRole },
+        to: { role: role },
+        targetUserEmail: targetDetails.email,
+        targetUserName: targetDetails.displayName
+      },
+      ipMasked: req.ipData?.masked,
+      ipHash: req.ipData?.hash,
+      rawIP: req.ipData?.raw,
+      location: location,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      meta: {
+        updateTimestamp: new Date().toISOString()
+      }
+    });
+
+    res.status(200).json({ message: 'User role updated successfully' });
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    res.status(500).json({ error: 'Failed to update user role' });
+  }
+});
+
+// ✅ PROTECTED: Requires admin or super admin role (PATCH alias for PUT)
+// ✅ VALIDATED: Input validation applied
+app.patch('/api/users/:userId/role', requireAuth, requireRole('admin', 'super admin'), validateRoleUpdate, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { role } = req.body;
+    
+    console.log('👤 Role update (PATCH) by:', req.user.email, 'Role:', req.user.role);
 
     // Get target user details before update
     const targetUserDoc = await db.collection('userroles').doc(userId).get();
@@ -4422,7 +4509,17 @@ app.use('/api/', apiLimiter);
 // ✅ VALIDATED: Input validation applied
 app.post('/api/register', validateUserRegistration, async (req, res) => {
   try {
-    const { email, password, displayName, role = 'user', dateOfBirth } = req.body;
+    const { email, password, displayName, role = 'user', dateOfBirth, userType } = req.body;
+
+    // Determine the actual role based on userType
+    // If userType is 'broker', set role to 'broker'
+    // If userType is 'regular' or undefined/empty, set role to 'default'
+    let actualRole = 'default'; // Default role for regular users
+    if (userType === 'broker') {
+      actualRole = 'broker';
+    } else if (userType === 'regular' || !userType) {
+      actualRole = 'default';
+    }
 
     // Create user in Firebase Auth
     const userRecord = await admin.auth().createUser({
@@ -4435,7 +4532,7 @@ app.post('/api/register', validateUserRegistration, async (req, res) => {
     // Set role in userroles collection with date of birth
     const userRoleData = {
       email: email,
-      role: role,
+      role: actualRole, // Use the determined role
       displayName: displayName,
       name: displayName,
       createdAt: admin.firestore.FieldValue.serverTimestamp()
@@ -4452,7 +4549,7 @@ app.post('/api/register', validateUserRegistration, async (req, res) => {
     await db.collection('loginMetadata').doc(userRecord.uid).set({
       loginCount: 0,
       email: email,
-      role: role,
+      role: actualRole, // Use the determined role
       lastLoginAt: null,
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
@@ -4464,12 +4561,13 @@ app.post('/api/register', validateUserRegistration, async (req, res) => {
       actorUid: userRecord.uid,
       actorDisplayName: displayName,
       actorEmail: email,
-      actorRole: role,
+      actorRole: actualRole, // Use the determined role
       targetType: 'user',
       targetId: userRecord.uid,
       details: {
         registrationMethod: 'email-password',
-        assignedRole: role
+        assignedRole: actualRole, // Use the determined role
+        userType: userType || 'regular' // Log the userType for audit
       },
       ipMasked: req.ipData?.masked,
       ipHash: req.ipData?.hash,
@@ -7871,6 +7969,7 @@ const createIdentityActivityLog = async (logData) => {
 };
 
 /**
+/**
  * POST /api/identity/lists
  * Create a new identity list from uploaded file data
  * 
@@ -7883,14 +7982,27 @@ const createIdentityActivityLog = async (logData) => {
  * - fileType: string - Auto-detected file type ('corporate', 'individual', or 'unknown')
  * - entries: object[] - Array of row data objects
  * - originalFileName: string - Original uploaded file name
+ * - listType: string - Type of list ('individual', 'corporate', 'flexible') - optional
+ * - uploadMode: string - Upload mode used ('template', 'flexible') - optional
  * 
- * Requirements: 1.5, 1.6, 1.7
+ * Requirements: 1.5, 1.6, 1.7, 15.7
  */
-app.post('/api/identity/lists', requireAuth, requireAdmin, async (req, res) => {
+app.post('/api/identity/lists', requireAuth, requireBrokerOrAdmin, async (req, res) => {
   try {
-    const { name, columns, emailColumn, nameColumns, policyColumn, fileType, entries, originalFileName } = req.body;
+    const { 
+      name, 
+      columns, 
+      emailColumn, 
+      nameColumns, 
+      policyColumn, 
+      fileType, 
+      entries, 
+      originalFileName,
+      listType,
+      uploadMode
+    } = req.body;
     
-    console.log(`📋 Creating identity list: ${name} (type: ${fileType || 'unknown'})`);
+    console.log(`📋 Creating identity list: ${name} (type: ${fileType || 'unknown'}, listType: ${listType || 'flexible'}, mode: ${uploadMode || 'flexible'})`);
     
     // Validate required fields
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -7928,6 +8040,22 @@ app.post('/api/identity/lists', requireAuth, requireAdmin, async (req, res) => {
       });
     }
     
+    // Validate listType if provided
+    if (listType && !['individual', 'corporate', 'flexible'].includes(listType)) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        message: 'listType must be one of: individual, corporate, flexible'
+      });
+    }
+    
+    // Validate uploadMode if provided
+    if (uploadMode && !['template', 'flexible'].includes(uploadMode)) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        message: 'uploadMode must be one of: template, flexible'
+      });
+    }
+    
     // Create list document
     const listRef = db.collection('identity-lists').doc();
     const listId = listRef.id;
@@ -7941,6 +8069,8 @@ app.post('/api/identity/lists', requireAuth, requireAdmin, async (req, res) => {
       nameColumns: nameColumns || null,
       policyColumn: policyColumn || null,
       fileType: fileType || 'unknown',
+      listType: listType || 'flexible',
+      uploadMode: uploadMode || 'flexible',
       totalEntries: entries.length,
       verifiedCount: 0,
       pendingCount: entries.length,
@@ -8066,13 +8196,15 @@ app.post('/api/identity/lists', requireAuth, requireAdmin, async (req, res) => {
         nameColumns: nameColumns,
         policyColumn: policyColumn,
         originalFileName: originalFileName,
+        listType: listType || 'flexible',
+        uploadMode: uploadMode || 'flexible',
         createdBy: req.user.email
       },
       ipAddress: req.ipData?.masked,
       userAgent: req.headers['user-agent']
     });
     
-    console.log(`✅ Created identity list ${listId} with ${entries.length} entries`);
+    console.log(`✅ Created identity list ${listId} with ${entries.length} entries (listType: ${listType || 'flexible'}, uploadMode: ${uploadMode || 'flexible'})`);
     
     res.status(201).json({
       listId: listId,
@@ -8091,12 +8223,23 @@ app.post('/api/identity/lists', requireAuth, requireAdmin, async (req, res) => {
 /**
  * GET /api/identity/lists
  * Get all identity lists with summary statistics
+ * Brokers see only their own lists, admins see all
  * 
- * Requirements: 2.1
+ * Requirements: 2.1, 11.3, 11.4
  */
-app.get('/api/identity/lists', requireAuth, requireAdmin, async (req, res) => {
+app.get('/api/identity/lists', requireAuth, requireBrokerOrAdmin, async (req, res) => {
   try {
-    const listsSnapshot = await db.collection('identity-lists')
+    let listsQuery = db.collection('identity-lists');
+    
+    // Filter by createdBy for brokers
+    if (normalizeRole(req.user.role) === 'broker') {
+      listsQuery = listsQuery.where('createdBy', '==', req.user.uid);
+      console.log(`🔒 Broker ${req.user.email} filtering lists by createdBy: ${req.user.uid}`);
+    } else {
+      console.log(`✅ Admin/Compliance ${req.user.email} accessing all lists`);
+    }
+    
+    const listsSnapshot = await listsQuery
       .orderBy('createdAt', 'desc')
       .get();
     
@@ -8115,11 +8258,12 @@ app.get('/api/identity/lists', requireAuth, requireAdmin, async (req, res) => {
         linkSentCount: data.linkSentCount || 0,
         progress: total > 0 ? Math.round((verified / total) * 100) : 0,
         createdAt: data.createdAt?.toDate?.() || data.createdAt,
-        originalFileName: data.originalFileName
+        originalFileName: data.originalFileName,
+        createdBy: data.createdBy // Include for debugging
       };
     });
     
-    console.log(`✅ Retrieved ${lists.length} identity lists`);
+    console.log(`✅ Retrieved ${lists.length} identity lists for ${req.user.email}`);
     res.status(200).json({ lists });
     
   } catch (error) {
@@ -8134,10 +8278,11 @@ app.get('/api/identity/lists', requireAuth, requireAdmin, async (req, res) => {
 /**
  * GET /api/identity/lists/:listId
  * Get a single list with full details
+ * Brokers can only access their own lists
  * 
- * Requirements: 2.2
+ * Requirements: 2.2, 11.3, 11.4
  */
-app.get('/api/identity/lists/:listId', requireAuth, requireAdmin, async (req, res) => {
+app.get('/api/identity/lists/:listId', requireAuth, requireBrokerOrAdmin, async (req, res) => {
   try {
     const { listId } = req.params;
     
@@ -8151,6 +8296,16 @@ app.get('/api/identity/lists/:listId', requireAuth, requireAdmin, async (req, re
     }
     
     const listData = listDoc.data();
+    
+    // Check ownership for brokers
+    if (normalizeRole(req.user.role) === 'broker' && listData.createdBy !== req.user.uid) {
+      console.log(`❌ Broker ${req.user.email} attempted to access list ${listId} owned by ${listData.createdBy}`);
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to access this list'
+      });
+    }
+    
     const total = listData.totalEntries || 0;
     const verified = listData.verifiedCount || 0;
     
@@ -8171,7 +8326,7 @@ app.get('/api/identity/lists/:listId', requireAuth, requireAdmin, async (req, re
       originalFileName: listData.originalFileName
     };
     
-    console.log(`✅ Retrieved identity list ${listId}`);
+    console.log(`✅ Retrieved identity list ${listId} for ${req.user.email}`);
     res.status(200).json({ list });
     
   } catch (error) {
@@ -8186,6 +8341,7 @@ app.get('/api/identity/lists/:listId', requireAuth, requireAdmin, async (req, re
 /**
  * GET /api/identity/lists/:listId/entries
  * Get entries for a list with filtering, search, and pagination
+ * Brokers can only access entries from their own lists
  * 
  * Query params:
  * - status: Filter by status (pending, link_sent, verified, failed, email_failed)
@@ -8193,9 +8349,9 @@ app.get('/api/identity/lists/:listId', requireAuth, requireAdmin, async (req, re
  * - page: Page number (default 1)
  * - limit: Items per page (default 50, max 100)
  * 
- * Requirements: 2.2, 2.3, 2.4
+ * Requirements: 2.2, 2.3, 2.4, 11.3, 11.4
  */
-app.get('/api/identity/lists/:listId/entries', requireAuth, requireAdmin, async (req, res) => {
+app.get('/api/identity/lists/:listId/entries', requireAuth, requireBrokerOrAdmin, async (req, res) => {
   try {
     const { listId } = req.params;
     const { status, search, page = 1, limit = 50 } = req.query;
@@ -8206,6 +8362,17 @@ app.get('/api/identity/lists/:listId/entries', requireAuth, requireAdmin, async 
       return res.status(404).json({
         error: 'List not found',
         message: `No list found with ID: ${listId}`
+      });
+    }
+    
+    const listData = listDoc.data();
+    
+    // Check ownership for brokers
+    if (normalizeRole(req.user.role) === 'broker' && listData.createdBy !== req.user.uid) {
+      console.log(`❌ Broker ${req.user.email} attempted to access entries for list ${listId} owned by ${listData.createdBy}`);
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to access entries for this list'
       });
     }
     
@@ -8296,10 +8463,11 @@ app.get('/api/identity/lists/:listId/entries', requireAuth, requireAdmin, async 
 /**
  * DELETE /api/identity/lists/:listId
  * Delete a list and all its entries
+ * Brokers can only delete their own lists
  * 
- * Requirements: 2.5, 2.6
+ * Requirements: 2.5, 2.6, 11.7, 11.9
  */
-app.delete('/api/identity/lists/:listId', requireAuth, requireAdmin, async (req, res) => {
+app.delete('/api/identity/lists/:listId', requireAuth, requireBrokerOrAdmin, async (req, res) => {
   try {
     const { listId } = req.params;
     
@@ -8317,6 +8485,15 @@ app.delete('/api/identity/lists/:listId', requireAuth, requireAdmin, async (req,
     }
     
     const listData = listDoc.data();
+    
+    // Check ownership for brokers
+    if (normalizeRole(req.user.role) === 'broker' && listData.createdBy !== req.user.uid) {
+      console.log(`❌ Broker ${req.user.email} attempted to delete list ${listId} owned by ${listData.createdBy}`);
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to delete this list'
+      });
+    }
     
     // Delete all entries for this list
     const entriesSnapshot = await db.collection('identity-entries')
@@ -8340,7 +8517,7 @@ app.delete('/api/identity/lists/:listId', requireAuth, requireAdmin, async (req,
     await createIdentityActivityLog({
       listId: listId,
       action: 'list_deleted',
-      actorType: 'admin',
+      actorType: normalizeRole(req.user.role) === 'broker' ? 'broker' : 'admin',
       actorId: req.user.uid,
       details: {
         name: listData.name,
@@ -8370,14 +8547,15 @@ app.delete('/api/identity/lists/:listId', requireAuth, requireAdmin, async (req,
 /**
  * POST /api/identity/lists/:listId/send
  * Send verification links to selected entries
+ * Brokers can only send for their own lists
  * 
  * Body:
  * - entryIds: string[] - Array of entry IDs to send links to
  * - verificationType: 'NIN' | 'CAC' - Type of verification to request
  * 
- * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 5.4
+ * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 5.4, 11.7, 11.8
  */
-app.post('/api/identity/lists/:listId/send', requireAuth, requireAdmin, async (req, res) => {
+app.post('/api/identity/lists/:listId/send', requireAuth, requireBrokerOrAdmin, async (req, res) => {
   try {
     const { listId } = req.params;
     const { entryIds, verificationType } = req.body;
@@ -8411,6 +8589,15 @@ app.post('/api/identity/lists/:listId/send', requireAuth, requireAdmin, async (r
     }
     
     const listData = listDoc.data();
+    
+    // Check ownership for brokers
+    if (normalizeRole(req.user.role) === 'broker' && listData.createdBy !== req.user.uid) {
+      console.log(`❌ Broker ${req.user.email} attempted to send verification for list ${listId} owned by ${listData.createdBy}`);
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to send verification links for this list'
+      });
+    }
     
     // Fetch all selected entries
     const entriesSnapshot = await db.collection('identity-entries')
@@ -9297,12 +9484,13 @@ app.post('/api/identity/verify/:token', async (req, res) => {
 /**
  * GET /api/identity/lists/:listId/export
  * Export a list to CSV with all original columns + verification columns
+ * Brokers can only export their own lists
  * 
  * Response: CSV file download
  * 
- * Requirements: 7.3, 7.4, 7.5
+ * Requirements: 7.3, 7.4, 7.5, 11.7
  */
-app.get('/api/identity/lists/:listId/export', requireAuth, requireAdmin, async (req, res) => {
+app.get('/api/identity/lists/:listId/export', requireAuth, requireBrokerOrAdmin, async (req, res) => {
   try {
     const { listId } = req.params;
     
@@ -9319,6 +9507,16 @@ app.get('/api/identity/lists/:listId/export', requireAuth, requireAdmin, async (
     }
     
     const listData = listDoc.data();
+    
+    // Check ownership for brokers
+    if (normalizeRole(req.user.role) === 'broker' && listData.createdBy !== req.user.uid) {
+      console.log(`❌ Broker ${req.user.email} attempted to export list ${listId} owned by ${listData.createdBy}`);
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to export this list'
+      });
+    }
+    
     const originalColumns = listData.columns || [];
     
     // Fetch all entries for this list (no pagination for export)
@@ -9444,6 +9642,7 @@ app.get('/api/identity/lists/:listId/export', requireAuth, requireAdmin, async (
 /**
  * POST /api/identity/entries/:entryId/resend
  * Resend verification link for a single entry
+ * Brokers can only resend for entries in their own lists
  * 
  * This endpoint:
  * - Generates a new secure token (invalidating the old one)
@@ -9457,9 +9656,9 @@ app.get('/api/identity/lists/:listId/export', requireAuth, requireAdmin, async (
  * - resendCount: number - Updated resend count
  * - warning?: string - Warning message if resendCount > 3
  * 
- * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
+ * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 11.7, 11.8
  */
-app.post('/api/identity/entries/:entryId/resend', requireAuth, requireAdmin, async (req, res) => {
+app.post('/api/identity/entries/:entryId/resend', requireAuth, requireBrokerOrAdmin, async (req, res) => {
   try {
     const { entryId } = req.params;
     
@@ -9485,6 +9684,18 @@ app.post('/api/identity/entries/:entryId/resend', requireAuth, requireAdmin, asy
     }
     
     const entry = entryDoc.data();
+    
+    // Check ownership for brokers - verify they own the list this entry belongs to
+    if (normalizeRole(req.user.role) === 'broker') {
+      const listDoc = await db.collection('identity-lists').doc(entry.listId).get();
+      if (!listDoc.exists || listDoc.data().createdBy !== req.user.uid) {
+        console.log(`❌ Broker ${req.user.email} attempted to resend for entry ${entryId} in list owned by ${listDoc.data()?.createdBy}`);
+        return res.status(403).json({
+          error: 'Forbidden',
+          message: 'You do not have permission to resend verification links for this entry'
+        });
+      }
+    }
     
     // Check if entry has already been verified
     if (entry.status === 'verified') {
@@ -9630,6 +9841,7 @@ app.post('/api/identity/entries/:entryId/resend', requireAuth, requireAdmin, asy
 /**
  * GET /api/identity/lists/:listId/activity
  * Get activity logs for a specific list with filtering and pagination
+ * Brokers can only view activity logs for their own lists
  * 
  * Query Parameters:
  * - action: string - Filter by action type (list_created, list_deleted, links_sent, link_resent, verification_success, verification_failed, export_generated)
@@ -9638,9 +9850,9 @@ app.post('/api/identity/entries/:entryId/resend', requireAuth, requireAdmin, asy
  * - page: number - Page number (default: 1)
  * - limit: number - Items per page (default: 50, max: 100)
  * 
- * Requirements: 9.2, 9.3, 9.4
+ * Requirements: 9.2, 9.3, 9.4, 11.7
  */
-app.get('/api/identity/lists/:listId/activity', requireAuth, requireAdmin, async (req, res) => {
+app.get('/api/identity/lists/:listId/activity', requireAuth, requireBrokerOrAdmin, async (req, res) => {
   try {
     const { listId } = req.params;
     const { action, startDate, endDate, page = '1', limit = '50' } = req.query;
@@ -9654,6 +9866,17 @@ app.get('/api/identity/lists/:listId/activity', requireAuth, requireAdmin, async
       return res.status(404).json({
         error: 'List not found',
         message: `No list found with ID: ${listId}`
+      });
+    }
+    
+    const listData = listDoc.data();
+    
+    // Check ownership for brokers
+    if (normalizeRole(req.user.role) === 'broker' && listData.createdBy !== req.user.uid) {
+      console.log(`❌ Broker ${req.user.email} attempted to view activity logs for list ${listId} owned by ${listData.createdBy}`);
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to view activity logs for this list'
       });
     }
     
