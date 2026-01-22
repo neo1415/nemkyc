@@ -224,3 +224,189 @@ The Identity Collection System enables NEM Insurance to collect missing National
 10. THE System SHALL maintain backward compatibility with the existing flexible format (no specific template required)
 11. THE System SHALL allow administrators to toggle between "Template Mode" and "Flexible Mode" in settings or upload dialog
 
+### Requirement 16: Broker Auto-Redirect on Login
+
+**User Story:** As a broker, I want to be automatically redirected to the Identity Collection page with the upload dialog open when I log in, so that I can immediately start my workflow without navigation delays.
+
+#### Acceptance Criteria
+
+1. WHEN a user with "broker" role successfully logs in, THE System SHALL immediately redirect them to `/admin/identity`
+2. WHEN the broker lands on `/admin/identity`, THE System SHALL automatically open the Upload Dialog modal
+3. THE redirect and modal opening SHALL happen with no perceptible lag
+4. THE auto-redirect SHALL only apply to users with "broker" role
+5. WHEN a user with "admin", "compliance", or "super_admin" role logs in, THE System SHALL redirect them to the standard admin dashboard
+6. WHEN a user with "default" or "claims" role logs in, THE System SHALL redirect them to their appropriate dashboard
+
+### Requirement 17: Downloadable Excel Templates with Pre-filled Headers
+
+**User Story:** As a broker, I want to download Excel templates with column headers already filled in, so that I can easily fill in customer data and upload it without formatting errors.
+
+#### Acceptance Criteria
+
+1. THE Identity Collection page SHALL display a "Download Template" button or menu
+2. WHEN a broker clicks "Download Template", THE System SHALL show options for "Individual Template" and "Corporate Template"
+3. WHEN "Individual Template" is selected, THE System SHALL generate an Excel file (.xlsx) with pre-filled headers: Title, First Name, Last Name, Phone Number, Email, Address, Gender, Date of Birth (optional), Occupation (optional), Nationality (optional), Policy Number (required), BVN (required), NIN (optional), CAC (optional)
+4. WHEN "Corporate Template" is selected, THE System SHALL generate an Excel file (.xlsx) with pre-filled headers: Company Name, Company Address, Email Address, Company Type, Phone Number, Policy Number (required), Registration Number (required), Registration Date (required), Business Address (required), CAC (optional)
+5. THE downloaded Excel file SHALL have the first row containing the column headers
+6. THE downloaded Excel file SHALL be named descriptively (e.g., "NEM_Individual_Template.xlsx", "NEM_Corporate_Template.xlsx")
+7. THE System SHALL allow brokers to fill in data under each column header and re-upload the file
+
+### Requirement 18: Enhanced Data Columns
+
+**User Story:** As a broker, I want to provide additional identity and policy information in my uploads, so that the system can perform comprehensive verification and integration with IES.
+
+#### Acceptance Criteria
+
+1. THE Individual template SHALL include a "Policy Number" column (required) for IES handshake/integration
+2. THE Individual template SHALL include a "BVN" column (required) for validation with NIN
+3. THE Individual template SHALL include a "NIN" column (optional) if broker already has it
+4. THE Individual template SHALL include a "CAC" column (optional) if broker already has it
+5. THE Corporate template SHALL include a "Policy Number" column (required) for IES handshake/integration
+6. THE Corporate template SHALL include a "Registration Number" column (required) for corporate verification
+7. THE Corporate template SHALL include a "Registration Date" column (required) for corporate verification
+8. THE Corporate template SHALL include a "Business Address" column (required) for corporate verification
+9. THE Corporate template SHALL include a "CAC" column (optional) if broker already has it
+10. THE System SHALL store all these additional columns in the entry data
+11. THE System SHALL validate that required columns contain non-empty values
+
+### Requirement 19: Bulk Verification Button
+
+**User Story:** As a broker or administrator, I want to verify all unverified entries in bulk, so that I can quickly process entries that already have identity numbers pre-filled.
+
+#### Acceptance Criteria
+
+1. THE list detail page SHALL display a "Verify All Unverified" button
+2. WHEN the "Verify All Unverified" button is clicked, THE System SHALL read all entries in the list
+3. FOR entries with status "pending" or "link_sent" that have NIN pre-filled, THE System SHALL automatically verify the NIN against the appropriate API
+4. FOR entries with status "pending" or "link_sent" that have BVN pre-filled, THE System SHALL automatically verify the BVN against the appropriate API
+5. FOR entries with status "pending" or "link_sent" that have CAC pre-filled, THE System SHALL automatically verify the CAC against the appropriate API
+6. WHEN verification succeeds, THE System SHALL update the entry status to "verified"
+7. WHEN verification fails, THE System SHALL update the entry status to "verification_failed" with detailed error message
+8. THE System SHALL skip entries that are already verified (status = "verified")
+9. THE System SHALL skip entries that do not have NIN, BVN, or CAC pre-filled
+10. THE System SHALL display progress during bulk verification
+11. WHEN bulk verification completes, THE System SHALL display a summary showing: total processed, successful verifications, failed verifications, skipped entries
+
+### Requirement 20: Enhanced Verification Flow with Field-Level Validation
+
+**User Story:** As a customer, I want to see relevant information on the verification page and have my identity validated against multiple fields, so that the verification is comprehensive and accurate.
+
+#### Acceptance Criteria
+
+1. WHEN verification type is NIN (Individual), THE Customer_Page SHALL display: First Name, Last Name, Email, Date of Birth
+2. WHEN verification type is NIN (Individual), THE Customer_Page SHALL provide an input field for NIN
+3. WHEN a customer submits NIN, THE System SHALL validate the NIN against: First Name, Last Name, Date of Birth, Gender, BVN (all in background)
+4. WHEN verification type is CAC (Corporate), THE Customer_Page SHALL display: Company Name, Registration Number, Registration Date
+5. WHEN verification type is CAC (Corporate), THE Customer_Page SHALL provide an input field for CAC
+6. WHEN a customer submits CAC, THE System SHALL validate the CAC against: Company Name, Registration Number, Registration Date, Business Address (all in background)
+7. THE System SHALL perform all field validations without displaying which specific fields are being checked to the customer
+8. WHEN all validations pass, THE System SHALL mark the entry as "verified"
+9. WHEN any validation fails, THE System SHALL mark the entry as "verification_failed" with detailed error information
+
+### Requirement 21: Detailed Error Handling and Notifications
+
+**User Story:** As a customer and as staff, I want to receive clear, actionable error messages when verification fails, so that I know what went wrong and what to do next.
+
+#### Acceptance Criteria
+
+1. WHEN verification fails due to field mismatch, THE Customer_Page SHALL display a user-friendly error message explaining exactly what doesn't match
+2. THE error message SHALL include clear next steps: "Please contact your broker at [broker_email]"
+3. WHEN verification fails, THE System SHALL send an email to the customer with the error message and broker contact information
+4. WHEN verification fails, THE System SHALL send an email notification to staff (Compliance, Admin, Brokers)
+5. THE staff email SHALL include details of what failed (which fields didn't match)
+6. THE staff email SHALL request verification that the data provided is correct
+7. IN the list detail table, THE System SHALL display a new status: "verification_failed"
+8. WHEN a user clicks on a failed entry, THE System SHALL show the detailed failure reason
+9. THE failure reason SHALL use good UI/UX language that is clear and professional
+10. THE System SHALL log all verification failures with detailed error information for audit purposes
+
+### Requirement 22: Selection Logic Enhancement
+
+**User Story:** As a broker or administrator, I want the "Select All" function to intelligently exclude already-verified entries, so that I don't waste resources sending duplicate verification requests.
+
+#### Acceptance Criteria
+
+1. WHEN "Select All" is clicked, THE System SHALL automatically exclude entries with status "verified"
+2. WHEN "Select All" is clicked, THE System SHALL only select entries with status "pending" or "link_sent"
+3. THE System SHALL NOT send verification requests to entries that are already verified
+4. THE System SHALL display a count of selected entries excluding verified entries
+5. WHEN a user manually selects a verified entry, THE System SHALL show a warning: "This entry is already verified"
+6. THE "Request NIN" and "Request CAC" buttons SHALL be disabled if only verified entries are selected
+
+### Requirement 23: Hide Flexible Mode Tab
+
+**User Story:** As a product manager, I want to hide the Flexible Mode tab from the UI while keeping the code, so that we can simplify the interface while maintaining the option to re-enable it later.
+
+#### Acceptance Criteria
+
+1. THE Upload Dialog SHALL NOT display the "Flexible Mode" tab option
+2. THE Upload Dialog SHALL only show "Template Mode" as the upload option
+3. THE System SHALL keep all Flexible Mode code in the codebase without deletion
+4. THE System SHALL add code comments indicating that Flexible Mode is hidden but available
+5. THE System SHALL default to Template Mode for all uploads
+6. THE System SHALL maintain backward compatibility with existing flexible-mode lists
+
+### Requirement 24: NAICOM Compliance Messaging
+
+**User Story:** As a broker, I want to understand the regulatory requirements for collecting customer identity information, so that I can communicate the importance to my clients.
+
+#### Acceptance Criteria
+
+1. THE Upload Dialog SHALL display a professional explanation about NAICOM/NAIIRA regulations
+2. THE explanation SHALL inform brokers that they must provide all required details in accordance with NAICOM/NAIIRA law
+3. THE explanation SHALL use the same regulatory language from the customer verification email
+4. THE explanation SHALL be tuned for brokers (not customers)
+5. THE explanation SHALL be displayed prominently before or during the upload process
+6. THE explanation SHALL include references to KYC requirements and data integrity mandates
+
+### Requirement 25: Onboarding Tour System
+
+**User Story:** As a new broker, I want a guided tour of the Identity Collection system, so that I can quickly learn how to use all the features effectively.
+
+#### Acceptance Criteria
+
+1. THE System SHALL implement a guided onboarding tour using React Joyride library
+2. THE tour SHALL include the following steps in order:
+   - Step 1: Welcome message explaining the identity collection process
+   - Step 2: Highlight "Upload New List" button and explain downloading templates
+   - Step 3: After upload, highlight the list table and explain reviewing data
+   - Step 4: Highlight "Select All" checkbox and explain selecting customers
+   - Step 5: Highlight "Request NIN" / "Request CAC" buttons and explain sending verification requests
+   - Step 6: Highlight status column and explain tracking progress
+   - Step 7: Highlight "Verify All Unverified" button and explain bulk verification
+3. THE System SHALL track tour completion in Firestore (user document field: `onboardingTourCompleted`)
+4. THE tour SHALL only be shown on first login for brokers (when `onboardingTourCompleted` is false or undefined)
+5. THE System SHALL provide a way for users to restart the tour from settings or help menu
+6. THE tour SHALL be dismissible at any time
+7. WHEN a user dismisses the tour, THE System SHALL mark it as completed
+8. THE tour SHALL use NEM Insurance branding colors (#800020)
+9. THE tour SHALL have clear "Next", "Back", and "Skip Tour" buttons
+
+### Requirement 26: API Integration Preparation
+
+**User Story:** As a developer, I want the system to be prepared for future API integrations, so that we can easily connect real verification services when they become available.
+
+#### Acceptance Criteria
+
+1. THE System SHALL document that NIN/BVN verification API will be integrated later
+2. THE System SHALL document that CAC verification API (different from NIN/BVN) will be integrated later
+3. THE System SHALL document that Termii APIs for WhatsApp and SMS notifications will be integrated later
+4. THE System SHALL use mock/demo mode for testing verification flows
+5. THE System SHALL structure verification code to easily swap mock implementations with real API calls
+6. THE System SHALL include configuration flags to enable/disable demo mode
+7. THE System SHALL log all verification attempts for future API integration testing
+
+### Requirement 27: Prevent Duplicate Verifications
+
+**User Story:** As an administrator, I want to prevent duplicate verification requests for already-verified entries, so that we don't waste money on unnecessary API calls.
+
+#### Acceptance Criteria
+
+1. WHEN an entry has status "verified", THE System SHALL NOT allow it to be selected for sending verification emails
+2. WHEN an entry has status "verified", THE System SHALL NOT include it in bulk verification
+3. THE list detail page SHALL clearly mark verified entries with a distinct visual indicator
+4. WHEN a user attempts to select a verified entry, THE System SHALL show a tooltip: "Already verified"
+5. THE "Request NIN" and "Request CAC" buttons SHALL be disabled when only verified entries are selected
+6. THE "Verify All Unverified" button SHALL skip all entries with status "verified"
+7. THE System SHALL log when duplicate verification attempts are prevented for audit purposes
+

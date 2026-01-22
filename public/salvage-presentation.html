@@ -1,0 +1,1480 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEM Insurance - Salvage Management System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+    <style>
+        * {margin: 0;padding: 0;box-sizing: border-box;}
+        body {font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;background: #3d0814;color: #fff;}
+        .presentation {width: 100%;max-width: 1200px;margin: 0 auto;}
+        .slide {width: 100%;min-height: 100vh;padding: 60px;display: none;flex-direction: column;justify-content: center;background: linear-gradient(135deg, #800020 0%, #5c0011 100%);page-break-after: always;}
+        .slide.active {display: flex;}
+        .slide-number {position: absolute;top: 20px;right: 40px;font-size: 14px;opacity: 0.7;}
+        h1 {font-size: 3.5em;margin-bottom: 30px;color: #FFD700;text-align: center;line-height: 1.2;}
+        h2 {font-size: 2.5em;margin-bottom: 30px;color: #FFD700;border-bottom: 3px solid #FFD700;padding-bottom: 15px;}
+        h3 {font-size: 1.8em;margin: 25px 0 15px 0;color: #FFD700;}
+        p, li {font-size: 1.3em;line-height: 1.8;margin-bottom: 15px;}
+        ul {margin-left: 40px;}
+        .highlight {background: rgba(255, 215, 0, 0.2);padding: 3px 8px;border-radius: 4px;color: #FFD700;font-weight: bold;}
+        .stat-box {background: rgba(255, 255, 255, 0.1);padding: 25px;border-radius: 10px;margin: 20px 0;border-left: 5px solid #FFD700;}
+        .two-column {display: grid;grid-template-columns: 1fr 1fr;gap: 40px;margin: 20px 0;}
+        .three-column {display: grid;grid-template-columns: 1fr 1fr 1fr;gap: 30px;margin: 20px 0;}
+        .card {background: rgba(255, 255, 255, 0.1);padding: 25px;border-radius: 10px;border: 2px solid rgba(255, 215, 0, 0.3);}
+        .card h3 {margin-top: 0;font-size: 1.5em;}
+        .card p {font-size: 1.1em;}
+        .controls {position: fixed;bottom: 30px;left: 50%;transform: translateX(-50%);display: flex;gap: 20px;z-index: 1000;}
+        button {padding: 15px 30px;font-size: 16px;background: #FFD700;color: #800020;border: none;border-radius: 5px;cursor: pointer;font-weight: bold;transition: all 0.3s;}
+        button:hover {background: #FFF;transform: scale(1.05);}
+        button:disabled {opacity: 0.5;cursor: not-allowed;}
+        .logo {text-align: center;margin-bottom: 40px;font-size: 2em;color: #FFD700;font-weight: bold;}
+        .subtitle {text-align: center;font-size: 1.5em;color: #FFF;margin-top: -20px;margin-bottom: 40px;}
+        .metric {text-align: center;padding: 20px;background: rgba(255, 215, 0, 0.1);border-radius: 10px;margin: 10px 0;}
+        .metric-value {font-size: 3em;color: #FFD700;font-weight: bold;display: block;}
+        .metric-label {font-size: 1.2em;color: #FFF;display: block;margin-top: 10px;}
+        .comparison {display: flex;justify-content: space-around;margin: 30px 0;}
+        .comparison-item {text-align: center;flex: 1;padding: 20px;}
+        .comparison-item.old {opacity: 0.6;}
+        .arrow {font-size: 3em;color: #FFD700;margin: 0 20px;}
+        @media (max-width: 768px) {
+            .slide {padding: 30px;}
+            h1 {font-size: 2em;}
+            h2 {font-size: 1.8em;}
+            p, li {font-size: 1em;}
+            .two-column, .three-column {grid-template-columns: 1fr;}
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation">
+        <!-- PASTE YOUR COMPLETE 32 SLIDES HERE -->
+        <!-- Start from: <div class="slide active"> -->
+        <!-- End before: </div> (the closing div for presentation) -->
+        
+        <!-- Example slide structure (replace with your 32 slides): -->
+        <div class="slide active">
+            <div class="slide-number">1/32</div>
+            <div class="logo">NEM INSURANCE PLC</div>
+            <h1>SALVAGE MANAGEMENT SYSTEM</h1>
+            <div class="subtitle">Board of Directors Presentation</div>
+            <div class="subtitle" style="margin-top: 50px; font-size: 1.2em;">January 2026</div>
+            <div class="subtitle" style="margin-top: 30px; font-size: 1em; opacity: 0.8;">System Design & Development by Oyeniyi Ademola Daniel</div>
+        </div>
+        
+      <div class="slide active">
+            <div class="slide-number">1/32</div>
+            <div class="logo">NEM INSURANCE PLC</div>
+            <h1>SALVAGE MANAGEMENT SYSTEM</h1>
+            <div class="subtitle">Board of Directors Presentation</div>
+            <div class="subtitle" style="margin-top: 50px; font-size: 1.2em;">January 2026</div>
+            <div class="subtitle" style="margin-top: 30px; font-size: 1em; opacity: 0.8;">System Design & Development by Oyeniyi Ademola Daniel</div>
+        </div>
+
+        <!-- Slide 2: What Is This System -->
+        <div class="slide">
+            <div class="slide-number">2/32</div>
+            <h2>What Is This System?</h2>
+            <p>In simple words: This is a mobile phone application (website that works like an app) that helps NEM Insurance sell damaged cars, electronics, and property faster and for more money.</p>
+            
+            <p style="margin-top: 30px;">When someone's car gets damaged in an accident and we pay their claim, we take the damaged car (called "salvage"). Right now, it takes 14+ days to sell this damaged car and we only get back 22 cents for every ₦1 worth of the car (very low!). Everything is done manually with phone calls, WhatsApp messages, and paperwork. We lose money because the process is slow and vendors don't trust the system.</p>
+            
+            <p style="margin-top: 30px;">This system puts everything online so vendors (people who buy damaged items) can see what's available on their mobile phones, bid on items from anywhere (like eBay), pay instantly with their bank cards, and complete everything in 3 days instead of 14 days.</p>
+        </div>
+
+        <!-- Slide 3: Current Challenges -->
+        <div class="slide">
+            <div class="slide-number">3/32</div>
+            <h2>The Problem Today</h2>
+            <div class="stat-box">
+                <h3>⏱️ Processing Time</h3>
+                <p>14+ days to sell damaged assets</p>
+            </div>
+            <div class="stat-box">
+                <h3>💰 Low Recovery Rate</h3>
+                <p>Only 22 cents recovered for every ₦1 worth of salvage</p>
+            </div>
+            <div class="stat-box">
+                <h3>📱 Manual Process</h3>
+                <p>Phone calls, WhatsApp messages, and paperwork</p>
+            </div>
+            <div class="stat-box">
+                <h3>🤝 Trust Issues</h3>
+                <p>Vendors don't trust the manual system, leading to lower bids</p>
+            </div>
+        </div>
+
+        <!-- Slide 4: The Solution -->
+        <div class="slide">
+            <div class="slide-number">4/32</div>
+            <h2>The Solution: Bottom Line Impact</h2>
+            <div class="comparison">
+                <div class="comparison-item old">
+                    <div class="metric-value">14+</div>
+                    <div class="metric-label">Days to Sell</div>
+                </div>
+                <div class="arrow">→</div>
+                <div class="comparison-item">
+                    <div class="metric-value" style="color: #FFD700;">3</div>
+                    <div class="metric-label">Days to Sell</div>
+                </div>
+            </div>
+            
+            <div class="comparison">
+                <div class="comparison-item old">
+                    <div class="metric-value">22%</div>
+                    <div class="metric-label">Recovery Rate</div>
+                </div>
+                <div class="arrow">→</div>
+                <div class="comparison-item">
+                    <div class="metric-value" style="color: #FFD700;">35-40%</div>
+                    <div class="metric-label">Recovery Rate</div>
+                </div>
+            </div>
+            
+            <div class="comparison">
+                <div class="comparison-item old">
+                    <div class="metric-value">100</div>
+                    <div class="metric-label">Cases (6 months)</div>
+                </div>
+                <div class="arrow">→</div>
+                <div class="comparison-item">
+                    <div class="metric-value" style="color: #FFD700;">200+</div>
+                    <div class="metric-label">Cases (6 months)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Key Innovation - AI & Machine Learning -->
+        <div class="slide">
+            <div class="slide-number">5/32</div>
+            <h2>🤖 AI & Machine Learning Capabilities</h2>
+            <div class="stat-box">
+                <h3>Intelligent Damage Assessment</h3>
+                <p>AI analyzes photos of damaged assets in real-time and automatically determines:</p>
+                <ul>
+                    <li><span class="highlight">Damage Severity</span>: Categorizes as Minor (0-20%), Moderate (20-40%), Severe (40-60%), or Total Loss (60%+)</li>
+                    <li><span class="highlight">Estimated Salvage Value</span>: Uses machine learning models trained on historical salvage sales data</li>
+                    <li><span class="highlight">Suggested Reserve Price</span>: Recommends optimal starting bid (typically 70% of estimated value)</li>
+                    <li><span class="highlight">Risk Assessment</span>: Flags items that may be difficult to sell</li>
+                </ul>
+            </div>
+            <div class="stat-box">
+                <h3>Benefits</h3>
+                <ul>
+                    <li>No more guesswork - data-driven pricing decisions</li>
+                    <li>Consistent valuation across all claims adjusters</li>
+                    <li>Faster approvals - Salvage Manager gets AI recommendation instantly</li>
+                    <li>Better recovery rates - optimal pricing attracts more bidders</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 6: GPS & Geolocation -->
+        <div class="slide">
+            <div class="slide-number">6/32</div>
+            <h2>📍 GPS Geolocation Technology</h2>
+            <div class="two-column">
+                <div class="card">
+                    <h3>Automatic Location Tagging</h3>
+                    <p>When Claims Adjusters take photos at accident scenes, the system automatically:</p>
+                    <ul style="font-size: 1em;">
+                        <li>Captures exact GPS coordinates</li>
+                        <li>Records timestamp and location</li>
+                        <li>Creates geofenced digital record</li>
+                        <li>No manual entry needed</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Benefits for Salvage Management</h3>
+                    <ul style="font-size: 1em;">
+                        <li><span class="highlight">Easy Asset Tracking</span>: Know exactly where every salvage item is located</li>
+                        <li><span class="highlight">Vendor Proximity</span>: Vendors can see distance to item and plan pickup</li>
+                        <li><span class="highlight">Fraud Prevention</span>: Verify adjuster was actually at scene</li>
+                        <li><span class="highlight">Route Planning</span>: Winners can map route to pickup location</li>
+                        <li><span class="highlight">Audit Trail</span>: Complete chain of custody from accident to sale</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="stat-box" style="margin-top: 20px;">
+                <p><strong>Real-World Impact:</strong> Vendors can immediately see "Toyota Camry - Ikeja, Lagos (8.5km from you)" and decide if the pickup logistics work for their business. This transparency increases bidder confidence and participation.</p>
+            </div>
+        </div>
+
+        <!-- Slide 7: Offline-First Architecture -->
+        <div class="slide">
+            <div class="slide-number">7/32</div>
+            <h2>📶 Offline-First Technology</h2>
+            <div class="stat-box">
+                <h3>Why This Matters in Nigeria</h3>
+                <p>Network connectivity is unreliable at accident scenes (rural areas, underground parking, remote locations). Traditional apps would fail. Our system works regardless of internet availability.</p>
+            </div>
+            
+            <div class="two-column">
+                <div class="card">
+                    <h3>How It Works</h3>
+                    <ul style="font-size: 1em;">
+                        <li><span class="highlight">Progressive Web App (PWA)</span>: Works like a mobile app but runs in browser</li>
+                        <li><span class="highlight">Local Storage</span>: Data saved on phone first</li>
+                        <li><span class="highlight">Smart Sync</span>: Uploads automatically when connection returns</li>
+                        <li><span class="highlight">Image Compression</span>: Reduces data usage by 80%</li>
+                        <li><span class="highlight">Queue Management</span>: Pending actions saved and executed later</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Real-World Scenario</h3>
+                    <p style="font-size: 1.1em;">Claims Adjuster at accident scene in remote area with poor network:</p>
+                    <ol style="font-size: 0.95em; margin-left: 20px;">
+                        <li>Takes 8 photos of damaged vehicle</li>
+                        <li>Records voice note describing damage</li>
+                        <li>Fills case details in app</li>
+                        <li>Submits case - app saves locally</li>
+                        <li>Drives back to office with WiFi</li>
+                        <li>App auto-uploads everything</li>
+                        <li>Salvage Manager gets notification</li>
+                    </ol>
+                    <p style="margin-top: 15px;"><strong>Result:</strong> <span class="highlight">Zero downtime, zero data loss</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: System Users Overview -->
+        <div class="slide">
+            <div class="slide-number">8/32</div>
+            <h2>Who Uses This System?</h2>
+            <div class="three-column">
+                <div class="card">
+                    <h3>👔 Internal Users</h3>
+                    <ul style="font-size: 0.95em;">
+                        <li>Claims Adjusters</li>
+                        <li>Salvage Manager</li>
+                        <li>Finance Officer</li>
+                        <li>System Administrator</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>👨‍💼 External Users</h3>
+                    <ul style="font-size: 0.95em;">
+                        <li>Verified Vendors (Tier 1)</li>
+                        <li>Premium Vendors (Tier 2)</li>
+                        <li>Auto Parts Dealers</li>
+                        <li>Scrap Merchants</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>📊 Stakeholders</h3>
+                    <ul style="font-size: 0.95em;">
+                        <li>Board of Directors</li>
+                        <li>Risk Management</li>
+                        <li>Compliance Team</li>
+                        <li>Auditors</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Claims Adjusters -->
+        <div class="slide">
+            <div class="slide-number">9/32</div>
+            <h2>1️⃣ Claims Adjusters (Field Staff)</h2>
+            <div class="two-column">
+                <div>
+                    <h3>What They Do</h3>
+                    <p>Take photos of damaged items and upload them from their phones at the accident scene</p>
+                    
+                    <h3 style="margin-top: 30px;">How It Helps Them</h3>
+                    <ul>
+                        <li>Don't have to return to office to upload photos</li>
+                        <li>Work even when there's no internet (offline mode)</li>
+                        <li>Phone camera and GPS auto-tag location</li>
+                        <li>AI tells them damage severity instantly</li>
+                        <li>Create complete case in under 5 minutes</li>
+                        <li>Voice notes for hands-free documentation</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Process Flow</h3>
+                    <ol style="font-size: 1em; margin-left: 20px;">
+                        <li>Open app at accident scene</li>
+                        <li>Tap "Create New Case"</li>
+                        <li>Enter claim reference number</li>
+                        <li>Select asset type (Vehicle/Property/Electronics)</li>
+                        <li>Take 3-10 photos with phone camera</li>
+                        <li>GPS auto-tags location</li>
+                        <li>Record voice note (optional)</li>
+                        <li>AI analyzes and suggests pricing</li>
+                        <li>Submit (works offline)</li>
+                    </ol>
+                    <p style="margin-top: 20px;"><span class="highlight">Time: 5 minutes per case</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: Salvage Manager -->
+        <div class="slide">
+            <div class="slide-number">10/32</div>
+            <h2>2️⃣ Salvage Manager</h2>
+            <div class="two-column">
+                <div>
+                    <h3>What They Do</h3>
+                    <p>Approve or reject salvage items for auction</p>
+                    
+                    <h3 style="margin-top: 30px;">How It Helps Them</h3>
+                    <ul>
+                        <li>Approve cases from mobile phone while traveling</li>
+                        <li>See AI suggestions for pricing (no guesswork)</li>
+                        <li>Get instant alerts when items need approval</li>
+                        <li>Approve/reject in under 12 hours instead of days</li>
+                        <li>View all photos, GPS location, damage assessment</li>
+                        <li>Override AI suggestions if needed</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Mobile Dashboard</h3>
+                    <ul style="font-size: 1em;">
+                        <li>Active auctions: 15</li>
+                        <li>Total bids today: 47</li>
+                        <li>Average recovery rate: 38%</li>
+                        <li>Cases pending approval: 3 🔔</li>
+                        <li>Charts showing trends</li>
+                        <li>Export PDF reports</li>
+                        <li>Share via WhatsApp</li>
+                    </ul>
+                    <p style="margin-top: 20px;"><span class="highlight">One-tap approval from anywhere</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: Vendor Registration - Two-Tier System -->
+        <div class="slide">
+            <div class="slide-number">11/32</div>
+            <h2>3️⃣ Vendors - Registration System</h2>
+            <div class="stat-box">
+                <h3>Annual Vendor Fee</h3>
+                <p>All vendors pay a <span class="highlight">yearly subscription fee</span> to access the platform. Fee amount to be decided by System Administrators based on market dynamics and vendor feedback.</p>
+            </div>
+            <div class="two-column">
+                <div class="card">
+                    <h3>Tier 1: BVN Verified</h3>
+                    <p><strong>Bid Limit:</strong> <span class="highlight">Up to ₦4,999,999</span></p>
+                    <p style="margin-top: 15px;"><strong>Registration Process:</strong></p>
+                    <ol style="font-size: 0.95em; margin-left: 20px; margin-top: 10px;">
+                        <li>Fill basic form (Name, Email, Phone, DOB) OR sign up with Google/Facebook</li>
+                        <li>Verify phone via SMS code (OTP)</li>
+                        <li>Enter BVN (Bank Verification Number)</li>
+                        <li>System auto-verifies BVN matches name, phone, DOB</li>
+                        <li>If matched → Instantly approved!</li>
+                        <li>Gets "Verified BVN ✓" badge</li>
+                    </ol>
+                    <p style="margin-top: 15px;"><span class="highlight">Time: 3 minutes</span></p>
+                    <p style="margin-top: 10px;"><strong>Perfect for:</strong> Small traders, mechanics, informal sector</p>
+                </div>
+                <div class="card">
+                    <h3>Tier 2: Full KYC</h3>
+                    <p><strong>Bid Limit:</strong> <span class="highlight">₦5,000,000 and above</span></p>
+                    <p style="margin-top: 15px;"><strong>Additional Requirements:</strong></p>
+                    <ul style="font-size: 0.95em; margin-top: 10px;">
+                        <li>CAC certificate (business registration)</li>
+                        <li>Tax ID (TIN)</li>
+                        <li>Bank statement</li>
+                        <li>Valid ID (NIN/Driver's license/Passport)</li>
+                    </ul>
+                    <p style="margin-top: 15px;"><strong>Verification:</strong></p>
+                    <ul style="font-size: 0.95em;">
+                        <li>System auto-verifies NIN, bank account, BVN match</li>
+                        <li>Salvage Manager manually reviews documents</li>
+                        <li>Gets "Verified Business ✓" badge</li>
+                    </ul>
+                    <p style="margin-top: 15px;"><span class="highlight">Time: 24 hours</span></p>
+                    <p style="margin-top: 10px;"><strong>Perfect for:</strong> Established businesses, large dealers</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: Bidding Process -->
+        <div class="slide">
+            <div class="slide-number">12/32</div>
+            <h2>How Vendors Bid</h2>
+            <div class="two-column">
+                <div>
+                    <h3>The Process</h3>
+                    <ol style="font-size: 1.1em; margin-left: 20px;">
+                        <li>Open app on mobile phone</li>
+                        <li>See list of active auctions (card layout)</li>
+                        <li>Each card shows:
+                            <ul style="font-size: 0.9em; margin-top: 10px;">
+                                <li>Photo of item</li>
+                                <li>Current bid amount</li>
+                                <li>Countdown timer</li>
+                                <li>"7 vendors watching"</li>
+                                <li>GPS location & distance</li>
+                            </ul>
+                        </li>
+                        <li>Tap item to see full details</li>
+                        <li>Swipe through photos</li>
+                        <li>View AI damage assessment</li>
+                        <li>See location on map</li>
+                        <li>Check bid history graph</li>
+                        <li>Tap "Place Bid"</li>
+                        <li>Enter amount, confirm with SMS code</li>
+                    </ol>
+                    <p style="margin-top: 20px;"><span class="highlight">Total time: Under 1 minute</span></p>
+                </div>
+                <div>
+                    <h3>Gamification Features</h3>
+                    <div class="stat-box">
+                        <p><strong>🕐 Countdown Timer:</strong> Changes to RED when <1 hour left (creates urgency!)</p>
+                    </div>
+                    <div class="stat-box">
+                        <p><strong>⏰ Auto-Extend:</strong> Bid in last 5 minutes? Auction extends by 2 minutes (prevents sniping)</p>
+                    </div>
+                    <div class="stat-box">
+                        <p><strong>📱 Outbid Alerts:</strong> SMS/Push: "You've been outbid! Current bid: ₦550,000"</p>
+                    </div>
+                    <div class="stat-box">
+                        <p><strong>🏆 Leaderboard:</strong> "Top 10 Vendors This Month" with trophy icons</p>
+                    </div>
+                    <div class="stat-box">
+                        <p><strong>⭐ Ratings:</strong> 5-star system (like Uber) - vendors want good ratings</p>
+                    </div>
+                    <div class="stat-box">
+                        <p><strong>👀 Social Proof:</strong> "12 people watching this item" (peer pressure)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: Payment System -->
+        <div class="slide">
+            <div class="slide-number">13/32</div>
+            <h2>4️⃣ Payment System (90% Automated)</h2>
+            <div class="three-column">
+                <div class="card">
+                    <h3>Option 1: Paystack (90%)</h3>
+                    <p style="font-size: 0.95em;"><strong>Instant & Automatic</strong></p>
+                    <ul style="font-size: 0.9em;">
+                        <li>Click "Pay with Paystack"</li>
+                        <li>Pay via:
+                            <ul style="margin-left: 15px;">
+                                <li>Debit/Credit card</li>
+                                <li>Bank transfer</li>
+                                <li>USSD code</li>
+                                <li>Bank account</li>
+                            </ul>
+                        </li>
+                        <li>Confirmed in <10 minutes</li>
+                        <li><span class="highlight">Auto-verified</span> (no Finance Officer needed!)</li>
+                        <li>Pickup authorization sent automatically</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Option 2: Bank Transfer (10%)</h3>
+                    <p style="font-size: 0.95em;"><strong>Manual Verification</strong></p>
+                    <ul style="font-size: 0.9em;">
+                        <li>See company bank details</li>
+                        <li>Pay via mobile banking</li>
+                        <li>Upload payment screenshot</li>
+                        <li>Finance Officer gets notification</li>
+                        <li>Reviews and approves</li>
+                        <li>Takes 2-4 hours</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Option 3: Escrow Wallet</h3>
+                    <p style="font-size: 0.95em;"><strong>For Power Users</strong></p>
+                    <ul style="font-size: 0.9em;">
+                        <li>Pre-load wallet with ₦2M</li>
+                        <li>Win auction for ₦520k</li>
+                        <li>₦520k frozen instantly</li>
+                        <li>After pickup, released to NEM</li>
+                        <li>Remaining ₦1.48M stays for next bid</li>
+                        <li><span class="highlight">Instant payment - zero waiting!</span></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="stat-box" style="margin-top: 20px;">
+                <h3>Late Payment Protection</h3>
+                <ul>
+                    <li>Pay within 24 hours or auction canceled</li>
+                    <li>Vendor suspended for 7 days after 2nd offense</li>
+                    <li>Rating drops (damages reputation)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 14: Finance Officer -->
+        <div class="slide">
+            <div class="slide-number">14/32</div>
+            <h2>5️⃣ Finance Officer (Minimal Work)</h2>
+            <div class="two-column">
+                <div>
+                    <h3>What They Do</h3>
+                    <p>Verify payments from vendors</p>
+                    
+                    <h3 style="margin-top: 30px;">How It Helps Them</h3>
+                    <ul>
+                        <li><span class="highlight">90% of payments auto-verified</span> via Paystack</li>
+                        <li>Only check 10% paid via bank transfer</li>
+                        <li>Verification in 10 minutes vs 4 hours</li>
+                        <li>Dashboard shows pending payments</li>
+                        <li>No more phone calls to confirm payments</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Dashboard</h3>
+                    <ul style="font-size: 1em;">
+                        <li>Total payments today: ₦2.5M</li>
+                        <li>Auto-verified: 23 (90%) ✅</li>
+                        <li>Pending manual verification: 3 (10%) ⏳</li>
+                        <li>Overdue: 1 ⚠️</li>
+                        <li>Pie chart: Paystack vs Bank Transfer</li>
+                        <li>Export daily reconciliation report</li>
+                    </ul>
+                    <p style="margin-top: 20px;"><span class="highlight">Work reduced by 90%</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 15: System Administrator -->
+        <div class="slide">
+            <div class="slide-number">15/32</div>
+            <h2>6️⃣ System Administrator</h2>
+            <div class="two-column">
+                <div>
+                    <h3>What They Do</h3>
+                    <ul>
+                        <li>Create staff accounts</li>
+                        <li>Monitor security</li>
+                        <li>Prevent fraud</li>
+                        <li>Set vendor subscription fees</li>
+                        <li>Manage system settings</li>
+                        <li>Ensure NDPR compliance</li>
+                    </ul>
+                    
+                    <h3 style="margin-top: 30px;">How It Helps Them</h3>
+                    <ul>
+                        <li>Create new staff accounts in <3 minutes</li>
+                        <li>Real-time fraud alerts</li>
+                        <li>Auto-suspend bad vendors after 3 warnings</li>
+                        <li>Complete activity logs (audit trail)</li>
+                        <li>Role-based access control</li>
+                        <li>Flexible fee management</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Fraud Detection Alerts</h3>
+                    <ul style="font-size: 0.95em;">
+                        <li>⚠️ Same person bidding against themselves (same IP)</li>
+                        <li>⚠️ New vendor bids 3x higher than market</li>
+                        <li>⚠️ Multiple accounts using same BVN/phone</li>
+                        <li>⚠️ Suspicious payment patterns</li>
+                        <li>⚠️ Vendor with 3+ failed payments</li>
+                    </ul>
+                    <h3 style="margin-top: 25px;">Activity Logging</h3>
+                    <p style="font-size: 0.9em;">Every action logged:</p>
+                    <ul style="font-size: 0.85em;">
+                        <li>"John Doe logged in from 192.168.1.1 at 2:30 PM via iPhone"</li>
+                        <li>"Jane Smith placed bid of ₦520k on Auction #123 at 3:45 PM"</li>
+                        <li>"Payment verified by Finance Officer Mary at 4:00 PM"</li>
+                    </ul>
+                    <p style="margin-top: 15px; font-size: 0.9em;">Cannot be deleted. Stored for 2 years (NDPR).</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 16: Why Mobile-First -->
+        <div class="slide">
+            <div class="slide-number">16/32</div>
+            <h2>📱 Why Mobile-First? (Not Desktop)</h2>
+            <div class="stat-box">
+                <h3>The Nigerian Reality</h3>
+                <div class="two-column" style="margin-top: 20px;">
+                    <div>
+                        <p><strong>70%+</strong> of Nigerian internet users are mobile-only</p>
+                    </div>
+                    <div>
+                        <p>Vendors are traders, mechanics, scrap dealers - they don't sit at desks</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="two-column" style="margin-top: 30px;">
+                <div class="card">
+                    <h3>What "Mobile-First" Means</h3>
+                    <ul style="font-size: 0.95em;">
+                        <li><span class="highlight">Progressive Web App (PWA)</span>: Works like mobile app but runs in browser (no app store download)</li>
+                        <li><span class="highlight">Offline Mode</span>: Works without internet</li>
+                        <li><span class="highlight">Fast Loading</span>: 2 seconds even on 3G</li>
+                        <li><span class="highlight">Touch-Optimized</span>: Big buttons, easy to tap</li>
+                        <li><span class="highlight">Camera Integration</span>: Take photos in browser</li>
+                        <li><span class="highlight">GPS Auto-Tag</span>: Uses phone location</li>
+                        <li><span class="highlight">Push Notifications</span>: Alerts when browser closed</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Why Not Native App (Initially)?</h3>
+                    <ul style="font-size: 0.95em;">
+                        <li>PWA sufficient for MVP (Month 1-2)</li>
+                        <li>Native apps in Phase 2 (Month 3-6) if needed</li>
+                        <li>Saves development time and cost</li>
+                        <li>No app store approval delays</li>
+                        <li>Updates deploy instantly</li>
+                        <li>Works on ALL phones (Android, iPhone, etc.)</li>
+                    </ul>
+                    <p style="margin-top: 20px; font-size: 0.9em;"><strong>Future:</strong> If demand is high, we'll build native iOS/Android apps in Phase 2</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 17: Security & Fraud Prevention -->
+        <div class="slide">
+            <div class="slide-number">17/32</div>
+            <h2>🔒 Security & Fraud Prevention</h2>
+            <div class="two-column">
+                <div>
+                    <h3>Pattern Detection</h3>
+                    <div class="stat-box">
+                        <p><strong>AI monitors:</strong></p>
+                        <ul style="font-size: 0.95em;">
+                            <li>Same person bidding against themselves (IP tracking)</li>
+                            <li>New vendors with abnormal bid patterns</li>
+                            <li>Multiple accounts using same BVN/phone</li>
+                            <li>Payment defaults and late payers</li>
+                        </ul>
+                    </div>
+                    
+                    <h3 style="margin-top: 25px;">Auto-Suspension</h3>
+                    <div class="stat-box">
+                        <ul style="font-size: 0.95em;">
+                            <li>3 confirmed fraud attempts → 30-day suspension</li>
+                            <li>All bids canceled</li>
+                            <li>Vendor notified immediately</li>
+                            <li>Can appeal to System Admin</li>
+                        </ul>
+                    </div>
+                </div>
+                <div>
+                    <h3>Data Protection (NDPR Compliant)</h3>
+                    <div class="stat-box">
+                        <ul style="font-size: 0.95em;">
+                            <li><span class="highlight">BVN Encryption</span>: Only last 4 digits shown (****7890)</li>
+                            <li><span class="highlight">Password Security</span>: Military-grade encryption (bcrypt)</li>
+                            <li><span class="highlight">Data in Transit</span>: TLS 1.3 encryption</li>
+                            <li><span class="highlight">Activity Logs</span>: Cannot be deleted, stored 2 years</li>
+                            <li><span class="highlight">User Rights</span>: Can export/delete their data</li>
+                            <li><span class="highlight">Consent</span>: Required before data collection</li>
+                        </ul>
+                    </div>
+                    
+                    <h3 style="margin-top: 25px;">Security Standards</h3>
+                    <div class="stat-box">
+                        <ul style="font-size: 0.95em;">
+                            <li>OWASP Top 10 protection</li>
+                            <li>Penetration testing (quarterly)</li>
+                            <li>External security audit (before launch)</li>
+                            <li>99.5% uptime SLA</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 18: Technology Stack -->
+        <div class="slide">
+            <div class="slide-number">18/32</div>
+            <h2>⚙️ Technology Stack (Simple Terms)</h2>
+            <div class="three-column">
+                <div class="card">
+                    <h3>Frontend (What Users See)</h3>
+                    <ul style="font-size: 0.85em;">
+                        <li><strong>React.js</strong>: Modern web framework</li>
+                        <li><strong>PWA/Workbox</strong>: Offline capability</li>
+                        <li><strong>Tailwind CSS</strong>: Beautiful design</li>
+                        <li><strong>WebSockets</strong>: Real-time updates</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Backend (The Brain)</h3>
+                    <ul style="font-size: 0.85em;">
+                        <li><strong>Node.js/Express</strong>: Handles requests</li>
+                        <li><strong>PostgreSQL</strong>: Database storage</li>
+                        <li><strong>Redis</strong>: Fast memory (timers, wallets)</li>
+                        <li><strong>AWS Lagos</strong>: Nigerian hosting</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>AI & ML</h3>
+                    <ul style="font-size: 0.85em;">
+                        <li><strong>Google Cloud Vision</strong>: Damage assessment (₦20/image)</li>
+                        <li><strong>Document AI</strong>: Read IDs/docs (₦15/doc)</li>
+                        <li><strong>Custom ML Models</strong>: Price prediction</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="two-column" style="margin-top: 20px;">
+                <div class="card">
+                    <h3>Third-Party Services</h3>
+                    <ul style="font-size: 0.85em;">
+                        <li><strong>Paystack/Flutterwave</strong>: Payments (₦35/transaction)</li>
+                        <li><strong>Mono/Okra</strong>: BVN verification (₦50/check)</li>
+                        <li><strong>Termii</strong>: SMS (₦4/SMS)</li>
+                        <li><strong>SendGrid</strong>: Email (₦0.50/email)</li>
+                        <li><strong>Cloudflare CDN</strong>: Fast images (₦10k/month)</li>
+                        <li><strong>TinyPNG</strong>: Image compression (₦5k/month)</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Why These Choices?</h3>
+                    <ul style="font-size: 0.85em;">
+                        <li>All proven in Nigerian market</li>
+                        <li>Reliable uptime (99.9%+)</li>
+                        <li>Cost-effective for scale</li>
+                        <li>Easy to maintain and upgrade</li>
+                        <li>Strong developer community</li>
+                        <li>NDPR compliant</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 19: Development Timeline -->
+        <div class="slide">
+            <div class="slide-number">19/32</div>
+            <h2>🗓️ Development Timeline (8 Weeks)</h2>
+            <div class="two-column">
+                <div class="card">
+                    <h3>Week 1-2: Foundation</h3>
+                    <ul style="font-size: 0.9em;">
+                        <li>User registration (email, Google, Facebook)</li>
+                        <li>Phone verification (SMS OTP)</li>
+                        <li>BVN verification (Tier 1)</li>
+                        <li>Mobile-responsive design</li>
+                        <li>Offline mode setup</li>
+                        <li>Activity logging system</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Week 3-4: Core Features</h3>
+                    <ul style="font-size: 0.9em;">
+                        <li>Salvage case creation (mobile)</li>
+                        <li>Photo upload with camera</li>
+                        <li>AI damage assessment integration</li>
+                        <li>GPS auto-tagging</li>
+                        <li>Paystack payment integration</li>
+                        <li>Tier 2 KYC verification</li>
+                        <li>SMS/Email notifications</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="two-column" style="margin-top: 20px;">
+                <div class="card">
+                    <h3>Week 5-6: Bidding & Gamification</h3>
+                    <ul style="font-size: 0.9em;">
+                        <li>Auction creation engine</li>
+                        <li>Real-time bidding system</li>
+                        <li>Countdown timers</li>
+                        <li>Auto-extend feature</li>
+                        <li>Push notifications ("Outbid!")</li>
+                        <li>Vendor leaderboard</li>
+                        <li>5-star ratings system</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Week 7-8: Polish & Launch</h3>
+                    <ul style="font-size: 0.9em;">
+                        <li>Escrow wallet functionality</li>
+                        <li>Fraud detection algorithms</li>
+                        <li>Mobile dashboards (all users)</li>
+                        <li>WhatsApp report sharing</li>
+                        <li>Testing (100+ test cases)</li>
+                        <li>Security audit</li>
+                        <li>Beta launch with 20 vendors</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 20: Future Enhancements -->
+        <div class="slide">
+            <div class="slide-number">20/32</div>
+            <h2>🚀 Future Enhancements (Phase 2 & 3)</h2>
+            <div class="two-column">
+                <div class="card">
+                    <h3>Phase 2 (Month 3-6)</h3>
+                    <p style="font-size: 0.9em; margin-bottom: 15px;"><strong>Cost:</strong> ₦8-12M additional</p>
+                    <ul style="font-size: 0.9em;">
+                        <li>Native iOS/Android apps (if needed)</li>
+                        <li>WhatsApp Business API integration</li>
+                        <li>Advanced analytics (predictive pricing)</li>
+                        <li>Bulk case upload (Excel import)</li>
+                        <li>Multi-language (Yoruba, Igbo, Hausa)</li>
+                        <li>API for third-party integrations</li>
+                        <li>Vendor onboarding videos</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Phase 3 (Month 7-12)</h3>
+                    <p style="font-size: 0.9em; margin-bottom: 15px;"><strong>Cost:</strong> ₦15-20M additional</p>
+                    <ul style="font-size: 0.9em;">
+                        <li>IoT GPS trackers on salvage (real-time tracking)</li>
+                        <li>Blockchain-based bidding (if regulatory requirement)</li>
+                        <li>Multi-currency (USD, GBP for international buyers)</li>
+                        <li>Advanced fraud detection (deep learning AI)</li>
+                        <li>Integration with National Insurance Database</li>
+                        <li>Virtual auction rooms (live video bidding)</li>
+                        <li>Automated pickup scheduling</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="stat-box" style="margin-top: 20px;">
+                <p><strong>Recommendation:</strong> Focus on MVP first (8 weeks). Evaluate PWA performance, then decide on Phase 2/3 based on vendor feedback and usage data.</p>
+            </div>
+        </div>
+
+        <!-- Slide 21: Financial Impact - Current vs New -->
+        <div class="slide">
+            <div class="slide-number">21/32</div>
+            <h2>💰 Financial Impact</h2>
+            <div class="comparison">
+                <div class="comparison-item old">
+                    <h3>Current Manual Process</h3>
+                    <div class="metric">
+                        <span class="metric-value">22%</span>
+                        <span class="metric-label">Recovery Rate</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value">14+</span>
+                        <span class="metric-label">Days Processing</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value">~400</span>
+                        <span class="metric-label">Cases/Year</span>
+                    </div>
+                </div>
+                <div class="arrow">→</div>
+                <div class="comparison-item">
+                    <h3>With New System</h3>
+                    <div class="metric">
+                        <span class="metric-value" style="color: #FFD700;">35-40%</span>
+                        <span class="metric-label">Recovery Rate</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value" style="color: #FFD700;"><3</span>
+                        <span class="metric-label">Days Processing</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value" style="color: #FFD700;">~800</span>
+                        <span class="metric-label">Cases/Year</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-box" style="margin-top: 30px;">
+                <h3>Example: ₦1M Car Claim</h3>
+                <div class="two-column">
+                    <div>
+                        <p><strong>Old:</strong> Salvage sells for ₦220,000</p>
+                        <p>NEM loses ₦780,000</p>
+                    </div>
+                    <div>
+                        <p><strong>New:</strong> Salvage sells for ₦375,000</p>
+                        <p>NEM loses only ₦625,000</p>
+                    </div>
+                </div>
+                <p style="margin-top: 20px; text-align: center;"><span class="highlight">Savings: ₦155,000 per claim (70% better recovery)</span></p>
+            </div>
+        </div>
+
+        <!-- Slide 22: Annual Financial Impact -->
+        <div class="slide">
+            <div class="slide-number">22/32</div>
+            <h2>📊 Annual Financial Impact</h2>
+            <div class="stat-box">
+                <h3>Based on 800 Cases @ ₦500k Average Claim Value</h3>
+                <div class="metric" style="margin: 20px 0;">
+                    <span class="metric-value">₦400M</span>
+                    <span class="metric-label">Total Claim Value (800 × ₦500k)</span>
+                </div>
+            </div>
+            
+            <div class="two-column" style="margin-top: 30px;">
+                <div class="stat-box">
+                    <h3>Old System Recovery (22%)</h3>
+                    <div class="metric">
+                        <span class="metric-value">₦88M</span>
+                        <span class="metric-label">Recovered</span>
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <h3>New System Recovery (37.5%)</h3>
+                    <div class="metric">
+                        <span class="metric-value" style="color: #FFD700;">₦150M</span>
+                        <span class="metric-label">Recovered</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-box" style="margin-top: 30px; background: rgba(255, 215, 0, 0.2); border-left-color: #FFD700;">
+                <h3>Additional Recovery Per Year</h3>
+                <div class="metric">
+                    <span class="metric-value" style="color: #FFD700;">₦62M</span>
+                    <span class="metric-label">Extra Revenue</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 23: ROI & Break-Even -->
+        <div class="slide">
+            <div class="slide-number">23/32</div>
+            <h2>📈 ROI & Break-Even Analysis</h2>
+            <div class="stat-box">
+                <h3>Investment Required</h3>
+                <div class="two-column">
+                    <div>
+                        <p><strong>Development (8 weeks):</strong> ₦7,550,000</p>
+                        <ul style="font-size: 0.9em; margin-top: 10px;">
+                            <li>Frontend/UI/UX: ₦1,850,000</li>
+                            <li>Backend: ₦2,500,000</li>
+                            <li>AI integration: ₦1,300,000</li>
+                            <li>Testing: ₦300,000</li>
+                            <li>Security audit: ₦800,000</li>
+                            <li>Training: ₦800,000</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <p><strong>Year 1 Operations:</strong> ₦950,000</p>
+                        <ul style="font-size: 0.9em; margin-top: 10px;">
+                            <li>Web hosting: ₦500,000</li>
+                            <li>Domain: ₦150,000</li>
+                            <li>Verification APIs: ₦100,000</li>
+                            <li>AI APIs: ₦200,000</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="metric" style="margin-top: 20px;">
+                    <span class="metric-value">₦8,500,000</span>
+                    <span class="metric-label">Total Year 1 Investment</span>
+                </div>
+            </div>
+            
+            <div class="stat-box" style="margin-top: 30px; background: rgba(255, 215, 0, 0.2); border-left-color: #FFD700;">
+                <h3>Returns</h3>
+                <div class="metric">
+                    <span class="metric-value" style="color: #FFD700;">₦62M</span>
+                    <span class="metric-label">Additional Recovery Year 1</span>
+                </div>
+                <div class="metric" style="margin-top: 20px;">
+                    <span class="metric-value" style="color: #FFD700;">206%</span>
+                    <span class="metric-label">ROI in Year 1</span>
+                </div>
+                <div class="metric" style="margin-top: 20px;">
+                    <span class="metric-value" style="color: #FFD700;">5-6 Months</span>
+                    <span class="metric-label">Payback Period</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 24: Year 2+ Projections -->
+        <div class="slide">
+            <div class="slide-number">24/32</div>
+            <h2>💹 Year 2+ Projections</h2>
+            <div class="stat-box">
+                <h3>Recurring Annual Benefit</h3>
+                <p style="font-size: 1.1em; margin-bottom: 20px;">After initial investment is recovered, the system continues generating value:</p>
+                <div class="metric">
+                    <span class="metric-value" style="color: #FFD700;">₦50M+</span>
+                    <span class="metric-label">Annual Recurring Savings</span>
+                </div>
+                <p style="margin-top: 20px; font-size: 0.95em;">(Operational costs: ₦950k/year, Additional recovery: ₦62M/year, Net benefit: ₦61M/year)</p>
+            </div>
+            
+            <div class="two-column" style="margin-top: 30px;">
+                <div class="stat-box">
+                    <h3>Growth Potential</h3>
+                    <ul style="font-size: 0.95em;">
+                        <li>As vendor base grows → more competitive bidding</li>
+                        <li>As AI learns → better price predictions</li>
+                        <li>As trust builds → higher bid amounts</li>
+                        <li>Potential to reach 45-50% recovery rate</li>
+                    </ul>
+                </div>
+                <div class="stat-box">
+                    <h3>Additional Revenue Streams</h3>
+                    <ul style="font-size: 0.95em;">
+                        <li>Vendor annual subscription fees</li>
+                        <li>Premium vendor tier fees</li>
+                        <li>Transaction fees (optional)</li>
+                        <li>API access for third parties</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 25: Risk Assessment -->
+        <div class="slide">
+            <div class="slide-number">25/32</div>
+            <h2>⚠️ Risk Assessment & Mitigation</h2>
+            <div class="two-column">
+                <div class="card">
+                    <h3>Technical Risks</h3>
+                    <div class="stat-box" style="margin-top: 15px;">
+                        <p><strong>Risk:</strong> Paystack/Flutterwave downtime</p>
+                        <p><strong>Solution:</strong> Fallback to bank transfer, payment queue for retry</p>
+                    </div>
+                    <div class="stat-box" style="margin-top: 15px;">
+                        <p><strong>Risk:</strong> Mobile network instability</p>
+                        <p><strong>Solution:</strong> Offline mode, image compression, SMS fallback, CDN</p>
+                    </div>
+                    <div class="stat-box" style="margin-top: 15px;">
+                        <p><strong>Risk:</strong> BVN API rate limits</p>
+                        <p><strong>Solution:</strong> Cache verified BVNs, retry logic, backup provider (Okra)</p>
+                    </div>
+                    <div class="stat-box" style="margin-top: 15px;">
+                        <p><strong>Risk:</strong> Real-time bidding at scale</p>
+                        <p><strong>Solution:</strong> Load testing (100+ concurrent bidders), horizontal scaling</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Business Risks</h3>
+                    <div class="stat-box" style="margin-top: 15px;">
+                        <p><strong>Risk:</strong> Vendor fraud (fake BVNs)</p>
+                        <p><strong>Solution:</strong> BVN API verification, fraud detection, Tier 2 manual review, auto-suspension</p>
+                    </div>
+                    <div class="stat-box" style="margin-top: 15px;">
+                        <p><strong>Risk:</strong> Payment defaults</p>
+                        <p><strong>Solution:</strong> Escrow wallet, 24hr deadline, vendor suspension, reputation system</p>
+                    </div>
+                    <div class="stat-box" style="margin-top: 15px;">
+                        <p><strong>Risk:</strong> Low vendor adoption</p>
+                        <p><strong>Solution:</strong> Simple Tier 1 registration, SMS marketing, referral bonuses, gamification</p>
+                    </div>
+                    <div class="stat-box" style="margin-top: 15px;">
+                        <p><strong>Risk:</strong> Informal traders resistance</p>
+                        <p><strong>Solution:</strong> WhatsApp onboarding videos, in-person training, hybrid model</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 26: Competitive Advantage -->
+        <div class="slide">
+            <div class="slide-number">26/32</div>
+            <h2>🏆 What Makes This Different?</h2>
+            <div class="stat-box">
+                <h3>vs. Current Manual Process</h3>
+                <ul style="font-size: 1.1em;">
+                    <li><span class="highlight">5X faster</span> (3 days vs 14 days)</li>
+                    <li><span class="highlight">70% better recovery</span> (37.5% vs 22%)</li>
+                    <li><span class="highlight">2X more capacity</span> (800 cases vs 400)</li>
+                    <li><span class="highlight">Zero manual payment verification</span> (90% automated)</li>
+                    <li><span class="highlight">Real-time visibility</span> (not WhatsApp messages)</li>
+                </ul>
+            </div>
+            
+            <div class="two-column" style="margin-top: 30px;">
+                <div class="stat-box">
+                    <h3>vs. International Competitors (Mitchell, IAA)</h3>
+                    <ul style="font-size: 0.95em;">
+                        <li>Built for Nigerian market (mobile-first, not desktop)</li>
+                        <li>BVN integration (instant trust)</li>
+                        <li>SMS-heavy (Nigerians check SMS more than email)</li>
+                        <li>Tiered KYC (accommodates informal traders)</li>
+                        <li>Escrow wallet (addresses payment trust issues)</li>
+                        <li>Gamification (leaderboard, countdown timers)</li>
+                        <li>Local payment (Paystack/Flutterwave)</li>
+                    </ul>
+                </div>
+                <div class="stat-box">
+                    <h3>vs. Generic Auction Platforms (eBay, etc.)</h3>
+                    <ul style="font-size: 0.95em;">
+                        <li>Built specifically for insurance salvage</li>
+                        <li>AI damage assessment (not just photos)</li>
+                        <li>GPS tracking of items</li>
+                        <li>NDPR compliant</li>
+                        <li>Fraud detection for bidding patterns</li>
+                        <li>Integration with claims system</li>
+                        <li>Offline capabilities</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 27: Implementation Plan -->
+        <div class="slide">
+            <div class="slide-number">27/32</div>
+            <h2>🎯 Implementation Plan</h2>
+            <div class="stat-box">
+                <h3>Phase 1: Development (Week 1-8)</h3>
+                <ul style="font-size: 1.1em;">
+                    <li>Build core system (registration, bidding, payment)</li>
+                    <li>Integrate AI damage assessment</li>
+                    <li>Setup GPS geolocation</li>
+                    <li>Implement offline mode</li>
+                    <li>Security audit</li>
+                </ul>
+            </div>
+            
+            <div class="stat-box" style="margin-top: 20px;">
+                <h3>Phase 2: Beta Testing (Week 9-10)</h3>
+                <ul style="font-size: 1.1em;">
+                    <li>Recruit 20 vendors for beta</li>
+                    <li>List 10-15 salvage items</li>
+                    <li>Monitor system performance</li>
+                    <li>Gather feedback</li>
+                    <li>Fix bugs and optimize</li>
+                </ul>
+            </div>
+            
+            <div class="stat-box" style="margin-top: 20px;">
+                <h3>Phase 3: Full Launch (Week 11-12)</h3>
+                <ul style="font-size: 1.1em;">
+                    <li>Onboard existing vendor database</li>
+                    <li>SMS marketing campaign</li>
+                    <li>Train all staff members</li>
+                    <li>Go live with all salvage inventory</li>
+                    <li>Monitor and optimize continuously</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 28: Success Metrics -->
+        <div class="slide">
+            <div class="slide-number">28/32</div>
+            <h2>📊 Success Metrics (How We Measure Success)</h2>
+            <div class="two-column">
+                <div class="card">
+                    <h3>Primary KPIs</h3>
+                    <div class="metric">
+                        <span class="metric-label">Recovery Rate</span>
+                        <span class="metric-value" style="font-size: 1.8em;">35-40%</span>
+                        <p style="font-size: 0.8em; margin-top: 10px;">Target (vs 22% current)</p>
+                    </div>
+                    <div class="metric" style="margin-top: 20px;">
+                        <span class="metric-label">Processing Time</span>
+                        <span class="metric-value" style="font-size: 1.8em;"><3 Days</span>
+                        <p style="font-size: 0.8em; margin-top: 10px;">Target (vs 14+ days current)</p>
+                    </div>
+                    <div class="metric" style="margin-top: 20px;">
+                        <span class="metric-label">Cases Processed</span>
+                        <span class="metric-value" style="font-size: 1.8em;">200+</span>
+                        <p style="font-size: 0.8em; margin-top: 10px;">First 6 months (vs 100 current)</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Secondary KPIs</h3>
+                    <ul style="font-size: 0.95em;">
+                        <li><strong>Vendor Registration:</strong> 100+ vendors in 3 months</li>
+                        <li><strong>Payment Automation:</strong> 90%+ via Paystack</li>
+                        <li><strong>AI Accuracy:</strong> 85%+ pricing accuracy</li>
+                        <li><strong>Mobile Usage:</strong> 80%+ transactions via mobile</li>
+                        <li><strong>Vendor Satisfaction:</strong> 4.0+ star rating average</li>
+                        <li><strong>System Uptime:</strong> 99.5%+</li>
+                        <li><strong>Fraud Rate:</strong> <2% of transactions</li>
+                        <li><strong>Average Bids/Auction:</strong> 5+ competitive bids</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 29: Compliance & Legal -->
+        <div class="slide">
+            <div class="slide-number">29/32</div>
+            <h2>⚖️ Compliance & Legal Framework</h2>
+            <div class="stat-box">
+                <h3>NDPR (Nigeria Data Protection Regulation)</h3>
+                <ul style="font-size: 1.1em;">
+                    <li>User consent obtained before data collection</li>
+                    <li>Data export functionality (users can download their data)</li>
+                    <li>Data deletion requests handled within 30 days</li>
+                    <li>BVN encrypted and masked (only last 4 digits shown)</li>
+                    <li>Complete activity logs for audit trail</li>
+                    <li>Privacy policy and terms of service</li>
+                </ul>
+            </div>
+            
+            <div class="two-column" style="margin-top: 30px;">
+                <div class="stat-box">
+                    <h3>Security Standards</h3>
+                    <ul style="font-size: 0.95em;">
+                        <li>OWASP Top 10 protection</li>
+                        <li>Penetration testing (quarterly)</li>
+                        <li>External security audit (before launch)</li>
+                        <li>TLS 1.3 encryption</li>
+                        <li>99.5% uptime SLA</li>
+                        <li>Incident response plan</li>
+                        <li>Regular backup and disaster recovery</li>
+                    </ul>
+                </div>
+                <div class="stat-box">
+                    <h3>Insurance & Legal</h3>
+                    <ul style="font-size: 0.95em;">
+                        <li>Terms of Service (vendor agreement)</li>
+                        <li>Privacy Policy (NDPR compliant)</li>
+                        <li>Auction Rules (transparent bidding)</li>
+                        <li>Payment Terms (clear refund policy)</li>
+                        <li>Dispute Resolution Process</li>
+                        <li>Insurance for cyber liability</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 30: Board Decision Points -->
+        <div class="slide">
+            <div class="slide-number">30/32</div>
+            <h2>🎯 Board Decision Points</h2>
+            <div class="stat-box">
+                <h3>1. Budget Approval</h3>
+                <p style="font-size: 1.2em;">Approve <span class="highlight">₦8,500,000</span> for development and Year 1 operations?</p>
+                <ul style="font-size: 1em; margin-top: 15px;">
+                    <li>Expected ROI: 206% in Year 1</li>
+                    <li>Payback period: 5-6 months</li>
+                    <li>Annual recurring benefit: ₦50M+</li>
+                </ul>
+            </div>
+            
+            <div class="stat-box" style="margin-top: 20px;">
+                <h3>2. Vendor Fee Structure</h3>
+                <p style="font-size: 1.2em;">Implement annual vendor subscription fee?</p>
+                <ul style="font-size: 1em; margin-top: 15px;">
+                    <li>System Administrators will set fee based on market analysis</li>
+                    <li>Can be adjusted quarterly based on adoption rate</li>
+                    <li>Potential additional revenue stream</li>
+                </ul>
+            </div>
+            
+            <div class="stat-box" style="margin-top: 20px;">
+                <h3>3. Phase 2 Planning</h3>
+                <p style="font-size: 1.2em;">Proceed with Phase 2 (native apps) in Month 3-6?</p>
+                <ul style="font-size: 1em; margin-top: 15px;">
+                    <li>Cost: ₦8-12M additional</li>
+                    <li>Decision based on PWA performance</li>
+                    <li>Evaluate after 3 months of operation</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 31: Recommendation -->
+        <div class="slide">
+            <div class="slide-number">31/32</div>
+            <h2>✅ Recommendations</h2>
+            <div class="stat-box" style="background: rgba(255, 215, 0, 0.2); border-left-color: #FFD700;">
+                <h3>1. Approve MVP Development (8 Weeks)</h3>
+                <ul style="font-size: 1.2em;">
+                    <li><span class="highlight">High ROI</span> (206% Year 1)</li>
+                    <li><span class="highlight">Low Risk</span> (technical solutions in place)</li>
+                    <li><span class="highlight">Quick Payback</span> (5-6 months)</li>
+                    <li><span class="highlight">Proven Technology</span> (all components battle-tested)</li>
+                </ul>
+            </div>
+            
+            <div class="stat-box" style="margin-top: 20px; background: rgba(255, 215, 0, 0.2); border-left-color: #FFD700;">
+                <h3>2. Start with Free Vendor Access</h3>
+                <ul style="font-size: 1.2em;">
+                    <li>Build vendor base first (focus on adoption)</li>
+                    <li>Introduce annual subscription fee in Month 7</li>
+                    <li>Set fees based on real usage data</li>
+                    <li>Allow System Admins flexibility to adjust</li>
+                </ul>
+            </div>
+            
+            <div class="stat-box" style="margin-top: 20px; background: rgba(255, 215, 0, 0.2); border-left-color: #FFD700;">
+                <h3>3. Defer Phase 2 Decision</h3>
+                <ul style="font-size: 1.2em;">
+                    <li>Evaluate PWA performance first</li>
+                    <li>Gather vendor feedback on native app need</li>
+                    <li>Decide on Phase 2 after Month 3</li>
+                    <li>Data-driven decision making</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 32: Conclusion -->
+        <div class="slide">
+            <div class="slide-number">32/32</div>
+            <h2>🚀 Conclusion</h2>
+            <div class="stat-box" style="background: rgba(255, 215, 0, 0.2); border-left-color: #FFD700;">
+                <h3>What We're Building</h3>
+                <p style="font-size: 1.3em; line-height: 1.8;">A mobile-first platform that makes selling salvage as easy as selling on WhatsApp, as fast as paying with Paystack, and as trusted as banking with your BVN.</p>
+            </div>
+            
+            <div class="three-column" style="margin-top: 40px;">
+                <div class="metric">
+                    <span class="metric-value">₦8.5M</span>
+                    <span class="metric-label">Investment Required</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-value" style="color: #FFD700;">₦62M</span>
+                    <span class="metric-label">Year 1 Additional Recovery</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-value" style="color: #FFD700;">206%</span>
+                    <span class="metric-label">ROI Year 1</span>
+                </div>
+            </div>
+            
+            <div class="stat-box" style="margin-top: 40px; text-align: center;">
+                <h3 style="font-size: 2em; color: #FFD700;">Transform Salvage Management</h3>
+                <p style="font-size: 1.4em; margin-top: 20px;">From 14-day manual process to 3-day automated system</p>
+                <p style="font-size: 1.4em; margin-top: 15px;">From 22% recovery to 35-40% recovery</p>
+                <p style="font-size: 1.4em; margin-top: 15px;">From 400 cases/year to 800+ cases/year</p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 50px;">
+                <p style="font-size: 1.1em; opacity: 0.7;">Prepared for NEM Insurance PLC Board of Directors</p>
+                <p style="font-size: 1.1em; opacity: 0.7; margin-top: 10px;">System Design & Development: Oyeniyi Ademola Daniel</p>
+                <p style="font-size: 1.1em; opacity: 0.7; margin-top: 10px;">Document Version: 1.0 | January 2026</p>
+            </div>
+        </div>
+        
+    </div>
+
+    <div class="controls">
+        <button id="prevBtn" onclick="changeSlide(-1)">← Previous</button>
+        <button id="downloadPdfBtn" onclick="downloadPDF()">📥 Download PDF</button>
+        <button id="downloadPptxBtn" onclick="downloadPPTX()">📊 Download PPTX</button>
+        <button id="nextBtn" onclick="changeSlide(1)">Next →</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+        const downloadPptxBtn = document.getElementById('downloadPptxBtn');
+
+        function showSlide(n) {
+            slides.forEach(slide => slide.classList.remove('active'));
+            if (n >= slides.length) currentSlide = slides.length - 1;
+            else if (n < 0) currentSlide = 0;
+            else currentSlide = n;
+            slides[currentSlide].classList.add('active');
+            prevBtn.disabled = currentSlide === 0;
+            nextBtn.disabled = currentSlide === slides.length - 1;
+        }
+
+        function changeSlide(direction) {
+            showSlide(currentSlide + direction);
+        }
+
+        async function downloadPDF() {
+            downloadPdfBtn.textContent = '⏳ Preparing...';
+            downloadPdfBtn.disabled = true;
+            downloadPptxBtn.disabled = true;
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
+            document.querySelector('.controls').style.display = 'none';
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({orientation: 'landscape', unit: 'px', format: [1200, 900]});
+
+                for (let i = 0; i < slides.length; i++) {
+                    downloadPdfBtn.textContent = `⏳ Slide ${i + 1}/${slides.length}...`;
+                    slides.forEach(s => s.style.display = 'none');
+                    slides[i].style.display = 'flex';
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    const canvas = await html2canvas(slides[i], {
+                        scale: 1.5, backgroundColor: '#800020', logging: false,
+                        useCORS: true, windowWidth: 1200, windowHeight: 900
+                    });
+                    
+                    if (i > 0) pdf.addPage();
+                    const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                    pdf.addImage(imgData, 'JPEG', 0, 0, 1200, 900);
+                }
+
+                pdf.save('NEM_Insurance_Salvage_Management_System.pdf');
+                downloadPdfBtn.textContent = '✅ Downloaded!';
+                setTimeout(() => {
+                    downloadPdfBtn.textContent = '📥 Download PDF';
+                    downloadPdfBtn.disabled = false;
+                    downloadPptxBtn.disabled = false;
+                }, 2000);
+            } catch (error) {
+                console.error('PDF Error:', error);
+                alert('PDF failed: ' + error.message);
+                downloadPdfBtn.textContent = '📥 Download PDF';
+                downloadPdfBtn.disabled = false;
+                downloadPptxBtn.disabled = false;
+            } finally {
+                document.querySelector('.controls').style.display = 'flex';
+                showSlide(currentSlide);
+                prevBtn.disabled = false;
+                nextBtn.disabled = false;
+            }
+        }
+
+        async function downloadPPTX() {
+            downloadPptxBtn.textContent = '⏳ Preparing...';
+            downloadPdfBtn.disabled = true;
+            downloadPptxBtn.disabled = true;
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
+            document.querySelector('.controls').style.display = 'none';
+
+            try {
+                let pptx = new PptxGenJS();
+                pptx.layout = 'LAYOUT_WIDE';
+                pptx.author = 'Oyeniyi Ademola Daniel';
+                pptx.company = 'NEM Insurance PLC';
+                pptx.title = 'Salvage Management System';
+
+                for (let i = 0; i < slides.length; i++) {
+                    downloadPptxBtn.textContent = `⏳ Slide ${i + 1}/${slides.length}...`;
+                    slides.forEach(s => s.style.display = 'none');
+                    slides[i].style.display = 'flex';
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    const canvas = await html2canvas(slides[i], {
+                        scale: 1.5, backgroundColor: '#800020', logging: false,
+                        useCORS: true, windowWidth: 1200, windowHeight: 900
+                    });
+                    
+                    const imgData = canvas.toDataURL('image/png');
+                    let slide = pptx.addSlide();
+                    slide.background = { color: '800020' };
+                    slide.addImage({data: imgData, x: 0, y: 0, w: '100%', h: '100%'});
+                }
+
+                downloadPptxBtn.textContent = '⏳ Saving file...';
+                
+                // Wait for the file to actually download
+                await pptx.writeFile({ fileName: 'NEM_Insurance_Salvage_Management_System.pptx' });
+                
+                downloadPptxBtn.textContent = '✅ Downloaded!';
+                setTimeout(() => {
+                    downloadPptxBtn.textContent = '📊 Download PPTX';
+                    downloadPdfBtn.disabled = false;
+                    downloadPptxBtn.disabled = false;
+                }, 2000);
+                
+            } catch (error) {
+                console.error('PPTX Error:', error);
+                alert('PPTX failed: ' + error.message);
+                downloadPptxBtn.textContent = '📊 Download PPTX';
+                downloadPdfBtn.disabled = false;
+                downloadPptxBtn.disabled = false;
+            } finally {
+                document.querySelector('.controls').style.display = 'flex';
+                showSlide(currentSlide);
+                prevBtn.disabled = false;
+                nextBtn.disabled = false;
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') changeSlide(-1);
+            if (e.key === 'ArrowRight') changeSlide(1);
+        });
+
+        showSlide(0);
+    </script>
+</body>
+</html>

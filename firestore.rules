@@ -71,6 +71,33 @@ service cloud.firestore {
       return request.resource.data.submittedBy == request.auth.token.email.lower();
     }
 
+    // ========== /users/{userId} ==========
+    
+    match /users/{userId} {
+      // Users can create their own document with basic fields
+      // Role is restricted to 'default' or 'broker' on client-side creation for security
+      allow create: if request.auth != null && 
+        request.auth.uid == userId &&
+        (!("role" in request.resource.data) || request.resource.data.role in ['default', 'broker']);
+
+      // Users can read their own document (needed for tour tracking and profile)
+      // Admins and super admins can read any user document
+      allow read: if request.auth != null && (
+        request.auth.uid == userId || 
+        isAdminOrSuperAdmin()
+      );
+      
+      // Users can update their own document (for tour completion, profile updates, etc.)
+      // Admins can update any user document (for role changes)
+      allow update: if request.auth != null && (
+        request.auth.uid == userId ||
+        isAdminOrSuperAdmin()
+      );
+      
+      // Only super admins can delete user documents
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
     // ========== /userroles/{userId} ==========
 
     match /userroles/{userId} {
@@ -88,8 +115,17 @@ service cloud.firestore {
          get(/databases/$(database)/documents/userroles/$(request.auth.uid)).data.role in ['super admin', 'superAdmin', 'super-admin', 'SuperAdmin'])
       );
       
-      // Only super admins can update or delete
-      allow update, delete: if request.auth != null &&
+      // Users can update their own document (including tour fields)
+      // Super admins can update any document
+      // Tour fields: onboardingTourStep, onboardingTourStartedAt, onboardingTourLastAction, onboardingTourCompleted
+      allow update: if request.auth != null && (
+        request.auth.uid == userId ||
+        (exists(/databases/$(database)/documents/userroles/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/userroles/$(request.auth.uid)).data.role in ['super admin', 'superAdmin', 'super-admin', 'SuperAdmin'])
+      );
+      
+      // Only super admins can delete
+      allow delete: if request.auth != null &&
         exists(/databases/$(database)/documents/userroles/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/userroles/$(request.auth.uid)).data.role in ['super admin', 'superAdmin', 'super-admin', 'SuperAdmin'];
     }

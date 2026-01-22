@@ -62,6 +62,7 @@ import {
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 import { SendConfirmDialog } from '../../components/identity/SendConfirmDialog';
+import { useBrokerTourV2 } from '../../hooks/useBrokerTourV2';
 import type { IdentityEntry, ListDetails, EntryStatus, VerificationType, ActivityLog, ActivityAction } from '../../types/remediation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
@@ -79,6 +80,9 @@ export default function IdentityListDetail({
 }: IdentityListDetailProps = {}) {
   const { listId: paramListId } = useParams<{ listId: string }>();
   const navigate = useNavigate();
+  
+  // Tour integration
+  const { advanceTour } = useBrokerTourV2();
   
   // Use prop listId if provided (embedded mode), otherwise use URL param
   const listId = propListId || paramListId;
@@ -102,6 +106,20 @@ export default function IdentityListDetail({
   const [resendDialogOpen, setResendDialogOpen] = useState(false);
   const [resendEntry, setResendEntry] = useState<IdentityEntry | null>(null);
   const [resending, setResending] = useState(false);
+
+  // Bulk verification state
+  const [bulkVerifying, setBulkVerifying] = useState(false);
+  const [bulkVerifyDialogOpen, setBulkVerifyDialogOpen] = useState(false);
+  const [bulkVerifyResults, setBulkVerifyResults] = useState<{
+    processed: number;
+    verified: number;
+    failed: number;
+    skipped: number;
+  } | null>(null);
+
+  // Failure details dialog state
+  const [failureDetailsOpen, setFailureDetailsOpen] = useState(false);
+  const [selectedFailedEntry, setSelectedFailedEntry] = useState<IdentityEntry | null>(null);
 
   // Activity log state
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
@@ -152,6 +170,9 @@ export default function IdentityListDetail({
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Tour step 3 (Select Entries) should already be active when page loads
+  // No need to advance here - it was advanced before navigation
 
   // Fetch activity logs
   const fetchActivityLogs = useCallback(async () => {
@@ -290,15 +311,29 @@ export default function IdentityListDetail({
           pending: { bgcolor: '#f5f5f5', color: '#666', label: 'Pending' },
           link_sent: { bgcolor: '#800020', color: 'white', label: 'Link Sent' },
           verified: { bgcolor: '#2e7d32', color: 'white', label: 'Verified' },
+          verification_failed: { bgcolor: '#d32f2f', color: 'white', label: 'Verification Failed' },
           failed: { bgcolor: '#d32f2f', color: 'white', label: 'Failed' },
           email_failed: { bgcolor: '#B8860B', color: 'white', label: 'Email Failed' },
         };
         const config = statusConfig[status] || { bgcolor: '#f5f5f5', color: '#666', label: status };
+        
+        // Make verification_failed status clickable to show details
+        const isClickable = status === 'verification_failed';
+        
         return (
           <Chip 
             label={config.label} 
             size="small" 
-            sx={{ bgcolor: config.bgcolor, color: config.color }}
+            sx={{ 
+              bgcolor: config.bgcolor, 
+              color: config.color,
+              cursor: isClickable ? 'pointer' : 'default',
+              '&:hover': isClickable ? { opacity: 0.8 } : {}
+            }}
+            onClick={isClickable ? () => {
+              setSelectedFailedEntry(params.row as IdentityEntry);
+              setFailureDetailsOpen(true);
+            } : undefined}
           />
         );
       },
@@ -489,6 +524,11 @@ export default function IdentityListDetail({
       setSelectedIds({ type: 'include', ids: new Set() });
       fetchData();
       
+      // Advance tour when emails are sent successfully
+      if (result.sent > 0) {
+        advanceTour();
+      }
+      
       // Show success message
       alert(`Sent ${result.sent} verification links. ${result.failed} failed.`);
     } catch (err) {
@@ -521,6 +561,42 @@ export default function IdentityListDetail({
     } catch (err) {
       console.error('Export error:', err);
       setError(err instanceof Error ? err.message : 'Failed to export');
+    }
+  };
+
+  // Handle bulk verification
+  const handleBulkVerify = async () => {
+    if (!listId) return;
+    
+    try {
+      setBulkVerifying(true);
+      setError(null);
+      
+      const response = await fetch(`${API_BASE_URL}/api/identity/lists/${listId}/bulk-verify`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to bulk verify');
+      }
+      
+      const results = await response.json();
+      setBulkVerifyResults(results);
+      setBulkVerifyDialogOpen(true);
+      
+      // Refresh data to show updated statuses
+      await fetchData();
+      
+    } catch (err) {
+      console.error('Bulk verification error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to bulk verify entries');
+    } finally {
+      setBulkVerifying(false);
     }
   };
 
@@ -561,7 +637,7 @@ export default function IdentityListDetail({
             <RefreshIcon />
           </IconButton>
         </Tooltip>
-        <Button startIcon={<ExportIcon />} onClick={handleExport}>
+        <Button startIcon={<ExportIcon />} onClick={handleExport} data-tour="export-button">
           Export
         </Button>
       </Box>
@@ -627,47 +703,77 @@ export default function IdentityListDetail({
             <MenuItem value="pending">Pending</MenuItem>
             <MenuItem value="link_sent">Link Sent</MenuItem>
             <MenuItem value="verified">Verified</MenuItem>
+            <MenuItem value="verification_failed">Verification Failed</MenuItem>
             <MenuItem value="failed">Failed</MenuItem>
             <MenuItem value="email_failed">Email Failed</MenuItem>
           </Select>
         </FormControl>
         <Box sx={{ flexGrow: 1 }} />
         <Button
-          variant="contained"
-          startIcon={<SendIcon />}
-          disabled={selectedCount === 0}
-          onClick={() => handleSendClick('NIN')}
+          variant="outlined"
+          startIcon={bulkVerifying ? <CircularProgress size={20} /> : <RefreshIcon />}
+          disabled={bulkVerifying || !list || list.totalEntries === 0}
+          onClick={handleBulkVerify}
           sx={{ 
-            bgcolor: '#800020', 
-            '&:hover': { bgcolor: '#600018' },
-            color: 'white'
+            borderColor: '#800020',
+            color: '#800020',
+            '&:hover': { 
+              borderColor: '#600018',
+              bgcolor: 'rgba(128, 0, 32, 0.04)'
+            }
           }}
         >
-          Request NIN ({selectedCount})
+          {bulkVerifying ? 'Verifying...' : 'Verify All Unverified'}
         </Button>
-        <Button
-          variant="contained"
-          startIcon={<SendIcon />}
-          disabled={selectedCount === 0}
-          onClick={() => handleSendClick('CAC')}
-          sx={{ 
-            bgcolor: '#B8860B', 
-            '&:hover': { bgcolor: '#8B6914' },
-            color: 'white'
-          }}
-        >
-          Request CAC ({selectedCount})
-        </Button>
+        <Box data-tour="request-buttons" sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="contained"
+            startIcon={<SendIcon />}
+            disabled={selectedCount === 0}
+            onClick={() => handleSendClick('NIN')}
+            sx={{ 
+              bgcolor: '#800020', 
+              '&:hover': { bgcolor: '#600018' },
+              color: 'white'
+            }}
+          >
+            Request NIN ({selectedCount})
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<SendIcon />}
+            disabled={selectedCount === 0}
+            onClick={() => handleSendClick('CAC')}
+            sx={{ 
+              bgcolor: '#B8860B', 
+              '&:hover': { bgcolor: '#8B6914' },
+              color: 'white'
+            }}
+          >
+            Request CAC ({selectedCount})
+          </Button>
+        </Box>
       </Box>
 
       {/* Data Grid */}
-      <Paper sx={{ height: 600 }}>
+      <Paper sx={{ height: 600 }} data-tour="select-entries">
         <DataGrid
           rows={entries}
           columns={buildColumns()}
           checkboxSelection
           rowSelectionModel={selectedIds}
-          onRowSelectionModelChange={(newSelection) => setSelectedIds(newSelection)}
+          onRowSelectionModelChange={(newSelection) => {
+            setSelectedIds(newSelection);
+            // Advance tour when entries are selected
+            const selectedCount = Array.isArray(newSelection) 
+              ? newSelection.length 
+              : (newSelection.type === 'include' ? newSelection.ids.size : entries.length - newSelection.ids.size);
+            
+            if (selectedCount > 0) {
+              advanceTour();
+            }
+          }}
+          isRowSelectable={(params) => params.row.status !== 'verified'}
           paginationMode="server"
           rowCount={total}
           paginationModel={{ page, pageSize }}
@@ -678,6 +784,13 @@ export default function IdentityListDetail({
           pageSizeOptions={[10, 25, 50, 100]}
           loading={loading}
           disableRowSelectionOnClick
+          sx={{
+            '& .MuiDataGrid-row.verified-row': {
+              opacity: 0.6,
+              backgroundColor: '#f5f5f5',
+            },
+          }}
+          getRowClassName={(params) => params.row.status === 'verified' ? 'verified-row' : ''}
         />
       </Paper>
 
@@ -733,6 +846,78 @@ export default function IdentityListDetail({
             }}
           >
             {resending ? 'Sending...' : 'Resend Link'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk Verification Results Dialog */}
+      <Dialog
+        open={bulkVerifyDialogOpen}
+        onClose={() => setBulkVerifyDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Bulk Verification Complete</DialogTitle>
+        <DialogContent>
+          {bulkVerifyResults && (
+            <Box>
+              <DialogContentText sx={{ mb: 2 }}>
+                The bulk verification process has completed. Here are the results:
+              </DialogContentText>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body1">Processed:</Typography>
+                  <Chip label={bulkVerifyResults.processed} color="primary" />
+                </Box>
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body1">Successfully Verified:</Typography>
+                  <Chip label={bulkVerifyResults.verified} color="success" />
+                </Box>
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body1">Failed:</Typography>
+                  <Chip label={bulkVerifyResults.failed} color="error" />
+                </Box>
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body1">Skipped:</Typography>
+                  <Chip label={bulkVerifyResults.skipped} color="default" />
+                </Box>
+              </Box>
+              
+              {bulkVerifyResults.verified > 0 && (
+                <Alert severity="success" sx={{ mt: 2 }}>
+                  {bulkVerifyResults.verified} {bulkVerifyResults.verified === 1 ? 'entry has' : 'entries have'} been successfully verified!
+                </Alert>
+              )}
+              
+              {bulkVerifyResults.failed > 0 && (
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  {bulkVerifyResults.failed} {bulkVerifyResults.failed === 1 ? 'entry' : 'entries'} failed verification. Check the status column for details.
+                </Alert>
+              )}
+              
+              {bulkVerifyResults.skipped > 0 && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  {bulkVerifyResults.skipped} {bulkVerifyResults.skipped === 1 ? 'entry was' : 'entries were'} skipped (already verified or missing identity data).
+                </Alert>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setBulkVerifyDialogOpen(false)} 
+            variant="contained"
+            sx={{ 
+              bgcolor: '#800020', 
+              '&:hover': { bgcolor: '#600018' },
+              color: 'white'
+            }}
+          >
+            Close
           </Button>
         </DialogActions>
       </Dialog>
@@ -864,6 +1049,183 @@ export default function IdentityListDetail({
           )}
         </AccordionDetails>
       </Accordion>
+
+      {/* Failure Details Dialog */}
+      <Dialog
+        open={failureDetailsOpen}
+        onClose={() => setFailureDetailsOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <ErrorIcon color="error" />
+          Verification Failure Details
+        </DialogTitle>
+        <DialogContent>
+          {selectedFailedEntry && (
+            <Box>
+              <Alert severity="error" sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Verification Failed
+                </Typography>
+                <Typography variant="body2">
+                  The identity verification for this customer did not succeed. Please review the details below.
+                </Typography>
+              </Alert>
+
+              {/* Customer Information */}
+              <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                <Typography variant="subtitle2" color="primary" gutterBottom>
+                  Customer Information
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1 }}>
+                  {selectedFailedEntry.displayName && (
+                    <Box>
+                      <Typography variant="caption" color="textSecondary">Name</Typography>
+                      <Typography variant="body2">{selectedFailedEntry.displayName}</Typography>
+                    </Box>
+                  )}
+                  <Box>
+                    <Typography variant="caption" color="textSecondary">Email</Typography>
+                    <Typography variant="body2">{selectedFailedEntry.email}</Typography>
+                  </Box>
+                  {selectedFailedEntry.policyNumber && (
+                    <Box>
+                      <Typography variant="caption" color="textSecondary">Policy Number</Typography>
+                      <Typography variant="body2">{selectedFailedEntry.policyNumber}</Typography>
+                    </Box>
+                  )}
+                  {selectedFailedEntry.verificationType && (
+                    <Box>
+                      <Typography variant="caption" color="textSecondary">Verification Type</Typography>
+                      <Typography variant="body2">{selectedFailedEntry.verificationType}</Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Paper>
+
+              {/* Failure Reason */}
+              {selectedFailedEntry.verificationDetails?.failureReason && (
+                <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: '#fff3e0' }}>
+                  <Typography variant="subtitle2" color="error" gutterBottom>
+                    Reason for Failure
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    {selectedFailedEntry.verificationDetails.failureReason}
+                  </Typography>
+                </Paper>
+              )}
+
+              {/* Failed Fields (if available) */}
+              {selectedFailedEntry.verificationDetails?.failedFields && 
+               selectedFailedEntry.verificationDetails.failedFields.length > 0 && (
+                <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                  <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                    Fields That Did Not Match
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                    {selectedFailedEntry.verificationDetails.failedFields.map((field, idx) => (
+                      <Chip 
+                        key={idx}
+                        label={field}
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                      />
+                    ))}
+                  </Box>
+                </Paper>
+              )}
+
+              {/* Validation Details */}
+              {selectedFailedEntry.verificationDetails?.fieldsValidated && 
+               selectedFailedEntry.verificationDetails.fieldsValidated.length > 0 && (
+                <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                  <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                    Fields Validated
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                    {selectedFailedEntry.verificationDetails.fieldsValidated.map((field, idx) => (
+                      <Chip 
+                        key={idx}
+                        label={field}
+                        size="small"
+                        variant="outlined"
+                      />
+                    ))}
+                  </Box>
+                </Paper>
+              )}
+
+              {/* Attempt Information */}
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                  Attempt Information
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1 }}>
+                  <Box>
+                    <Typography variant="caption" color="textSecondary">Total Attempts</Typography>
+                    <Typography variant="body2">{selectedFailedEntry.verificationAttempts || 0}</Typography>
+                  </Box>
+                  {selectedFailedEntry.lastAttemptAt && (
+                    <Box>
+                      <Typography variant="caption" color="textSecondary">Last Attempt</Typography>
+                      <Typography variant="body2">
+                        {new Date(selectedFailedEntry.lastAttemptAt).toLocaleString()}
+                      </Typography>
+                    </Box>
+                  )}
+                  {selectedFailedEntry.lastAttemptError && (
+                    <Box sx={{ gridColumn: '1 / -1' }}>
+                      <Typography variant="caption" color="textSecondary">Last Error</Typography>
+                      <Typography variant="body2" color="error">
+                        {selectedFailedEntry.lastAttemptError}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Paper>
+
+              {/* Next Steps */}
+              <Alert severity="info" sx={{ mt: 3 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Recommended Next Steps
+                </Typography>
+                <Typography variant="body2" component="div">
+                  <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                    <li>Verify that the customer information in your records is accurate</li>
+                    <li>Contact the customer to confirm their identity details</li>
+                    <li>If the information is correct, you may resend the verification link</li>
+                    <li>Consider reaching out to compliance for assistance if the issue persists</li>
+                  </ul>
+                </Typography>
+              </Alert>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFailureDetailsOpen(false)}>
+            Close
+          </Button>
+          {selectedFailedEntry && selectedFailedEntry.status === 'verification_failed' && (
+            <Button
+              variant="contained"
+              startIcon={<ResendIcon />}
+              onClick={() => {
+                setFailureDetailsOpen(false);
+                handleResendClick(selectedFailedEntry);
+              }}
+              sx={{ 
+                bgcolor: '#800020', 
+                '&:hover': { bgcolor: '#600018' },
+                color: 'white'
+              }}
+            >
+              Resend Verification Link
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

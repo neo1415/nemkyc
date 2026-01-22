@@ -24,6 +24,12 @@ const multer = require("multer");
 const { getStorage } = require("firebase-admin/storage");
 const crypto = require('crypto');
 
+// Import verification error handling utility
+const {
+  createVerificationError,
+  isVerificationError
+} = require('./src/utils/verificationErrors.js');
+
 // ============= LOGGING UTILITY =============
 
 /**
@@ -7969,6 +7975,192 @@ const createIdentityActivityLog = async (logData) => {
 };
 
 /**
+ * Send customer error notification email
+ * Requirements: 21.2, 21.3, 21.6
+ */
+const sendCustomerErrorNotification = async (entry, verificationError) => {
+  try {
+    if (!entry.email) {
+      console.log('⚠️ No email address for customer notification');
+      return false;
+    }
+    
+    const subject = 'Identity Verification Issue - Action Required';
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #800020; color: white; padding: 20px; text-align: center; }
+          .content { padding: 20px; background-color: #f9f9f9; }
+          .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+          .error-box { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
+          .next-steps { background-color: #d1ecf1; border-left: 4px solid #0c5460; padding: 15px; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h2>NEM Insurance</h2>
+            <p>Identity Verification</p>
+          </div>
+          <div class="content">
+            <p>Dear ${entry.displayName || 'Client'},</p>
+            
+            <div class="error-box">
+              <h3>Verification Issue</h3>
+              <p>${verificationError.customerMessage}</p>
+            </div>
+            
+            <p>We apologize for any inconvenience this may cause. This verification is required to comply with regulatory requirements from the National Insurance Commission (NAICOM).</p>
+            
+            <p>Thank you for your cooperation.</p>
+            
+            <p>Yours faithfully,<br/>
+            <strong>NEM Insurance</strong></p>
+          </div>
+          <div class="footer">
+            <p>Email: nemsupport@nem-insurance.com | Telephone: 0201-4489570-2</p>
+            <p>This is an automated message. Please do not reply directly to this email.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    await sendEmail(entry.email, subject, html);
+    console.log(`✅ Customer error notification sent to ${entry.email}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send customer error notification:', error);
+    return false;
+  }
+};
+
+/**
+ * Send staff error notification email
+ * Requirements: 21.4, 21.5, 21.10
+ */
+const sendStaffErrorNotification = async (entry, verificationError, listId) => {
+  try {
+    // Get all users with roles: compliance, admin, broker (who created the list)
+    const usersSnapshot = await db.collection('users').get();
+    const staffEmails = [];
+    
+    // Get list creator
+    let listCreatorEmail = null;
+    try {
+      const listDoc = await db.collection('identity-lists').doc(listId).get();
+      if (listDoc.exists) {
+        const listData = listDoc.data();
+        if (listData.createdBy) {
+          const creatorDoc = await db.collection('users').doc(listData.createdBy).get();
+          if (creatorDoc.exists) {
+            listCreatorEmail = creatorDoc.data().email;
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching list creator:', err);
+    }
+    
+    usersSnapshot.forEach(doc => {
+      const userData = doc.data();
+      const role = userData.role || 'default';
+      
+      // Include compliance, admin, super_admin, and the broker who created this list
+      if (role === 'compliance' || role === 'admin' || role === 'super_admin') {
+        if (userData.email && !staffEmails.includes(userData.email)) {
+          staffEmails.push(userData.email);
+        }
+      } else if (role === 'broker' && userData.email === listCreatorEmail) {
+        if (!staffEmails.includes(userData.email)) {
+          staffEmails.push(userData.email);
+        }
+      }
+    });
+    
+    if (staffEmails.length === 0) {
+      console.log('⚠️ No staff emails found for notification');
+      return false;
+    }
+    
+    const subject = `Verification Failure Alert - ${entry.displayName || 'Customer'}`;
+    
+    // Generate admin portal link
+    const adminPortalLink = `${process.env.VITE_APP_URL || 'http://localhost:5173'}/admin/identity/${listId}`;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #800020; color: white; padding: 20px; text-align: center; }
+          .content { padding: 20px; background-color: #f9f9f9; }
+          .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+          .alert-box { background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0; }
+          .details-box { background-color: #e7f3ff; border-left: 4px solid #2196F3; padding: 15px; margin: 20px 0; }
+          .action-box { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
+          .button { display: inline-block; padding: 10px 20px; background-color: #800020; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+          pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h2>NEM Insurance - Staff Alert</h2>
+            <p>Verification Failure Notification</p>
+          </div>
+          <div class="content">
+            <div class="alert-box">
+              <h3>⚠️ Verification Failed</h3>
+              <p>A customer verification attempt has failed and requires attention.</p>
+            </div>
+            
+            <div class="details-box">
+              <h3>Customer Details</h3>
+              <p><strong>Name:</strong> ${entry.displayName || 'N/A'}</p>
+              <p><strong>Email:</strong> ${entry.email || 'N/A'}</p>
+              <p><strong>Policy Number:</strong> ${entry.policyNumber || 'N/A'}</p>
+              <p><strong>Verification Type:</strong> ${entry.verificationType || 'N/A'}</p>
+            </div>
+            
+            <div class="alert-box">
+              <h3>Technical Details</h3>
+              <pre>${verificationError.staffMessage}</pre>
+            </div>
+            
+            <div class="action-box">
+              <h3>Action Required</h3>
+              <p>Please review the customer's information and verify that the data in the uploaded list matches their official documents.</p>
+              <p>You may need to contact the customer to confirm their information.</p>
+              <a href="${adminPortalLink}" class="button">View in Admin Portal</a>
+            </div>
+          </div>
+          <div class="footer">
+            <p>This is an automated alert from the NEM Insurance Identity Collection System.</p>
+            <p>Email: nemsupport@nem-insurance.com | Telephone: 0201-4489570-2</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    await sendEmail(staffEmails, subject, html);
+    console.log(`✅ Staff error notification sent to ${staffEmails.length} recipients`);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send staff error notification:', error);
+    return false;
+  }
+};
+
+/**
 /**
  * POST /api/identity/lists
  * Create a new identity list from uploaded file data
@@ -9132,14 +9324,82 @@ app.get('/api/identity/verify/:token', async (req, res) => {
     
     console.log(`✅ Token valid for entry ${entryDoc.id}, verificationType: ${entry.verificationType}, name: ${name || 'N/A'}`);
     
+    // Extract enhanced fields for field-level validation display (Requirement 20.1, 20.2, 20.4, 20.5)
+    const entryInfo = {
+      name,
+      policyNumber,
+      verificationType: entry.verificationType,
+      expiresAt: tokenExpiresAt.toISOString()
+    };
+    
+    // For NIN verification: add firstName, lastName, email, dateOfBirth (Requirement 20.1)
+    if (entry.verificationType === 'NIN' && entry.data) {
+      const data = entry.data;
+      
+      // Extract firstName
+      const firstNameFields = ['firstName', 'first_name', 'First Name', 'FirstName', 'FIRST_NAME', 'first', 'First'];
+      for (const field of firstNameFields) {
+        const val = getCleanValue(data[field]);
+        if (val) { entryInfo.firstName = val; break; }
+      }
+      
+      // Extract lastName
+      const lastNameFields = ['lastName', 'last_name', 'Last Name', 'LastName', 'LAST_NAME', 'surname', 'Surname', 'SURNAME', 'last', 'Last'];
+      for (const field of lastNameFields) {
+        const val = getCleanValue(data[field]);
+        if (val) { entryInfo.lastName = val; break; }
+      }
+      
+      // Extract email
+      entryInfo.email = entry.email || null;
+      
+      // Extract dateOfBirth
+      const dobFields = ['dateOfBirth', 'date_of_birth', 'Date of Birth', 'DateOfBirth', 'DOB', 'dob', 'birthDate', 'birth_date'];
+      for (const field of dobFields) {
+        const val = getCleanValue(data[field]);
+        if (val) { entryInfo.dateOfBirth = val; break; }
+      }
+    }
+    
+    // For CAC verification: add companyName, registrationNumber, registrationDate (Requirement 20.4)
+    if (entry.verificationType === 'CAC' && entry.data) {
+      const data = entry.data;
+      
+      // Extract companyName
+      const companyNameFields = [
+        'companyName', 'company_name', 'Company Name', 'CompanyName', 'COMPANY_NAME',
+        'company', 'Company', 'COMPANY',
+        'businessName', 'business_name', 'Business Name', 'BusinessName'
+      ];
+      for (const field of companyNameFields) {
+        const val = getCleanValue(data[field]);
+        if (val) { entryInfo.companyName = val; break; }
+      }
+      
+      // Extract registrationNumber (use stored field first)
+      entryInfo.registrationNumber = entry.registrationNumber || null;
+      if (!entryInfo.registrationNumber) {
+        const regNumFields = ['registrationNumber', 'registration_number', 'Registration Number', 'RegistrationNumber', 'RC_Number', 'rc_number', 'RC Number'];
+        for (const field of regNumFields) {
+          const val = getCleanValue(data[field]);
+          if (val) { entryInfo.registrationNumber = val; break; }
+        }
+      }
+      
+      // Extract registrationDate (use stored field first)
+      entryInfo.registrationDate = entry.registrationDate || null;
+      if (!entryInfo.registrationDate) {
+        const regDateFields = ['registrationDate', 'registration_date', 'Registration Date', 'RegistrationDate', 'dateOfRegistration', 'date_of_registration'];
+        for (const field of regDateFields) {
+          const val = getCleanValue(data[field]);
+          if (val) { entryInfo.registrationDate = val; break; }
+        }
+      }
+    }
+    
     res.json({
       valid: true,
-      entryInfo: {
-        name,
-        policyNumber,
-        verificationType: entry.verificationType,
-        expiresAt: tokenExpiresAt.toISOString()
-      }
+      entryInfo
     });
     
   } catch (error) {
@@ -9160,7 +9420,6 @@ app.get('/api/identity/verify/:token', async (req, res) => {
  * 
  * Body:
  * - identityNumber: string - NIN (11 digits) or CAC/RC number
- * - companyName: string (optional) - Required for CAC verification
  * - demoMode: boolean (optional) - Use demo mode for testing
  * 
  * Response:
@@ -9168,12 +9427,18 @@ app.get('/api/identity/verify/:token', async (req, res) => {
  * - error: string (optional) - Error message if failed
  * - attemptsRemaining: number (optional) - Remaining attempts if failed
  * 
- * Requirements: 6.3, 6.4, 6.5, 6.6, 6.7, 6.8
+ * Field-level validation (Requirement 20.3, 20.6, 20.7, 20.8, 20.9):
+ * - For NIN: validates against firstName, lastName, dateOfBirth, gender, bvn
+ * - For CAC: validates against companyName, registrationNumber, registrationDate, businessAddress
+ * - All validations performed in background (not disclosed to customer)
+ * - Validation results stored in entry.verificationDetails
+ * 
+ * Requirements: 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 20.3, 20.6, 20.7, 20.8, 20.9
  */
 app.post('/api/identity/verify/:token', async (req, res) => {
   try {
     const { token } = req.params;
-    const { identityNumber, companyName, demoMode } = req.body;
+    const { identityNumber, demoMode } = req.body;
     
     if (!token) {
       return res.status(400).json({
@@ -9253,18 +9518,11 @@ app.post('/api/identity/verify/:token', async (req, res) => {
         });
       }
     } else if (verificationType === 'CAC') {
-      // CAC requires both number and company name
+      // CAC requires number (company name will be validated from stored data)
       if (!identityNumber.trim()) {
         return res.status(400).json({
           success: false,
           error: 'Please enter a valid CAC/RC number',
-          attemptsRemaining: maxAttempts - currentAttempts
-        });
-      }
-      if (!companyName || !companyName.trim()) {
-        return res.status(400).json({
-          success: false,
-          error: 'Please enter the registered company name',
           attemptsRemaining: maxAttempts - currentAttempts
         });
       }
@@ -9280,29 +9538,61 @@ app.post('/api/identity/verify/:token', async (req, res) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     });
     
-    // Call Paystack verification API
+    // Call Paystack verification API with field-level validation (Requirement 20.3, 20.6)
     let verificationResult;
     const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
     
+    // Extract fields from entry data for validation
+    const data = entry.data || {};
+    const fieldsValidated = [];
+    const failedFields = [];
+    
     try {
       if (verificationType === 'NIN') {
+        // Extract fields for NIN validation (Requirement 20.3)
+        const firstName = data.firstName || data.first_name || data['First Name'] || data.FirstName || '';
+        const lastName = data.lastName || data.last_name || data['Last Name'] || data.LastName || data.surname || data.Surname || '';
+        const dateOfBirth = data.dateOfBirth || data.date_of_birth || data['Date of Birth'] || data.DOB || data.dob || '';
+        const gender = data.gender || data.Gender || data.GENDER || data.sex || data.Sex || '';
+        const bvn = entry.bvn || data.bvn || data.BVN || '';
+        
+        fieldsValidated.push('firstName', 'lastName', 'dateOfBirth', 'gender', 'bvn');
+        
         // NIN verification via Paystack
         if (demoMode) {
-          console.log('🎭 DEMO MODE: Simulating NIN verification');
+          console.log('🎭 DEMO MODE: Simulating NIN verification with field-level validation');
           await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          // Simulate field validation
+          const mockValidation = {
+            first_name: firstName.toUpperCase(),
+            last_name: lastName.toUpperCase(),
+            dob: dateOfBirth,
+            gender: gender.toUpperCase(),
+            bvn: bvn
+          };
+          
+          // Check if fields match (simple demo logic)
+          const allFieldsMatch = firstName && lastName && dateOfBirth;
+          
           verificationResult = {
-            success: true,
+            success: allFieldsMatch,
             data: {
-              first_name: 'JOHN',
-              last_name: 'DOE',
+              first_name: mockValidation.first_name,
+              last_name: mockValidation.last_name,
               middle_name: 'DEMO',
-              dob: '1990-01-15',
+              dob: mockValidation.dob,
               mobile: '080****5678',
-              nin: identityNumber.substring(0, 4) + '*******'
-            }
+              nin: identityNumber.substring(0, 4) + '*******',
+              gender: mockValidation.gender
+            },
+            fieldsValidated,
+            failedFields: allFieldsMatch ? [] : ['firstName', 'lastName']
           };
         } else if (paystackSecretKey) {
-          console.log(`🔍 Calling Paystack NIN verification for: ${identityNumber.substring(0, 4)}***`);
+          console.log(`🔍 Calling Paystack NIN verification for: ${identityNumber.substring(0, 4)}*** with field validation`);
+          
+          // Call Paystack NIN verification API
           const response = await fetch(`https://api.paystack.co/bank/resolve_bvn/${identityNumber}`, {
             method: 'GET',
             headers: {
@@ -9311,36 +9601,100 @@ app.post('/api/identity/verify/:token', async (req, res) => {
           });
           
           const responseData = await response.json();
-          verificationResult = {
-            success: response.ok && responseData.status,
-            data: responseData.data,
-            message: responseData.message
-          };
+          
+          if (response.ok && responseData.status && responseData.data) {
+            // Perform field-level validation (Requirement 20.3)
+            const apiData = responseData.data;
+            
+            // Validate firstName
+            if (firstName && apiData.first_name) {
+              const match = firstName.toLowerCase().trim() === apiData.first_name.toLowerCase().trim();
+              if (!match) failedFields.push('firstName');
+            }
+            
+            // Validate lastName
+            if (lastName && apiData.last_name) {
+              const match = lastName.toLowerCase().trim() === apiData.last_name.toLowerCase().trim();
+              if (!match) failedFields.push('lastName');
+            }
+            
+            // Validate dateOfBirth
+            if (dateOfBirth && apiData.dob) {
+              const match = dateOfBirth === apiData.dob;
+              if (!match) failedFields.push('dateOfBirth');
+            }
+            
+            // Validate gender
+            if (gender && apiData.gender) {
+              const match = gender.toLowerCase().charAt(0) === apiData.gender.toLowerCase().charAt(0);
+              if (!match) failedFields.push('gender');
+            }
+            
+            // Validate BVN
+            if (bvn && apiData.bvn) {
+              const match = bvn === apiData.bvn;
+              if (!match) failedFields.push('bvn');
+            }
+            
+            verificationResult = {
+              success: failedFields.length === 0,
+              data: apiData,
+              message: failedFields.length > 0 ? 'Some fields did not match' : responseData.message,
+              fieldsValidated,
+              failedFields
+            };
+          } else {
+            verificationResult = {
+              success: false,
+              message: responseData.message || 'Verification failed',
+              fieldsValidated,
+              failedFields: []
+            };
+          }
         } else {
           // No API key - use demo mode
           console.log('⚠️ No Paystack API key configured, using demo mode');
           verificationResult = {
             success: true,
             data: { nin: identityNumber },
-            message: 'Verification simulated (no API key configured)'
+            message: 'Verification simulated (no API key configured)',
+            fieldsValidated,
+            failedFields: []
           };
         }
       } else {
+        // CAC verification with field-level validation (Requirement 20.6)
+        const companyName = data.companyName || data.company_name || data['Company Name'] || data.CompanyName || '';
+        const registrationNumber = entry.registrationNumber || data.registrationNumber || data.registration_number || data['Registration Number'] || '';
+        const registrationDate = entry.registrationDate || data.registrationDate || data.registration_date || data['Registration Date'] || '';
+        const businessAddress = entry.businessAddress || data.businessAddress || data.business_address || data['Business Address'] || data.companyAddress || data.company_address || '';
+        
+        fieldsValidated.push('companyName', 'registrationNumber', 'registrationDate', 'businessAddress');
+        
         // CAC verification via Paystack
         if (demoMode) {
-          console.log('🎭 DEMO MODE: Simulating CAC verification');
+          console.log('🎭 DEMO MODE: Simulating CAC verification with field-level validation');
           await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          // Simulate field validation
+          const allFieldsMatch = companyName && registrationNumber;
+          
           verificationResult = {
-            success: true,
+            success: allFieldsMatch,
             data: {
               company_name: companyName.toUpperCase(),
               rc_number: identityNumber,
               company_type: 'LIMITED LIABILITY COMPANY',
-              status: 'ACTIVE'
-            }
+              status: 'ACTIVE',
+              registration_date: registrationDate,
+              address: businessAddress
+            },
+            fieldsValidated,
+            failedFields: allFieldsMatch ? [] : ['companyName']
           };
         } else if (paystackSecretKey) {
-          console.log(`🔍 Calling Paystack CAC verification for: ${identityNumber}`);
+          console.log(`🔍 Calling Paystack CAC verification for: ${identityNumber} with field validation`);
+          
           const response = await fetch('https://api.paystack.co/identity/cac', {
             method: 'POST',
             headers: {
@@ -9354,18 +9708,60 @@ app.post('/api/identity/verify/:token', async (req, res) => {
           });
           
           const responseData = await response.json();
-          verificationResult = {
-            success: response.ok && responseData.status,
-            data: responseData.data,
-            message: responseData.message
-          };
+          
+          if (response.ok && responseData.status && responseData.data) {
+            // Perform field-level validation (Requirement 20.6)
+            const apiData = responseData.data;
+            
+            // Validate companyName
+            if (companyName && apiData.company_name) {
+              const match = companyName.toLowerCase().trim() === apiData.company_name.toLowerCase().trim();
+              if (!match) failedFields.push('companyName');
+            }
+            
+            // Validate registrationNumber
+            if (registrationNumber && apiData.rc_number) {
+              const match = registrationNumber.toLowerCase().trim() === apiData.rc_number.toLowerCase().trim();
+              if (!match) failedFields.push('registrationNumber');
+            }
+            
+            // Validate registrationDate
+            if (registrationDate && apiData.registration_date) {
+              const match = registrationDate === apiData.registration_date;
+              if (!match) failedFields.push('registrationDate');
+            }
+            
+            // Validate businessAddress
+            if (businessAddress && apiData.address) {
+              const match = businessAddress.toLowerCase().includes(apiData.address.toLowerCase()) || 
+                           apiData.address.toLowerCase().includes(businessAddress.toLowerCase());
+              if (!match) failedFields.push('businessAddress');
+            }
+            
+            verificationResult = {
+              success: failedFields.length === 0,
+              data: apiData,
+              message: failedFields.length > 0 ? 'Some fields did not match' : responseData.message,
+              fieldsValidated,
+              failedFields
+            };
+          } else {
+            verificationResult = {
+              success: false,
+              message: responseData.message || 'Verification failed',
+              fieldsValidated,
+              failedFields: []
+            };
+          }
         } else {
           // No API key - use demo mode
           console.log('⚠️ No Paystack API key configured, using demo mode');
           verificationResult = {
             success: true,
             data: { rc_number: identityNumber, company_name: companyName },
-            message: 'Verification simulated (no API key configured)'
+            message: 'Verification simulated (no API key configured)',
+            fieldsValidated,
+            failedFields: []
           };
         }
       }
@@ -9373,24 +9769,36 @@ app.post('/api/identity/verify/:token', async (req, res) => {
       console.error('❌ Paystack API error:', apiError);
       verificationResult = {
         success: false,
-        message: 'Verification service temporarily unavailable. Please try again.'
+        message: 'Verification service temporarily unavailable. Please try again.',
+        fieldsValidated,
+        failedFields: []
       };
     }
     
     // Handle verification result
     if (verificationResult.success) {
-      // Success - update entry with verified data
+      // Success - update entry with verified data and validation details (Requirement 20.8, 20.9)
       const updateData = {
         status: 'verified',
         verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        // Store verification details (Requirement 20.9)
+        verificationDetails: {
+          fieldsValidated: verificationResult.fieldsValidated || [],
+          failedFields: [],
+          validationSuccess: true
+        }
       };
       
       if (verificationType === 'NIN') {
         updateData.nin = identityNumber;
       } else {
         updateData.cac = identityNumber;
-        updateData.cacCompanyName = companyName;
+        // Store company name from data if available
+        const companyName = data.companyName || data.company_name || data['Company Name'] || data.CompanyName || '';
+        if (companyName) {
+          updateData.cacCompanyName = companyName;
+        }
       }
       
       await entryRef.update(updateData);
@@ -9410,7 +9818,8 @@ app.post('/api/identity/verify/:token', async (req, res) => {
         actorType: 'customer',
         details: {
           verificationType,
-          email: entry.email
+          email: entry.email,
+          fieldsValidated: verificationResult.fieldsValidated
         },
         ipAddress: req.ipData?.masked,
         userAgent: req.headers['user-agent']
@@ -9424,18 +9833,64 @@ app.post('/api/identity/verify/:token', async (req, res) => {
       });
       
     } else {
-      // Failure - check if max attempts reached
+      // Failure - check if max attempts reached and store validation details (Requirement 20.7, 20.8, 20.9, 21.1, 21.7, 21.8, 21.9, 21.10)
       const attemptsRemaining = maxAttempts - newAttemptCount;
       
-      // Update entry with error info
+      // Get broker email for error messages
+      let brokerEmail = null;
+      try {
+        const listDoc = await db.collection('identity-lists').doc(entry.listId).get();
+        if (listDoc.exists) {
+          const listData = listDoc.data();
+          if (listData.createdBy) {
+            const creatorDoc = await db.collection('users').doc(listData.createdBy).get();
+            if (creatorDoc.exists) {
+              brokerEmail = creatorDoc.data().email;
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching broker email:', err);
+      }
+      
+      // Create structured error using utility (Requirement 21.1, 21.2, 21.9)
+      const verificationError = createVerificationError(
+        verificationResult.failedFields && verificationResult.failedFields.length > 0 
+          ? 'field_mismatch' 
+          : 'api_error',
+        {
+          failedFields: verificationResult.failedFields || [],
+          brokerEmail,
+          customerName: entry.displayName,
+          policyNumber: entry.policyNumber,
+          verificationType,
+          technicalDetails: {
+            attemptNumber: newAttemptCount,
+            maxAttempts,
+            apiMessage: verificationResult.message,
+            fieldsValidated: verificationResult.fieldsValidated
+          }
+        }
+      );
+      
+      // Update entry with error info and validation details (Requirement 21.7, 21.8, 21.10)
       const updateData = {
         lastAttemptError: verificationResult.message || 'Verification failed',
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        // Store verification details (Requirement 20.9, 21.8, 21.9)
+        verificationDetails: {
+          fieldsValidated: verificationResult.fieldsValidated || [],
+          failedFields: verificationResult.failedFields || [],
+          failureReason: verificationError.message,
+          validationSuccess: false,
+          customerMessage: verificationError.customerMessage,
+          staffMessage: verificationError.staffMessage
+        }
       };
       
       if (attemptsRemaining <= 0) {
-        // Max attempts reached - mark as failed
-        updateData.status = 'failed';
+        // Max attempts reached - mark as verification_failed (Requirement 21.7)
+        updateData.status = 'verification_failed';
         
         // Update list statistics
         const listRef = db.collection('identity-lists').doc(entry.listId);
@@ -9443,9 +9898,24 @@ app.post('/api/identity/verify/:token', async (req, res) => {
           failedCount: admin.firestore.FieldValue.increment(1),
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
+      } else {
+        // Still have attempts remaining - mark as verification_failed but allow retry
+        updateData.status = 'verification_failed';
       }
       
       await entryRef.update(updateData);
+      
+      // Send error notifications (Requirement 21.2, 21.3, 21.4, 21.5, 21.6)
+      try {
+        // Send customer notification
+        await sendCustomerErrorNotification(entry, verificationError);
+        
+        // Send staff notification
+        await sendStaffErrorNotification(entry, verificationError, entry.listId);
+      } catch (emailError) {
+        console.error('❌ Error sending error notifications:', emailError);
+        // Don't fail the request if email sending fails
+      }
       
       // Create activity log
       await createIdentityActivityLog({
@@ -9457,7 +9927,10 @@ app.post('/api/identity/verify/:token', async (req, res) => {
           verificationType,
           email: entry.email,
           error: verificationResult.message,
-          attemptsRemaining
+          attemptsRemaining,
+          fieldsValidated: verificationResult.fieldsValidated,
+          failedFields: verificationResult.failedFields,
+          errorType: verificationError.errorType
         },
         ipAddress: req.ipData?.masked,
         userAgent: req.headers['user-agent']
@@ -9465,9 +9938,10 @@ app.post('/api/identity/verify/:token', async (req, res) => {
       
       console.log(`❌ Verification failed for entry ${entryDoc.id}, attempts remaining: ${attemptsRemaining}`);
       
+      // Return user-friendly error message (Requirement 21.1, 21.2)
       return res.json({
         success: false,
-        error: verificationResult.message || 'Verification failed. Please check your information and try again.',
+        error: verificationError.customerMessage,
         attemptsRemaining: Math.max(0, attemptsRemaining)
       });
     }
@@ -9951,6 +10425,382 @@ app.get('/api/identity/lists/:listId/activity', requireAuth, requireBrokerOrAdmi
     console.error('❌ Error fetching activity logs:', error);
     res.status(500).json({
       error: 'Failed to fetch activity logs',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/identity/lists/:listId/bulk-verify
+ * Bulk verify all unverified entries that have NIN, BVN, or CAC pre-filled
+ * Brokers can only bulk verify entries in their own lists
+ * 
+ * This endpoint:
+ * - Queries entries with status 'pending' or 'link_sent'
+ * - Filters entries that have NIN, BVN, or CAC pre-filled
+ * - For each entry, calls appropriate verification API
+ * - Updates entry status based on result
+ * - Skips entries that are already verified
+ * - Returns summary: { processed, verified, failed, skipped }
+ * 
+ * Response:
+ * - processed: number - Total entries processed
+ * - verified: number - Successfully verified entries
+ * - failed: number - Failed verification entries
+ * - skipped: number - Skipped entries (already verified or missing data)
+ * - details: array - Detailed results for each entry
+ * 
+ * Requirements: 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 19.7, 19.8, 19.9, 19.10, 19.11
+ */
+app.post('/api/identity/lists/:listId/bulk-verify', requireAuth, requireBrokerOrAdmin, async (req, res) => {
+  try {
+    const { listId } = req.params;
+    
+    console.log(`🔄 Starting bulk verification for list ${listId}`);
+    
+    // Validate list exists
+    const listDoc = await db.collection('identity-lists').doc(listId).get();
+    
+    if (!listDoc.exists) {
+      return res.status(404).json({
+        error: 'List not found',
+        message: `No list found with ID: ${listId}`
+      });
+    }
+    
+    const listData = listDoc.data();
+    
+    // Check ownership for brokers
+    if (normalizeRole(req.user.role) === 'broker' && listData.createdBy !== req.user.uid) {
+      console.log(`❌ Broker ${req.user.email} attempted to bulk verify list ${listId} owned by ${listData.createdBy}`);
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to bulk verify entries in this list'
+      });
+    }
+    
+    // Query entries with status 'pending' or 'link_sent'
+    const entriesSnapshot = await db.collection('identity-entries')
+      .where('listId', '==', listId)
+      .where('status', 'in', ['pending', 'link_sent'])
+      .get();
+    
+    console.log(`📋 Found ${entriesSnapshot.size} entries with status 'pending' or 'link_sent'`);
+    
+    // Initialize results
+    const results = {
+      processed: 0,
+      verified: 0,
+      failed: 0,
+      skipped: 0,
+      details: []
+    };
+    
+    // Process each entry
+    for (const entryDoc of entriesSnapshot.docs) {
+      const entry = entryDoc.data();
+      const entryId = entryDoc.id;
+      const entryRef = db.collection('identity-entries').doc(entryId);
+      
+      // Skip if already verified (safety check)
+      if (entry.status === 'verified') {
+        results.skipped++;
+        results.details.push({
+          entryId,
+          email: entry.email,
+          status: 'skipped',
+          reason: 'already_verified'
+        });
+        
+        // Log audit event
+        await createIdentityActivityLog({
+          listId,
+          entryId,
+          action: 'bulk_verify_skipped',
+          actorType: 'admin',
+          actorId: req.user.uid,
+          details: {
+            reason: 'already_verified',
+            email: entry.email
+          },
+          ipAddress: req.ipData?.masked,
+          userAgent: req.headers['user-agent']
+        });
+        
+        continue;
+      }
+      
+      // Check if entry has pre-filled identity data
+      const hasNIN = entry.data?.nin || entry.data?.NIN || entry.nin;
+      const hasBVN = entry.data?.bvn || entry.data?.BVN || entry.bvn;
+      const hasCAC = entry.data?.cac || entry.data?.CAC || entry.cac;
+      
+      // Skip if no identity data pre-filled
+      if (!hasNIN && !hasBVN && !hasCAC) {
+        results.skipped++;
+        results.details.push({
+          entryId,
+          email: entry.email,
+          status: 'skipped',
+          reason: 'no_identity_data'
+        });
+        continue;
+      }
+      
+      // Determine verification type and data
+      let verificationType;
+      let identityNumber;
+      let verificationData = {};
+      
+      if (hasNIN || hasBVN) {
+        // Individual verification (NIN/BVN)
+        verificationType = 'NIN';
+        identityNumber = hasNIN || hasBVN;
+        
+        // Extract additional fields for validation
+        verificationData = {
+          firstName: entry.data?.firstName || entry.data?.['First Name'] || entry.data?.['first name'],
+          lastName: entry.data?.lastName || entry.data?.['Last Name'] || entry.data?.['last name'],
+          dateOfBirth: entry.data?.dateOfBirth || entry.data?.['Date of Birth'] || entry.data?.['date of birth'],
+          gender: entry.data?.gender || entry.data?.Gender,
+          bvn: hasBVN
+        };
+      } else if (hasCAC) {
+        // Corporate verification (CAC)
+        verificationType = 'CAC';
+        identityNumber = hasCAC;
+        
+        // Extract additional fields for validation
+        verificationData = {
+          companyName: entry.data?.companyName || entry.data?.['Company Name'] || entry.data?.['company name'],
+          registrationNumber: entry.data?.registrationNumber || entry.data?.['Registration Number'] || entry.data?.['registration number'],
+          registrationDate: entry.data?.registrationDate || entry.data?.['Registration Date'] || entry.data?.['registration date'],
+          businessAddress: entry.data?.businessAddress || entry.data?.['Business Address'] || entry.data?.['business address']
+        };
+      }
+      
+      // Validate identity number format
+      if (verificationType === 'NIN' && !/^\d{11}$/.test(identityNumber)) {
+        results.skipped++;
+        results.details.push({
+          entryId,
+          email: entry.email,
+          status: 'skipped',
+          reason: 'invalid_nin_format'
+        });
+        continue;
+      }
+      
+      // Call verification API
+      let verificationResult;
+      const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
+      
+      try {
+        results.processed++;
+        
+        if (verificationType === 'NIN') {
+          // NIN verification via Paystack
+          if (paystackSecretKey) {
+            console.log(`🔍 Verifying NIN for entry ${entryId}: ${identityNumber.substring(0, 4)}***`);
+            const response = await fetch(`https://api.paystack.co/bank/resolve_bvn/${identityNumber}`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${paystackSecretKey}`,
+              },
+            });
+            
+            const responseData = await response.json();
+            verificationResult = {
+              success: response.ok && responseData.status,
+              data: responseData.data,
+              message: responseData.message
+            };
+          } else {
+            // No API key - use demo mode
+            console.log(`🎭 DEMO MODE: Simulating NIN verification for entry ${entryId}`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            verificationResult = {
+              success: true,
+              data: { nin: identityNumber },
+              message: 'Verification simulated (no API key configured)'
+            };
+          }
+        } else {
+          // CAC verification via Paystack
+          if (paystackSecretKey) {
+            console.log(`🔍 Verifying CAC for entry ${entryId}: ${identityNumber}`);
+            const response = await fetch('https://api.paystack.co/identity/cac', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${paystackSecretKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ 
+                rc_number: identityNumber, 
+                company_name: verificationData.companyName 
+              }),
+            });
+            
+            const responseData = await response.json();
+            verificationResult = {
+              success: response.ok && responseData.status,
+              data: responseData.data,
+              message: responseData.message
+            };
+          } else {
+            // No API key - use demo mode
+            console.log(`🎭 DEMO MODE: Simulating CAC verification for entry ${entryId}`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            verificationResult = {
+              success: true,
+              data: { rc_number: identityNumber, company_name: verificationData.companyName },
+              message: 'Verification simulated (no API key configured)'
+            };
+          }
+        }
+        
+        // Handle verification result
+        if (verificationResult.success) {
+          // Success - update entry with verified data
+          const updateData = {
+            status: 'verified',
+            verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          };
+          
+          if (verificationType === 'NIN') {
+            updateData.nin = identityNumber;
+          } else {
+            updateData.cac = identityNumber;
+            if (verificationData.companyName) {
+              updateData.cacCompanyName = verificationData.companyName;
+            }
+          }
+          
+          await entryRef.update(updateData);
+          
+          results.verified++;
+          results.details.push({
+            entryId,
+            email: entry.email,
+            status: 'verified',
+            verificationType
+          });
+          
+          // Log success
+          await createIdentityActivityLog({
+            listId,
+            entryId,
+            action: 'verification_success',
+            actorType: 'admin',
+            actorId: req.user.uid,
+            details: {
+              email: entry.email,
+              verificationType,
+              method: 'bulk_verify'
+            },
+            ipAddress: req.ipData?.masked,
+            userAgent: req.headers['user-agent']
+          });
+          
+          console.log(`✅ Entry ${entryId} verified successfully`);
+        } else {
+          // Failure - update entry status
+          await entryRef.update({
+            status: 'verification_failed',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            verificationDetails: {
+              failureReason: verificationResult.message || 'Verification failed',
+              failedAt: admin.firestore.FieldValue.serverTimestamp()
+            }
+          });
+          
+          results.failed++;
+          results.details.push({
+            entryId,
+            email: entry.email,
+            status: 'failed',
+            verificationType,
+            reason: verificationResult.message
+          });
+          
+          // Log failure
+          await createIdentityActivityLog({
+            listId,
+            entryId,
+            action: 'verification_failed',
+            actorType: 'admin',
+            actorId: req.user.uid,
+            details: {
+              email: entry.email,
+              verificationType,
+              error: verificationResult.message,
+              method: 'bulk_verify'
+            },
+            ipAddress: req.ipData?.masked,
+            userAgent: req.headers['user-agent']
+          });
+          
+          console.log(`❌ Entry ${entryId} verification failed: ${verificationResult.message}`);
+        }
+        
+      } catch (apiError) {
+        console.error(`❌ API error for entry ${entryId}:`, apiError);
+        
+        results.failed++;
+        results.details.push({
+          entryId,
+          email: entry.email,
+          status: 'failed',
+          verificationType,
+          reason: 'API error: ' + apiError.message
+        });
+        
+        // Update entry with error
+        await entryRef.update({
+          status: 'verification_failed',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          verificationDetails: {
+            failureReason: 'API error: ' + apiError.message,
+            failedAt: admin.firestore.FieldValue.serverTimestamp()
+          }
+        });
+      }
+    }
+    
+    // Update list statistics
+    const listRef = db.collection('identity-lists').doc(listId);
+    const updatedEntriesSnapshot = await db.collection('identity-entries')
+      .where('listId', '==', listId)
+      .get();
+    
+    let verifiedCount = 0;
+    let pendingCount = 0;
+    let failedCount = 0;
+    
+    updatedEntriesSnapshot.forEach(doc => {
+      const status = doc.data().status;
+      if (status === 'verified') verifiedCount++;
+      else if (status === 'verification_failed' || status === 'failed') failedCount++;
+      else pendingCount++;
+    });
+    
+    await listRef.update({
+      verifiedCount,
+      pendingCount,
+      failedCount,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+    console.log(`✅ Bulk verification complete for list ${listId}`);
+    console.log(`   Processed: ${results.processed}, Verified: ${results.verified}, Failed: ${results.failed}, Skipped: ${results.skipped}`);
+    
+    res.status(200).json(results);
+    
+  } catch (error) {
+    console.error('❌ Error during bulk verification:', error);
+    res.status(500).json({
+      error: 'Bulk verification failed',
       message: error.message
     });
   }

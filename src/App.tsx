@@ -220,6 +220,8 @@ function App() {
              {/* Public Verification Route - Customer Identity Remediation (No Auth Required) */}
              <Route path="verify/:token" element={<CustomerVerificationPage />} />
              
+             {/* Salvage Presentation - Use standalone HTML at /salvage-presentation.html */}
+             
              {/* Protected Routes */}
              <Route path="dashboard" element={
                <ProtectedRoute>

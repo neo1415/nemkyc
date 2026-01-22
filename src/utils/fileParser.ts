@@ -16,7 +16,7 @@ import type { FileParseResult, NameColumns, FileType, TemplateValidationResult }
 
 /**
  * Individual Client Template Schema
- * Requirements: 15.1, 15.2
+ * Requirements: 15.1, 15.2, 18.1, 18.2, 18.3, 18.4
  */
 export interface IndividualTemplateSchema {
   required: string[];
@@ -25,36 +25,47 @@ export interface IndividualTemplateSchema {
 
 export const INDIVIDUAL_TEMPLATE: IndividualTemplateSchema = {
   required: [
+    'policy number',    // Required for IES integration (Requirement 18.1) - FIRST COLUMN
     'title',
     'first name',
     'last name',
     'phone number',
     'email',
     'address',
-    'gender'
+    'gender',
+    'bvn'              // Required for validation with NIN (Requirement 18.2)
   ],
   optional: [
     'date of birth',
     'occupation',
-    'nationality'
+    'nationality',
+    'nin'              // Optional - pre-filled if broker already has it (Requirement 18.3)
   ]
 };
 
 /**
  * Corporate Client Template Schema
- * Requirements: 15.3
+ * Requirements: 15.3, 18.5, 18.6, 18.7, 18.8, 18.9
  */
 export interface CorporateTemplateSchema {
   required: string[];
+  optional: string[];
 }
 
 export const CORPORATE_TEMPLATE: CorporateTemplateSchema = {
   required: [
+    'policy number',           // Required for IES integration (Requirement 18.5) - FIRST COLUMN
     'company name',
     'company address',
     'email address',
     'company type',
-    'phone number'
+    'phone number',
+    'registration number',     // Required for corporate verification (Requirement 18.6)
+    'registration date',       // Required for corporate verification (Requirement 18.7)
+    'business address'         // Required for corporate verification (Requirement 18.8)
+  ],
+  optional: [
+    'cac'                      // Optional - pre-filled if broker already has it (Requirement 18.9)
   ]
 };
 
@@ -253,6 +264,10 @@ export function parseCSV(file: File): Promise<FileParseResult> {
         const detectedFileType = detectFileType(columns);
         const detectedNameColumns = detectNameColumns(columns, detectedFileType);
         const detectedPolicyColumn = detectPolicyColumn(columns);
+        const detectedBVNColumn = detectBVNColumn(columns);
+        const detectedRegistrationNumberColumn = detectRegistrationNumberColumn(columns);
+        const detectedRegistrationDateColumn = detectRegistrationDateColumn(columns);
+        const detectedBusinessAddressColumn = detectBusinessAddressColumn(columns);
 
         resolve({
           columns,
@@ -260,6 +275,10 @@ export function parseCSV(file: File): Promise<FileParseResult> {
           detectedEmailColumn,
           detectedNameColumns,
           detectedPolicyColumn,
+          detectedBVNColumn,
+          detectedRegistrationNumberColumn,
+          detectedRegistrationDateColumn,
+          detectedBusinessAddressColumn,
           detectedFileType,
           totalRows: rows.length
         });
@@ -308,6 +327,10 @@ export function parseExcel(file: File): Promise<FileParseResult> {
         const detectedFileType = detectFileType(columns);
         const detectedNameColumns = detectNameColumns(columns, detectedFileType);
         const detectedPolicyColumn = detectPolicyColumn(columns);
+        const detectedBVNColumn = detectBVNColumn(columns);
+        const detectedRegistrationNumberColumn = detectRegistrationNumberColumn(columns);
+        const detectedRegistrationDateColumn = detectRegistrationDateColumn(columns);
+        const detectedBusinessAddressColumn = detectBusinessAddressColumn(columns);
 
         resolve({
           columns,
@@ -315,6 +338,10 @@ export function parseExcel(file: File): Promise<FileParseResult> {
           detectedEmailColumn,
           detectedNameColumns,
           detectedPolicyColumn,
+          detectedBVNColumn,
+          detectedRegistrationNumberColumn,
+          detectedRegistrationDateColumn,
+          detectedBusinessAddressColumn,
           detectedFileType,
           totalRows: jsonData.length
         });
@@ -569,6 +596,121 @@ export function detectPolicyColumn(columns: string[]): string | null {
 }
 
 /**
+ * Auto-detect BVN column by searching for columns containing "bvn"
+ * Searches from left to right
+ * Requirements: 18.10, 18.11
+ */
+export function detectBVNColumn(columns: string[]): string | null {
+  // First pass: look for exact matches
+  for (const column of columns) {
+    const lowerColumn = column.toLowerCase().replace(/[_\s-]/g, '');
+    if (lowerColumn === 'bvn' || 
+        lowerColumn === 'bvnumber' || 
+        lowerColumn === 'bankverificationnumber') {
+      return column;
+    }
+  }
+  
+  // Second pass: any column containing "bvn"
+  for (const column of columns) {
+    if (column.toLowerCase().includes('bvn')) {
+      return column;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Auto-detect registration number column for corporate entities
+ * Searches for RC number, registration number, CAC number patterns
+ * Requirements: 18.10, 18.11
+ */
+export function detectRegistrationNumberColumn(columns: string[]): string | null {
+  // First pass: look for exact matches
+  for (const column of columns) {
+    const lowerColumn = column.toLowerCase().replace(/[_\s-]/g, '');
+    if (lowerColumn === 'registrationnumber' || 
+        lowerColumn === 'rcnumber' || 
+        lowerColumn === 'rc' ||
+        lowerColumn === 'cacnumber' ||
+        lowerColumn === 'regno') {
+      return column;
+    }
+  }
+  
+  // Second pass: columns containing registration or rc
+  for (const column of columns) {
+    const lowerColumn = column.toLowerCase();
+    if ((lowerColumn.includes('registration') && lowerColumn.includes('number')) ||
+        (lowerColumn.includes('rc') && lowerColumn.includes('number'))) {
+      return column;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Auto-detect registration date column for corporate entities
+ * Searches for registration date, incorporation date patterns
+ * Requirements: 18.10, 18.11
+ */
+export function detectRegistrationDateColumn(columns: string[]): string | null {
+  // First pass: look for exact matches
+  for (const column of columns) {
+    const lowerColumn = column.toLowerCase().replace(/[_\s-]/g, '');
+    if (lowerColumn === 'registrationdate' || 
+        lowerColumn === 'dateofregistration' ||
+        lowerColumn === 'incorporationdate' ||
+        lowerColumn === 'dateofincorporation') {
+      return column;
+    }
+  }
+  
+  // Second pass: columns containing registration/incorporation and date
+  for (const column of columns) {
+    const lowerColumn = column.toLowerCase();
+    if ((lowerColumn.includes('registration') && lowerColumn.includes('date')) ||
+        (lowerColumn.includes('incorporation') && lowerColumn.includes('date'))) {
+      return column;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Auto-detect business address column for corporate entities
+ * Searches for business address, company address patterns
+ * Requirements: 18.10, 18.11
+ */
+export function detectBusinessAddressColumn(columns: string[]): string | null {
+  // First pass: look for exact matches
+  for (const column of columns) {
+    const lowerColumn = column.toLowerCase().replace(/[_\s-]/g, '');
+    if (lowerColumn === 'businessaddress' || 
+        lowerColumn === 'companyaddress' ||
+        lowerColumn === 'officeaddress' ||
+        lowerColumn === 'registeredaddress') {
+      return column;
+    }
+  }
+  
+  // Second pass: columns containing business/company and address
+  for (const column of columns) {
+    const lowerColumn = column.toLowerCase();
+    if ((lowerColumn.includes('business') && lowerColumn.includes('address')) ||
+        (lowerColumn.includes('company') && lowerColumn.includes('address')) ||
+        (lowerColumn.includes('office') && lowerColumn.includes('address'))) {
+      return column;
+    }
+  }
+  
+  return null;
+}
+
+/**
  * Helper to check if a value is effectively empty (N/A, blank, etc.)
  */
 export function isEmptyValue(val: any): boolean {
@@ -723,4 +865,44 @@ export function extractPolicyNumber(entry: Record<string, any>): string | undefi
   }
   
   return undefined;
+}
+
+/**
+ * Extract BVN from entry data using detected column
+ * Requirements: 18.10, 18.11
+ */
+export function extractBVN(entry: Record<string, any>, bvnColumn: string | null): string | undefined {
+  if (!bvnColumn) return undefined;
+  const value = getCleanValue(entry[bvnColumn]);
+  return value || undefined;
+}
+
+/**
+ * Extract registration number from entry data using detected column
+ * Requirements: 18.10, 18.11
+ */
+export function extractRegistrationNumber(entry: Record<string, any>, regNumberColumn: string | null): string | undefined {
+  if (!regNumberColumn) return undefined;
+  const value = getCleanValue(entry[regNumberColumn]);
+  return value || undefined;
+}
+
+/**
+ * Extract registration date from entry data using detected column
+ * Requirements: 18.10, 18.11
+ */
+export function extractRegistrationDate(entry: Record<string, any>, regDateColumn: string | null): string | undefined {
+  if (!regDateColumn) return undefined;
+  const value = getCleanValue(entry[regDateColumn]);
+  return value || undefined;
+}
+
+/**
+ * Extract business address from entry data using detected column
+ * Requirements: 18.10, 18.11
+ */
+export function extractBusinessAddress(entry: Record<string, any>, businessAddressColumn: string | null): string | undefined {
+  if (!businessAddressColumn) return undefined;
+  const value = getCleanValue(entry[businessAddressColumn]);
+  return value || undefined;
 }

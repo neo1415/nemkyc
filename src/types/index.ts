@@ -10,6 +10,11 @@ export interface User {
   phone?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  // Tour tracking fields
+  onboardingTourStep?: number;           // Current step (0-6), default 0
+  onboardingTourStartedAt?: Date;        // When tour was first started
+  onboardingTourLastAction?: string;     // Last completed action
+  onboardingTourCompleted?: boolean;     // Final completion flag
 }
 
 // CDD Form Types
