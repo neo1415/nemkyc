@@ -14,11 +14,12 @@
  * Status of an identity entry
  */
 export type EntryStatus = 
-  | 'pending'        // Entry created, no link sent yet
-  | 'link_sent'      // Verification link sent via email
-  | 'verified'       // Identity verified successfully
-  | 'failed'         // Verification failed after max attempts
-  | 'email_failed';  // Email sending failed
+  | 'pending'              // Entry created, no link sent yet
+  | 'link_sent'            // Verification link sent via email
+  | 'verified'             // Identity verified successfully
+  | 'verification_failed'  // Verification failed due to field mismatch
+  | 'failed'               // Verification failed after max attempts
+  | 'email_failed';        // Email sending failed
 
 /**
  * Type of identity verification requested
@@ -96,7 +97,17 @@ export interface IdentityEntry {
   // Extracted fields
   email: string;                 // From the detected/selected email column
   displayName?: string;          // Combined name from name columns
-  policyNumber?: string;         // Extracted policy number if available
+  policyNumber?: string;         // Extracted policy number if available (required for IES integration)
+  
+  // Enhanced identity fields (Requirement 18)
+  bvn?: string;                  // Bank Verification Number (required for Individual)
+  nin?: string;                  // National Identification Number (optional - pre-filled or verified)
+  cac?: string;                  // Corporate Affairs Commission number (optional - pre-filled or verified)
+  
+  // Corporate-specific fields (Requirement 18)
+  registrationNumber?: string;   // Company registration number (required for Corporate)
+  registrationDate?: string;     // Company registration date (required for Corporate)
+  businessAddress?: string;      // Company business address (required for Corporate)
   
   // Verification tracking
   verificationType?: VerificationType;
@@ -107,10 +118,15 @@ export interface IdentityEntry {
   tokenExpiresAt?: Date;
   
   // Verification results (appended data)
-  nin?: string;                  // Verified NIN (11 digits)
-  cac?: string;                  // Verified CAC/RC number
   cacCompanyName?: string;       // Verified company name for CAC
   verifiedAt?: Date;
+  
+  // Verification details (Requirement 18.9)
+  verificationDetails?: {
+    fieldsValidated: string[];   // Which fields were checked during verification
+    failedFields?: string[];     // Which fields didn't match (for debugging)
+    failureReason?: string;      // Human-readable error message
+  };
   
   // Tracking
   linkSentAt?: Date;
@@ -212,6 +228,14 @@ export interface PublicEntryInfo {
   policyNumber?: string;         // Extracted from data if available
   verificationType: VerificationType;
   expiresAt: Date;
+  // Enhanced fields for field-level validation display (Requirement 20.1, 20.2, 20.4, 20.5)
+  firstName?: string;            // For NIN verification
+  lastName?: string;             // For NIN verification
+  email?: string;                // For NIN verification
+  dateOfBirth?: string;          // For NIN verification
+  companyName?: string;          // For CAC verification
+  registrationNumber?: string;   // For CAC verification
+  registrationDate?: string;     // For CAC verification
 }
 
 /**
@@ -223,6 +247,10 @@ export interface FileParseResult {
   detectedEmailColumn: string | null;  // Auto-detected email column or null
   detectedNameColumns?: NameColumns;   // Auto-detected name columns
   detectedPolicyColumn?: string | null; // Auto-detected policy column
+  detectedBVNColumn?: string | null;    // Auto-detected BVN column (Requirement 18.10)
+  detectedRegistrationNumberColumn?: string | null; // Auto-detected registration number column (Requirement 18.10)
+  detectedRegistrationDateColumn?: string | null;   // Auto-detected registration date column (Requirement 18.10)
+  detectedBusinessAddressColumn?: string | null;    // Auto-detected business address column (Requirement 18.10)
   detectedFileType?: FileType;   // Auto-detected file type (corporate/individual)
   totalRows: number;
 }

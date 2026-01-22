@@ -671,3 +671,559 @@ src/
 - Verification flow with mock Paystack
 - Export generation
 
+
+
+## New Features Design
+
+### Broker Auto-Redirect on Login
+
+**Implementation:**
+- In `AuthContext.tsx`, after successful login, check user role
+- If role === 'broker', redirect to `/admin/identity` with state flag `{ openUploadDialog: true }`
+- In `IdentityListsDashboard.tsx`, check for state flag on mount
+- If flag present, automatically open UploadDialog component
+- Use React Router's `useLocation` and `useNavigate` hooks
+
+**Code Flow:**
+```typescript
+// In AuthContext after login
+if (userRole === 'broker') {
+  navigate('/admin/identity', { state: { openUploadDialog: true } });
+} else if (userRole === 'admin' || userRole === 'super_admin') {
+  navigate('/admin/dashboard');
+}
+
+// In IdentityListsDashboard
+const location = useLocation();
+useEffect(() => {
+  if (location.state?.openUploadDialog) {
+    setUploadDialogOpen(true);
+    // Clear state to prevent reopening on refresh
+    navigate(location.pathname, { replace: true, state: {} });
+  }
+}, [location]);
+```
+
+### Downloadable Excel Templates
+
+**Template Generation:**
+- Use `xlsx` library to generate Excel files with pre-filled headers
+- Create utility function `generateTemplate(type: 'individual' | 'corporate'): Blob`
+- Add "Download Template" button/menu in UploadDialog
+
+**Individual Template Columns:**
+```typescript
+const INDIVIDUAL_TEMPLATE_HEADERS = [
+  'Title',
+  'First Name',
+  'Last Name',
+  'Phone Number',
+  'Email',
+  'Address',
+  'Gender',
+  'Date of Birth',      // Optional
+  'Occupation',         // Optional
+  'Nationality',        // Optional
+  'Policy Number',      // Required
+  'BVN',               // Required
+  'NIN',               // Optional
+  'CAC'                // Optional
+];
+```
+
+**Corporate Template Columns:**
+```typescript
+const CORPORATE_TEMPLATE_HEADERS = [
+  'Company Name',
+  'Company Address',
+  'Email Address',
+  'Company Type',
+  'Phone Number',
+  'Policy Number',          // Required
+  'Registration Number',    // Required
+  'Registration Date',      // Required
+  'Business Address',       // Required
+  'CAC'                    // Optional
+];
+```
+
+**Template Generation Function:**
+```typescript
+function generateExcelTemplate(type: 'individual' | 'corporate'): Blob {
+  const headers = type === 'individual' 
+    ? INDIVIDUAL_TEMPLATE_HEADERS 
+    : CORPORATE_TEMPLATE_HEADERS;
+  
+  const worksheet = XLSX.utils.aoa_to_sheet([headers]);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
+  
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  return new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+```
+
+### Enhanced Data Model
+
+**Updated IdentityEntry Interface:**
+```typescript
+interface IdentityEntry {
+  // ... existing fields ...
+  
+  // New validation fields
+  policyNumber: string;           // Required - for IES integration
+  bvn?: string;                   // Required for Individual
+  nin?: string;                   // Optional - pre-filled
+  cac?: string;                   // Optional - pre-filled
+  
+  // Corporate-specific fields
+  registrationNumber?: string;    // Required for Corporate
+  registrationDate?: string;      // Required for Corporate
+  businessAddress?: string;       // Required for Corporate
+  
+  // Verification details
+  verificationDetails?: {
+    fieldsValidated: string[];    // Which fields were checked
+    failedFields?: string[];      // Which fields didn't match
+    failureReason?: string;       // Human-readable error
+  };
+}
+```
+
+### Bulk Verification Feature
+
+**Implementation:**
+- Add "Verify All Unverified" button in ListDetailPage toolbar
+- Create new endpoint: `POST /api/identity/lists/:listId/bulk-verify`
+- Backend logic:
+  1. Query all entries with status 'pending' or 'link_sent'
+  2. Filter entries that have NIN, BVN, or CAC pre-filled
+  3. For each entry, call appropriate verification API
+  4. Update status based on result
+  5. Return summary: { processed, verified, failed, skipped }
+
+**Verification Logic:**
+```typescript
+async function bulkVerifyEntries(listId: string) {
+  const entries = await getEntriesForBulkVerification(listId);
+  const results = { processed: 0, verified: 0, failed: 0, skipped: 0 };
+  
+  for (const entry of entries) {
+    if (entry.status === 'verified') {
+      results.skipped++;
+      continue;
+    }
+    
+    if (entry.nin && entry.bvn) {
+      const result = await verifyNIN(entry);
+      updateEntryStatus(entry.id, result);
+      results.processed++;
+      result.success ? results.verified++ : results.failed++;
+    } else if (entry.cac) {
+      const result = await verifyCAC(entry);
+      updateEntryStatus(entry.id, result);
+      results.processed++;
+      result.success ? results.verified++ : results.failed++;
+    } else {
+      results.skipped++;
+    }
+  }
+  
+  return results;
+}
+```
+
+### Enhanced Verification Flow
+
+**Field-Level Validation:**
+
+**For NIN (Individual):**
+- Customer sees: First Name, Last Name, Email, Date of Birth
+- Customer inputs: NIN
+- Backend validates against: First Name, Last Name, Date of Birth, Gender, BVN
+
+**For CAC (Corporate):**
+- Customer sees: Company Name, Registration Number, Registration Date
+- Customer inputs: CAC
+- Backend validates against: Company Name, Registration Number, Registration Date, Business Address
+
+**Verification API Call Structure:**
+```typescript
+interface NINVerificationRequest {
+  nin: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  gender: string;
+  bvn: string;
+}
+
+interface CACVerificationRequest {
+  cac: string;
+  companyName: string;
+  registrationNumber: string;
+  registrationDate: string;
+  businessAddress: string;
+}
+```
+
+### Detailed Error Handling
+
+**Error Response Structure:**
+```typescript
+interface VerificationError {
+  success: false;
+  errorType: 'field_mismatch' | 'api_error' | 'invalid_input';
+  failedFields?: string[];
+  message: string;
+  customerMessage: string;
+  staffMessage: string;
+  brokerEmail?: string;
+}
+```
+
+**Error Flow:**
+1. Verification fails → Generate detailed error
+2. Update entry status to 'verification_failed'
+3. Store failure details in entry.verificationDetails
+4. Send email to customer with user-friendly message
+5. Send email to staff (compliance, admin, brokers) with technical details
+6. Log error for audit trail
+
+**Customer Error Email Template:**
+```
+Subject: Identity Verification Issue - Action Required
+
+Dear [Customer Name],
+
+We were unable to verify your identity information due to a mismatch in the details provided.
+
+Issue: [User-friendly explanation of what didn't match]
+
+Next Steps:
+Please contact your broker at [broker_email] to resolve this issue. They will help ensure your information is correct.
+
+Thank you for your cooperation.
+
+NEM Insurance
+```
+
+**Staff Notification Email Template:**
+```
+Subject: Verification Failure Alert - [Customer Name]
+
+A verification attempt has failed for the following customer:
+
+Customer: [Name]
+Policy Number: [Policy Number]
+Verification Type: [NIN/CAC]
+
+Failed Fields:
+- [Field 1]: Expected [X], Got [Y]
+- [Field 2]: Mismatch detected
+
+Action Required:
+Please verify that the data provided in the uploaded list is accurate and matches the customer's official documents.
+
+View Details: [Link to entry in admin portal]
+```
+
+### Selection Logic Enhancement
+
+**Smart Select All:**
+```typescript
+function handleSelectAll(checked: boolean) {
+  if (checked) {
+    // Only select entries that are NOT verified
+    const selectableEntries = entries.filter(
+      entry => entry.status !== 'verified'
+    );
+    setSelectedEntries(selectableEntries.map(e => e.id));
+  } else {
+    setSelectedEntries([]);
+  }
+}
+
+// Disable action buttons if only verified entries selected
+const hasUnverifiedSelected = selectedEntries.some(id => {
+  const entry = entries.find(e => e.id === id);
+  return entry && entry.status !== 'verified';
+});
+```
+
+### UI/UX Updates
+
+**Hide Flexible Mode:**
+- In UploadDialog, remove the tab/toggle for "Flexible Mode"
+- Keep the code but don't render the UI element
+- Add comment: `// Flexible mode hidden but code retained for future use`
+
+**NAICOM Compliance Message:**
+```typescript
+const NAICOM_MESSAGE = `
+In compliance with the National Insurance Commission (NAICOM) and National Insurance 
+and Insurers Regulatory Authority (NAIIRA) regulations, all insurance providers are 
+mandated to collect and maintain accurate Know Your Customer (KYC) information.
+
+Please ensure all required fields in the downloaded template are filled accurately 
+and completely. This information is critical for regulatory compliance and policy 
+administration.
+
+Required documents must match official government-issued identification.
+`;
+```
+
+Display this message prominently in the UploadDialog before template download.
+
+### Onboarding Tour System
+
+**Implementation using React Joyride:**
+
+**Tour Steps Configuration:**
+```typescript
+const BROKER_TOUR_STEPS = [
+  {
+    target: '.welcome-message',
+    content: 'Welcome to the Identity Collection System! Let us guide you through the process of collecting customer identity information.',
+    placement: 'center',
+  },
+  {
+    target: '.upload-button',
+    content: 'Start by clicking here to upload a new customer list. You can download our pre-formatted template to ensure all required fields are included.',
+  },
+  {
+    target: '.download-template-button',
+    content: 'Download the Individual or Corporate template with all required column headers pre-filled.',
+  },
+  {
+    target: '.list-table',
+    content: 'After uploading, review your customer data here. All columns from your file are preserved.',
+  },
+  {
+    target: '.select-all-checkbox',
+    content: 'Select individual customers or use "Select All" to choose all unverified entries at once.',
+  },
+  {
+    target: '.request-nin-button',
+    content: 'Click "Request NIN" for individual clients or "Request CAC" for corporate clients to send verification emails.',
+  },
+  {
+    target: '.status-column',
+    content: 'Track verification progress here. Statuses include: Pending, Link Sent, Verified, and Verification Failed.',
+  },
+  {
+    target: '.verify-all-button',
+    content: 'If you\'ve pre-filled NIN/CAC/BVN in your upload, click here to verify all entries at once.',
+  },
+];
+```
+
+**Tour State Management:**
+```typescript
+interface OnboardingState {
+  run: boolean;
+  stepIndex: number;
+  completed: boolean;
+}
+
+// Store completion in Firestore
+interface UserDocument {
+  // ... existing fields ...
+  onboardingTourCompleted: boolean;
+}
+
+// Check on mount
+useEffect(() => {
+  if (userRole === 'broker' && !user.onboardingTourCompleted) {
+    setTourState({ run: true, stepIndex: 0, completed: false });
+  }
+}, [user]);
+
+// On tour completion
+function handleTourComplete() {
+  updateUserDocument(user.uid, { onboardingTourCompleted: true });
+}
+```
+
+**Tour Styling:**
+```typescript
+const tourStyles = {
+  options: {
+    primaryColor: '#800020', // NEM Insurance brand color
+    zIndex: 10000,
+  },
+  buttonNext: {
+    backgroundColor: '#800020',
+  },
+  buttonBack: {
+    color: '#800020',
+  },
+};
+```
+
+### API Integration Preparation
+
+**Mock Mode Configuration:**
+```typescript
+interface VerificationConfig {
+  mode: 'mock' | 'production';
+  ninApiUrl?: string;
+  cacApiUrl?: string;
+  termiiApiKey?: string;
+}
+
+// In environment config
+const VERIFICATION_CONFIG: VerificationConfig = {
+  mode: process.env.VERIFICATION_MODE || 'mock',
+  ninApiUrl: process.env.NIN_API_URL,
+  cacApiUrl: process.env.CAC_API_URL,
+  termiiApiKey: process.env.TERMII_API_KEY,
+};
+
+// Verification service with mock fallback
+async function verifyNIN(data: NINVerificationRequest) {
+  if (VERIFICATION_CONFIG.mode === 'mock') {
+    return mockNINVerification(data);
+  }
+  return callNINAPI(data);
+}
+```
+
+**Mock Implementation:**
+```typescript
+function mockNINVerification(data: NINVerificationRequest) {
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // Mock validation logic
+  const isValid = data.nin.length === 11 && data.nin.startsWith('1');
+  
+  return {
+    success: isValid,
+    message: isValid ? 'Verification successful' : 'NIN not found',
+    data: isValid ? { verified: true, matchScore: 100 } : null,
+  };
+}
+```
+
+### Prevent Duplicate Verifications
+
+**Entry Selection Filter:**
+```typescript
+// Filter out verified entries from selection
+function getSelectableEntries(entries: IdentityEntry[]) {
+  return entries.filter(entry => entry.status !== 'verified');
+}
+
+// Visual indicator for verified entries
+function renderEntryRow(entry: IdentityEntry) {
+  const isVerified = entry.status === 'verified';
+  
+  return (
+    <TableRow 
+      className={isVerified ? 'verified-entry' : ''}
+      style={{ opacity: isVerified ? 0.6 : 1 }}
+    >
+      <TableCell>
+        <Checkbox 
+          disabled={isVerified}
+          checked={selectedEntries.includes(entry.id)}
+          onChange={() => handleSelectEntry(entry.id)}
+        />
+        {isVerified && <Tooltip title="Already verified" />}
+      </TableCell>
+      {/* ... other cells ... */}
+    </TableRow>
+  );
+}
+```
+
+**Bulk Verification Skip Logic:**
+```typescript
+async function bulkVerify(listId: string) {
+  const entries = await getEntries(listId);
+  
+  for (const entry of entries) {
+    // Skip verified entries
+    if (entry.status === 'verified') {
+      logAudit({
+        action: 'bulk_verify_skipped',
+        entryId: entry.id,
+        reason: 'already_verified',
+      });
+      continue;
+    }
+    
+    // Proceed with verification
+    await verifyEntry(entry);
+  }
+}
+```
+
+## Updated Correctness Properties
+
+### Property 21: Template Download Completeness
+*For any* template download request (Individual or Corporate), the generated Excel file must contain all required column headers in the first row, properly formatted.
+
+**Validates: Requirements 17.3, 17.4, 17.7**
+
+### Property 22: Bulk Verification Selectivity
+*For any* bulk verification operation, the system must only process entries with status 'pending' or 'link_sent' that have NIN, BVN, or CAC pre-filled, and must skip all entries with status 'verified'.
+
+**Validates: Requirements 19.3, 19.4, 19.5, 19.8, 19.9**
+
+### Property 23: Field-Level Validation Completeness
+*For any* NIN verification, the system must validate against First Name, Last Name, Date of Birth, Gender, and BVN. For any CAC verification, the system must validate against Company Name, Registration Number, Registration Date, and Business Address.
+
+**Validates: Requirements 20.3, 20.6**
+
+### Property 24: Error Notification Completeness
+*For any* verification failure, the system must send an email to the customer with user-friendly error message and broker contact, AND send an email to all staff with roles 'compliance', 'admin', or 'broker' with technical details.
+
+**Validates: Requirements 21.3, 21.4, 21.5**
+
+### Property 25: Verified Entry Exclusion
+*For any* "Select All" operation, the system must exclude all entries with status 'verified' from the selection. For any bulk verification operation, entries with status 'verified' must be skipped.
+
+**Validates: Requirements 22.1, 22.2, 22.3, 27.1, 27.2, 27.6**
+
+### Property 26: Broker Auto-Redirect
+*For any* successful login where user role is 'broker', the system must redirect to `/admin/identity` and automatically open the Upload Dialog.
+
+**Validates: Requirements 16.1, 16.2, 16.3**
+
+### Property 27: Tour Completion Tracking
+*For any* broker user, the onboarding tour must be shown only once (when onboardingTourCompleted is false), and upon completion or dismissal, the field must be updated to true.
+
+**Validates: Requirements 25.3, 25.4, 25.6, 25.7**
+
+## Updated Testing Strategy
+
+### Additional Unit Tests
+- Template generation (Individual and Corporate)
+- Bulk verification logic
+- Field-level validation
+- Error message generation
+- Selection filtering (exclude verified)
+
+### Additional Property-Based Tests
+```
+src/
+  __tests__/
+    identity/
+      templateGeneration.test.ts      # Property 21
+      bulkVerification.test.ts        # Property 22
+      fieldValidation.test.ts         # Property 23
+      errorNotifications.test.ts      # Property 24
+      verifiedExclusion.test.ts       # Property 25
+      brokerRedirect.test.ts          # Property 26
+      tourTracking.test.ts            # Property 27
+```
+
+### Integration Tests
+- Complete broker workflow from login to verification
+- Template download → fill → upload → verify flow
+- Bulk verification with mixed entry statuses
+- Error handling and notification flow
+- Tour completion and persistence
+

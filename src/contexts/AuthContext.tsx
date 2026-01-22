@@ -716,9 +716,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMfaResolver(null);
     setVerificationId(null);
     
+    // CRITICAL FIX: Preserve tour state in BOTH localStorage AND sessionStorage
+    console.log('🔍 Logout: Preserving tour state before clearing storage');
+    const tourStateKeys = Object.keys(localStorage).filter(key => key.startsWith('broker-tour-state'));
+    const tourStates: Record<string, string> = {};
+    
+    tourStateKeys.forEach(key => {
+      const value = localStorage.getItem(key);
+      if (value) {
+        tourStates[key] = value;
+        console.log(`🔍 Logout: Found tour state for key ${key}:`, value);
+        // ALSO save to sessionStorage as backup
+        try {
+          sessionStorage.setItem(key, value);
+          console.log(`✅ Logout: Backed up tour state to sessionStorage for key ${key}`);
+        } catch (e) {
+          console.error(`❌ Logout: Failed to backup to sessionStorage:`, e);
+        }
+      }
+    });
+    
+    console.log('🔍 Logout: Tour states to preserve:', Object.keys(tourStates));
+    
     // Clear any cached data
     localStorage.clear();
     sessionStorage.clear();
+    
+    console.log('🔍 Logout: Storage cleared, now restoring tour state');
+    
+    // Restore tour state to BOTH storages
+    Object.entries(tourStates).forEach(([key, value]) => {
+      try {
+        localStorage.setItem(key, value);
+        console.log(`✅ Logout: Restored tour state to localStorage for key ${key}`);
+        
+        // Verify it was saved
+        const verification = localStorage.getItem(key);
+        if (!verification) {
+          console.error(`❌ Logout: localStorage restore FAILED for key ${key}`);
+        }
+      } catch (e) {
+        console.error(`❌ Logout: Failed to restore to localStorage:`, e);
+      }
+      
+      try {
+        sessionStorage.setItem(key, value);
+        console.log(`✅ Logout: Restored tour state to sessionStorage for key ${key}`);
+      } catch (e) {
+        console.error(`❌ Logout: Failed to restore to sessionStorage:`, e);
+      }
+    });
+    
+    // Final verification
+    console.log('🔍 Logout: Final verification of tour state preservation');
+    tourStateKeys.forEach(key => {
+      const localValue = localStorage.getItem(key);
+      const sessionValue = sessionStorage.getItem(key);
+      console.log(`🔍 Logout: Key ${key} - localStorage: ${localValue ? 'EXISTS' : 'MISSING'}, sessionStorage: ${sessionValue ? 'EXISTS' : 'MISSING'}`);
+    });
     
     await signOut(auth);
   };
