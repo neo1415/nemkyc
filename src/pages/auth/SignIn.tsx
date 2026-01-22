@@ -10,7 +10,7 @@ import { Label } from '../../components/ui/label';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { LogIn, Mail, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { isAdminRole } from '../../utils/roleNormalization';
+import { isAdminRole, rolesMatch } from '../../utils/roleNormalization';
 import MFAModal from '../../components/auth/MFAModal';
 import EmailVerificationModal from '../../components/auth/EmailVerificationModal';
 import logoImage from '../../assets/NEMs-Logo.jpg';
@@ -110,9 +110,15 @@ const SignIn: React.FC = () => {
         return;
       }
 
-      // Normal sign-in flow - role-based navigation
-      if (isAdminRole(user.role)) {
-        console.log('🎯 Admin user detected, redirecting to /admin', { role: user.role });
+      // Role-based navigation
+      if (user.role === 'broker') {
+        console.log('🎯 Broker user detected, redirecting to /admin/identity with upload dialog');
+        navigate('/admin/identity', { replace: true, state: { openUploadDialog: true } });
+      } else if (rolesMatch(user.role, 'admin') || rolesMatch(user.role, 'super admin') || rolesMatch(user.role, 'compliance') || rolesMatch(user.role, 'claims')) {
+        console.log('🎯 Admin/Compliance/Claims user detected, redirecting to /admin');
+        navigate('/admin', { replace: true });
+      } else if (isAdminRole(user.role)) {
+        console.log('🎯 Other admin user detected, redirecting to /admin', { role: user.role });
         navigate('/admin', { replace: true });
       } else {
         console.log('🎯 Regular user, redirecting to /dashboard', { role: user.role });
@@ -146,9 +152,15 @@ const SignIn: React.FC = () => {
         return;
       }
       
-      // Normal sign-in flow - role-based navigation
-      if (isAdminRole(user.role)) {
-        console.log('🎯 Admin user already authenticated, redirecting to /admin', { role: user.role });
+      // Role-based navigation
+      if (user.role === 'broker') {
+        console.log('🎯 Broker user already authenticated, redirecting to /admin/identity with upload dialog');
+        navigate('/admin/identity', { replace: true, state: { openUploadDialog: true } });
+      } else if (rolesMatch(user.role, 'admin') || rolesMatch(user.role, 'super admin') || rolesMatch(user.role, 'compliance') || rolesMatch(user.role, 'claims')) {
+        console.log('🎯 Admin/Compliance/Claims user already authenticated, redirecting to /admin');
+        navigate('/admin', { replace: true });
+      } else if (isAdminRole(user.role)) {
+        console.log('🎯 Other admin user already authenticated, redirecting to /admin', { role: user.role });
         navigate('/admin', { replace: true });
       } else {
         console.log('🎯 Regular user already authenticated, redirecting to /dashboard', { role: user.role });

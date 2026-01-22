@@ -43,6 +43,14 @@ interface EntryInfo {
   brokerName?: string;
   verificationType: VerificationType;
   expiresAt?: Date;
+  // Enhanced fields for field-level validation display (Requirement 20.1, 20.2, 20.4, 20.5)
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  dateOfBirth?: string;
+  companyName?: string;
+  registrationNumber?: string;
+  registrationDate?: string;
 }
 
 // Legacy token validation response (for backward compatibility)
@@ -115,6 +123,14 @@ const CustomerVerificationPage: React.FC = () => {
               policyNumber: data.entryInfo.policyNumber,
               verificationType: data.entryInfo.verificationType,
               expiresAt: data.entryInfo.expiresAt ? new Date(data.entryInfo.expiresAt) : undefined,
+              // Enhanced fields (Requirement 20.1, 20.2, 20.4, 20.5)
+              firstName: data.entryInfo.firstName,
+              lastName: data.entryInfo.lastName,
+              email: data.entryInfo.email,
+              dateOfBirth: data.entryInfo.dateOfBirth,
+              companyName: data.entryInfo.companyName,
+              registrationNumber: data.entryInfo.registrationNumber,
+              registrationDate: data.entryInfo.registrationDate,
             });
             setPageState('valid');
             return;
@@ -190,8 +206,8 @@ const CustomerVerificationPage: React.FC = () => {
   };
 
   // Validate CAC inputs
-  const isValidCAC = (cacNumber: string, companyName: string): boolean => {
-    return cacNumber.trim().length > 0 && companyName.trim().length > 0;
+  const isValidCAC = (cacNumber: string): boolean => {
+    return cacNumber.trim().length > 0;
   };
 
   // Handle verification submission
@@ -207,8 +223,8 @@ const CustomerVerificationPage: React.FC = () => {
         return;
       }
     } else {
-      if (!isValidCAC(identityNumber, companyName)) {
-        toast.error('Please enter both CAC number and company name.');
+      if (!isValidCAC(identityNumber)) {
+        toast.error('Please enter a valid CAC number.');
         return;
       }
     }
@@ -228,7 +244,7 @@ const CustomerVerificationPage: React.FC = () => {
         credentials: 'include',
         body: JSON.stringify({
           identityNumber,
-          companyName: isNIN ? undefined : companyName,
+          // Company name is not sent by customer - backend will use stored data for validation
           demoMode,
         }),
       });
@@ -443,11 +459,66 @@ const CustomerVerificationPage: React.FC = () => {
                 </div>
               )}
               
+              {/* Enhanced field display based on verification type (Requirement 20.1, 20.2, 20.4, 20.5) */}
               <h3 className="text-sm font-semibold text-slate-500 mb-4 uppercase tracking-wide">
-                {entryInfo.name ? 'Additional Details' : 'Please Confirm Your Details'}
+                {isNIN ? 'Individual Client Information' : 'Corporate Client Information'}
               </h3>
               <div className="space-y-3">
-                {!entryInfo.name && (
+                {/* For NIN: Display First Name, Last Name, Email, Date of Birth (Requirement 20.1) */}
+                {isNIN && (
+                  <>
+                    {entryInfo.firstName && (
+                      <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                        <span className="text-slate-500">First Name</span>
+                        <span className="font-semibold text-slate-900">{entryInfo.firstName}</span>
+                      </div>
+                    )}
+                    {entryInfo.lastName && (
+                      <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                        <span className="text-slate-500">Last Name</span>
+                        <span className="font-semibold text-slate-900">{entryInfo.lastName}</span>
+                      </div>
+                    )}
+                    {entryInfo.email && (
+                      <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                        <span className="text-slate-500">Email</span>
+                        <span className="font-semibold text-slate-900">{entryInfo.email}</span>
+                      </div>
+                    )}
+                    {entryInfo.dateOfBirth && (
+                      <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                        <span className="text-slate-500">Date of Birth</span>
+                        <span className="font-semibold text-slate-900">{entryInfo.dateOfBirth}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {/* For CAC: Display Company Name, Registration Number, Registration Date (Requirement 20.4) */}
+                {!isNIN && (
+                  <>
+                    {entryInfo.companyName && (
+                      <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                        <span className="text-slate-500">Company Name</span>
+                        <span className="font-semibold text-slate-900">{entryInfo.companyName}</span>
+                      </div>
+                    )}
+                    {entryInfo.registrationNumber && (
+                      <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                        <span className="text-slate-500">Registration Number</span>
+                        <span className="font-semibold text-slate-900">{entryInfo.registrationNumber}</span>
+                      </div>
+                    )}
+                    {entryInfo.registrationDate && (
+                      <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                        <span className="text-slate-500">Registration Date</span>
+                        <span className="font-semibold text-slate-900">{entryInfo.registrationDate}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {!entryInfo.name && !entryInfo.firstName && !entryInfo.companyName && (
                   <Alert className="bg-amber-50 border-amber-200 mb-4">
                     <AlertTriangle className="h-4 w-4 text-amber-600" />
                     <AlertDescription className="text-amber-800 text-sm">
@@ -475,16 +546,16 @@ const CustomerVerificationPage: React.FC = () => {
                 </div>
               </div>
               
-              {/* Identity Validation Notice */}
-              {entryInfo.name && (
-                <Alert className="mt-4 bg-blue-50 border-blue-200">
-                  <Info className="h-4 w-4 text-blue-600" />
-                  <AlertDescription className="text-blue-800 text-sm">
-                    Your {isNIN ? 'NIN' : 'CAC'} will be validated against the name shown above. 
-                    Please ensure the information matches your official records.
-                  </AlertDescription>
-                </Alert>
-              )}
+              {/* Identity Validation Notice (Requirement 20.2, 20.5) */}
+              <Alert className="mt-4 bg-blue-50 border-blue-200">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800 text-sm">
+                  {isNIN 
+                    ? 'Your NIN will be validated against the information shown above. Please ensure your NIN matches these details.'
+                    : 'Your CAC will be validated against the company information shown above. Please ensure your CAC matches these details.'
+                  }
+                </AlertDescription>
+              </Alert>
             </CardContent>
           </Card>
         )}
@@ -548,7 +619,7 @@ const CustomerVerificationPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* NIN Input (11 digits) */}
+              {/* NIN Input (11 digits) - Requirement 20.2 */}
               {isNIN && (
                 <div className="space-y-2">
                   <Label htmlFor="identityNumber" className="text-sm font-semibold text-slate-700">
@@ -569,46 +640,32 @@ const CustomerVerificationPage: React.FC = () => {
                     <span>Test NIN: 22222222221</span>
                     <span>{identityNumber.length}/11 digits</span>
                   </div>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Only your NIN is required. We will validate it against the information shown above.
+                  </p>
                 </div>
               )}
 
-              {/* CAC Inputs (number + company name) */}
+              {/* CAC Input (number only) - Requirement 20.5 */}
               {!isNIN && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="identityNumber" className="text-sm font-semibold text-slate-700">
-                      CAC/RC Registration Number
-                    </Label>
-                    <Input
-                      id="identityNumber"
-                      type="text"
-                      placeholder="e.g., RC123456 or BN1234567"
-                      value={identityNumber}
-                      onChange={(e) => setIdentityNumber(formatIdentityNumber(e.target.value, 'CAC'))}
-                      className="h-12 border-2 focus:border-emerald-500"
-                      maxLength={15}
-                      disabled={verificationState === 'verifying'}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="companyName" className="text-sm font-semibold text-slate-700">
-                      Registered Company Name
-                    </Label>
-                    <Input
-                      id="companyName"
-                      type="text"
-                      placeholder="Enter company name as registered with CAC"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      className="h-12 border-2 focus:border-emerald-500"
-                      disabled={verificationState === 'verifying'}
-                    />
-                    <p className="text-xs text-slate-400">
-                      Must match the name on your CAC registration certificate
-                    </p>
-                  </div>
-                </>
+                <div className="space-y-2">
+                  <Label htmlFor="identityNumber" className="text-sm font-semibold text-slate-700">
+                    CAC/RC Registration Number
+                  </Label>
+                  <Input
+                    id="identityNumber"
+                    type="text"
+                    placeholder="e.g., RC123456 or BN1234567"
+                    value={identityNumber}
+                    onChange={(e) => setIdentityNumber(formatIdentityNumber(e.target.value, 'CAC'))}
+                    className="h-12 border-2 focus:border-emerald-500"
+                    maxLength={15}
+                    disabled={verificationState === 'verifying'}
+                  />
+                  <p className="text-xs text-slate-500 mt-2">
+                    Only your CAC number is required. We will validate it against the company information shown above.
+                  </p>
+                </div>
               )}
 
               {/* Verification Error */}
@@ -632,7 +689,7 @@ const CustomerVerificationPage: React.FC = () => {
                 disabled={
                   verificationState === 'verifying' ||
                   (isNIN && !isValidNIN(identityNumber)) ||
-                  (!isNIN && !isValidCAC(identityNumber, companyName)) ||
+                  (!isNIN && !isValidCAC(identityNumber)) ||
                   attemptsRemaining === 0
                 }
                 className={`w-full h-12 text-base font-semibold ${isNIN ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}

@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -38,7 +38,11 @@ import {
 } from '@mui/icons-material';
 import { UploadDialog } from '../../components/identity/UploadDialog';
 import IdentityListDetail from './IdentityListDetail';
+import '../../styles/broker-tour.css';
 import type { ListSummary } from '../../types/remediation';
+
+// Import tour reset utility for testing (makes it available in console)
+import '../../utils/resetBrokerTour';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -48,6 +52,8 @@ interface IdentityListsDashboardProps {
 
 export default function IdentityListsDashboard({ isEmbedded = false }: IdentityListsDashboardProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [lists, setLists] = useState<ListSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +95,13 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
   useEffect(() => {
     fetchLists();
   }, [fetchLists]);
+
+  useEffect(() => {
+    if (location.state?.openUploadDialog) {
+      setUploadDialogOpen(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   const handleUploadSuccess = (listId: string) => {
     setUploadDialogOpen(false);
@@ -188,6 +201,7 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
             </IconButton>
           </Tooltip>
           <Button
+            data-tour="upload-button"
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setUploadDialogOpen(true)}
@@ -211,6 +225,7 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
 
       {/* Stats Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
+        {/* @ts-expect-error - MUI Grid v6 type issue with item prop */}
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -221,6 +236,7 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
             </CardContent>
           </Card>
         </Grid>
+        {/* @ts-expect-error - MUI Grid v6 type issue with item prop */}
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -231,6 +247,7 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
             </CardContent>
           </Card>
         </Grid>
+        {/* @ts-expect-error - MUI Grid v6 type issue with item prop */}
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -243,6 +260,7 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
             </CardContent>
           </Card>
         </Grid>
+        {/* @ts-expect-error - MUI Grid v6 type issue with item prop */}
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -291,9 +309,11 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
         </Card>
       ) : (
         <Grid container spacing={2}>
-          {lists.map((list) => (
+          {lists.map((list, index) => (
+            // @ts-expect-error - MUI Grid v6 type issue with item prop
             <Grid item xs={12} sm={6} md={4} key={list.id}>
               <Card 
+                data-tour={index === 0 ? "list-card" : undefined}
                 sx={{ 
                   height: '100%',
                   cursor: 'pointer',

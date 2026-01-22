@@ -53,6 +53,8 @@ import {
   Description as TemplateIcon,
   DynamicFeed as FlexibleIcon,
   Warning as WarningIcon,
+  Download as DownloadIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
 import { 
@@ -64,6 +66,8 @@ import {
   INDIVIDUAL_TEMPLATE,
   CORPORATE_TEMPLATE,
 } from '../../utils/fileParser';
+import { downloadTemplate } from '../../utils/templateGenerator';
+import { useBrokerTourV2 } from '../../hooks/useBrokerTourV2';
 import type { FileParseResult, UploadMode, ListType, TemplateValidationResult } from '../../types/remediation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
@@ -75,7 +79,11 @@ interface UploadDialogProps {
 }
 
 export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
-  const [uploadMode, setUploadMode] = useState<UploadMode>('flexible');
+  // Tour integration
+  const { advanceTour } = useBrokerTourV2();
+  
+  // Default to template mode (flexible mode hidden but available in code)
+  const [uploadMode, setUploadMode] = useState<UploadMode>('template');
   const [file, setFile] = useState<File | null>(null);
   const [parseResult, setParseResult] = useState<FileParseResult | null>(null);
   const [templateValidation, setTemplateValidation] = useState<TemplateValidationResult | null>(null);
@@ -84,6 +92,7 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
   const [loading, setLoading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showTemplateMenu, setShowTemplateMenu] = useState(false);
 
   const resetState = () => {
     setFile(null);
@@ -107,6 +116,14 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
         resetState();
       }
     }
+  };
+
+  const handleDownloadTemplate = (type: 'individual' | 'corporate') => {
+    downloadTemplate(type);
+    setShowTemplateMenu(false);
+    
+    // Advance tour when template is downloaded
+    advanceTour();
   };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -155,6 +172,9 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
       } else {
         setTemplateValidation(null);
       }
+      
+      // Advance tour to show "Create List" step
+      advanceTour();
     } catch (err) {
       console.error('Parse error:', err);
       setError(err instanceof Error ? err.message : 'Failed to parse file');
@@ -223,6 +243,10 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
       }
 
       const data = await response.json();
+      
+      // Advance tour to list detail page step
+      advanceTour();
+      
       onSuccess(data.listId);
       handleClose();
     } catch (err) {
@@ -249,11 +273,12 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth sx={{ zIndex: 1300 }}>
       <DialogTitle>Upload Customer List</DialogTitle>
-      <DialogContent>
+      <DialogContent sx={{ overflowY: 'auto' }}>
         {/* Upload Mode Selector */}
-        <Box sx={{ mb: 3 }}>
+        {/* NOTE: Flexible Mode is hidden from UI but code remains available for future use */}
+        <Box sx={{ mb: 3, display: 'none' }}>
           <Typography variant="subtitle2" gutterBottom>
             Upload Mode
           </Typography>
@@ -265,6 +290,7 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
             fullWidth
             sx={{ mb: 1 }}
           >
+            {/* Flexible Mode - Hidden but available in code */}
             <ToggleButton value="flexible" aria-label="flexible mode">
               <FlexibleIcon sx={{ mr: 1 }} />
               Flexible Mode
@@ -281,37 +307,91 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
           </Typography>
         </Box>
 
+        {/* NAICOM Compliance Message */}
+        <Alert severity="info" icon={<InfoIcon />} sx={{ mb: 3, bgcolor: '#f0f7ff' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+            📋 NAICOM/NAIIRA Regulatory Compliance
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            As a registered insurance broker, you are required to maintain accurate Know Your Customer (KYC) records 
+            for all clients in accordance with NAICOM and NAIIRA regulations.
+          </Typography>
+          <Typography variant="body2">
+            This system helps you collect and verify National Identity Numbers (NIN) for individual clients and 
+            Corporate Affairs Commission (CAC) registration details for corporate clients, ensuring compliance with 
+            regulatory requirements for customer identification and verification.
+          </Typography>
+        </Alert>
+
         {/* Template Requirements (shown in template mode) */}
         {uploadMode === 'template' && !parseResult && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
-              Template Requirements
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                  <PersonIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                  Individual Template
-                </Typography>
-                <Typography variant="caption" component="div">
-                  <strong>Required:</strong> {INDIVIDUAL_TEMPLATE.required.join(', ')}
-                </Typography>
-                <Typography variant="caption" component="div" color="textSecondary">
-                  <strong>Optional:</strong> {INDIVIDUAL_TEMPLATE.optional.join(', ')}
-                </Typography>
+          <>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                Template Requirements
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                    <PersonIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                    Individual Template
+                  </Typography>
+                  <Typography variant="caption" component="div">
+                    <strong>Required:</strong> {INDIVIDUAL_TEMPLATE.required.join(', ')}
+                  </Typography>
+                  <Typography variant="caption" component="div" color="textSecondary">
+                    <strong>Optional:</strong> {INDIVIDUAL_TEMPLATE.optional.join(', ')}
+                  </Typography>
+                </Box>
+                <Divider orientation="vertical" flexItem />
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                    <BusinessIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                    Corporate Template
+                  </Typography>
+                  <Typography variant="caption" component="div">
+                    <strong>Required:</strong> {CORPORATE_TEMPLATE.required.join(', ')}
+                  </Typography>
+                </Box>
               </Box>
-              <Divider orientation="vertical" flexItem />
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                  <BusinessIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                  Corporate Template
-                </Typography>
-                <Typography variant="caption" component="div">
-                  <strong>Required:</strong> {CORPORATE_TEMPLATE.required.join(', ')}
-                </Typography>
-              </Box>
+            </Alert>
+
+            {/* Download Template Buttons */}
+            <Box sx={{ mb: 2, display: 'flex', gap: 2 }} data-tour="download-template">
+              <Button
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                onClick={() => handleDownloadTemplate('individual')}
+                fullWidth
+                sx={{ 
+                  borderColor: 'primary.main',
+                  '&:hover': { 
+                    borderColor: 'primary.dark',
+                    bgcolor: 'primary.lighter' 
+                  }
+                }}
+              >
+                Download Individual Template
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                onClick={() => handleDownloadTemplate('corporate')}
+                fullWidth
+                sx={{ 
+                  borderColor: 'warning.main',
+                  color: 'warning.main',
+                  '&:hover': { 
+                    borderColor: 'warning.dark',
+                    bgcolor: 'warning.lighter',
+                    color: 'warning.dark'
+                  }
+                }}
+              >
+                Download Corporate Template
+              </Button>
             </Box>
-          </Alert>
+          </>
         )}
 
         {error && (
@@ -366,6 +446,7 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
           // File Upload Zone
           <Box
             {...getRootProps()}
+            data-tour="upload-area"
             sx={{
               border: '2px dashed',
               borderColor: isDragActive ? 'primary.main' : 'grey.300',
@@ -379,6 +460,10 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
                 borderColor: 'primary.main',
                 bgcolor: 'action.hover',
               },
+              // Ensure dropzone works during tour
+              pointerEvents: 'auto !important',
+              position: 'relative',
+              zIndex: 1,
             }}
           >
             <input {...getInputProps()} />
@@ -523,7 +608,7 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
             <Typography variant="subtitle2" gutterBottom>
               Preview (first {previewRows.length} rows)
             </Typography>
-            <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+            <TableContainer component={Paper} sx={{ maxHeight: 300, overflowY: 'auto', pointerEvents: 'auto' }}>
               <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
@@ -589,6 +674,7 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
           Cancel
         </Button>
         <Button
+          data-tour="create-list-button"
           onClick={handleSubmit}
           variant="contained"
           disabled={
