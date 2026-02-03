@@ -442,6 +442,9 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
           </>
         )}
 
+        {/* Data Quality Warnings - Removed per user request */}
+        {/* Data formatting corrections are still applied silently in the background */}
+
         {!parseResult ? (
           // File Upload Zone
           <Box

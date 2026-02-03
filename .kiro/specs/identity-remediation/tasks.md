@@ -899,3 +899,88 @@ This plan implements a flexible identity collection system that accepts any CSV/
     - Test logout mid-tour → resumes on next login
     - Test skip tour → marks as completed
     - _Requirements: All tour requirements_
+
+
+- [x] 42. Fix Excel data formatting issues
+  - [x] 42.1 Add date column detection utility
+    - Create `isDateColumn()` function in `src/utils/fileParser.ts`
+    - Define DATE_COLUMN_PATTERNS array with common date column names
+    - Check column names against patterns (case-insensitive)
+    - _Requirements: 28.5_
+
+  - [x] 42.2 Add Excel serial date converter
+    - Create `excelSerialToDate()` function in `src/utils/fileParser.ts`
+    - Convert Excel serial numbers (e.g., 29224) to DD/MM/YYYY format (e.g., 04/01/1980)
+    - Handle Excel's 1900 leap year bug (subtract 2 from serial)
+    - _Requirements: 28.1, 28.5, 28.7_
+
+  - [x] 42.3 Add date value formatter
+    - Create `formatDateValue()` function in `src/utils/fileParser.ts`
+    - Check if column is a date column
+    - If value is a number (Excel serial), convert to readable date
+    - Otherwise return value unchanged
+    - _Requirements: 28.1, 28.5, 28.7_
+
+  - [x] 42.4 Add phone column detection utility
+    - Create `isPhoneColumn()` function in `src/utils/fileParser.ts`
+    - Define PHONE_COLUMN_PATTERNS array with common phone column names
+    - Check column names against patterns (case-insensitive)
+    - _Requirements: 28.6_
+
+  - [x] 42.5 Add phone value formatter
+    - Create `formatPhoneValue()` function in `src/utils/fileParser.ts`
+    - Check if column is a phone column
+    - Convert value to string and remove non-digit characters
+    - If 10 digits and doesn't start with 0, prepend 0
+    - Validate Nigerian format (11 digits starting with 0)
+    - _Requirements: 28.2, 28.6, 28.9, 28.10_
+
+  - [x] 42.6 Update parseExcel to use raw cell values
+    - Update `parseExcel()` function in `src/utils/fileParser.ts`
+    - Add `raw: true` option to XLSX.read()
+    - Add `cellDates: false` to prevent auto-conversion
+    - Add `raw: true` to sheet_to_json()
+    - _Requirements: 28.3, 28.4_
+
+  - [x] 42.7 Apply formatting to parsed Excel data
+    - Update `parseExcel()` function to format each row
+    - Loop through columns and apply formatDateValue()
+    - Loop through columns and apply formatPhoneValue()
+    - Return formatted data instead of raw data
+    - _Requirements: 28.1, 28.2, 28.5, 28.6, 28.7_
+
+  - [x] 42.8 Add data quality validation
+    - Create `DataQualityWarning` interface in `src/types/remediation.ts`
+    - Create `validateDataQuality()` function in `src/utils/fileParser.ts`
+    - Check for converted dates and corrected phone numbers
+    - Return array of warnings with details
+    - _Requirements: 28.1, 28.2_
+
+  - [x] 42.9 Update UploadDialog to show data quality warnings
+    - Update `src/components/identity/UploadDialog.tsx`
+    - Call validateDataQuality() after parsing
+    - Display warnings in an Alert component
+    - Show first 5 warnings with "and X more" if needed
+    - _Requirements: 28.1, 28.2_
+
+  - [x] 42.10 Write property test for Excel formatting preservation
+    - **Property 28: Excel Data Formatting Preservation**
+    - Create test in `src/__tests__/identity/fileParser.test.ts`
+    - Generate Excel files with serial dates and 10-digit phone numbers
+    - Parse files and verify dates are DD/MM/YYYY format
+    - Verify phone numbers are 11 digits starting with 0
+    - **Validates: Requirements 28.1, 28.2, 28.3, 28.4, 28.5, 28.6, 28.9, 28.10**
+
+  - [x] 42.11 Test with real Excel files
+    - Create test Excel file with dates like "1/4/1980"
+    - Create test Excel file with phone numbers like "7089273645"
+    - Upload files and verify data is preserved correctly
+    - Check preview table shows correct formatting
+    - Verify data in Firestore has correct values
+    - _Requirements: 28.1, 28.2, 28.7, 28.8_
+
+  - [x] 42.12 Update export to preserve formatting
+    - Ensure exported CSV/Excel maintains date format
+    - Ensure exported files preserve phone number leading zeros
+    - Test export → re-import cycle maintains data integrity
+    - _Requirements: 28.8_
