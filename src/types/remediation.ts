@@ -253,6 +253,20 @@ export interface FileParseResult {
   detectedBusinessAddressColumn?: string | null;    // Auto-detected business address column (Requirement 18.10)
   detectedFileType?: FileType;   // Auto-detected file type (corporate/individual)
   totalRows: number;
+  dataQualityWarnings?: DataQualityWarning[]; // Warnings about data formatting corrections (Requirement 28)
+}
+
+/**
+ * Data quality warning for Excel formatting issues
+ * Requirements: 28.1, 28.2
+ */
+export interface DataQualityWarning {
+  type: 'date_converted' | 'phone_corrected';
+  column: string;
+  rowIndex: number;
+  originalValue: any;
+  correctedValue: any;
+  message: string;
 }
 
 /**
