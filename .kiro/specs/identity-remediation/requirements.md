@@ -410,3 +410,20 @@ The Identity Collection System enables NEM Insurance to collect missing National
 6. THE "Verify All Unverified" button SHALL skip all entries with status "verified"
 7. THE System SHALL log when duplicate verification attempts are prevented for audit purposes
 
+
+### Requirement 28: Excel Data Formatting Preservation
+
+**User Story:** As a broker or administrator, I want Excel files to preserve data formatting for dates and phone numbers, so that critical identity information is not corrupted during upload.
+
+#### Acceptance Criteria
+
+1. WHEN an Excel file contains date values (e.g., "1/4/1980"), THE System SHALL preserve the date in human-readable format and NOT convert it to Excel serial numbers (e.g., "29224")
+2. WHEN an Excel file contains phone numbers with leading zeros (e.g., "07089273645"), THE System SHALL preserve the leading zeros and NOT drop them (e.g., "7089273645")
+3. THE System SHALL configure the Excel parser to read cells as raw text values to prevent automatic type conversion
+4. WHEN parsing Excel files, THE System SHALL use the `raw: true` option in the xlsx library to preserve original cell values
+5. THE System SHALL detect date columns by name patterns (e.g., "date of birth", "registration date") and format Excel serial numbers back to readable dates
+6. THE System SHALL detect phone number columns by name patterns (e.g., "phone", "mobile", "telephone") and ensure leading zeros are preserved
+7. WHEN displaying data in the preview table, THE System SHALL show dates in DD/MM/YYYY format
+8. WHEN exporting data, THE System SHALL preserve the original formatting for dates and phone numbers
+9. THE System SHALL validate that phone numbers for Nigerian numbers start with "0" and are 11 digits long
+10. IF a phone number is missing a leading zero and is 10 digits, THE System SHALL automatically prepend "0" to correct the format

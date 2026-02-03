@@ -1227,3 +1227,348 @@ src/
 - Error handling and notification flow
 - Tour completion and persistence
 
+
+
+## Excel Data Formatting Preservation
+
+### Problem Statement
+
+Excel automatically converts certain data types during file operations:
+1. **Dates**: Converts human-readable dates (e.g., "1/4/1980") to serial numbers (e.g., "29224")
+2. **Phone Numbers**: Drops leading zeros from numbers (e.g., "07089273645" becomes "7089273645")
+
+This causes critical data corruption for identity verification where:
+- Date of Birth must match exactly for NIN/BVN validation
+- Phone numbers must be in correct Nigerian format (11 digits starting with 0)
+
+### Solution Design
+
+#### 1. Raw Cell Value Reading
+
+Update the Excel parser to read raw cell values instead of formatted values:
+
+```typescript
+// In parseExcel function
+const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, {
+  raw: true,        // Read raw cell values
+  defval: '',       // Default value for empty cells
+  dateNF: 'dd/mm/yyyy'  // Date number format
+});
+```
+
+#### 2. Date Column Detection and Conversion
+
+Detect date columns by name patterns and convert Excel serial numbers to readable dates:
+
+```typescript
+const DATE_COLUMN_PATTERNS = [
+  'date of birth',
+  'dob',
+  'birth date',
+  'registration date',
+  'date of registration',
+  'incorporation date',
+  'date of incorporation'
+];
+
+function isDateColumn(columnName: string): boolean {
+  const normalized = columnName.toLowerCase().replace(/[_\s-]/g, '');
+  return DATE_COLUMN_PATTERNS.some(pattern => 
+    normalized.includes(pattern.replace(/\s/g, ''))
+  );
+}
+
+function excelSerialToDate(serial: number): string {
+  // Excel serial date starts from 1900-01-01
+  const excelEpoch = new Date(1900, 0, 1);
+  const days = serial - 2; // Excel has a leap year bug for 1900
+  const date = new Date(excelEpoch.getTime() + days * 24 * 60 * 60 * 1000);
+  
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  
+  return `${day}/${month}/${year}`;
+}
+
+function formatDateValue(value: any, columnName: string): any {
+  if (!isDateColumn(columnName)) return value;
+  
+  // If it's a number (Excel serial date), convert it
+  if (typeof value === 'number' && value > 1000 && value < 100000) {
+    return excelSerialToDate(value);
+  }
+  
+  return value;
+}
+```
+
+#### 3. Phone Number Detection and Correction
+
+Detect phone columns and ensure leading zeros are preserved:
+
+```typescript
+const PHONE_COLUMN_PATTERNS = [
+  'phone',
+  'mobile',
+  'telephone',
+  'tel',
+  'contact',
+  'cell'
+];
+
+function isPhoneColumn(columnName: string): boolean {
+  const normalized = columnName.toLowerCase().replace(/[_\s-]/g, '');
+  return PHONE_COLUMN_PATTERNS.some(pattern => 
+    normalized.includes(pattern)
+  );
+}
+
+function formatPhoneValue(value: any, columnName: string): any {
+  if (!isPhoneColumn(columnName)) return value;
+  
+  // Convert to string and remove any non-digit characters
+  let phone = String(value).replace(/\D/g, '');
+  
+  // If it's 10 digits and doesn't start with 0, prepend 0
+  if (phone.length === 10 && !phone.startsWith('0')) {
+    phone = '0' + phone;
+  }
+  
+  return phone;
+}
+```
+
+#### 4. Integrated Parsing Flow
+
+Update the `parseExcel` function to apply formatting corrections:
+
+```typescript
+export function parseExcel(file: File): Promise<FileParseResult> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { 
+          type: 'array',
+          cellDates: false,  // Don't auto-convert to JS dates
+          raw: true          // Read raw values
+        });
+        
+        const firstSheetName = workbook.SheetNames[0];
+        if (!firstSheetName) {
+          reject(new Error('Excel file contains no sheets'));
+          return;
+        }
+
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Convert to JSON with raw values
+        const rawData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, {
+          raw: true,
+          defval: ''
+        });
+
+        if (rawData.length === 0) {
+          reject(new Error('Excel file contains no data'));
+          return;
+        }
+
+        // Extract columns
+        const columns = Object.keys(rawData[0]);
+        
+        // Format each row's values based on column type
+        const formattedData = rawData.map(row => {
+          const formattedRow: Record<string, any> = {};
+          
+          for (const column of columns) {
+            let value = row[column];
+            
+            // Apply date formatting if it's a date column
+            value = formatDateValue(value, column);
+            
+            // Apply phone formatting if it's a phone column
+            value = formatPhoneValue(value, column);
+            
+            formattedRow[column] = value;
+          }
+          
+          return formattedRow;
+        });
+
+        // Continue with detection logic...
+        const detectedEmailColumn = detectEmailColumn(columns);
+        // ... rest of the function
+        
+        resolve({
+          columns,
+          rows: formattedData,  // Use formatted data
+          // ... rest of the result
+        });
+      } catch (error) {
+        reject(new Error(`Excel parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+}
+```
+
+#### 5. Validation and User Feedback
+
+Add validation warnings in the upload preview:
+
+```typescript
+interface DataQualityWarning {
+  type: 'date_format' | 'phone_format' | 'missing_leading_zero';
+  column: string;
+  rowIndex: number;
+  originalValue: any;
+  correctedValue: any;
+  message: string;
+}
+
+function validateDataQuality(
+  rows: Record<string, any>[], 
+  columns: string[]
+): DataQualityWarning[] {
+  const warnings: DataQualityWarning[] = [];
+  
+  rows.forEach((row, index) => {
+    columns.forEach(column => {
+      const value = row[column];
+      
+      // Check for Excel serial dates that were converted
+      if (isDateColumn(column) && typeof value === 'string' && value.includes('/')) {
+        // This was likely converted from a serial number
+        warnings.push({
+          type: 'date_format',
+          column,
+          rowIndex: index,
+          originalValue: value,
+          correctedValue: value,
+          message: `Date in row ${index + 1} was converted from Excel format`
+        });
+      }
+      
+      // Check for phone numbers that had leading zero added
+      if (isPhoneColumn(column) && typeof value === 'string' && value.length === 11 && value.startsWith('0')) {
+        const withoutZero = value.substring(1);
+        if (/^\d{10}$/.test(withoutZero)) {
+          warnings.push({
+            type: 'phone_format',
+            column,
+            rowIndex: index,
+            originalValue: withoutZero,
+            correctedValue: value,
+            message: `Leading zero added to phone number in row ${index + 1}`
+          });
+        }
+      }
+    });
+  });
+  
+  return warnings;
+}
+```
+
+### UI Updates
+
+#### Upload Dialog Enhancements
+
+Show data quality warnings in the preview:
+
+```typescript
+// In UploadDialog.tsx
+const [dataWarnings, setDataWarnings] = useState<DataQualityWarning[]>([]);
+
+// After parsing
+const warnings = validateDataQuality(parseResult.rows, parseResult.columns);
+setDataWarnings(warnings);
+
+// Display warnings
+{dataWarnings.length > 0 && (
+  <Alert severity="info" sx={{ mb: 2 }}>
+    <AlertTitle>Data Formatting Applied</AlertTitle>
+    <Typography variant="body2">
+      {dataWarnings.length} value(s) were automatically formatted:
+    </Typography>
+    <ul>
+      {dataWarnings.slice(0, 5).map((w, i) => (
+        <li key={i}>{w.message}</li>
+      ))}
+      {dataWarnings.length > 5 && (
+        <li>... and {dataWarnings.length - 5} more</li>
+      )}
+    </ul>
+  </Alert>
+)}
+```
+
+### Testing Strategy
+
+#### Property-Based Test
+
+**Property 28: Excel Data Formatting Preservation**
+
+*For any* Excel file with date columns and phone columns:
+- Date values must be in DD/MM/YYYY format (not Excel serial numbers)
+- Phone numbers must preserve leading zeros
+- Nigerian phone numbers must be 11 digits starting with "0"
+
+**Validates: Requirements 28.1, 28.2, 28.3, 28.4, 28.5, 28.6**
+
+```typescript
+// In fileParser.test.ts
+describe('Property 28: Excel Data Formatting Preservation', () => {
+  it('should preserve date formatting from Excel files', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(fc.record({
+          'Date of Birth': fc.integer({ min: 29000, max: 45000 }), // Excel serial dates
+          'Phone Number': fc.integer({ min: 7000000000, max: 9999999999 }) // 10-digit numbers
+        }), { minLength: 1, maxLength: 100 }),
+        async (testData) => {
+          // Create Excel file with serial dates and numbers without leading zeros
+          const worksheet = XLSX.utils.json_to_sheet(testData);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+          const excelBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+          const file = new File([excelBuffer], 'test.xlsx');
+          
+          // Parse the file
+          const result = await parseExcel(file);
+          
+          // Verify dates are formatted as DD/MM/YYYY
+          result.rows.forEach(row => {
+            const dob = row['Date of Birth'];
+            expect(dob).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+          });
+          
+          // Verify phone numbers have leading zero
+          result.rows.forEach(row => {
+            const phone = row['Phone Number'];
+            expect(phone).toMatch(/^0\d{10}$/);
+            expect(phone.length).toBe(11);
+          });
+        }
+      ),
+      { numRuns: 50 }
+    );
+  });
+});
+```
+
+### Correctness Property
+
+**Property 28: Excel Data Formatting Preservation**
+
+*For any* Excel file uploaded to the system:
+- Date columns must not contain Excel serial numbers in the parsed data
+- Phone number columns must preserve leading zeros
+- All Nigerian phone numbers must be 11 digits starting with "0"
+
+**Validates: Requirements 28.1, 28.2, 28.3, 28.4, 28.5, 28.6, 28.9, 28.10**

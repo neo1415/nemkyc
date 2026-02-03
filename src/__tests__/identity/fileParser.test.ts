@@ -1023,3 +1023,254 @@ describe('Feature: identity-remediation, Property 20: Backward Compatibility', (
 });
 
 import { validateIndividualTemplate, validateCorporateTemplate, detectTemplateType, validateTemplate } from '../../utils/fileParser';
+
+
+describe('Feature: identity-remediation, Property 28: Excel Data Formatting Preservation', () => {
+  /**
+   * Property 28: Excel Data Formatting Preservation
+   * 
+   * For any Excel file with:
+   * - Date columns containing Excel serial numbers (e.g., 29224)
+   * - Phone columns containing 10-digit numbers without leading zeros
+   * 
+   * The parser should:
+   * - Convert Excel serial dates to DD/MM/YYYY format
+   * - Add leading zeros to 10-digit phone numbers
+   * - Preserve the corrected formatting
+   * 
+   * **Validates: Requirements 28.1, 28.2, 28.3, 28.4, 28.5, 28.6, 28.9, 28.10**
+   */
+  
+  it('should convert Excel serial dates to DD/MM/YYYY format', async () => {
+    const { excelSerialToDate } = await import('../../utils/fileParser');
+    
+    fc.assert(
+      fc.property(
+        // Generate Excel serial numbers for dates between 1980 and 2024
+        // Excel serial 29221 = 1980-01-01, 45292 = 2024-01-01
+        fc.integer({ min: 29221, max: 45292 }),
+        (serial) => {
+          const formatted = excelSerialToDate(serial);
+          
+          // Should be in DD/MM/YYYY format
+          expect(formatted).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+          
+          // Parse the formatted date
+          const [day, month, year] = formatted.split('/').map(Number);
+          
+          // Validate date components
+          expect(day).toBeGreaterThanOrEqual(1);
+          expect(day).toBeLessThanOrEqual(31);
+          expect(month).toBeGreaterThanOrEqual(1);
+          expect(month).toBeLessThanOrEqual(12);
+          expect(year).toBeGreaterThanOrEqual(1980);
+          expect(year).toBeLessThanOrEqual(2024);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  it('should detect date columns by name patterns', async () => {
+    const { isDateColumn } = await import('../../utils/fileParser');
+    
+    const dateColumnNames = [
+      'Date of Birth',
+      'date_of_birth',
+      'DOB',
+      'Registration Date',
+      'registration_date',
+      'Incorporation Date',
+      'Expiry Date',
+      'Created Date',
+      'Updated Date'
+    ];
+    
+    const nonDateColumnNames = [
+      'Name',
+      'Email',
+      'Phone',
+      'Address',
+      'Company'
+    ];
+    
+    // All date column names should be detected
+    dateColumnNames.forEach(col => {
+      expect(isDateColumn(col)).toBe(true);
+    });
+    
+    // Non-date columns should not be detected
+    nonDateColumnNames.forEach(col => {
+      expect(isDateColumn(col)).toBe(false);
+    });
+  });
+
+  it('should format date values in date columns', async () => {
+    const { formatDateValue } = await import('../../utils/fileParser');
+    
+    // Test with Excel serial number in a date column
+    const dateSerial = 29224; // Should be 04/01/1980
+    const formatted = formatDateValue(dateSerial, 'Date of Birth');
+    expect(formatted).toBe('04/01/1980');
+    
+    // Test with non-serial value in date column (should be unchanged)
+    const textDate = '01/04/1980';
+    const unchanged = formatDateValue(textDate, 'Date of Birth');
+    expect(unchanged).toBe(textDate);
+    
+    // Test with serial in non-date column (should be unchanged)
+    const serialInNonDate = formatDateValue(29224, 'Name');
+    expect(serialInNonDate).toBe(29224);
+  });
+
+  it('should add leading zero to 10-digit phone numbers', async () => {
+    const { formatPhoneValue } = await import('../../utils/fileParser');
+    
+    fc.assert(
+      fc.property(
+        // Generate 10-digit phone numbers (Nigerian format without leading 0)
+        fc.integer({ min: 7000000000, max: 9999999999 }),
+        (phoneNumber) => {
+          const phoneStr = String(phoneNumber);
+          const formatted = formatPhoneValue(phoneStr, 'Phone Number');
+          
+          // Should have 11 digits
+          expect(formatted).toHaveLength(11);
+          
+          // Should start with 0
+          expect(formatted).toMatch(/^0\d{10}$/);
+          
+          // Should be the original number with 0 prepended
+          expect(formatted).toBe('0' + phoneStr);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  it('should detect phone columns by name patterns', async () => {
+    const { isPhoneColumn } = await import('../../utils/fileParser');
+    
+    const phoneColumnNames = [
+      'Phone',
+      'phone',
+      'Phone Number',
+      'phone_number',
+      'Mobile',
+      'mobile',
+      'Telephone',
+      'telephone',
+      'Contact',
+      'contact',
+      'Cell'
+    ];
+    
+    const nonPhoneColumnNames = [
+      'Name',
+      'Email',
+      'Address',
+      'Date of Birth'
+    ];
+    
+    // All phone column names should be detected
+    phoneColumnNames.forEach(col => {
+      expect(isPhoneColumn(col)).toBe(true);
+    });
+    
+    // Non-phone columns should not be detected
+    nonPhoneColumnNames.forEach(col => {
+      expect(isPhoneColumn(col)).toBe(false);
+    });
+  });
+
+  it('should preserve 11-digit phone numbers starting with 0', async () => {
+    const { formatPhoneValue } = await import('../../utils/fileParser');
+    
+    fc.assert(
+      fc.property(
+        // Generate 11-digit phone numbers starting with 0
+        fc.integer({ min: 7000000000, max: 9999999999 }),
+        (phoneNumber) => {
+          const validPhone = '0' + String(phoneNumber);
+          const formatted = formatPhoneValue(validPhone, 'Phone Number');
+          
+          // Should remain unchanged
+          expect(formatted).toBe(validPhone);
+          expect(formatted).toHaveLength(11);
+          expect(formatted).toMatch(/^0\d{10}$/);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  it('should handle phone numbers with non-digit characters', async () => {
+    const { formatPhoneValue } = await import('../../utils/fileParser');
+    
+    const testCases = [
+      { input: '0708-927-3645', expected: '07089273645' },
+      { input: '(070) 8927-3645', expected: '07089273645' },
+      { input: '+234 708 927 3645', expected: '2347089273645' },
+      { input: '708 927 3645', expected: '07089273645' }, // 10 digits, should add 0
+    ];
+    
+    testCases.forEach(({ input, expected }) => {
+      const formatted = formatPhoneValue(input, 'Phone Number');
+      expect(formatted).toBe(expected);
+    });
+  });
+
+  it('should generate data quality warnings for corrected values', async () => {
+    const { validateDataQuality } = await import('../../utils/fileParser');
+    
+    const columns = ['Name', 'Date of Birth', 'Phone Number'];
+    
+    const originalRows = [
+      { 'Name': 'John Doe', 'Date of Birth': 29224, 'Phone Number': 7089273645 },
+      { 'Name': 'Jane Smith', 'Date of Birth': 29225, 'Phone Number': 8012345678 }
+    ];
+    
+    const formattedRows = [
+      { 'Name': 'John Doe', 'Date of Birth': '04/01/1980', 'Phone Number': '07089273645' },
+      { 'Name': 'Jane Smith', 'Date of Birth': '05/01/1980', 'Phone Number': '08012345678' }
+    ];
+    
+    const warnings = validateDataQuality(originalRows, formattedRows, columns);
+    
+    // Should have warnings for both date and phone corrections
+    expect(warnings.length).toBeGreaterThan(0);
+    
+    // Check for date conversion warnings
+    const dateWarnings = warnings.filter(w => w.type === 'date_converted');
+    expect(dateWarnings.length).toBe(2);
+    expect(dateWarnings[0].column).toBe('Date of Birth');
+    expect(dateWarnings[0].originalValue).toBe(29224);
+    expect(dateWarnings[0].correctedValue).toBe('04/01/1980');
+    
+    // Check for phone correction warnings
+    const phoneWarnings = warnings.filter(w => w.type === 'phone_corrected');
+    expect(phoneWarnings.length).toBe(2);
+    expect(phoneWarnings[0].column).toBe('Phone Number');
+    expect(phoneWarnings[0].originalValue).toBe(7089273645);
+    expect(phoneWarnings[0].correctedValue).toBe('07089273645');
+  });
+
+  it('should not generate warnings for unchanged values', async () => {
+    const { validateDataQuality } = await import('../../utils/fileParser');
+    
+    const columns = ['Name', 'Email'];
+    
+    const originalRows = [
+      { 'Name': 'John Doe', 'Email': 'john@example.com' }
+    ];
+    
+    const formattedRows = [
+      { 'Name': 'John Doe', 'Email': 'john@example.com' }
+    ];
+    
+    const warnings = validateDataQuality(originalRows, formattedRows, columns);
+    
+    // Should have no warnings since nothing changed
+    expect(warnings.length).toBe(0);
+  });
+});

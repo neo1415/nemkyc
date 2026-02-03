@@ -300,7 +300,12 @@ export function parseExcel(file: File): Promise<FileParseResult> {
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'array' });
+        // Requirements 28.3, 28.4: Use raw: true and cellDates: false to preserve original values
+        const workbook = XLSX.read(data, { 
+          type: 'array',
+          raw: true,           // Preserve raw cell values
+          cellDates: false     // Don't auto-convert to Date objects
+        });
         
         // Get the first sheet
         const firstSheetName = workbook.SheetNames[0];
@@ -312,8 +317,10 @@ export function parseExcel(file: File): Promise<FileParseResult> {
         const worksheet = workbook.Sheets[firstSheetName];
         
         // Convert to JSON with header row
+        // Requirements 28.3, 28.4: Use raw: true to get original cell values
         const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, {
-          defval: '' // Default value for empty cells
+          defval: '', // Default value for empty cells
+          raw: true   // Preserve raw values (don't format)
         });
 
         if (jsonData.length === 0) {
@@ -323,6 +330,29 @@ export function parseExcel(file: File): Promise<FileParseResult> {
 
         // Extract columns from the first row's keys
         const columns = Object.keys(jsonData[0]);
+        
+        // Requirements 28.1, 28.2, 28.5, 28.6, 28.7: Format each row's data
+        const formattedRows = jsonData.map(row => {
+          const formattedRow: Record<string, any> = {};
+          
+          for (const column of columns) {
+            let value = row[column];
+            
+            // Apply date formatting if this is a date column
+            value = formatDateValue(value, column);
+            
+            // Apply phone formatting if this is a phone column
+            value = formatPhoneValue(value, column);
+            
+            formattedRow[column] = value;
+          }
+          
+          return formattedRow;
+        });
+        
+        // Generate data quality warnings
+        const dataQualityWarnings = validateDataQuality(jsonData, formattedRows, columns);
+        
         const detectedEmailColumn = detectEmailColumn(columns);
         const detectedFileType = detectFileType(columns);
         const detectedNameColumns = detectNameColumns(columns, detectedFileType);
@@ -334,7 +364,7 @@ export function parseExcel(file: File): Promise<FileParseResult> {
 
         resolve({
           columns,
-          rows: jsonData,
+          rows: formattedRows, // Return formatted data instead of raw
           detectedEmailColumn,
           detectedNameColumns,
           detectedPolicyColumn,
@@ -343,7 +373,8 @@ export function parseExcel(file: File): Promise<FileParseResult> {
           detectedRegistrationDateColumn,
           detectedBusinessAddressColumn,
           detectedFileType,
-          totalRows: jsonData.length
+          totalRows: formattedRows.length,
+          dataQualityWarnings
         });
       } catch (error) {
         reject(new Error(`Excel parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`));
@@ -905,4 +936,238 @@ export function extractBusinessAddress(entry: Record<string, any>, businessAddre
   if (!businessAddressColumn) return undefined;
   const value = getCleanValue(entry[businessAddressColumn]);
   return value || undefined;
+}
+
+// ========== Excel Data Formatting Utilities (Requirement 28) ==========
+
+/**
+ * Common date column name patterns
+ * Used to detect which columns contain date values
+ * Requirements: 28.5
+ */
+const DATE_COLUMN_PATTERNS = [
+  'date',
+  'dob',
+  'dateofbirth',
+  'birthdate',
+  'birthday',
+  'registration',
+  'registrationdate',
+  'incorporation',
+  'incorporationdate',
+  'expiry',
+  'expirydate',
+  'effective',
+  'effectivedate',
+  'created',
+  'createddate',
+  'updated',
+  'updateddate'
+];
+
+/**
+ * Check if a column name indicates it contains date values
+ * Requirements: 28.5
+ * 
+ * @param columnName - The column name to check
+ * @returns true if the column likely contains dates
+ */
+export function isDateColumn(columnName: string): boolean {
+  const normalized = normalizeColumnName(columnName);
+  
+  // Check if the normalized column name contains any date pattern
+  return DATE_COLUMN_PATTERNS.some(pattern => normalized.includes(pattern));
+}
+
+/**
+ * Convert Excel serial date number to DD/MM/YYYY format
+ * Requirements: 28.1, 28.5, 28.7
+ * 
+ * Excel stores dates as serial numbers where 1 = January 1, 1900.
+ * However, Excel has a bug where it treats 1900 as a leap year (it wasn't).
+ * We need to subtract 2 from the serial to account for this.
+ * 
+ * @param serial - Excel serial date number (e.g., 29224)
+ * @returns Date string in DD/MM/YYYY format (e.g., "04/01/1980")
+ */
+export function excelSerialToDate(serial: number): string {
+  // Excel's epoch is January 1, 1900 (serial 1)
+  // But Excel incorrectly treats 1900 as a leap year
+  // So we need to subtract 2 to correct for this bug
+  const excelEpoch = new Date(1900, 0, 1);
+  const daysOffset = serial - 2; // Subtract 2 for Excel's leap year bug
+  
+  // Calculate the actual date
+  const date = new Date(excelEpoch.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+  
+  // Format as DD/MM/YYYY
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  
+  return `${day}/${month}/${year}`;
+}
+
+/**
+ * Format a date value from Excel data
+ * Requirements: 28.1, 28.5, 28.7
+ * 
+ * If the column is a date column and the value is a number (Excel serial),
+ * convert it to DD/MM/YYYY format. Otherwise return the value unchanged.
+ * 
+ * @param value - The cell value from Excel
+ * @param columnName - The column name
+ * @returns Formatted date string or original value
+ */
+export function formatDateValue(value: any, columnName: string): any {
+  // Check if this is a date column
+  if (!isDateColumn(columnName)) {
+    return value;
+  }
+  
+  // If the value is a number, it's likely an Excel serial date
+  if (typeof value === 'number' && value > 0 && value < 100000) {
+    // Convert Excel serial to readable date
+    return excelSerialToDate(value);
+  }
+  
+  // Return value unchanged if it's not a serial number
+  return value;
+}
+
+/**
+ * Common phone column name patterns
+ * Used to detect which columns contain phone numbers
+ * Requirements: 28.6
+ */
+const PHONE_COLUMN_PATTERNS = [
+  'phone',
+  'mobile',
+  'telephone',
+  'tel',
+  'cell',
+  'contact',
+  'phonenumber',
+  'mobilenumber',
+  'telephonenumber',
+  'cellnumber',
+  'contactnumber'
+];
+
+/**
+ * Check if a column name indicates it contains phone numbers
+ * Requirements: 28.6
+ * 
+ * @param columnName - The column name to check
+ * @returns true if the column likely contains phone numbers
+ */
+export function isPhoneColumn(columnName: string): boolean {
+  const normalized = normalizeColumnName(columnName);
+  
+  // Check if the normalized column name contains any phone pattern
+  return PHONE_COLUMN_PATTERNS.some(pattern => normalized.includes(pattern));
+}
+
+/**
+ * Format a phone number value from Excel data
+ * Requirements: 28.2, 28.6, 28.9, 28.10
+ * 
+ * Ensures Nigerian phone numbers:
+ * - Start with 0
+ * - Are 11 digits long
+ * - Have leading zeros preserved
+ * 
+ * If a 10-digit number is found without leading 0, prepends 0.
+ * 
+ * @param value - The cell value from Excel
+ * @param columnName - The column name
+ * @returns Formatted phone number or original value
+ */
+export function formatPhoneValue(value: any, columnName: string): any {
+  // Check if this is a phone column
+  if (!isPhoneColumn(columnName)) {
+    return value;
+  }
+  
+  // Convert to string and remove non-digit characters
+  let phoneStr = String(value).replace(/\D/g, '');
+  
+  // If empty after cleaning, return original value
+  if (!phoneStr) {
+    return value;
+  }
+  
+  // If it's 10 digits and doesn't start with 0, prepend 0
+  if (phoneStr.length === 10 && !phoneStr.startsWith('0')) {
+    phoneStr = '0' + phoneStr;
+  }
+  
+  // Validate Nigerian format (11 digits starting with 0)
+  if (phoneStr.length === 11 && phoneStr.startsWith('0')) {
+    return phoneStr;
+  }
+  
+  // Return the cleaned phone string even if it doesn't match Nigerian format
+  // (could be international or other format)
+  return phoneStr || value;
+}
+
+/**
+ * Validate data quality and detect formatting corrections
+ * Requirements: 28.1, 28.2
+ * 
+ * Checks for:
+ * - Date columns that had Excel serial numbers converted to readable dates
+ * - Phone columns that had leading zeros added or formatting corrected
+ * 
+ * @param originalRows - The raw rows before formatting
+ * @param formattedRows - The rows after formatting
+ * @param columns - The column names
+ * @returns Array of warnings about data quality issues
+ */
+export function validateDataQuality(
+  originalRows: Record<string, any>[],
+  formattedRows: Record<string, any>[],
+  columns: string[]
+): import('../types/remediation').DataQualityWarning[] {
+  const warnings: import('../types/remediation').DataQualityWarning[] = [];
+  
+  for (let rowIndex = 0; rowIndex < originalRows.length; rowIndex++) {
+    const originalRow = originalRows[rowIndex];
+    const formattedRow = formattedRows[rowIndex];
+    
+    for (const column of columns) {
+      const originalValue = originalRow[column];
+      const formattedValue = formattedRow[column];
+      
+      // Check if value was changed
+      if (originalValue !== formattedValue) {
+        // Check if it's a date conversion
+        if (isDateColumn(column) && typeof originalValue === 'number') {
+          warnings.push({
+            type: 'date_converted',
+            column,
+            rowIndex,
+            originalValue,
+            correctedValue: formattedValue,
+            message: `Date in column "${column}" was converted from Excel serial number ${originalValue} to ${formattedValue}`
+          });
+        }
+        
+        // Check if it's a phone correction
+        if (isPhoneColumn(column)) {
+          warnings.push({
+            type: 'phone_corrected',
+            column,
+            rowIndex,
+            originalValue,
+            correctedValue: formattedValue,
+            message: `Phone number in column "${column}" was corrected from ${originalValue} to ${formattedValue}`
+          });
+        }
+      }
+    }
+  }
+  
+  return warnings;
 }
