@@ -1,0 +1,74 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 600  # 10 minutes
+      arrivalRate: 10
+  
+  processor: "./test-data-generator.js"
+  
+  # Performance thresholds for different endpoints
+  ensure:
+    maxErrorRate: 1
+    p95: 5000  # Overall p95 < 5 seconds
+    p99: 10000 # Overall p99 < 10 seconds
+
+scenarios:
+  # List Creation - 20% of traffic
+  - name: "List Creation"
+    weight: 20
+    flow:
+      - function: "generateListData"
+      - post:
+          url: "/api/identity/lists"
+          json:
+            name: "{{ listName }}"
+            columns: ["email", "firstName", "lastName", "nin", "bvn", "gender", "dateOfBirth", "phoneNumber", "address", "policyNumber"]
+            entries: "{{ entries }}"
+            emailColumn: "email"
+            listType: "individual"
+            uploadMode: "template"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          capture:
+            - json: "$.listId"
+              as: "createdListId"
+      - think: 3
+
+  # List Retrieval - 30% of traffic
+  - name: "List Retrieval"
+    weight: 30
+    flow:
+      - function: "generateTestData"
+      - get:
+          url: "/api/identity/lists"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          capture:
+            - json: "$.lists[0].id"
+              as: "listId"
+      - think: 2
+
+  # Entry Verification - 40% of traffic (most common operation)
+  - name: "Entry Verification"
+    weight: 40
+    flow:
+      - function: "generateTestData"
+      - post:
+          url: "/api/identity/verify/{{ token }}"
+          json:
+            identityNumber: "{{ nin }}"
+          capture:
+            - json: "$.success"
+              as: "success"
+      - think: 2
+
+  # Export List - 10% of traffic (least common)
+  - name: "Export List"
+    weight: 10
+    flow:
+      - function: "generateListId"
+      - get:
+          url: "/api/identity/lists/{{ listId }}/export"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - think: 5

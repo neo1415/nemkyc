@@ -113,8 +113,7 @@ describe('Property 21: Template Download Completeness', () => {
       'Date of Birth',
       'Occupation',
       'Nationality',
-      'NIN',
-      'CAC'
+      'NIN'
     ];
     
     optionalColumns.forEach((col) => {

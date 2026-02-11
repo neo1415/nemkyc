@@ -1,12 +1,21 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { Alert, AlertDescription } from '../../components/ui/alert';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Users, FileText, CheckCircle, Clock, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
+import { Users, FileText, CheckCircle, Clock, TrendingUp, TrendingDown, RefreshCw, Activity, AlertTriangle, DollarSign } from 'lucide-react';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useAuth } from '../../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
-import { useAdminDashboardStats, useMonthlySubmissionData } from '../../hooks/useAdminDashboard';
+import { 
+  useAdminDashboardStats, 
+  useMonthlySubmissionData,
+  useHealthStatus,
+  useErrorRate,
+  useAPIUsage,
+  useSystemAlerts
+} from '../../hooks/useAdminDashboard';
 import { useQueryClient } from '@tanstack/react-query';
 import { rolesMatch, normalizeRole, hasAnyRole } from '../../utils/roleNormalization';
 
@@ -34,12 +43,41 @@ const AdminDashboard: React.FC = () => {
     refetch: refetchMonthly 
   } = useMonthlySubmissionData(user?.role || '');
 
+  // Health monitoring data
+  const {
+    data: healthStatus,
+    isLoading: healthLoading,
+    refetch: refetchHealth
+  } = useHealthStatus();
+
+  const {
+    data: errorRate,
+    isLoading: errorRateLoading,
+    refetch: refetchErrorRate
+  } = useErrorRate(24);
+
+  const {
+    data: apiUsage,
+    isLoading: apiUsageLoading,
+    refetch: refetchAPIUsage
+  } = useAPIUsage('day');
+
+  const {
+    data: alerts,
+    isLoading: alertsLoading,
+    refetch: refetchAlerts
+  } = useSystemAlerts();
+
   const isLoading = statsLoading || monthlyLoading;
 
   // Handle refresh button
   const handleRefresh = () => {
     refetchStats();
     refetchMonthly();
+    refetchHealth();
+    refetchErrorRate();
+    refetchAPIUsage();
+    refetchAlerts();
   };
 
   // Role-based access helpers using normalization
@@ -317,6 +355,127 @@ const AdminDashboard: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* System Health Monitoring - Only for admin and super admin */}
+      {(normalizeRole(userRole) === 'admin' || normalizeRole(userRole) === 'super admin') && (
+        <div className="space-y-6">
+          <h2 className="text-xl font-semibold text-gray-900">System Health & Monitoring</h2>
+          
+          {/* Health Status Cards */}
+          <div className="flex flex-wrap gap-4">
+            {/* API Health Status */}
+            <Card className="flex-1 min-w-[250px]">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">API Status</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      {healthStatus?.status === 'up' && (
+                        <>
+                          <Badge className="bg-green-500">Online</Badge>
+                          <span className="text-xs text-gray-500">
+                            {healthStatus.responseTime}ms
+                          </span>
+                        </>
+                      )}
+                      {healthStatus?.status === 'down' && (
+                        <Badge className="bg-red-500">Offline</Badge>
+                      )}
+                      {healthStatus?.status === 'not_configured' && (
+                        <Badge className="bg-gray-500">Not Configured</Badge>
+                      )}
+                      {!healthStatus && (
+                        <Badge className="bg-gray-400">Unknown</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {healthStatus?.message || 'Checking...'}
+                    </p>
+                  </div>
+                  <Activity className={`h-8 w-8 ${
+                    healthStatus?.status === 'up' ? 'text-green-600' : 
+                    healthStatus?.status === 'down' ? 'text-red-600' : 
+                    'text-gray-600'
+                  }`} />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Error Rate */}
+            <Card className="flex-1 min-w-[250px]">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Error Rate (24h)</p>
+                    <p className="text-3xl font-bold">
+                      {errorRate?.errorRatePercent || '0.00'}%
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {errorRate?.failed || 0} / {errorRate?.total || 0} failed
+                    </p>
+                  </div>
+                  <AlertTriangle className={`h-8 w-8 ${
+                    parseFloat(errorRate?.errorRatePercent || '0') > 10 ? 'text-red-600' :
+                    parseFloat(errorRate?.errorRatePercent || '0') > 5 ? 'text-yellow-600' :
+                    'text-green-600'
+                  }`} />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* API Usage Today */}
+            <Card className="flex-1 min-w-[250px]">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">API Calls (Today)</p>
+                    <p className="text-3xl font-bold">{apiUsage?.calls || 0}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      ₦{(apiUsage?.cost || 0).toFixed(2)} cost
+                    </p>
+                    {apiUsage && apiUsage.calls > 0 && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        ~₦{((apiUsage.cost / apiUsage.calls) * 30 * apiUsage.calls).toFixed(0)} monthly projection
+                      </p>
+                    )}
+                  </div>
+                  <DollarSign className="h-8 w-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* System Alerts */}
+          {alerts && alerts.length > 0 && (
+            <Alert className="border-yellow-500 bg-yellow-50">
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-yellow-800">
+                      {alerts.length} System Alert{alerts.length > 1 ? 's' : ''}
+                    </p>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      {alerts[0].message}
+                      {alerts.length > 1 && ` and ${alerts.length - 1} more`}
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      // Navigate to alerts page or show modal
+                      console.log('View alerts');
+                    }}
+                  >
+                    View All
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+      )}
 
       {/* Form Submissions Chart */}
       <Card>

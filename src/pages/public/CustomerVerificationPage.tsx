@@ -673,12 +673,30 @@ const CustomerVerificationPage: React.FC = () => {
                 <Alert className="bg-red-50 border-red-200">
                   <AlertTriangle className="h-4 w-4 text-red-600" />
                   <AlertDescription className="text-red-800">
-                    {verificationError}
-                    {attemptsRemaining > 0 && (
-                      <span className="block mt-1 font-medium">
-                        Attempts remaining: {attemptsRemaining}
-                      </span>
-                    )}
+                    <div className="space-y-2">
+                      <p className="font-semibold">Verification Failed</p>
+                      <p>{verificationError}</p>
+                      {attemptsRemaining > 0 && (
+                        <p className="font-medium">
+                          Attempts remaining: {attemptsRemaining}
+                        </p>
+                      )}
+                      {attemptsRemaining === 0 && (
+                        <div className="mt-3 pt-3 border-t border-red-300">
+                          <p className="font-semibold mb-2">Need Help?</p>
+                          <p className="text-sm">
+                            Please contact your broker or NEM Insurance support:
+                          </p>
+                          <div className="mt-2 space-y-1 text-sm">
+                            {entryInfo?.brokerName && (
+                              <p>Broker: <strong>{entryInfo.brokerName}</strong></p>
+                            )}
+                            <p>Email: <strong>nemsupport@nem-insurance.com</strong></p>
+                            <p>Phone: <strong>0201-4489570-2</strong></p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </AlertDescription>
                 </Alert>
               )}
@@ -706,6 +724,20 @@ const CustomerVerificationPage: React.FC = () => {
                   </>
                 )}
               </Button>
+
+              {/* Contact Support Button */}
+              {verificationState === 'failed' && (
+                <Button
+                  onClick={() => {
+                    window.location.href = 'mailto:nemsupport@nem-insurance.com?subject=Verification%20Assistance%20Required';
+                  }}
+                  variant="outline"
+                  className="w-full h-12 text-base font-semibold border-2"
+                >
+                  <Phone className="w-5 h-5 mr-2" />
+                  Contact Support
+                </Button>
+              )}
 
               {attemptsRemaining === 0 && (
                 <Alert className="bg-amber-50 border-amber-200">

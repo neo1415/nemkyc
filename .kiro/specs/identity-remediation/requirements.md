@@ -427,3 +427,173 @@ The Identity Collection System enables NEM Insurance to collect missing National
 8. WHEN exporting data, THE System SHALL preserve the original formatting for dates and phone numbers
 9. THE System SHALL validate that phone numbers for Nigerian numbers start with "0" and are 11 digits long
 10. IF a phone number is missing a leading zero and is 10 digits, THE System SHALL automatically prepend "0" to correct the format
+
+### Requirement 29: Datapro NIN Verification API Integration
+
+**User Story:** As a system administrator, I want to integrate the Datapro API for real NIN verification, so that we can validate customer identity information against the official NIMC database.
+
+#### Acceptance Criteria
+
+1. THE System SHALL integrate with Datapro API at base URL: https://api.datapronigeria.com
+2. THE System SHALL use the /verifynin/ endpoint with query parameter regNo for NIN verification
+3. THE System SHALL send the SERVICEID (merchant ID) in the request header for authentication
+4. THE System SHALL handle all Datapro response codes: 200 (success), 400 (bad request), 401 (authorization failed), 87 (invalid service ID), 88 (network error)
+5. THE System SHALL parse the ResponseInfo and ResponseData from Datapro API responses
+6. THE System SHALL extract FirstName, LastName, Gender, DateOfBirth, and PhoneNumber from ResponseData
+7. THE System SHALL NOT store photo or signature data from the API response
+8. THE System SHALL implement retry logic for network errors (maximum 3 retries with exponential backoff)
+9. THE System SHALL implement a 30-second timeout for API requests
+10. THE System SHALL log all API requests with masked NIN (show only first 4 digits)
+
+### Requirement 30: Field-Level Validation Against Excel Data
+
+**User Story:** As a compliance officer, I want the system to validate NIN data against the information in our Excel files, so that we can ensure data accuracy and detect discrepancies.
+
+#### Acceptance Criteria
+
+1. THE System SHALL compare First Name from Datapro API with First Name from Excel (case-insensitive, whitespace trimmed)
+2. THE System SHALL compare Last Name from Datapro API with Last Name from Excel (case-insensitive, whitespace trimmed)
+3. THE System SHALL compare Gender from Datapro API with Gender from Excel (normalized: M/Male/MALE → male, F/Female/FEMALE → female)
+4. THE System SHALL compare Date of Birth from Datapro API with Date of Birth from Excel (supporting multiple formats: DD/MM/YYYY, DD-MMM-YYYY, YYYY-MM-DD)
+5. THE System SHALL compare Phone Number from Datapro API with Phone Number from Excel (optional, normalized: remove spaces/dashes, handle +234 vs 0 prefix)
+6. THE System SHALL NOT validate Middle Name (not included in Excel template)
+7. THE System SHALL mark verification as successful ONLY if First Name, Last Name, Gender, and Date of Birth all match
+8. THE System SHALL mark verification as failed if any required field does not match
+9. THE System SHALL store field matching results in entry.verificationDetails with fieldsValidated and failedFields arrays
+10. THE System SHALL allow Phone Number mismatch without failing verification (people change phone numbers)
+
+### Requirement 31: NDPR-Compliant Data Encryption
+
+**User Story:** As a data protection officer, I want all personally identifiable information (PII) to be encrypted at rest, so that we comply with Nigeria Data Protection Regulation (NDPR) requirements.
+
+#### Acceptance Criteria
+
+1. THE System SHALL encrypt all NIN values using AES-256-GCM encryption before storing in Firestore
+2. THE System SHALL encrypt all BVN values using AES-256-GCM encryption before storing in Firestore
+3. THE System SHALL encrypt all CAC values using AES-256-GCM encryption before storing in Firestore
+4. THE System SHALL generate a unique Initialization Vector (IV) for each encryption operation
+5. THE System SHALL store the IV alongside the encrypted data
+6. THE System SHALL store the encryption key in an environment variable (ENCRYPTION_KEY) and NEVER in code or database
+7. THE System SHALL decrypt identity numbers only in server memory when needed for verification
+8. THE System SHALL clear decrypted values from memory immediately after use
+9. THE System SHALL NEVER log plaintext identity numbers
+10. THE System SHALL provide a migration script to encrypt existing plaintext identity numbers in the database
+
+### Requirement 32: Secure API Credential Management
+
+**User Story:** As a security engineer, I want API credentials to be securely managed and never exposed to the frontend, so that we prevent unauthorized access to verification services.
+
+#### Acceptance Criteria
+
+1. THE System SHALL store the Datapro SERVICEID in an environment variable (DATAPRO_SERVICE_ID)
+2. THE System SHALL NEVER send the SERVICEID to the frontend or include it in client-side code
+3. THE System SHALL validate that DATAPRO_SERVICE_ID is set before allowing production mode
+4. THE System SHALL prevent server startup if production mode is enabled without required credentials
+5. THE System SHALL log a warning on startup if credentials are missing in development mode
+6. THE System SHALL use different credentials for development, staging, and production environments
+7. THE System SHALL implement rate limiting on verification endpoints to prevent abuse
+8. THE System SHALL track API usage (number of calls per day/month) in Firestore
+9. THE System SHALL alert administrators when API usage approaches configured limits
+10. THE System SHALL display API usage statistics in the admin dashboard
+
+### Requirement 33: User-Friendly Error Messages
+
+**User Story:** As a customer, I want to receive clear, actionable error messages when verification fails, so that I know what to do next without technical confusion.
+
+#### Acceptance Criteria
+
+1. WHEN Datapro returns response code 400, THE System SHALL display: "Invalid NIN format. Please check and try again."
+2. WHEN Datapro returns response code 401 or 87, THE System SHALL display: "Verification service unavailable. Please contact support."
+3. WHEN Datapro returns response code 88, THE System SHALL display: "Network error. Please try again later."
+4. WHEN NIN is not found in NIMC database, THE System SHALL display: "NIN not found. Please verify your NIN and try again."
+5. WHEN field validation fails, THE System SHALL display: "The information provided does not match our records. Please contact your broker at [broker_email]."
+6. THE System SHALL NEVER display technical error messages, API responses, or stack traces to customers
+7. THE System SHALL include broker contact information in all customer error messages
+8. THE System SHALL provide a "Contact Support" button on error pages
+9. THE System SHALL send a customer-friendly error email when verification fails
+10. THE System SHALL send a technical error email to staff (compliance, admin, broker) with full details when verification fails
+
+### Requirement 34: Comprehensive Audit Logging
+
+**User Story:** As a compliance officer, I want all verification attempts to be logged with full details, so that we can audit the system and investigate issues.
+
+#### Acceptance Criteria
+
+1. THE System SHALL log every verification attempt with timestamp, entry ID, and NIN (masked)
+2. THE System SHALL log every Datapro API call with request details (NIN masked) and response code
+3. THE System SHALL log field matching results (which fields matched, which failed)
+4. THE System SHALL log all encryption and decryption operations (without logging plaintext values)
+5. THE System SHALL log all errors with full context (error message, stack trace, request details)
+6. THE System SHALL store audit logs in Firestore collection: verification-audit-logs
+7. THE System SHALL retain audit logs for minimum 7 years (NDPR requirement)
+8. THE System SHALL provide an audit log viewer in the admin dashboard
+9. THE System SHALL allow filtering audit logs by date range, entry ID, and result (success/failure)
+10. THE System SHALL export audit logs to CSV for external analysis
+
+### Requirement 35: Bulk Verification with Datapro API
+
+**User Story:** As an administrator, I want to verify multiple NIns in bulk using the Datapro API, so that I can efficiently process large lists of customers.
+
+#### Acceptance Criteria
+
+1. THE System SHALL process bulk verification requests in batches of 10 concurrent API calls
+2. THE System SHALL add a 1-second delay between batches to respect API rate limits
+3. THE System SHALL decrypt NIns before sending to Datapro API
+4. THE System SHALL perform field-level validation for each entry
+5. THE System SHALL update entry status based on verification result (verified, verification_failed)
+6. THE System SHALL store verification details in entry.verificationDetails
+7. THE System SHALL skip entries that are already verified (status = 'verified')
+8. THE System SHALL track progress and display to user (X of Y processed)
+9. THE System SHALL return a detailed summary: { processed, verified, failed, skipped }
+10. THE System SHALL allow pausing and resuming bulk verification operations
+
+### Requirement 36: Performance Optimization and Caching
+
+**User Story:** As a system administrator, I want the system to cache verification results and optimize API calls, so that we reduce costs and improve performance.
+
+#### Acceptance Criteria
+
+1. THE System SHALL cache successful NIN verification results for 24 hours
+2. THE System SHALL use the cached result if the same NIN is verified again within 24 hours
+3. THE System SHALL store cache in Firestore collection: verification-cache
+4. THE System SHALL include cache hit/miss statistics in admin dashboard
+5. THE System SHALL implement request queuing when API rate limit is reached
+6. THE System SHALL process queued requests in background
+7. THE System SHALL notify users when queued verification is complete
+8. THE System SHALL implement exponential backoff for API retry attempts
+9. THE System SHALL measure and log API response times
+10. THE System SHALL alert administrators if average response time exceeds 5 seconds
+
+### Requirement 37: Monitoring and Alerting
+
+**User Story:** As a system administrator, I want to monitor API health and receive alerts for issues, so that I can proactively address problems before they impact users.
+
+#### Acceptance Criteria
+
+1. THE System SHALL ping Datapro API health endpoint every 5 minutes
+2. THE System SHALL alert administrators if API is unreachable for more than 15 minutes
+3. THE System SHALL track verification success rate (successful / total attempts)
+4. THE System SHALL alert administrators if success rate drops below 90%
+5. THE System SHALL track API error rates by error code (400, 401, 87, 88)
+6. THE System SHALL display API health status in admin dashboard (green/yellow/red indicator)
+7. THE System SHALL track daily and monthly API call counts
+8. THE System SHALL alert administrators when approaching 80% of monthly API limit
+9. THE System SHALL estimate monthly costs based on API usage
+10. THE System SHALL display cost projections in admin dashboard
+
+### Requirement 38: Production Deployment Readiness
+
+**User Story:** As a DevOps engineer, I want comprehensive deployment documentation and rollback procedures, so that I can safely deploy the Datapro integration to production.
+
+#### Acceptance Criteria
+
+1. THE System SHALL provide a deployment checklist with all required environment variables
+2. THE System SHALL validate all required environment variables on server startup
+3. THE System SHALL provide a database backup script to run before deployment
+4. THE System SHALL provide a rollback script to switch back to mock mode if needed
+5. THE System SHALL provide a data migration script to encrypt existing plaintext identity numbers
+6. THE System SHALL include load testing results for 100 concurrent verifications
+7. THE System SHALL include security audit report confirming NDPR compliance
+8. THE System SHALL provide monitoring setup instructions (alerts, dashboards)
+9. THE System SHALL provide troubleshooting guide for common issues
+10. THE System SHALL provide post-deployment verification checklist
