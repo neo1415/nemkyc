@@ -33,36 +33,36 @@ export interface VerificationConfig {
 
 // Current configuration - set to 'mock' for development
 export const verificationConfig: VerificationConfig = {
-  mode: (process.env.VERIFICATION_MODE as VerificationMode) || 'mock', // Options: 'mock' | 'datapro' | 'paystack' | 'production'
+  mode: (import.meta.env.VITE_VERIFICATION_MODE as VerificationMode) || 'mock', // Options: 'mock' | 'datapro' | 'paystack' | 'production'
   
   // Datapro API Configuration (NIN verification)
   // Base URL: https://api.datapronigeria.com
   // Endpoint: /verifynin/?regNo={NIN}
   // Authentication: SERVICEID header
-  dataproApiUrl: process.env.DATAPRO_API_URL || 'https://api.datapronigeria.com',
-  dataproServiceId: process.env.DATAPRO_SERVICE_ID || '',
+  dataproApiUrl: import.meta.env.VITE_DATAPRO_API_URL || 'https://api.datapronigeria.com',
+  dataproServiceId: import.meta.env.VITE_DATAPRO_SERVICE_ID || '',
   
   // VerifyData API Configuration (CAC verification)
   // Base URL: https://vd.villextra.com
   // Endpoint: /api/v1/cac/verify
   // Authentication: secret-key header
-  verifydataApiUrl: process.env.VERIFYDATA_API_URL || 'https://vd.villextra.com',
-  verifydataSecretKey: process.env.VERIFYDATA_SECRET_KEY || '',
+  verifydataApiUrl: import.meta.env.VITE_VERIFYDATA_API_URL || 'https://vd.villextra.com',
+  verifydataSecretKey: import.meta.env.VITE_VERIFYDATA_SECRET_KEY || '',
   
   // Paystack API Configuration (legacy NIN/BVN verification)
   // TODO: Add real API URL and key when ready
-  ninBvnApiUrl: process.env.NIN_BVN_API_URL || 'https://api.paystack.co/identity',
-  ninBvnApiKey: process.env.NIN_BVN_API_KEY || '',
+  ninBvnApiUrl: import.meta.env.VITE_NIN_BVN_API_URL || 'https://api.paystack.co/identity',
+  ninBvnApiKey: import.meta.env.VITE_NIN_BVN_API_KEY || '',
   
   // CAC API Configuration (legacy)
   // TODO: Add real API URL and key when ready
-  cacApiUrl: process.env.CAC_API_URL || '',
-  cacApiKey: process.env.CAC_API_KEY || '',
+  cacApiUrl: import.meta.env.VITE_CAC_API_URL || '',
+  cacApiKey: import.meta.env.VITE_CAC_API_KEY || '',
   
   // Termii API Configuration (for WhatsApp/SMS notifications)
   // TODO: Add real API URL and key when ready
-  termiiApiUrl: process.env.TERMII_API_URL || 'https://api.ng.termii.com/api',
-  termiiApiKey: process.env.TERMII_API_KEY || '',
+  termiiApiUrl: import.meta.env.VITE_TERMII_API_URL || 'https://api.ng.termii.com/api',
+  termiiApiKey: import.meta.env.VITE_TERMII_API_KEY || '',
 };
 
 /**

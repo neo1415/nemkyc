@@ -29,6 +29,7 @@ import type {
   VerificationType,
   TokenValidationResponse as IdentityTokenValidationResponse
 } from '../../types/remediation';
+import { isMockMode } from '../../config/verificationConfig';
 
 // Page states
 type PageState = 'loading' | 'valid' | 'expired' | 'used' | 'invalid' | 'error';
@@ -598,26 +599,28 @@ const CustomerVerificationPage: React.FC = () => {
             </div>
 
             <div className="space-y-6">
-              {/* Demo Mode Toggle */}
-              <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
-                <div className="flex items-center gap-2">
-                  <Info className="w-4 h-4 text-amber-600" />
-                  <span className="text-sm text-amber-800">Demo Mode (simulated verification)</span>
-                </div>
-                <button
-                  onClick={() => setDemoMode(!demoMode)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    demoMode ? 'bg-amber-500' : 'bg-slate-300'
-                  }`}
-                  aria-label="Toggle demo mode"
-                >
-                  <span
-                    className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                      demoMode ? 'left-7' : 'left-1'
+              {/* Demo Mode Toggle - Only show in mock mode */}
+              {isMockMode() && (
+                <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <div className="flex items-center gap-2">
+                    <Info className="w-4 h-4 text-amber-600" />
+                    <span className="text-sm text-amber-800">Demo Mode (simulated verification)</span>
+                  </div>
+                  <button
+                    onClick={() => setDemoMode(!demoMode)}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      demoMode ? 'bg-amber-500' : 'bg-slate-300'
                     }`}
-                  />
-                </button>
-              </div>
+                    aria-label="Toggle demo mode"
+                  >
+                    <span
+                      className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                        demoMode ? 'left-7' : 'left-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
 
               {/* NIN Input (11 digits) - Requirement 20.2 */}
               {isNIN && (
