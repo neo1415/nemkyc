@@ -1,0 +1,53 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    # Warm up phase - gradually increase load
+    - duration: 60
+      arrivalRate: 10
+      name: "Warm up - 10 requests/sec"
+    
+    # Sustained load phase - maintain steady load
+    - duration: 180
+      arrivalRate: 30
+      name: "Sustained load - 30 requests/sec"
+    
+    # Peak load phase - test maximum capacity
+    - duration: 60
+      arrivalRate: 50
+      name: "Peak load - 50 requests/sec"
+    
+    # Cool down phase - reduce load
+    - duration: 60
+      arrivalRate: 10
+      name: "Cool down - 10 requests/sec"
+  
+  processor: "./test-data-generator.js"
+  
+  # Performance thresholds
+  ensure:
+    maxErrorRate: 1  # Max 1% error rate
+    p95: 3000        # 95th percentile < 3 seconds
+    p99: 5000        # 99th percentile < 5 seconds
+
+scenarios:
+  - name: "Customer Verification Flow"
+    flow:
+      # Generate test data
+      - function: "generateTestData"
+      
+      # Submit verification
+      - post:
+          url: "/api/identity/verify/{{ token }}"
+          json:
+            identityNumber: "{{ nin }}"
+          capture:
+            - json: "$.success"
+              as: "verificationSuccess"
+            - json: "$.message"
+              as: "verificationMessage"
+      
+      # Think time (simulate user reading response)
+      - think: 2
+      
+      # Log result
+      - log: "Verification {{ verificationSuccess }}: {{ verificationMessage }}"

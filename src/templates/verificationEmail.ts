@@ -329,6 +329,526 @@ export interface IdentityVerificationEmailTemplate {
 }
 
 /**
+ * Email template parameters for verification failure notification
+ */
+export interface VerificationFailureEmailData {
+  customerName?: string;
+  policyNumber?: string;
+  verificationType: VerificationType;
+  errorMessage: string;
+  brokerEmail?: string;
+  failedFields?: string[];
+}
+
+/**
+ * Generates the HTML email content for verification failure notification
+ * 
+ * This email is sent to customers when their verification fails.
+ * It includes a user-friendly explanation of what went wrong and clear next steps.
+ * 
+ * @param data - The verification failure email data
+ * @returns The complete HTML email content
+ */
+export function generateVerificationFailureEmailHtml(data: VerificationFailureEmailData): string {
+  const { customerName, policyNumber, verificationType, errorMessage, brokerEmail, failedFields } = data;
+
+  const documentType = verificationType === 'NIN' ? 'NIN' : 'CAC Registration Number';
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verification Issue - NEM Insurance</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f4f4f4;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header with NEM Insurance Branding -->
+          <tr>
+            <td style="background: linear-gradient(135deg, ${BRAND_COLORS.primary} 0%, #600018 100%); padding: 30px 40px; border-radius: 8px 8px 0 0;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td>
+                    <h1 style="color: ${BRAND_COLORS.secondary}; margin: 0; font-size: 28px; font-weight: bold;">NEM Insurance</h1>
+                    <p style="color: #ffffff; margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;">Verification Update</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <!-- Greeting -->
+              <p style="color: ${BRAND_COLORS.text}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                Dear ${customerName ? `<strong>${escapeHtml(customerName)}</strong>` : 'Client'},
+              </p>
+              
+              <!-- Issue Notice -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 0 6px 6px 0; margin: 20px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="color: #856404; font-size: 16px; font-weight: bold; margin: 0 0 10px 0;">
+                      ⚠️ Verification Issue
+                    </p>
+                    <p style="color: #856404; font-size: 14px; margin: 0;">
+                      We encountered an issue while verifying your ${escapeHtml(documentType)}.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              ${policyNumber ? `
+              <!-- Policy Information -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: ${BRAND_COLORS.background}; border-radius: 6px; margin: 20px 0;">
+                <tr>
+                  <td style="padding: 15px 20px;">
+                    <p style="color: ${BRAND_COLORS.lightText}; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 5px 0;">Policy Reference</p>
+                    <p style="color: ${BRAND_COLORS.text}; font-size: 14px; font-weight: bold; margin: 0;">${escapeHtml(policyNumber)}</p>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
+              
+              <!-- What Went Wrong -->
+              <h2 style="color: ${BRAND_COLORS.primary}; font-size: 18px; margin: 25px 0 15px 0;">What Went Wrong</h2>
+              <div style="background-color: ${BRAND_COLORS.background}; padding: 20px; border-radius: 6px; margin: 0 0 25px 0;">
+                <p style="color: ${BRAND_COLORS.text}; font-size: 15px; line-height: 1.6; margin: 0; white-space: pre-line;">
+${escapeHtml(errorMessage)}
+                </p>
+              </div>
+              
+              <!-- Next Steps -->
+              <h2 style="color: ${BRAND_COLORS.primary}; font-size: 18px; margin: 25px 0 15px 0;">Next Steps</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 0 6px 6px 0; margin: 0 0 25px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="color: #2e7d32; font-size: 15px; line-height: 1.8; margin: 0;">
+                      <strong>Please contact your broker${brokerEmail ? ` at <a href="mailto:${escapeHtml(brokerEmail)}" style="color: ${BRAND_COLORS.primary};">${escapeHtml(brokerEmail)}</a>` : ''}</strong> to resolve this issue.
+                      <br><br>
+                      Your broker will:
+                      <br>• Verify your information is correct
+                      <br>• Help update any outdated details
+                      <br>• Send you a new verification link if needed
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Reassurance -->
+              <p style="color: ${BRAND_COLORS.text}; font-size: 15px; line-height: 1.6; margin: 25px 0 0 0;">
+                We understand this may be frustrating, and we're here to help. This verification is required by NAICOM regulations to ensure the security and accuracy of your policy information.
+              </p>
+              
+              <p style="color: ${BRAND_COLORS.text}; font-size: 15px; line-height: 1.6; margin: 20px 0 0 0;">
+                Thank you for your patience and cooperation.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: ${BRAND_COLORS.background}; padding: 25px 40px; border-radius: 0 0 8px 8px;">
+              <p style="color: ${BRAND_COLORS.lightText}; font-size: 13px; line-height: 1.6; margin: 0 0 10px 0;">
+                If you need immediate assistance, please contact us:
+              </p>
+              <p style="color: ${BRAND_COLORS.text}; font-size: 13px; margin: 5px 0;">
+                📧 Email: <a href="mailto:nemsupport@nem-insurance.com" style="color: ${BRAND_COLORS.primary};">nemsupport@nem-insurance.com</a>
+              </p>
+              <p style="color: ${BRAND_COLORS.text}; font-size: 13px; margin: 5px 0;">
+                📞 Telephone: <a href="tel:+2342014489570" style="color: ${BRAND_COLORS.primary};">0201-4489570-2</a>
+              </p>
+              <p style="color: ${BRAND_COLORS.text}; font-size: 16px; margin: 20px 0 10px 0;">
+                Yours faithfully,<br>
+                <strong>NEM Insurance</strong>
+              </p>
+              <p style="color: ${BRAND_COLORS.lightText}; font-size: 12px; margin: 20px 0 0 0;">
+                © ${new Date().getFullYear()} NEM Insurance. All rights reserved.
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+/**
+ * Generates the plain text version of the verification failure email
+ * 
+ * @param data - The verification failure email data
+ * @returns The plain text email content
+ */
+export function generateVerificationFailureEmailText(data: VerificationFailureEmailData): string {
+  const { customerName, policyNumber, verificationType, errorMessage, brokerEmail } = data;
+
+  const documentType = verificationType === 'NIN' ? 'NIN' : 'CAC Registration Number';
+
+  return `
+NEM Insurance - Verification Update
+====================================
+
+Dear ${customerName || 'Client'},
+
+⚠️ VERIFICATION ISSUE
+We encountered an issue while verifying your ${documentType}.
+
+${policyNumber ? `POLICY REFERENCE\n----------------\n${policyNumber}\n\n` : ''}WHAT WENT WRONG
+----------------
+${errorMessage}
+
+NEXT STEPS
+----------
+Please contact your broker${brokerEmail ? ` at ${brokerEmail}` : ''} to resolve this issue.
+
+Your broker will:
+• Verify your information is correct
+• Help update any outdated details
+• Send you a new verification link if needed
+
+We understand this may be frustrating, and we're here to help. This verification is required by NAICOM regulations to ensure the security and accuracy of your policy information.
+
+Thank you for your patience and cooperation.
+
+NEED HELP?
+----------
+If you need immediate assistance, please contact us:
+
+Email: nemsupport@nem-insurance.com
+Telephone: 0201-4489570-2
+
+Yours faithfully,
+NEM Insurance
+
+© ${new Date().getFullYear()} NEM Insurance. All rights reserved.
+  `.trim();
+}
+
+/**
+ * Generates the email subject line for verification failure
+ * 
+ * @param verificationType - The type of verification (NIN or CAC)
+ * @param policyNumber - The customer's policy number (optional)
+ * @returns The email subject line
+ */
+export function generateVerificationFailureEmailSubject(verificationType: VerificationType, policyNumber?: string): string {
+  const documentType = verificationType === 'NIN' ? 'NIN' : 'CAC';
+  const policyRef = policyNumber ? ` - Policy ${policyNumber}` : '';
+  return `Action Required: ${documentType} Verification Issue${policyRef} - NEM Insurance`;
+}
+
+/**
+ * Generates the complete verification failure email template
+ * 
+ * @param data - The verification failure email data
+ * @returns The complete email template
+ */
+export function generateVerificationFailureEmail(data: VerificationFailureEmailData): IdentityVerificationEmailTemplate {
+  return {
+    subject: generateVerificationFailureEmailSubject(data.verificationType, data.policyNumber),
+    html: generateVerificationFailureEmailHtml(data),
+    text: generateVerificationFailureEmailText(data),
+  };
+}
+
+/**
+ * Email template parameters for staff notification
+ */
+export interface StaffNotificationEmailData {
+  customerName?: string;
+  customerEmail?: string;
+  policyNumber?: string;
+  verificationType: VerificationType;
+  errorType: string;
+  failedFields?: string[];
+  technicalDetails?: Record<string, any>;
+  entryId?: string;
+  listId?: string;
+}
+
+/**
+ * Generates the HTML email content for staff notification
+ * 
+ * This email is sent to compliance, admin, and broker roles when verification fails.
+ * It includes technical details and a link to the entry in the admin portal.
+ * 
+ * @param data - The staff notification email data
+ * @returns The complete HTML email content
+ */
+export function generateStaffNotificationEmailHtml(data: StaffNotificationEmailData): string {
+  const { 
+    customerName, 
+    customerEmail, 
+    policyNumber, 
+    verificationType, 
+    errorType, 
+    failedFields, 
+    technicalDetails,
+    entryId,
+    listId
+  } = data;
+
+  const documentType = verificationType === 'NIN' ? 'NIN' : 'CAC Registration Number';
+  const adminPortalLink = listId && entryId 
+    ? `${process.env.REACT_APP_BASE_URL || 'https://app.nem-insurance.com'}/admin/identity/${listId}`
+    : null;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verification Failure Alert - NEM Insurance</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f4f4f4;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" width="700" cellspacing="0" cellpadding="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%); padding: 30px 40px; border-radius: 8px 8px 0 0;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td>
+                    <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold;">⚠️ Verification Failure Alert</h1>
+                    <p style="color: #ffffff; margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;">Staff Notification - Action Required</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <!-- Alert Box -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #ffebee; border-left: 4px solid #d32f2f; border-radius: 0 6px 6px 0; margin: 0 0 25px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="color: #c62828; font-size: 16px; font-weight: bold; margin: 0 0 10px 0;">
+                      A customer verification has failed and requires attention.
+                    </p>
+                    <p style="color: #c62828; font-size: 14px; margin: 0;">
+                      Please review the details below and take appropriate action.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Customer Information -->
+              <h2 style="color: ${BRAND_COLORS.primary}; font-size: 18px; margin: 25px 0 15px 0;">Customer Information</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: ${BRAND_COLORS.background}; border-radius: 6px; margin: 0 0 25px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    ${customerName ? `<p style="color: ${BRAND_COLORS.text}; font-size: 14px; margin: 0 0 10px 0;"><strong>Customer Name:</strong> ${escapeHtml(customerName)}</p>` : ''}
+                    ${customerEmail ? `<p style="color: ${BRAND_COLORS.text}; font-size: 14px; margin: 0 0 10px 0;"><strong>Email:</strong> ${escapeHtml(customerEmail)}</p>` : ''}
+                    ${policyNumber ? `<p style="color: ${BRAND_COLORS.text}; font-size: 14px; margin: 0 0 10px 0;"><strong>Policy Number:</strong> ${escapeHtml(policyNumber)}</p>` : ''}
+                    <p style="color: ${BRAND_COLORS.text}; font-size: 14px; margin: 0;"><strong>Verification Type:</strong> ${escapeHtml(documentType)}</p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Error Details -->
+              <h2 style="color: ${BRAND_COLORS.primary}; font-size: 18px; margin: 25px 0 15px 0;">Error Details</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: ${BRAND_COLORS.background}; border-radius: 6px; margin: 0 0 25px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="color: ${BRAND_COLORS.text}; font-size: 14px; margin: 0 0 10px 0;"><strong>Error Type:</strong> ${escapeHtml(errorType)}</p>
+                    ${failedFields && failedFields.length > 0 ? `
+                    <p style="color: ${BRAND_COLORS.text}; font-size: 14px; margin: 0 0 5px 0;"><strong>Failed Fields:</strong></p>
+                    <ul style="color: ${BRAND_COLORS.text}; font-size: 14px; margin: 5px 0 10px 20px; padding: 0;">
+                      ${failedFields.map(field => `<li>${escapeHtml(field)}</li>`).join('')}
+                    </ul>
+                    ` : ''}
+                  </td>
+                </tr>
+              </table>
+              
+              ${technicalDetails ? `
+              <!-- Technical Details -->
+              <h2 style="color: ${BRAND_COLORS.primary}; font-size: 18px; margin: 25px 0 15px 0;">Technical Details</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f5f5f5; border-radius: 6px; margin: 0 0 25px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <pre style="color: ${BRAND_COLORS.text}; font-size: 12px; font-family: 'Courier New', monospace; margin: 0; white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(JSON.stringify(technicalDetails, null, 2))}</pre>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
+              
+              <!-- Action Required -->
+              <h2 style="color: ${BRAND_COLORS.primary}; font-size: 18px; margin: 25px 0 15px 0;">Action Required</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #e3f2fd; border-left: 4px solid #1976d2; border-radius: 0 6px 6px 0; margin: 0 0 25px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="color: #0d47a1; font-size: 15px; line-height: 1.8; margin: 0;">
+                      <strong>Please take the following actions:</strong>
+                      <br><br>
+                      1. Review the customer's information in the uploaded list
+                      <br>2. Verify the data matches the customer's official documents
+                      <br>3. Contact the customer if necessary to confirm their information
+                      <br>4. Update the list with correct information if needed
+                      <br>5. Resend verification link if appropriate
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              ${adminPortalLink ? `
+              <!-- Admin Portal Link -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td align="center" style="padding: 10px 0 25px 0;">
+                    <a href="${escapeHtml(adminPortalLink)}" 
+                       style="display: inline-block; background-color: ${BRAND_COLORS.primary}; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 6px; font-size: 16px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                      View in Admin Portal
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
+              
+              <!-- Footer Note -->
+              <p style="color: ${BRAND_COLORS.lightText}; font-size: 13px; line-height: 1.6; margin: 25px 0 0 0;">
+                This is an automated notification sent to compliance, admin, and broker staff. Please do not reply to this email.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: ${BRAND_COLORS.background}; padding: 25px 40px; border-radius: 0 0 8px 8px;">
+              <p style="color: ${BRAND_COLORS.text}; font-size: 16px; margin: 0 0 10px 0;">
+                <strong>NEM Insurance</strong><br>
+                Identity Verification System
+              </p>
+              <p style="color: ${BRAND_COLORS.lightText}; font-size: 12px; margin: 20px 0 0 0;">
+                © ${new Date().getFullYear()} NEM Insurance. All rights reserved.
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+/**
+ * Generates the plain text version of the staff notification email
+ * 
+ * @param data - The staff notification email data
+ * @returns The plain text email content
+ */
+export function generateStaffNotificationEmailText(data: StaffNotificationEmailData): string {
+  const { 
+    customerName, 
+    customerEmail, 
+    policyNumber, 
+    verificationType, 
+    errorType, 
+    failedFields, 
+    technicalDetails,
+    entryId,
+    listId
+  } = data;
+
+  const documentType = verificationType === 'NIN' ? 'NIN' : 'CAC Registration Number';
+  const adminPortalLink = listId && entryId 
+    ? `${process.env.REACT_APP_BASE_URL || 'https://app.nem-insurance.com'}/admin/identity/${listId}`
+    : null;
+
+  return `
+⚠️ VERIFICATION FAILURE ALERT
+=============================
+Staff Notification - Action Required
+
+A customer verification has failed and requires attention.
+Please review the details below and take appropriate action.
+
+CUSTOMER INFORMATION
+--------------------
+${customerName ? `Customer Name: ${customerName}\n` : ''}${customerEmail ? `Email: ${customerEmail}\n` : ''}${policyNumber ? `Policy Number: ${policyNumber}\n` : ''}Verification Type: ${documentType}
+
+ERROR DETAILS
+-------------
+Error Type: ${errorType}
+${failedFields && failedFields.length > 0 ? `\nFailed Fields:\n${failedFields.map(field => `  - ${field}`).join('\n')}` : ''}
+
+${technicalDetails ? `\nTECHNICAL DETAILS\n-----------------\n${JSON.stringify(technicalDetails, null, 2)}\n` : ''}
+ACTION REQUIRED
+---------------
+Please take the following actions:
+
+1. Review the customer's information in the uploaded list
+2. Verify the data matches the customer's official documents
+3. Contact the customer if necessary to confirm their information
+4. Update the list with correct information if needed
+5. Resend verification link if appropriate
+
+${adminPortalLink ? `\nVIEW IN ADMIN PORTAL\n--------------------\n${adminPortalLink}\n` : ''}
+This is an automated notification sent to compliance, admin, and broker staff.
+Please do not reply to this email.
+
+NEM Insurance
+Identity Verification System
+
+© ${new Date().getFullYear()} NEM Insurance. All rights reserved.
+  `.trim();
+}
+
+/**
+ * Generates the email subject line for staff notification
+ * 
+ * @param customerName - The customer's name (optional)
+ * @param policyNumber - The customer's policy number (optional)
+ * @returns The email subject line
+ */
+export function generateStaffNotificationEmailSubject(customerName?: string, policyNumber?: string): string {
+  const customerRef = customerName || (policyNumber ? `Policy ${policyNumber}` : 'Customer');
+  return `⚠️ Verification Failure: ${customerRef} - Action Required`;
+}
+
+/**
+ * Generates the complete staff notification email template
+ * 
+ * @param data - The staff notification email data
+ * @returns The complete email template
+ */
+export function generateStaffNotificationEmail(data: StaffNotificationEmailData): IdentityVerificationEmailTemplate {
+  return {
+    subject: generateStaffNotificationEmailSubject(data.customerName, data.policyNumber),
+    html: generateStaffNotificationEmailHtml(data),
+    text: generateStaffNotificationEmailText(data),
+  };
+}
+
+/**
+ * Complete email template data structure for Identity Collection System
+ */
+export interface IdentityVerificationEmailTemplate {
+  subject: string;
+  html: string;
+  text: string;
+}
+
+/**
  * Generates the complete Identity Collection email template with subject, HTML, and plain text
  * 
  * This is the main function to use for the Identity Collection System.

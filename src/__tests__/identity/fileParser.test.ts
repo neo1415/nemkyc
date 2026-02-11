@@ -528,13 +528,13 @@ describe('Feature: identity-remediation, Property 16: Template Validation - Indi
     fc.assert(
       fc.property(
         fc.constantFrom(
-          ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender'],
-          ['Title', 'First Name', 'Last Name', 'Phone Number', 'Email', 'Address', 'Gender'],
-          ['TITLE', 'FIRST NAME', 'LAST NAME', 'PHONE NUMBER', 'EMAIL', 'ADDRESS', 'GENDER'],
-          ['title', 'firstName', 'lastName', 'phoneNumber', 'email', 'address', 'gender'],
-          ['Title', 'First_Name', 'Last_Name', 'Phone_Number', 'Email', 'Address', 'Gender']
+          ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender', 'policy number', 'bvn'],
+          ['Title', 'First Name', 'Last Name', 'Phone Number', 'Email', 'Address', 'Gender', 'Policy Number', 'BVN'],
+          ['TITLE', 'FIRST NAME', 'LAST NAME', 'PHONE NUMBER', 'EMAIL', 'ADDRESS', 'GENDER', 'POLICY NUMBER', 'BVN'],
+          ['title', 'firstName', 'lastName', 'phoneNumber', 'email', 'address', 'gender', 'policyNumber', 'bvn'],
+          ['Title', 'First_Name', 'Last_Name', 'Phone_Number', 'Email', 'Address', 'Gender', 'Policy_Number', 'BVN']
         ),
-        fc.array(fc.string({ minLength: 1, maxLength: 20 }), { minLength: 0, maxLength: 5 }),
+        fc.array(fc.string({ minLength: 1, maxLength: 20 }).filter(s => !s.toLowerCase().includes('company')), { minLength: 0, maxLength: 5 }),
         (requiredColumns, optionalColumns) => {
           const columns = [...requiredColumns, ...optionalColumns];
           const result = validateIndividualTemplate(columns);
@@ -557,12 +557,12 @@ describe('Feature: identity-remediation, Property 16: Template Validation - Indi
    * **Validates: Requirements 15.8, 15.9**
    */
   it('should fail validation when required Individual columns are missing', () => {
-    const requiredColumns = ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender'];
+    const requiredColumns = ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender', 'policy number', 'bvn'];
     
     fc.assert(
       fc.property(
-        fc.integer({ min: 1, max: 7 }),
-        fc.shuffledSubarray(requiredColumns, { minLength: 0, maxLength: 6 }),
+        fc.integer({ min: 1, max: 9 }),
+        fc.shuffledSubarray(requiredColumns, { minLength: 0, maxLength: 8 }),
         (numToRemove, columnsToKeep) => {
           // Ensure we're actually removing at least one column
           if (columnsToKeep.length === requiredColumns.length) {
@@ -595,11 +595,11 @@ describe('Feature: identity-remediation, Property 16: Template Validation - Indi
    */
   it('should recognize column name variations for Individual template', () => {
     const variations = [
-      ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender'],
-      ['Title', 'First Name', 'Last Name', 'Phone Number', 'Email', 'Address', 'Gender'],
-      ['TITLE', 'FIRST_NAME', 'LAST_NAME', 'PHONE_NUMBER', 'EMAIL', 'ADDRESS', 'GENDER'],
-      ['title', 'firstName', 'lastName', 'phoneNumber', 'email', 'address', 'gender'],
-      ['Title', 'First-Name', 'Last-Name', 'Phone-Number', 'Email', 'Address', 'Gender']
+      ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender', 'policy number', 'bvn'],
+      ['Title', 'First Name', 'Last Name', 'Phone Number', 'Email', 'Address', 'Gender', 'Policy Number', 'BVN'],
+      ['TITLE', 'FIRST_NAME', 'LAST_NAME', 'PHONE_NUMBER', 'EMAIL', 'ADDRESS', 'GENDER', 'POLICY_NUMBER', 'BVN'],
+      ['title', 'firstName', 'lastName', 'phoneNumber', 'email', 'address', 'gender', 'policyNumber', 'bvn'],
+      ['Title', 'First-Name', 'Last-Name', 'Phone-Number', 'Email', 'Address', 'Gender', 'Policy-Number', 'BVN']
     ];
     
     for (const columns of variations) {
@@ -619,12 +619,12 @@ describe('Feature: identity-remediation, Property 16: Template Validation - Indi
    * **Validates: Requirements 15.1, 15.2**
    */
   it('should validate successfully with optional Individual columns', () => {
-    const requiredColumns = ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender'];
-    const optionalColumns = ['date of birth', 'occupation', 'nationality'];
+    const requiredColumns = ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender', 'policy number', 'bvn'];
+    const optionalColumns = ['date of birth', 'occupation', 'nationality', 'nin'];
     
     fc.assert(
       fc.property(
-        fc.shuffledSubarray(optionalColumns, { minLength: 0, maxLength: 3 }),
+        fc.shuffledSubarray(optionalColumns, { minLength: 0, maxLength: 4 }),
         (selectedOptional) => {
           const columns = [...requiredColumns, ...selectedOptional];
           const result = validateIndividualTemplate(columns);
@@ -651,13 +651,13 @@ describe('Feature: identity-remediation, Property 17: Template Validation - Corp
     fc.assert(
       fc.property(
         fc.constantFrom(
-          ['company name', 'company address', 'email address', 'company type', 'phone number'],
-          ['Company Name', 'Company Address', 'Email Address', 'Company Type', 'Phone Number'],
-          ['COMPANY NAME', 'COMPANY ADDRESS', 'EMAIL ADDRESS', 'COMPANY TYPE', 'PHONE NUMBER'],
-          ['companyName', 'companyAddress', 'emailAddress', 'companyType', 'phoneNumber'],
-          ['Company_Name', 'Company_Address', 'Email_Address', 'Company_Type', 'Phone_Number']
+          ['company name', 'company address', 'email address', 'company type', 'phone number', 'policy number', 'registration number', 'registration date', 'business address'],
+          ['Company Name', 'Company Address', 'Email Address', 'Company Type', 'Phone Number', 'Policy Number', 'Registration Number', 'Registration Date', 'Business Address'],
+          ['COMPANY NAME', 'COMPANY ADDRESS', 'EMAIL ADDRESS', 'COMPANY TYPE', 'PHONE NUMBER', 'POLICY NUMBER', 'REGISTRATION NUMBER', 'REGISTRATION DATE', 'BUSINESS ADDRESS'],
+          ['companyName', 'companyAddress', 'emailAddress', 'companyType', 'phoneNumber', 'policyNumber', 'registrationNumber', 'registrationDate', 'businessAddress'],
+          ['Company_Name', 'Company_Address', 'Email_Address', 'Company_Type', 'Phone_Number', 'Policy_Number', 'Registration_Number', 'Registration_Date', 'Business_Address']
         ),
-        fc.array(fc.string({ minLength: 1, maxLength: 20 }), { minLength: 0, maxLength: 5 }),
+        fc.array(fc.string({ minLength: 1, maxLength: 20 }).filter(s => !s.toLowerCase().includes('first') && !s.toLowerCase().includes('last')), { minLength: 0, maxLength: 5 }),
         (requiredColumns, optionalColumns) => {
           const columns = [...requiredColumns, ...optionalColumns];
           const result = validateCorporateTemplate(columns);
@@ -680,11 +680,11 @@ describe('Feature: identity-remediation, Property 17: Template Validation - Corp
    * **Validates: Requirements 15.8, 15.9**
    */
   it('should fail validation when required Corporate columns are missing', () => {
-    const requiredColumns = ['company name', 'company address', 'email address', 'company type', 'phone number'];
+    const requiredColumns = ['company name', 'company address', 'email address', 'company type', 'phone number', 'policy number', 'registration number', 'registration date', 'business address'];
     
     fc.assert(
       fc.property(
-        fc.shuffledSubarray(requiredColumns, { minLength: 0, maxLength: 4 }),
+        fc.shuffledSubarray(requiredColumns, { minLength: 0, maxLength: 8 }),
         (columnsToKeep) => {
           // Ensure we're actually removing at least one column
           if (columnsToKeep.length === requiredColumns.length) {
@@ -717,11 +717,11 @@ describe('Feature: identity-remediation, Property 17: Template Validation - Corp
    */
   it('should recognize column name variations for Corporate template', () => {
     const variations = [
-      ['company name', 'company address', 'email address', 'company type', 'phone number'],
-      ['Company Name', 'Company Address', 'Email Address', 'Company Type', 'Phone Number'],
-      ['COMPANY_NAME', 'COMPANY_ADDRESS', 'EMAIL_ADDRESS', 'COMPANY_TYPE', 'PHONE_NUMBER'],
-      ['companyName', 'companyAddress', 'emailAddress', 'companyType', 'phoneNumber'],
-      ['Company-Name', 'Company-Address', 'Email-Address', 'Company-Type', 'Phone-Number']
+      ['company name', 'company address', 'email address', 'company type', 'phone number', 'policy number', 'registration number', 'registration date', 'business address'],
+      ['Company Name', 'Company Address', 'Email Address', 'Company Type', 'Phone Number', 'Policy Number', 'Registration Number', 'Registration Date', 'Business Address'],
+      ['COMPANY_NAME', 'COMPANY_ADDRESS', 'EMAIL_ADDRESS', 'COMPANY_TYPE', 'PHONE_NUMBER', 'POLICY_NUMBER', 'REGISTRATION_NUMBER', 'REGISTRATION_DATE', 'BUSINESS_ADDRESS'],
+      ['companyName', 'companyAddress', 'emailAddress', 'companyType', 'phoneNumber', 'policyNumber', 'registrationNumber', 'registrationDate', 'businessAddress'],
+      ['Company-Name', 'Company-Address', 'Email-Address', 'Company-Type', 'Phone-Number', 'Policy-Number', 'Registration-Number', 'Registration-Date', 'Business-Address']
     ];
     
     for (const columns of variations) {
@@ -746,9 +746,9 @@ describe('Feature: identity-remediation, Property 18: List Type Auto-Detection',
     fc.assert(
       fc.property(
         fc.constantFrom(
-          ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender'],
-          ['Title', 'First Name', 'Last Name', 'Phone Number', 'Email', 'Address', 'Gender', 'Date of Birth'],
-          ['first name', 'last name', 'email', 'phone number', 'address', 'gender', 'title', 'occupation']
+          ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender', 'policy number', 'bvn'],
+          ['Title', 'First Name', 'Last Name', 'Phone Number', 'Email', 'Address', 'Gender', 'Date of Birth', 'Policy Number', 'BVN'],
+          ['first name', 'last name', 'email', 'phone number', 'address', 'gender', 'title', 'occupation', 'policy number', 'bvn']
         ),
         (columns) => {
           const result = detectTemplateType(columns);
@@ -756,7 +756,7 @@ describe('Feature: identity-remediation, Property 18: List Type Auto-Detection',
           expect(result.detectedType).toBe('individual');
           
           // If all required columns are present, validation should pass
-          const hasAllRequired = ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender']
+          const hasAllRequired = ['title', 'first name', 'last name', 'phone number', 'email', 'address', 'gender', 'policy number', 'bvn']
             .every(required => columns.some(col => col.toLowerCase().replace(/[_\s-]/g, '') === required.replace(/[_\s-]/g, '')));
           
           if (hasAllRequired) {
@@ -779,9 +779,9 @@ describe('Feature: identity-remediation, Property 18: List Type Auto-Detection',
     fc.assert(
       fc.property(
         fc.constantFrom(
-          ['company name', 'company address', 'email address', 'company type', 'phone number'],
-          ['Company Name', 'Company Address', 'Email Address', 'Company Type', 'Phone Number', 'RC Number'],
-          ['company name', 'company type', 'email address', 'phone number', 'company address', 'director 1']
+          ['company name', 'company address', 'email address', 'company type', 'phone number', 'policy number', 'registration number', 'registration date', 'business address'],
+          ['Company Name', 'Company Address', 'Email Address', 'Company Type', 'Phone Number', 'RC Number', 'Policy Number', 'Registration Number', 'Registration Date', 'Business Address'],
+          ['company name', 'company type', 'email address', 'phone number', 'company address', 'director 1', 'policy number', 'registration number', 'registration date', 'business address']
         ),
         (columns) => {
           const result = detectTemplateType(columns);
@@ -789,7 +789,7 @@ describe('Feature: identity-remediation, Property 18: List Type Auto-Detection',
           expect(result.detectedType).toBe('corporate');
           
           // If all required columns are present, validation should pass
-          const hasAllRequired = ['company name', 'company address', 'email address', 'company type', 'phone number']
+          const hasAllRequired = ['company name', 'company address', 'email address', 'company type', 'phone number', 'policy number', 'registration number', 'registration date', 'business address']
             .every(required => columns.some(col => col.toLowerCase().replace(/[_\s-]/g, '') === required.replace(/[_\s-]/g, '')));
           
           if (hasAllRequired) {

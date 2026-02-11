@@ -1,0 +1,35 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    # 30 minute sustained load test
+    - duration: 1800
+      arrivalRate: 20
+      name: "Sustained load - 20 requests/sec for 30 minutes"
+  
+  processor: "./test-data-generator.js"
+  
+  # Ensure performance doesn't degrade over time
+  ensure:
+    maxErrorRate: 1
+    p95: 3000
+    p99: 5000
+
+scenarios:
+  - name: "Mixed Workload"
+    flow:
+      # Generate test data
+      - function: "generateTestData"
+      
+      # Perform multiple operations in sequence
+      - loop:
+        # Verification request
+        - post:
+            url: "/api/identity/verify/{{ token }}"
+            json:
+              identityNumber: "{{ nin }}"
+        
+        # Think time between requests
+        - think: 5
+        
+        # Repeat 10 times
+        count: 10

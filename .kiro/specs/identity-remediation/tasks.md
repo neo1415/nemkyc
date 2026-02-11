@@ -984,3 +984,842 @@ This plan implements a flexible identity collection system that accepts any CSV/
     - Ensure exported files preserve phone number leading zeros
     - Test export → re-import cycle maintains data integrity
     - _Requirements: 28.8_
+
+## Phase 3: Datapro NIN Verification API Integration
+
+### Overview
+Integrate the Datapro API for real NIN verification with enterprise-grade security, NDPR compliance, and comprehensive error handling. This phase replaces mock verification with production-ready implementation.
+
+### Security & Compliance Requirements
+- **NDPR Compliance**: Encrypt all PII (NIN, BVN, CAC) at rest using AES-256-GCM
+- **API Security**: Store Datapro SERVICEID in environment variables, never expose to frontend
+- **Backend-Only**: All verification logic runs on server, frontend only displays results
+- **Audit Logging**: Log all verification attempts with timestamps and results
+- **Data Minimization**: Only store encrypted identity numbers, never store photos/signatures from API
+
+### Datapro API Specifications
+- **Base URL**: https://api.datapronigeria.com
+- **Endpoint**: /verifynin/?regNo={NIN}
+- **Method**: GET
+- **Authentication**: Header `SERVICEID` (merchant ID)
+- **Response Codes**:
+  - 200: Success - NIN found
+  - 400: Bad request
+  - 401: Authorization failed
+  - 87: Invalid service ID
+  - 88: Network error
+
+### Response Structure
+```json
+{
+  "ResponseInfo": {
+    "ResponseCode": "00",
+    "Parameter": "12345678901",
+    "Source": "NIMC",
+    "Message": "Results Found",
+    "Timestamp": "21/10/2018 8:36:12PM"
+  },
+  "ResponseData": {
+    "FirstName": "JOHN",
+    "MiddleName": null,
+    "LastName": "BULL",
+    "Gender": "Male",
+    "DateOfBirth": "12-May-1969",
+    "PhoneNumber": "08123456789",
+    "birthdate": "20/01/1980",
+    "birthlga": "Kosofe",
+    "birthstate": "LAGOS",
+    "photo": "---Base64 Encoded---",
+    "signature": "---Base64 Encoded---",
+    "trackingId": "100083737345"
+  }
+}
+```
+
+### Field Validation Strategy
+**Match Against Excel Data**:
+- First Name (required, case-insensitive)
+- Last Name (required, case-insensitive)
+- Gender (required, case-insensitive)
+- Date of Birth (required, flexible format matching)
+- Phone Number (optional, loose matching - people change numbers)
+
+**Note**: Middle name NOT validated (not in Excel template)
+
+- [x] 43. Implement NDPR-compliant data encryption
+  - [x] 43.1 Create encryption utility module
+    - Create `src/utils/encryption.ts` (frontend)
+    - Create `server-utils/encryption.js` (backend)
+    - Implement AES-256-GCM encryption/decryption functions
+    - Use crypto.randomBytes for IV generation
+    - Store encryption key in environment variable (ENCRYPTION_KEY)
+    - Generate key with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+    - _Security: NDPR compliance for PII storage_
+
+  - [x] 43.2 Update backend to encrypt identity numbers on storage
+    - Update `POST /api/identity/lists` endpoint in server.js
+    - Encrypt NIN, BVN, CAC fields before storing in Firestore
+    - Store encrypted data with IV (initialization vector)
+    - Never store plaintext identity numbers
+    - _Security: Encryption at rest_
+
+  - [x] 43.3 Update backend to decrypt for verification
+    - Update verification endpoints to decrypt before API calls
+    - Decrypt only in memory, never log plaintext
+    - Clear decrypted values from memory after use
+    - _Security: Secure data handling_
+
+  - [x] 43.4 Add encryption migration script
+    - Create script to encrypt existing plaintext identity numbers
+    - Run once to migrate legacy data
+    - Backup database before running
+    - _Security: Retroactive protection_
+
+  - [x] 43.5 Update Firestore security rules
+    - Ensure encrypted fields are write-protected
+    - Only backend service account can write encrypted data
+    - _Security: Access control_
+
+- [x] 44. Configure Datapro API credentials
+  - [x] 44.1 Update environment variables
+    - Add `DATAPRO_SERVICE_ID` to .env.example
+    - Add `DATAPRO_API_URL=https://api.datapronigeria.com` to .env.example
+    - Add `ENCRYPTION_KEY` to .env.example (32-byte hex)
+    - Document how to obtain SERVICEID from Datapro
+    - _Security: Credential management_
+
+  - [x] 44.2 Update verification config
+    - Update `src/config/verificationConfig.ts`
+    - Add Datapro configuration fields
+    - Add mode: 'mock' | 'datapro' | 'paystack'
+    - Default to 'mock' for development
+    - _Configuration: API switching_
+
+  - [x] 44.3 Validate configuration on server startup
+    - Check if DATAPRO_SERVICE_ID is set when mode is 'datapro'
+    - Check if ENCRYPTION_KEY is set
+    - Log warnings if credentials missing
+    - Prevent server start if production mode without credentials
+    - _Security: Configuration validation_
+
+- [x] 45. Implement Datapro NIN verification service
+  - [x] 45.1 Create Datapro API client
+    - Create `server-services/dataproClient.js`
+    - Implement `verifyNIN(nin)` function
+    - Make GET request to /verifynin/?regNo={nin}
+    - Add SERVICEID header
+    - Handle all response codes (200, 400, 401, 87, 88)
+    - Implement retry logic for network errors (max 3 retries)
+    - Add timeout (30 seconds)
+    - _Integration: API client_
+
+  - [x] 45.2 Implement response parsing and validation
+    - Parse ResponseInfo and ResponseData
+    - Validate ResponseCode === "00" for success
+    - Extract relevant fields (FirstName, LastName, Gender, DateOfBirth, PhoneNumber)
+    - Handle missing or null fields gracefully
+    - _Integration: Response handling_
+
+  - [x] 45.3 Implement field-level matching logic
+    - Create `matchFields(apiData, excelData)` function
+    - Compare First Name (case-insensitive, trim whitespace)
+    - Compare Last Name (case-insensitive, trim whitespace)
+    - Compare Gender (normalize: M/Male/MALE → male, F/Female/FEMALE → female)
+    - Compare Date of Birth (handle multiple formats: DD/MM/YYYY, DD-MMM-YYYY, YYYY-MM-DD)
+    - Compare Phone Number (optional, normalize: remove spaces/dashes, handle +234 vs 0)
+    - Return match results: { matched: boolean, failedFields: string[] }
+    - _Validation: Field matching_
+
+  - [x] 45.4 Implement comprehensive error handling
+    - Map Datapro error codes to user-friendly messages
+    - 400: "Invalid NIN format. Please check and try again."
+    - 401/87: "Verification service unavailable. Please contact support."
+    - 88: "Network error. Please try again later."
+    - Field mismatch: "The information provided does not match our records. Please contact your broker."
+    - NIN not found: "NIN not found in NIMC database. Please verify your NIN and try again."
+    - _UX: Error messages_
+
+  - [x] 45.5 Add comprehensive logging
+    - Log all API requests (NIN masked: show only first 4 digits)
+    - Log all API responses (exclude sensitive data)
+    - Log field matching results
+    - Log errors with full context
+    - Use structured logging for easy searching
+    - _Monitoring: Audit trail_
+
+- [x] 46. Update verification endpoints for Datapro
+  - [x] 46.1 Update POST /api/identity/verify/:token
+    - Replace Paystack NIN verification with Datapro
+    - Decrypt NIN from entry before API call
+    - Call Datapro API with decrypted NIN
+    - Perform field-level validation against Excel data
+    - Store validation results in entry.verificationDetails
+    - Update entry status based on result
+    - Send appropriate notifications
+    - _Integration: Customer verification_
+
+  - [x] 46.2 Update bulk verification endpoint
+    - Update `POST /api/identity/lists/:listId/bulk-verify`
+    - Use Datapro API for NIN verification
+    - Decrypt NIns before verification
+    - Process entries in batches (10 at a time to avoid rate limits)
+    - Add delay between batches (1 second)
+    - Track progress and return detailed summary
+    - _Integration: Bulk processing_
+
+  - [x] 46.3 Add rate limiting for Datapro API
+    - Implement rate limiter (max 50 requests per minute)
+    - Queue requests if limit exceeded
+    - Return 429 status if queue is full
+    - Log rate limit hits
+    - _Performance: API limits_
+
+  - [x] 46.4 Add API call cost tracking
+    - Track number of Datapro API calls per day/month
+    - Store in Firestore collection: api-usage
+    - Display usage stats in admin dashboard
+    - Alert when approaching limits
+    - _Monitoring: Cost control_
+
+- [x] 47. Implement enhanced error notifications
+  - [x] 47.1 Create error message templates
+    - Update `src/utils/verificationErrors.ts`
+    - Add Datapro-specific error messages
+    - Create customer-friendly messages (no technical details)
+    - Create staff-friendly messages (include technical details)
+    - Map Datapro error codes to messages
+    - _UX: Error communication_
+
+  - [x] 47.2 Update customer error email template
+    - Update `src/templates/verificationEmail.ts`
+    - Add verification failure email template
+    - Include: what went wrong (user-friendly), next steps, broker contact
+    - Use professional, empathetic tone
+    - _UX: Customer communication_
+
+  - [x] 47.3 Update staff notification email template
+    - Create staff notification template
+    - Include: customer details, failed fields, API response, action required
+    - Send to compliance, admin, and broker roles
+    - Include link to entry in admin portal
+    - _UX: Staff communication_
+
+  - [x] 47.4 Implement notification sending logic
+    - Update verification endpoint to send emails on failure
+    - Send customer email immediately
+    - Send staff email immediately
+    - Log all email sends
+    - Handle email failures gracefully
+    - _Integration: Notifications_
+
+- [x] 48. Update UI for verification results
+  - [x] 48.1 Update list detail table
+    - Update `src/pages/admin/IdentityListDetail.tsx`
+    - Add "Verification Details" column
+    - Show matched/failed fields for each entry
+    - Add tooltip with full details on hover
+    - Color-code: green (verified), red (failed), yellow (pending)
+    - _UX: Visual feedback_
+
+  - [x] 48.2 Create verification details dialog
+    - Create `src/components/identity/VerificationDetailsDialog.tsx`
+    - Show full verification results
+    - Display API response data (sanitized)
+    - Show field-by-field comparison
+    - Show timestamps and attempt count
+    - _UX: Detailed view_
+
+  - [x] 48.3 Add verification retry button
+    - Add "Retry Verification" button for failed entries
+    - Allow admin to retry verification manually
+    - Increment attempt count
+    - Show confirmation dialog
+    - _UX: Manual retry_
+
+  - [x] 48.4 Update customer verification page
+    - Update `src/pages/public/CustomerVerificationPage.tsx`
+    - Show clear error messages from Datapro
+    - Display broker contact information on error
+    - Add "Contact Support" button
+    - _UX: Customer experience_
+
+- [x] 49. Implement comprehensive testing
+  - [x] 49.1 Create Datapro API mock for testing
+    - Create `server-services/__mocks__/dataproClient.js`
+    - Mock all response scenarios (success, errors, field mismatches)
+    - Use realistic test data
+    - _Testing: Mocks_
+
+  - [x] 49.2 Write unit tests for encryption
+    - Test encryption/decryption round-trip
+    - Test IV uniqueness
+    - Test key validation
+    - Test error handling
+    - _Testing: Security_
+
+  - [x] 49.3 Write unit tests for Datapro client
+    - Test successful verification
+    - Test all error codes (400, 401, 87, 88)
+    - Test network errors and retries
+    - Test timeout handling
+    - Test response parsing
+    - _Testing: API client_
+
+  - [x] 49.4 Write unit tests for field matching
+    - Test name matching (case-insensitive, whitespace)
+    - Test gender matching (normalization)
+    - Test date matching (multiple formats)
+    - Test phone matching (optional, normalization)
+    - Test partial matches
+    - _Testing: Validation logic_
+
+  - [x] 49.5 Write integration tests for verification flow
+    - Test end-to-end customer verification
+    - Test bulk verification
+    - Test error scenarios
+    - Test notification sending
+    - Test encryption/decryption in flow
+    - _Testing: Integration_
+
+  - [x] 49.6 Write property-based tests
+    - **Property 29: Encryption Reversibility**
+      - For any plaintext identity number, encrypt → decrypt must return original value
+    - **Property 30: Field Matching Consistency**
+      - For any two identical names (ignoring case/whitespace), matching must return true
+    - **Property 31: Date Format Flexibility**
+      - For any date in DD/MM/YYYY, DD-MMM-YYYY, or YYYY-MM-DD format representing the same date, matching must return true
+    - _Testing: Properties_
+
+- [x] 50. Security hardening and audit
+  - [x] 50.1 Security code review
+    - Review all encryption code
+    - Review API credential handling
+    - Review error messages (no data leaks)
+    - Review logging (no sensitive data in logs)
+    - _Security: Code review_
+
+  - [x] 50.2 Add security headers
+    - Ensure SERVICEID never sent to frontend
+    - Add CSP headers to prevent XSS
+    - Add rate limiting to verification endpoints
+    - _Security: Headers_
+
+  - [x] 50.3 Implement audit logging
+    - Log all verification attempts
+    - Log all API calls (with masked data)
+    - Log all encryption/decryption operations
+    - Store logs in Firestore: verification-audit-logs
+    - _Security: Audit trail_
+
+  - [x] 50.4 Create security documentation
+    - Document encryption approach
+    - Document key management
+    - Document API security
+    - Document NDPR compliance measures
+    - _Security: Documentation_
+
+- [ ] 51. Performance optimization
+  - [ ] 51.1 Implement caching for verified NIns
+    - Cache successful verifications (24 hours)
+    - Use Redis or Firestore for cache
+    - Reduce duplicate API calls
+    - _Performance: Caching_
+
+  - [x] 51.2 Optimize bulk verification
+    - Process in parallel batches (10 concurrent)
+    - Add progress tracking
+    - Add pause/resume functionality
+    - _Performance: Bulk processing_
+
+  - [x] 51.3 Add request queuing
+    - Queue verification requests during high load
+    - Process queue in background
+    - Notify user when complete
+    - _Performance: Queuing_
+
+- [x] 52. Monitoring and alerting
+  - [x] 52.1 Add API health checks
+    - Ping Datapro API every 5 minutes
+    - Alert if API is down
+    - Display status in admin dashboard
+    - _Monitoring: Health checks_
+
+  - [x] 52.2 Add error rate monitoring
+    - Track verification success/failure rates
+    - Alert if error rate > 10%
+    - Display metrics in admin dashboard
+    - _Monitoring: Error rates_
+
+  - [x] 52.3 Add cost monitoring
+    - Track API call costs
+    - Alert when approaching budget limits
+    - Display cost projections
+    - _Monitoring: Costs_
+
+- [x] 53. Documentation and training
+  - [x] 53.1 Update API documentation
+    - Document Datapro integration
+    - Document encryption approach
+    - Document error handling
+    - Document field matching logic
+    - _Documentation: API_
+
+  - [x] 53.2 Create admin user guide
+    - How to interpret verification results
+    - How to handle failed verifications
+    - How to retry verifications
+    - How to contact support
+    - _Documentation: User guide_
+
+  - [x] 53.3 Create broker training materials
+    - How to prepare Excel files
+    - What data is required
+    - How to handle customer questions
+    - Common error scenarios
+    - _Documentation: Training_
+
+- [x] 54. Production deployment preparation
+  - [x] 54.1 Create deployment checklist
+    - Verify DATAPRO_SERVICE_ID is set
+    - Verify ENCRYPTION_KEY is set
+    - Verify all tests pass
+    - Verify security audit complete
+    - Backup database
+    - _Deployment: Checklist_
+
+  - [x] 54.2 Create rollback plan
+    - Document how to switch back to mock mode
+    - Document how to restore from backup
+    - Test rollback procedure
+    - _Deployment: Rollback_
+
+  - [x] 54.3 Set up monitoring
+    - Configure alerts for API errors
+    - Configure alerts for high error rates
+    - Configure alerts for cost overruns
+    - Test alert delivery
+    - _Deployment: Monitoring_
+
+  - [x] 54.4 Conduct load testing
+    - Test with 100 concurrent verifications
+    - Test bulk verification with 1000 entries
+    - Measure API response times
+    - Identify bottlenecks
+    - _Deployment: Load testing_
+
+- [x] 55. Final integration testing
+  - [x] 55.1 Test complete workflow with Datapro API
+    - Upload list with real test NIns (if available)
+    - Send verification requests
+    - Customer submits NIN
+    - Verify Datapro API is called
+    - Verify field matching works
+    - Verify results are stored correctly
+    - _Testing: End-to-end_
+
+  - [x] 55.2 Test error scenarios
+    - Test invalid NIN
+    - Test NIN not found
+    - Test field mismatch
+    - Test API errors (401, 87, 88)
+    - Test network errors
+    - Verify error messages are user-friendly
+    - Verify notifications are sent
+    - _Testing: Error handling_
+
+  - [x] 55.3 Test bulk verification
+    - Upload list with 50 entries
+    - Run bulk verification
+    - Verify all entries processed
+    - Verify rate limiting works
+    - Verify progress tracking works
+    - _Testing: Bulk processing_
+
+  - [x] 55.4 Test security measures
+    - Verify NIns are encrypted in database
+    - Verify SERVICEID not exposed to frontend
+    - Verify no sensitive data in logs
+    - Verify audit logs are created
+    - _Testing: Security_
+
+  - [x] 55.5 Test performance
+    - Measure single verification time
+    - Measure bulk verification time (100 entries)
+    - Verify caching works
+    - Verify no memory leaks
+    - _Testing: Performance_
+
+- [ ] 56. Production launch
+  - [ ] 56.1 Switch to production mode
+    - Update verificationConfig.mode to 'datapro'
+    - Deploy to production
+    - Monitor for errors
+    - _Launch: Go-live_
+
+  - [ ] 56.2 Monitor first 24 hours
+    - Watch error rates
+    - Watch API call counts
+    - Watch response times
+    - Address any issues immediately
+    - _Launch: Monitoring_
+
+  - [ ] 56.3 Gather feedback
+    - Collect feedback from brokers
+    - Collect feedback from admins
+    - Identify improvement areas
+    - _Launch: Feedback_
+
+  - [ ] 56.4 Create post-launch report
+    - Document what went well
+    - Document issues encountered
+    - Document lessons learned
+    - Plan for future improvements
+    - _Launch: Retrospective_
+
+## Notes for Phase 3
+
+- **CRITICAL**: Never store plaintext NIN/BVN/CAC in database
+- **CRITICAL**: Never expose DATAPRO_SERVICE_ID to frontend
+- **CRITICAL**: Never log plaintext identity numbers
+- **IMPORTANT**: Phone number matching is loose (people change numbers)
+
+## Phase 4: VerifyData CAC Verification API Integration
+
+### Overview
+Integrate VerifyData's CAC (Corporate Affairs Commission) verification API. Leverages 90% of existing Datapro NIN infrastructure for consistency and maintainability.
+
+### VerifyData API Specifications
+- **Base URL**: https://vd.villextra.com
+- **Endpoint**: /api/ValidateRcNumber/Initiate
+- **Method**: POST (different from Datapro GET)
+- **Authentication**: secretKey in request body (different from Datapro header)
+- **Response Codes**:
+  - 200 + success:true: Success - CAC found
+  - 400 + statusCode "FF": Invalid secret key
+  - 400 + statusCode "IB": Insufficient balance
+  - 400 + statusCode "BR": Contact administrator
+  - 400 + statusCode "EE": No active service
+  - 500: Server error
+
+### Request/Response Format
+**Request**:
+```json
+{
+  "rcNumber": "RC123456",
+  "secretKey": "your_secret_key_here"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "success",
+  "data": {
+    "name": "TEST COMPANY LTD",
+    "registrationNumber": "RC123456",
+    "companyStatus": "Verified",
+    "registrationDate": "2024-04-23",
+    "typeOfEntity": "PRIVATE_COMPANY_LIMITED_BY_SHARES"
+  }
+}
+```
+
+### Field Validation Strategy
+**Match Against Excel Data**:
+- Company Name (required, case-insensitive, handle Ltd/Limited/PLC variations)
+- Registration Number (required, normalize RC prefix)
+- Registration Date (required, flexible format matching)
+- Company Status (must be "Verified" or active)
+
+**Note**: Same flexible date parsing as NIN verification
+
+- [-] 56. Implement VerifyData CAC verification client
+  - [x] 56.1 Create VerifyData API client
+    - Create `server-services/verifydataClient.cjs`
+    - Mirror structure of `dataproClient.cjs` for consistency
+    - Implement `verifyCAC(rcNumber)` function
+    - Make POST request to /api/ValidateRcNumber/Initiate
+    - Add secretKey in request body (not header like Datapro)
+    - Handle all response codes (200, 400 with various statusCodes, 500)
+    - Implement retry logic for network errors (max 3 retries)
+    - Add timeout (30 seconds)
+    - _Integration: API client_
+
+  - [x] 56.2 Implement CAC-specific utility functions
+    - Create `maskRCNumber(rcNumber)` - show only first 4 chars
+    - Create `normalizeCompanyName(name)` - handle Ltd/Limited/PLC variations
+    - Create `normalizeRCNumber(rcNumber)` - remove RC prefix, normalize
+    - Reuse `parseDate()` from dataproClient for registration date
+    - _Utilities: Normalization_
+
+  - [x] 56.3 Implement CAC field matching logic
+    - Create `matchCACFields(apiData, excelData)` function
+    - Compare Company Name (case-insensitive, handle Ltd/Limited/PLC)
+    - Compare Registration Number (normalize RC prefix)
+    - Compare Registration Date (flexible format matching)
+    - Validate Company Status (must be "Verified" or active)
+    - Return match results: { matched: boolean, failedFields: string[] }
+    - _Validation: Field matching_
+
+  - [x] 56.4 Implement comprehensive error handling
+    - Map VerifyData status codes to user-friendly messages
+    - FF: "Verification service unavailable. Please contact support."
+    - IB: "Verification service unavailable. Please contact support."
+    - BR: "Verification service unavailable. Please contact support."
+    - EE: "Verification service unavailable. Please contact support."
+    - 500: "Network error. Please try again later."
+    - Field mismatch: "The company information provided does not match CAC records. Please contact your broker."
+    - CAC not found: "RC number not found in CAC database. Please verify your RC number and try again."
+    - _UX: Error messages_
+
+  - [x] 56.5 Add comprehensive logging
+    - Log all API requests (RC number masked: show only first 4 chars)
+    - Log all API responses (exclude sensitive data)
+    - Log field matching results
+    - Log errors with full context
+    - Use structured logging for easy searching
+    - _Monitoring: Audit trail_
+
+- [x] 57. Create VerifyData mock and tests
+  - [x] 57.1 Create VerifyData API mock
+    - Create `server-services/__mocks__/verifydataClient.cjs`
+    - Mock all response scenarios (success, errors, field mismatches)
+    - Use realistic test data
+    - Mirror Datapro mock structure
+    - _Testing: Mocks_
+
+  - [x] 57.2 Write unit tests for VerifyData client
+    - Create `server-services/__tests__/verifydataClient.test.cjs`
+    - Test successful verification
+    - Test all status codes (FF, IB, BR, EE, 500)
+    - Test network errors and retries
+    - Test timeout handling
+    - Test response parsing
+    - Mirror Datapro test structure
+    - _Testing: API client_
+
+  - [x] 57.3 Write unit tests for CAC field matching
+    - Test company name matching (case-insensitive, Ltd/Limited/PLC variations)
+    - Test RC number matching (with/without RC prefix)
+    - Test registration date matching (multiple formats)
+    - Test company status validation
+    - Test partial matches
+    - _Testing: Validation logic_
+
+- [x] 58. Update configuration for VerifyData
+  - [x] 58.1 Update verification config
+    - Update `src/config/verificationConfig.ts`
+    - Add VerifyData API URL and secret key fields
+    - Add validation for VerifyData credentials
+    - Update `hasRequiredCredentials()` function
+    - _Configuration: API config_
+
+  - [x] 58.2 Update environment variables
+    - Add `VERIFYDATA_API_URL=https://vd.villextra.com` to .env.example
+    - Add `VERIFYDATA_SECRET_KEY` to .env.example
+    - Add same to backend-package/.env.example
+    - Document how to obtain secret key from VerifyData
+    - _Configuration: Environment_
+
+  - [x] 58.3 Validate configuration on server startup
+    - Check if VERIFYDATA_SECRET_KEY is set when CAC verification enabled
+    - Log warnings if credentials missing
+    - Prevent server start if production mode without credentials
+    - _Security: Configuration validation_
+
+- [x] 59. Update rate limiter for VerifyData
+  - [x] 59.1 Add VerifyData rate limiting
+    - Update `server-utils/rateLimiter.cjs`
+    - Add `applyVerifydataRateLimit()` function
+    - Same pattern as `applyDataproRateLimit()`
+    - Max 50 requests per minute (adjust based on VerifyData limits)
+    - Use separate rate limit bucket for VerifyData
+    - _Performance: Rate limiting_
+
+- [x] 60. Update server endpoints for CAC verification
+  - [x] 60.1 Update POST /api/identity/verify/:token
+    - Add CAC verification branch
+    - Import verifydataClient
+    - Decrypt CAC number from entry before API call
+    - Call VerifyData API with decrypted CAC
+    - Perform field-level validation against Excel data
+    - Store validation results in entry.verificationDetails
+    - Update entry status based on result
+    - Send appropriate notifications
+    - _Integration: Customer verification_
+
+  - [x] 60.2 Update bulk verification endpoint
+    - Update `POST /api/identity/lists/:listId/bulk-verify`
+    - Add CAC verification logic
+    - Use VerifyData API for CAC entries
+    - Decrypt CAC numbers before verification
+    - Process CAC entries in batches (10 at a time)
+    - Add delay between batches (1 second)
+    - Track progress and return detailed summary
+    - _Integration: Bulk processing_
+
+  - [x] 60.3 Add routing logic for NIN vs CAC
+    - Update verification endpoints to route based on verificationType
+    - If verificationType === 'NIN': use dataproClient + applyDataproRateLimit
+    - If verificationType === 'CAC': use verifydataClient + applyVerifydataRateLimit
+    - Reuse all other infrastructure (encryption, logging, queue, etc.)
+    - _Integration: Routing_
+
+- [x] 61. Update monitoring for VerifyData
+  - [x] 61.1 Add VerifyData API health checks
+    - Update `server-utils/healthMonitor.cjs`
+    - Add health check for VerifyData API
+    - Ping VerifyData API every 5 minutes
+    - Alert if API is down
+    - Display status in admin dashboard
+    - _Monitoring: Health checks_
+
+  - [x] 61.2 Add VerifyData API usage tracking
+    - Update `server-utils/apiUsageTracker.cjs`
+    - Track VerifyData API calls separately from Datapro
+    - Store in Firestore collection: api-usage
+    - Display usage stats in admin dashboard
+    - Alert when approaching limits
+    - _Monitoring: Cost control_
+
+- [x] 62. Integration testing for CAC verification
+  - [x] 62.1 Create CAC integration tests
+    - Create `src/__tests__/cac/integration.test.ts`
+    - Test end-to-end CAC verification flow
+    - Test bulk CAC verification
+    - Test error scenarios
+    - Test notification sending
+    - Test encryption/decryption in flow
+    - Mirror Datapro integration test structure
+    - _Testing: Integration_
+
+  - [x] 62.2 Test CAC verification workflow
+    - Upload list with CAC entries
+    - Send CAC verification requests
+    - Customer submits CAC
+    - Verify VerifyData API is called
+    - Verify field matching works
+    - Verify results are stored correctly
+    - _Testing: End-to-end_
+
+  - [x] 62.3 Test CAC error scenarios
+    - Test invalid RC number
+    - Test RC number not found
+    - Test field mismatch (company name, RC number, date)
+    - Test API errors (FF, IB, BR, EE, 500)
+    - Test network errors
+    - Verify error messages are user-friendly
+    - Verify notifications are sent
+    - _Testing: Error handling_
+
+  - [x] 62.4 Test mixed NIN and CAC lists
+    - Upload list with both NIN and CAC entries
+    - Run bulk verification
+    - Verify NIN entries use Datapro API
+    - Verify CAC entries use VerifyData API
+    - Verify both types processed correctly
+    - _Testing: Mixed verification_
+
+- [-] 63. Documentation for CAC verification
+  - [x] 63.1 Update API documentation
+    - Update `docs/API_DOCUMENTATION.md`
+    - Document VerifyData integration
+    - Document CAC field matching logic
+    - Document error codes and handling
+    - _Documentation: API_
+
+  - [x] 63.2 Update admin user guide
+    - Update `docs/ADMIN_USER_GUIDE.md`
+    - Add CAC verification section
+    - How to interpret CAC verification results
+    - How to handle failed CAC verifications
+    - How to retry CAC verifications
+    - _Documentation: User guide_
+
+  - [ ] 63.3 Update broker training materials
+    - Update `docs/BROKER_TRAINING_GUIDE.md`
+    - Add CAC data requirements
+    - What CAC data is required (company name, RC number, reg date)
+    - How to prepare CAC Excel files
+    - Common CAC error scenarios
+    - _Documentation: Training_
+
+  - [x] 63.4 Create VerifyData integration summary
+    - Create `.kiro/specs/identity-remediation/VERIFYDATA_INTEGRATION_SUMMARY.md`
+    - Document implementation approach
+    - Document code reuse from Datapro
+    - Document differences from Datapro
+    - Document testing approach
+    - _Documentation: Summary_
+
+- [x] 64. Final CAC verification testing
+  - [x] 64.1 Test complete CAC workflow
+    - Upload CAC list with real test RC numbers (if available)
+    - Send verification requests
+    - Customer submits CAC
+    - Verify VerifyData API is called
+    - Verify field matching works
+    - Verify results are stored correctly
+    - _Testing: End-to-end_
+
+  - [x] 64.2 Test CAC security measures
+    - Verify CAC numbers are encrypted in database
+    - Verify VERIFYDATA_SECRET_KEY not exposed to frontend
+    - Verify no sensitive data in logs
+    - Verify audit logs are created for CAC verifications
+    - _Testing: Security_
+
+  - [x] 64.3 Test CAC performance
+    - Measure single CAC verification time
+    - Measure bulk CAC verification time (100 entries)
+    - Verify rate limiting works
+    - Verify no memory leaks
+    - _Testing: Performance_
+
+  - [x] 64.4 Test CAC with production credentials
+    - Obtain test credentials from NEM Insurance
+    - Test with real VerifyData API
+    - Verify all functionality works
+    - Document any issues
+    - _Testing: Production API_
+
+- [x] 65. CAC verification production launch
+  - [x] 65.1 Deploy CAC verification to production
+    - Ensure VERIFYDATA_SECRET_KEY is set
+    - Deploy to production
+    - Monitor for errors
+    - _Launch: Go-live_
+
+  - [x] 65.2 Monitor first 24 hours
+    - Watch CAC verification error rates
+    - Watch VerifyData API call counts
+    - Watch response times
+    - Address any issues immediately
+    - _Launch: Monitoring_
+
+  - [x] 65.3 Gather CAC verification feedback
+    - Collect feedback from brokers using CAC verification
+    - Collect feedback from admins
+    - Identify improvement areas
+    - _Launch: Feedback_
+
+## Notes for Phase 4
+
+- **REUSE**: 90% of code reused from Datapro NIN implementation
+- **NEW**: Only VerifyData client and CAC-specific field matching are new
+- **CONSISTENCY**: Same patterns for encryption, logging, queue, monitoring
+- **CRITICAL**: Never store plaintext CAC numbers in database
+- **CRITICAL**: Never expose VERIFYDATA_SECRET_KEY to frontend
+- **CRITICAL**: Never log plaintext RC numbers
+- **IMPORTANT**: Company name matching handles Ltd/Limited/PLC variations
+- **IMPORTANT**: RC number matching normalizes RC prefix
+- **IMPORTANT**: Middle name is NOT validated (not in Excel template)
+- **IMPORTANT**: Date format matching must be flexible (multiple formats)
+- **IMPORTANT**: All error messages must be user-friendly (no technical jargon)
+- **IMPORTANT**: Staff notifications must include technical details for debugging
+- **TESTING**: Use mock mode for development, Datapro mode for production
+- **COMPLIANCE**: NDPR requires encryption of all PII at rest
+- **PERFORMANCE**: Rate limit API calls to avoid overages
+- **MONITORING**: Track API usage and costs closely

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { normalizeRole } from '../utils/roleNormalization';
+import { api } from '../api/client';
 
 export interface DashboardStats {
   totalUsers: number;
@@ -13,6 +14,40 @@ export interface DashboardStats {
   claimsForms: number;
   recentSubmissions: any[];
   monthlyData: Array<{ month: string; submissions: number }>;
+}
+
+export interface HealthStatus {
+  service: string;
+  status: 'up' | 'down' | 'not_configured' | 'error' | 'unknown';
+  message: string;
+  timestamp: Date;
+  responseTime?: number;
+  errorCode?: string;
+}
+
+export interface ErrorRateStats {
+  errorRate: number;
+  errorRatePercent: string;
+  total: number;
+  failed: number;
+  hours: number;
+}
+
+export interface APIUsageStats {
+  calls: number;
+  cost: number;
+  period: 'day' | 'month';
+}
+
+export interface SystemAlert {
+  id: string;
+  type: string;
+  service: string;
+  message: string;
+  timestamp: Date;
+  severity: 'critical' | 'warning' | 'info';
+  acknowledged: boolean;
+  details?: any;
 }
 
 // Helper function to get collections based on user role
@@ -328,5 +363,98 @@ export const useMonthlySubmissionData = (userRole: string) => {
     gcTime: 1000 * 60 * 30, // 30 minutes garbage collection
     retry: 1, // Only retry once on failure
     retryDelay: 1000, // 1 second retry delay
+  });
+};
+
+
+// ============= HEALTH MONITORING HOOKS =============
+
+/**
+ * Fetch API health status
+ */
+const fetchHealthStatus = async (): Promise<HealthStatus> => {
+  const response = await api.get('/api/health/status');
+  return response;
+};
+
+/**
+ * Fetch error rate statistics
+ */
+const fetchErrorRate = async (hours: number = 24): Promise<ErrorRateStats> => {
+  const response = await api.get(`/api/health/error-rate?hours=${hours}`);
+  return response;
+};
+
+/**
+ * Fetch API usage statistics
+ */
+const fetchAPIUsage = async (period: 'day' | 'month' = 'day'): Promise<APIUsageStats> => {
+  const response = await api.get(`/api/health/usage?period=${period}`);
+  return response;
+};
+
+/**
+ * Fetch unacknowledged alerts
+ */
+const fetchAlerts = async (): Promise<SystemAlert[]> => {
+  const response = await api.get('/api/health/alerts');
+  return response.alerts;
+};
+
+/**
+ * Hook to get API health status
+ */
+export const useHealthStatus = () => {
+  return useQuery({
+    queryKey: ['healthStatus'],
+    queryFn: fetchHealthStatus,
+    staleTime: 1000 * 60, // 1 minute cache
+    gcTime: 1000 * 60 * 5, // 5 minutes garbage collection
+    retry: 1,
+    retryDelay: 1000,
+    refetchInterval: 1000 * 60 * 5, // Refetch every 5 minutes
+  });
+};
+
+/**
+ * Hook to get error rate statistics
+ */
+export const useErrorRate = (hours: number = 24) => {
+  return useQuery({
+    queryKey: ['errorRate', hours],
+    queryFn: () => fetchErrorRate(hours),
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    gcTime: 1000 * 60 * 10, // 10 minutes garbage collection
+    retry: 1,
+    retryDelay: 1000,
+  });
+};
+
+/**
+ * Hook to get API usage statistics
+ */
+export const useAPIUsage = (period: 'day' | 'month' = 'day') => {
+  return useQuery({
+    queryKey: ['apiUsage', period],
+    queryFn: () => fetchAPIUsage(period),
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    gcTime: 1000 * 60 * 10, // 10 minutes garbage collection
+    retry: 1,
+    retryDelay: 1000,
+  });
+};
+
+/**
+ * Hook to get system alerts
+ */
+export const useSystemAlerts = () => {
+  return useQuery({
+    queryKey: ['systemAlerts'],
+    queryFn: fetchAlerts,
+    staleTime: 1000 * 60, // 1 minute cache
+    gcTime: 1000 * 60 * 5, // 5 minutes garbage collection
+    retry: 1,
+    retryDelay: 1000,
+    refetchInterval: 1000 * 60 * 2, // Refetch every 2 minutes
   });
 };

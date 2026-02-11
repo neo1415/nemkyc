@@ -1,0 +1,24 @@
+{
+  "name": "identity-collection-load-tests",
+  "version": "1.0.0",
+  "description": "Load testing suite for Identity Collection System",
+  "scripts": {
+    "test:concurrent": "artillery run concurrent-verifications.yml --output ../reports/concurrent-verifications.json",
+    "test:response-time": "artillery run response-time-test.yml --output ../reports/response-time.json",
+    "test:sustained": "artillery run sustained-load-test.yml --output ../reports/sustained-load.json",
+    "test:bulk": "node bulk-verification-test.js",
+    "test:rate-limit": "node rate-limit-test.js",
+    "test:all": "npm run test:concurrent && npm run test:response-time && npm run test:bulk && npm run test:rate-limit",
+    "report:concurrent": "artillery report ../reports/concurrent-verifications.json --output ../reports/concurrent-verifications.html",
+    "report:response-time": "artillery report ../reports/response-time.json --output ../reports/response-time.html",
+    "report:sustained": "artillery report ../reports/sustained-load.json --output ../reports/sustained-load.html",
+    "report:all": "npm run report:concurrent && npm run report:response-time && npm run report:sustained"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^8.0.0",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "artillery": "^2.0.0"
+  }
+}
