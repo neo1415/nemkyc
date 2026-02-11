@@ -68,6 +68,7 @@ import { SendConfirmDialog } from '../../components/identity/SendConfirmDialog';
 import { VerificationDetailsDialog } from '../../components/identity/VerificationDetailsDialog';
 import { useBrokerTourV2 } from '../../hooks/useBrokerTourV2';
 import type { IdentityEntry, ListDetails, EntryStatus, VerificationType, ActivityLog, ActivityAction } from '../../types/remediation';
+import { isEncrypted } from '../../utils/encryption';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -296,13 +297,48 @@ export default function IdentityListDetail({
         headerName: col,
         flex: 1,
         minWidth: 120,
-        valueGetter: (value, row) => row.data?.[col] || '',
+        valueGetter: (value, row) => {
+          const cellData = row.data?.[col];
+          
+          // Handle encrypted data - show indicator instead of object
+          if (isEncrypted(cellData)) {
+            return '[Encrypted]';
+          }
+          
+          // Handle null/undefined
+          if (cellData === null || cellData === undefined) {
+            return '';
+          }
+          
+          // Handle objects (shouldn't happen, but safety check)
+          if (typeof cellData === 'object') {
+            return '[Complex Data]';
+          }
+          
+          return cellData;
+        },
         renderCell: (params) => {
           const isEmailCol = col === list.emailColumn;
+          const isEncryptedData = params.value === '[Encrypted]';
+          
           return (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               {isEmailCol && <span>📧</span>}
-              {params.value}
+              {isEncryptedData ? (
+                <Tooltip title="This field contains encrypted data that can only be viewed by authorized personnel">
+                  <Chip 
+                    label="🔒 Encrypted" 
+                    size="small" 
+                    sx={{ 
+                      bgcolor: '#f5f5f5', 
+                      color: '#666',
+                      fontSize: '0.75rem'
+                    }} 
+                  />
+                </Tooltip>
+              ) : (
+                params.value
+              )}
             </Box>
           );
         },
@@ -467,7 +503,32 @@ export default function IdentityListDetail({
       field: 'nin',
       headerName: 'NIN',
       width: 130,
-      renderCell: (params) => params.value || '-',
+      valueGetter: (value) => {
+        if (!value) return '-';
+        // Handle encrypted data
+        if (isEncrypted(value)) {
+          return '[Encrypted]';
+        }
+        return value;
+      },
+      renderCell: (params) => {
+        if (params.value === '[Encrypted]') {
+          return (
+            <Tooltip title="This field contains encrypted data">
+              <Chip 
+                label="🔒 Encrypted" 
+                size="small" 
+                sx={{ 
+                  bgcolor: '#f5f5f5', 
+                  color: '#666',
+                  fontSize: '0.75rem'
+                }} 
+              />
+            </Tooltip>
+          );
+        }
+        return params.value || '-';
+      },
     });
 
     // Add CAC column
@@ -475,7 +536,32 @@ export default function IdentityListDetail({
       field: 'cac',
       headerName: 'CAC',
       width: 130,
-      renderCell: (params) => params.value || '-',
+      valueGetter: (value) => {
+        if (!value) return '-';
+        // Handle encrypted data
+        if (isEncrypted(value)) {
+          return '[Encrypted]';
+        }
+        return value;
+      },
+      renderCell: (params) => {
+        if (params.value === '[Encrypted]') {
+          return (
+            <Tooltip title="This field contains encrypted data">
+              <Chip 
+                label="🔒 Encrypted" 
+                size="small" 
+                sx={{ 
+                  bgcolor: '#f5f5f5', 
+                  color: '#666',
+                  fontSize: '0.75rem'
+                }} 
+              />
+            </Tooltip>
+          );
+        }
+        return params.value || '-';
+      },
     });
 
     // Add verified at column
@@ -675,7 +761,7 @@ export default function IdentityListDetail({
   // Handle bulk verification
   const [bulkVerifyJobId, setBulkVerifyJobId] = useState<string | null>(null);
   const [bulkVerifyProgress, setBulkVerifyProgress] = useState<number>(0);
-  const [bulkVerifyStatus, setBulkVerifyStatus] = useState<'idle' | 'running' | 'paused' | 'completed' | 'error'>('idle');
+  const [bulkVerifyStatus, setBulkVerifyStatus] = useState<'idle' | 'running' | 'paused' | 'completed' | 'error' | 'queued'>('idle');
   const [bulkVerifyPollInterval, setBulkVerifyPollInterval] = useState<NodeJS.Timeout | null>(null);
 
   // Poll for bulk verification progress
