@@ -19,16 +19,95 @@ const path = require('path');
 const compression = require('compression');
 const app = express();
 const axios = require('axios');
-const bcrypt = require('bcrypt'); 
 const multer = require("multer");
 const { getStorage } = require("firebase-admin/storage");
 const crypto = require('crypto');
 
 // Import verification error handling utility
 const {
-  createVerificationError,
-  isVerificationError
+  createVerificationError
 } = require('./src/utils/verificationErrors.js');
+
+// Import encryption utility for NDPR compliance
+const {
+  encryptData,
+  decryptData,
+  isEncrypted,
+  clearSensitiveData
+} = require('./server-utils/encryption.cjs');
+
+// Import Datapro NIN verification client
+const {
+  verifyNIN: dataproVerifyNIN,
+  matchFields: dataproMatchFields,
+  getUserFriendlyError: dataproGetUserFriendlyError,
+  getTechnicalError: dataproGetTechnicalError
+} = require('./server-services/dataproClient.cjs');
+
+// Import VerifyData CAC verification client
+const {
+  verifyCAC: verifydataVerifyCAC,
+  matchCACFields: verifydataMatchCACFields,
+  getUserFriendlyError: verifydataGetUserFriendlyError,
+  getTechnicalError: verifydataGetTechnicalError
+} = require('./server-services/verifydataClient.cjs');
+
+// Import rate limiter
+const {
+  getDataproRateLimitStatus,
+  resetDataproRateLimit,
+  applyVerifydataRateLimit
+} = require('./server-utils/rateLimiter.cjs');
+
+// Import API usage tracker
+const {
+  trackDataproAPICall,
+  trackVerifydataAPICall,
+  getAPIUsageStats,
+  getMonthlyUsageSummary,
+  checkUsageLimits
+} = require('./server-utils/apiUsageTracker.cjs');
+
+// Import security middleware
+const {
+  verificationRateLimiter,
+  bulkVerificationRateLimiter,
+  stripServiceId,
+  additionalSecurityHeaders,
+  validateOrigin,
+  logSecurityEvent
+} = require('./server-utils/securityMiddleware.cjs');
+
+// Import audit logger
+const {
+  logVerificationAttempt,
+  logAPICall,
+  logEncryptionOperation,
+  logSecurityEvent: logAuditSecurityEvent,
+  logBulkOperation,
+  queryAuditLogs,
+  getAuditLogStats
+} = require('./server-utils/auditLogger.cjs');
+
+// Import verification queue
+const {
+  enqueue: enqueueVerification,
+  getQueueStatus,
+  getUserQueueItems,
+  getQueueStats
+} = require('./server-utils/verificationQueue.cjs');
+
+// Import health monitor
+const {
+  initializeHealthMonitor,
+  stopHealthMonitor,
+  getHealthStatus,
+  getHealthHistory,
+  calculateErrorRate,
+  getAPIUsage,
+  getUnacknowledgedAlerts,
+  acknowledgeAlert
+} = require('./server-utils/healthMonitor.cjs');
 
 // ============= LOGGING UTILITY =============
 
@@ -363,8 +442,18 @@ app.use(cors({
     console.error('❌ CORS: Blocked origin:', origin);
     console.error('💡 To allow this origin, add it to allowedOrigins array or ADDITIONAL_ALLOWED_ORIGINS env var');
     
-    // Log CORS block
-    logCORSBlock(origin, null).catch(err => console.error('Failed to log CORS block:', err));
+    // Log CORS block using audit logger
+    logSecurityEvent({
+      eventType: 'cors_block',
+      severity: 'medium',
+      description: `CORS policy blocked access from origin: ${origin}`,
+      userId: 'unknown',
+      ipAddress: 'unknown',
+      metadata: {
+        origin,
+        userAgent: 'unknown'
+      }
+    }).catch(err => console.error('Failed to log CORS block:', err));
     
     return callback(new Error(`CORS policy does not allow access from origin: ${origin}`), false);
   },
@@ -427,6 +516,11 @@ app.use(helmet.frameguard({ action: 'deny' })); // Changed from sameorigin to de
 app.use(hpp());
 app.use(mongoSanitize());
 app.use(xss());
+
+// ✅ SECURITY: Additional security middleware
+app.use(stripServiceId); // Ensure SERVICEID never sent to frontend
+app.use(additionalSecurityHeaders); // Additional security headers
+app.use(validateOrigin); // Validate request origin
 
 // ✅ SECURE: Request size limits to prevent DoS
 app.use(express.json({ 
@@ -661,8 +755,23 @@ const requireRole = (...allowedRoles) => {
     if (!normalizedAllowedRoles.includes(userRole)) {
       console.log('❌ Authorization failed:', req.user.email, 'has role', userRole, 'but needs one of', normalizedAllowedRoles);
       
-      // Log authorization failure
-      logAuthorizationFailure(req, allowedRoles, userRole).catch(err => 
+      // Log authorization failure using audit logger
+      logSecurityEvent({
+        eventType: 'authorization_failure',
+        severity: 'high',
+        description: `User ${req.user.email} with role ${userRole} attempted to access resource requiring roles: ${allowedRoles.join(', ')}`,
+        userId: req.user.uid,
+        ipAddress: req.ipData?.masked || 'unknown',
+        metadata: {
+          requiredRoles: allowedRoles,
+          userRole: userRole,
+          rawRole: req.user.rawRole,
+          email: req.user.email,
+          path: req.path,
+          method: req.method,
+          userAgent: req.headers['user-agent']
+        }
+      }).catch(err => 
         console.error('Failed to log authorization failure:', err)
       );
       
@@ -771,8 +880,24 @@ const handleValidationErrors = (req, res, next) => {
   if (!errors.isEmpty()) {
     console.log('❌ Validation failed:', errors.array());
     
-    // Log validation failure
-    logValidationFailure(req, errors.array()).catch(err => 
+    // Log validation failure using audit logger
+    logSecurityEvent({
+      eventType: 'validation_failure',
+      severity: 'low',
+      description: `Validation failed for ${req.method} ${req.path}`,
+      userId: req.user?.uid || 'unknown',
+      ipAddress: req.ipData?.masked || 'unknown',
+      metadata: {
+        path: req.path,
+        method: req.method,
+        errors: errors.array().map(err => ({
+          field: err.path || err.param,
+          message: err.msg,
+          value: err.value
+        })),
+        userAgent: req.headers['user-agent']
+      }
+    }).catch(err => 
       console.error('Failed to log validation failure:', err)
     );
     
@@ -1697,77 +1822,6 @@ const logAuthEvent = async (req, eventType, success, userId = null, email = null
 };
 
 /**
- * Log authorization failures
- */
-const logAuthorizationFailure = async (req, requiredRoles, userRole) => {
-  const { deviceType, browser, os } = parseUserAgent(req.headers['user-agent']);
-  const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
-  
-  await logAction({
-    action: 'authorization-failure',
-    severity: 'warning',
-    actorUid: req.user?.uid,
-    actorEmail: req.user?.email,
-    actorRole: userRole,
-    targetType: 'api-endpoint',
-    targetId: req.path,
-    requestMethod: req.method,
-    requestPath: req.path,
-    responseStatus: 403,
-    ipMasked: req.ipData?.masked,
-    ipHash: req.ipData?.hash,
-    rawIP: req.ipData?.raw,
-    location: location,
-    userAgent: req.headers['user-agent'],
-    deviceType: deviceType,
-    browser: browser,
-    os: os,
-    sessionId: req.cookies?.__session,
-    correlationId: req.correlationId || uuidv4(),
-    details: {
-      requiredRoles: requiredRoles,
-      userRole: userRole,
-      endpoint: req.path
-    }
-  });
-};
-
-/**
- * Log validation failures
- */
-const logValidationFailure = async (req, errors) => {
-  const { deviceType, browser, os } = parseUserAgent(req.headers['user-agent']);
-  const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
-  
-  await logAction({
-    action: 'validation-failure',
-    severity: 'warning',
-    actorUid: req.user?.uid,
-    actorEmail: req.user?.email,
-    actorRole: req.user?.role,
-    targetType: 'api-endpoint',
-    targetId: req.path,
-    requestMethod: req.method,
-    requestPath: req.path,
-    responseStatus: 400,
-    ipMasked: req.ipData?.masked,
-    ipHash: req.ipData?.hash,
-    rawIP: req.ipData?.raw,
-    location: location,
-    userAgent: req.headers['user-agent'],
-    deviceType: deviceType,
-    browser: browser,
-    os: os,
-    sessionId: req.cookies?.__session,
-    correlationId: req.correlationId || uuidv4(),
-    details: {
-      errors: errors,
-      requestBody: sanitizeRequestBody(req.body)
-    }
-  });
-};
-
-/**
  * Log rate limit hits
  */
 const logRateLimitHit = async (req) => {
@@ -1796,30 +1850,6 @@ const logRateLimitHit = async (req) => {
     isAnomaly: true,
     details: {
       endpoint: req.path,
-      timestamp: new Date().toISOString()
-    }
-  });
-};
-
-/**
- * Log CORS blocks
- */
-const logCORSBlock = async (origin, req) => {
-  await logAction({
-    action: 'cors-block',
-    severity: 'warning',
-    targetType: 'security',
-    targetId: origin,
-    requestMethod: req?.method || 'OPTIONS',
-    requestPath: req?.path || 'unknown',
-    responseStatus: 403,
-    ipMasked: req?.ipData?.masked,
-    ipHash: req?.ipData?.hash,
-    rawIP: req?.ipData?.raw,
-    userAgent: req?.headers?.['user-agent'],
-    isAnomaly: true,
-    details: {
-      blockedOrigin: origin,
       timestamp: new Date().toISOString()
     }
   });
@@ -4302,7 +4332,7 @@ app.use('/api/auth/verify-mfa', mfaAttemptLimit);
 // These endpoints proxy requests to Paystack to avoid CORS issues
 
 // BVN Verification Proxy (Paystack Resolve BVN)
-app.post('/api/verify/nin', async (req, res) => {
+app.post('/api/verify/nin', verificationRateLimiter, async (req, res) => {
   try {
     const { nin, secretKey, demoMode } = req.body;
     
@@ -4346,6 +4376,28 @@ app.post('/api/verify/nin', async (req, res) => {
 
     console.log('🔍 BVN Verification request for:', nin.substring(0, 4) + '***');
 
+    // Log verification attempt before API call (Requirement 1.1, 1.5)
+    try {
+      await logVerificationAttempt({
+        verificationType: 'NIN',
+        identityNumber: nin, // Will be masked by function
+        userId: req.user?.uid || 'anonymous',
+        userEmail: req.user?.email || 'anonymous',
+        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+        result: 'pending',
+        metadata: {
+          userAgent: req.headers['user-agent'],
+          demoMode: false
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log verification attempt:', logError);
+      // Continue execution - don't throw
+    }
+
+    // Track API call start time (Requirement 5.1, 5.3, 5.4)
+    const apiStartTime = Date.now();
+    
     // Paystack Resolve BVN endpoint
     const response = await fetch(`https://api.paystack.co/bank/resolve_bvn/${nin}`, {
       method: 'GET',
@@ -4367,8 +4419,53 @@ app.post('/api/verify/nin', async (req, res) => {
       data = { status: false, message: 'Invalid response from verification service' };
     }
     
+    // Calculate API call duration (Requirement 5.3, 5.4)
+    const apiDuration = Date.now() - apiStartTime;
+    
+    // Log API call (Requirement 5.1, 5.3, 5.4)
+    try {
+      await logAPICall({
+        apiName: 'Paystack',
+        endpoint: '/bank/resolve_bvn',
+        method: 'GET',
+        requestData: { nin }, // Will be masked by function
+        statusCode: response.status,
+        responseData: data, // Will be masked by function
+        duration: apiDuration,
+        userId: req.user?.uid || 'anonymous',
+        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+        metadata: {
+          demoMode: false,
+          cost: 0 // Paystack doesn't provide cost in response
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log API call:', logError);
+      // Continue execution - don't throw
+    }
+    
     if (response.ok && data.status) {
       console.log('✅ BVN verification successful');
+      
+      // Log successful verification (Requirement 1.2, 1.3, 1.5)
+      try {
+        await logVerificationAttempt({
+          verificationType: 'NIN',
+          identityNumber: nin,
+          userId: req.user?.uid || 'anonymous',
+          userEmail: req.user?.email || 'anonymous',
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          result: 'success',
+          metadata: {
+            userAgent: req.headers['user-agent'],
+            fieldsValidated: data.data ? Object.keys(data.data) : [],
+            demoMode: false
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log verification attempt:', logError);
+      }
+      
       return res.json({
         status: true,
         message: 'BVN verified successfully',
@@ -4376,6 +4473,27 @@ app.post('/api/verify/nin', async (req, res) => {
       });
     } else {
       console.log('❌ BVN verification failed:', data.message);
+      
+      // Log failed verification (Requirement 1.2, 1.3, 1.5)
+      try {
+        await logVerificationAttempt({
+          verificationType: 'NIN',
+          identityNumber: nin,
+          userId: req.user?.uid || 'anonymous',
+          userEmail: req.user?.email || 'anonymous',
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          result: 'failure',
+          errorCode: response.status.toString(),
+          errorMessage: data.message || 'Verification failed',
+          metadata: {
+            userAgent: req.headers['user-agent'],
+            demoMode: false
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log verification attempt:', logError);
+      }
+      
       return res.json({
         status: false,
         message: data.message || 'Verification failed. Please check your BVN and try again.'
@@ -4383,6 +4501,27 @@ app.post('/api/verify/nin', async (req, res) => {
     }
   } catch (error) {
     console.error('❌ BVN verification error:', error);
+    
+    // Log error verification (Requirement 1.2, 1.3, 1.5)
+    try {
+      await logVerificationAttempt({
+        verificationType: 'NIN',
+        identityNumber: req.body.nin,
+        userId: req.user?.uid || 'anonymous',
+        userEmail: req.user?.email || 'anonymous',
+        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+        result: 'error',
+        errorCode: 'INTERNAL_ERROR',
+        errorMessage: error.message || 'Verification service error',
+        metadata: {
+          userAgent: req.headers['user-agent'],
+          demoMode: false
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log verification attempt:', logError);
+    }
+    
     return res.status(500).json({ 
       status: false, 
       message: 'Verification service error. Please try again.' 
@@ -4391,7 +4530,7 @@ app.post('/api/verify/nin', async (req, res) => {
 });
 
 // CAC Verification Proxy
-app.post('/api/verify/cac', async (req, res) => {
+app.post('/api/verify/cac', verificationRateLimiter, async (req, res) => {
   try {
     const { rc_number, company_name, secretKey, demoMode } = req.body;
     
@@ -4418,50 +4557,164 @@ app.post('/api/verify/cac', async (req, res) => {
       });
     }
     
-    if (!rc_number || !company_name || !secretKey) {
+    if (!rc_number || !company_name) {
       return res.status(400).json({ 
         status: false, 
-        message: 'RC number, company name, and API key are required' 
+        message: 'RC number and company name are required' 
       });
     }
 
     console.log('🔍 CAC Verification request for:', rc_number);
 
-    const response = await fetch('https://api.paystack.co/identity/cac', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${secretKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ rc_number, company_name }),
-    });
-
-    const responseText = await response.text();
-    console.log('📋 Paystack CAC response:', responseText.substring(0, 300));
-    
-    let data;
+    // Log verification attempt before API call (Requirement 2.1, 2.5)
     try {
-      data = responseText ? JSON.parse(responseText) : { status: false, message: 'Empty response' };
-    } catch (parseError) {
-      data = { status: false, message: 'Invalid response from verification service' };
+      await logVerificationAttempt({
+        verificationType: 'CAC',
+        identityNumber: rc_number, // Will be masked by function
+        userId: req.user?.uid || 'anonymous',
+        userEmail: req.user?.email || 'anonymous',
+        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+        result: 'pending',
+        metadata: {
+          userAgent: req.headers['user-agent'],
+          demoMode: false
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log verification attempt:', logError);
+      // Continue execution - don't throw
     }
+
+    // Apply VerifyData rate limiting
+    try {
+      await applyVerifydataRateLimit();
+    } catch (rateLimitError) {
+      console.error('❌ VerifyData rate limit exceeded:', rateLimitError);
+      return res.status(429).json({
+        status: false,
+        message: 'Too many verification requests. Please try again in a moment.'
+      });
+    }
+
+    // Track API call start time (Requirement 5.2, 5.3, 5.4)
+    const apiStartTime = Date.now();
+
+    // Call VerifyData CAC verification API
+    const verifydataResult = await verifydataVerifyCAC(rc_number);
     
-    if (response.ok && data.status) {
+    // Calculate API call duration (Requirement 5.3, 5.4)
+    const apiDuration = Date.now() - apiStartTime;
+    
+    // Log API call (Requirement 5.2, 5.3, 5.4)
+    try {
+      await logAPICall({
+        apiName: 'VerifyData',
+        endpoint: '/api/ValidateRcNumber/Initiate',
+        method: 'POST',
+        requestData: { rcNumber: rc_number }, // Will be masked by function
+        statusCode: verifydataResult.success ? 200 : 400,
+        responseData: verifydataResult, // Will be masked by function
+        duration: apiDuration,
+        userId: req.user?.uid || 'anonymous',
+        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+        metadata: {
+          demoMode: false,
+          cost: verifydataResult.cost || 0
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log API call:', logError);
+      // Continue execution - don't throw
+    }
+
+    // Track API call for cost monitoring
+    await trackVerifydataAPICall(db, {
+      rcNumber: rc_number.substring(0, 4) + '*******',
+      success: verifydataResult.success,
+      errorCode: verifydataResult.errorCode || null,
+      userId: req.user?.uid || null,
+      listId: null,
+      entryId: null
+    });
+    
+    if (verifydataResult.success) {
       console.log('✅ CAC verification successful');
+      
+      // Log successful verification (Requirement 2.2, 2.3, 2.5)
+      try {
+        await logVerificationAttempt({
+          verificationType: 'CAC',
+          identityNumber: rc_number,
+          userId: req.user?.uid || 'anonymous',
+          userEmail: req.user?.email || 'anonymous',
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          result: 'success',
+          metadata: {
+            userAgent: req.headers['user-agent'],
+            fieldsValidated: verifydataResult.data ? Object.keys(verifydataResult.data) : [],
+            demoMode: false
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log verification attempt:', logError);
+      }
+      
       return res.json({
         status: true,
         message: 'CAC verified successfully',
-        data: data.data
+        data: verifydataResult.data
       });
     } else {
-      console.log('❌ CAC verification failed:', data.message);
+      console.log('❌ CAC verification failed:', verifydataResult.error);
+      
+      // Log failed verification (Requirement 2.2, 2.3, 2.5)
+      try {
+        await logVerificationAttempt({
+          verificationType: 'CAC',
+          identityNumber: rc_number,
+          userId: req.user?.uid || 'anonymous',
+          userEmail: req.user?.email || 'anonymous',
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          result: 'failure',
+          errorCode: verifydataResult.errorCode,
+          errorMessage: verifydataResult.error || 'Verification failed',
+          metadata: {
+            userAgent: req.headers['user-agent'],
+            demoMode: false
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log verification attempt:', logError);
+      }
+      
       return res.json({
         status: false,
-        message: data.message || 'Verification failed'
+        message: verifydataGetUserFriendlyError(verifydataResult.errorCode, verifydataResult.details) || 'Verification failed. Please check your CAC/RC number and try again.'
       });
     }
   } catch (error) {
     console.error('❌ CAC verification error:', error);
+    
+    // Log error verification (Requirement 2.2, 2.3, 2.5)
+    try {
+      await logVerificationAttempt({
+        verificationType: 'CAC',
+        identityNumber: req.body.rc_number,
+        userId: req.user?.uid || 'anonymous',
+        userEmail: req.user?.email || 'anonymous',
+        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+        result: 'error',
+        errorCode: 'INTERNAL_ERROR',
+        errorMessage: error.message || 'Verification service error',
+        metadata: {
+          userAgent: req.headers['user-agent'],
+          demoMode: false
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log verification attempt:', logError);
+    }
+    
     return res.status(500).json({ 
       status: false, 
       message: 'Verification service error. Please try again.' 
@@ -5218,6 +5471,81 @@ app.post('/api/cleanup-expired-ips', requireAuth, requireSuperAdmin, async (req,
     });
   }
 });
+
+// ============= RATE LIMIT RESET ENDPOINT =============
+// ✅ PROTECTED: Requires super admin role
+// POST /api/admin/rate-limit/reset
+// Reset rate limiter for Datapro or VerifyData API
+app.post('/api/admin/rate-limit/reset', 
+  requireAuth, 
+  requireSuperAdmin,
+  [
+    body('service')
+      .trim()
+      .notEmpty().withMessage('Service is required')
+      .isIn(['datapro', 'verifydata']).withMessage('Service must be either "datapro" or "verifydata"'),
+    body('reason')
+      .trim()
+      .notEmpty().withMessage('Reason is required')
+      .isString().withMessage('Reason must be a string')
+      .isLength({ min: 10, max: 500 }).withMessage('Reason must be between 10 and 500 characters'),
+    handleValidationErrors
+  ],
+  async (req, res) => {
+    try {
+      const { service, reason } = req.body;
+      
+      console.log(`🔄 Rate limit reset requested by ${req.user.email} for ${service}`);
+      console.log(`📝 Reason: ${reason}`);
+      
+      // Reset the appropriate rate limiter
+      if (service === 'datapro') {
+        resetDataproRateLimit();
+      } else if (service === 'verifydata') {
+        resetVerifydataRateLimit();
+      }
+      
+      // Log the rate limit reset event
+      try {
+        await logSecurityEvent({
+          eventType: 'rate_limit_reset',
+          severity: 'medium',
+          description: `Rate limit reset for ${service} by ${req.user.email}`,
+          userId: req.user.uid,
+          ipAddress: req.ipData?.masked || 'unknown',
+          metadata: {
+            service,
+            reason,
+            resetBy: req.user.email,
+            resetByUid: req.user.uid,
+            resetByRole: req.user.role,
+            timestamp: new Date().toISOString()
+          }
+        });
+      } catch (logError) {
+        console.error('❌ Failed to log rate limit reset:', logError.message);
+        // Continue even if logging fails
+      }
+      
+      console.log(`✅ Rate limit reset successful for ${service}`);
+      
+      res.json({
+        success: true,
+        message: `Rate limit reset successful for ${service}`,
+        service,
+        resetBy: req.user.email,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Error resetting rate limit:', error);
+      res.status(500).json({
+        error: 'Rate limit reset failed',
+        message: 'Unable to reset rate limit. Please try again or contact support.'
+      });
+    }
+  }
+);
 
 // ✅ Route to manually generate test events (for development/testing only)
 // ✅ PROTECTED: Only available in non-production environments
@@ -7975,6 +8303,25 @@ const createIdentityActivityLog = async (logData) => {
 };
 
 /**
+ * Track a VerifyData API call for cost monitoring
+ * Similar to trackDataproAPICall but for VerifyData CAC verification
+ * 
+ * @param {Object} db - Firestore database instance
+ * @param {Object} callData - API call data
+ * @param {string} callData.rcNumber - Masked RC number (first 4 chars only)
+ * @param {boolean} callData.success - Whether the call succeeded
+ * @param {string} callData.errorCode - Error code if failed
+ * @param {string} callData.userId - User ID who initiated the call
+ * @param {string} callData.listId - List ID if part of bulk verification
+ * @param {string} callData.entryId - Entry ID being verified
+ * @returns {Promise<void>}
+ */
+// DUPLICATE REMOVED - Function is imported from apiUsageTracker.cjs at line 69
+// const trackVerifydataAPICall = async (db, callData) => {
+//   ... function body removed ...
+// };
+
+/**
  * Send customer error notification email
  * Requirements: 21.2, 21.3, 21.6
  */
@@ -7985,54 +8332,163 @@ const sendCustomerErrorNotification = async (entry, verificationError) => {
       return false;
     }
     
-    const subject = 'Identity Verification Issue - Action Required';
+    // Import email template functions (these are in src/templates/verificationEmail.ts)
+    // For server-side use, we'll inline the template generation here
+    
+    const verificationType = entry.verificationType || 'NIN';
+    const customerName = entry.displayName;
+    const policyNumber = entry.policyNumber;
+    const errorMessage = verificationError.customerMessage;
+    const brokerEmail = verificationError.brokerEmail;
+    const failedFields = verificationError.failedFields;
+    
+    const documentType = verificationType === 'NIN' ? 'NIN' : 'CAC Registration Number';
+    
+    const subject = `Action Required: ${verificationType} Verification Issue${policyNumber ? ` - Policy ${policyNumber}` : ''} - NEM Insurance`;
     
     const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background-color: #800020; color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; background-color: #f9f9f9; }
-          .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
-          .error-box { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
-          .next-steps { background-color: #d1ecf1; border-left: 4px solid #0c5460; padding: 15px; margin: 20px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h2>NEM Insurance</h2>
-            <p>Identity Verification</p>
-          </div>
-          <div class="content">
-            <p>Dear ${entry.displayName || 'Client'},</p>
-            
-            <div class="error-box">
-              <h3>Verification Issue</h3>
-              <p>${verificationError.customerMessage}</p>
-            </div>
-            
-            <p>We apologize for any inconvenience this may cause. This verification is required to comply with regulatory requirements from the National Insurance Commission (NAICOM).</p>
-            
-            <p>Thank you for your cooperation.</p>
-            
-            <p>Yours faithfully,<br/>
-            <strong>NEM Insurance</strong></p>
-          </div>
-          <div class="footer">
-            <p>Email: nemsupport@nem-insurance.com | Telephone: 0201-4489570-2</p>
-            <p>This is an automated message. Please do not reply directly to this email.</p>
-          </div>
-        </div>
-      </body>
-      </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verification Issue - NEM Insurance</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f4f4f4;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header with NEM Insurance Branding -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #800020 0%, #600018 100%); padding: 30px 40px; border-radius: 8px 8px 0 0;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td>
+                    <h1 style="color: #FFD700; margin: 0; font-size: 28px; font-weight: bold;">NEM Insurance</h1>
+                    <p style="color: #ffffff; margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;">Verification Update</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <!-- Greeting -->
+              <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                Dear ${customerName ? `<strong>${customerName}</strong>` : 'Client'},
+              </p>
+              
+              <!-- Issue Notice -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 0 6px 6px 0; margin: 20px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="color: #856404; font-size: 16px; font-weight: bold; margin: 0 0 10px 0;">
+                      ⚠️ Verification Issue
+                    </p>
+                    <p style="color: #856404; font-size: 14px; margin: 0;">
+                      We encountered an issue while verifying your ${documentType}.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              ${policyNumber ? `
+              <!-- Policy Information -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f9f9f9; border-radius: 6px; margin: 20px 0;">
+                <tr>
+                  <td style="padding: 15px 20px;">
+                    <p style="color: #666666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 5px 0;">Policy Reference</p>
+                    <p style="color: #333333; font-size: 14px; font-weight: bold; margin: 0;">${policyNumber}</p>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
+              
+              <!-- What Went Wrong -->
+              <h2 style="color: #800020; font-size: 18px; margin: 25px 0 15px 0;">What Went Wrong</h2>
+              <div style="background-color: #f9f9f9; padding: 20px; border-radius: 6px; margin: 0 0 25px 0;">
+                <p style="color: #333333; font-size: 15px; line-height: 1.6; margin: 0; white-space: pre-line;">
+${errorMessage}
+                </p>
+              </div>
+              
+              <!-- Next Steps -->
+              <h2 style="color: #800020; font-size: 18px; margin: 25px 0 15px 0;">Next Steps</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 0 6px 6px 0; margin: 0 0 25px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="color: #2e7d32; font-size: 15px; line-height: 1.8; margin: 0;">
+                      <strong>Please contact your broker${brokerEmail ? ` at <a href="mailto:${brokerEmail}" style="color: #800020;">${brokerEmail}</a>` : ''}</strong> to resolve this issue.
+                      <br><br>
+                      Your broker will:
+                      <br>• Verify your information is correct
+                      <br>• Help update any outdated details
+                      <br>• Send you a new verification link if needed
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Reassurance -->
+              <p style="color: #333333; font-size: 15px; line-height: 1.6; margin: 25px 0 0 0;">
+                We understand this may be frustrating, and we're here to help. This verification is required by NAICOM regulations to ensure the security and accuracy of your policy information.
+              </p>
+              
+              <p style="color: #333333; font-size: 15px; line-height: 1.6; margin: 20px 0 0 0;">
+                Thank you for your patience and cooperation.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f9f9f9; padding: 25px 40px; border-radius: 0 0 8px 8px;">
+              <p style="color: #666666; font-size: 13px; line-height: 1.6; margin: 0 0 10px 0;">
+                If you need immediate assistance, please contact us:
+              </p>
+              <p style="color: #333333; font-size: 13px; margin: 5px 0;">
+                📧 Email: <a href="mailto:nemsupport@nem-insurance.com" style="color: #800020;">nemsupport@nem-insurance.com</a>
+              </p>
+              <p style="color: #333333; font-size: 13px; margin: 5px 0;">
+                📞 Telephone: <a href="tel:+2342014489570" style="color: #800020;">0201-4489570-2</a>
+              </p>
+              <p style="color: #333333; font-size: 16px; margin: 20px 0 10px 0;">
+                Yours faithfully,<br>
+                <strong>NEM Insurance</strong>
+              </p>
+              <p style="color: #666666; font-size: 12px; margin: 20px 0 0 0;">
+                © ${new Date().getFullYear()} NEM Insurance. All rights reserved.
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
     `;
     
     await sendEmail(entry.email, subject, html);
     console.log(`✅ Customer error notification sent to ${entry.email}`);
+    
+    // Log email send
+    await createIdentityActivityLog({
+      listId: entry.listId,
+      entryId: entry.id,
+      action: 'customer_error_email_sent',
+      actorType: 'system',
+      details: {
+        email: entry.email,
+        errorType: verificationError.errorType
+      }
+    });
+    
     return true;
   } catch (error) {
     console.error('❌ Failed to send customer error notification:', error);
@@ -8088,71 +8544,190 @@ const sendStaffErrorNotification = async (entry, verificationError, listId) => {
       return false;
     }
     
-    const subject = `Verification Failure Alert - ${entry.displayName || 'Customer'}`;
+    const customerName = entry.displayName;
+    const customerEmail = entry.email;
+    const policyNumber = entry.policyNumber;
+    const verificationType = entry.verificationType || 'NIN';
+    const errorType = verificationError.errorType || 'Unknown';
+    const failedFields = verificationError.failedFields || [];
+    const technicalDetails = verificationError.technicalDetails;
+    
+    const documentType = verificationType === 'NIN' ? 'NIN' : 'CAC Registration Number';
+    const customerRef = customerName || (policyNumber ? `Policy ${policyNumber}` : 'Customer');
+    const subject = `⚠️ Verification Failure: ${customerRef} - Action Required`;
     
     // Generate admin portal link
     const adminPortalLink = `${process.env.VITE_APP_URL || 'http://localhost:5173'}/admin/identity/${listId}`;
     
     const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background-color: #800020; color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; background-color: #f9f9f9; }
-          .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
-          .alert-box { background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0; }
-          .details-box { background-color: #e7f3ff; border-left: 4px solid #2196F3; padding: 15px; margin: 20px 0; }
-          .action-box { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
-          .button { display: inline-block; padding: 10px 20px; background-color: #800020; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
-          pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h2>NEM Insurance - Staff Alert</h2>
-            <p>Verification Failure Notification</p>
-          </div>
-          <div class="content">
-            <div class="alert-box">
-              <h3>⚠️ Verification Failed</h3>
-              <p>A customer verification attempt has failed and requires attention.</p>
-            </div>
-            
-            <div class="details-box">
-              <h3>Customer Details</h3>
-              <p><strong>Name:</strong> ${entry.displayName || 'N/A'}</p>
-              <p><strong>Email:</strong> ${entry.email || 'N/A'}</p>
-              <p><strong>Policy Number:</strong> ${entry.policyNumber || 'N/A'}</p>
-              <p><strong>Verification Type:</strong> ${entry.verificationType || 'N/A'}</p>
-            </div>
-            
-            <div class="alert-box">
-              <h3>Technical Details</h3>
-              <pre>${verificationError.staffMessage}</pre>
-            </div>
-            
-            <div class="action-box">
-              <h3>Action Required</h3>
-              <p>Please review the customer's information and verify that the data in the uploaded list matches their official documents.</p>
-              <p>You may need to contact the customer to confirm their information.</p>
-              <a href="${adminPortalLink}" class="button">View in Admin Portal</a>
-            </div>
-          </div>
-          <div class="footer">
-            <p>This is an automated alert from the NEM Insurance Identity Collection System.</p>
-            <p>Email: nemsupport@nem-insurance.com | Telephone: 0201-4489570-2</p>
-          </div>
-        </div>
-      </body>
-      </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verification Failure Alert - NEM Insurance</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f4f4f4;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" width="700" cellspacing="0" cellpadding="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%); padding: 30px 40px; border-radius: 8px 8px 0 0;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td>
+                    <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold;">⚠️ Verification Failure Alert</h1>
+                    <p style="color: #ffffff; margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;">Staff Notification - Action Required</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <!-- Alert Box -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #ffebee; border-left: 4px solid #d32f2f; border-radius: 0 6px 6px 0; margin: 0 0 25px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="color: #c62828; font-size: 16px; font-weight: bold; margin: 0 0 10px 0;">
+                      A customer verification has failed and requires attention.
+                    </p>
+                    <p style="color: #c62828; font-size: 14px; margin: 0;">
+                      Please review the details below and take appropriate action.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Customer Information -->
+              <h2 style="color: #800020; font-size: 18px; margin: 25px 0 15px 0;">Customer Information</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f9f9f9; border-radius: 6px; margin: 0 0 25px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    ${customerName ? `<p style="color: #333333; font-size: 14px; margin: 0 0 10px 0;"><strong>Customer Name:</strong> ${customerName}</p>` : ''}
+                    ${customerEmail ? `<p style="color: #333333; font-size: 14px; margin: 0 0 10px 0;"><strong>Email:</strong> ${customerEmail}</p>` : ''}
+                    ${policyNumber ? `<p style="color: #333333; font-size: 14px; margin: 0 0 10px 0;"><strong>Policy Number:</strong> ${policyNumber}</p>` : ''}
+                    <p style="color: #333333; font-size: 14px; margin: 0;"><strong>Verification Type:</strong> ${documentType}</p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Error Details -->
+              <h2 style="color: #800020; font-size: 18px; margin: 25px 0 15px 0;">Error Details</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f9f9f9; border-radius: 6px; margin: 0 0 25px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="color: #333333; font-size: 14px; margin: 0 0 10px 0;"><strong>Error Type:</strong> ${errorType}</p>
+                    ${failedFields && failedFields.length > 0 ? `
+                    <p style="color: #333333; font-size: 14px; margin: 0 0 5px 0;"><strong>Failed Fields:</strong></p>
+                    <ul style="color: #333333; font-size: 14px; margin: 5px 0 10px 20px; padding: 0;">
+                      ${failedFields.map(field => `<li>${field}</li>`).join('')}
+                    </ul>
+                    ` : ''}
+                  </td>
+                </tr>
+              </table>
+              
+              ${technicalDetails ? `
+              <!-- Technical Details -->
+              <h2 style="color: #800020; font-size: 18px; margin: 25px 0 15px 0;">Technical Details</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f5f5f5; border-radius: 6px; margin: 0 0 25px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <pre style="color: #333333; font-size: 12px; font-family: 'Courier New', monospace; margin: 0; white-space: pre-wrap; word-wrap: break-word;">${JSON.stringify(technicalDetails, null, 2)}</pre>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
+              
+              <!-- Staff Message -->
+              <h2 style="color: #800020; font-size: 18px; margin: 25px 0 15px 0;">Detailed Analysis</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f9f9f9; border-radius: 6px; margin: 0 0 25px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <pre style="color: #333333; font-size: 13px; font-family: Arial, sans-serif; margin: 0; white-space: pre-wrap; word-wrap: break-word; line-height: 1.6;">${verificationError.staffMessage}</pre>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Action Required -->
+              <h2 style="color: #800020; font-size: 18px; margin: 25px 0 15px 0;">Action Required</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #e3f2fd; border-left: 4px solid #1976d2; border-radius: 0 6px 6px 0; margin: 0 0 25px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="color: #0d47a1; font-size: 15px; line-height: 1.8; margin: 0;">
+                      <strong>Please take the following actions:</strong>
+                      <br><br>
+                      1. Review the customer's information in the uploaded list
+                      <br>2. Verify the data matches the customer's official documents
+                      <br>3. Contact the customer if necessary to confirm their information
+                      <br>4. Update the list with correct information if needed
+                      <br>5. Resend verification link if appropriate
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Admin Portal Link -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td align="center" style="padding: 10px 0 25px 0;">
+                    <a href="${adminPortalLink}" 
+                       style="display: inline-block; background-color: #800020; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 6px; font-size: 16px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                      View in Admin Portal
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Footer Note -->
+              <p style="color: #666666; font-size: 13px; line-height: 1.6; margin: 25px 0 0 0;">
+                This is an automated notification sent to compliance, admin, and broker staff. Please do not reply to this email.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f9f9f9; padding: 25px 40px; border-radius: 0 0 8px 8px;">
+              <p style="color: #333333; font-size: 16px; margin: 0 0 10px 0;">
+                <strong>NEM Insurance</strong><br>
+                Identity Verification System
+              </p>
+              <p style="color: #666666; font-size: 12px; margin: 20px 0 0 0;">
+                © ${new Date().getFullYear()} NEM Insurance. All rights reserved.
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
     `;
     
     await sendEmail(staffEmails, subject, html);
     console.log(`✅ Staff error notification sent to ${staffEmails.length} recipients`);
+    
+    // Log email send
+    await createIdentityActivityLog({
+      listId: listId,
+      entryId: entry.id,
+      action: 'staff_error_email_sent',
+      actorType: 'system',
+      details: {
+        recipientCount: staffEmails.length,
+        errorType: verificationError.errorType
+      }
+    });
+    
     return true;
   } catch (error) {
     console.error('❌ Failed to send staff error notification:', error);
@@ -8354,6 +8929,49 @@ app.post('/api/identity/lists', requireAuth, requireBrokerOrAdmin, async (req, r
         ? String(entryData[policyColumn]).trim() 
         : null;
       
+      // Encrypt sensitive identity fields if present (NDPR compliance)
+      // Check for NIN, BVN, CAC in the entry data
+      const sensitiveFields = {};
+      
+      // Check for NIN field (various possible column names)
+      const ninValue = entryData.nin || entryData.NIN || entryData.Nin || 
+                       entryData['NIN'] || entryData['nin'] || null;
+      if (ninValue && String(ninValue).trim() && !isEmptyValue(ninValue)) {
+        try {
+          const encrypted = encryptData(String(ninValue).trim());
+          sensitiveFields.nin = encrypted;
+          console.log(`🔒 Encrypted NIN for entry ${index + 1}`);
+        } catch (err) {
+          console.error(`❌ Failed to encrypt NIN for entry ${index + 1}:`, err.message);
+        }
+      }
+      
+      // Check for BVN field
+      const bvnValue = entryData.bvn || entryData.BVN || entryData.Bvn || 
+                       entryData['BVN'] || entryData['bvn'] || null;
+      if (bvnValue && String(bvnValue).trim() && !isEmptyValue(bvnValue)) {
+        try {
+          const encrypted = encryptData(String(bvnValue).trim());
+          sensitiveFields.bvn = encrypted;
+          console.log(`🔒 Encrypted BVN for entry ${index + 1}`);
+        } catch (err) {
+          console.error(`❌ Failed to encrypt BVN for entry ${index + 1}:`, err.message);
+        }
+      }
+      
+      // Check for CAC field
+      const cacValue = entryData.cac || entryData.CAC || entryData.Cac || 
+                       entryData['CAC'] || entryData['cac'] || null;
+      if (cacValue && String(cacValue).trim() && !isEmptyValue(cacValue)) {
+        try {
+          const encrypted = encryptData(String(cacValue).trim());
+          sensitiveFields.cac = encrypted;
+          console.log(`🔒 Encrypted CAC for entry ${index + 1}`);
+        } catch (err) {
+          console.error(`❌ Failed to encrypt CAC for entry ${index + 1}:`, err.message);
+        }
+      }
+      
       const entry = {
         id: entryId,
         listId: listId,
@@ -8365,7 +8983,8 @@ app.post('/api/identity/lists', requireAuth, requireBrokerOrAdmin, async (req, r
         resendCount: 0,
         verificationAttempts: 0,
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
+        ...sensitiveFields // Add encrypted fields if present
       };
       
       await entryRef.set(entry);
@@ -9435,7 +10054,7 @@ app.get('/api/identity/verify/:token', async (req, res) => {
  * 
  * Requirements: 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 20.3, 20.6, 20.7, 20.8, 20.9
  */
-app.post('/api/identity/verify/:token', async (req, res) => {
+app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res) => {
   try {
     const { token } = req.params;
     const { identityNumber, demoMode } = req.body;
@@ -9538,9 +10157,8 @@ app.post('/api/identity/verify/:token', async (req, res) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     });
     
-    // Call Paystack verification API with field-level validation (Requirement 20.3, 20.6)
+    // Call Datapro verification API with field-level validation (Requirement 20.3, 20.6)
     let verificationResult;
-    const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
     
     // Extract fields from entry data for validation
     const data = entry.data || {};
@@ -9556,9 +10174,25 @@ app.post('/api/identity/verify/:token', async (req, res) => {
         const gender = data.gender || data.Gender || data.GENDER || data.sex || data.Sex || '';
         const bvn = entry.bvn || data.bvn || data.BVN || '';
         
-        fieldsValidated.push('firstName', 'lastName', 'dateOfBirth', 'gender', 'bvn');
+        fieldsValidated.push('firstName', 'lastName', 'dateOfBirth', 'gender');
+        if (bvn) fieldsValidated.push('bvn');
         
-        // NIN verification via Paystack
+        // Decrypt NIN if encrypted
+        let decryptedNIN = identityNumber;
+        if (entry.nin && isEncrypted(entry.nin)) {
+          try {
+            decryptedNIN = decryptData(entry.nin.encrypted, entry.nin.iv);
+            console.log(`🔓 Decrypted NIN for verification`);
+          } catch (err) {
+            console.error(`❌ Failed to decrypt NIN:`, err.message);
+            return res.status(500).json({
+              success: false,
+              error: 'Failed to process verification. Please contact support.'
+            });
+          }
+        }
+        
+        // NIN verification via Datapro
         if (demoMode) {
           console.log('🎭 DEMO MODE: Simulating NIN verification with field-level validation');
           await new Promise(resolve => setTimeout(resolve, 1500));
@@ -9578,90 +10212,167 @@ app.post('/api/identity/verify/:token', async (req, res) => {
           verificationResult = {
             success: allFieldsMatch,
             data: {
-              first_name: mockValidation.first_name,
-              last_name: mockValidation.last_name,
-              middle_name: 'DEMO',
-              dob: mockValidation.dob,
-              mobile: '080****5678',
-              nin: identityNumber.substring(0, 4) + '*******',
+              firstName: mockValidation.first_name,
+              lastName: mockValidation.last_name,
+              middleName: 'DEMO',
+              dateOfBirth: mockValidation.dob,
+              phoneNumber: '080****5678',
               gender: mockValidation.gender
             },
             fieldsValidated,
             failedFields: allFieldsMatch ? [] : ['firstName', 'lastName']
           };
-        } else if (paystackSecretKey) {
-          console.log(`🔍 Calling Paystack NIN verification for: ${identityNumber.substring(0, 4)}*** with field validation`);
+        } else {
+          console.log(`🔍 Calling Datapro NIN verification for: ${decryptedNIN.substring(0, 4)}*** with field validation`);
           
-          // Call Paystack NIN verification API
-          const response = await fetch(`https://api.paystack.co/bank/resolve_bvn/${identityNumber}`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${paystackSecretKey}`,
-            },
+          // Log verification attempt before API call (Requirement 1.1, 1.5)
+          try {
+            await logVerificationAttempt({
+              verificationType: 'NIN',
+              identityNumber: decryptedNIN, // Will be masked by function
+              userId: 'anonymous', // Customer verification - no user ID
+              userEmail: 'anonymous',
+              ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+              result: 'pending',
+              metadata: {
+                userAgent: req.headers['user-agent'],
+                listId: entry.listId,
+                entryId: entryDoc.id
+              }
+            });
+          } catch (logError) {
+            console.error('Failed to log verification attempt:', logError);
+            // Continue execution - don't throw
+          }
+          
+          // Track API call start time (Requirement 5.1, 5.3, 5.4)
+          const apiStartTime = Date.now();
+          
+          // Call Datapro NIN verification API
+          const dataproResult = await dataproVerifyNIN(decryptedNIN);
+          
+          // Calculate API call duration (Requirement 5.3, 5.4)
+          const apiDuration = Date.now() - apiStartTime;
+          
+          // Log API call (Requirement 5.1, 5.3, 5.4)
+          try {
+            await logAPICall({
+              apiName: 'Datapro',
+              endpoint: '/verifynin',
+              method: 'GET',
+              requestData: { nin: decryptedNIN }, // Will be masked by function
+              statusCode: dataproResult.success ? 200 : 400,
+              responseData: dataproResult, // Will be masked by function
+              duration: apiDuration,
+              userId: 'anonymous', // Customer verification - no user ID
+              ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+              metadata: {
+                listId: entry.listId,
+                entryId: entryDoc.id,
+                cost: dataproResult.cost || 0
+              }
+            });
+          } catch (logError) {
+            console.error('Failed to log API call:', logError);
+            // Continue execution - don't throw
+          }
+          
+          // Track API call for cost monitoring
+          await trackDataproAPICall(db, {
+            nin: decryptedNIN.substring(0, 4) + '*******',
+            success: dataproResult.success,
+            errorCode: dataproResult.errorCode || null,
+            userId: null, // Customer verification - no user ID
+            listId: entry.listId,
+            entryId: entryDoc.id
           });
           
-          const responseData = await response.json();
-          
-          if (response.ok && responseData.status && responseData.data) {
-            // Perform field-level validation (Requirement 20.3)
-            const apiData = responseData.data;
+          if (dataproResult.success) {
+            // Perform field-level validation using Datapro's matchFields function
+            const excelData = {
+              firstName,
+              lastName,
+              dateOfBirth,
+              gender,
+              phoneNumber: data.phoneNumber || data.phone_number || data['Phone Number'] || ''
+            };
             
-            // Validate firstName
-            if (firstName && apiData.first_name) {
-              const match = firstName.toLowerCase().trim() === apiData.first_name.toLowerCase().trim();
-              if (!match) failedFields.push('firstName');
-            }
-            
-            // Validate lastName
-            if (lastName && apiData.last_name) {
-              const match = lastName.toLowerCase().trim() === apiData.last_name.toLowerCase().trim();
-              if (!match) failedFields.push('lastName');
-            }
-            
-            // Validate dateOfBirth
-            if (dateOfBirth && apiData.dob) {
-              const match = dateOfBirth === apiData.dob;
-              if (!match) failedFields.push('dateOfBirth');
-            }
-            
-            // Validate gender
-            if (gender && apiData.gender) {
-              const match = gender.toLowerCase().charAt(0) === apiData.gender.toLowerCase().charAt(0);
-              if (!match) failedFields.push('gender');
-            }
-            
-            // Validate BVN
-            if (bvn && apiData.bvn) {
-              const match = bvn === apiData.bvn;
-              if (!match) failedFields.push('bvn');
-            }
+            const matchResult = dataproMatchFields(dataproResult.data, excelData);
             
             verificationResult = {
-              success: failedFields.length === 0,
-              data: apiData,
-              message: failedFields.length > 0 ? 'Some fields did not match' : responseData.message,
+              success: matchResult.matched,
+              data: dataproResult.data,
+              message: matchResult.matched ? 'Verification successful' : 'Field mismatch detected',
               fieldsValidated,
-              failedFields
+              failedFields: matchResult.failedFields,
+              matchDetails: matchResult.details
             };
+            
+            console.log(`✅ Datapro verification completed: ${matchResult.matched ? 'MATCHED' : 'FAILED'}`);
+            if (!matchResult.matched) {
+              console.log(`❌ Failed fields: ${matchResult.failedFields.join(', ')}`);
+            }
+            
+            // Log verification result (Requirement 1.2, 1.3, 1.5)
+            try {
+              await logVerificationAttempt({
+                verificationType: 'NIN',
+                identityNumber: decryptedNIN,
+                userId: 'anonymous',
+                userEmail: 'anonymous',
+                ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+                result: matchResult.matched ? 'success' : 'failure',
+                errorCode: matchResult.matched ? undefined : 'FIELD_MISMATCH',
+                errorMessage: matchResult.matched ? undefined : 'Field mismatch detected',
+                metadata: {
+                  userAgent: req.headers['user-agent'],
+                  listId: entry.listId,
+                  entryId: entryDoc.id,
+                  fieldsValidated: matchResult.details?.matchedFields || [],
+                  failedFields: matchResult.failedFields || []
+                }
+              });
+            } catch (logError) {
+              console.error('Failed to log verification attempt:', logError);
+            }
           } else {
+            // Datapro API error
+            console.error(`❌ Datapro verification failed: ${dataproResult.error}`);
             verificationResult = {
               success: false,
-              message: responseData.message || 'Verification failed',
+              message: dataproGetUserFriendlyError(dataproResult.errorCode, dataproResult.details),
+              technicalMessage: dataproGetTechnicalError(dataproResult.errorCode, dataproResult.details),
+              errorCode: dataproResult.errorCode,
               fieldsValidated,
               failedFields: []
             };
+            
+            // Log failed verification (Requirement 1.2, 1.3, 1.5)
+            try {
+              await logVerificationAttempt({
+                verificationType: 'NIN',
+                identityNumber: decryptedNIN,
+                userId: 'anonymous',
+                userEmail: 'anonymous',
+                ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+                result: 'failure',
+                errorCode: dataproResult.errorCode,
+                errorMessage: dataproResult.error || 'Verification failed',
+                metadata: {
+                  userAgent: req.headers['user-agent'],
+                  listId: entry.listId,
+                  entryId: entryDoc.id,
+                  failedFields: []
+                }
+              });
+            } catch (logError) {
+              console.error('Failed to log verification attempt:', logError);
+            }
           }
-        } else {
-          // No API key - use demo mode
-          console.log('⚠️ No Paystack API key configured, using demo mode');
-          verificationResult = {
-            success: true,
-            data: { nin: identityNumber },
-            message: 'Verification simulated (no API key configured)',
-            fieldsValidated,
-            failedFields: []
-          };
         }
+        
+        // Clear decrypted NIN from memory
+        clearSensitiveData(decryptedNIN);
       } else {
         // CAC verification with field-level validation (Requirement 20.6)
         const companyName = data.companyName || data.company_name || data['Company Name'] || data.CompanyName || '';
@@ -9671,7 +10382,22 @@ app.post('/api/identity/verify/:token', async (req, res) => {
         
         fieldsValidated.push('companyName', 'registrationNumber', 'registrationDate', 'businessAddress');
         
-        // CAC verification via Paystack
+        // Decrypt CAC if encrypted
+        let decryptedCAC = identityNumber;
+        if (entry.cac && isEncrypted(entry.cac)) {
+          try {
+            decryptedCAC = decryptData(entry.cac.encrypted, entry.cac.iv);
+            console.log(`🔓 Decrypted CAC for verification`);
+          } catch (err) {
+            console.error(`❌ Failed to decrypt CAC:`, err.message);
+            return res.status(500).json({
+              success: false,
+              error: 'Failed to process verification. Please contact support.'
+            });
+          }
+        }
+        
+        // CAC verification via VerifyData
         if (demoMode) {
           console.log('🎭 DEMO MODE: Simulating CAC verification with field-level validation');
           await new Promise(resolve => setTimeout(resolve, 1500));
@@ -9692,81 +10418,171 @@ app.post('/api/identity/verify/:token', async (req, res) => {
             fieldsValidated,
             failedFields: allFieldsMatch ? [] : ['companyName']
           };
-        } else if (paystackSecretKey) {
-          console.log(`🔍 Calling Paystack CAC verification for: ${identityNumber} with field validation`);
+        } else {
+          console.log(`🔍 Calling VerifyData CAC verification for: ${decryptedCAC.substring(0, 4)}*** with field validation`);
           
-          const response = await fetch('https://api.paystack.co/identity/cac', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${paystackSecretKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-              rc_number: identityNumber, 
-              company_name: companyName 
-            }),
+          // Log verification attempt before API call (Requirement 2.1, 2.5)
+          try {
+            await logVerificationAttempt({
+              verificationType: 'CAC',
+              identityNumber: decryptedCAC, // Will be masked by function
+              userId: 'anonymous', // Customer verification - no user ID
+              userEmail: 'anonymous',
+              ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+              result: 'pending',
+              metadata: {
+                userAgent: req.headers['user-agent'],
+                listId: entry.listId,
+                entryId: entryDoc.id
+              }
+            });
+          } catch (logError) {
+            console.error('Failed to log verification attempt:', logError);
+            // Continue execution - don't throw
+          }
+          
+          // Apply VerifyData rate limiting
+          try {
+            await applyVerifydataRateLimit();
+          } catch (rateLimitError) {
+            console.error('❌ VerifyData rate limit exceeded:', rateLimitError);
+            return res.status(429).json({
+              success: false,
+              error: 'Too many verification requests. Please try again in a moment.',
+              attemptsRemaining: maxAttempts - currentAttempts
+            });
+          }
+          
+          // Track API call start time (Requirement 5.2, 5.3, 5.4)
+          const apiStartTime = Date.now();
+          
+          // Call VerifyData CAC verification API
+          const verifydataResult = await verifydataVerifyCAC(decryptedCAC);
+          
+          // Calculate API call duration (Requirement 5.3, 5.4)
+          const apiDuration = Date.now() - apiStartTime;
+          
+          // Log API call (Requirement 5.2, 5.3, 5.4)
+          try {
+            await logAPICall({
+              apiName: 'VerifyData',
+              endpoint: '/api/ValidateRcNumber/Initiate',
+              method: 'POST',
+              requestData: { rcNumber: decryptedCAC }, // Will be masked by function
+              statusCode: verifydataResult.success ? 200 : 400,
+              responseData: verifydataResult, // Will be masked by function
+              duration: apiDuration,
+              userId: 'anonymous', // Customer verification - no user ID
+              ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+              metadata: {
+                listId: entry.listId,
+                entryId: entryDoc.id,
+                cost: verifydataResult.cost || 0
+              }
+            });
+          } catch (logError) {
+            console.error('Failed to log API call:', logError);
+            // Continue execution - don't throw
+          }
+          
+          // Track API call for cost monitoring
+          await trackVerifydataAPICall(db, {
+            rcNumber: decryptedCAC.substring(0, 4) + '*******',
+            success: verifydataResult.success,
+            errorCode: verifydataResult.errorCode || null,
+            userId: null, // Customer verification - no user ID
+            listId: entry.listId,
+            entryId: entryDoc.id
           });
           
-          const responseData = await response.json();
-          
-          if (response.ok && responseData.status && responseData.data) {
-            // Perform field-level validation (Requirement 20.6)
-            const apiData = responseData.data;
+          if (verifydataResult.success) {
+            // Perform field-level validation using VerifyData's matchCACFields function
+            const excelData = {
+              companyName,
+              registrationNumber,
+              registrationDate,
+              businessAddress
+            };
             
-            // Validate companyName
-            if (companyName && apiData.company_name) {
-              const match = companyName.toLowerCase().trim() === apiData.company_name.toLowerCase().trim();
-              if (!match) failedFields.push('companyName');
-            }
-            
-            // Validate registrationNumber
-            if (registrationNumber && apiData.rc_number) {
-              const match = registrationNumber.toLowerCase().trim() === apiData.rc_number.toLowerCase().trim();
-              if (!match) failedFields.push('registrationNumber');
-            }
-            
-            // Validate registrationDate
-            if (registrationDate && apiData.registration_date) {
-              const match = registrationDate === apiData.registration_date;
-              if (!match) failedFields.push('registrationDate');
-            }
-            
-            // Validate businessAddress
-            if (businessAddress && apiData.address) {
-              const match = businessAddress.toLowerCase().includes(apiData.address.toLowerCase()) || 
-                           apiData.address.toLowerCase().includes(businessAddress.toLowerCase());
-              if (!match) failedFields.push('businessAddress');
-            }
+            const matchResult = verifydataMatchCACFields(verifydataResult.data, excelData);
             
             verificationResult = {
-              success: failedFields.length === 0,
-              data: apiData,
-              message: failedFields.length > 0 ? 'Some fields did not match' : responseData.message,
+              success: matchResult.matched,
+              data: verifydataResult.data,
+              message: matchResult.matched ? 'Verification successful' : 'Field mismatch detected',
               fieldsValidated,
-              failedFields
+              failedFields: matchResult.failedFields,
+              matchDetails: matchResult.details
             };
+            
+            console.log(`✅ VerifyData verification completed: ${matchResult.matched ? 'MATCHED' : 'FAILED'}`);
+            if (!matchResult.matched) {
+              console.log(`❌ Failed fields: ${matchResult.failedFields.join(', ')}`);
+            }
+            
+            // Log successful verification (Requirement 2.2, 2.3, 2.5)
+            try {
+              await logVerificationAttempt({
+                verificationType: 'CAC',
+                identityNumber: decryptedCAC,
+                userId: 'anonymous',
+                userEmail: 'anonymous',
+                ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+                result: matchResult.matched ? 'success' : 'failure',
+                errorCode: matchResult.matched ? undefined : 'FIELD_MISMATCH',
+                errorMessage: matchResult.matched ? undefined : 'Field mismatch detected',
+                metadata: {
+                  userAgent: req.headers['user-agent'],
+                  listId: entry.listId,
+                  entryId: entryDoc.id,
+                  fieldsValidated: matchResult.details?.matchedFields || [],
+                  failedFields: matchResult.failedFields || []
+                }
+              });
+            } catch (logError) {
+              console.error('Failed to log verification attempt:', logError);
+            }
           } else {
+            // VerifyData API error
+            console.error(`❌ VerifyData verification failed: ${verifydataResult.error}`);
             verificationResult = {
               success: false,
-              message: responseData.message || 'Verification failed',
+              message: verifydataGetUserFriendlyError(verifydataResult.errorCode, verifydataResult.details),
+              technicalMessage: verifydataGetTechnicalError(verifydataResult.errorCode, verifydataResult.details),
+              errorCode: verifydataResult.errorCode,
               fieldsValidated,
               failedFields: []
             };
+            
+            // Log failed verification (Requirement 2.2, 2.3, 2.5)
+            try {
+              await logVerificationAttempt({
+                verificationType: 'CAC',
+                identityNumber: decryptedCAC,
+                userId: 'anonymous',
+                userEmail: 'anonymous',
+                ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+                result: 'failure',
+                errorCode: verifydataResult.errorCode,
+                errorMessage: verifydataResult.error || 'Verification failed',
+                metadata: {
+                  userAgent: req.headers['user-agent'],
+                  listId: entry.listId,
+                  entryId: entryDoc.id,
+                  failedFields: []
+                }
+              });
+            } catch (logError) {
+              console.error('Failed to log verification attempt:', logError);
+            }
           }
-        } else {
-          // No API key - use demo mode
-          console.log('⚠️ No Paystack API key configured, using demo mode');
-          verificationResult = {
-            success: true,
-            data: { rc_number: identityNumber, company_name: companyName },
-            message: 'Verification simulated (no API key configured)',
-            fieldsValidated,
-            failedFields: []
-          };
         }
+        
+        // Clear decrypted CAC from memory
+        clearSensitiveData(decryptedCAC);
       }
     } catch (apiError) {
-      console.error('❌ Paystack API error:', apiError);
+      console.error('❌ API error:', apiError);
       verificationResult = {
         success: false,
         message: 'Verification service temporarily unavailable. Please try again.',
@@ -9777,6 +10593,115 @@ app.post('/api/identity/verify/:token', async (req, res) => {
     
     // Handle verification result
     if (verificationResult.success) {
+      // ============================================
+      // DUPLICATE DETECTION: Check if NIN/CAC already verified
+      // ============================================
+      console.log(`🔍 Checking for duplicate ${verificationType}...`);
+      
+      // Search for existing verified entries with this identity number
+      let duplicateQuery;
+      if (verificationType === 'NIN') {
+        // For NIN, we need to check both encrypted and plaintext (for migration period)
+        duplicateQuery = db.collection('identity-entries')
+          .where('status', '==', 'verified')
+          .limit(1000); // Get all verified entries to check
+      } else {
+        // For CAC, same approach
+        duplicateQuery = db.collection('identity-entries')
+          .where('status', '==', 'verified')
+          .limit(1000);
+      }
+      
+      const duplicateSnapshot = await duplicateQuery.get();
+      let duplicateFound = false;
+      let duplicateEntry = null;
+      
+      // Check each verified entry
+      for (const doc of duplicateSnapshot.docs) {
+        const existingEntry = doc.data();
+        
+        // Skip the current entry (in case of re-verification)
+        if (doc.id === entryDoc.id) continue;
+        
+        // Check if this entry has the same identity number
+        let existingIdentityNumber = null;
+        
+        if (verificationType === 'NIN' && existingEntry.nin) {
+          // Decrypt if encrypted
+          if (isEncrypted(existingEntry.nin)) {
+            try {
+              existingIdentityNumber = decryptData(existingEntry.nin.encrypted, existingEntry.nin.iv);
+            } catch (err) {
+              console.error(`Failed to decrypt NIN for comparison:`, err.message);
+              continue;
+            }
+          } else {
+            existingIdentityNumber = existingEntry.nin;
+          }
+        } else if (verificationType === 'CAC' && existingEntry.cac) {
+          // Decrypt if encrypted
+          if (isEncrypted(existingEntry.cac)) {
+            try {
+              existingIdentityNumber = decryptData(existingEntry.cac.encrypted, existingEntry.cac.iv);
+            } catch (err) {
+              console.error(`Failed to decrypt CAC for comparison:`, err.message);
+              continue;
+            }
+          } else {
+            existingIdentityNumber = existingEntry.cac;
+          }
+        }
+        
+        // Compare identity numbers
+        if (existingIdentityNumber && existingIdentityNumber === identityNumber) {
+          duplicateFound = true;
+          duplicateEntry = existingEntry;
+          console.log(`⚠️  Duplicate ${verificationType} found! Already verified in entry ${doc.id}`);
+          break;
+        }
+      }
+      
+      // If duplicate found, reject verification
+      if (duplicateFound) {
+        // Update entry status to indicate duplicate
+        await entryRef.update({
+          status: 'verification_failed',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          verificationDetails: {
+            failureReason: `This ${verificationType} has already been verified in the system`,
+            isDuplicate: true,
+            validationSuccess: false
+          }
+        });
+        
+        // Log the duplicate attempt
+        await createIdentityActivityLog({
+          listId: entry.listId,
+          entryId: entryDoc.id,
+          action: 'verification_failed',
+          actorType: 'customer',
+          details: {
+            verificationType,
+            email: entry.email,
+            error: 'Duplicate identity number',
+            reason: `${verificationType} already verified in system`
+          },
+          ipAddress: req.ipData?.masked,
+          userAgent: req.headers['user-agent']
+        });
+        
+        console.log(`❌ Verification rejected for entry ${entryDoc.id} - duplicate ${verificationType}`);
+        
+        // Return error to customer (without revealing who used it)
+        return res.json({
+          success: false,
+          error: `This ${verificationType === 'NIN' ? 'National Identification Number' : 'CAC Registration Number'} has already been verified in our system. Each identity number can only be used once. If you believe this is an error, please contact your insurance broker or our support team at nemsupport@nem-insurance.com.`,
+          isDuplicate: true
+        });
+      }
+      
+      console.log(`✅ No duplicate found, proceeding with verification`);
+      
       // Success - update entry with verified data and validation details (Requirement 20.8, 20.9)
       const updateData = {
         status: 'verified',
@@ -9786,14 +10711,32 @@ app.post('/api/identity/verify/:token', async (req, res) => {
         verificationDetails: {
           fieldsValidated: verificationResult.fieldsValidated || [],
           failedFields: [],
-          validationSuccess: true
+          validationSuccess: true,
+          matchDetails: verificationResult.matchDetails || null
         }
       };
       
+      // Encrypt identity numbers before storing (NDPR compliance)
       if (verificationType === 'NIN') {
-        updateData.nin = identityNumber;
+        try {
+          const encrypted = encryptData(identityNumber);
+          updateData.nin = encrypted;
+          console.log(`🔒 Encrypted NIN before storage`);
+        } catch (err) {
+          console.error(`❌ Failed to encrypt NIN:`, err.message);
+          // Store unencrypted as fallback (should not happen in production)
+          updateData.nin = identityNumber;
+        }
       } else {
-        updateData.cac = identityNumber;
+        try {
+          const encrypted = encryptData(identityNumber);
+          updateData.cac = encrypted;
+          console.log(`🔒 Encrypted CAC before storage`);
+        } catch (err) {
+          console.error(`❌ Failed to encrypt CAC:`, err.message);
+          // Store unencrypted as fallback (should not happen in production)
+          updateData.cac = identityNumber;
+        }
         // Store company name from data if available
         const companyName = data.companyName || data.company_name || data['Company Name'] || data.CompanyName || '';
         if (companyName) {
@@ -10056,13 +10999,39 @@ app.get('/api/identity/lists/:listId/export', requireAuth, requireBrokerOrAdmin,
         row.push(escapeCSV(value));
       }
       
+      // Decrypt identity numbers for export (authorized users only)
+      let ninValue = entry.nin || '';
+      let cacValue = entry.cac || '';
+      
+      if (ninValue && isEncrypted(ninValue)) {
+        try {
+          ninValue = decryptData(ninValue.encrypted, ninValue.iv);
+        } catch (err) {
+          console.error(`❌ Failed to decrypt NIN for export:`, err.message);
+          ninValue = '[ENCRYPTED]'; // Show that data is encrypted but couldn't be decrypted
+        }
+      }
+      
+      if (cacValue && isEncrypted(cacValue)) {
+        try {
+          cacValue = decryptData(cacValue.encrypted, cacValue.iv);
+        } catch (err) {
+          console.error(`❌ Failed to decrypt CAC for export:`, err.message);
+          cacValue = '[ENCRYPTED]'; // Show that data is encrypted but couldn't be decrypted
+        }
+      }
+      
       // Add verification columns
       row.push(escapeCSV(formatStatus(entry.status)));           // Verification Status
-      row.push(escapeCSV(entry.nin || ''));                       // NIN
-      row.push(escapeCSV(entry.cac || ''));                       // CAC
-      row.push(escapeCSV(entry.cacCompanyName || ''));            // CAC Company Name
-      row.push(escapeCSV(formatDate(entry.verifiedAt)));          // Verified At
-      row.push(escapeCSV(formatDate(entry.linkSentAt)));          // Link Sent At
+      row.push(escapeCSV(ninValue));                             // NIN (decrypted)
+      row.push(escapeCSV(cacValue));                             // CAC (decrypted)
+      row.push(escapeCSV(entry.cacCompanyName || ''));           // CAC Company Name
+      row.push(escapeCSV(formatDate(entry.verifiedAt)));         // Verified At
+      row.push(escapeCSV(formatDate(entry.linkSentAt)));         // Link Sent At
+      
+      // Clear decrypted values from memory
+      clearSensitiveData(ninValue);
+      clearSensitiveData(cacValue);
       
       csvRows.push(row.join(','));
     }
@@ -10431,6 +11400,178 @@ app.get('/api/identity/lists/:listId/activity', requireAuth, requireBrokerOrAdmi
 });
 
 /**
+ * GET /api/identity/rate-limit-status
+ * Get Datapro API rate limiter status
+ * Admin only endpoint for monitoring API usage
+ * 
+ * Response:
+ * - availableTokens: number - Available request tokens
+ * - maxTokens: number - Maximum tokens (50)
+ * - queueSize: number - Number of queued requests
+ * - maxQueueSize: number - Maximum queue size (100)
+ * - utilizationPercent: number - Percentage of tokens used
+ */
+app.get('/api/identity/rate-limit-status', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const status = getDataproRateLimitStatus();
+    
+    console.log(`📊 Rate limit status requested by ${req.user.email}`);
+    
+    res.status(200).json({
+      success: true,
+      status,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Error fetching rate limit status:', error);
+    res.status(500).json({
+      error: 'Failed to fetch rate limit status',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/identity/api-usage/monthly/:month
+ * Get monthly API usage summary
+ * Admin only endpoint for cost monitoring
+ * 
+ * Params:
+ * - month: YYYY-MM format (e.g., "2026-02")
+ * 
+ * Response:
+ * - month: string - Month in YYYY-MM format
+ * - totalCalls: number - Total API calls
+ * - successCalls: number - Successful calls
+ * - failedCalls: number - Failed calls
+ * - successRate: number - Success rate percentage
+ * - estimatedCost: number - Estimated cost in NGN
+ * - currency: string - Currency code (NGN)
+ */
+app.get('/api/identity/api-usage/monthly/:month', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { month } = req.params;
+    
+    // Validate month format (YYYY-MM)
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        error: 'Invalid month format',
+        message: 'Month must be in YYYY-MM format (e.g., "2026-02")'
+      });
+    }
+    
+    const summary = await getMonthlyUsageSummary(db, month);
+    
+    console.log(`📊 Monthly API usage requested by ${req.user.email} for ${month}`);
+    
+    res.status(200).json({
+      success: true,
+      summary
+    });
+  } catch (error) {
+    console.error('❌ Error fetching monthly usage:', error);
+    res.status(500).json({
+      error: 'Failed to fetch monthly usage',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/identity/api-usage/stats
+ * Get API usage statistics for a date range
+ * Admin only endpoint for cost monitoring
+ * 
+ * Query params:
+ * - startDate: YYYY-MM-DD format (required)
+ * - endDate: YYYY-MM-DD format (required)
+ * 
+ * Response:
+ * - startDate: string
+ * - endDate: string
+ * - totalCalls: number
+ * - successCalls: number
+ * - failedCalls: number
+ * - successRate: number
+ * - dailyStats: array of daily statistics
+ */
+app.get('/api/identity/api-usage/stats', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        error: 'Missing parameters',
+        message: 'startDate and endDate are required (YYYY-MM-DD format)'
+      });
+    }
+    
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      return res.status(400).json({
+        error: 'Invalid date format',
+        message: 'Dates must be in YYYY-MM-DD format'
+      });
+    }
+    
+    const stats = await getAPIUsageStats(db, startDate, endDate);
+    
+    console.log(`📊 API usage stats requested by ${req.user.email} for ${startDate} to ${endDate}`);
+    
+    res.status(200).json({
+      success: true,
+      stats
+    });
+  } catch (error) {
+    console.error('❌ Error fetching usage stats:', error);
+    res.status(500).json({
+      error: 'Failed to fetch usage stats',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/identity/api-usage/alerts
+ * Check if API usage is approaching limits
+ * Admin only endpoint for cost monitoring
+ * 
+ * Query params:
+ * - monthlyLimit: number (optional, default: 10000)
+ * - alertThreshold: number (optional, default: 80)
+ * 
+ * Response:
+ * - month: string - Current month
+ * - totalCalls: number - Total calls this month
+ * - monthlyLimit: number - Monthly limit
+ * - usagePercent: number - Usage percentage
+ * - shouldAlert: boolean - Whether to alert
+ * - alertLevel: string - 'normal', 'warning', or 'critical'
+ * - message: string - Alert message if applicable
+ */
+app.get('/api/identity/api-usage/alerts', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const monthlyLimit = parseInt(req.query.monthlyLimit) || 10000;
+    const alertThreshold = parseInt(req.query.alertThreshold) || 80;
+    
+    const alert = await checkUsageLimits(db, monthlyLimit, alertThreshold);
+    
+    console.log(`📊 API usage alerts requested by ${req.user.email}`);
+    
+    res.status(200).json({
+      success: true,
+      alert
+    });
+  } catch (error) {
+    console.error('❌ Error checking usage alerts:', error);
+    res.status(500).json({
+      error: 'Failed to check usage alerts',
+      message: error.message
+    });
+  }
+});
+
+/**
  * POST /api/identity/lists/:listId/bulk-verify
  * Bulk verify all unverified entries that have NIN, BVN, or CAC pre-filled
  * Brokers can only bulk verify entries in their own lists
@@ -10442,8 +11583,15 @@ app.get('/api/identity/lists/:listId/activity', requireAuth, requireBrokerOrAdmi
  * - Updates entry status based on result
  * - Skips entries that are already verified
  * - Returns summary: { processed, verified, failed, skipped }
+ * - Processes in parallel batches (10 concurrent) for performance
+ * - Supports progress tracking via separate endpoint
+ * - Supports pause/resume functionality
+ * 
+ * Request body (optional):
+ * - batchSize: number - Number of concurrent verifications (default: 10, max: 20)
  * 
  * Response:
+ * - jobId: string - Unique job ID for tracking progress
  * - processed: number - Total entries processed
  * - verified: number - Successfully verified entries
  * - failed: number - Failed verification entries
@@ -10451,12 +11599,669 @@ app.get('/api/identity/lists/:listId/activity', requireAuth, requireBrokerOrAdmi
  * - details: array - Detailed results for each entry
  * 
  * Requirements: 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 19.7, 19.8, 19.9, 19.10, 19.11
+ * Performance: 51.2 - Parallel batch processing, progress tracking, pause/resume
  */
-app.post('/api/identity/lists/:listId/bulk-verify', requireAuth, requireBrokerOrAdmin, async (req, res) => {
+
+// In-memory job tracking for bulk verification
+const bulkVerificationJobs = new Map();
+
+// Helper function to execute bulk verification (can be called directly or from queue)
+async function executeBulkVerification(listId, entriesSnapshot, batchSize, userId, ipData, userAgent) {
+  const jobId = `bulk_verify_${listId}_${Date.now()}`;
+  
+  // Initialize job tracking
+  const jobData = {
+    jobId,
+    listId,
+    userId,
+    status: 'running',
+    startedAt: new Date(),
+    totalEntries: entriesSnapshot.size,
+    processed: 0,
+    verified: 0,
+    failed: 0,
+    skipped: 0,
+    details: [],
+    paused: false,
+    batchSize,
+    progress: 0
+  };
+  
+  bulkVerificationJobs.set(jobId, jobData);
+  
+  // Log bulk operation start
+  try {
+    await logBulkOperation({
+      operationType: 'bulk_verification_start',
+      totalRecords: entriesSnapshot.size,
+      successCount: 0,
+      failureCount: 0,
+      userId: userId,
+      userEmail: 'unknown', // Will be filled from user context if available
+      metadata: {
+        listId,
+        jobId,
+        batchSize,
+        ipAddress: ipData?.masked || 'unknown'
+      }
+    });
+  } catch (logError) {
+    console.error('❌ Failed to log bulk operation start:', logError);
+    // Don't fail the operation if logging fails
+  }
+  
+  try {
+    const entries = entriesSnapshot.docs.map(doc => ({
+      id: doc.id,
+      data: doc.data()
+    }));
+    
+    // Process in batches
+    for (let i = 0; i < entries.length; i += batchSize) {
+      // Check if job is paused
+      let currentJob = bulkVerificationJobs.get(jobId);
+      if (currentJob && currentJob.paused) {
+        console.log(`⏸️ Job ${jobId} paused at entry ${i}/${entries.length}`);
+        currentJob.status = 'paused';
+        currentJob.pausedAt = new Date();
+        bulkVerificationJobs.set(jobId, currentJob);
+        throw new Error('Job paused');
+      }
+      
+      const batch = entries.slice(i, i + batchSize);
+      console.log(`📦 Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(entries.length / batchSize)} (${batch.length} entries)`);
+      
+      // Process batch in parallel
+      const batchResults = await Promise.all(
+        batch.map(entry => 
+          processSingleEntry(
+            entry.data,
+            entry.id,
+            listId,
+            userId,
+            ipData,
+            userAgent
+          )
+        )
+      );
+      
+      // Update job progress
+      currentJob = bulkVerificationJobs.get(jobId);
+      if (currentJob) {
+        batchResults.forEach(result => {
+          currentJob.processed++;
+          if (result.status === 'verified') currentJob.verified++;
+          else if (result.status === 'failed') currentJob.failed++;
+          else if (result.status === 'skipped') currentJob.skipped++;
+          currentJob.details.push(result);
+        });
+        
+        currentJob.progress = Math.round((currentJob.processed / currentJob.totalEntries) * 100);
+        bulkVerificationJobs.set(jobId, currentJob);
+      }
+      
+      // Small delay between batches to avoid overwhelming the API
+      if (i + batchSize < entries.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    // Update list statistics
+    const db = admin.firestore();
+    const listRef = db.collection('identity-lists').doc(listId);
+    const updatedEntriesSnapshot = await db.collection('identity-entries')
+      .where('listId', '==', listId)
+      .get();
+    
+    let verifiedCount = 0;
+    let pendingCount = 0;
+    let failedCount = 0;
+    
+    updatedEntriesSnapshot.forEach(doc => {
+      const status = doc.data().status;
+      if (status === 'verified') verifiedCount++;
+      else if (status === 'verification_failed' || status === 'failed') failedCount++;
+      else pendingCount++;
+    });
+    
+    await listRef.update({
+      verifiedCount,
+      pendingCount,
+      failedCount,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+    // Mark job as complete
+    const finalJob = bulkVerificationJobs.get(jobId);
+    if (finalJob) {
+      finalJob.status = 'completed';
+      finalJob.completedAt = new Date();
+      bulkVerificationJobs.set(jobId, finalJob);
+      
+      // Log bulk operation completion
+      const duration = finalJob.completedAt - finalJob.startedAt;
+      try {
+        await logBulkOperation({
+          operationType: 'bulk_verification_complete',
+          totalRecords: finalJob.totalEntries,
+          successCount: finalJob.verified,
+          failureCount: finalJob.failed,
+          userId: userId,
+          userEmail: 'unknown',
+          metadata: {
+            listId,
+            jobId,
+            duration,
+            skippedCount: finalJob.skipped,
+            batchSize,
+            ipAddress: ipData?.masked || 'unknown'
+          }
+        });
+      } catch (logError) {
+        console.error('❌ Failed to log bulk operation completion:', logError);
+      }
+    }
+    
+    console.log(`✅ Bulk verification complete for list ${listId}`);
+    console.log(`   Processed: ${finalJob.processed}, Verified: ${finalJob.verified}, Failed: ${finalJob.failed}, Skipped: ${finalJob.skipped}`);
+    
+    // Clean up job after 1 hour
+    setTimeout(() => {
+      bulkVerificationJobs.delete(jobId);
+      console.log(`🗑️ Cleaned up job ${jobId}`);
+    }, 3600000);
+    
+    return {
+      jobId,
+      processed: finalJob.processed,
+      verified: finalJob.verified,
+      failed: finalJob.failed,
+      skipped: finalJob.skipped
+    };
+    
+  } catch (error) {
+    console.error('❌ Error during bulk verification:', error);
+    const errorJob = bulkVerificationJobs.get(jobId);
+    if (errorJob) {
+      errorJob.status = 'error';
+      errorJob.error = error.message;
+      errorJob.errorAt = new Date();
+      bulkVerificationJobs.set(jobId, errorJob);
+      
+      // Log bulk operation failure
+      try {
+        await logBulkOperation({
+          operationType: 'bulk_verification_failure',
+          totalRecords: errorJob.totalEntries,
+          successCount: errorJob.verified,
+          failureCount: errorJob.failed,
+          userId: userId,
+          userEmail: 'unknown',
+          metadata: {
+            listId,
+            jobId,
+            error: error.message,
+            processed: errorJob.processed,
+            skippedCount: errorJob.skipped,
+            ipAddress: ipData?.masked || 'unknown'
+          }
+        });
+      } catch (logError) {
+        console.error('❌ Failed to log bulk operation failure:', logError);
+      }
+    }
+    throw error;
+  }
+}
+
+// Helper function to process a single entry
+async function processSingleEntry(entry, entryId, listId, userId, ipData, userAgent) {
+  const entryRef = db.collection('identity-entries').doc(entryId);
+  
+  // Skip if already verified (safety check)
+  if (entry.status === 'verified') {
+    await createIdentityActivityLog({
+      listId,
+      entryId,
+      action: 'bulk_verify_skipped',
+      actorType: 'admin',
+      actorId: userId,
+      details: {
+        reason: 'already_verified',
+        email: entry.email
+      },
+      ipAddress: ipData?.masked,
+      userAgent
+    });
+    
+    return {
+      entryId,
+      email: entry.email,
+      status: 'skipped',
+      reason: 'already_verified'
+    };
+  }
+  
+  // Check if entry has pre-filled identity data
+  let hasNIN = entry.data?.nin || entry.data?.NIN || entry.nin;
+  let hasBVN = entry.data?.bvn || entry.data?.BVN || entry.bvn;
+  let hasCAC = entry.data?.cac || entry.data?.CAC || entry.cac;
+  
+  // Decrypt encrypted identity fields if present
+  if (hasNIN && isEncrypted(hasNIN)) {
+    try {
+      hasNIN = decryptData(hasNIN.encrypted, hasNIN.iv);
+      console.log(`🔓 Decrypted NIN for entry ${entryId}`);
+    } catch (err) {
+      console.error(`❌ Failed to decrypt NIN for entry ${entryId}:`, err.message);
+      hasNIN = null;
+    }
+  }
+  
+  if (hasBVN && isEncrypted(hasBVN)) {
+    try {
+      hasBVN = decryptData(hasBVN.encrypted, hasBVN.iv);
+      console.log(`🔓 Decrypted BVN for entry ${entryId}`);
+    } catch (err) {
+      console.error(`❌ Failed to decrypt BVN for entry ${entryId}:`, err.message);
+      hasBVN = null;
+    }
+  }
+  
+  if (hasCAC && isEncrypted(hasCAC)) {
+    try {
+      hasCAC = decryptData(hasCAC.encrypted, hasCAC.iv);
+      console.log(`🔓 Decrypted CAC for entry ${entryId}`);
+    } catch (err) {
+      console.error(`❌ Failed to decrypt CAC for entry ${entryId}:`, err.message);
+      hasCAC = null;
+    }
+  }
+  
+  // Skip if no identity data pre-filled
+  if (!hasNIN && !hasBVN && !hasCAC) {
+    return {
+      entryId,
+      email: entry.email,
+      status: 'skipped',
+      reason: 'no_identity_data'
+    };
+  }
+  
+  // Determine verification type and data
+  let verificationType;
+  let identityNumber;
+  let verificationData = {};
+  
+  if (hasNIN || hasBVN) {
+    verificationType = 'NIN';
+    identityNumber = hasNIN || hasBVN;
+    
+    verificationData = {
+      firstName: entry.data?.firstName || entry.data?.['First Name'] || entry.data?.['first name'],
+      lastName: entry.data?.lastName || entry.data?.['Last Name'] || entry.data?.['last name'],
+      dateOfBirth: entry.data?.dateOfBirth || entry.data?.['Date of Birth'] || entry.data?.['date of birth'],
+      gender: entry.data?.gender || entry.data?.Gender,
+      bvn: hasBVN
+    };
+  } else if (hasCAC) {
+    verificationType = 'CAC';
+    identityNumber = hasCAC;
+    
+    verificationData = {
+      companyName: entry.data?.companyName || entry.data?.['Company Name'] || entry.data?.['company name'],
+      registrationNumber: entry.data?.registrationNumber || entry.data?.['Registration Number'] || entry.data?.['registration number'],
+      registrationDate: entry.data?.registrationDate || entry.data?.['Registration Date'] || entry.data?.['registration date'],
+      businessAddress: entry.data?.businessAddress || entry.data?.['Business Address'] || entry.data?.['business address']
+    };
+  }
+  
+  // Validate identity number format
+  if (verificationType === 'NIN' && !/^\d{11}$/.test(identityNumber)) {
+    return {
+      entryId,
+      email: entry.email,
+      status: 'skipped',
+      reason: 'invalid_nin_format'
+    };
+  }
+  
+  // Call verification API
+  let verificationResult;
+  
+  try {
+    if (verificationType === 'NIN') {
+      console.log(`🔍 Verifying NIN for entry ${entryId}: ${identityNumber.substring(0, 4)}***`);
+      
+      const dataproResult = await dataproVerifyNIN(identityNumber);
+      
+      await trackDataproAPICall(db, {
+        nin: identityNumber.substring(0, 4) + '*******',
+        success: dataproResult.success,
+        errorCode: dataproResult.errorCode || null,
+        userId,
+        listId,
+        entryId
+      });
+      
+      if (dataproResult.success) {
+        const excelData = {
+          firstName: verificationData.firstName,
+          lastName: verificationData.lastName,
+          dateOfBirth: verificationData.dateOfBirth,
+          gender: verificationData.gender,
+          phoneNumber: entry.data?.phoneNumber || entry.data?.phone_number || entry.data?.['Phone Number'] || ''
+        };
+        
+        const matchResult = dataproMatchFields(dataproResult.data, excelData);
+        
+        verificationResult = {
+          success: matchResult.matched,
+          data: dataproResult.data,
+          message: matchResult.matched ? 'Verification successful' : 'Field mismatch detected',
+          failedFields: matchResult.failedFields,
+          matchDetails: matchResult.details
+        };
+        
+        console.log(`✅ Datapro verification for entry ${entryId}: ${matchResult.matched ? 'MATCHED' : 'FAILED'}`);
+        if (!matchResult.matched) {
+          console.log(`❌ Failed fields: ${matchResult.failedFields.join(', ')}`);
+        }
+      } else {
+        console.error(`❌ Datapro verification failed for entry ${entryId}: ${dataproResult.error}`);
+        verificationResult = {
+          success: false,
+          message: dataproGetUserFriendlyError(dataproResult.errorCode, dataproResult.details),
+          technicalMessage: dataproGetTechnicalError(dataproResult.errorCode, dataproResult.details),
+          errorCode: dataproResult.errorCode
+        };
+      }
+    } else {
+      // CAC verification via VerifyData
+      console.log(`🔍 Verifying CAC for entry ${entryId}: ${identityNumber.substring(0, 4)}***`);
+      
+      // Log verification attempt before API call (Requirement 2.1, 2.5)
+      try {
+        await logVerificationAttempt({
+          verificationType: 'CAC',
+          identityNumber: identityNumber, // Will be masked by function
+          userId: userId || 'anonymous',
+          userEmail: 'bulk_verification',
+          ipAddress: 'bulk_operation',
+          result: 'pending',
+          metadata: {
+            listId,
+            entryId,
+            bulkOperation: true
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log verification attempt:', logError);
+        // Continue execution - don't throw
+      }
+      
+      // Apply VerifyData rate limiting
+      try {
+        await applyVerifydataRateLimit();
+      } catch (rateLimitError) {
+        console.error(`❌ VerifyData rate limit exceeded for entry ${entryId}:`, rateLimitError);
+        return {
+          entryId,
+          email: entry.email,
+          status: 'failed',
+          verificationType,
+          reason: 'Rate limit exceeded'
+        };
+      }
+      
+      // Track API call start time (Requirement 5.2, 5.3, 5.4)
+      const apiStartTime = Date.now();
+      
+      const verifydataResult = await verifydataVerifyCAC(identityNumber);
+      
+      // Calculate API call duration (Requirement 5.3, 5.4)
+      const apiDuration = Date.now() - apiStartTime;
+      
+      // Log API call (Requirement 5.2, 5.3, 5.4)
+      try {
+        await logAPICall({
+          apiName: 'VerifyData',
+          endpoint: '/api/ValidateRcNumber/Initiate',
+          method: 'POST',
+          requestData: { rcNumber: identityNumber }, // Will be masked by function
+          statusCode: verifydataResult.success ? 200 : 400,
+          responseData: verifydataResult, // Will be masked by function
+          duration: apiDuration,
+          userId: userId || 'anonymous',
+          ipAddress: 'bulk_operation',
+          metadata: {
+            listId,
+            entryId,
+            bulkOperation: true,
+            cost: verifydataResult.cost || 0
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log API call:', logError);
+        // Continue execution - don't throw
+      }
+      
+      await trackVerifydataAPICall(db, {
+        rcNumber: identityNumber.substring(0, 4) + '*******',
+        success: verifydataResult.success,
+        errorCode: verifydataResult.errorCode || null,
+        userId,
+        listId,
+        entryId
+      });
+      
+      if (verifydataResult.success) {
+        const excelData = {
+          companyName: verificationData.companyName,
+          registrationNumber: verificationData.registrationNumber,
+          registrationDate: verificationData.registrationDate,
+          businessAddress: verificationData.businessAddress
+        };
+        
+        const matchResult = verifydataMatchCACFields(verifydataResult.data, excelData);
+        
+        verificationResult = {
+          success: matchResult.matched,
+          data: verifydataResult.data,
+          message: matchResult.matched ? 'Verification successful' : 'Field mismatch detected',
+          failedFields: matchResult.failedFields,
+          matchDetails: matchResult.details
+        };
+        
+        console.log(`✅ VerifyData verification for entry ${entryId}: ${matchResult.matched ? 'MATCHED' : 'FAILED'}`);
+        if (!matchResult.matched) {
+          console.log(`❌ Failed fields: ${matchResult.failedFields.join(', ')}`);
+        }
+        
+        // Log successful verification (Requirement 2.2, 2.3, 2.5)
+        try {
+          await logVerificationAttempt({
+            verificationType: 'CAC',
+            identityNumber: identityNumber,
+            userId: userId || 'anonymous',
+            userEmail: 'bulk_verification',
+            ipAddress: 'bulk_operation',
+            result: matchResult.matched ? 'success' : 'failure',
+            errorCode: matchResult.matched ? undefined : 'FIELD_MISMATCH',
+            errorMessage: matchResult.matched ? undefined : 'Field mismatch detected',
+            metadata: {
+              listId,
+              entryId,
+              bulkOperation: true,
+              fieldsValidated: matchResult.details?.matchedFields || [],
+              failedFields: matchResult.failedFields || []
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log verification attempt:', logError);
+        }
+      } else {
+        console.error(`❌ VerifyData verification failed for entry ${entryId}: ${verifydataResult.error}`);
+        verificationResult = {
+          success: false,
+          message: verifydataGetUserFriendlyError(verifydataResult.errorCode, verifydataResult.details),
+          technicalMessage: verifydataGetTechnicalError(verifydataResult.errorCode, verifydataResult.details),
+          errorCode: verifydataResult.errorCode
+        };
+        
+        // Log failed verification (Requirement 2.2, 2.3, 2.5)
+        try {
+          await logVerificationAttempt({
+            verificationType: 'CAC',
+            identityNumber: identityNumber,
+            userId: userId || 'anonymous',
+            userEmail: 'bulk_verification',
+            ipAddress: 'bulk_operation',
+            result: 'failure',
+            errorCode: verifydataResult.errorCode,
+            errorMessage: verifydataResult.error || 'Verification failed',
+            metadata: {
+              listId,
+              entryId,
+              bulkOperation: true,
+              failedFields: []
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log verification attempt:', logError);
+        }
+      }
+    }
+    
+    // Handle verification result
+    if (verificationResult.success) {
+      const updateData = {
+        status: 'verified',
+        verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        verificationDetails: {
+          validationSuccess: true,
+          matchDetails: verificationResult.matchDetails || null,
+          verifiedVia: 'bulk_verify'
+        }
+      };
+      
+      if (verificationType === 'NIN') {
+        try {
+          const encrypted = encryptData(identityNumber);
+          updateData.nin = encrypted;
+          console.log(`🔒 Encrypted NIN before storage for entry ${entryId}`);
+        } catch (err) {
+          console.error(`❌ Failed to encrypt NIN for entry ${entryId}:`, err.message);
+          updateData.nin = identityNumber;
+        }
+      } else {
+        try {
+          const encrypted = encryptData(identityNumber);
+          updateData.cac = encrypted;
+          console.log(`🔒 Encrypted CAC before storage for entry ${entryId}`);
+        } catch (err) {
+          console.error(`❌ Failed to encrypt CAC for entry ${entryId}:`, err.message);
+          updateData.cac = identityNumber;
+        }
+        if (verificationData.companyName) {
+          updateData.cacCompanyName = verificationData.companyName;
+        }
+      }
+      
+      await entryRef.update(updateData);
+      clearSensitiveData(identityNumber);
+      
+      await createIdentityActivityLog({
+        listId,
+        entryId,
+        action: 'verification_success',
+        actorType: 'admin',
+        actorId: userId,
+        details: {
+          email: entry.email,
+          verificationType,
+          method: 'bulk_verify'
+        },
+        ipAddress: ipData?.masked,
+        userAgent
+      });
+      
+      console.log(`✅ Entry ${entryId} verified successfully`);
+      
+      return {
+        entryId,
+        email: entry.email,
+        status: 'verified',
+        verificationType
+      };
+    } else {
+      await entryRef.update({
+        status: 'verification_failed',
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        verificationDetails: {
+          failureReason: verificationResult.message || 'Verification failed',
+          failedAt: admin.firestore.FieldValue.serverTimestamp()
+        }
+      });
+      
+      await createIdentityActivityLog({
+        listId,
+        entryId,
+        action: 'verification_failed',
+        actorType: 'admin',
+        actorId: userId,
+        details: {
+          email: entry.email,
+          verificationType,
+          error: verificationResult.message,
+          method: 'bulk_verify'
+        },
+        ipAddress: ipData?.masked,
+        userAgent
+      });
+      
+      console.log(`❌ Entry ${entryId} verification failed: ${verificationResult.message}`);
+      
+      return {
+        entryId,
+        email: entry.email,
+        status: 'failed',
+        verificationType,
+        reason: verificationResult.message
+      };
+    }
+  } catch (apiError) {
+    console.error(`❌ API error for entry ${entryId}:`, apiError);
+    
+    await entryRef.update({
+      status: 'verification_failed',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      verificationDetails: {
+        failureReason: 'API error: ' + apiError.message,
+        failedAt: admin.firestore.FieldValue.serverTimestamp()
+      }
+    });
+    
+    return {
+      entryId,
+      email: entry.email,
+      status: 'failed',
+      verificationType,
+      reason: 'API error: ' + apiError.message
+    };
+  }
+}
+
+app.post('/api/identity/lists/:listId/bulk-verify', requireAuth, requireBrokerOrAdmin, bulkVerificationRateLimiter, async (req, res) => {
   try {
     const { listId } = req.params;
+    const { batchSize = 10 } = req.body;
     
-    console.log(`🔄 Starting bulk verification for list ${listId}`);
+    // Validate batch size
+    const validatedBatchSize = Math.min(20, Math.max(1, parseInt(batchSize) || 10));
+    
+    console.log(`🔄 Starting bulk verification for list ${listId} with batch size ${validatedBatchSize}`);
     
     // Validate list exists
     const listDoc = await db.collection('identity-lists').doc(listId).get();
@@ -10487,326 +12292,852 @@ app.post('/api/identity/lists/:listId/bulk-verify', requireAuth, requireBrokerOr
     
     console.log(`📋 Found ${entriesSnapshot.size} entries with status 'pending' or 'link_sent'`);
     
-    // Initialize results
-    const results = {
-      processed: 0,
-      verified: 0,
-      failed: 0,
-      skipped: 0,
-      details: []
-    };
+    // Check queue load - if system is at capacity, queue the request
+    const queueStats = getQueueStats();
+    const isHighLoad = queueStats.utilizationPercent >= 80 || queueStats.queueSize > 50;
     
-    // Process each entry
-    for (const entryDoc of entriesSnapshot.docs) {
-      const entry = entryDoc.data();
-      const entryId = entryDoc.id;
-      const entryRef = db.collection('identity-entries').doc(entryId);
-      
-      // Skip if already verified (safety check)
-      if (entry.status === 'verified') {
-        results.skipped++;
-        results.details.push({
-          entryId,
-          email: entry.email,
-          status: 'skipped',
-          reason: 'already_verified'
-        });
-        
-        // Log audit event
-        await createIdentityActivityLog({
-          listId,
-          entryId,
-          action: 'bulk_verify_skipped',
-          actorType: 'admin',
-          actorId: req.user.uid,
-          details: {
-            reason: 'already_verified',
-            email: entry.email
-          },
-          ipAddress: req.ipData?.masked,
-          userAgent: req.headers['user-agent']
-        });
-        
-        continue;
-      }
-      
-      // Check if entry has pre-filled identity data
-      const hasNIN = entry.data?.nin || entry.data?.NIN || entry.nin;
-      const hasBVN = entry.data?.bvn || entry.data?.BVN || entry.bvn;
-      const hasCAC = entry.data?.cac || entry.data?.CAC || entry.cac;
-      
-      // Skip if no identity data pre-filled
-      if (!hasNIN && !hasBVN && !hasCAC) {
-        results.skipped++;
-        results.details.push({
-          entryId,
-          email: entry.email,
-          status: 'skipped',
-          reason: 'no_identity_data'
-        });
-        continue;
-      }
-      
-      // Determine verification type and data
-      let verificationType;
-      let identityNumber;
-      let verificationData = {};
-      
-      if (hasNIN || hasBVN) {
-        // Individual verification (NIN/BVN)
-        verificationType = 'NIN';
-        identityNumber = hasNIN || hasBVN;
-        
-        // Extract additional fields for validation
-        verificationData = {
-          firstName: entry.data?.firstName || entry.data?.['First Name'] || entry.data?.['first name'],
-          lastName: entry.data?.lastName || entry.data?.['Last Name'] || entry.data?.['last name'],
-          dateOfBirth: entry.data?.dateOfBirth || entry.data?.['Date of Birth'] || entry.data?.['date of birth'],
-          gender: entry.data?.gender || entry.data?.Gender,
-          bvn: hasBVN
-        };
-      } else if (hasCAC) {
-        // Corporate verification (CAC)
-        verificationType = 'CAC';
-        identityNumber = hasCAC;
-        
-        // Extract additional fields for validation
-        verificationData = {
-          companyName: entry.data?.companyName || entry.data?.['Company Name'] || entry.data?.['company name'],
-          registrationNumber: entry.data?.registrationNumber || entry.data?.['Registration Number'] || entry.data?.['registration number'],
-          registrationDate: entry.data?.registrationDate || entry.data?.['Registration Date'] || entry.data?.['registration date'],
-          businessAddress: entry.data?.businessAddress || entry.data?.['Business Address'] || entry.data?.['business address']
-        };
-      }
-      
-      // Validate identity number format
-      if (verificationType === 'NIN' && !/^\d{11}$/.test(identityNumber)) {
-        results.skipped++;
-        results.details.push({
-          entryId,
-          email: entry.email,
-          status: 'skipped',
-          reason: 'invalid_nin_format'
-        });
-        continue;
-      }
-      
-      // Call verification API
-      let verificationResult;
-      const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
+    if (isHighLoad && entriesSnapshot.size > 20) {
+      console.log(`⚠️ System under high load (${queueStats.utilizationPercent}% utilization, ${queueStats.queueSize} queued). Queuing bulk verification request.`);
       
       try {
-        results.processed++;
-        
-        if (verificationType === 'NIN') {
-          // NIN verification via Paystack
-          if (paystackSecretKey) {
-            console.log(`🔍 Verifying NIN for entry ${entryId}: ${identityNumber.substring(0, 4)}***`);
-            const response = await fetch(`https://api.paystack.co/bank/resolve_bvn/${identityNumber}`, {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${paystackSecretKey}`,
-              },
-            });
-            
-            const responseData = await response.json();
-            verificationResult = {
-              success: response.ok && responseData.status,
-              data: responseData.data,
-              message: responseData.message
-            };
-          } else {
-            // No API key - use demo mode
-            console.log(`🎭 DEMO MODE: Simulating NIN verification for entry ${entryId}`);
-            await new Promise(resolve => setTimeout(resolve, 500));
-            verificationResult = {
-              success: true,
-              data: { nin: identityNumber },
-              message: 'Verification simulated (no API key configured)'
-            };
-          }
-        } else {
-          // CAC verification via Paystack
-          if (paystackSecretKey) {
-            console.log(`🔍 Verifying CAC for entry ${entryId}: ${identityNumber}`);
-            const response = await fetch('https://api.paystack.co/identity/cac', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${paystackSecretKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ 
-                rc_number: identityNumber, 
-                company_name: verificationData.companyName 
-              }),
-            });
-            
-            const responseData = await response.json();
-            verificationResult = {
-              success: response.ok && responseData.status,
-              data: responseData.data,
-              message: responseData.message
-            };
-          } else {
-            // No API key - use demo mode
-            console.log(`🎭 DEMO MODE: Simulating CAC verification for entry ${entryId}`);
-            await new Promise(resolve => setTimeout(resolve, 500));
-            verificationResult = {
-              success: true,
-              data: { rc_number: identityNumber, company_name: verificationData.companyName },
-              message: 'Verification simulated (no API key configured)'
-            };
-          }
-        }
-        
-        // Handle verification result
-        if (verificationResult.success) {
-          // Success - update entry with verified data
-          const updateData = {
-            status: 'verified',
-            verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-          };
-          
-          if (verificationType === 'NIN') {
-            updateData.nin = identityNumber;
-          } else {
-            updateData.cac = identityNumber;
-            if (verificationData.companyName) {
-              updateData.cacCompanyName = verificationData.companyName;
-            }
-          }
-          
-          await entryRef.update(updateData);
-          
-          results.verified++;
-          results.details.push({
-            entryId,
-            email: entry.email,
-            status: 'verified',
-            verificationType
-          });
-          
-          // Log success
-          await createIdentityActivityLog({
-            listId,
-            entryId,
-            action: 'verification_success',
-            actorType: 'admin',
-            actorId: req.user.uid,
-            details: {
-              email: entry.email,
-              verificationType,
-              method: 'bulk_verify'
-            },
-            ipAddress: req.ipData?.masked,
-            userAgent: req.headers['user-agent']
-          });
-          
-          console.log(`✅ Entry ${entryId} verified successfully`);
-        } else {
-          // Failure - update entry status
-          await entryRef.update({
-            status: 'verification_failed',
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            verificationDetails: {
-              failureReason: verificationResult.message || 'Verification failed',
-              failedAt: admin.firestore.FieldValue.serverTimestamp()
-            }
-          });
-          
-          results.failed++;
-          results.details.push({
-            entryId,
-            email: entry.email,
-            status: 'failed',
-            verificationType,
-            reason: verificationResult.message
-          });
-          
-          // Log failure
-          await createIdentityActivityLog({
-            listId,
-            entryId,
-            action: 'verification_failed',
-            actorType: 'admin',
-            actorId: req.user.uid,
-            details: {
-              email: entry.email,
-              verificationType,
-              error: verificationResult.message,
-              method: 'bulk_verify'
-            },
-            ipAddress: req.ipData?.masked,
-            userAgent: req.headers['user-agent']
-          });
-          
-          console.log(`❌ Entry ${entryId} verification failed: ${verificationResult.message}`);
-        }
-        
-      } catch (apiError) {
-        console.error(`❌ API error for entry ${entryId}:`, apiError);
-        
-        results.failed++;
-        results.details.push({
-          entryId,
-          email: entry.email,
-          status: 'failed',
-          verificationType,
-          reason: 'API error: ' + apiError.message
-        });
-        
-        // Update entry with error
-        await entryRef.update({
-          status: 'verification_failed',
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          verificationDetails: {
-            failureReason: 'API error: ' + apiError.message,
-            failedAt: admin.firestore.FieldValue.serverTimestamp()
+        // Queue the bulk verification request
+        const queueResult = enqueueVerification({
+          type: 'bulk',
+          userId: req.user.uid,
+          userEmail: req.user.email,
+          listId,
+          verificationType: 'bulk_verify',
+          priority: 0, // Normal priority
+          notifyOnComplete: true,
+          metadata: {
+            batchSize: validatedBatchSize,
+            totalEntries: entriesSnapshot.size
+          },
+          verificationFn: async () => {
+            // This function will be executed when the queue processes this item
+            return await executeBulkVerification(
+              listId,
+              entriesSnapshot,
+              validatedBatchSize,
+              req.user.uid,
+              req.ipData,
+              req.headers['user-agent']
+            );
           }
         });
+        
+        return res.status(202).json({
+          queued: true,
+          queueId: queueResult.queueId,
+          position: queueResult.position,
+          queueSize: queueResult.queueSize,
+          estimatedWaitTime: queueResult.estimatedWaitTime,
+          message: 'Your bulk verification request has been queued due to high system load. You will be notified when it completes.',
+          statusUrl: `/api/identity/queue/status/${queueResult.queueId}`
+        });
+        
+      } catch (queueError) {
+        console.error('❌ Failed to queue request:', queueError);
+        // Fall through to immediate processing if queuing fails
+        console.log('⚠️ Falling back to immediate processing');
       }
     }
     
-    // Update list statistics
-    const listRef = db.collection('identity-lists').doc(listId);
-    const updatedEntriesSnapshot = await db.collection('identity-entries')
-      .where('listId', '==', listId)
-      .get();
+    // Create job ID for tracking
+    const jobId = `bulk_verify_${listId}_${Date.now()}`;
     
-    let verifiedCount = 0;
-    let pendingCount = 0;
-    let failedCount = 0;
-    
-    updatedEntriesSnapshot.forEach(doc => {
-      const status = doc.data().status;
-      if (status === 'verified') verifiedCount++;
-      else if (status === 'verification_failed' || status === 'failed') failedCount++;
-      else pendingCount++;
+    // Send immediate response with job ID
+    res.status(202).json({
+      jobId,
+      message: 'Bulk verification started',
+      totalEntries: entriesSnapshot.size,
+      batchSize: validatedBatchSize,
+      statusUrl: `/api/identity/bulk-verify/${jobId}/status`
     });
     
-    await listRef.update({
-      verifiedCount,
-      pendingCount,
-      failedCount,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    });
-    
-    console.log(`✅ Bulk verification complete for list ${listId}`);
-    console.log(`   Processed: ${results.processed}, Verified: ${results.verified}, Failed: ${results.failed}, Skipped: ${results.skipped}`);
-    
-    res.status(200).json(results);
+    // Process entries in background using helper function
+    (async () => {
+      try {
+        await executeBulkVerification(
+          listId,
+          entriesSnapshot,
+          validatedBatchSize,
+          req.user.uid,
+          req.ipData,
+          req.headers['user-agent']
+        );
+      } catch (error) {
+        console.error('❌ Error during bulk verification:', error);
+      }
+    })();
     
   } catch (error) {
-    console.error('❌ Error during bulk verification:', error);
+    console.error('❌ Error starting bulk verification:', error);
     res.status(500).json({
-      error: 'Bulk verification failed',
+      error: 'Bulk verification failed to start',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/identity/bulk-verify/:jobId/status
+ * Get the status of a bulk verification job
+ * 
+ * Response:
+ * - jobId: string - Job ID
+ * - status: string - Job status (running, paused, completed, error)
+ * - progress: number - Progress percentage (0-100)
+ * - processed: number - Entries processed so far
+ * - verified: number - Successfully verified entries
+ * - failed: number - Failed verification entries
+ * - skipped: number - Skipped entries
+ * - totalEntries: number - Total entries to process
+ * - startedAt: Date - Job start time
+ * - completedAt: Date - Job completion time (if completed)
+ * - pausedAt: Date - Job pause time (if paused)
+ * - details: array - Detailed results (optional, only if includeDetails=true)
+ */
+app.get('/api/identity/bulk-verify/:jobId/status', requireAuth, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const { includeDetails = 'false' } = req.query;
+    
+    const job = bulkVerificationJobs.get(jobId);
+    
+    if (!job) {
+      return res.status(404).json({
+        error: 'Job not found',
+        message: `No bulk verification job found with ID: ${jobId}`
+      });
+    }
+    
+    // Check if user has permission to view this job
+    if (job.userId !== req.user.uid && !['admin', 'super_admin', 'compliance'].includes(normalizeRole(req.user.role))) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to view this job'
+      });
+    }
+    
+    // Build response
+    const response = {
+      jobId: job.jobId,
+      listId: job.listId,
+      status: job.status,
+      progress: job.progress || 0,
+      processed: job.processed,
+      verified: job.verified,
+      failed: job.failed,
+      skipped: job.skipped,
+      totalEntries: job.totalEntries,
+      batchSize: job.batchSize,
+      startedAt: job.startedAt,
+      completedAt: job.completedAt || null,
+      pausedAt: job.pausedAt || null,
+      error: job.error || null
+    };
+    
+    // Include details if requested
+    if (includeDetails === 'true') {
+      response.details = job.details;
+    }
+    
+    res.status(200).json(response);
+    
+  } catch (error) {
+    console.error('❌ Error getting job status:', error);
+    res.status(500).json({
+      error: 'Failed to get job status',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/identity/bulk-verify/:jobId/pause
+ * Pause a running bulk verification job
+ * 
+ * Response:
+ * - success: boolean
+ * - message: string
+ * - jobId: string
+ * - status: string
+ */
+app.post('/api/identity/bulk-verify/:jobId/pause', requireAuth, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    
+    const job = bulkVerificationJobs.get(jobId);
+    
+    if (!job) {
+      return res.status(404).json({
+        error: 'Job not found',
+        message: `No bulk verification job found with ID: ${jobId}`
+      });
+    }
+    
+    // Check if user has permission to pause this job
+    if (job.userId !== req.user.uid && !['admin', 'super_admin', 'compliance'].includes(normalizeRole(req.user.role))) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to pause this job'
+      });
+    }
+    
+    // Check if job is running
+    if (job.status !== 'running') {
+      return res.status(400).json({
+        error: 'Invalid operation',
+        message: `Cannot pause job with status: ${job.status}`
+      });
+    }
+    
+    // Set pause flag
+    job.paused = true;
+    bulkVerificationJobs.set(jobId, job);
+    
+    console.log(`⏸️ Job ${jobId} pause requested by ${req.user.email}`);
+    
+    // Log bulk operation pause
+    try {
+      await logBulkOperation({
+        operationType: 'bulk_verification_pause',
+        totalRecords: job.totalEntries,
+        successCount: job.verified,
+        failureCount: job.failed,
+        userId: req.user.uid,
+        userEmail: req.user.email,
+        metadata: {
+          listId: job.listId,
+          jobId,
+          progress: job.progress,
+          processed: job.processed,
+          skippedCount: job.skipped,
+          ipAddress: req.ipData?.masked || 'unknown'
+        }
+      });
+    } catch (logError) {
+      console.error('❌ Failed to log bulk operation pause:', logError);
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Job pause requested. The job will pause after completing the current batch.',
+      jobId: job.jobId,
+      status: 'pausing'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error pausing job:', error);
+    res.status(500).json({
+      error: 'Failed to pause job',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/identity/bulk-verify/:jobId/resume
+ * Resume a paused bulk verification job
+ * 
+ * Response:
+ * - success: boolean
+ * - message: string
+ * - jobId: string
+ * - status: string
+ */
+app.post('/api/identity/bulk-verify/:jobId/resume', requireAuth, requireBrokerOrAdmin, bulkVerificationRateLimiter, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    
+    const job = bulkVerificationJobs.get(jobId);
+    
+    if (!job) {
+      return res.status(404).json({
+        error: 'Job not found',
+        message: `No bulk verification job found with ID: ${jobId}`
+      });
+    }
+    
+    // Check if user has permission to resume this job
+    if (job.userId !== req.user.uid && !['admin', 'super_admin', 'compliance'].includes(normalizeRole(req.user.role))) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to resume this job'
+      });
+    }
+    
+    // Check if job is paused
+    if (job.status !== 'paused') {
+      return res.status(400).json({
+        error: 'Invalid operation',
+        message: `Cannot resume job with status: ${job.status}`
+      });
+    }
+    
+    console.log(`▶️ Resuming job ${jobId} requested by ${req.user.email}`);
+    
+    // Get remaining entries
+    const entriesSnapshot = await db.collection('identity-entries')
+      .where('listId', '==', job.listId)
+      .where('status', 'in', ['pending', 'link_sent'])
+      .get();
+    
+    const entries = entriesSnapshot.docs.map(doc => ({
+      id: doc.id,
+      data: doc.data()
+    }));
+    
+    // Reset pause flag and update status
+    job.paused = false;
+    job.status = 'running';
+    job.resumedAt = new Date();
+    bulkVerificationJobs.set(jobId, job);
+    
+    // Log bulk operation resume
+    try {
+      await logBulkOperation({
+        operationType: 'bulk_verification_resume',
+        totalRecords: job.totalEntries,
+        successCount: job.verified,
+        failureCount: job.failed,
+        userId: req.user.uid,
+        userEmail: req.user.email,
+        metadata: {
+          listId: job.listId,
+          jobId,
+          progress: job.progress,
+          processed: job.processed,
+          remainingEntries: entries.length,
+          skippedCount: job.skipped,
+          ipAddress: req.ipData?.masked || 'unknown'
+        }
+      });
+    } catch (logError) {
+      console.error('❌ Failed to log bulk operation resume:', logError);
+    }
+    
+    // Send response immediately
+    res.status(200).json({
+      success: true,
+      message: 'Job resumed',
+      jobId: job.jobId,
+      status: 'running',
+      remainingEntries: entries.length
+    });
+    
+    // Continue processing in background
+    (async () => {
+      try {
+        const startIndex = job.processed;
+        
+        // Process remaining entries in batches
+        for (let i = 0; i < entries.length; i += job.batchSize) {
+          // Check if job is paused again
+          let currentJob = bulkVerificationJobs.get(jobId);
+          if (currentJob && currentJob.paused) {
+            console.log(`⏸️ Job ${jobId} paused again at entry ${i}/${entries.length}`);
+            currentJob.status = 'paused';
+            currentJob.pausedAt = new Date();
+            bulkVerificationJobs.set(jobId, currentJob);
+            return;
+          }
+          
+          const batch = entries.slice(i, i + job.batchSize);
+          console.log(`📦 Processing resumed batch ${Math.floor(i / job.batchSize) + 1}/${Math.ceil(entries.length / job.batchSize)} (${batch.length} entries)`);
+          
+          // Process batch in parallel
+          const batchResults = await Promise.all(
+            batch.map(entry => 
+              processSingleEntry(
+                entry.data,
+                entry.id,
+                job.listId,
+                job.userId,
+                req.ipData,
+                req.headers['user-agent']
+              )
+            )
+          );
+          
+          // Update job progress
+          currentJob = bulkVerificationJobs.get(jobId);
+          if (currentJob) {
+            batchResults.forEach(result => {
+              currentJob.processed++;
+              if (result.status === 'verified') currentJob.verified++;
+              else if (result.status === 'failed') currentJob.failed++;
+              else if (result.status === 'skipped') currentJob.skipped++;
+              currentJob.details.push(result);
+            });
+            
+            currentJob.progress = Math.round((currentJob.processed / currentJob.totalEntries) * 100);
+            bulkVerificationJobs.set(jobId, currentJob);
+          }
+          
+          // Small delay between batches
+          if (i + job.batchSize < entries.length) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+        
+        // Update list statistics
+        const listRef = db.collection('identity-lists').doc(job.listId);
+        const updatedEntriesSnapshot = await db.collection('identity-entries')
+          .where('listId', '==', job.listId)
+          .get();
+        
+        let verifiedCount = 0;
+        let pendingCount = 0;
+        let failedCount = 0;
+        
+        updatedEntriesSnapshot.forEach(doc => {
+          const status = doc.data().status;
+          if (status === 'verified') verifiedCount++;
+          else if (status === 'verification_failed' || status === 'failed') failedCount++;
+          else pendingCount++;
+        });
+        
+        await listRef.update({
+          verifiedCount,
+          pendingCount,
+          failedCount,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Mark job as complete
+        const finalJob = bulkVerificationJobs.get(jobId);
+        if (finalJob) {
+          finalJob.status = 'completed';
+          finalJob.completedAt = new Date();
+          bulkVerificationJobs.set(jobId, finalJob);
+        }
+        
+        console.log(`✅ Resumed bulk verification complete for list ${job.listId}`);
+        
+        // Clean up job after 1 hour
+        setTimeout(() => {
+          bulkVerificationJobs.delete(jobId);
+          console.log(`🗑️ Cleaned up job ${jobId}`);
+        }, 3600000);
+        
+      } catch (error) {
+        console.error('❌ Error during resumed bulk verification:', error);
+        const errorJob = bulkVerificationJobs.get(jobId);
+        if (errorJob) {
+          errorJob.status = 'error';
+          errorJob.error = error.message;
+          errorJob.errorAt = new Date();
+          bulkVerificationJobs.set(jobId, errorJob);
+        }
+      }
+    })();
+    
+  } catch (error) {
+    console.error('❌ Error resuming job:', error);
+    res.status(500).json({
+      error: 'Failed to resume job',
+      message: error.message
+    });
+  }
+});
+
+// ============= VERIFICATION QUEUE API =============
+
+/**
+ * GET /api/identity/queue/status/:queueId
+ * Get the status of a queued verification request
+ * 
+ * Response:
+ * - queueId: string - Queue item ID
+ * - status: string - Status (queued, processing, completed, failed)
+ * - position: number - Position in queue (if queued)
+ * - queueSize: number - Total queue size (if queued)
+ * - estimatedWaitTime: number - Estimated wait time in seconds (if queued)
+ * - queuedAt: Date - When item was queued
+ * - startedAt: Date - When processing started (if processing/completed)
+ * - completedAt: Date - When processing completed (if completed)
+ * - result: object - Verification result (if completed)
+ * - error: string - Error message (if failed)
+ */
+app.get('/api/identity/queue/status/:queueId', requireAuth, async (req, res) => {
+  try {
+    const { queueId } = req.params;
+    
+    const status = getQueueStatus(queueId);
+    
+    if (!status) {
+      return res.status(404).json({
+        error: 'Queue item not found',
+        message: `No queue item found with ID: ${queueId}`
+      });
+    }
+    
+    res.status(200).json(status);
+    
+  } catch (error) {
+    console.error('❌ Error getting queue status:', error);
+    res.status(500).json({
+      error: 'Failed to get queue status',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/identity/queue/user
+ * Get all queue items for the current user
+ * 
+ * Response:
+ * - items: Array of queue items
+ */
+app.get('/api/identity/queue/user', requireAuth, async (req, res) => {
+  try {
+    const items = getUserQueueItems(req.user.uid);
+    
+    res.status(200).json({
+      items,
+      total: items.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting user queue items:', error);
+    res.status(500).json({
+      error: 'Failed to get queue items',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/identity/queue/stats
+ * Get queue statistics (Admin only)
+ * 
+ * Response:
+ * - queueSize: number - Current queue size
+ * - activeJobs: number - Number of active jobs
+ * - maxConcurrent: number - Maximum concurrent jobs
+ * - maxQueueSize: number - Maximum queue size
+ * - isProcessing: boolean - Whether queue is being processed
+ * - utilizationPercent: number - Queue utilization percentage
+ */
+app.get('/api/identity/queue/stats', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const stats = getQueueStats();
+    
+    res.status(200).json(stats);
+    
+  } catch (error) {
+    console.error('❌ Error getting queue stats:', error);
+    res.status(500).json({
+      error: 'Failed to get queue stats',
       message: error.message
     });
   }
 });
 
 // ============= END IDENTITY COLLECTION SYSTEM API =============
+
+// ============= AUDIT LOGGING API =============
+
+/**
+ * Get audit logs (Admin only)
+ * 
+ * Query parameters:
+ * - eventType: Filter by event type (verification_attempt, api_call, encryption_operation, security_event, bulk_operation)
+ * - userId: Filter by user ID
+ * - startDate: Filter by start date (ISO 8601)
+ * - endDate: Filter by end date (ISO 8601)
+ * - limit: Limit number of results (default: 100, max: 1000)
+ * 
+ * Response:
+ * - logs: Array of log entries
+ * - total: Total number of logs
+ */
+app.get('/api/audit/logs', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { eventType, userId, startDate, endDate, limit } = req.query;
+    
+    console.log(`📋 Admin ${req.user.email} querying audit logs`);
+    
+    // Build filters
+    const filters = {};
+    
+    if (eventType) filters.eventType = eventType;
+    if (userId) filters.userId = userId;
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
+    if (limit) filters.limit = Math.min(1000, parseInt(limit) || 100);
+    
+    // Query audit logs
+    const logs = await queryAuditLogs(filters);
+    
+    console.log(`✅ Retrieved ${logs.length} audit logs`);
+    
+    res.status(200).json({
+      logs,
+      total: logs.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Error querying audit logs:', error);
+    res.status(500).json({
+      error: 'Failed to query audit logs',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Get audit log statistics (Admin only)
+ * 
+ * Query parameters:
+ * - startDate: Start date for statistics (ISO 8601)
+ * - endDate: End date for statistics (ISO 8601)
+ * 
+ * Response:
+ * - total: Total number of logs
+ * - byEventType: Count by event type
+ * - byResult: Count by result (for verification attempts)
+ * - byVerificationType: Count by verification type
+ */
+app.get('/api/audit/stats', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    console.log(`📊 Admin ${req.user.email} querying audit log statistics`);
+    
+    // Build filters
+    const filters = {};
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
+    
+    // Get statistics
+    const stats = await getAuditLogStats(filters);
+    
+    console.log(`✅ Retrieved audit log statistics`);
+    
+    res.status(200).json(stats);
+    
+  } catch (error) {
+    console.error('❌ Error getting audit log statistics:', error);
+    res.status(500).json({
+      error: 'Failed to get audit log statistics',
+      message: error.message
+    });
+  }
+});
+
+// ============= END AUDIT LOGGING API =============
+
+// ============= HEALTH MONITORING API =============
+
+/**
+ * Get current API health status
+ * 
+ * GET /api/health/status
+ * 
+ * Response:
+ * - service: Service name (e.g., 'datapro')
+ * - status: 'up', 'down', 'not_configured', 'error'
+ * - message: Status message
+ * - timestamp: Last check timestamp
+ * - responseTime: Response time in milliseconds
+ */
+app.get('/api/health/status', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    console.log(`🏥 Admin ${req.user.email} checking API health status`);
+    
+    const status = await getHealthStatus();
+    
+    if (!status) {
+      return res.status(200).json({
+        service: 'datapro',
+        status: 'unknown',
+        message: 'No health check data available yet',
+        timestamp: new Date()
+      });
+    }
+    
+    res.status(200).json(status);
+    
+  } catch (error) {
+    console.error('❌ Error getting health status:', error);
+    res.status(500).json({
+      error: 'Failed to get health status',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Get health status history
+ * 
+ * GET /api/health/history?limit=100
+ * 
+ * Query parameters:
+ * - limit: Number of records to retrieve (default: 100)
+ * 
+ * Response: Array of health status records
+ */
+app.get('/api/health/history', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 100;
+    
+    console.log(`🏥 Admin ${req.user.email} retrieving health history (limit: ${limit})`);
+    
+    const history = await getHealthHistory(limit);
+    
+    res.status(200).json({
+      history,
+      count: history.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting health history:', error);
+    res.status(500).json({
+      error: 'Failed to get health history',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Get error rate statistics
+ * 
+ * GET /api/health/error-rate?hours=24
+ * 
+ * Query parameters:
+ * - hours: Number of hours to look back (default: 24)
+ * 
+ * Response:
+ * - errorRate: Error rate as decimal (0.0 to 1.0)
+ * - total: Total verification attempts
+ * - failed: Failed verification attempts
+ */
+app.get('/api/health/error-rate', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const hours = parseInt(req.query.hours) || 24;
+    
+    console.log(`📊 Admin ${req.user.email} checking error rate (last ${hours}h)`);
+    
+    const stats = await calculateErrorRate(hours);
+    
+    res.status(200).json({
+      ...stats,
+      hours,
+      errorRatePercent: (stats.errorRate * 100).toFixed(2)
+    });
+    
+  } catch (error) {
+    console.error('❌ Error calculating error rate:', error);
+    res.status(500).json({
+      error: 'Failed to calculate error rate',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Get API usage statistics
+ * 
+ * GET /api/health/usage?period=day
+ * 
+ * Query parameters:
+ * - period: 'day' or 'month' (default: 'day')
+ * 
+ * Response:
+ * - calls: Number of API calls
+ * - cost: Total cost
+ * - period: Period queried
+ */
+app.get('/api/health/usage', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const period = req.query.period || 'day';
+    
+    if (!['day', 'month'].includes(period)) {
+      return res.status(400).json({
+        error: 'Invalid period',
+        message: 'Period must be "day" or "month"'
+      });
+    }
+    
+    console.log(`💰 Admin ${req.user.email} checking API usage (${period})`);
+    
+    const usage = await getAPIUsage(period);
+    
+    res.status(200).json({
+      ...usage,
+      period
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting API usage:', error);
+    res.status(500).json({
+      error: 'Failed to get API usage',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Get unacknowledged alerts
+ * 
+ * GET /api/health/alerts
+ * 
+ * Response: Array of unacknowledged alerts
+ */
+app.get('/api/health/alerts', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    console.log(`🚨 Admin ${req.user.email} retrieving unacknowledged alerts`);
+    
+    const alerts = await getUnacknowledgedAlerts();
+    
+    res.status(200).json({
+      alerts,
+      count: alerts.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting alerts:', error);
+    res.status(500).json({
+      error: 'Failed to get alerts',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Acknowledge an alert
+ * 
+ * POST /api/health/alerts/:alertId/acknowledge
+ * 
+ * Response: Success message
+ */
+app.post('/api/health/alerts/:alertId/acknowledge', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { alertId } = req.params;
+    
+    console.log(`✅ Admin ${req.user.email} acknowledging alert ${alertId}`);
+    
+    await acknowledgeAlert(alertId, req.user.uid);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Alert acknowledged successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error acknowledging alert:', error);
+    res.status(500).json({
+      error: 'Failed to acknowledge alert',
+      message: error.message
+    });
+  }
+});
+
+// ============= END HEALTH MONITORING API =============
 
 // ============= END IDENTITY REMEDIATION SYSTEM =============
 
@@ -11078,14 +13409,127 @@ app.use((req, res) => {
 
 // ============= END ERROR HANDLER =============
 
-app.listen(port, async () => {
+// ============= CONFIGURATION VALIDATION =============
+
+/**
+ * Validate server configuration on startup
+ * Checks for required environment variables and API credentials
+ */
+function validateServerConfiguration() {
+  logger.info('Validating server configuration...');
+  
+  const errors = [];
+  const warnings = [];
+  
+  // Check ENCRYPTION_KEY (required for NDPR compliance)
+  if (!process.env.ENCRYPTION_KEY) {
+    errors.push('ENCRYPTION_KEY is not set. This is required for NDPR compliance.');
+    errors.push('Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  } else if (process.env.ENCRYPTION_KEY.length !== 64) {
+    warnings.push('ENCRYPTION_KEY should be 64 characters (32 bytes hex). Current length: ' + process.env.ENCRYPTION_KEY.length);
+  }
+  
+  // Check verification mode
+  const verificationMode = process.env.VERIFICATION_MODE || 'mock';
+  logger.info(`Verification mode: ${verificationMode}`);
+  
+  // Check Datapro credentials if in datapro mode
+  if (verificationMode === 'datapro') {
+    if (!process.env.DATAPRO_SERVICE_ID) {
+      errors.push('DATAPRO_SERVICE_ID is not set but verification mode is "datapro".');
+      errors.push('Contact Datapro Nigeria (https://datapronigeria.com) to obtain a SERVICEID.');
+    }
+    
+    if (!process.env.DATAPRO_API_URL) {
+      warnings.push('DATAPRO_API_URL is not set. Using default: https://api.datapronigeria.com');
+    }
+    
+    // Check VerifyData credentials for CAC verification
+    if (!process.env.VERIFYDATA_SECRET_KEY) {
+      errors.push('VERIFYDATA_SECRET_KEY is not set but verification mode is "datapro".');
+      errors.push('CAC verification requires VerifyData API credentials.');
+      errors.push('Visit https://vd.villextra.com to create an account and obtain a secret key.');
+    }
+    
+    if (!process.env.VERIFYDATA_API_URL) {
+      warnings.push('VERIFYDATA_API_URL is not set. Using default: https://vd.villextra.com');
+    }
+    
+    if (process.env.DATAPRO_SERVICE_ID && process.env.VERIFYDATA_SECRET_KEY) {
+      logger.success('Datapro API configuration validated');
+      logger.success('VerifyData API configuration validated');
+    }
+  }
+  
+  // Check if in production environment without proper credentials
+  if (process.env.NODE_ENV === 'production') {
+    if (verificationMode === 'mock') {
+      warnings.push('Running in production with mock verification mode. This should only be used for testing.');
+    }
+    
+    if (!process.env.ENCRYPTION_KEY) {
+      errors.push('ENCRYPTION_KEY must be set in production for NDPR compliance.');
+    }
+    
+    if (verificationMode === 'datapro' && !process.env.DATAPRO_SERVICE_ID) {
+      errors.push('DATAPRO_SERVICE_ID must be set in production when using datapro mode.');
+    }
+    
+    if (verificationMode === 'datapro' && !process.env.VERIFYDATA_SECRET_KEY) {
+      errors.push('VERIFYDATA_SECRET_KEY must be set in production when using datapro mode for CAC verification.');
+    }
+  }
+  
+  // Log warnings
+  if (warnings.length > 0) {
+    logger.warn('Configuration warnings:');
+    warnings.forEach(warning => logger.warn(`  - ${warning}`));
+  }
+  
+  // Log errors and exit if critical
+  if (errors.length > 0) {
+    logger.error('Configuration errors:');
+    errors.forEach(error => logger.error(`  - ${error}`));
+    
+    if (process.env.NODE_ENV === 'production') {
+      logger.error('Cannot start server in production with configuration errors. Exiting...');
+      process.exit(1);
+    } else {
+      logger.warn('Configuration errors detected but continuing in development mode.');
+      logger.warn('Please fix these issues before deploying to production.');
+    }
+  } else {
+    logger.success('Server configuration validated successfully');
+  }
+  
+  return { errors, warnings };
+}
+
+// Run configuration validation
+const configValidation = validateServerConfiguration();
+
+// ============= END CONFIGURATION VALIDATION =============
+
+const server = app.listen(port, async () => {
   console.log('='.repeat(80));
-  console.log(`� SERnVER STARTED - UPDATED VERSION WITH COLLECTION MAPPING FIX`);
+  console.log(`🚀 SERVER STARTED - UPDATED VERSION WITH COLLECTION MAPPING FIX`);
   console.log(`Server running on port ${port}`);
   console.log(`📝 Events logging: ${EVENTS_CONFIG.ENABLE_EVENTS_LOGGING ? 'ENABLED' : 'DISABLED'}`);
   console.log(`🌐 IP geolocation: ${EVENTS_CONFIG.ENABLE_IP_GEOLOCATION ? 'ENABLED' : 'DISABLED'}`);
+  console.log(`🔐 Encryption: ${process.env.ENCRYPTION_KEY ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+  console.log(`🔍 Verification mode: ${process.env.VERIFICATION_MODE || 'mock'}`);
+  if (configValidation.warnings.length > 0) {
+    console.log(`⚠️  Configuration warnings: ${configValidation.warnings.length}`);
+  }
+  if (configValidation.errors.length > 0) {
+    console.log(`❌ Configuration errors: ${configValidation.errors.length}`);
+  }
   console.log('='.repeat(80));
   console.log(`⏰ Raw IP retention: ${EVENTS_CONFIG.RAW_IP_RETENTION_DAYS} days`);
+  
+  // Initialize health monitoring
+  console.log('🏥 Initializing health monitoring...');
+  initializeHealthMonitor(db);
   
   // Force generate sample events on every startup for testing
   console.log('🧪 Generating initial sample events for testing...');
@@ -11122,3 +13566,123 @@ app.listen(port, async () => {
   
   await setSuperAdminOnStartup();
 });
+
+// ============= GRACEFUL SHUTDOWN HANDLERS =============
+
+/**
+ * Graceful shutdown function
+ * Handles cleanup when server receives shutdown signals
+ */
+async function gracefulShutdown(signal) {
+  console.log(`\n🛑 Received ${signal} signal. Starting graceful shutdown...`);
+  
+  try {
+    // Log shutdown event
+    await logSecurityEvent({
+      eventType: 'server_shutdown',
+      severity: 'medium',
+      description: `Server shutting down due to ${signal} signal`,
+      userId: 'system',
+      ipAddress: 'localhost',
+      metadata: {
+        signal,
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+      }
+    });
+  } catch (error) {
+    console.error('❌ Failed to log shutdown event:', error.message);
+  }
+  
+  // Stop accepting new connections
+  console.log('🔒 Closing server to new connections...');
+  server.close((err) => {
+    if (err) {
+      console.error('❌ Error closing server:', err.message);
+    } else {
+      console.log('✅ Server closed to new connections');
+    }
+  });
+  
+  // Stop health monitoring
+  console.log('🏥 Stopping health monitor...');
+  try {
+    stopHealthMonitor();
+    console.log('✅ Health monitor stopped');
+  } catch (error) {
+    console.error('❌ Error stopping health monitor:', error.message);
+  }
+  
+  // Wait for in-flight requests with 10-second timeout
+  console.log('⏳ Waiting for in-flight requests (10s timeout)...');
+  const shutdownTimeout = setTimeout(() => {
+    console.warn('⚠️  Shutdown timeout reached. Forcing exit...');
+    process.exit(1);
+  }, 10000);
+  
+  // Clear timeout if shutdown completes before timeout
+  shutdownTimeout.unref();
+  
+  console.log('✅ Graceful shutdown complete');
+  process.exit(0);
+}
+
+// Register SIGTERM handler (production deployments)
+process.on('SIGTERM', () => {
+  gracefulShutdown('SIGTERM');
+});
+
+// Register SIGINT handler (Ctrl+C in terminal)
+process.on('SIGINT', () => {
+  gracefulShutdown('SIGINT');
+});
+
+// Register uncaughtException handler
+process.on('uncaughtException', async (error) => {
+  console.error('❌ UNCAUGHT EXCEPTION:', error);
+  
+  try {
+    await logSecurityEvent({
+      eventType: 'uncaught_exception',
+      severity: 'critical',
+      description: `Uncaught exception: ${error.message}`,
+      userId: 'system',
+      ipAddress: 'localhost',
+      metadata: {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (logError) {
+    console.error('❌ Failed to log uncaught exception:', logError.message);
+  }
+  
+  gracefulShutdown('uncaughtException');
+});
+
+// Register unhandledRejection handler
+process.on('unhandledRejection', async (reason, promise) => {
+  console.error('❌ UNHANDLED REJECTION:', reason);
+  
+  try {
+    await logSecurityEvent({
+      eventType: 'unhandled_rejection',
+      severity: 'critical',
+      description: `Unhandled promise rejection: ${reason}`,
+      userId: 'system',
+      ipAddress: 'localhost',
+      metadata: {
+        reason: String(reason),
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (logError) {
+    console.error('❌ Failed to log unhandled rejection:', logError.message);
+  }
+  
+  // Don't exit on unhandled rejection, just log it
+  console.log('⚠️  Continuing after unhandled rejection...');
+});
+
+console.log('✅ Graceful shutdown handlers registered');

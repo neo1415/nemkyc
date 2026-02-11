@@ -59,9 +59,13 @@ import {
   Delete as DeleteIcon,
   Add as AddIcon,
   GetApp as DownloadIcon,
+  Pause as PauseIcon,
+  PlayArrow as PlayArrowIcon,
 } from '@mui/icons-material';
+import { CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { DataGrid, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 import { SendConfirmDialog } from '../../components/identity/SendConfirmDialog';
+import { VerificationDetailsDialog } from '../../components/identity/VerificationDetailsDialog';
 import { useBrokerTourV2 } from '../../hooks/useBrokerTourV2';
 import type { IdentityEntry, ListDetails, EntryStatus, VerificationType, ActivityLog, ActivityAction } from '../../types/remediation';
 
@@ -120,6 +124,11 @@ export default function IdentityListDetail({
   // Failure details dialog state
   const [failureDetailsOpen, setFailureDetailsOpen] = useState(false);
   const [selectedFailedEntry, setSelectedFailedEntry] = useState<IdentityEntry | null>(null);
+
+  // Retry verification state
+  const [retryDialogOpen, setRetryDialogOpen] = useState(false);
+  const [retryEntry, setRetryEntry] = useState<IdentityEntry | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   // Activity log state
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
@@ -335,6 +344,105 @@ export default function IdentityListDetail({
               setFailureDetailsOpen(true);
             } : undefined}
           />
+        );
+      },
+    });
+
+    // Add Verification Details column
+    columns.push({
+      field: 'verificationDetails',
+      headerName: 'Verification Details',
+      width: 200,
+      renderCell: (params) => {
+        const entry = params.row as IdentityEntry;
+        const details = entry.verificationDetails;
+        const status = entry.status;
+
+        // Show nothing for pending or link_sent
+        if (status === 'pending' || status === 'link_sent') {
+          return <Typography variant="body2" color="textSecondary">-</Typography>;
+        }
+
+        // Show success indicator for verified
+        if (status === 'verified') {
+          const validatedFields = details?.fieldsValidated || [];
+          return (
+            <Tooltip title={
+              <Box>
+                <Typography variant="caption" fontWeight="bold">Validated Fields:</Typography>
+                {validatedFields.length > 0 ? (
+                  <ul style={{ margin: '4px 0', paddingLeft: '16px' }}>
+                    {validatedFields.map((field, idx) => (
+                      <li key={idx}>{field}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Typography variant="caption">All fields matched</Typography>
+                )}
+              </Box>
+            }>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#2e7d32' }}>
+                <CheckCircle2 size={16} />
+                <Typography variant="body2" fontWeight="medium">
+                  {validatedFields.length} fields matched
+                </Typography>
+              </Box>
+            </Tooltip>
+          );
+        }
+
+        // Show failure indicator for verification_failed
+        if (status === 'verification_failed') {
+          const failedFields = details?.failedFields || [];
+          const failureReason = details?.failureReason || 'Verification failed';
+          
+          return (
+            <Tooltip title={
+              <Box>
+                <Typography variant="caption" fontWeight="bold" color="error">Failed Fields:</Typography>
+                {failedFields.length > 0 ? (
+                  <ul style={{ margin: '4px 0', paddingLeft: '16px' }}>
+                    {failedFields.map((field, idx) => (
+                      <li key={idx}>{field}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Typography variant="caption">{failureReason}</Typography>
+                )}
+                <Typography variant="caption" sx={{ mt: 1, display: 'block', fontStyle: 'italic' }}>
+                  Click status for full details
+                </Typography>
+              </Box>
+            }>
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 0.5, 
+                  color: '#d32f2f',
+                  cursor: 'pointer',
+                  '&:hover': { opacity: 0.8 }
+                }}
+                onClick={() => {
+                  setSelectedFailedEntry(entry);
+                  setFailureDetailsOpen(true);
+                }}
+              >
+                <XCircle size={16} />
+                <Typography variant="body2" fontWeight="medium">
+                  {failedFields.length > 0 ? `${failedFields.length} fields failed` : 'Failed'}
+                </Typography>
+              </Box>
+            </Tooltip>
+          );
+        }
+
+        // Show warning for other failure states
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#B8860B' }}>
+            <AlertTriangle size={16} />
+            <Typography variant="body2">{status}</Typography>
+          </Box>
         );
       },
     });
@@ -565,12 +673,63 @@ export default function IdentityListDetail({
   };
 
   // Handle bulk verification
+  const [bulkVerifyJobId, setBulkVerifyJobId] = useState<string | null>(null);
+  const [bulkVerifyProgress, setBulkVerifyProgress] = useState<number>(0);
+  const [bulkVerifyStatus, setBulkVerifyStatus] = useState<'idle' | 'running' | 'paused' | 'completed' | 'error'>('idle');
+  const [bulkVerifyPollInterval, setBulkVerifyPollInterval] = useState<NodeJS.Timeout | null>(null);
+
+  // Poll for bulk verification progress
+  const pollBulkVerifyProgress = async (jobId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/identity/bulk-verify/${jobId}/status`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get job status');
+      }
+      
+      const status = await response.json();
+      setBulkVerifyProgress(status.progress || 0);
+      setBulkVerifyStatus(status.status);
+      
+      // If job is completed or errored, stop polling and show results
+      if (status.status === 'completed' || status.status === 'error') {
+        if (bulkVerifyPollInterval) {
+          clearInterval(bulkVerifyPollInterval);
+          setBulkVerifyPollInterval(null);
+        }
+        
+        // Fetch full results with details
+        const detailsResponse = await fetch(`${API_BASE_URL}/api/identity/bulk-verify/${jobId}/status?includeDetails=true`, {
+          method: 'GET',
+          credentials: 'include',
+        });
+        
+        if (detailsResponse.ok) {
+          const results = await detailsResponse.json();
+          setBulkVerifyResults(results);
+          setBulkVerifyDialogOpen(true);
+        }
+        
+        // Refresh data to show updated statuses
+        await fetchData();
+        setBulkVerifying(false);
+      }
+    } catch (err) {
+      console.error('Error polling job status:', err);
+    }
+  };
+
   const handleBulkVerify = async () => {
     if (!listId) return;
     
     try {
       setBulkVerifying(true);
       setError(null);
+      setBulkVerifyProgress(0);
+      setBulkVerifyStatus('running');
       
       const response = await fetch(`${API_BASE_URL}/api/identity/lists/${listId}/bulk-verify`, {
         method: 'POST',
@@ -578,26 +737,164 @@ export default function IdentityListDetail({
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          batchSize: 10 // Process 10 entries concurrently
+        })
       });
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to bulk verify');
+        throw new Error(errorData.message || 'Failed to start bulk verification');
       }
       
-      const results = await response.json();
-      setBulkVerifyResults(results);
-      setBulkVerifyDialogOpen(true);
+      const result = await response.json();
       
-      // Refresh data to show updated statuses
-      await fetchData();
+      // Check if request was queued
+      if (result.queued) {
+        // Request was queued due to high load
+        setBulkVerifying(false);
+        setBulkVerifyStatus('queued');
+        setError(null);
+        
+        // Show queue notification
+        alert(`Your bulk verification request has been queued.\n\nPosition: ${result.position}/${result.queueSize}\nEstimated wait: ${result.estimatedWaitTime} seconds\n\nYou will be notified when it completes.`);
+        
+        // Optionally poll queue status
+        // You can implement queue status polling here if needed
+        
+        return;
+      }
+      
+      // Normal processing - not queued
+      setBulkVerifyJobId(result.jobId);
+      
+      // Start polling for progress
+      const interval = setInterval(() => {
+        pollBulkVerifyProgress(result.jobId);
+      }, 2000); // Poll every 2 seconds
+      
+      setBulkVerifyPollInterval(interval);
       
     } catch (err) {
       console.error('Bulk verification error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to bulk verify entries');
-    } finally {
+      setError(err instanceof Error ? err.message : 'Failed to start bulk verification');
       setBulkVerifying(false);
+      setBulkVerifyStatus('error');
     }
+  };
+
+  // Handle pause bulk verification
+  const handlePauseBulkVerify = async () => {
+    if (!bulkVerifyJobId) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/identity/bulk-verify/${bulkVerifyJobId}/pause`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to pause bulk verification');
+      }
+      
+      setBulkVerifyStatus('paused');
+      
+      // Stop polling
+      if (bulkVerifyPollInterval) {
+        clearInterval(bulkVerifyPollInterval);
+        setBulkVerifyPollInterval(null);
+      }
+    } catch (err) {
+      console.error('Error pausing bulk verification:', err);
+      setError(err instanceof Error ? err.message : 'Failed to pause bulk verification');
+    }
+  };
+
+  // Handle resume bulk verification
+  const handleResumeBulkVerify = async () => {
+    if (!bulkVerifyJobId) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/identity/bulk-verify/${bulkVerifyJobId}/resume`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to resume bulk verification');
+      }
+      
+      setBulkVerifyStatus('running');
+      
+      // Restart polling
+      const interval = setInterval(() => {
+        pollBulkVerifyProgress(bulkVerifyJobId);
+      }, 2000);
+      
+      setBulkVerifyPollInterval(interval);
+    } catch (err) {
+      console.error('Error resuming bulk verification:', err);
+      setError(err instanceof Error ? err.message : 'Failed to resume bulk verification');
+    }
+  };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (bulkVerifyPollInterval) {
+        clearInterval(bulkVerifyPollInterval);
+      }
+    };
+  }, [bulkVerifyPollInterval]);
+
+  // Handle manual retry verification
+  const handleRetryVerification = async () => {
+    if (!retryEntry) return;
+
+    try {
+      setRetrying(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE_URL}/api/identity/entries/${retryEntry.id}/retry-verification`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to retry verification');
+      }
+
+      const result = await response.json();
+      
+      setRetryDialogOpen(false);
+      setRetryEntry(null);
+      
+      // Refresh data to show updated status
+      await fetchData();
+      
+      if (result.success) {
+        setSuccessMessage(`Verification retry successful for ${retryEntry.email}`);
+      } else {
+        setError(`Verification retry failed: ${result.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Error retrying verification:', err);
+      setError(err instanceof Error ? err.message : 'Failed to retry verification');
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  // Handle retry button click from dialog
+  const handleRetryClick = (entry: IdentityEntry) => {
+    setRetryEntry(entry);
+    setRetryDialogOpen(true);
   };
 
   // Get selected entries for the dialog
@@ -723,8 +1020,46 @@ export default function IdentityListDetail({
             }
           }}
         >
-          {bulkVerifying ? 'Verifying...' : 'Verify All Unverified'}
+          {bulkVerifying ? `Verifying... ${bulkVerifyProgress}%` : 'Verify All Unverified'}
         </Button>
+        
+        {/* Pause/Resume buttons for bulk verification */}
+        {bulkVerifying && bulkVerifyStatus === 'running' && (
+          <Button
+            variant="outlined"
+            startIcon={<PauseIcon />}
+            onClick={handlePauseBulkVerify}
+            sx={{ 
+              borderColor: '#FFA500',
+              color: '#FFA500',
+              '&:hover': { 
+                borderColor: '#FF8C00',
+                bgcolor: 'rgba(255, 165, 0, 0.04)'
+              }
+            }}
+          >
+            Pause
+          </Button>
+        )}
+        
+        {bulkVerifyStatus === 'paused' && (
+          <Button
+            variant="outlined"
+            startIcon={<PlayArrowIcon />}
+            onClick={handleResumeBulkVerify}
+            sx={{ 
+              borderColor: '#008000',
+              color: '#008000',
+              '&:hover': { 
+                borderColor: '#006400',
+                bgcolor: 'rgba(0, 128, 0, 0.04)'
+              }
+            }}
+          >
+            Resume
+          </Button>
+        )}
+        
         <Box data-tour="request-buttons" sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="contained"
@@ -1050,180 +1385,55 @@ export default function IdentityListDetail({
         </AccordionDetails>
       </Accordion>
 
-      {/* Failure Details Dialog */}
-      <Dialog
+      {/* Verification Details Dialog */}
+      <VerificationDetailsDialog
         open={failureDetailsOpen}
         onClose={() => setFailureDetailsOpen(false)}
-        maxWidth="md"
-        fullWidth
+        entry={selectedFailedEntry}
+        onRetry={handleRetryClick}
+      />
+
+      {/* Retry Verification Confirmation Dialog */}
+      <Dialog
+        open={retryDialogOpen}
+        onClose={() => !retrying && setRetryDialogOpen(false)}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <ErrorIcon color="error" />
-          Verification Failure Details
-        </DialogTitle>
+        <DialogTitle>Retry Verification</DialogTitle>
         <DialogContent>
-          {selectedFailedEntry && (
-            <Box>
-              <Alert severity="error" sx={{ mb: 3 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Verification Failed
-                </Typography>
-                <Typography variant="body2">
-                  The identity verification for this customer did not succeed. Please review the details below.
-                </Typography>
-              </Alert>
-
-              {/* Customer Information */}
-              <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                <Typography variant="subtitle2" color="primary" gutterBottom>
-                  Customer Information
-                </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1 }}>
-                  {selectedFailedEntry.displayName && (
-                    <Box>
-                      <Typography variant="caption" color="textSecondary">Name</Typography>
-                      <Typography variant="body2">{selectedFailedEntry.displayName}</Typography>
-                    </Box>
-                  )}
-                  <Box>
-                    <Typography variant="caption" color="textSecondary">Email</Typography>
-                    <Typography variant="body2">{selectedFailedEntry.email}</Typography>
-                  </Box>
-                  {selectedFailedEntry.policyNumber && (
-                    <Box>
-                      <Typography variant="caption" color="textSecondary">Policy Number</Typography>
-                      <Typography variant="body2">{selectedFailedEntry.policyNumber}</Typography>
-                    </Box>
-                  )}
-                  {selectedFailedEntry.verificationType && (
-                    <Box>
-                      <Typography variant="caption" color="textSecondary">Verification Type</Typography>
-                      <Typography variant="body2">{selectedFailedEntry.verificationType}</Typography>
-                    </Box>
-                  )}
+          <DialogContentText>
+            {retryEntry && (
+              <>
+                Are you sure you want to manually retry verification for{' '}
+                <strong>{retryEntry.email}</strong>?
+                <Box sx={{ mt: 2 }}>
+                  This will attempt to verify the identity information again using the stored data.
                 </Box>
-              </Paper>
-
-              {/* Failure Reason */}
-              {selectedFailedEntry.verificationDetails?.failureReason && (
-                <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: '#fff3e0' }}>
-                  <Typography variant="subtitle2" color="error" gutterBottom>
-                    Reason for Failure
-                  </Typography>
-                  <Typography variant="body2" sx={{ mt: 1 }}>
-                    {selectedFailedEntry.verificationDetails.failureReason}
-                  </Typography>
-                </Paper>
-              )}
-
-              {/* Failed Fields (if available) */}
-              {selectedFailedEntry.verificationDetails?.failedFields && 
-               selectedFailedEntry.verificationDetails.failedFields.length > 0 && (
-                <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                  <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                    Fields That Did Not Match
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                    {selectedFailedEntry.verificationDetails.failedFields.map((field, idx) => (
-                      <Chip 
-                        key={idx}
-                        label={field}
-                        size="small"
-                        color="error"
-                        variant="outlined"
-                      />
-                    ))}
-                  </Box>
-                </Paper>
-              )}
-
-              {/* Validation Details */}
-              {selectedFailedEntry.verificationDetails?.fieldsValidated && 
-               selectedFailedEntry.verificationDetails.fieldsValidated.length > 0 && (
-                <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                  <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                    Fields Validated
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                    {selectedFailedEntry.verificationDetails.fieldsValidated.map((field, idx) => (
-                      <Chip 
-                        key={idx}
-                        label={field}
-                        size="small"
-                        variant="outlined"
-                      />
-                    ))}
-                  </Box>
-                </Paper>
-              )}
-
-              {/* Attempt Information */}
-              <Paper variant="outlined" sx={{ p: 2 }}>
-                <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                  Attempt Information
-                </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1 }}>
-                  <Box>
-                    <Typography variant="caption" color="textSecondary">Total Attempts</Typography>
-                    <Typography variant="body2">{selectedFailedEntry.verificationAttempts || 0}</Typography>
-                  </Box>
-                  {selectedFailedEntry.lastAttemptAt && (
-                    <Box>
-                      <Typography variant="caption" color="textSecondary">Last Attempt</Typography>
-                      <Typography variant="body2">
-                        {new Date(selectedFailedEntry.lastAttemptAt).toLocaleString()}
-                      </Typography>
-                    </Box>
-                  )}
-                  {selectedFailedEntry.lastAttemptError && (
-                    <Box sx={{ gridColumn: '1 / -1' }}>
-                      <Typography variant="caption" color="textSecondary">Last Error</Typography>
-                      <Typography variant="body2" color="error">
-                        {selectedFailedEntry.lastAttemptError}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              </Paper>
-
-              {/* Next Steps */}
-              <Alert severity="info" sx={{ mt: 3 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Recommended Next Steps
-                </Typography>
-                <Typography variant="body2" component="div">
-                  <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
-                    <li>Verify that the customer information in your records is accurate</li>
-                    <li>Contact the customer to confirm their identity details</li>
-                    <li>If the information is correct, you may resend the verification link</li>
-                    <li>Consider reaching out to compliance for assistance if the issue persists</li>
-                  </ul>
-                </Typography>
-              </Alert>
-            </Box>
-          )}
+                {(retryEntry.verificationAttempts || 0) > 0 && (
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    Previous attempts: <strong>{retryEntry.verificationAttempts}</strong>
+                  </Alert>
+                )}
+              </>
+            )}
+          </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setFailureDetailsOpen(false)}>
-            Close
+          <Button onClick={() => setRetryDialogOpen(false)} disabled={retrying}>
+            Cancel
           </Button>
-          {selectedFailedEntry && selectedFailedEntry.status === 'verification_failed' && (
-            <Button
-              variant="contained"
-              startIcon={<ResendIcon />}
-              onClick={() => {
-                setFailureDetailsOpen(false);
-                handleResendClick(selectedFailedEntry);
-              }}
-              sx={{ 
-                bgcolor: '#800020', 
-                '&:hover': { bgcolor: '#600018' },
-                color: 'white'
-              }}
-            >
-              Resend Verification Link
-            </Button>
-          )}
+          <Button 
+            onClick={handleRetryVerification} 
+            variant="contained" 
+            disabled={retrying}
+            startIcon={retrying ? <CircularProgress size={16} /> : <RefreshIcon />}
+            sx={{ 
+              bgcolor: '#800020', 
+              '&:hover': { bgcolor: '#600018' },
+              color: 'white'
+            }}
+          >
+            {retrying ? 'Retrying...' : 'Retry Verification'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

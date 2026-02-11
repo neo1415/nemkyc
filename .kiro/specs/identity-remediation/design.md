@@ -1572,3 +1572,555 @@ describe('Property 28: Excel Data Formatting Preservation', () => {
 - All Nigerian phone numbers must be 11 digits starting with "0"
 
 **Validates: Requirements 28.1, 28.2, 28.3, 28.4, 28.5, 28.6, 28.9, 28.10**
+
+
+## Datapro NIN Verification API Integration
+
+### Overview
+
+Integration with Datapro API for production NIN verification against the official NIMC database. This replaces mock verification with enterprise-grade identity validation while maintaining NDPR compliance through encryption and secure credential management.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Frontend (React)                                  │
+│  - Upload Excel with customer data                                   │
+│  - Display verification results                                      │
+│  - NO access to SERVICEID or encryption keys                         │
+│  - NO access to plaintext NIns                                       │
+└───────────┬─────────────────────────────────────────────────────────┘
+            │ HTTPS
+            ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Backend (Node.js/Express)                         │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  Encryption Layer (AES-256-GCM)                              │   │
+│  │  - Encrypt NIns before storage                               │   │
+│  │  - Decrypt NIns for verification only                        │   │
+│  │  - Clear plaintext from memory after use                     │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  Datapro Client                                              │   │
+│  │  - GET /verifynin/?regNo={NIN}                              │   │
+│  │  - Header: SERVICEID                                         │   │
+│  │  - Retry logic (3 attempts)                                  │   │
+│  │  - Timeout: 30 seconds                                       │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  Field Validation Engine                                     │   │
+│  │  - Compare FirstName (case-insensitive)                      │   │
+│  │  - Compare LastName (case-insensitive)                       │   │
+│  │  - Compare Gender (normalized)                               │   │
+│  │  - Compare DateOfBirth (flexible formats)                    │   │
+│  │  - Compare PhoneNumber (optional, normalized)                │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  Audit Logger                                                │   │
+│  │  - Log all API calls (NIN masked)                            │   │
+│  │  - Log field matching results                                │   │
+│  │  - Log errors with context                                   │   │
+│  │  - Store in Firestore: verification-audit-logs               │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+└───────────┬─────────────────────────────────────────────────────────┘
+            │ HTTPS + SERVICEID Header
+            ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Datapro API                                       │
+│  Base URL: https://api.datapronigeria.com                           │
+│  Endpoint: /verifynin/?regNo={NIN}                                  │
+│  Authentication: SERVICEID header                                    │
+│  Response: JSON with ResponseInfo + ResponseData                    │
+└───────────┬─────────────────────────────────────────────────────────┘
+            │
+            ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    NIMC Database                                     │
+│  Official National Identity Management Commission database           │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Data Flow
+
+#### 1. Upload Flow (with Encryption)
+```
+1. Broker uploads Excel with customer data (including NIns)
+2. Backend parses Excel and extracts data
+3. Backend encrypts NIN using AES-256-GCM with unique IV
+4. Backend stores encrypted NIN + IV in Firestore
+5. Backend NEVER stores plaintext NIN
+```
+
+#### 2. Verification Flow (Customer-Initiated)
+```
+1. Customer receives email with verification link
+2. Customer clicks link and enters NIN on public page
+3. Frontend sends NIN to backend via POST /api/identity/verify/:token
+4. Backend validates token and retrieves entry
+5. Backend decrypts stored NIN from Firestore
+6. Backend calls Datapro API with decrypted NIN
+7. Backend receives ResponseData from Datapro
+8. Backend performs field-level validation:
+   - Compare FirstName (API vs Excel)
+   - Compare LastName (API vs Excel)
+   - Compare Gender (API vs Excel)
+   - Compare DateOfBirth (API vs Excel)
+   - Compare PhoneNumber (API vs Excel, optional)
+9. Backend stores validation results in entry.verificationDetails
+10. Backend updates entry status (verified or verification_failed)
+11. Backend sends notification emails (customer + staff)
+12. Backend clears decrypted NIN from memory
+13. Backend returns result to frontend
+```
+
+#### 3. Bulk Verification Flow
+```
+1. Admin clicks "Verify All Unverified" button
+2. Frontend sends request to POST /api/identity/lists/:listId/bulk-verify
+3. Backend queries all unverified entries with pre-filled NIns
+4. Backend processes in batches of 10:
+   a. Decrypt NIN
+   b. Call Datapro API
+   c. Validate fields
+   d. Update entry status
+   e. Store results
+   f. Clear decrypted NIN from memory
+5. Backend adds 1-second delay between batches (rate limiting)
+6. Backend returns summary: { processed, verified, failed, skipped }
+```
+
+### Datapro API Integration
+
+#### Request Format
+```http
+GET /verifynin/?regNo=12345678901 HTTP/1.1
+Host: api.datapronigeria.com
+SERVICEID: your_merchant_id_here
+```
+
+#### Response Format (Success)
+```json
+{
+  "ResponseInfo": {
+    "ResponseCode": "00",
+    "Parameter": "12345678901",
+    "Source": "NIMC",
+    "Message": "Results Found",
+    "Timestamp": "21/10/2018 8:36:12PM"
+  },
+  "ResponseData": {
+    "FirstName": "JOHN",
+    "MiddleName": null,
+    "LastName": "BULL",
+    "Gender": "Male",
+    "DateOfBirth": "12-May-1969",
+    "PhoneNumber": "08123456789",
+    "birthdate": "20/01/1980",
+    "birthlga": "Kosofe",
+    "birthstate": "LAGOS",
+    "photo": "---Base64 Encoded---",
+    "signature": "---Base64 Encoded---",
+    "trackingId": "100083737345"
+  }
+}
+```
+
+#### Response Codes
+- **200**: Success - NIN found and verified
+- **400**: Bad request - Invalid NIN format
+- **401**: Authorization failed - Invalid credentials
+- **87**: Invalid service ID - SERVICEID not authenticated
+- **88**: Network error - Server unreachable
+
+### Encryption Implementation
+
+#### Encryption Utility (Backend)
+```javascript
+// server-utils/encryption.js
+const crypto = require('crypto');
+
+const ALGORITHM = 'aes-256-gcm';
+const KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'hex'); // 32 bytes
+
+/**
+ * Encrypt a plaintext value
+ * @param {string} plaintext - Value to encrypt
+ * @returns {{ encrypted: string, iv: string, authTag: string }}
+ */
+function encrypt(plaintext) {
+  const iv = crypto.randomBytes(16); // Unique IV for each encryption
+  const cipher = crypto.createCipheriv(ALGORITHM, KEY, iv);
+  
+  let encrypted = cipher.update(plaintext, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  
+  const authTag = cipher.getAuthTag();
+  
+  return {
+    encrypted,
+    iv: iv.toString('hex'),
+    authTag: authTag.toString('hex')
+  };
+}
+
+/**
+ * Decrypt an encrypted value
+ * @param {string} encrypted - Encrypted value
+ * @param {string} iv - Initialization vector
+ * @param {string} authTag - Authentication tag
+ * @returns {string} Plaintext value
+ */
+function decrypt(encrypted, iv, authTag) {
+  const decipher = crypto.createDecipheriv(
+    ALGORITHM,
+    KEY,
+    Buffer.from(iv, 'hex')
+  );
+  
+  decipher.setAuthTag(Buffer.from(authTag, 'hex'));
+  
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  
+  return decrypted;
+}
+
+module.exports = { encrypt, decrypt };
+```
+
+#### Storage Format in Firestore
+```javascript
+{
+  // ... other entry fields ...
+  nin: {
+    encrypted: "a1b2c3d4...",  // Encrypted NIN
+    iv: "e5f6g7h8...",          // Initialization vector
+    authTag: "i9j0k1l2..."      // Authentication tag
+  },
+  // Never store plaintext NIN
+}
+```
+
+### Field Validation Logic
+
+#### Name Matching
+```javascript
+function matchName(apiName, excelName) {
+  if (!apiName || !excelName) return false;
+  
+  // Normalize: lowercase, trim, remove extra spaces
+  const normalize = (str) => str.toLowerCase().trim().replace(/\s+/g, ' ');
+  
+  return normalize(apiName) === normalize(excelName);
+}
+```
+
+#### Gender Matching
+```javascript
+function matchGender(apiGender, excelGender) {
+  if (!apiGender || !excelGender) return false;
+  
+  // Normalize to 'male' or 'female'
+  const normalize = (str) => {
+    const lower = str.toLowerCase().trim();
+    if (lower.startsWith('m')) return 'male';
+    if (lower.startsWith('f')) return 'female';
+    return lower;
+  };
+  
+  return normalize(apiGender) === normalize(excelGender);
+}
+```
+
+#### Date Matching
+```javascript
+function matchDate(apiDate, excelDate) {
+  if (!apiDate || !excelDate) return false;
+  
+  // Parse multiple formats to YYYY-MM-DD
+  const parseDate = (str) => {
+    // Handle DD/MM/YYYY
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
+      const [day, month, year] = str.split('/');
+      return `${year}-${month}-${day}`;
+    }
+    
+    // Handle DD-MMM-YYYY (e.g., 12-May-1969)
+    if (/^\d{2}-[A-Za-z]{3}-\d{4}$/.test(str)) {
+      const months = {
+        jan: '01', feb: '02', mar: '03', apr: '04',
+        may: '05', jun: '06', jul: '07', aug: '08',
+        sep: '09', oct: '10', nov: '11', dec: '12'
+      };
+      const [day, month, year] = str.split('-');
+      const monthNum = months[month.toLowerCase()];
+      return `${year}-${monthNum}-${day}`;
+    }
+    
+    // Handle YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      return str;
+    }
+    
+    return null;
+  };
+  
+  const apiParsed = parseDate(apiDate);
+  const excelParsed = parseDate(excelDate);
+  
+  return apiParsed && excelParsed && apiParsed === excelParsed;
+}
+```
+
+#### Phone Matching (Optional)
+```javascript
+function matchPhone(apiPhone, excelPhone) {
+  if (!apiPhone || !excelPhone) return true; // Optional field
+  
+  // Normalize: remove spaces, dashes, handle +234 vs 0
+  const normalize = (str) => {
+    let cleaned = str.replace(/[\s\-\(\)]/g, '');
+    
+    // Convert +234 to 0
+    if (cleaned.startsWith('+234')) {
+      cleaned = '0' + cleaned.substring(4);
+    } else if (cleaned.startsWith('234')) {
+      cleaned = '0' + cleaned.substring(3);
+    }
+    
+    return cleaned;
+  };
+  
+  return normalize(apiPhone) === normalize(excelPhone);
+}
+```
+
+### Error Handling
+
+#### Error Message Mapping
+```javascript
+const ERROR_MESSAGES = {
+  // Datapro error codes
+  400: {
+    customer: "Invalid NIN format. Please check and try again.",
+    staff: "Bad request - Invalid NIN format provided"
+  },
+  401: {
+    customer: "Verification service unavailable. Please contact support.",
+    staff: "Authorization failed - Invalid SERVICEID"
+  },
+  87: {
+    customer: "Verification service unavailable. Please contact support.",
+    staff: "Invalid service ID - SERVICEID could not be authenticated"
+  },
+  88: {
+    customer: "Network error. Please try again later.",
+    staff: "Network error - Datapro API server unreachable"
+  },
+  
+  // Application errors
+  'nin_not_found': {
+    customer: "NIN not found in NIMC database. Please verify your NIN and try again.",
+    staff: "NIN not found - ResponseCode indicates NIN does not exist in NIMC database"
+  },
+  'field_mismatch': {
+    customer: "The information provided does not match our records. Please contact your broker at {brokerEmail}.",
+    staff: "Field validation failed - {failedFields} did not match between API and Excel data"
+  },
+  'api_error': {
+    customer: "Verification failed. Please try again or contact support.",
+    staff: "API error - {errorDetails}"
+  }
+};
+```
+
+#### Error Notification Flow
+```javascript
+async function handleVerificationFailure(entry, errorType, errorDetails) {
+  // 1. Update entry status
+  await updateEntry(entry.id, {
+    status: 'verification_failed',
+    verificationDetails: {
+      errorType,
+      errorDetails,
+      timestamp: new Date()
+    }
+  });
+  
+  // 2. Send customer email (user-friendly)
+  await sendCustomerErrorEmail({
+    to: entry.email,
+    name: entry.displayName,
+    message: ERROR_MESSAGES[errorType].customer,
+    brokerEmail: entry.brokerEmail || 'support@nem-insurance.com'
+  });
+  
+  // 3. Send staff email (technical details)
+  await sendStaffErrorEmail({
+    to: ['compliance@nem-insurance.com', 'admin@nem-insurance.com'],
+    customerName: entry.displayName,
+    policyNumber: entry.policyNumber,
+    errorType,
+    errorDetails,
+    failedFields: errorDetails.failedFields,
+    entryLink: `https://nemforms.com/admin/identity/${entry.listId}?entry=${entry.id}`
+  });
+  
+  // 4. Log for audit
+  await logAudit({
+    action: 'verification_failed',
+    entryId: entry.id,
+    errorType,
+    errorDetails
+  });
+}
+```
+
+### Performance Optimization
+
+#### Caching Strategy
+```javascript
+// Cache successful verifications for 24 hours
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+async function getCachedVerification(nin) {
+  const cacheDoc = await db.collection('verification-cache')
+    .doc(hashNIN(nin)) // Hash NIN for cache key
+    .get();
+  
+  if (!cacheDoc.exists) return null;
+  
+  const cache = cacheDoc.data();
+  const age = Date.now() - cache.timestamp;
+  
+  if (age > CACHE_TTL) {
+    // Cache expired
+    await cacheDoc.ref.delete();
+    return null;
+  }
+  
+  return cache.data;
+}
+
+async function setCachedVerification(nin, data) {
+  await db.collection('verification-cache')
+    .doc(hashNIN(nin))
+    .set({
+      data,
+      timestamp: Date.now()
+    });
+}
+```
+
+#### Rate Limiting
+```javascript
+// Rate limiter: max 50 requests per minute
+const rateLimiter = {
+  requests: [],
+  maxRequests: 50,
+  windowMs: 60 * 1000, // 1 minute
+  
+  async checkLimit() {
+    const now = Date.now();
+    
+    // Remove old requests outside window
+    this.requests = this.requests.filter(time => now - time < this.windowMs);
+    
+    if (this.requests.length >= this.maxRequests) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+    
+    this.requests.push(now);
+  }
+};
+```
+
+### Monitoring and Alerting
+
+#### Health Check
+```javascript
+// Ping Datapro API every 5 minutes
+setInterval(async () => {
+  try {
+    const response = await fetch('https://api.datapronigeria.com/health', {
+      headers: { 'SERVICEID': process.env.DATAPRO_SERVICE_ID }
+    });
+    
+    if (!response.ok) {
+      await alertAdmins('Datapro API health check failed');
+    }
+  } catch (error) {
+    await alertAdmins('Datapro API unreachable');
+  }
+}, 5 * 60 * 1000);
+```
+
+#### Usage Tracking
+```javascript
+async function trackAPIUsage() {
+  const today = new Date().toISOString().split('T')[0];
+  
+  await db.collection('api-usage').doc(today).set({
+    date: today,
+    calls: admin.firestore.FieldValue.increment(1),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+}
+```
+
+### Security Checklist
+
+- [x] Encrypt all NIns at rest using AES-256-GCM
+- [x] Store encryption key in environment variable
+- [x] Never log plaintext NIns
+- [x] Never send SERVICEID to frontend
+- [x] Decrypt NIns only in server memory
+- [x] Clear decrypted values immediately after use
+- [x] Implement rate limiting on verification endpoints
+- [x] Track API usage and costs
+- [x] Audit log all verification attempts
+- [x] Validate all environment variables on startup
+- [x] Use HTTPS for all API calls
+- [x] Implement retry logic with exponential backoff
+- [x] Set timeout for API requests (30 seconds)
+- [x] Handle all error codes gracefully
+- [x] Provide user-friendly error messages
+- [x] Send technical details only to staff
+
+### Testing Strategy
+
+#### Unit Tests
+- Encryption/decryption round-trip
+- Field matching logic (names, gender, dates, phone)
+- Error message mapping
+- Rate limiting
+- Cache operations
+
+#### Integration Tests
+- End-to-end verification flow
+- Bulk verification
+- Error scenarios (all error codes)
+- Notification sending
+- Audit logging
+
+#### Property-Based Tests
+- **Property 29**: Encryption reversibility
+- **Property 30**: Field matching consistency
+- **Property 31**: Date format flexibility
+
+### Deployment Checklist
+
+- [ ] Set DATAPRO_SERVICE_ID environment variable
+- [ ] Set ENCRYPTION_KEY environment variable (32-byte hex)
+- [ ] Run database backup
+- [ ] Run encryption migration script for existing data
+- [ ] Update verificationConfig.mode to 'datapro'
+- [ ] Run all tests (unit, integration, property-based)
+- [ ] Complete security audit
+- [ ] Set up monitoring and alerts
+- [ ] Load test with 100 concurrent verifications
+- [ ] Prepare rollback plan
+- [ ] Deploy to production
+- [ ] Monitor for 24 hours
+- [ ] Gather feedback
+
