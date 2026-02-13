@@ -11,6 +11,7 @@ import { downloadDynamicPDF } from '../../services/dynamicPdfService';
 import { FORM_MAPPINGS, FormField } from '../../config/formMappings';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../firebase/config';
+import { formatDate as formatDateUtil } from '../../utils/dateFormatter';
 
 const theme = createTheme({
   palette: {
@@ -249,15 +250,15 @@ const UserFormViewer: React.FC = () => {
   const formatDate = (date: any): string => {
     if (!date) return '';
     if (date.toDate && typeof date.toDate === 'function') {
-      return date.toDate().toLocaleDateString();
+      return formatDateUtil(date.toDate());
     }
     if (date instanceof Date) {
-      return date.toLocaleDateString();
+      return formatDateUtil(date);
     }
     if (typeof date === 'string') {
       const parsedDate = new Date(date);
       if (!isNaN(parsedDate.getTime())) {
-        return parsedDate.toLocaleDateString();
+        return formatDateUtil(parsedDate);
       }
     }
     return String(date);

@@ -23,6 +23,7 @@ const { URL } = require('url');
 
 // Import rate limiter
 const { applyVerifydataRateLimit } = require('../server-utils/rateLimiter.cjs');
+const { safeJSONParse } = require('../server-utils/jsonParser.cjs');
 
 // Note: API usage tracking is done in server.js to access Firestore db instance
 
@@ -196,19 +197,25 @@ async function verifyCAC(rcNumber) {
 
       // Handle different status codes
       if (statusCode === 200) {
-        // Parse response
-        let parsedData;
-        try {
-          parsedData = JSON.parse(data);
-        } catch (parseError) {
-          console.error(`[VerifydataClient] Failed to parse response: ${parseError.message}`);
+        // Parse response using safe JSON parser
+        const parseResult = safeJSONParse(data, {
+          source: 'VerifydataClient',
+          rcNumber: maskRCNumber(rcNumber),
+          statusCode,
+          responseLength: data ? data.length : 0
+        });
+
+        if (!parseResult.success) {
+          console.error(`[VerifydataClient] ${parseResult.error}`);
           return {
             success: false,
             error: 'Invalid response from verification service',
-            errorCode: 'PARSE_ERROR',
-            details: { parseError: parseError.message }
+            errorCode: parseResult.errorCode,
+            details: parseResult.details
           };
         }
+
+        const parsedData = parseResult.data;
 
         // Check if success is true
         if (parsedData.success === true && parsedData.data) {
@@ -242,19 +249,25 @@ async function verifyCAC(rcNumber) {
           };
         }
       } else if (statusCode === 400) {
-        // Parse response to check statusCode
-        let parsedData;
-        try {
-          parsedData = JSON.parse(data);
-        } catch (parseError) {
-          console.error(`[VerifydataClient] Failed to parse 400 response: ${parseError.message}`);
+        // Parse response to check statusCode using safe JSON parser
+        const parseResult = safeJSONParse(data, {
+          source: 'VerifydataClient',
+          rcNumber: maskRCNumber(rcNumber),
+          statusCode,
+          responseLength: data ? data.length : 0
+        });
+
+        if (!parseResult.success) {
+          console.error(`[VerifydataClient] Failed to parse 400 response: ${parseResult.error}`);
           return {
             success: false,
             error: 'Invalid RC number format. Please check and try again.',
             errorCode: 'BAD_REQUEST',
-            details: { statusCode: 400 }
+            details: { statusCode: 400, ...parseResult.details }
           };
         }
+
+        const parsedData = parseResult.data;
 
         // Check statusCode in response
         const responseStatusCode = parsedData.statusCode;

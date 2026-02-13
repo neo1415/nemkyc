@@ -1,6 +1,7 @@
 
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { formatDate } from '../utils/dateFormatter';
 
 export interface PDFOptions {
   title: string;
@@ -184,10 +185,10 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
           let displayValue = 'N/A';
           if (value !== null && value !== undefined && value !== '') {
             if (field.key.toLowerCase().includes('date') && value instanceof Date) {
-              displayValue = value.toLocaleDateString();
+              displayValue = formatDate(value);
             } else if (field.key.toLowerCase().includes('date') && typeof value === 'string' && value.includes('T')) {
               try {
-                displayValue = new Date(value).toLocaleDateString();
+                displayValue = formatDate(new Date(value));
               } catch {
                 displayValue = String(value);
               }
@@ -282,9 +283,9 @@ export const generateFormPDF = async (options: PDFOptions): Promise<Blob> => {
         // Format value based on type
         let displayValue = String(value);
         if (key.toLowerCase().includes('date') && value instanceof Date) {
-          displayValue = value.toLocaleDateString();
+          displayValue = formatDate(value);
         } else if (key.toLowerCase().includes('date') && typeof value === 'string' && value.includes('T')) {
-          displayValue = new Date(value).toLocaleDateString();
+          displayValue = formatDate(new Date(value));
         } else if (typeof value === 'boolean') {
           displayValue = value ? 'Yes' : 'No';
         } else if (typeof value === 'number') {

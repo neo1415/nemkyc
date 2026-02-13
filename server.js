@@ -97,6 +97,12 @@ const {
   getQueueStats
 } = require('./server-utils/verificationQueue.cjs');
 
+// Import date formatter
+const {
+  formatDate,
+  formatDateLong
+} = require('./server-utils/dateFormatter.cjs');
+
 // Import health monitor
 const {
   initializeHealthMonitor,
@@ -2256,7 +2262,7 @@ app.post('/api/update-claim-status', requireAuth, requireClaims, [
             
             <div style="background: #f0f8ff; padding: 15px; border-left: 4px solid ${statusColor}; margin: 20px 0;">
               <p style="margin: 0;"><strong>Claim Reference:</strong> ${documentId}</p>
-              <p style="margin: 5px 0 0 0;"><strong>Decision Date:</strong> ${new Date().toLocaleDateString()}</p>
+              <p style="margin: 5px 0 0 0;"><strong>Decision Date:</strong> ${formatDate(new Date())}</p>
             </div>
             
             ${isApproved ? '<p>Congratulations again!</p>' : '<p>Thank you for your understanding.</p>'}
@@ -7088,12 +7094,7 @@ app.post('/api/remediation/batches/:batchId/send-emails', requireAuth, requireAd
         
         // Format expiration date
         const expiresAt = record.tokenExpiresAt?.toDate?.() || new Date(record.tokenExpiresAt);
-        const expirationDate = expiresAt.toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
+        const expirationDate = formatDateLong(expiresAt);
         
         // Generate email content
         const emailHtml = generateVerificationEmailHtml({
@@ -9494,12 +9495,7 @@ app.post('/api/identity/lists/:listId/send', requireAuth, requireBrokerOrAdmin, 
                              'Valued Customer';
         
         // Format expiration date
-        const expirationDateStr = tokenExpiresAt.toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
+        const expirationDateStr = formatDateLong(tokenExpiresAt);
         
         // Send verification email
         const mailOptions = {
@@ -11202,12 +11198,7 @@ app.post('/api/identity/entries/:entryId/resend', requireAuth, requireBrokerOrAd
                          'Valued Customer';
     
     // Format expiration date
-    const expirationDateStr = newTokenExpiresAt.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    const expirationDateStr = formatDateLong(newTokenExpiresAt);
     
     // Send verification email
     const mailOptions = {
@@ -11252,7 +11243,7 @@ app.post('/api/identity/entries/:entryId/resend', requireAuth, requireBrokerOrAd
     // Build response
     const response = {
       success: true,
-      newExpiresAt: newTokenExpiresAt,
+      newExpiresAt: newTokenExpiresAt.toISOString(), // Explicit ISO string conversion
       resendCount: newResendCount
     };
     

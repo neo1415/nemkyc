@@ -1,3 +1,5 @@
+import { formatDateLong } from '../utils/dateFormatter';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 export interface EmailOptions {
@@ -125,11 +127,7 @@ export const sendSubmissionConfirmation = async (
     userName: userName || 'Valued Customer',
     formType,
     ticketId: ticketId || 'N/A',
-    submissionDate: new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }),
+    submissionDate: formatDateLong(new Date()),
     dashboardUrl
   };
   

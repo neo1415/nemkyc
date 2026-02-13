@@ -69,6 +69,7 @@ import { VerificationDetailsDialog } from '../../components/identity/Verificatio
 import { useBrokerTourV2 } from '../../hooks/useBrokerTourV2';
 import type { IdentityEntry, ListDetails, EntryStatus, VerificationType, ActivityLog, ActivityAction } from '../../types/remediation';
 import { isEncrypted } from '../../utils/encryption';
+import { formatDate, formatDateLong, formatDateTime } from '../../utils/dateFormatter';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -494,7 +495,7 @@ export default function IdentityListDetail({
         const date = typeof value === 'object' && value !== null && 'toDate' in value 
           ? (value as { toDate: () => Date }).toDate() 
           : new Date(value as string | number | Date);
-        return isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
+        return formatDate(date);
       },
     });
 
@@ -575,7 +576,7 @@ export default function IdentityListDetail({
         const date = typeof value === 'object' && value !== null && 'toDate' in value 
           ? (value as { toDate: () => Date }).toDate() 
           : new Date(value as string | number | Date);
-        return isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
+        return formatDate(date);
       },
     });
 
@@ -667,7 +668,7 @@ export default function IdentityListDetail({
       if (result.warning) {
         setSuccessMessage(`Link resent successfully. Warning: ${result.warning}`);
       } else {
-        setSuccessMessage(`Verification link resent to ${resendEntry.email}. Expires: ${new Date(result.newExpiresAt).toLocaleDateString()}`);
+        setSuccessMessage(`Verification link resent to ${resendEntry.email}. Expires: ${formatDateLong(result.newExpiresAt)}`);
       }
     } catch (err) {
       console.error('Error resending link:', err);
@@ -1434,7 +1435,7 @@ export default function IdentityListDetail({
                         <Box component="span" sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                           <span>
                             {log.timestamp 
-                              ? new Date(log.timestamp).toLocaleString() 
+                              ? formatDateTime(log.timestamp) 
                               : 'Unknown time'}
                           </span>
                           {log.actorType === 'admin' && log.details?.sentBy && (

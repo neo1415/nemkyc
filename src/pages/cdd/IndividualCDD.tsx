@@ -23,6 +23,7 @@ import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
 import DatePicker from '@/components/common/DatePicker';
 import { format } from 'date-fns';
+import { formatDate } from '@/utils/dateFormatter';
 
 // FORM COMPONENTS DEFINED OUTSIDE TO PREVENT FOCUS LOSS
 const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
@@ -709,7 +710,7 @@ const IndividualCDD: React.FC = () => {
                   <div><strong>Nationality:</strong> {watchedValues.nationality}</div>
                   <div><strong>Occupation:</strong> {watchedValues.occupation}</div>
                   <div><strong>BVN:</strong> {watchedValues.BVNNumber}</div>
-                  <div><strong>Date of Birth:</strong> {watchedValues.dateOfBirth ? new Date(watchedValues.dateOfBirth).toLocaleDateString() : 'Not set'}</div>
+                  <div><strong>Date of Birth:</strong> {watchedValues.dateOfBirth ? formatDate(new Date(watchedValues.dateOfBirth)) : 'Not set'}</div>
                   <div><strong>Place of Birth:</strong> {watchedValues.placeOfBirth}</div>
                   <div><strong>ID Type:</strong> {watchedValues.identificationType}</div>
                   <div><strong>ID Number:</strong> {watchedValues.identificationNumber}</div>
