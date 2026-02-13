@@ -22,6 +22,7 @@ const { URL } = require('url');
 
 // Import rate limiter
 const { applyDataproRateLimit } = require('../server-utils/rateLimiter.cjs');
+const { safeJSONParse } = require('../server-utils/jsonParser.cjs');
 
 // Note: API usage tracking is done in server.js to access Firestore db instance
 
@@ -207,19 +208,25 @@ async function verifyNIN(nin) {
 
       // Handle different status codes
       if (statusCode === 200) {
-        // Parse response
-        let parsedData;
-        try {
-          parsedData = JSON.parse(data);
-        } catch (parseError) {
-          console.error(`[DataproClient] Failed to parse response: ${parseError.message}`);
+        // Parse response using safe JSON parser
+        const parseResult = safeJSONParse(data, {
+          source: 'DataproClient',
+          nin: maskNIN(nin),
+          statusCode,
+          responseLength: data ? data.length : 0
+        });
+
+        if (!parseResult.success) {
+          console.error(`[DataproClient] ${parseResult.error}`);
           return {
             success: false,
             error: 'Invalid response from verification service',
-            errorCode: 'PARSE_ERROR',
-            details: { parseError: parseError.message }
+            errorCode: parseResult.errorCode,
+            details: parseResult.details
           };
         }
+
+        const parsedData = parseResult.data;
 
         // Validate response structure
         if (!parsedData.ResponseInfo || !parsedData.ResponseData) {

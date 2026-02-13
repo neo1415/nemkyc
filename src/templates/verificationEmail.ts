@@ -16,6 +16,7 @@
  */
 
 import { LegacyVerificationEmailData } from '../types/remediation';
+import { formatDateLong } from '../utils/dateFormatter';
 
 /**
  * Verification type for identity collection
@@ -169,7 +170,7 @@ export function generateIdentityVerificationEmailHtml(data: IdentityVerification
                 <tr>
                   <td style="padding: 15px 20px;">
                     <p style="color: #856404; font-size: 14px; margin: 0;">
-                      <strong>⏰ Important:</strong> This link will expire on <strong>${escapeHtml(expiresAt.toLocaleDateString())}</strong>.
+                      <strong>⏰ Important:</strong> This link will expire on <strong>${escapeHtml(formatDateLong(expiresAt))}</strong>.
                     </p>
                   </td>
                 </tr>
@@ -278,7 +279,7 @@ ${policyNumber ? `POLICY REFERENCE\n----------------\n${policyNumber}\n\n` : ''}
 
 ${verificationLink}
 
-IMPORTANT: This link will expire on ${expiresAt.toLocaleDateString()}.
+IMPORTANT: This link will expire on ${formatDateLong(expiresAt)}.
 
 Please note that failure to update these details may affect the continued administration of your policy, in line with regulatory guidelines.
 

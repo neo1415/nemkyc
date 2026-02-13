@@ -75,6 +75,7 @@ export interface ActivityQueryParams {
 // Resend Link Response
 export interface ResendLinkResponseBody {
   success: boolean;
+  /** ISO 8601 date string representing when the verification link expires */
   newExpiresAt: string;
   resendCount: number;
   warning?: string;
