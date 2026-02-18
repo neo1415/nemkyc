@@ -33,8 +33,8 @@ export function MetricsOverview({ summary, loading }: MetricsOverviewProps) {
 
   if (!summary) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        No data available
+      <div className="text-center py-8 text-gray-500" data-testid="metrics-overview">
+        No metrics
       </div>
     );
   }
@@ -74,7 +74,7 @@ export function MetricsOverview({ summary, loading }: MetricsOverviewProps) {
   };
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="metrics-overview">
       {/* Total API Calls Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -82,7 +82,7 @@ export function MetricsOverview({ summary, loading }: MetricsOverviewProps) {
           <Activity className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{totalCalls.toLocaleString()}</div>
+          <div className="text-2xl font-bold">Metrics: {totalCalls.toLocaleString()} calls</div>
           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
             {getTrendIcon(comparison.callsChange)}
             <span className={getTrendColor(comparison.callsChange)}>

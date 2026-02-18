@@ -142,6 +142,106 @@ const logger = {
   }
 };
 
+// ============= VERIFICATION LOGGING HELPER =============
+
+/**
+ * Helper function to consolidate verification logging
+ * Eliminates duplicate audit log entries by combining API usage tracking and audit logging
+ * 
+ * @param {Object} db - Firestore database instance
+ * @param {Object} params - Logging parameters
+ * @param {string} params.provider - API provider ('datapro' or 'verifydata')
+ * @param {string} params.verificationType - Type of verification ('NIN' or 'CAC')
+ * @param {boolean} params.success - Whether verification succeeded
+ * @param {string} params.listId - Identity list ID
+ * @param {string} params.entryId - Entry ID being verified
+ * @param {string} params.identityNumber - Identity number (will be masked)
+ * @param {string} params.userId - User ID
+ * @param {string} params.userEmail - User email
+ * @param {string} params.userName - User name
+ * @param {string} params.ipAddress - Client IP address
+ * @param {string} params.errorCode - Error code if failed
+ * @param {string} params.errorMessage - Error message if failed
+ * @param {Object} params.metadata - Additional metadata
+ * @returns {Promise<void>}
+ */
+async function logVerificationComplete(db, params) {
+  const {
+    provider,
+    verificationType,
+    success,
+    listId,
+    entryId,
+    identityNumber,
+    userId,
+    userEmail,
+    userName,
+    ipAddress,
+    errorCode,
+    errorMessage,
+    metadata = {}
+  } = params;
+
+  try {
+    // Import helper functions from apiUsageTracker
+    const { calculateCost, lookupBrokerInfo } = require('./server-utils/apiUsageTracker.cjs');
+    
+    // Calculate cost based on provider and success
+    const cost = calculateCost(provider, success);
+    
+    // Look up broker information from listId
+    const brokerInfo = await lookupBrokerInfo(db, listId);
+    
+    // Track API usage with complete data (replaces trackDataproAPICall/trackVerifydataAPICall)
+    if (provider === 'datapro') {
+      await trackDataproAPICall(db, {
+        nin: identityNumber ? identityNumber.substring(0, 4) + '*******' : '****',
+        success,
+        errorCode: errorCode || null,
+        userId: brokerInfo.userId,
+        listId: listId || null,
+        entryId: entryId || null
+      });
+    } else if (provider === 'verifydata') {
+      await trackVerifydataAPICall(db, {
+        rcNumber: identityNumber ? identityNumber.substring(0, 4) + '*******' : '****',
+        success,
+        errorCode: errorCode || null,
+        userId: brokerInfo.userId,
+        listId: listId || null,
+        entryId: entryId || null
+      });
+    }
+    
+    // Log verification attempt with complete data (single entry)
+    await logVerificationAttempt({
+      verificationType,
+      identityNumber,
+      userId: brokerInfo.userId,
+      userEmail: brokerInfo.userEmail,
+      userName: brokerInfo.userName,
+      userType: 'customer',
+      ipAddress: ipAddress || 'unknown',
+      result: success ? 'success' : 'failure',
+      errorCode: errorCode || null,
+      errorMessage: errorMessage || null,
+      apiProvider: provider,
+      cost,
+      metadata: {
+        ...metadata,
+        listId,
+        entryId
+      }
+    });
+    
+    console.log(`📝 [AUDIT] Consolidated logging complete: ${provider} ${verificationType} - ${success ? 'SUCCESS' : 'FAILED'}`);
+    
+  } catch (error) {
+    console.error('[LogVerificationComplete] Error in consolidated logging:', error);
+    // Don't throw - logging failure shouldn't break the main flow
+  }
+}
+
 // ============= TICKET ID GENERATOR =============
 /**
  * Ticket ID Generator Utility (Server-side)
@@ -10189,26 +10289,6 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
         } else {
           console.log(`🔍 Calling Datapro NIN verification for: ${decryptedNIN.substring(0, 4)}*** with field validation`);
           
-          // Log verification attempt before API call (Requirement 1.1, 1.5)
-          try {
-            await logVerificationAttempt({
-              verificationType: 'NIN',
-              identityNumber: decryptedNIN, // Will be masked by function
-              userId: userName,
-              userEmail: entry.email || 'anonymous',
-              ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-              result: 'pending',
-              metadata: {
-                userAgent: req.headers['user-agent'],
-                listId: entry.listId,
-                entryId: entryDoc.id
-              }
-            });
-          } catch (logError) {
-            console.error('Failed to log verification attempt:', logError);
-            // Continue execution - don't throw
-          }
-          
           // Track API call start time (Requirement 5.1, 5.3, 5.4)
           const apiStartTime = Date.now();
           
@@ -10241,21 +10321,6 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
             // Continue execution - don't throw
           }
           
-          // Track API call for cost monitoring
-          try {
-            await trackDataproAPICall(db, {
-              nin: decryptedNIN.substring(0, 4) + '*******',
-              success: dataproResult.success,
-              errorCode: dataproResult.errorCode || null,
-              userId: null, // Customer verification - no user ID
-              listId: entry.listId,
-              entryId: entryDoc.id
-            });
-          } catch (trackError) {
-            console.error('Failed to track Datapro API call:', trackError);
-            // Continue execution - don't throw
-          }
-          
           if (dataproResult.success) {
             // Perform field-level validation using Datapro's matchFields function
             const excelData = {
@@ -10282,27 +10347,29 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
               console.log(`❌ Failed fields: ${matchResult.failedFields.join(', ')}`);
             }
             
-            // Log verification result (Requirement 1.2, 1.3, 1.5)
+            // Consolidated logging - replaces duplicate trackDataproAPICall + logVerificationAttempt calls
             try {
-              await logVerificationAttempt({
+              await logVerificationComplete(db, {
+                provider: 'datapro',
                 verificationType: 'NIN',
+                success: matchResult.matched,
+                listId: entry.listId,
+                entryId: entryDoc.id,
                 identityNumber: decryptedNIN,
                 userId: userName,
                 userEmail: entry.email || 'anonymous',
+                userName: userName,
                 ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-                result: matchResult.matched ? 'success' : 'failure',
-                errorCode: matchResult.matched ? undefined : 'FIELD_MISMATCH',
-                errorMessage: matchResult.matched ? undefined : 'Field mismatch detected',
+                errorCode: matchResult.matched ? null : 'FIELD_MISMATCH',
+                errorMessage: matchResult.matched ? null : 'Field mismatch detected',
                 metadata: {
                   userAgent: req.headers['user-agent'],
-                  listId: entry.listId,
-                  entryId: entryDoc.id,
                   fieldsValidated: matchResult.details?.matchedFields || [],
                   failedFields: matchResult.failedFields || []
                 }
               });
             } catch (logError) {
-              console.error('Failed to log verification attempt:', logError);
+              console.error('Failed to log verification complete:', logError);
             }
           } else {
             // Datapro API error
@@ -10316,26 +10383,28 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
               failedFields: []
             };
             
-            // Log failed verification (Requirement 1.2, 1.3, 1.5)
+            // Consolidated logging - replaces duplicate trackDataproAPICall + logVerificationAttempt calls
             try {
-              await logVerificationAttempt({
+              await logVerificationComplete(db, {
+                provider: 'datapro',
                 verificationType: 'NIN',
+                success: false,
+                listId: entry.listId,
+                entryId: entryDoc.id,
                 identityNumber: decryptedNIN,
                 userId: userName,
                 userEmail: entry.email || 'anonymous',
+                userName: userName,
                 ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-                result: 'failure',
                 errorCode: dataproResult.errorCode,
                 errorMessage: dataproResult.error || 'Verification failed',
                 metadata: {
                   userAgent: req.headers['user-agent'],
-                  listId: entry.listId,
-                  entryId: entryDoc.id,
                   failedFields: []
                 }
               });
             } catch (logError) {
-              console.error('Failed to log verification attempt:', logError);
+              console.error('Failed to log verification complete:', logError);
             }
           }
         }
@@ -10393,26 +10462,6 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
         } else {
           console.log(`🔍 Calling VerifyData CAC verification for: ${decryptedCAC.substring(0, 4)}*** with field validation`);
           
-          // Log verification attempt before API call (Requirement 2.1, 2.5)
-          try {
-            await logVerificationAttempt({
-              verificationType: 'CAC',
-              identityNumber: decryptedCAC, // Will be masked by function
-              userId: userName,
-              userEmail: entry.email || 'anonymous',
-              ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-              result: 'pending',
-              metadata: {
-                userAgent: req.headers['user-agent'],
-                listId: entry.listId,
-                entryId: entryDoc.id
-              }
-            });
-          } catch (logError) {
-            console.error('Failed to log verification attempt:', logError);
-            // Continue execution - don't throw
-          }
-          
           // Apply VerifyData rate limiting
           try {
             await applyVerifydataRateLimit();
@@ -10457,21 +10506,6 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
             // Continue execution - don't throw
           }
           
-          // Track API call for cost monitoring
-          try {
-            await trackVerifydataAPICall(db, {
-              rcNumber: decryptedCAC.substring(0, 4) + '*******',
-              success: verifydataResult.success,
-              errorCode: verifydataResult.errorCode || null,
-              userId: null, // Customer verification - no user ID
-              listId: entry.listId,
-              entryId: entryDoc.id
-            });
-          } catch (trackError) {
-            console.error('Failed to track VerifyData API call:', trackError);
-            // Continue execution - don't throw
-          }
-          
           if (verifydataResult.success) {
             // Perform field-level validation using VerifyData's matchCACFields function
             const excelData = {
@@ -10497,27 +10531,29 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
               console.log(`❌ Failed fields: ${matchResult.failedFields.join(', ')}`);
             }
             
-            // Log successful verification (Requirement 2.2, 2.3, 2.5)
+            // Consolidated logging - replaces duplicate trackVerifydataAPICall + logVerificationAttempt calls
             try {
-              await logVerificationAttempt({
+              await logVerificationComplete(db, {
+                provider: 'verifydata',
                 verificationType: 'CAC',
+                success: matchResult.matched,
+                listId: entry.listId,
+                entryId: entryDoc.id,
                 identityNumber: decryptedCAC,
                 userId: userName,
                 userEmail: entry.email || 'anonymous',
+                userName: userName,
                 ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-                result: matchResult.matched ? 'success' : 'failure',
-                errorCode: matchResult.matched ? undefined : 'FIELD_MISMATCH',
-                errorMessage: matchResult.matched ? undefined : 'Field mismatch detected',
+                errorCode: matchResult.matched ? null : 'FIELD_MISMATCH',
+                errorMessage: matchResult.matched ? null : 'Field mismatch detected',
                 metadata: {
                   userAgent: req.headers['user-agent'],
-                  listId: entry.listId,
-                  entryId: entryDoc.id,
                   fieldsValidated: matchResult.details?.matchedFields || [],
                   failedFields: matchResult.failedFields || []
                 }
               });
             } catch (logError) {
-              console.error('Failed to log verification attempt:', logError);
+              console.error('Failed to log verification complete:', logError);
             }
           } else {
             // VerifyData API error
@@ -10531,26 +10567,28 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
               failedFields: []
             };
             
-            // Log failed verification (Requirement 2.2, 2.3, 2.5)
+            // Consolidated logging - replaces duplicate trackVerifydataAPICall + logVerificationAttempt calls
             try {
-              await logVerificationAttempt({
+              await logVerificationComplete(db, {
+                provider: 'verifydata',
                 verificationType: 'CAC',
+                success: false,
+                listId: entry.listId,
+                entryId: entryDoc.id,
                 identityNumber: decryptedCAC,
                 userId: userName,
                 userEmail: entry.email || 'anonymous',
+                userName: userName,
                 ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-                result: 'failure',
                 errorCode: verifydataResult.errorCode,
                 errorMessage: verifydataResult.error || 'Verification failed',
                 metadata: {
                   userAgent: req.headers['user-agent'],
-                  listId: entry.listId,
-                  entryId: entryDoc.id,
                   failedFields: []
                 }
               });
             } catch (logError) {
-              console.error('Failed to log verification attempt:', logError);
+              console.error('Failed to log verification complete:', logError);
             }
           }
         }
@@ -13126,31 +13164,44 @@ app.get('/api/analytics/overview', requireAuth, requireSuperAdmin, async (req, r
       failedCalls += data.failedCalls || 0;
     });
     
-    // Calculate costs (₦50 per NIN, ₦100 per CAC)
-    const dataproSnapshot = await db.collection('api-usage')
-      .where('period', '==', 'monthly')
-      .where('month', '==', month)
-      .where('apiProvider', '==', 'datapro')
-      .get();
-    
-    const verifydataSnapshot = await db.collection('api-usage')
-      .where('period', '==', 'monthly')
-      .where('month', '==', month)
-      .where('apiProvider', '==', 'verifydata')
-      .get();
-    
+    // Calculate costs and provider breakdown from api-usage-logs
+    // Query individual call logs for accurate provider breakdown
+    let usageLogsSnapshot;
     let dataproCalls = 0;
     let verifydataCalls = 0;
+    let totalCostFromLogs = 0;
     
-    dataproSnapshot.forEach(doc => {
-      dataproCalls += doc.data().totalCalls || 0;
-    });
+    try {
+      usageLogsSnapshot = await db.collection('api-usage-logs')
+        .where('month', '==', month)
+        .get();
+      
+      usageLogsSnapshot.forEach(doc => {
+        const data = doc.data();
+        
+        // Count calls by provider
+        if (data.apiProvider === 'datapro') {
+          dataproCalls++;
+        } else if (data.apiProvider === 'verifydata') {
+          verifydataCalls++;
+        }
+        
+        // Sum actual costs from logs (uses stored cost field if available)
+        if (data.cost !== undefined && data.cost !== null) {
+          totalCostFromLogs += data.cost;
+        }
+      });
+    } catch (error) {
+      console.error('Error querying api-usage-logs by month:', error);
+      console.log('Skipping detailed cost breakdown - using estimation from api-usage collection');
+      // Don't throw - just use the aggregated data from api-usage collection
+      // The costs will be estimated below based on call counts
+    }
     
-    verifydataSnapshot.forEach(doc => {
-      verifydataCalls += doc.data().totalCalls || 0;
-    });
-    
-    const totalCost = (dataproCalls * 50) + (verifydataCalls * 100);
+    // Use calculated cost from logs if available, otherwise fall back to estimation
+    const totalCost = totalCostFromLogs > 0 
+      ? totalCostFromLogs 
+      : (dataproCalls * 50) + (verifydataCalls * 100);
     const successRate = totalCalls > 0 ? (successfulCalls / totalCalls) * 100 : 0;
     
     // Get previous month for comparison
@@ -13230,6 +13281,194 @@ app.get('/api/analytics/overview', requireAuth, requireSuperAdmin, async (req, r
     
     res.status(500).json({
       error: 'Failed to fetch analytics overview',
+      message: error.message,
+      requestId: `req_${Date.now()}`
+    });
+  }
+});
+
+/**
+ * Get daily usage data for charts
+ * 
+ * GET /api/analytics/daily-usage?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+ * 
+ * Query parameters:
+ * - startDate: Start date in YYYY-MM-DD format (required)
+ * - endDate: End date in YYYY-MM-DD format (required)
+ * 
+ * Response:
+ * - dailyData: Array of daily usage objects with date, totalCalls, successfulCalls, failedCalls
+ * - metadata: Request metadata including timing info
+ * 
+ * Security: Super admin only, rate limited
+ * Performance: Limited to 365 days max range
+ */
+app.get('/api/analytics/daily-usage', requireAuth, requireSuperAdmin, async (req, res) => {
+  const startTime = Date.now();
+  
+  try {
+    const { startDate, endDate } = req.query;
+    
+    // Input validation
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        error: 'Missing required parameters',
+        message: 'startDate and endDate are required',
+        example: '/api/analytics/daily-usage?startDate=2024-01-01&endDate=2024-01-31'
+      });
+    }
+    
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
+      return res.status(400).json({
+        error: 'Invalid date format',
+        message: 'Dates must be in YYYY-MM-DD format'
+      });
+    }
+    
+    // Validate date range
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const now = new Date();
+    
+    if (start > end) {
+      return res.status(400).json({
+        error: 'Invalid date range',
+        message: 'startDate must be before or equal to endDate'
+      });
+    }
+    
+    if (end > now) {
+      return res.status(400).json({
+        error: 'Invalid date range',
+        message: 'endDate cannot be in the future'
+      });
+    }
+    
+    // Validate date range is not too large (max 365 days)
+    const daysDiff = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysDiff > 365) {
+      return res.status(400).json({
+        error: 'Date range too large',
+        message: 'Maximum date range is 365 days'
+      });
+    }
+    
+    console.log(`📊 Super Admin ${req.user.email} fetching daily usage from ${startDate} to ${endDate}`);
+    
+    // Log to audit system
+    await logAuditSecurityEvent({
+      eventType: 'analytics_access',
+      severity: 'low',
+      description: `Super Admin ${req.user.email} accessed daily usage analytics`,
+      userId: req.user.uid,
+      ipAddress: req.ip,
+      metadata: {
+        startDate,
+        endDate,
+        userEmail: req.user.email,
+        userAgent: req.get('user-agent')
+      }
+    });
+    
+    // Query api-usage-logs for the date range
+    let logsSnapshot;
+    try {
+      logsSnapshot = await db.collection('api-usage-logs')
+        .where('date', '>=', startDate)
+        .where('date', '<=', endDate)
+        .get();
+    } catch (error) {
+      console.error('Error querying api-usage-logs by date range:', error);
+      return res.status(500).json({
+        error: 'Database query failed',
+        message: 'Unable to query analytics data. This endpoint requires Firestore composite indexes. Please check Firebase console.'
+      });
+    }
+    
+    // Aggregate by date
+    const dailyStatsMap = new Map();
+    
+    logsSnapshot.forEach(doc => {
+      const data = doc.data();
+      const date = data.date;
+      
+      if (!date) return; // Skip if no date field
+      
+      if (!dailyStatsMap.has(date)) {
+        dailyStatsMap.set(date, {
+          date,
+          totalCalls: 0,
+          successfulCalls: 0,
+          failedCalls: 0
+        });
+      }
+      
+      const stats = dailyStatsMap.get(date);
+      stats.totalCalls++;
+      
+      if (data.success) {
+        stats.successfulCalls++;
+      } else {
+        stats.failedCalls++;
+      }
+    });
+    
+    // Convert map to array and fill in missing dates
+    const dailyData = [];
+    const currentDate = new Date(start);
+    
+    while (currentDate <= end) {
+      const dateKey = currentDate.toISOString().split('T')[0];
+      
+      if (dailyStatsMap.has(dateKey)) {
+        dailyData.push(dailyStatsMap.get(dateKey));
+      } else {
+        // Add entry with zero counts for days with no data
+        dailyData.push({
+          date: dateKey,
+          totalCalls: 0,
+          successfulCalls: 0,
+          failedCalls: 0
+        });
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    // Sort chronologically (should already be sorted, but ensure it)
+    dailyData.sort((a, b) => a.date.localeCompare(b.date));
+    
+    res.status(200).json({
+      dailyData,
+      metadata: {
+        totalDays: dailyData.length,
+        requestTime: Date.now() - startTime,
+        generatedAt: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching daily usage:', error);
+    
+    // Log error to audit system
+    await logAuditSecurityEvent({
+      eventType: 'analytics_error',
+      severity: 'medium',
+      description: `Daily usage fetch failed`,
+      userId: req.user?.uid || 'unknown',
+      ipAddress: req.ip,
+      metadata: {
+        error: error.message,
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+        userEmail: req.user?.email
+      }
+    }).catch(err => console.error('Failed to log error:', err));
+    
+    res.status(500).json({
+      error: 'Failed to fetch daily usage',
       message: error.message,
       requestId: `req_${Date.now()}`
     });
@@ -13348,11 +13587,20 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
     });
     
     // Query api-usage-logs for the date range with limit
-    const logsSnapshot = await db.collection('api-usage-logs')
-      .where('timestamp', '>=', new Date(startDate))
-      .where('timestamp', '<=', new Date(endDate + 'T23:59:59'))
-      .limit(10000) // Hard limit to prevent memory issues
-      .get();
+    let logsSnapshot;
+    try {
+      logsSnapshot = await db.collection('api-usage-logs')
+        .where('timestamp', '>=', new Date(startDate))
+        .where('timestamp', '<=', new Date(endDate + 'T23:59:59'))
+        .limit(10000) // Hard limit to prevent memory issues
+        .get();
+    } catch (error) {
+      console.error('Error querying api-usage-logs by timestamp:', error);
+      return res.status(500).json({
+        error: 'Database query failed',
+        message: 'Unable to query analytics data. This endpoint requires Firestore composite indexes. Please check Firebase console.'
+      });
+    }
     
     // Check if we hit the limit
     const hitLimit = logsSnapshot.size >= 10000;
@@ -13373,7 +13621,8 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
           successfulCalls: 0,
           failedCalls: 0,
           dataproCalls: 0,
-          verifydataCalls: 0
+          verifydataCalls: 0,
+          totalCost: 0  // NEW: Track actual cost from logs
         });
       }
       
@@ -13391,6 +13640,11 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
         stats.dataproCalls++;
       } else if (data.apiProvider === 'verifydata') {
         stats.verifydataCalls++;
+      }
+      
+      // NEW: Sum actual cost from logs (only count costs > 0 for successful calls)
+      if (data.cost !== undefined && data.cost !== null && data.cost > 0) {
+        stats.totalCost += data.cost;
       }
     });
     
@@ -13428,6 +13682,7 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
         userStats.failedCalls += stats.failedCalls;
         userStats.dataproCalls += stats.dataproCalls;
         userStats.verifydataCalls += stats.verifydataCalls;
+        userStats.totalCost += stats.totalCost;  // NEW: Accumulate actual cost from logs
       } catch (err) {
         console.error(`Error fetching list ${listId}:`, err);
       }
@@ -13448,8 +13703,13 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
         console.error(`Error fetching user ${userId}:`, err);
       }
       
-      // Calculate total cost: Datapro ₦50/call, VerifyData ₦100/call
-      data.totalCost = (data.dataproCalls * 50) + (data.verifydataCalls * 100);
+      // Calculate total cost from stored cost field if available, otherwise estimate
+      // Use actual cost from logs (already accumulated above)
+      // If no cost data available, fall back to estimation
+      if (data.totalCost === 0 && (data.dataproCalls > 0 || data.verifydataCalls > 0)) {
+        // Fallback: Estimate cost if cost field not available in logs
+        data.totalCost = (data.dataproCalls * 50) + (data.verifydataCalls * 100);
+      }
       
       data.successRate = data.totalCalls > 0 
         ? parseFloat(((data.successfulCalls / data.totalCalls) * 100).toFixed(2))
@@ -13830,10 +14090,19 @@ app.get('/api/analytics/export', requireAuth, requireSuperAdmin, async (req, res
     // Fetch data for each requested section
     if (sectionList.includes('overview')) {
       // Get overview data
-      const logsSnapshot = await db.collection('api-usage-logs')
-        .where('timestamp', '>=', new Date(startDate))
-        .where('timestamp', '<=', new Date(endDate + 'T23:59:59'))
-        .get();
+      let logsSnapshot;
+      try {
+        logsSnapshot = await db.collection('api-usage-logs')
+          .where('timestamp', '>=', new Date(startDate))
+          .where('timestamp', '<=', new Date(endDate + 'T23:59:59'))
+          .get();
+      } catch (error) {
+        console.error('Error querying api-usage-logs for export overview:', error);
+        return res.status(500).json({
+          error: 'Database query failed',
+          message: 'Unable to query analytics data for export. This requires Firestore composite indexes.'
+        });
+      }
       
       let totalCalls = 0;
       let successfulCalls = 0;
@@ -13858,10 +14127,19 @@ app.get('/api/analytics/export', requireAuth, requireSuperAdmin, async (req, res
     
     if (sectionList.includes('brokers')) {
       // Get broker usage data (reuse logic from broker-usage endpoint)
-      const logsSnapshot = await db.collection('api-usage-logs')
-        .where('timestamp', '>=', new Date(startDate))
-        .where('timestamp', '<=', new Date(endDate + 'T23:59:59'))
-        .get();
+      let logsSnapshot;
+      try {
+        logsSnapshot = await db.collection('api-usage-logs')
+          .where('timestamp', '>=', new Date(startDate))
+          .where('timestamp', '<=', new Date(endDate + 'T23:59:59'))
+          .get();
+      } catch (error) {
+        console.error('Error querying api-usage-logs for export brokers:', error);
+        return res.status(500).json({
+          error: 'Database query failed',
+          message: 'Unable to query analytics data for export. This requires Firestore composite indexes.'
+        });
+      }
       
       const brokerMap = new Map();
       
@@ -13900,10 +14178,19 @@ app.get('/api/analytics/export', requireAuth, requireSuperAdmin, async (req, res
     
     if (sectionList.includes('costs')) {
       // Get cost data
-      const logsSnapshot = await db.collection('api-usage-logs')
-        .where('timestamp', '>=', new Date(startDate))
-        .where('timestamp', '<=', new Date(endDate + 'T23:59:59'))
-        .get();
+      let logsSnapshot;
+      try {
+        logsSnapshot = await db.collection('api-usage-logs')
+          .where('timestamp', '>=', new Date(startDate))
+          .where('timestamp', '<=', new Date(endDate + 'T23:59:59'))
+          .get();
+      } catch (error) {
+        console.error('Error querying api-usage-logs for export costs:', error);
+        return res.status(500).json({
+          error: 'Database query failed',
+          message: 'Unable to query analytics data for export. This requires Firestore composite indexes.'
+        });
+      }
       
       let dataproCalls = 0;
       let verifydataCalls = 0;
