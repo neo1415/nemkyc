@@ -123,10 +123,10 @@ const AdminAnalyticsDashboard: React.FC = () => {
               
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Backend API Not Available
+                  Error loading analytics dashboard
                 </h2>
                 <p className="text-gray-600 mb-4">
-                  The analytics dashboard requires backend API endpoints to fetch data from Firestore.
+                  {error.message}
                 </p>
               </div>
 

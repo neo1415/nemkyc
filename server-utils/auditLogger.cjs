@@ -50,6 +50,8 @@ function getDb() {
  * @param {string} params.result - Result (success, failure, error)
  * @param {string} params.errorCode - Error code (if failed)
  * @param {string} params.errorMessage - Error message (if failed)
+ * @param {string} params.apiProvider - API provider ('datapro' or 'verifydata')
+ * @param {number} params.cost - Cost of the API call in Naira
  * @param {Object} params.metadata - Additional metadata
  * @returns {Promise<void>}
  */
@@ -66,6 +68,8 @@ async function logVerificationAttempt(params) {
       result,
       errorCode,
       errorMessage,
+      apiProvider,
+      cost,
       metadata = {}
     } = params;
 
@@ -89,6 +93,10 @@ async function logVerificationAttempt(params) {
       result: result, // 'success', 'failure', 'error'
       errorCode: errorCode || null,
       errorMessage: errorMessage || null,
+      
+      // API provider and cost
+      apiProvider: apiProvider || 'unknown',
+      cost: cost || 0,
       
       // Metadata
       metadata: {

@@ -25,9 +25,9 @@ vi.mock('../../contexts/AuthContext', () => ({
 
 // Mock child components
 vi.mock('../../components/analytics/MetricsOverview', () => ({
-  MetricsOverview: ({ data }: any) => (
+  MetricsOverview: ({ summary }: any) => (
     <div data-testid="metrics-overview">
-      {data ? `Metrics: ${data.totalCalls} calls` : 'No metrics'}
+      {summary ? `Metrics: ${summary.totalCalls} calls` : 'No metrics'}
     </div>
   ),
 }));
@@ -37,9 +37,9 @@ vi.mock('../../components/analytics/UsageCharts', () => ({
 }));
 
 vi.mock('../../components/analytics/UserAttributionTable', () => ({
-  UserAttributionTable: ({ brokers }: any) => (
+  UserAttributionTable: ({ data }: any) => (
     <div data-testid="user-attribution-table">
-      {brokers ? `${brokers.length} brokers` : 'No brokers'}
+      {data && data.length > 0 ? `${data.length} brokers` : 'No brokers'}
     </div>
   ),
 }));
@@ -139,7 +139,7 @@ describe('AdminAnalyticsDashboard Integration Tests', () => {
 
   const mockUseAnalyticsDashboard = {
     summary: mockSummary,
-    brokerUsage: mockBrokerUsage,
+    userAttribution: mockBrokerUsage,
     costTracking: mockCostTracking,
     loading: false,
     error: null,
