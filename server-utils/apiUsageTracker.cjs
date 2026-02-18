@@ -15,15 +15,15 @@
 /**
  * Calculate cost for an API call
  * 
+ * Based on Datapro documentation, they charge for ALL API calls (both success and failure).
+ * 
  * @param {string} apiProvider - API provider ('datapro' or 'verifydata')
  * @param {boolean} success - Whether the call succeeded
- * @returns {number} Cost in Naira (₦50 for Datapro success, ₦100 for VerifyData success, ₦0 for failures)
+ * @returns {number} Cost in Naira (₦50 for Datapro, ₦100 for VerifyData - charged regardless of success/failure)
  */
 function calculateCost(apiProvider, success) {
-  if (!success) {
-    return 0;
-  }
-  
+  // Datapro and VerifyData charge for ALL API calls, not just successful ones
+  // This is confirmed in their API documentation
   if (apiProvider === 'datapro') {
     return 50;
   } else if (apiProvider === 'verifydata') {
@@ -482,11 +482,11 @@ async function getMonthlyUsageSummary(db, month, apiProvider = null) {
       const successCalls = data.successCalls || 0;
       const failedCalls = data.failedCalls || 0;
       
-      // Estimate cost based on provider
-      // Datapro: ₦50 per successful call
-      // VerifyData: ₦100 per successful call (adjust based on actual pricing)
+      // Calculate cost: ALL calls are charged (success and failure)
+      // Datapro: ₦50 per call
+      // VerifyData: ₦100 per call
       const costPerCall = apiProvider === 'datapro' ? 50 : 100;
-      const estimatedCost = successCalls * costPerCall;
+      const estimatedCost = totalCalls * costPerCall; // Changed from successCalls to totalCalls
       
       return {
         apiProvider,
