@@ -150,6 +150,43 @@ export class AnalyticsAPI {
   }
 
   /**
+   * Fetches daily usage data for charts
+   * 
+   * @param startDate - Start date in YYYY-MM-DD format
+   * @param endDate - End date in YYYY-MM-DD format
+   * @returns Array of daily usage data points
+   * 
+   * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
+   */
+  async fetchDailyUsage(startDate: string, endDate: string): Promise<any[]> {
+    const params = new URLSearchParams({ startDate, endDate });
+    const response = await fetch(`${this.baseURL}/daily-usage?${params}`, {
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Failed to fetch daily usage' }));
+      throw new Error(error.error || 'Failed to fetch daily usage');
+    }
+
+    const data = await response.json();
+    
+    // Transform backend response to match UsageDataPoint interface
+    return (data.dailyData || []).map((day: any) => ({
+      date: day.date,
+      totalCalls: day.totalCalls || 0,
+      successCount: day.successfulCalls || 0,
+      failureCount: day.failedCalls || 0,
+      dataproCalls: day.dataproCalls || 0,
+      verifydataCalls: day.verifydataCalls || 0,
+      dataproCost: (day.dataproCalls || 0) * 50,
+      verifydataCost: (day.verifydataCalls || 0) * 100,
+      totalCost: ((day.dataproCalls || 0) * 50) + ((day.verifydataCalls || 0) * 100)
+    }));
+  }
+
+  /**
    * Fetches budget configuration
    * 
    * @returns Budget configuration with thresholds

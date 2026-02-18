@@ -4513,63 +4513,35 @@ app.post('/api/verify/cac', verificationRateLimiter, async (req, res) => {
     // Calculate API call duration (Requirement 5.3, 5.4)
     const apiDuration = Date.now() - apiStartTime;
     
-    // Log API call (Requirement 5.2, 5.3, 5.4)
-    try {
-      await logAPICall({
-        apiName: 'VerifyData',
-        endpoint: '/api/ValidateRcNumber/Initiate',
-        method: 'POST',
-        requestData: { rcNumber: rc_number }, // Will be masked by function
-        statusCode: verifydataResult.success ? 200 : 400,
-        responseData: verifydataResult, // Will be masked by function
-        duration: apiDuration,
-        userId: req.user?.uid || 'anonymous',
-        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-        metadata: {
-          demoMode: false,
-          cost: verifydataResult.cost || 0
-        }
-      });
-    } catch (logError) {
-      console.error('Failed to log API call:', logError);
-      // Continue execution - don't throw
-    }
-
-    // Track API call for cost monitoring
-    try {
-      await trackVerifydataAPICall(db, {
-        rcNumber: rc_number.substring(0, 4) + '*******',
-        success: verifydataResult.success,
-        errorCode: verifydataResult.errorCode || null,
-        userId: req.user?.uid || null,
-        listId: null,
-        entryId: null
-      });
-    } catch (trackError) {
-      console.error('Failed to track VerifyData API call:', trackError);
-      // Continue execution - don't throw
-    }
-    
+    // ✅ CONSOLIDATED LOGGING - Single call replaces logAPICall + trackVerifydataAPICall + logVerificationAttempt
+    // This prevents duplicate audit log entries
     if (verifydataResult.success) {
       console.log('✅ CAC verification successful');
       
-      // Log successful verification (Requirement 2.2, 2.3, 2.5)
+      // Single consolidated log for successful verification
       try {
-        await logVerificationAttempt({
+        await logVerificationComplete(db, {
+          provider: 'verifydata',
           verificationType: 'CAC',
+          success: true,
+          listId: null,
+          entryId: null,
           identityNumber: rc_number,
           userId: req.user?.uid || 'anonymous',
           userEmail: req.user?.email || 'anonymous',
+          userName: req.user?.name || 'Anonymous',
           ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-          result: 'success',
+          errorCode: null,
+          errorMessage: null,
           metadata: {
             userAgent: req.headers['user-agent'],
             fieldsValidated: verifydataResult.data ? Object.keys(verifydataResult.data) : [],
-            demoMode: false
+            demoMode: false,
+            apiDuration
           }
         });
       } catch (logError) {
-        console.error('Failed to log verification attempt:', logError);
+        console.error('Failed to log verification:', logError);
       }
       
       return res.json({
@@ -4580,24 +4552,29 @@ app.post('/api/verify/cac', verificationRateLimiter, async (req, res) => {
     } else {
       console.log('❌ CAC verification failed:', verifydataResult.error);
       
-      // Log failed verification (Requirement 2.2, 2.3, 2.5)
+      // Single consolidated log for failed verification
       try {
-        await logVerificationAttempt({
+        await logVerificationComplete(db, {
+          provider: 'verifydata',
           verificationType: 'CAC',
+          success: false,
+          listId: null,
+          entryId: null,
           identityNumber: rc_number,
           userId: req.user?.uid || 'anonymous',
           userEmail: req.user?.email || 'anonymous',
+          userName: req.user?.name || 'Anonymous',
           ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-          result: 'failure',
           errorCode: verifydataResult.errorCode,
           errorMessage: verifydataResult.error || 'Verification failed',
           metadata: {
             userAgent: req.headers['user-agent'],
-            demoMode: false
+            demoMode: false,
+            apiDuration
           }
         });
       } catch (logError) {
-        console.error('Failed to log verification attempt:', logError);
+        console.error('Failed to log verification:', logError);
       }
       
       return res.json({
@@ -11838,20 +11815,6 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
       
       const dataproResult = await dataproVerifyNIN(identityNumber);
       
-      try {
-        await trackDataproAPICall(db, {
-          nin: identityNumber.substring(0, 4) + '*******',
-          success: dataproResult.success,
-          errorCode: dataproResult.errorCode || null,
-          userId,
-          listId,
-          entryId
-        });
-      } catch (trackError) {
-        console.error('Failed to track Datapro API call:', trackError);
-        // Continue execution - don't throw
-      }
-      
       if (dataproResult.success) {
         const excelData = {
           firstName: verificationData.firstName,
@@ -11875,6 +11838,31 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
         if (!matchResult.matched) {
           console.log(`❌ Failed fields: ${matchResult.failedFields.join(', ')}`);
         }
+        
+        // ✅ CONSOLIDATED LOGGING - Single call replaces trackDataproAPICall + logVerificationAttempt
+        try {
+          await logVerificationComplete(db, {
+            provider: 'datapro',
+            verificationType: 'NIN',
+            success: matchResult.matched,
+            listId,
+            entryId,
+            identityNumber,
+            userId,
+            userEmail: entry.email || 'bulk_verification',
+            userName: 'Bulk Operation',
+            ipAddress: 'bulk_operation',
+            errorCode: matchResult.matched ? null : 'FIELD_MISMATCH',
+            errorMessage: matchResult.matched ? null : 'Field mismatch detected',
+            metadata: {
+              bulkOperation: true,
+              fieldsValidated: matchResult.details?.matchedFields || [],
+              failedFields: matchResult.failedFields || []
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log verification:', logError);
+        }
       } else {
         console.error(`❌ Datapro verification failed for entry ${entryId}: ${dataproResult.error}`);
         verificationResult = {
@@ -11883,30 +11871,33 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
           technicalMessage: dataproGetTechnicalError(dataproResult.errorCode, dataproResult.details),
           errorCode: dataproResult.errorCode
         };
+        
+        // ✅ CONSOLIDATED LOGGING for failed verification
+        try {
+          await logVerificationComplete(db, {
+            provider: 'datapro',
+            verificationType: 'NIN',
+            success: false,
+            listId,
+            entryId,
+            identityNumber,
+            userId,
+            userEmail: entry.email || 'bulk_verification',
+            userName: 'Bulk Operation',
+            ipAddress: 'bulk_operation',
+            errorCode: dataproResult.errorCode,
+            errorMessage: dataproResult.error || 'Verification failed',
+            metadata: {
+              bulkOperation: true
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log verification:', logError);
+        }
       }
     } else {
       // CAC verification via VerifyData
       console.log(`🔍 Verifying CAC for entry ${entryId}: ${identityNumber.substring(0, 4)}***`);
-      
-      // Log verification attempt before API call (Requirement 2.1, 2.5)
-      try {
-        await logVerificationAttempt({
-          verificationType: 'CAC',
-          identityNumber: identityNumber, // Will be masked by function
-          userId: userId || 'anonymous',
-          userEmail: 'bulk_verification',
-          ipAddress: 'bulk_operation',
-          result: 'pending',
-          metadata: {
-            listId,
-            entryId,
-            bulkOperation: true
-          }
-        });
-      } catch (logError) {
-        console.error('Failed to log verification attempt:', logError);
-        // Continue execution - don't throw
-      }
       
       // Apply VerifyData rate limiting
       try {
@@ -11922,51 +11913,7 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
         };
       }
       
-      // Track API call start time (Requirement 5.2, 5.3, 5.4)
-      const apiStartTime = Date.now();
-      
       const verifydataResult = await verifydataVerifyCAC(identityNumber);
-      
-      // Calculate API call duration (Requirement 5.3, 5.4)
-      const apiDuration = Date.now() - apiStartTime;
-      
-      // Log API call (Requirement 5.2, 5.3, 5.4)
-      try {
-        await logAPICall({
-          apiName: 'VerifyData',
-          endpoint: '/api/ValidateRcNumber/Initiate',
-          method: 'POST',
-          requestData: { rcNumber: identityNumber }, // Will be masked by function
-          statusCode: verifydataResult.success ? 200 : 400,
-          responseData: verifydataResult, // Will be masked by function
-          duration: apiDuration,
-          userId: userId || 'anonymous',
-          ipAddress: 'bulk_operation',
-          metadata: {
-            listId,
-            entryId,
-            bulkOperation: true,
-            cost: verifydataResult.cost || 0
-          }
-        });
-      } catch (logError) {
-        console.error('Failed to log API call:', logError);
-        // Continue execution - don't throw
-      }
-      
-      try {
-        await trackVerifydataAPICall(db, {
-          rcNumber: identityNumber.substring(0, 4) + '*******',
-          success: verifydataResult.success,
-          errorCode: verifydataResult.errorCode || null,
-          userId,
-          listId,
-          entryId
-        });
-      } catch (trackError) {
-        console.error('Failed to track VerifyData API call:', trackError);
-        // Continue execution - don't throw
-      }
       
       if (verifydataResult.success) {
         const excelData = {
@@ -11991,27 +11938,29 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
           console.log(`❌ Failed fields: ${matchResult.failedFields.join(', ')}`);
         }
         
-        // Log successful verification (Requirement 2.2, 2.3, 2.5)
+        // ✅ CONSOLIDATED LOGGING - Single call replaces trackVerifydataAPICall + logVerificationAttempt
         try {
-          await logVerificationAttempt({
+          await logVerificationComplete(db, {
+            provider: 'verifydata',
             verificationType: 'CAC',
-            identityNumber: identityNumber,
-            userId: userId || 'anonymous',
-            userEmail: 'bulk_verification',
+            success: matchResult.matched,
+            listId,
+            entryId,
+            identityNumber,
+            userId,
+            userEmail: entry.email || 'bulk_verification',
+            userName: 'Bulk Operation',
             ipAddress: 'bulk_operation',
-            result: matchResult.matched ? 'success' : 'failure',
-            errorCode: matchResult.matched ? undefined : 'FIELD_MISMATCH',
-            errorMessage: matchResult.matched ? undefined : 'Field mismatch detected',
+            errorCode: matchResult.matched ? null : 'FIELD_MISMATCH',
+            errorMessage: matchResult.matched ? null : 'Field mismatch detected',
             metadata: {
-              listId,
-              entryId,
               bulkOperation: true,
               fieldsValidated: matchResult.details?.matchedFields || [],
               failedFields: matchResult.failedFields || []
             }
           });
         } catch (logError) {
-          console.error('Failed to log verification attempt:', logError);
+          console.error('Failed to log verification:', logError);
         }
       } else {
         console.error(`❌ VerifyData verification failed for entry ${entryId}: ${verifydataResult.error}`);
@@ -12022,26 +11971,27 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
           errorCode: verifydataResult.errorCode
         };
         
-        // Log failed verification (Requirement 2.2, 2.3, 2.5)
+        // ✅ CONSOLIDATED LOGGING for failed verification
         try {
-          await logVerificationAttempt({
+          await logVerificationComplete(db, {
+            provider: 'verifydata',
             verificationType: 'CAC',
-            identityNumber: identityNumber,
-            userId: userId || 'anonymous',
-            userEmail: 'bulk_verification',
+            success: false,
+            listId,
+            entryId,
+            identityNumber,
+            userId,
+            userEmail: entry.email || 'bulk_verification',
+            userName: 'Bulk Operation',
             ipAddress: 'bulk_operation',
-            result: 'failure',
             errorCode: verifydataResult.errorCode,
             errorMessage: verifydataResult.error || 'Verification failed',
             metadata: {
-              listId,
-              entryId,
-              bulkOperation: true,
-              failedFields: []
+              bulkOperation: true
             }
           });
         } catch (logError) {
-          console.error('Failed to log verification attempt:', logError);
+          console.error('Failed to log verification:', logError);
         }
       }
     }
@@ -13401,7 +13351,9 @@ app.get('/api/analytics/daily-usage', requireAuth, requireSuperAdmin, async (req
           date,
           totalCalls: 0,
           successfulCalls: 0,
-          failedCalls: 0
+          failedCalls: 0,
+          dataproCalls: 0,
+          verifydataCalls: 0
         });
       }
       
@@ -13412,6 +13364,13 @@ app.get('/api/analytics/daily-usage', requireAuth, requireSuperAdmin, async (req
         stats.successfulCalls++;
       } else {
         stats.failedCalls++;
+      }
+      
+      // Count by provider
+      if (data.apiProvider === 'datapro') {
+        stats.dataproCalls++;
+      } else if (data.apiProvider === 'verifydata') {
+        stats.verifydataCalls++;
       }
     });
     
@@ -13430,7 +13389,9 @@ app.get('/api/analytics/daily-usage', requireAuth, requireSuperAdmin, async (req
           date: dateKey,
           totalCalls: 0,
           successfulCalls: 0,
-          failedCalls: 0
+          failedCalls: 0,
+          dataproCalls: 0,
+          verifydataCalls: 0
         });
       }
       
@@ -13664,8 +13625,9 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
         if (!userStatsMap.has(createdBy)) {
           userStatsMap.set(createdBy, {
             userId: createdBy,
-            userName: 'Loading...', // Will be populated below
-            userEmail: 'Loading...',
+            brokerId: createdBy, // Frontend expects brokerId
+            userName: 'Loading...', // User attribution - not broker-specific
+            userEmail: 'Loading...', // User attribution - not broker-specific
             userRole: 'unknown',
             totalCalls: 0,
             successfulCalls: 0,
@@ -13688,19 +13650,52 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
       }
     }
     
-    // Fetch user details including role
+    // Fetch user details including role and lastActivity
     const users = [];
     for (const [userId, data] of userStatsMap.entries()) {
+      console.log(`[UserAttribution] Processing userId: ${userId}`);
+      
       try {
+        // Get user profile from users collection
         const userDoc = await db.collection('users').doc(userId).get();
+        
         if (userDoc.exists) {
           const userData = userDoc.data();
+          console.log(`[UserAttribution] Found user in users collection:`, { email: userData.email, role: userData.role });
           data.userName = userData.displayName || userData.email || 'Unknown';
           data.userEmail = userData.email || 'unknown@example.com';
           data.userRole = userData.role || 'broker'; // Default to broker if role not set
+        } else {
+          console.log(`[UserAttribution] User ${userId} NOT found in users collection`);
+          // User not found in users collection - keep defaults
+          data.userName = 'Unknown';
+          data.userEmail = 'unknown@example.com';
+          data.userRole = 'unknown';
+        }
+        
+        // Get lastActivity from userroles collection (session data)
+        // userroles uses userId as document ID, so we can fetch directly
+        const userRoleDoc = await db.collection('userroles').doc(userId).get();
+        
+        if (userRoleDoc.exists) {
+          const sessionData = userRoleDoc.data();
+          console.log(`[UserAttribution] Found session data with lastActivity:`, sessionData.lastActivity);
+          data.lastActivity = sessionData.lastActivity || null;
+          
+          // If user not found in users collection, try to get info from userroles
+          if (!userDoc.exists && sessionData.email) {
+            console.log(`[UserAttribution] Using data from userroles:`, { email: sessionData.email, role: sessionData.role });
+            data.userName = sessionData.name || sessionData.email || 'Unknown';
+            data.userEmail = sessionData.email || 'unknown@example.com';
+            data.userRole = sessionData.role || 'broker';
+          }
+        } else {
+          console.log(`[UserAttribution] No session data found for userId: ${userId}`);
+          data.lastActivity = null;
         }
       } catch (err) {
-        console.error(`Error fetching user ${userId}:`, err);
+        console.error(`[UserAttribution] Error fetching user ${userId}:`, err);
+        data.lastActivity = null;
       }
       
       // Calculate total cost from stored cost field if available, otherwise estimate

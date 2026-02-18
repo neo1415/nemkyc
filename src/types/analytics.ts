@@ -37,8 +37,8 @@ export interface UsageDataPoint {
 export interface BrokerUsage {
   userId?: string; // Backend returns userId
   brokerId: string;
-  brokerName: string;
-  brokerEmail: string;
+  userName: string; // Changed from brokerName - this is user attribution
+  userEmail: string; // Changed from brokerEmail - this is user attribution
   userRole?: string;
   totalCalls: number;
   dataproCalls: number;
