@@ -491,7 +491,11 @@ export default function IdentityListDetail({
       width: 150,
       valueGetter: (value) => {
         if (!value) return '-';
-        return formatDate(value);
+        // Handle both Date objects and Firestore timestamps
+        const date = typeof value === 'object' && value !== null && 'toDate' in value 
+          ? (value as { toDate: () => Date }).toDate() 
+          : new Date(value as string | number | Date);
+        return formatDate(date);
       },
     });
 
@@ -1430,9 +1434,7 @@ export default function IdentityListDetail({
                       secondary={
                         <Box component="span" sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                           <span>
-                            {log.timestamp 
-                              ? formatDateTime(log.timestamp) 
-                              : 'Unknown time'}
+                            {formatDateTime(log.timestamp)}
                           </span>
                           {log.actorType === 'admin' && log.details?.sentBy && (
                             <span>by {log.details.sentBy}</span>
