@@ -40,6 +40,7 @@ import { UploadDialog } from '../../components/identity/UploadDialog';
 import IdentityListDetail from './IdentityListDetail';
 import '../../styles/broker-tour.css';
 import type { ListSummary } from '../../types/remediation';
+import { formatDate } from '../../utils/dateFormatter';
 
 // Import tour reset utility for testing (makes it available in console)
 import '../../utils/resetBrokerTour';
@@ -178,14 +179,6 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
       bgcolor: progress >= 100 ? '#2e7d32' : progress >= 50 ? '#B8860B' : '#800020'
     }
   });
-
-  const formatDate = (date: Date | string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
 
   return (
     <Box sx={{ p: 3 }}>

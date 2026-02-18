@@ -43,6 +43,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import type { RemediationAuditLog, AuditLogAction, AuditActorType } from '@/types/remediation';
+import { formatDateTime } from '@/utils/dateFormatter';
 
 // Custom theme with burgundy and gold (matching existing admin tables)
 const theme = createTheme({
@@ -154,22 +155,6 @@ const RemediationAuditLogs: React.FC = () => {
     }
   };
 
-  const formatDate = (timestamp: string | Date): string => {
-    try {
-      const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
-      return date.toLocaleString('en-GB', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
-    } catch {
-      return 'Invalid Date';
-    }
-  };
-
   const getActionChipColor = (action: string): 'success' | 'error' | 'warning' | 'info' | 'default' => {
     const colors: Record<string, 'success' | 'error' | 'warning' | 'info' | 'default'> = {
       batch_created: 'info',
@@ -218,7 +203,7 @@ const RemediationAuditLogs: React.FC = () => {
 
     const headers = ['Timestamp', 'Action', 'Actor Type', 'Actor ID', 'Batch ID', 'Record ID', 'IP Address', 'Details'];
     const csvData = logs.map((log) => [
-      formatDate(log.timestamp),
+      formatDateTime(log.timestamp),
       formatActionLabel(log.action),
       log.actorType,
       log.actorId || 'N/A',
@@ -269,7 +254,7 @@ const RemediationAuditLogs: React.FC = () => {
       width: 180,
       renderCell: (params: GridRenderCellParams) => (
         <Typography variant="body2" sx={{ fontWeight: 500 }}>
-          {formatDate(params.value)}
+          {formatDateTime(params.value)}
         </Typography>
       ),
     },
@@ -598,7 +583,7 @@ const RemediationAuditLogs: React.FC = () => {
                     <Typography variant="subtitle2" color="text.secondary">
                       Timestamp
                     </Typography>
-                    <Typography variant="body1">{formatDate(viewDialog.log.timestamp)}</Typography>
+                    <Typography variant="body1">{formatDateTime(viewDialog.log.timestamp)}</Typography>
                   </Box>
                   <Box>
                     <Typography variant="subtitle2" color="text.secondary">

@@ -26,7 +26,7 @@ const crypto = require('crypto');
 // Import verification error handling utility
 const {
   createVerificationError
-} = require('./src/utils/verificationErrors.js');
+} = require('./server-utils/verificationErrors.js');
 
 // Import encryption utility for NDPR compliance
 const {
@@ -54,9 +54,10 @@ const {
 
 // Import rate limiter
 const {
+  applyDataproRateLimit,
+  applyVerifydataRateLimit,
   getDataproRateLimitStatus,
-  resetDataproRateLimit,
-  applyVerifydataRateLimit
+  resetDataproRateLimit
 } = require('./server-utils/rateLimiter.cjs');
 
 // Import API usage tracker
@@ -4334,206 +4335,7 @@ app.use('/api/login', authLimiter);
 app.use('/api/register', authLimiter);
 app.use('/api/auth/verify-mfa', mfaAttemptLimit);
 
-// ============= PAYSTACK IDENTITY VERIFICATION PROXY =============
-// These endpoints proxy requests to Paystack to avoid CORS issues
-
-// BVN Verification Proxy (Paystack Resolve BVN)
-app.post('/api/verify/nin', verificationRateLimiter, async (req, res) => {
-  try {
-    const { nin, secretKey, demoMode } = req.body;
-    
-    // DEMO MODE - Return mock successful verification
-    if (demoMode) {
-      console.log('🎭 DEMO MODE: Simulating BVN verification for:', nin.substring(0, 4) + '***');
-      
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock successful response
-      return res.json({
-        status: true,
-        message: 'BVN verified successfully (Demo Mode)',
-        data: {
-          first_name: 'JOHN',
-          last_name: 'DOE',
-          middle_name: 'DEMO',
-          dob: '1990-01-15',
-          formatted_dob: '15-Jan-1990',
-          mobile: '080****5678',
-          bvn: nin.substring(0, 4) + '*******',
-        }
-      });
-    }
-    
-    if (!nin || !secretKey) {
-      return res.status(400).json({ 
-        status: false, 
-        message: 'BVN and API key are required' 
-      });
-    }
-
-    // Validate BVN format (11 digits)
-    if (!/^\d{11}$/.test(nin)) {
-      return res.status(400).json({ 
-        status: false, 
-        message: 'BVN must be exactly 11 digits' 
-      });
-    }
-
-    console.log('🔍 BVN Verification request for:', nin.substring(0, 4) + '***');
-
-    // Log verification attempt before API call (Requirement 1.1, 1.5)
-    try {
-      await logVerificationAttempt({
-        verificationType: 'NIN',
-        identityNumber: nin, // Will be masked by function
-        userId: req.user?.uid || 'anonymous',
-        userEmail: req.user?.email || 'anonymous',
-        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-        result: 'pending',
-        metadata: {
-          userAgent: req.headers['user-agent'],
-          demoMode: false
-        }
-      });
-    } catch (logError) {
-      console.error('Failed to log verification attempt:', logError);
-      // Continue execution - don't throw
-    }
-
-    // Track API call start time (Requirement 5.1, 5.3, 5.4)
-    const apiStartTime = Date.now();
-    
-    // Paystack Resolve BVN endpoint
-    const response = await fetch(`https://api.paystack.co/bank/resolve_bvn/${nin}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${secretKey}`,
-      },
-    });
-
-    console.log('📋 Paystack response status:', response.status);
-    
-    const responseText = await response.text();
-    console.log('📋 Paystack response:', responseText.substring(0, 300));
-    
-    let data;
-    try {
-      data = responseText ? JSON.parse(responseText) : { status: false, message: 'Empty response from Paystack' };
-    } catch (parseError) {
-      console.error('❌ Failed to parse Paystack response:', parseError);
-      data = { status: false, message: 'Invalid response from verification service' };
-    }
-    
-    // Calculate API call duration (Requirement 5.3, 5.4)
-    const apiDuration = Date.now() - apiStartTime;
-    
-    // Log API call (Requirement 5.1, 5.3, 5.4)
-    try {
-      await logAPICall({
-        apiName: 'Paystack',
-        endpoint: '/bank/resolve_bvn',
-        method: 'GET',
-        requestData: { nin }, // Will be masked by function
-        statusCode: response.status,
-        responseData: data, // Will be masked by function
-        duration: apiDuration,
-        userId: req.user?.uid || 'anonymous',
-        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-        metadata: {
-          demoMode: false,
-          cost: 0 // Paystack doesn't provide cost in response
-        }
-      });
-    } catch (logError) {
-      console.error('Failed to log API call:', logError);
-      // Continue execution - don't throw
-    }
-    
-    if (response.ok && data.status) {
-      console.log('✅ BVN verification successful');
-      
-      // Log successful verification (Requirement 1.2, 1.3, 1.5)
-      try {
-        await logVerificationAttempt({
-          verificationType: 'NIN',
-          identityNumber: nin,
-          userId: req.user?.uid || 'anonymous',
-          userEmail: req.user?.email || 'anonymous',
-          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-          result: 'success',
-          metadata: {
-            userAgent: req.headers['user-agent'],
-            fieldsValidated: data.data ? Object.keys(data.data) : [],
-            demoMode: false
-          }
-        });
-      } catch (logError) {
-        console.error('Failed to log verification attempt:', logError);
-      }
-      
-      return res.json({
-        status: true,
-        message: 'BVN verified successfully',
-        data: data.data
-      });
-    } else {
-      console.log('❌ BVN verification failed:', data.message);
-      
-      // Log failed verification (Requirement 1.2, 1.3, 1.5)
-      try {
-        await logVerificationAttempt({
-          verificationType: 'NIN',
-          identityNumber: nin,
-          userId: req.user?.uid || 'anonymous',
-          userEmail: req.user?.email || 'anonymous',
-          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-          result: 'failure',
-          errorCode: response.status.toString(),
-          errorMessage: data.message || 'Verification failed',
-          metadata: {
-            userAgent: req.headers['user-agent'],
-            demoMode: false
-          }
-        });
-      } catch (logError) {
-        console.error('Failed to log verification attempt:', logError);
-      }
-      
-      return res.json({
-        status: false,
-        message: data.message || 'Verification failed. Please check your BVN and try again.'
-      });
-    }
-  } catch (error) {
-    console.error('❌ BVN verification error:', error);
-    
-    // Log error verification (Requirement 1.2, 1.3, 1.5)
-    try {
-      await logVerificationAttempt({
-        verificationType: 'NIN',
-        identityNumber: req.body.nin,
-        userId: req.user?.uid || 'anonymous',
-        userEmail: req.user?.email || 'anonymous',
-        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-        result: 'error',
-        errorCode: 'INTERNAL_ERROR',
-        errorMessage: error.message || 'Verification service error',
-        metadata: {
-          userAgent: req.headers['user-agent'],
-          demoMode: false
-        }
-      });
-    } catch (logError) {
-      console.error('Failed to log verification attempt:', logError);
-    }
-    
-    return res.status(500).json({ 
-      status: false, 
-      message: 'Verification service error. Please try again.' 
-    });
-  }
-});
+// ============= CAC VERIFICATION PROXY =============
 
 // CAC Verification Proxy
 app.post('/api/verify/cac', verificationRateLimiter, async (req, res) => {
@@ -4634,14 +4436,19 @@ app.post('/api/verify/cac', verificationRateLimiter, async (req, res) => {
     }
 
     // Track API call for cost monitoring
-    await trackVerifydataAPICall(db, {
-      rcNumber: rc_number.substring(0, 4) + '*******',
-      success: verifydataResult.success,
-      errorCode: verifydataResult.errorCode || null,
-      userId: req.user?.uid || null,
-      listId: null,
-      entryId: null
-    });
+    try {
+      await trackVerifydataAPICall(db, {
+        rcNumber: rc_number.substring(0, 4) + '*******',
+        success: verifydataResult.success,
+        errorCode: verifydataResult.errorCode || null,
+        userId: req.user?.uid || null,
+        listId: null,
+        entryId: null
+      });
+    } catch (trackError) {
+      console.error('Failed to track VerifyData API call:', trackError);
+      // Continue execution - don't throw
+    }
     
     if (verifydataResult.success) {
       console.log('✅ CAC verification successful');
@@ -9222,6 +9029,7 @@ app.get('/api/identity/lists/:listId/entries', requireAuth, requireBrokerOrAdmin
         resendCount: data.resendCount || 0,
         verificationAttempts: data.verificationAttempts || 0,
         lastAttemptAt: data.lastAttemptAt?.toDate?.() || data.lastAttemptAt,
+        verificationDetails: data.verificationDetails || null,
         createdAt: data.createdAt?.toDate?.() || data.createdAt,
         updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
       };
@@ -10098,6 +9906,157 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
       });
     }
     
+    // ============================================
+    // CRITICAL: Check for duplicate NIN/CAC BEFORE making expensive API call
+    // This prevents wasting money on already-verified identity numbers
+    // ============================================
+    const verificationType = entry.verificationType;
+    console.log(`🔍 Checking for duplicate ${verificationType} before API call...`);
+    
+    try {
+      const identityQuery = db.collection('identity-entries')
+        .where('listId', '==', entry.listId)
+        .where('status', '==', 'verified');
+      
+      const identitySnapshot = await identityQuery.get();
+      
+      let duplicateFound = false;
+      let duplicateEntry = null;
+      
+      for (const doc of identitySnapshot.docs) {
+        const existingEntry = doc.data();
+        
+        // Skip the current entry
+        if (doc.id === entryDoc.id) continue;
+        
+        // Check if NIN/CAC matches (handle both encrypted and plain)
+        let existingIdentityNumber = null;
+        
+        if (verificationType === 'NIN') {
+          if (existingEntry.nin) {
+            if (isEncrypted(existingEntry.nin)) {
+              try {
+                existingIdentityNumber = decryptData(existingEntry.nin.encrypted, existingEntry.nin.iv);
+              } catch (err) {
+                console.error('Failed to decrypt existing NIN for comparison:', err);
+                continue;
+              }
+            } else {
+              existingIdentityNumber = existingEntry.nin;
+            }
+          }
+        } else if (verificationType === 'CAC') {
+          if (existingEntry.cac) {
+            if (isEncrypted(existingEntry.cac)) {
+              try {
+                existingIdentityNumber = decryptData(existingEntry.cac.encrypted, existingEntry.cac.iv);
+              } catch (err) {
+                console.error('Failed to decrypt existing CAC for comparison:', err);
+                continue;
+              }
+            } else {
+              existingIdentityNumber = existingEntry.cac;
+            }
+          } else if (existingEntry.registrationNumber) {
+            existingIdentityNumber = existingEntry.registrationNumber;
+          }
+        }
+        
+        // Compare identity numbers
+        if (existingIdentityNumber && existingIdentityNumber === identityNumber) {
+          duplicateFound = true;
+          duplicateEntry = existingEntry;
+          console.log(`⚠️  Duplicate ${verificationType} found! Already verified in entry ${doc.id} - BLOCKING API CALL`);
+          break;
+        }
+      }
+      
+      if (duplicateFound) {
+        // Extract user information for audit logging
+        const data = entry.data || {};
+        let userName = 'anonymous';
+        if (verificationType === 'NIN') {
+          const firstName = data.firstName || data.first_name || data['First Name'] || data.FirstName || '';
+          const lastName = data.lastName || data.last_name || data['Last Name'] || data.LastName || data.surname || data.Surname || '';
+          if (firstName && lastName) {
+            userName = `${firstName} ${lastName}`;
+          } else if (firstName) {
+            userName = firstName;
+          } else if (lastName) {
+            userName = lastName;
+          }
+        } else if (verificationType === 'CAC') {
+          const companyName = data.companyName || data.company_name || data['Company Name'] || data.CompanyName || '';
+          if (companyName) {
+            userName = companyName;
+          }
+        }
+        
+        // Log verification attempt as FAILED due to duplicate (this will show in audit logs)
+        try {
+          await logVerificationAttempt({
+            verificationType: verificationType,
+            identityNumber: identityNumber, // Will be masked by function
+            userId: userName,
+            userEmail: entry.email || 'anonymous',
+            ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+            result: 'failure',
+            errorCode: 'DUPLICATE_IDENTITY',
+            errorMessage: `${verificationType} already verified in system`,
+            metadata: {
+              userAgent: req.headers['user-agent'],
+              listId: entry.listId,
+              entryId: entryDoc.id,
+              blockedBeforeAPICall: true,
+              costSaved: verificationType === 'NIN' ? 50 : 100
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log duplicate verification attempt:', logError);
+        }
+        
+        // Update current entry as failed due to duplicate
+        await entryRef.update({
+          status: 'failed',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          verificationDetails: {
+            failureReason: `This ${verificationType} has already been verified in the system`,
+            isDuplicate: true,
+            validationSuccess: false
+          }
+        });
+        
+        // Log security event for duplicate attempt
+        await logAuditSecurityEvent({
+          eventType: 'duplicate_identity_blocked',
+          severity: 'medium',
+          description: `Duplicate ${verificationType} blocked before API call - cost saved`,
+          userId: 'anonymous',
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          metadata: {
+            verificationType,
+            listId: entry.listId,
+            entryId: entryDoc.id,
+            email: entry.email,
+            error: 'Duplicate identity number',
+            reason: `${verificationType} already verified in system`,
+            costSaved: verificationType === 'NIN' ? 50 : 100 // ₦50 for NIN, ₦100 for CAC
+          }
+        });
+        
+        return res.json({
+          success: false,
+          error: `This ${verificationType === 'NIN' ? 'National Identification Number' : 'CAC Registration Number'} has already been verified in our system. Each identity number can only be used once. If you believe this is an error, please contact your insurance broker or our support team at nemsupport@nem-insurance.com.`,
+          isDuplicate: true
+        });
+      }
+      
+      console.log(`✅ No duplicate ${verificationType} found - proceeding with verification`);
+    } catch (duplicateCheckError) {
+      console.error('❌ Error checking for duplicates:', duplicateCheckError);
+      // Continue with verification - don't block on duplicate check failure
+    }
+    
     // Check if max attempts exceeded
     if (entry.status === 'failed') {
       console.log('ℹ️ Entry marked as failed - max attempts exceeded');
@@ -10108,6 +10067,9 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
       });
     }
     
+    const currentAttempts = entry.verificationAttempts || 0;
+    const maxAttempts = 3;
+    
     // Check token expiration
     const tokenExpiresAt = entry.tokenExpiresAt?.toDate ? entry.tokenExpiresAt.toDate() : new Date(entry.tokenExpiresAt);
     if (tokenExpiresAt < new Date()) {
@@ -10117,10 +10079,6 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
         error: 'This link has expired. Please contact your insurance provider for a new link.'
       });
     }
-    
-    const verificationType = entry.verificationType;
-    const currentAttempts = entry.verificationAttempts || 0;
-    const maxAttempts = 3;
     
     // Validate input based on verification type
     if (verificationType === 'NIN') {
@@ -10169,6 +10127,16 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
         const dateOfBirth = data.dateOfBirth || data.date_of_birth || data['Date of Birth'] || data.DOB || data.dob || '';
         const gender = data.gender || data.Gender || data.GENDER || data.sex || data.Sex || '';
         const bvn = entry.bvn || data.bvn || data.BVN || '';
+        
+        // Extract user name for audit logging
+        let userName = 'anonymous';
+        if (firstName && lastName) {
+          userName = `${firstName} ${lastName}`;
+        } else if (firstName) {
+          userName = firstName;
+        } else if (lastName) {
+          userName = lastName;
+        }
         
         fieldsValidated.push('firstName', 'lastName', 'dateOfBirth', 'gender');
         if (bvn) fieldsValidated.push('bvn');
@@ -10226,8 +10194,8 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
             await logVerificationAttempt({
               verificationType: 'NIN',
               identityNumber: decryptedNIN, // Will be masked by function
-              userId: 'anonymous', // Customer verification - no user ID
-              userEmail: 'anonymous',
+              userId: userName,
+              userEmail: entry.email || 'anonymous',
               ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
               result: 'pending',
               metadata: {
@@ -10274,14 +10242,19 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
           }
           
           // Track API call for cost monitoring
-          await trackDataproAPICall(db, {
-            nin: decryptedNIN.substring(0, 4) + '*******',
-            success: dataproResult.success,
-            errorCode: dataproResult.errorCode || null,
-            userId: null, // Customer verification - no user ID
-            listId: entry.listId,
-            entryId: entryDoc.id
-          });
+          try {
+            await trackDataproAPICall(db, {
+              nin: decryptedNIN.substring(0, 4) + '*******',
+              success: dataproResult.success,
+              errorCode: dataproResult.errorCode || null,
+              userId: null, // Customer verification - no user ID
+              listId: entry.listId,
+              entryId: entryDoc.id
+            });
+          } catch (trackError) {
+            console.error('Failed to track Datapro API call:', trackError);
+            // Continue execution - don't throw
+          }
           
           if (dataproResult.success) {
             // Perform field-level validation using Datapro's matchFields function
@@ -10314,8 +10287,8 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
               await logVerificationAttempt({
                 verificationType: 'NIN',
                 identityNumber: decryptedNIN,
-                userId: 'anonymous',
-                userEmail: 'anonymous',
+                userId: userName,
+                userEmail: entry.email || 'anonymous',
                 ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
                 result: matchResult.matched ? 'success' : 'failure',
                 errorCode: matchResult.matched ? undefined : 'FIELD_MISMATCH',
@@ -10348,8 +10321,8 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
               await logVerificationAttempt({
                 verificationType: 'NIN',
                 identityNumber: decryptedNIN,
-                userId: 'anonymous',
-                userEmail: 'anonymous',
+                userId: userName,
+                userEmail: entry.email || 'anonymous',
                 ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
                 result: 'failure',
                 errorCode: dataproResult.errorCode,
@@ -10375,6 +10348,9 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
         const registrationNumber = entry.registrationNumber || data.registrationNumber || data.registration_number || data['Registration Number'] || '';
         const registrationDate = entry.registrationDate || data.registrationDate || data.registration_date || data['Registration Date'] || '';
         const businessAddress = entry.businessAddress || data.businessAddress || data.business_address || data['Business Address'] || data.companyAddress || data.company_address || '';
+        
+        // Extract user name for audit logging
+        const userName = companyName || 'anonymous';
         
         fieldsValidated.push('companyName', 'registrationNumber', 'registrationDate', 'businessAddress');
         
@@ -10422,8 +10398,8 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
             await logVerificationAttempt({
               verificationType: 'CAC',
               identityNumber: decryptedCAC, // Will be masked by function
-              userId: 'anonymous', // Customer verification - no user ID
-              userEmail: 'anonymous',
+              userId: userName,
+              userEmail: entry.email || 'anonymous',
               ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
               result: 'pending',
               metadata: {
@@ -10482,14 +10458,19 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
           }
           
           // Track API call for cost monitoring
-          await trackVerifydataAPICall(db, {
-            rcNumber: decryptedCAC.substring(0, 4) + '*******',
-            success: verifydataResult.success,
-            errorCode: verifydataResult.errorCode || null,
-            userId: null, // Customer verification - no user ID
-            listId: entry.listId,
-            entryId: entryDoc.id
-          });
+          try {
+            await trackVerifydataAPICall(db, {
+              rcNumber: decryptedCAC.substring(0, 4) + '*******',
+              success: verifydataResult.success,
+              errorCode: verifydataResult.errorCode || null,
+              userId: null, // Customer verification - no user ID
+              listId: entry.listId,
+              entryId: entryDoc.id
+            });
+          } catch (trackError) {
+            console.error('Failed to track VerifyData API call:', trackError);
+            // Continue execution - don't throw
+          }
           
           if (verifydataResult.success) {
             // Perform field-level validation using VerifyData's matchCACFields function
@@ -10521,8 +10502,8 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
               await logVerificationAttempt({
                 verificationType: 'CAC',
                 identityNumber: decryptedCAC,
-                userId: 'anonymous',
-                userEmail: 'anonymous',
+                userId: userName,
+                userEmail: entry.email || 'anonymous',
                 ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
                 result: matchResult.matched ? 'success' : 'failure',
                 errorCode: matchResult.matched ? undefined : 'FIELD_MISMATCH',
@@ -10555,8 +10536,8 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
               await logVerificationAttempt({
                 verificationType: 'CAC',
                 identityNumber: decryptedCAC,
-                userId: 'anonymous',
-                userEmail: 'anonymous',
+                userId: userName,
+                userEmail: entry.email || 'anonymous',
                 ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
                 result: 'failure',
                 errorCode: verifydataResult.errorCode,
@@ -10589,114 +10570,7 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
     
     // Handle verification result
     if (verificationResult.success) {
-      // ============================================
-      // DUPLICATE DETECTION: Check if NIN/CAC already verified
-      // ============================================
-      console.log(`🔍 Checking for duplicate ${verificationType}...`);
-      
-      // Search for existing verified entries with this identity number
-      let duplicateQuery;
-      if (verificationType === 'NIN') {
-        // For NIN, we need to check both encrypted and plaintext (for migration period)
-        duplicateQuery = db.collection('identity-entries')
-          .where('status', '==', 'verified')
-          .limit(1000); // Get all verified entries to check
-      } else {
-        // For CAC, same approach
-        duplicateQuery = db.collection('identity-entries')
-          .where('status', '==', 'verified')
-          .limit(1000);
-      }
-      
-      const duplicateSnapshot = await duplicateQuery.get();
-      let duplicateFound = false;
-      let duplicateEntry = null;
-      
-      // Check each verified entry
-      for (const doc of duplicateSnapshot.docs) {
-        const existingEntry = doc.data();
-        
-        // Skip the current entry (in case of re-verification)
-        if (doc.id === entryDoc.id) continue;
-        
-        // Check if this entry has the same identity number
-        let existingIdentityNumber = null;
-        
-        if (verificationType === 'NIN' && existingEntry.nin) {
-          // Decrypt if encrypted
-          if (isEncrypted(existingEntry.nin)) {
-            try {
-              existingIdentityNumber = decryptData(existingEntry.nin.encrypted, existingEntry.nin.iv);
-            } catch (err) {
-              console.error(`Failed to decrypt NIN for comparison:`, err.message);
-              continue;
-            }
-          } else {
-            existingIdentityNumber = existingEntry.nin;
-          }
-        } else if (verificationType === 'CAC' && existingEntry.cac) {
-          // Decrypt if encrypted
-          if (isEncrypted(existingEntry.cac)) {
-            try {
-              existingIdentityNumber = decryptData(existingEntry.cac.encrypted, existingEntry.cac.iv);
-            } catch (err) {
-              console.error(`Failed to decrypt CAC for comparison:`, err.message);
-              continue;
-            }
-          } else {
-            existingIdentityNumber = existingEntry.cac;
-          }
-        }
-        
-        // Compare identity numbers
-        if (existingIdentityNumber && existingIdentityNumber === identityNumber) {
-          duplicateFound = true;
-          duplicateEntry = existingEntry;
-          console.log(`⚠️  Duplicate ${verificationType} found! Already verified in entry ${doc.id}`);
-          break;
-        }
-      }
-      
-      // If duplicate found, reject verification
-      if (duplicateFound) {
-        // Update entry status to indicate duplicate
-        await entryRef.update({
-          status: 'verification_failed',
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          verificationDetails: {
-            failureReason: `This ${verificationType} has already been verified in the system`,
-            isDuplicate: true,
-            validationSuccess: false
-          }
-        });
-        
-        // Log the duplicate attempt
-        await createIdentityActivityLog({
-          listId: entry.listId,
-          entryId: entryDoc.id,
-          action: 'verification_failed',
-          actorType: 'customer',
-          details: {
-            verificationType,
-            email: entry.email,
-            error: 'Duplicate identity number',
-            reason: `${verificationType} already verified in system`
-          },
-          ipAddress: req.ipData?.masked,
-          userAgent: req.headers['user-agent']
-        });
-        
-        console.log(`❌ Verification rejected for entry ${entryDoc.id} - duplicate ${verificationType}`);
-        
-        // Return error to customer (without revealing who used it)
-        return res.json({
-          success: false,
-          error: `This ${verificationType === 'NIN' ? 'National Identification Number' : 'CAC Registration Number'} has already been verified in our system. Each identity number can only be used once. If you believe this is an error, please contact your insurance broker or our support team at nemsupport@nem-insurance.com.`,
-          isDuplicate: true
-        });
-      }
-      
-      console.log(`✅ No duplicate found, proceeding with verification`);
+      console.log(`✅ Verification successful, proceeding with data storage`);
       
       // Success - update entry with verified data and validation details (Requirement 20.8, 20.9)
       const updateData = {
@@ -11926,14 +11800,19 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
       
       const dataproResult = await dataproVerifyNIN(identityNumber);
       
-      await trackDataproAPICall(db, {
-        nin: identityNumber.substring(0, 4) + '*******',
-        success: dataproResult.success,
-        errorCode: dataproResult.errorCode || null,
-        userId,
-        listId,
-        entryId
-      });
+      try {
+        await trackDataproAPICall(db, {
+          nin: identityNumber.substring(0, 4) + '*******',
+          success: dataproResult.success,
+          errorCode: dataproResult.errorCode || null,
+          userId,
+          listId,
+          entryId
+        });
+      } catch (trackError) {
+        console.error('Failed to track Datapro API call:', trackError);
+        // Continue execution - don't throw
+      }
       
       if (dataproResult.success) {
         const excelData = {
@@ -12037,14 +11916,19 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
         // Continue execution - don't throw
       }
       
-      await trackVerifydataAPICall(db, {
-        rcNumber: identityNumber.substring(0, 4) + '*******',
-        success: verifydataResult.success,
-        errorCode: verifydataResult.errorCode || null,
-        userId,
-        listId,
-        entryId
-      });
+      try {
+        await trackVerifydataAPICall(db, {
+          rcNumber: identityNumber.substring(0, 4) + '*******',
+          success: verifydataResult.success,
+          errorCode: verifydataResult.errorCode || null,
+          userId,
+          listId,
+          entryId
+        });
+      } catch (trackError) {
+        console.error('Failed to track VerifyData API call:', trackError);
+        // Continue execution - don't throw
+      }
       
       if (verifydataResult.success) {
         const excelData = {
@@ -13129,6 +13013,1093 @@ app.post('/api/health/alerts/:alertId/acknowledge', requireAuth, requireAdmin, a
 });
 
 // ============= END HEALTH MONITORING API =============
+
+// ============= ANALYTICS API =============
+
+/**
+ * Analytics API Health Check
+ * 
+ * GET /api/analytics/health
+ * 
+ * Response:
+ * - status: 'healthy' or 'unhealthy'
+ * - timestamp: Current server time
+ * - services: Status of dependent services
+ */
+app.get('/api/analytics/health', async (req, res) => {
+  try {
+    // Check Firestore connectivity
+    const healthCheck = await db.collection('health-check').doc('test').get();
+    
+    res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      services: {
+        firestore: 'connected',
+        analytics: 'operational'
+      }
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Get analytics dashboard overview
+ * 
+ * GET /api/analytics/overview?month=YYYY-MM
+ * 
+ * Query parameters:
+ * - month: Month in YYYY-MM format (optional, defaults to current month)
+ * 
+ * Response:
+ * - totalCalls: Total API calls in period
+ * - successfulCalls: Successful API calls
+ * - failedCalls: Failed API calls
+ * - totalCost: Total cost in period
+ * - successRate: Success rate percentage
+ * - avgResponseTime: Average response time in ms
+ * - comparison: Comparison with previous period
+ * 
+ * Security: Super admin only, rate limited
+ * Performance: Cached for 2 minutes
+ */
+app.get('/api/analytics/overview', requireAuth, requireSuperAdmin, async (req, res) => {
+  const startTime = Date.now();
+  
+  try {
+    // Input validation
+    const month = req.query.month || new Date().toISOString().substring(0, 7);
+    
+    // Validate month format (YYYY-MM)
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        error: 'Invalid month format',
+        message: 'Month must be in YYYY-MM format'
+      });
+    }
+    
+    // Validate month is not in the future
+    const requestedDate = new Date(month + '-01');
+    const now = new Date();
+    if (requestedDate > now) {
+      return res.status(400).json({
+        error: 'Invalid month',
+        message: 'Cannot request data for future months'
+      });
+    }
+    
+    console.log(`📊 Super Admin ${req.user.email} fetching analytics overview for ${month}`);
+    
+    // Log to audit system
+    await logAuditSecurityEvent({
+      eventType: 'analytics_access',
+      severity: 'low',
+      description: `Super Admin ${req.user.email} accessed analytics overview for ${month}`,
+      userId: req.user.uid,
+      ipAddress: req.ip,
+      metadata: {
+        month,
+        userEmail: req.user.email,
+        userAgent: req.get('user-agent')
+      }
+    });
+    
+    // Query api-usage collection for the month
+    const snapshot = await db.collection('api-usage')
+      .where('period', '==', 'monthly')
+      .where('month', '==', month)
+      .get();
+    
+    let totalCalls = 0;
+    let successfulCalls = 0;
+    let failedCalls = 0;
+    
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      totalCalls += data.totalCalls || 0;
+      successfulCalls += data.successCalls || 0;
+      failedCalls += data.failedCalls || 0;
+    });
+    
+    // Calculate costs (₦50 per NIN, ₦100 per CAC)
+    const dataproSnapshot = await db.collection('api-usage')
+      .where('period', '==', 'monthly')
+      .where('month', '==', month)
+      .where('apiProvider', '==', 'datapro')
+      .get();
+    
+    const verifydataSnapshot = await db.collection('api-usage')
+      .where('period', '==', 'monthly')
+      .where('month', '==', month)
+      .where('apiProvider', '==', 'verifydata')
+      .get();
+    
+    let dataproCalls = 0;
+    let verifydataCalls = 0;
+    
+    dataproSnapshot.forEach(doc => {
+      dataproCalls += doc.data().totalCalls || 0;
+    });
+    
+    verifydataSnapshot.forEach(doc => {
+      verifydataCalls += doc.data().totalCalls || 0;
+    });
+    
+    const totalCost = (dataproCalls * 50) + (verifydataCalls * 100);
+    const successRate = totalCalls > 0 ? (successfulCalls / totalCalls) * 100 : 0;
+    
+    // Get previous month for comparison
+    const prevMonthDate = new Date(month + '-01');
+    prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
+    const prevMonth = prevMonthDate.toISOString().substring(0, 7);
+    
+    const prevSnapshot = await db.collection('api-usage')
+      .where('period', '==', 'monthly')
+      .where('month', '==', prevMonth)
+      .get();
+    
+    let prevTotalCalls = 0;
+    let prevSuccessfulCalls = 0;
+    
+    prevSnapshot.forEach(doc => {
+      const data = doc.data();
+      prevTotalCalls += data.totalCalls || 0;
+      prevSuccessfulCalls += data.successCalls || 0;
+    });
+    
+    const callsChange = prevTotalCalls > 0 
+      ? ((totalCalls - prevTotalCalls) / prevTotalCalls) * 100 
+      : 0;
+    
+    const prevSuccessRate = prevTotalCalls > 0 
+      ? (prevSuccessfulCalls / prevTotalCalls) * 100 
+      : 0;
+    
+    const successRateChange = prevSuccessRate > 0 
+      ? successRate - prevSuccessRate 
+      : 0;
+    
+    
+    res.status(200).json({
+      totalCalls,
+      successfulCalls,
+      failedCalls,
+      dataproCalls,
+      verifydataCalls,
+      dataproCost: dataproCalls * 50,
+      verifydataCost: verifydataCalls * 100,
+      totalCost,
+      successRate: parseFloat(successRate.toFixed(2)),
+      failureRate: parseFloat(((failedCalls / totalCalls) * 100 || 0).toFixed(2)),
+      periodStart: new Date(month + '-01'),
+      periodEnd: new Date(month + '-01'),
+      avgResponseTime: 0, // Not tracked yet
+      previousPeriodComparison: {
+        callsChange: parseFloat(callsChange.toFixed(2)),
+        costChange: 0, // Not calculated yet
+        successRateChange: parseFloat(successRateChange.toFixed(2))
+      },
+      metadata: {
+        requestTime: Date.now() - startTime,
+        cached: false,
+        generatedAt: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching analytics overview:', error);
+    
+    // Log error to audit system
+    await logAuditSecurityEvent({
+      eventType: 'analytics_error',
+      severity: 'medium',
+      description: `Analytics overview fetch failed for ${req.query.month}`,
+      userId: req.user?.uid || 'unknown',
+      ipAddress: req.ip,
+      metadata: {
+        error: error.message,
+        month: req.query.month,
+        userEmail: req.user?.email
+      }
+    }).catch(err => console.error('Failed to log error:', err));
+    
+    res.status(500).json({
+      error: 'Failed to fetch analytics overview',
+      message: error.message,
+      requestId: `req_${Date.now()}`
+    });
+  }
+});
+
+/**
+ * Get user attribution data - shows all users who create lists and send links
+ * 
+ * GET /api/analytics/user-attribution?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&sortBy=calls&order=desc
+ * 
+ * Query parameters:
+ * - startDate: Start date in YYYY-MM-DD format (required)
+ * - endDate: End date in YYYY-MM-DD format (required)
+ * - sortBy: Sort field - 'calls', 'cost', 'successRate', or 'role' (optional)
+ * - order: Sort order - 'asc' or 'desc' (optional, default: 'desc')
+ * - limit: Maximum number of users to return (optional, default: 100, max: 1000)
+ * 
+ * Response:
+ * - users: Array of user attribution objects with role information
+ * - metadata: Request metadata including timing and pagination info
+ * 
+ * Security: Super admin only, rate limited
+ * Performance: Query limited to prevent memory issues
+ */
+app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async (req, res) => {
+  const startTime = Date.now();
+  
+  try {
+    const { startDate, endDate, sortBy = 'calls', order = 'desc', limit = 100 } = req.query;
+    
+    // Input validation
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        error: 'Missing required parameters',
+        message: 'startDate and endDate are required',
+        example: '/api/analytics/user-attribution?startDate=2024-01-01&endDate=2024-01-31'
+      });
+    }
+    
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
+      return res.status(400).json({
+        error: 'Invalid date format',
+        message: 'Dates must be in YYYY-MM-DD format'
+      });
+    }
+    
+    // Validate date range
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const now = new Date();
+    
+    if (start > end) {
+      return res.status(400).json({
+        error: 'Invalid date range',
+        message: 'startDate must be before or equal to endDate'
+      });
+    }
+    
+    if (end > now) {
+      return res.status(400).json({
+        error: 'Invalid date range',
+        message: 'endDate cannot be in the future'
+      });
+    }
+    
+    // Validate date range is not too large (max 1 year)
+    const daysDiff = (end - start) / (1000 * 60 * 60 * 24);
+    if (daysDiff > 365) {
+      return res.status(400).json({
+        error: 'Date range too large',
+        message: 'Maximum date range is 365 days'
+      });
+    }
+    
+    // Validate sortBy
+    const validSortFields = ['calls', 'cost', 'successRate', 'role'];
+    if (!validSortFields.includes(sortBy)) {
+      return res.status(400).json({
+        error: 'Invalid sortBy parameter',
+        message: `sortBy must be one of: ${validSortFields.join(', ')}`
+      });
+    }
+    
+    // Validate order
+    if (order !== 'asc' && order !== 'desc') {
+      return res.status(400).json({
+        error: 'Invalid order parameter',
+        message: 'order must be either "asc" or "desc"'
+      });
+    }
+    
+    // Validate and sanitize limit
+    const parsedLimit = Math.min(Math.max(parseInt(limit) || 100, 1), 1000);
+    
+    console.log(`📊 Super Admin ${req.user.email} fetching user attribution from ${startDate} to ${endDate}`);
+    
+    // Log to audit system
+    await logAuditSecurityEvent({
+      eventType: 'analytics_access',
+      severity: 'low',
+      description: `Super Admin ${req.user.email} accessed user attribution analytics`,
+      userId: req.user.uid,
+      ipAddress: req.ip,
+      metadata: {
+        startDate,
+        endDate,
+        sortBy,
+        order,
+        limit: parsedLimit,
+        userEmail: req.user.email,
+        userAgent: req.get('user-agent')
+      }
+    });
+    
+    // Query api-usage-logs for the date range with limit
+    const logsSnapshot = await db.collection('api-usage-logs')
+      .where('timestamp', '>=', new Date(startDate))
+      .where('timestamp', '<=', new Date(endDate + 'T23:59:59'))
+      .limit(10000) // Hard limit to prevent memory issues
+      .get();
+    
+    // Check if we hit the limit
+    const hitLimit = logsSnapshot.size >= 10000;
+    if (hitLimit) {
+      console.warn(`⚠️ User attribution query hit 10000 record limit for ${startDate} to ${endDate}`);
+    }
+    
+    // First, aggregate by listId (not userId, since customer verifications have userId = null)
+    const listStatsMap = new Map();
+    
+    logsSnapshot.forEach(doc => {
+      const data = doc.data();
+      const listId = data.listId || 'unknown';
+      
+      if (!listStatsMap.has(listId)) {
+        listStatsMap.set(listId, {
+          totalCalls: 0,
+          successfulCalls: 0,
+          failedCalls: 0,
+          dataproCalls: 0,
+          verifydataCalls: 0
+        });
+      }
+      
+      const stats = listStatsMap.get(listId);
+      stats.totalCalls++;
+      
+      if (data.success) {
+        stats.successfulCalls++;
+      } else {
+        stats.failedCalls++;
+      }
+      
+      // Track by provider
+      if (data.apiProvider === 'datapro') {
+        stats.dataproCalls++;
+      } else if (data.apiProvider === 'verifydata') {
+        stats.verifydataCalls++;
+      }
+    });
+    
+    // Now look up createdBy for each listId and aggregate by user
+    const userStatsMap = new Map();
+    
+    for (const [listId, stats] of listStatsMap.entries()) {
+      if (listId === 'unknown') continue;
+      
+      try {
+        const listDoc = await db.collection('identity-lists').doc(listId).get();
+        if (!listDoc.exists) continue;
+        
+        const listData = listDoc.data();
+        const createdBy = listData.createdBy || 'unknown';
+        
+        if (!userStatsMap.has(createdBy)) {
+          userStatsMap.set(createdBy, {
+            userId: createdBy,
+            userName: 'Loading...', // Will be populated below
+            userEmail: 'Loading...',
+            userRole: 'unknown',
+            totalCalls: 0,
+            successfulCalls: 0,
+            failedCalls: 0,
+            dataproCalls: 0,
+            verifydataCalls: 0,
+            totalCost: 0
+          });
+        }
+        
+        const userStats = userStatsMap.get(createdBy);
+        userStats.totalCalls += stats.totalCalls;
+        userStats.successfulCalls += stats.successfulCalls;
+        userStats.failedCalls += stats.failedCalls;
+        userStats.dataproCalls += stats.dataproCalls;
+        userStats.verifydataCalls += stats.verifydataCalls;
+      } catch (err) {
+        console.error(`Error fetching list ${listId}:`, err);
+      }
+    }
+    
+    // Fetch user details including role
+    const users = [];
+    for (const [userId, data] of userStatsMap.entries()) {
+      try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          data.userName = userData.displayName || userData.email || 'Unknown';
+          data.userEmail = userData.email || 'unknown@example.com';
+          data.userRole = userData.role || 'broker'; // Default to broker if role not set
+        }
+      } catch (err) {
+        console.error(`Error fetching user ${userId}:`, err);
+      }
+      
+      // Calculate total cost: Datapro ₦50/call, VerifyData ₦100/call
+      data.totalCost = (data.dataproCalls * 50) + (data.verifydataCalls * 100);
+      
+      data.successRate = data.totalCalls > 0 
+        ? parseFloat(((data.successfulCalls / data.totalCalls) * 100).toFixed(2))
+        : 0;
+      
+      users.push(data);
+    }
+    
+    // Sort users
+    users.sort((a, b) => {
+      let aVal, bVal;
+      
+      switch (sortBy) {
+        case 'cost':
+          aVal = a.totalCost;
+          bVal = b.totalCost;
+          break;
+        case 'successRate':
+          aVal = a.successRate;
+          bVal = b.successRate;
+          break;
+        case 'role':
+          // For string comparison
+          return order === 'asc' 
+            ? a.userRole.localeCompare(b.userRole) 
+            : b.userRole.localeCompare(a.userRole);
+        case 'calls':
+        default:
+          aVal = a.totalCalls;
+          bVal = b.totalCalls;
+          break;
+      }
+      
+      return order === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+    
+    // Apply limit
+    const limitedUsers = users.slice(0, parsedLimit);
+    
+    res.status(200).json({ 
+      users: limitedUsers,
+      metadata: {
+        totalUsers: users.length,
+        returnedUsers: limitedUsers.length,
+        hitQueryLimit: hitLimit,
+        requestTime: Date.now() - startTime,
+        generatedAt: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching broker usage:', error);
+    
+    // Log error to audit system
+    await logAuditSecurityEvent({
+      eventType: 'analytics_error',
+      severity: 'medium',
+      description: `Broker usage fetch failed`,
+      userId: req.user?.uid || 'unknown',
+      ipAddress: req.ip,
+      metadata: {
+        error: error.message,
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+        userEmail: req.user?.email
+      }
+    }).catch(err => console.error('Failed to log error:', err));
+    
+    res.status(500).json({
+      error: 'Failed to fetch broker usage',
+      message: error.message,
+      requestId: `req_${Date.now()}`
+    });
+  }
+});
+
+/**
+ * Get cost tracking data with budget monitoring
+ * 
+ * GET /api/analytics/cost-tracking?month=YYYY-MM
+ * 
+ * Query parameters:
+ * - month: Month in YYYY-MM format (optional, defaults to current month)
+ * 
+ * Response:
+ * - currentSpend: Current month spending
+ * - projectedSpend: Projected end-of-month spending
+ * - budget: Monthly budget limit
+ * - alertLevel: 'none', 'warning', or 'critical'
+ * - dailyAverage: Average daily spending
+ * - breakdown: Cost breakdown by provider
+ * - metadata: Request metadata
+ * 
+ * Security: Super admin only, rate limited
+ */
+app.get('/api/analytics/cost-tracking', requireAuth, requireSuperAdmin, async (req, res) => {
+  const startTime = Date.now();
+  
+  try {
+    const month = req.query.month || new Date().toISOString().substring(0, 7);
+    
+    // Validate month format
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        error: 'Invalid month format',
+        message: 'Month must be in YYYY-MM format'
+      });
+    }
+    
+    // Validate month is not in the future
+    const requestedDate = new Date(month + '-01');
+    const currentDate = new Date();
+    if (requestedDate > currentDate) {
+      return res.status(400).json({
+        error: 'Invalid month',
+        message: 'Cannot request data for future months'
+      });
+    }
+    
+    console.log(`💰 Super Admin ${req.user.email} fetching cost tracking for ${month}`);
+    
+    // Log to audit system
+    await logAuditSecurityEvent({
+      eventType: 'analytics_access',
+      severity: 'low',
+      description: `Super Admin ${req.user.email} accessed cost tracking`,
+      userId: req.user.uid,
+      ipAddress: req.ip,
+      metadata: {
+        month,
+        userEmail: req.user.email,
+        userAgent: req.get('user-agent')
+      }
+    });
+    
+    // Get budget config
+    const budgetDoc = await db.collection('budget-config').doc('default').get();
+    const budget = budgetDoc.exists ? budgetDoc.data().monthlyBudget || 100000 : 100000;
+    const warningThreshold = budgetDoc.exists ? budgetDoc.data().warningThreshold || 0.8 : 0.8;
+    const criticalThreshold = budgetDoc.exists ? budgetDoc.data().criticalThreshold || 0.95 : 0.95;
+    
+    // Query usage for the month
+    const dataproSnapshot = await db.collection('api-usage')
+      .where('period', '==', 'monthly')
+      .where('month', '==', month)
+      .where('apiProvider', '==', 'datapro')
+      .get();
+    
+    const verifydataSnapshot = await db.collection('api-usage')
+      .where('period', '==', 'monthly')
+      .where('month', '==', month)
+      .where('apiProvider', '==', 'verifydata')
+      .get();
+    
+    let dataproCalls = 0;
+    let verifydataCalls = 0;
+    
+    dataproSnapshot.forEach(doc => {
+      // Only count successful calls for cost calculation
+      dataproCalls += doc.data().successCalls || 0;
+    });
+    
+    verifydataSnapshot.forEach(doc => {
+      // Only count successful calls for cost calculation
+      verifydataCalls += doc.data().successCalls || 0;
+    });
+    
+    const dataproCost = dataproCalls * 50;
+    const verifydataCost = verifydataCalls * 100;
+    const currentSpend = dataproCost + verifydataCost;
+    
+    // Calculate projection
+    const now = new Date();
+    const monthStart = new Date(month + '-01');
+    const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+    const daysInMonth = monthEnd.getDate();
+    const dayOfMonth = now.getMonth() === monthStart.getMonth() && now.getFullYear() === monthStart.getFullYear()
+      ? now.getDate()
+      : daysInMonth;
+    
+    const dailyAverage = dayOfMonth > 0 ? currentSpend / dayOfMonth : 0;
+    const projectedSpend = dailyAverage * daysInMonth;
+    
+    // Determine alert level
+    let alertLevel = 'none';
+    const spendRatio = currentSpend / budget;
+    
+    if (spendRatio >= criticalThreshold) {
+      alertLevel = 'critical';
+    } else if (spendRatio >= warningThreshold) {
+      alertLevel = 'warning';
+    }
+    
+    res.status(200).json({
+      currentSpend,
+      projectedSpend: parseFloat(projectedSpend.toFixed(2)),
+      budget,
+      alertLevel,
+      dailyAverage: parseFloat(dailyAverage.toFixed(2)),
+      breakdown: {
+        datapro: dataproCost,
+        verifydata: verifydataCost
+      },
+      metadata: {
+        daysElapsed: dayOfMonth,
+        daysInMonth,
+        utilizationPercent: parseFloat(((currentSpend / budget) * 100).toFixed(2)),
+        requestTime: Date.now() - startTime,
+        generatedAt: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching cost tracking:', error);
+    
+    // Log error to audit system
+    await logAuditSecurityEvent({
+      eventType: 'analytics_error',
+      severity: 'medium',
+      description: `Cost tracking fetch failed`,
+      userId: req.user?.uid || 'unknown',
+      ipAddress: req.ip,
+      metadata: {
+        error: error.message,
+        month: req.query.month,
+        userEmail: req.user?.email
+      }
+    }).catch(err => console.error('Failed to log error:', err));
+    
+    res.status(500).json({
+      error: 'Failed to fetch cost tracking',
+      message: error.message,
+      requestId: `req_${Date.now()}`
+    });
+  }
+});
+
+/**
+ * Get budget configuration
+ * 
+ * GET /api/analytics/budget-config
+ * 
+ * Response:
+ * - monthlyBudget: Monthly budget limit in Naira
+ * - warningThreshold: Warning threshold (0.0 to 1.0)
+ * - criticalThreshold: Critical threshold (0.0 to 1.0)
+ */
+app.get('/api/analytics/budget-config', requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    console.log(`⚙️ Super Admin ${req.user.email} fetching budget config`);
+    
+    const budgetDoc = await db.collection('budget-config').doc('default').get();
+    
+    if (!budgetDoc.exists) {
+      // Return default config
+      return res.status(200).json({
+        monthlyBudget: 100000,
+        warningThreshold: 0.8,
+        criticalThreshold: 0.95
+      });
+    }
+    
+    res.status(200).json(budgetDoc.data());
+    
+  } catch (error) {
+    console.error('❌ Error fetching budget config:', error);
+    res.status(500).json({
+      error: 'Failed to fetch budget config',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Update budget configuration
+ * 
+ * POST /api/analytics/budget-config
+ * 
+ * Body:
+ * - monthlyBudget: Monthly budget limit in Naira
+ * - warningThreshold: Warning threshold (0.0 to 1.0)
+ * - criticalThreshold: Critical threshold (0.0 to 1.0)
+ */
+app.post('/api/analytics/budget-config', requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const { monthlyBudget, warningThreshold, criticalThreshold } = req.body;
+    
+    console.log(`⚙️ Super Admin ${req.user.email} updating budget config`);
+    
+    // Validate input
+    if (typeof monthlyBudget !== 'number' || monthlyBudget <= 0) {
+      return res.status(400).json({
+        error: 'Invalid monthlyBudget',
+        message: 'monthlyBudget must be a positive number'
+      });
+    }
+    
+    if (typeof warningThreshold !== 'number' || warningThreshold < 0 || warningThreshold > 1) {
+      return res.status(400).json({
+        error: 'Invalid warningThreshold',
+        message: 'warningThreshold must be between 0 and 1'
+      });
+    }
+    
+    if (typeof criticalThreshold !== 'number' || criticalThreshold < 0 || criticalThreshold > 1) {
+      return res.status(400).json({
+        error: 'Invalid criticalThreshold',
+        message: 'criticalThreshold must be between 0 and 1'
+      });
+    }
+    
+    if (warningThreshold >= criticalThreshold) {
+      return res.status(400).json({
+        error: 'Invalid thresholds',
+        message: 'warningThreshold must be less than criticalThreshold'
+      });
+    }
+    
+    // Save to Firestore
+    await db.collection('budget-config').doc('default').set({
+      monthlyBudget,
+      warningThreshold,
+      criticalThreshold,
+      updatedAt: new Date(),
+      updatedBy: req.user.uid
+    }, { merge: true });
+    
+    res.status(200).json({
+      success: true,
+      message: 'Budget configuration updated successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error updating budget config:', error);
+    res.status(500).json({
+      error: 'Failed to update budget config',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Export analytics report data
+ * 
+ * GET /api/analytics/export?format=csv&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&sections=overview,brokers,costs
+ * 
+ * Query parameters:
+ * - format: Report format - 'pdf', 'excel', or 'csv'
+ * - startDate: Start date in YYYY-MM-DD format
+ * - endDate: End date in YYYY-MM-DD format
+ * - sections: Comma-separated list of sections to include
+ * 
+ * Response: JSON data for report generation (frontend handles file creation)
+ */
+app.get('/api/analytics/export', requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const { format, startDate, endDate, sections } = req.query;
+    
+    if (!format || !startDate || !endDate || !sections) {
+      return res.status(400).json({
+        error: 'Missing required parameters',
+        message: 'format, startDate, endDate, and sections are required'
+      });
+    }
+    
+    console.log(`📄 Super Admin ${req.user.email} exporting ${format} report from ${startDate} to ${endDate}`);
+    
+    const sectionList = sections.split(',');
+    const reportData = {
+      format,
+      startDate,
+      endDate,
+      generatedAt: new Date().toISOString(),
+      generatedBy: req.user.email,
+      sections: {}
+    };
+    
+    // Fetch data for each requested section
+    if (sectionList.includes('overview')) {
+      // Get overview data
+      const logsSnapshot = await db.collection('api-usage-logs')
+        .where('timestamp', '>=', new Date(startDate))
+        .where('timestamp', '<=', new Date(endDate + 'T23:59:59'))
+        .get();
+      
+      let totalCalls = 0;
+      let successfulCalls = 0;
+      let failedCalls = 0;
+      
+      logsSnapshot.forEach(doc => {
+        totalCalls++;
+        if (doc.data().success) {
+          successfulCalls++;
+        } else {
+          failedCalls++;
+        }
+      });
+      
+      reportData.sections.overview = {
+        totalCalls,
+        successfulCalls,
+        failedCalls,
+        successRate: totalCalls > 0 ? ((successfulCalls / totalCalls) * 100).toFixed(2) : 0
+      };
+    }
+    
+    if (sectionList.includes('brokers')) {
+      // Get broker usage data (reuse logic from broker-usage endpoint)
+      const logsSnapshot = await db.collection('api-usage-logs')
+        .where('timestamp', '>=', new Date(startDate))
+        .where('timestamp', '<=', new Date(endDate + 'T23:59:59'))
+        .get();
+      
+      const brokerMap = new Map();
+      
+      logsSnapshot.forEach(doc => {
+        const data = doc.data();
+        const userId = data.userId || 'unknown';
+        
+        if (!brokerMap.has(userId)) {
+          brokerMap.set(userId, {
+            userId,
+            totalCalls: 0,
+            successfulCalls: 0,
+            failedCalls: 0,
+            totalCost: 0
+          });
+        }
+        
+        const broker = brokerMap.get(userId);
+        broker.totalCalls++;
+        
+        if (data.success) {
+          broker.successfulCalls++;
+        } else {
+          broker.failedCalls++;
+        }
+        
+        if (data.apiProvider === 'datapro') {
+          broker.totalCost += 50;
+        } else if (data.apiProvider === 'verifydata') {
+          broker.totalCost += 100;
+        }
+      });
+      
+      reportData.sections.brokers = Array.from(brokerMap.values());
+    }
+    
+    if (sectionList.includes('costs')) {
+      // Get cost data
+      const logsSnapshot = await db.collection('api-usage-logs')
+        .where('timestamp', '>=', new Date(startDate))
+        .where('timestamp', '<=', new Date(endDate + 'T23:59:59'))
+        .get();
+      
+      let dataproCalls = 0;
+      let verifydataCalls = 0;
+      
+      logsSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.apiProvider === 'datapro') {
+          dataproCalls++;
+        } else if (data.apiProvider === 'verifydata') {
+          verifydataCalls++;
+        }
+      });
+      
+      reportData.sections.costs = {
+        datapro: {
+          calls: dataproCalls,
+          cost: dataproCalls * 50
+        },
+        verifydata: {
+          calls: verifydataCalls,
+          cost: verifydataCalls * 100
+        },
+        total: (dataproCalls * 50) + (verifydataCalls * 100)
+      };
+    }
+    
+    res.status(200).json(reportData);
+    
+  } catch (error) {
+    console.error('❌ Error exporting report:', error);
+    res.status(500).json({
+      error: 'Failed to export report',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Get audit logs with filtering and pagination
+ * 
+ * GET /api/analytics/audit-logs?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&provider=datapro&status=success&limit=100
+ * 
+ * Query parameters:
+ * - startDate: Start date (YYYY-MM-DD) - optional, defaults to 30 days ago
+ * - endDate: End date (YYYY-MM-DD) - optional, defaults to today
+ * - provider: API provider filter ('datapro' or 'verifydata') - optional
+ * - status: Status filter ('success', 'failure', 'pending') - optional
+ * - eventType: Event type filter ('api_call', 'verification_attempt', etc.) - optional
+ * - limit: Max results (default: 100, max: 1000)
+ * 
+ * Security: Super admin only
+ */
+app.get('/api/analytics/audit-logs', requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const {
+      startDate,
+      endDate,
+      provider,
+      status,
+      eventType,
+      limit = 100
+    } = req.query;
+    
+    // Default date range: last 30 days
+    const end = endDate ? new Date(endDate + 'T23:59:59') : new Date();
+    const start = startDate ? new Date(startDate + 'T00:00:00') : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    
+    console.log(`📋 Super Admin ${req.user.email} fetching audit logs from ${start.toISOString()} to ${end.toISOString()}`);
+    
+    // Build query
+    let query = db.collection('verification-audit-logs')
+      .where('createdAt', '>=', start)
+      .where('createdAt', '<=', end)
+      .orderBy('createdAt', 'desc')
+      .limit(Math.min(parseInt(limit), 1000));
+    
+    // Apply event type filter if specified
+    if (eventType) {
+      query = db.collection('verification-audit-logs')
+        .where('eventType', '==', eventType)
+        .where('createdAt', '>=', start)
+        .where('createdAt', '<=', end)
+        .orderBy('createdAt', 'desc')
+        .limit(Math.min(parseInt(limit), 1000));
+    }
+    
+    const snapshot = await query.get();
+    
+    // Process and filter results
+    const logs = [];
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      
+      // Convert Firestore Timestamp to ISO string for JSON serialization
+      let timestamp = new Date().toISOString();
+      if (data.createdAt) {
+        try {
+          timestamp = data.createdAt.toDate ? data.createdAt.toDate().toISOString() : new Date(data.createdAt).toISOString();
+        } catch (e) {
+          console.error('Error converting timestamp:', e);
+        }
+      }
+      
+      // Determine success from status code if not explicitly set
+      const isSuccess = data.success !== undefined 
+        ? data.success 
+        : data.statusCode >= 200 && data.statusCode < 300;
+      
+      // Skip non-verification events first (security_event, bulk_operation, encryption_operation, etc.)
+      if (data.eventType !== 'api_call' && data.eventType !== 'verification_attempt') {
+        return;
+      }
+      
+      // Handle different event types with appropriate field mappings
+      let logProvider = 'unknown';
+      let logVerificationType = 'unknown';
+      
+      if (data.eventType === 'api_call') {
+        // API calls have apiName as provider
+        logProvider = data.apiName || 'unknown';
+        logVerificationType = data.verificationType || 'unknown';
+      } else if (data.eventType === 'verification_attempt') {
+        // Verification attempts don't have provider, infer from verificationType
+        logVerificationType = data.verificationType || 'unknown';
+        // Infer provider: NIN uses Datapro, CAC uses VerifyData
+        if (logVerificationType.toLowerCase() === 'nin') {
+          logProvider = 'datapro';
+        } else if (logVerificationType.toLowerCase() === 'cac') {
+          logProvider = 'verifydata';
+        } else {
+          logProvider = 'unknown';
+        }
+      }
+      
+      // Apply additional filters (can't use multiple where clauses on different fields without composite index)
+      if (provider && logProvider.toLowerCase() !== provider.toLowerCase()) {
+        return;
+      }
+      if (status) {
+        const logStatus = data.result || (isSuccess ? 'success' : 'failure');
+        if (logStatus !== status) {
+          return;
+        }
+      }
+      
+      logs.push({
+        id: doc.id,
+        timestamp,
+        eventType: data.eventType || 'unknown',
+        userId: data.userId || 'unknown',
+        userName: data.userEmail || data.userName || 'Unknown User',
+        provider: logProvider,
+        verificationType: logVerificationType,
+        status: data.result || (isSuccess ? 'success' : 'failure'),
+        cost: data.metadata?.cost || data.cost || 0,
+        ipAddress: data.ipAddress || 'unknown',
+        deviceInfo: data.metadata?.userAgent || 'unknown',
+        errorMessage: data.errorMessage || null,
+        requestData: data.requestDataMasked || null,
+        responseData: data.responseDataMasked || null
+      });
+    });
+    
+    // Log access
+    await logAuditSecurityEvent({
+      eventType: 'analytics_access',
+      severity: 'low',
+      description: `Super Admin ${req.user.email} accessed audit logs`,
+      userId: req.user.uid,
+      ipAddress: req.ip,
+      metadata: {
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        resultCount: logs.length,
+        filters: { provider, status, eventType }
+      }
+    });
+    
+    res.json({
+      logs,
+      total: logs.length,
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      filters: { provider, status, eventType }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching audit logs:', error);
+    res.status(500).json({
+      error: 'Failed to fetch audit logs',
+      message: error.message
+    });
+  }
+});
+
+// ============= END ANALYTICS API =============
 
 // ============= END IDENTITY REMEDIATION SYSTEM =============
 

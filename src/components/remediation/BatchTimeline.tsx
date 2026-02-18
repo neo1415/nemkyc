@@ -12,6 +12,7 @@ import {
   Warning,
   Done,
 } from '@mui/icons-material';
+import { formatDateTime } from '../../utils/dateFormatter';
 
 interface TimelineEvent {
   id: string;
@@ -152,16 +153,6 @@ const BatchTimeline: React.FC<BatchTimelineProps> = ({
     }
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   if (sortedEvents.length === 0) {
     return (
       <Paper sx={{ p: 3, textAlign: 'center' }}>
@@ -235,7 +226,7 @@ const BatchTimeline: React.FC<BatchTimelineProps> = ({
                 </Typography>
               </Box>
               <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', ml: 2 }}>
-                {formatDate(event.timestamp)}
+                {formatDateTime(event.timestamp)}
               </Typography>
             </Box>
           </Paper>

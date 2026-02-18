@@ -4,10 +4,10 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Users, FileText, CheckCircle, Clock, TrendingUp, TrendingDown, RefreshCw, Activity, AlertTriangle, DollarSign } from 'lucide-react';
+import { Users, FileText, CheckCircle, Clock, TrendingUp, TrendingDown, RefreshCw, Activity, AlertTriangle, DollarSign, BarChart3 } from 'lucide-react';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useAuth } from '../../contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { 
   useAdminDashboardStats, 
   useMonthlySubmissionData,
@@ -22,6 +22,7 @@ import { rolesMatch, normalizeRole, hasAnyRole } from '../../utils/roleNormaliza
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Redirect non-admin users (users with default role or broker role)
   if (!user || rolesMatch(user.role, 'default') || rolesMatch(user.role, 'broker')) {
@@ -143,6 +144,18 @@ const AdminDashboard: React.FC = () => {
           <p className="text-gray-600 mt-1">Manage all forms and user submissions</p>
         </div>
         <div className="flex items-center gap-4">
+          {/* Analytics Dashboard Button - Super Admin Only */}
+          {isSuperAdmin && (
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => navigate('/admin/analytics')}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+            >
+              <BarChart3 className="h-4 w-4" />
+              API Analytics
+            </Button>
+          )}
           <Button 
             variant="outline" 
             size="sm" 
