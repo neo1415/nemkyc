@@ -94,13 +94,14 @@ export class CostCalculator {
 
   /**
    * Calculates projected end-of-month cost based on current spending
+   * Rounds to nearest ₦50 (Datapro cost unit) for realistic projections
    * 
-   * Formula: (currentSpending / daysElapsed) × totalDaysInMonth
+   * Formula: round((currentSpending / daysElapsed) × totalDaysInMonth / 50) × 50
    * 
    * @param currentSpending - Current spending amount
    * @param daysElapsed - Number of days elapsed in the month
    * @param totalDaysInMonth - Total days in the month
-   * @returns Projected cost for the full month
+   * @returns Projected cost for the full month, rounded to nearest ₦50
    * 
    * Requirements: 6.3, 6.7
    */
@@ -113,7 +114,11 @@ export class CostCalculator {
       return 0;
     }
     const dailyAverage = currentSpending / daysElapsed;
-    return dailyAverage * totalDaysInMonth;
+    const rawProjection = dailyAverage * totalDaysInMonth;
+    
+    // Round to nearest ₦50 since that's the minimum API cost unit
+    // This gives more realistic projections (₦50, ₦100, ₦150, etc.)
+    return Math.round(rawProjection / 50) * 50;
   }
 
   /**

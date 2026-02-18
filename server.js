@@ -10215,6 +10215,17 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
           userName = lastName;
         }
         
+        // Log warning if customer data is missing
+        if (!firstName || !lastName) {
+          console.warn(`⚠️  Missing customer name data for entry ${entryDoc.id}:`, {
+            firstName: firstName ? 'present' : 'MISSING',
+            lastName: lastName ? 'present' : 'MISSING',
+            attemptedFields: ['firstName', 'first_name', 'First Name', 'FirstName', 'lastName', 'last_name', 'Last Name', 'LastName', 'surname', 'Surname'],
+            listId: entry.listId,
+            email: entry.email || 'MISSING'
+          });
+        }
+        
         fieldsValidated.push('firstName', 'lastName', 'dateOfBirth', 'gender');
         if (bvn) fieldsValidated.push('bvn');
         
@@ -10397,6 +10408,16 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
         
         // Extract user name for audit logging
         const userName = companyName || 'anonymous';
+        
+        // Log warning if customer data is missing
+        if (!companyName) {
+          console.warn(`⚠️  Missing company name data for CAC entry ${entryDoc.id}:`, {
+            companyName: 'MISSING',
+            attemptedFields: ['companyName', 'company_name', 'Company Name', 'CompanyName'],
+            listId: entry.listId,
+            email: entry.email || 'MISSING'
+          });
+        }
         
         fieldsValidated.push('companyName', 'registrationNumber', 'registrationDate', 'businessAddress');
         
@@ -13875,13 +13896,17 @@ app.get('/api/analytics/cost-tracking', requireAuth, requireSuperAdmin, async (r
     let verifydataCalls = 0;
     
     dataproSnapshot.forEach(doc => {
-      // Only count successful calls for cost calculation
-      dataproCalls += doc.data().successCalls || 0;
+      const data = doc.data();
+      // Count both successful and failed calls for accurate cost tracking
+      // API providers charge for both successful and failed verification attempts
+      dataproCalls += (data.successCalls || 0) + (data.failedCalls || 0);
     });
     
     verifydataSnapshot.forEach(doc => {
-      // Only count successful calls for cost calculation
-      verifydataCalls += doc.data().successCalls || 0;
+      const data = doc.data();
+      // Count both successful and failed calls for accurate cost tracking
+      // API providers charge for both successful and failed verification attempts
+      verifydataCalls += (data.successCalls || 0) + (data.failedCalls || 0);
     });
     
     const dataproCost = dataproCalls * 50;
