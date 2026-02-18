@@ -14,12 +14,14 @@ import type {
   BrokerUsage,
   CostTrackingData,
   FilterState,
+  UsageDataPoint,
 } from '../../types/analytics';
 
 interface UseAnalyticsDashboardResult {
   summary: AnalyticsSummary | null;
   userAttribution: BrokerUsage[];
   costTracking: CostTrackingData | null;
+  dailyUsage: UsageDataPoint[];
   loading: boolean;
   error: Error | null;
   refetch: () => void;
@@ -35,6 +37,7 @@ export function useAnalyticsDashboard(filters: FilterState): UseAnalyticsDashboa
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [userAttribution, setUserAttribution] = useState<BrokerUsage[]>([]);
   const [costTracking, setCostTracking] = useState<CostTrackingData | null>(null);
+  const [dailyUsage, setDailyUsage] = useState<UsageDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -49,15 +52,17 @@ export function useAnalyticsDashboard(filters: FilterState): UseAnalyticsDashboa
       const month = formatMonthForAPI(filters.dateRange.end);
 
       // Fetch all dashboard data from backend
-      const [overviewData, userData, costData] = await Promise.all([
+      const [overviewData, userData, costData, usageData] = await Promise.all([
         analyticsAPI.fetchOverview(month),
         analyticsAPI.fetchUserAttribution(startDate, endDate),
         analyticsAPI.fetchCostTracking(month),
+        analyticsAPI.fetchDailyUsage(startDate, endDate),
       ]);
 
       setSummary(overviewData);
       setUserAttribution(userData);
       setCostTracking(costData);
+      setDailyUsage(usageData);
     } catch (err) {
       console.error('Error fetching analytics data:', err);
       setError(err as Error);
@@ -78,6 +83,7 @@ export function useAnalyticsDashboard(filters: FilterState): UseAnalyticsDashboa
     summary,
     userAttribution,
     costTracking,
+    dailyUsage,
     loading,
     error,
     refetch,

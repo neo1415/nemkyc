@@ -247,8 +247,8 @@ export function AuditLogsViewer({ filters, data: externalData, loading: external
                           <div className="p-4 space-y-2">
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <span className="text-sm font-medium">User ID:</span>
-                                <span className="text-sm ml-2">{log.userId}</span>
+                                <span className="text-sm font-medium">User Name:</span>
+                                <span className="text-sm ml-2">{log.userName}</span>
                               </div>
                               <div>
                                 <span className="text-sm font-medium">IP Address:</span>

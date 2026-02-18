@@ -38,6 +38,7 @@ const AdminAnalyticsDashboard: React.FC = () => {
     summary,
     userAttribution,
     costTracking,
+    dailyUsage,
     loading,
     error,
     refetch
@@ -340,7 +341,7 @@ const AdminAnalyticsDashboard: React.FC = () => {
           />
 
           {/* Usage Charts */}
-          <UsageCharts data={[]} loading={loading} />
+          <UsageCharts data={dailyUsage} loading={loading} />
 
           {/* User Attribution Table */}
           <UserAttributionTable 
