@@ -20,7 +20,7 @@ interface UserAttributionTableProps {
   onExportCSV?: () => void;
 }
 
-type SortField = 'brokerName' | 'totalCalls' | 'totalCost' | 'successRate' | 'lastActivity' | 'userRole';
+type SortField = 'userName' | 'totalCalls' | 'totalCost' | 'successRate' | 'lastActivity' | 'userRole';
 type SortDirection = 'asc' | 'desc';
 
 /**
@@ -40,7 +40,7 @@ export function UserAttributionTable({ data, loading, onExportCSV }: UserAttribu
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Broker Attribution</CardTitle>
+          <CardTitle>User Attribution</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64 bg-gray-200 animate-pulse rounded"></div>
@@ -53,11 +53,11 @@ export function UserAttributionTable({ data, loading, onExportCSV }: UserAttribu
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Broker Attribution</CardTitle>
+          <CardTitle>User Attribution</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-gray-500">
-            No broker data available
+            No user data available
           </div>
         </CardContent>
       </Card>
@@ -127,7 +127,7 @@ export function UserAttributionTable({ data, loading, onExportCSV }: UserAttribu
   return (
     <Card data-testid="user-attribution-table">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>User Attribution ({sortedData.length} brokers)</CardTitle>
+        <CardTitle>User Attribution ({sortedData.length} users)</CardTitle>
         {onExportCSV && (
           <Button onClick={onExportCSV} variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
@@ -143,9 +143,9 @@ export function UserAttributionTable({ data, loading, onExportCSV }: UserAttribu
                 <TableHead className="w-[50px]"></TableHead>
                 <TableHead
                   className="cursor-pointer hover:bg-gray-50"
-                  onClick={() => handleSort('brokerName')}
+                  onClick={() => handleSort('userName')}
                 >
-                  Name <SortIcon field="brokerName" />
+                  Name <SortIcon field="userName" />
                 </TableHead>
                 <TableHead
                   className="cursor-pointer hover:bg-gray-50"
@@ -202,7 +202,7 @@ export function UserAttributionTable({ data, loading, onExportCSV }: UserAttribu
                     </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        {broker.brokerName}
+                        {broker.userName}
                         {isAnomaly(broker) && (
                           <AlertTriangle className="h-4 w-4 text-yellow-600" />
                         )}
@@ -214,14 +214,14 @@ export function UserAttributionTable({ data, loading, onExportCSV }: UserAttribu
                     <TableCell>{broker.successRate.toFixed(1)}%</TableCell>
                     <TableCell>{formatDate(broker.lastActivity)}</TableCell>
                   </TableRow>
-                  {expandedRows.has(broker.brokerId) && (
+                  {expandedRows.has(broker.userId || broker.brokerId) && (
                     <TableRow>
                       <TableCell colSpan={7} className="bg-gray-50">
                         <div className="p-4 space-y-2">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <span className="text-sm font-medium">Email:</span>
-                              <span className="text-sm ml-2">{broker.brokerEmail}</span>
+                              <span className="text-sm ml-2">{broker.userEmail}</span>
                             </div>
                             <div>
                               <span className="text-sm font-medium">User ID:</span>
@@ -258,7 +258,7 @@ export function UserAttributionTable({ data, loading, onExportCSV }: UserAttribu
         <div className="flex items-center justify-between mt-4">
           <div className="text-sm text-gray-500">
             Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, sortedData.length)} of{' '}
-            {sortedData.length} brokers
+            {sortedData.length} users
           </div>
           <div className="flex gap-2">
             <Button
