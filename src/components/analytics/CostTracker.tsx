@@ -6,6 +6,7 @@ import { AlertTriangle, AlertCircle, Settings } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { toast } from 'sonner';
 import type { CostTrackingData, BudgetConfig } from '../../types/analytics';
 
 interface CostTrackerProps {
@@ -61,20 +62,28 @@ export function CostTracker({ data, budgetConfig, onUpdateBudget, loading }: Cos
     return 'bg-green-600';
   };
 
-  const handleSaveBudget = () => {
+  const handleSaveBudget = async () => {
     if (onUpdateBudget && budgetConfig) {
-      onUpdateBudget({
-        ...budgetConfig,
-        monthlyLimit,
-      });
-      setIsDialogOpen(false);
+      try {
+        await onUpdateBudget({
+          ...budgetConfig,
+          monthlyLimit,
+        });
+        toast.success('Budget configuration saved successfully');
+        setIsDialogOpen(false);
+      } catch (error) {
+        toast.error('Failed to save budget configuration');
+        console.error('Budget save error:', error);
+      }
     }
   };
 
   return (
     <Card data-testid="cost-tracker">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Cost Tracker (Cost: {formatCurrency(data.currentSpending)})</CardTitle>
+        <CardTitle>
+          Cost Tracker ({formatCurrency(data.currentSpending)} of {formatCurrency(data.budgetLimit)})
+        </CardTitle>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">

@@ -94,6 +94,11 @@ export function AuditLogsViewer({ filters, data: externalData, loading: external
   }
 
   const filteredData = data.filter((log) => {
+    // Filter out duplicate "System" or "Unknown User" entries (duplicate logging bug)
+    if (log.userName === 'System' || log.userName === 'Unknown User') {
+      return false;
+    }
+    
     const matchesSearch = searchTerm === '' || 
       log.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.userId.toLowerCase().includes(searchTerm.toLowerCase());
@@ -249,6 +254,10 @@ export function AuditLogsViewer({ filters, data: externalData, loading: external
                               <div>
                                 <span className="text-sm font-medium">User Name:</span>
                                 <span className="text-sm ml-2">{log.userName}</span>
+                              </div>
+                              <div>
+                                <span className="text-sm font-medium">User Email:</span>
+                                <span className="text-sm ml-2">{log.userEmail || 'N/A'}</span>
                               </div>
                               <div>
                                 <span className="text-sm font-medium">IP Address:</span>
