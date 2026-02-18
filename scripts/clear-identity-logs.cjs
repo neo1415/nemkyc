@@ -5,7 +5,7 @@
  * Use this to start fresh with clean analytics data.
  * 
  * Usage:
- *   node scripts/clear-identity-logs.js [options]
+ *   node scripts/clear-identity-logs.cjs [options]
  * 
  * Options:
  *   --analytics     Clear API usage tracking and audit logs (RECOMMENDED)
@@ -13,8 +13,23 @@
  *   --all           Clear everything (analytics + activity logs)
  */
 
-require('dotenv').config();
 const admin = require('firebase-admin');
+const fs = require('fs');
+const path = require('path');
+
+// Load .env.local file manually
+const envPath = path.join(__dirname, '..', '.env.local');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  envContent.split('\n').forEach(line => {
+    const match = line.match(/^([^=:#]+)=(.*)$/);
+    if (match) {
+      const key = match[1].trim();
+      const value = match[2].trim();
+      process.env[key] = value;
+    }
+  });
+}
 
 // Initialize Firebase Admin
 const config = {
@@ -73,10 +88,30 @@ async function batchDelete(collectionName, query = null) {
 }
 
 /**
+ * Clear API usage tracking data
+ */
+async function clearAPIUsage() {
+  console.log('\n💰 Clearing API usage tracking data...');
+  const count = await batchDelete('api-usage');
+  console.log(`✅ Deleted ${count} API usage records`);
+  return count;
+}
+
+/**
+ * Clear audit logs
+ */
+async function clearAuditLogs() {
+  console.log('\n📋 Clearing audit logs...');
+  const count = await batchDelete('audit-logs');
+  console.log(`✅ Deleted ${count} audit log entries`);
+  return count;
+}
+
+/**
  * Clear activity logs
  */
 async function clearActivityLogs() {
-  console.log('\n📝 Clearing activity logs...');
+  console.log('\n📝 Clearing identity activity logs...');
   const count = await batchDelete('identity-activity-logs');
   console.log(`✅ Deleted ${count} activity log entries`);
   return count;
@@ -190,40 +225,39 @@ async function clearAllEntries() {
  * Main execution
  */
 async function main() {
-  console.log('🧹 Identity Collection Data Cleanup Script');
+  console.log('🧹 Analytics and Logging Data Cleanup Script');
   console.log('==========================================\n');
   
-  if (!logsOnly && !clearAll && !testOnly) {
+  if (!analyticsOnly && !activityOnly && !clearAll) {
     console.log('❌ Error: Please specify an option:');
-    console.log('  --logs-only   Clear only activity logs');
-    console.log('  --all         Clear everything (logs, lists, entries)');
-    console.log('  --test-only   Clear only test data');
-    console.log('\nExample: node scripts/clear-identity-logs.js --logs-only');
+    console.log('  --analytics   Clear API usage tracking and audit logs (RECOMMENDED)');
+    console.log('  --activity    Clear identity collection activity logs only');
+    console.log('  --all         Clear everything (analytics + activity logs)');
+    console.log('\nExample: node scripts/clear-identity-logs.js --analytics');
     process.exit(1);
   }
   
   try {
     let totalDeleted = 0;
     
-    if (logsOnly) {
-      console.log('Mode: Clear activity logs only\n');
+    if (analyticsOnly) {
+      console.log('Mode: Clear analytics data (API usage + audit logs)\n');
+      totalDeleted += await clearAPIUsage();
+      totalDeleted += await clearAuditLogs();
+    } else if (activityOnly) {
+      console.log('Mode: Clear identity activity logs only\n');
       totalDeleted += await clearActivityLogs();
-    } else if (testOnly) {
-      console.log('Mode: Clear test data only\n');
-      totalDeleted += await clearActivityLogs();
-      totalDeleted += await clearTestEntries();
-      totalDeleted += await clearTestLists();
     } else if (clearAll) {
-      console.log('⚠️  WARNING: This will delete ALL identity collection data!');
+      console.log('⚠️  WARNING: This will delete ALL analytics and activity logs!');
       console.log('Mode: Clear everything\n');
       
       // Wait 3 seconds to allow cancellation
       console.log('Starting in 3 seconds... (Press Ctrl+C to cancel)');
       await new Promise(resolve => setTimeout(resolve, 3000));
       
+      totalDeleted += await clearAPIUsage();
+      totalDeleted += await clearAuditLogs();
       totalDeleted += await clearActivityLogs();
-      totalDeleted += await clearAllEntries();
-      totalDeleted += await clearAllLists();
     }
     
     console.log('\n==========================================');
