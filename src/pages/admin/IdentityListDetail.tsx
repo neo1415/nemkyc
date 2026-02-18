@@ -491,11 +491,7 @@ export default function IdentityListDetail({
       width: 150,
       valueGetter: (value) => {
         if (!value) return '-';
-        // Handle both Date objects and Firestore timestamps
-        const date = typeof value === 'object' && value !== null && 'toDate' in value 
-          ? (value as { toDate: () => Date }).toDate() 
-          : new Date(value as string | number | Date);
-        return formatDate(date);
+        return formatDate(value);
       },
     });
 

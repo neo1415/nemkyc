@@ -85,10 +85,21 @@ function normalizeDate(value) {
     date = value;
   }
   // Handle Firestore Timestamp objects
-  else if (value && typeof value === 'object' && typeof value.toDate === 'function') {
-    try {
-      date = value.toDate();
-    } catch (error) {
+  else if (value && typeof value === 'object') {
+    // Check if it's an empty object (Firestore returns {} for null/undefined dates)
+    if (Object.keys(value).length === 0) {
+      return null;
+    }
+    
+    // Check if it has toDate method (Firestore Timestamp)
+    if (typeof value.toDate === 'function') {
+      try {
+        date = value.toDate();
+      } catch (error) {
+        return null;
+      }
+    } else {
+      // Object without toDate method - not a valid date
       return null;
     }
   }

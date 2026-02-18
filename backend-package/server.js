@@ -11091,13 +11091,13 @@ async function executeBulkVerification(listId, entriesSnapshot, batchSize, userI
       );
       
       // Update job progress
-      const currentJob = bulkVerificationJobs.get(jobId);
-      if (currentJob) {
+      let jobToUpdate = bulkVerificationJobs.get(jobId);
+      if (jobToUpdate) {
         batchResults.forEach(result => {
-          currentJob.processed++;
-          if (result.status === 'verified') currentJob.verified++;
-          else if (result.status === 'failed') currentJob.failed++;
-          else if (result.status === 'skipped') currentJob.skipped++;
+          jobToUpdate.processed++;
+          if (result.status === 'verified') jobToUpdate.verified++;
+          else if (result.status === 'failed') jobToUpdate.failed++;
+          else if (result.status === 'skipped') jobToUpdate.skipped++;
           currentJob.details.push(result);
         });
         

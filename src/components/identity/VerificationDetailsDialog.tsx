@@ -37,6 +37,7 @@ import {
   Replay as RetryIcon,
 } from '@mui/icons-material';
 import type { IdentityEntry } from '../../types/remediation';
+import { formatDateTime } from '../../utils/dateFormatter';
 
 interface VerificationDetailsDialogProps {
   open: boolean;
@@ -56,13 +57,6 @@ export const VerificationDetailsDialog: React.FC<VerificationDetailsDialogProps>
   const isVerified = entry.status === 'verified';
   const isFailed = entry.status === 'verification_failed';
   const details = entry.verificationDetails;
-
-  // Format date for display
-  const formatDate = (date: Date | string | undefined): string => {
-    if (!date) return 'N/A';
-    const d = typeof date === 'string' ? new Date(date) : date;
-    return d.toLocaleString();
-  };
 
   // Get status color
   const getStatusColor = () => {
@@ -239,7 +233,7 @@ export const VerificationDetailsDialog: React.FC<VerificationDetailsDialogProps>
               <Box>
                 <Typography variant="caption" color="textSecondary">Link Sent At</Typography>
                 <Typography variant="body2" fontWeight="medium">
-                  {formatDate(entry.linkSentAt)}
+                  {formatDateTime(entry.linkSentAt)}
                 </Typography>
               </Box>
             )}
@@ -247,7 +241,7 @@ export const VerificationDetailsDialog: React.FC<VerificationDetailsDialogProps>
               <Box>
                 <Typography variant="caption" color="textSecondary">Last Attempt</Typography>
                 <Typography variant="body2" fontWeight="medium">
-                  {formatDate(entry.lastAttemptAt)}
+                  {formatDateTime(entry.lastAttemptAt)}
                 </Typography>
               </Box>
             )}
@@ -255,7 +249,7 @@ export const VerificationDetailsDialog: React.FC<VerificationDetailsDialogProps>
               <Box>
                 <Typography variant="caption" color="textSecondary">Verified At</Typography>
                 <Typography variant="body2" fontWeight="medium" color="success.main">
-                  {formatDate(entry.verifiedAt)}
+                  {formatDateTime(entry.verifiedAt)}
                 </Typography>
               </Box>
             )}

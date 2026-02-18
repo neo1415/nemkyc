@@ -1,0 +1,188 @@
+/**
+ * Mobile-Responsive Styles for Analytics Dashboard
+ * Optimized for mobile, tablet, and desktop viewports
+ */
+
+/* Mobile-first approach: Base styles for mobile */
+
+/* Dashboard Container */
+.analytics-dashboard {
+  padding: 1rem;
+}
+
+/* Metrics Cards - Stack on mobile */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+/* Charts - Full width on mobile */
+.chart-container {
+  width: 100%;
+  height: 300px;
+  overflow-x: auto;
+}
+
+/* Tables - Horizontal scroll on mobile */
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-container table {
+  min-width: 600px;
+}
+
+/* Filter Controls - Stack on mobile */
+.filter-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Buttons - Full width on mobile */
+.mobile-button {
+  width: 100%;
+}
+
+/* Collapsible Sections for Mobile */
+.collapsible-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.collapsible-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  cursor: pointer;
+  background-color: #f9fafb;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.collapsible-content {
+  padding: 1rem;
+}
+
+.collapsible-content.collapsed {
+  display: none;
+}
+
+/* Touch-friendly controls */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Tablet styles (768px and up) */
+@media (min-width: 768px) {
+  .analytics-dashboard {
+    padding: 1.5rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  .chart-container {
+    height: 350px;
+  }
+
+  .filter-controls {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .mobile-button {
+    width: auto;
+  }
+
+  .table-container table {
+    min-width: 800px;
+  }
+}
+
+/* Desktop styles (1024px and up) */
+@media (min-width: 1024px) {
+  .analytics-dashboard {
+    padding: 2rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+
+  .chart-container {
+    height: 400px;
+  }
+
+  .table-container table {
+    min-width: 100%;
+  }
+
+  /* Two-column layout for charts */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Large desktop styles (1280px and up) */
+@media (min-width: 1280px) {
+  .analytics-dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .chart-container {
+    height: 450px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .analytics-dashboard {
+    padding: 0;
+  }
+
+  .filter-controls,
+  .mobile-button,
+  button {
+    display: none;
+  }
+
+  .chart-container {
+    page-break-inside: avoid;
+  }
+
+  .collapsible-content {
+    display: block !important;
+  }
+}
+
+/* Accessibility - Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .collapsible-header {
+    background-color: #1f2937;
+    border-color: #374151;
+  }
+
+  .collapsible-section {
+    border-color: #374151;
+  }
+}

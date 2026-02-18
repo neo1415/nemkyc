@@ -218,6 +218,15 @@ async function verifyNIN(nin) {
 
         if (!parseResult.success) {
           console.error(`[DataproClient] ${parseResult.error}`);
+          // Empty response usually means NIN not found
+          if (parseResult.errorCode === 'EMPTY_RESPONSE') {
+            return {
+              success: false,
+              error: 'NIN not found in NIMC database. Please verify the NIN and try again.',
+              errorCode: 'NIN_NOT_FOUND',
+              details: parseResult.details
+            };
+          }
           return {
             success: false,
             error: 'Invalid response from verification service',
@@ -255,19 +264,26 @@ async function verifyNIN(nin) {
 
         // Success - extract relevant fields
         console.log(`[DataproClient] Verification successful for NIN: ${maskNIN(nin)}`);
+        
+        // Helper to convert string "null" to actual null
+        const cleanValue = (val) => {
+          if (val === null || val === undefined || val === 'null' || val === '') return null;
+          return val;
+        };
+        
         return {
           success: true,
           data: {
-            firstName: parsedData.ResponseData.FirstName || null,
-            middleName: parsedData.ResponseData.MiddleName || null,
-            lastName: parsedData.ResponseData.LastName || null,
-            gender: parsedData.ResponseData.Gender || null,
-            dateOfBirth: parsedData.ResponseData.DateOfBirth || parsedData.ResponseData.birthdate || null,
-            phoneNumber: parsedData.ResponseData.PhoneNumber || null,
-            birthdate: parsedData.ResponseData.birthdate || null,
-            birthlga: parsedData.ResponseData.birthlga || null,
-            birthstate: parsedData.ResponseData.birthstate || null,
-            trackingId: parsedData.ResponseData.trackingId || null
+            firstName: cleanValue(parsedData.ResponseData.FirstName || parsedData.ResponseData.firstname),
+            middleName: cleanValue(parsedData.ResponseData.MiddleName || parsedData.ResponseData.middlename),
+            lastName: cleanValue(parsedData.ResponseData.LastName || parsedData.ResponseData.lastname || parsedData.ResponseData.surname),
+            gender: cleanValue(parsedData.ResponseData.Gender || parsedData.ResponseData.gender),
+            dateOfBirth: cleanValue(parsedData.ResponseData.DateOfBirth || parsedData.ResponseData.birthdate),
+            phoneNumber: cleanValue(parsedData.ResponseData.PhoneNumber || parsedData.ResponseData.telephoneno),
+            birthdate: cleanValue(parsedData.ResponseData.birthdate),
+            birthlga: cleanValue(parsedData.ResponseData.birthlga),
+            birthstate: cleanValue(parsedData.ResponseData.birthstate),
+            trackingId: cleanValue(parsedData.ResponseData.trackingId)
           },
           responseInfo: {
             responseCode: parsedData.ResponseInfo.ResponseCode,
@@ -407,6 +423,13 @@ function parseDate(dateStr) {
   const ddmmyyyyMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (ddmmyyyyMatch) {
     const [, day, month, year] = ddmmyyyyMatch;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  
+  // Try DD-MM-YYYY format (e.g., "14-12-1998")
+  const ddmmyyyyDashMatch = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (ddmmyyyyDashMatch) {
+    const [, day, month, year] = ddmmyyyyDashMatch;
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
   

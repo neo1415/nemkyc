@@ -31,6 +31,7 @@ import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import type { ParsedUploadRow, IdentityType } from '@/types/remediation';
+import { formatDate } from '../../utils/dateFormatter';
 
 interface BatchUploadDialogProps {
   open: boolean;
@@ -248,7 +249,7 @@ const BatchUploadDialog: React.FC<BatchUploadDialogProps> = ({
       
       // Auto-generate batch name from file name
       const baseName = uploadedFile.name.replace(/\.[^/.]+$/, '');
-      setBatchName(`${baseName} - ${new Date().toLocaleDateString()}`);
+      setBatchName(`${baseName} - ${formatDate(new Date())}`);
       
       setActiveStep(1);
     } catch (err) {
