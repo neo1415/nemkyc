@@ -13,6 +13,95 @@
  */
 
 /**
+ * Calculate cost for an API call
+ * 
+ * @param {string} apiProvider - API provider ('datapro' or 'verifydata')
+ * @param {boolean} success - Whether the call succeeded
+ * @returns {number} Cost in Naira (₦50 for Datapro success, ₦100 for VerifyData success, ₦0 for failures)
+ */
+function calculateCost(apiProvider, success) {
+  if (!success) {
+    return 0;
+  }
+  
+  if (apiProvider === 'datapro') {
+    return 50;
+  } else if (apiProvider === 'verifydata') {
+    return 100;
+  }
+  
+  return 0;
+}
+
+/**
+ * Look up broker information from listId
+ * 
+ * @param {Object} db - Firestore database instance
+ * @param {string} listId - Identity list ID
+ * @returns {Promise<{userId: string, userName: string, userEmail: string}>} Broker information
+ */
+async function lookupBrokerInfo(db, listId) {
+  try {
+    if (!listId) {
+      return {
+        userId: 'unknown',
+        userName: 'Unknown User',
+        userEmail: 'unknown'
+      };
+    }
+    
+    // Query identity-lists collection to get the broker who created the list
+    const listDoc = await db.collection('identity-lists').doc(listId).get();
+    
+    if (!listDoc.exists) {
+      return {
+        userId: 'unknown',
+        userName: 'Unknown User',
+        userEmail: 'unknown'
+      };
+    }
+    
+    const listData = listDoc.data();
+    const createdBy = listData.createdBy;
+    
+    if (!createdBy) {
+      return {
+        userId: 'unknown',
+        userName: 'Unknown User',
+        userEmail: 'unknown'
+      };
+    }
+    
+    // Query userroles collection to get broker name and email
+    const userDoc = await db.collection('userroles').doc(createdBy).get();
+    
+    if (!userDoc.exists) {
+      return {
+        userId: createdBy,
+        userName: 'Unknown User',
+        userEmail: 'unknown'
+      };
+    }
+    
+    const userData = userDoc.data();
+    
+    return {
+      userId: createdBy,
+      userName: userData.name || userData.displayName || 'Unknown User',
+      userEmail: userData.email || 'unknown'
+    };
+    
+  } catch (error) {
+    console.error('[APIUsageTracker] Error looking up broker info:', error);
+    return {
+      userId: 'unknown',
+      userName: 'Unknown User',
+      userEmail: 'unknown'
+    };
+  }
+}
+
+/**
  * Track a Datapro API call
  * 
  * @param {Object} db - Firestore database instance
@@ -30,6 +119,12 @@ async function trackDataproAPICall(db, callData) {
     const now = new Date();
     const dateKey = now.toISOString().split('T')[0]; // YYYY-MM-DD
     const monthKey = dateKey.substring(0, 7); // YYYY-MM
+    
+    // Calculate cost for this API call
+    const cost = calculateCost('datapro', callData.success);
+    
+    // Look up broker information if listId is provided
+    const brokerInfo = await lookupBrokerInfo(db, callData.listId);
     
     // Create usage document ID based on date
     const dailyDocId = `datapro-${dateKey}`;
@@ -93,16 +188,19 @@ async function trackDataproAPICall(db, callData) {
       });
     }
     
-    // Store individual call log for audit
+    // Store individual call log for audit with complete data
     await db.collection('api-usage-logs').add({
       apiProvider: 'datapro',
       apiType: 'nin_verification',
       ninMasked: callData.nin,
       success: callData.success,
       errorCode: callData.errorCode || null,
-      userId: callData.userId || null,
+      userId: brokerInfo.userId,
+      userName: brokerInfo.userName,
+      userEmail: brokerInfo.userEmail,
       listId: callData.listId || null,
       entryId: callData.entryId || null,
+      cost: cost,
       timestamp: now,
       date: dateKey,
       month: monthKey
@@ -134,6 +232,12 @@ async function trackVerifydataAPICall(db, callData) {
     const now = new Date();
     const dateKey = now.toISOString().split('T')[0]; // YYYY-MM-DD
     const monthKey = dateKey.substring(0, 7); // YYYY-MM
+    
+    // Calculate cost for this API call
+    const cost = calculateCost('verifydata', callData.success);
+    
+    // Look up broker information if listId is provided
+    const brokerInfo = await lookupBrokerInfo(db, callData.listId);
     
     // Create usage document ID based on date
     const dailyDocId = `verifydata-${dateKey}`;
@@ -197,16 +301,19 @@ async function trackVerifydataAPICall(db, callData) {
       });
     }
     
-    // Store individual call log for audit
+    // Store individual call log for audit with complete data
     await db.collection('api-usage-logs').add({
       apiProvider: 'verifydata',
       apiType: 'cac_verification',
       rcNumberMasked: callData.rcNumber,
       success: callData.success,
       errorCode: callData.errorCode || null,
-      userId: callData.userId || null,
+      userId: brokerInfo.userId,
+      userName: brokerInfo.userName,
+      userEmail: brokerInfo.userEmail,
       listId: callData.listId || null,
       entryId: callData.entryId || null,
+      cost: cost,
       timestamp: now,
       date: dateKey,
       month: monthKey
@@ -490,5 +597,7 @@ module.exports = {
   trackVerifydataAPICall,
   getAPIUsageStats,
   getMonthlyUsageSummary,
-  checkUsageLimits
+  checkUsageLimits,
+  calculateCost,
+  lookupBrokerInfo
 };

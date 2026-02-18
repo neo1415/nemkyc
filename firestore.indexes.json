@@ -380,6 +380,39 @@
       ]
     },
     {
+      "collectionGroup": "api-usage-logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "apiProvider", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "api-usage-logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "date", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "api-usage-logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "apiProvider", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "api-usage-logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "apiProvider", "order": "ASCENDING" },
+        { "fieldPath": "success", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "verification-audit-logs",
       "queryScope": "COLLECTION",
       "fields": [
@@ -410,6 +443,31 @@
       "fields": [
         { "fieldPath": "provider", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "verification-audit-logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "apiProvider", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "verification-audit-logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "result", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "verification-audit-logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "apiProvider", "order": "ASCENDING" },
+        { "fieldPath": "result", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
   ],

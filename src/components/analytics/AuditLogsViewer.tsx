@@ -11,12 +11,15 @@ import { analyticsAPI } from '../../services/analytics/AnalyticsAPI';
 import { formatDateForAPI } from '../../services/analytics/filterUtils';
 
 interface AuditLogsViewerProps {
-  filters: FilterState;
+  filters?: FilterState;
+  data?: AuditLogEntry[];
+  loading?: boolean;
 }
 
-export function AuditLogsViewer({ filters }: AuditLogsViewerProps) {
-  const [data, setData] = useState<AuditLogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+
+export function AuditLogsViewer({ filters, data: externalData, loading: externalLoading }: AuditLogsViewerProps) {
+  const [data, setData] = useState<AuditLogEntry[]>(externalData || []);
+  const [loading, setLoading] = useState(externalLoading ?? (externalData ? false : true));
   const [searchTerm, setSearchTerm] = useState('');
   const [providerFilter, setProviderFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -27,6 +30,19 @@ export function AuditLogsViewer({ filters }: AuditLogsViewerProps) {
 
   // Fetch audit logs
   useEffect(() => {
+    // If external data is provided, use it and don't fetch
+    if (externalData !== undefined) {
+      setData(externalData);
+      setLoading(externalLoading ?? false);
+      return;
+    }
+    
+    // Only fetch if filters are provided
+    if (!filters?.dateRange) {
+      setLoading(false);
+      return;
+    }
+    
     const fetchAuditLogs = async () => {
       try {
         setLoading(true);
@@ -49,7 +65,7 @@ export function AuditLogsViewer({ filters }: AuditLogsViewerProps) {
     };
 
     fetchAuditLogs();
-  }, [filters.dateRange]);
+  }, [filters?.dateRange, externalData, externalLoading]);
 
   if (loading) {
     return (

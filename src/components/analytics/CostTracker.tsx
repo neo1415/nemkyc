@@ -72,9 +72,9 @@ export function CostTracker({ data, budgetConfig, onUpdateBudget, loading }: Cos
   };
 
   return (
-    <Card>
+    <Card data-testid="cost-tracker">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Cost Tracker</CardTitle>
+        <CardTitle>Cost Tracker (Cost: {formatCurrency(data.currentSpending)})</CardTitle>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">

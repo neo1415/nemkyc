@@ -247,13 +247,21 @@ const fetchForms = async () => {
       } else if (typeof date === 'number') {
         // Handle timestamp
         dateObj = new Date(date);
+      } else if (typeof date === 'object' && date && date.seconds) {
+        // Firestore Timestamp object
+        dateObj = new Date(date.seconds * 1000);
+      } else if (typeof date === 'object' && date && Object.keys(date).length === 0) {
+        // Empty object from Firestore
+        return 'N/A';
+      } else if (!date) {
+        return 'N/A';
       } else {
-        return '';
+        return 'N/A';
       }
 
       // Check if date is valid
       if (isNaN(dateObj.getTime())) {
-        return '';
+        return 'N/A';
       }
 
       const day = String(dateObj.getDate()).padStart(2, '0');
@@ -263,7 +271,7 @@ const fetchForms = async () => {
       return `${day}/${month}/${year}`;
     } catch (error) {
       console.error('Error formatting date:', error);
-      return '';
+      return 'N/A';
     }
   };
 

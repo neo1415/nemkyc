@@ -40,7 +40,7 @@ export function UserAttributionTable({ data, loading, onExportCSV }: UserAttribu
     return (
       <Card>
         <CardHeader>
-          <CardTitle>User Attribution</CardTitle>
+          <CardTitle>Broker Attribution</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64 bg-gray-200 animate-pulse rounded"></div>
@@ -53,11 +53,11 @@ export function UserAttributionTable({ data, loading, onExportCSV }: UserAttribu
     return (
       <Card>
         <CardHeader>
-          <CardTitle>User Attribution</CardTitle>
+          <CardTitle>Broker Attribution</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-gray-500">
-            No user data available
+            No broker data available
           </div>
         </CardContent>
       </Card>
@@ -125,9 +125,9 @@ export function UserAttributionTable({ data, loading, onExportCSV }: UserAttribu
   };
 
   return (
-    <Card>
+    <Card data-testid="user-attribution-table">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>User Attribution</CardTitle>
+        <CardTitle>User Attribution ({sortedData.length} brokers)</CardTitle>
         {onExportCSV && (
           <Button onClick={onExportCSV} variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
@@ -258,7 +258,7 @@ export function UserAttributionTable({ data, loading, onExportCSV }: UserAttribu
         <div className="flex items-center justify-between mt-4">
           <div className="text-sm text-gray-500">
             Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, sortedData.length)} of{' '}
-            {sortedData.length} users
+            {sortedData.length} brokers
           </div>
           <div className="flex gap-2">
             <Button
