@@ -8953,7 +8953,7 @@ app.get('/api/identity/lists', requireAuth, requireBrokerOrAdmin, async (req, re
         failedCount: data.failedCount || 0,
         linkSentCount: data.linkSentCount || 0,
         progress: total > 0 ? Math.round((verified / total) * 100) : 0,
-        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        createdAt: data.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString() : data.createdAt,
         originalFileName: data.originalFileName,
         createdBy: data.createdBy // Include for debugging
       };
@@ -9017,8 +9017,8 @@ app.get('/api/identity/lists/:listId', requireAuth, requireBrokerOrAdmin, async 
       linkSentCount: listData.linkSentCount || 0,
       progress: total > 0 ? Math.round((verified / total) * 100) : 0,
       createdBy: listData.createdBy,
-      createdAt: listData.createdAt?.toDate?.() || listData.createdAt,
-      updatedAt: listData.updatedAt?.toDate?.() || listData.updatedAt,
+      createdAt: listData.createdAt?.toDate?.() ? listData.createdAt.toDate().toISOString() : listData.createdAt,
+      updatedAt: listData.updatedAt?.toDate?.() ? listData.updatedAt.toDate().toISOString() : listData.updatedAt,
       originalFileName: listData.originalFileName
     };
     
@@ -9097,18 +9097,18 @@ app.get('/api/identity/lists/:listId/entries', requireAuth, requireBrokerOrAdmin
         verificationType: data.verificationType,
         status: data.status,
         token: data.token,
-        tokenExpiresAt: data.tokenExpiresAt?.toDate?.() || data.tokenExpiresAt,
+        tokenExpiresAt: data.tokenExpiresAt?.toDate?.() ? data.tokenExpiresAt.toDate().toISOString() : data.tokenExpiresAt,
         nin: data.nin,
         cac: data.cac,
         cacCompanyName: data.cacCompanyName,
-        verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
-        linkSentAt: data.linkSentAt?.toDate?.() || data.linkSentAt,
+        verifiedAt: data.verifiedAt?.toDate?.() ? data.verifiedAt.toDate().toISOString() : data.verifiedAt,
+        linkSentAt: data.linkSentAt?.toDate?.() ? data.linkSentAt.toDate().toISOString() : data.linkSentAt,
         resendCount: data.resendCount || 0,
         verificationAttempts: data.verificationAttempts || 0,
-        lastAttemptAt: data.lastAttemptAt?.toDate?.() || data.lastAttemptAt,
+        lastAttemptAt: data.lastAttemptAt?.toDate?.() ? data.lastAttemptAt.toDate().toISOString() : data.lastAttemptAt,
         verificationDetails: data.verificationDetails || null,
-        createdAt: data.createdAt?.toDate?.() || data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+        createdAt: data.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString() : data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() ? data.updatedAt.toDate().toISOString() : data.updatedAt
       };
     });
     
@@ -11230,10 +11230,22 @@ app.get('/api/identity/lists/:listId/activity', requireAuth, requireBrokerOrAdmi
     
     let logs = snapshot.docs.map(doc => {
       const data = doc.data();
+      // Handle timestamp conversion - check if it exists and has toDate method
+      let timestamp = null;
+      if (data.timestamp) {
+        if (typeof data.timestamp.toDate === 'function') {
+          timestamp = data.timestamp.toDate().toISOString();
+        } else if (data.timestamp instanceof Date) {
+          timestamp = data.timestamp.toISOString();
+        } else if (typeof data.timestamp === 'string' || typeof data.timestamp === 'number') {
+          timestamp = new Date(data.timestamp).toISOString();
+        }
+      }
+      
       return {
         id: doc.id,
         ...data,
-        timestamp: data.timestamp?.toDate?.() || data.timestamp
+        timestamp: timestamp
       };
     });
     
