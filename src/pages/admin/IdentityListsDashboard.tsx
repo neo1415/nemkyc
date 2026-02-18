@@ -386,7 +386,11 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
                   </Box>
 
                   <Typography variant="caption" color="textSecondary">
-                    Uploaded {formatDate(list.createdAt)} • {list.totalEntries} entries
+                    Uploaded {formatDate(
+                      typeof list.createdAt === 'object' && list.createdAt !== null && 'toDate' in list.createdAt 
+                        ? (list.createdAt as { toDate: () => Date }).toDate() 
+                        : list.createdAt
+                    )} • {list.totalEntries} entries
                   </Typography>
                 </CardContent>
               </Card>
