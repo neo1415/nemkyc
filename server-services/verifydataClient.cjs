@@ -194,6 +194,13 @@ async function verifyCAC(rcNumber) {
       const { statusCode, data } = response;
 
       console.log(`[VerifydataClient] Response status: ${statusCode} for RC: ${maskRCNumber(rcNumber)}`);
+      
+      // Log raw response payload for debugging
+      console.log(`[VerifydataClient] ===== RAW API RESPONSE START =====`);
+      console.log(`[VerifydataClient] Status Code: ${statusCode}`);
+      console.log(`[VerifydataClient] Response Length: ${data ? data.length : 0} bytes`);
+      console.log(`[VerifydataClient] Raw Payload:`, data);
+      console.log(`[VerifydataClient] ===== RAW API RESPONSE END =====`);
 
       // Handle different status codes
       if (statusCode === 200) {
@@ -207,6 +214,15 @@ async function verifyCAC(rcNumber) {
 
         if (!parseResult.success) {
           console.error(`[VerifydataClient] ${parseResult.error}`);
+          // Empty response usually means RC not found
+          if (parseResult.errorCode === 'EMPTY_RESPONSE') {
+            return {
+              success: false,
+              error: 'RC number not found in CAC database. Please verify the RC number and try again.',
+              errorCode: 'CAC_NOT_FOUND',
+              details: parseResult.details
+            };
+          }
           return {
             success: false,
             error: 'Invalid response from verification service',
@@ -216,19 +232,41 @@ async function verifyCAC(rcNumber) {
         }
 
         const parsedData = parseResult.data;
+        
+        // Log parsed data structure for debugging
+        console.log(`[VerifydataClient] ===== PARSED DATA STRUCTURE START =====`);
+        console.log(`[VerifydataClient] Parsed Data:`, JSON.stringify(parsedData, null, 2));
+        console.log(`[VerifydataClient] Success Field:`, parsedData.success);
+        console.log(`[VerifydataClient] Data Field:`, parsedData.data ? JSON.stringify(parsedData.data, null, 2) : 'null');
+        console.log(`[VerifydataClient] ===== PARSED DATA STRUCTURE END =====`);
 
         // Check if success is true
         if (parsedData.success === true && parsedData.data) {
           // Success - extract relevant fields
           console.log(`[VerifydataClient] Verification successful for RC: ${maskRCNumber(rcNumber)}`);
+          
+          // Log all available fields in the data object
+          console.log(`[VerifydataClient] ===== AVAILABLE FIELDS IN API RESPONSE =====`);
+          console.log(`[VerifydataClient] All fields:`, Object.keys(parsedData.data));
+          for (const [key, value] of Object.entries(parsedData.data)) {
+            console.log(`[VerifydataClient]   ${key}: ${JSON.stringify(value)}`);
+          }
+          console.log(`[VerifydataClient] ===== END AVAILABLE FIELDS =====`);
+          
+          // Helper to convert string "null" to actual null
+          const cleanValue = (val) => {
+            if (val === null || val === undefined || val === 'null' || val === '') return null;
+            return val;
+          };
+          
           return {
             success: true,
             data: {
-              name: parsedData.data.name || null,
-              registrationNumber: parsedData.data.registrationNumber || null,
-              companyStatus: parsedData.data.companyStatus || null,
-              registrationDate: parsedData.data.registrationDate || null,
-              typeOfEntity: parsedData.data.typeOfEntity || null
+              name: cleanValue(parsedData.data.name),
+              registrationNumber: cleanValue(parsedData.data.registrationNumber),
+              companyStatus: cleanValue(parsedData.data.companyStatus),
+              registrationDate: cleanValue(parsedData.data.registrationDate),
+              typeOfEntity: cleanValue(parsedData.data.typeOfEntity)
             },
             responseInfo: {
               statusCode: parsedData.statusCode,
@@ -426,7 +464,7 @@ function normalizeRCNumber(rcNumber) {
 
 /**
  * Parse date from various formats to a comparable format
- * Supports: DD/MM/YYYY, DD-MMM-YYYY, YYYY-MM-DD
+ * Supports: DD/MM/YYYY, DD-MM-YYYY, DD-MMM-YYYY, YYYY-MM-DD
  * Reused from dataproClient for consistency
  * @param {string} dateStr - Date string to parse
  * @returns {string|null} Normalized date in YYYY-MM-DD format or null if invalid
@@ -440,6 +478,13 @@ function parseDate(dateStr) {
   const ddmmyyyyMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (ddmmyyyyMatch) {
     const [, day, month, year] = ddmmyyyyMatch;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  
+  // Try DD-MM-YYYY format (e.g., "14-12-1998")
+  const ddmmyyyyDashMatch = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (ddmmyyyyDashMatch) {
+    const [, day, month, year] = ddmmyyyyDashMatch;
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
   
@@ -495,6 +540,10 @@ function parseDate(dateStr) {
  * }
  */
 function matchCACFields(apiData, excelData) {
+  console.log(`[VerifydataClient] ===== FIELD MATCHING DEBUG START =====`);
+  console.log(`[VerifydataClient] API Data received:`, JSON.stringify(apiData, null, 2));
+  console.log(`[VerifydataClient] Excel Data received:`, JSON.stringify(excelData, null, 2));
+  
   const failedFields = [];
   const details = {};
   
@@ -564,9 +613,18 @@ function matchCACFields(apiData, excelData) {
     failedFields.push('Registration Date');
   }
   
-  // Validate Company Status (must be "Verified" or active)
+  // Validate Company Status - Accept any valid CAC status
+  // Valid statuses: ACTIVE, INACTIVE, VERIFIED, etc.
+  // We only reject if status is missing/null or explicitly invalid
   const apiStatus = (apiData.companyStatus || '').toLowerCase().trim();
-  const statusValid = apiStatus === 'verified' || apiStatus === 'active';
+  const validStatuses = ['active', 'inactive', 'verified', 'registered'];
+  const statusValid = apiStatus && validStatuses.includes(apiStatus);
+  
+  console.log(`[VerifydataClient] Company Status Validation:`);
+  console.log(`[VerifydataClient]   Raw API Status: "${apiData.companyStatus}"`);
+  console.log(`[VerifydataClient]   Normalized Status: "${apiStatus}"`);
+  console.log(`[VerifydataClient]   Is Valid: ${statusValid}`);
+  console.log(`[VerifydataClient]   Valid Statuses: ${validStatuses.join(', ')}`);
   
   details.companyStatus = {
     api: apiData.companyStatus,
@@ -585,6 +643,7 @@ function matchCACFields(apiData, excelData) {
   if (!matched) {
     console.log(`[VerifydataClient] Failed fields: ${failedFields.join(', ')}`);
   }
+  console.log(`[VerifydataClient] ===== FIELD MATCHING DEBUG END =====`);
   
   return {
     matched,

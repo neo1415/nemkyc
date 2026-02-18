@@ -18,6 +18,7 @@ import NotFound from './pages/NotFound';
 import Unauthorized from './pages/Unauthorized';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import RoleProtectedRoute from './components/auth/RoleProtectedRoute';
+import SuperAdminRoute from './components/auth/SuperAdminRoute';
 import MFAEnrollment from './components/auth/MFAEnrollment';
 import MFAVerification from './components/auth/MFAVerification';
 
@@ -115,6 +116,9 @@ const RemediationAuditLogs = lazy(() => import('./pages/admin/RemediationAuditLo
 // Identity Collection Pages (New flexible system)
 const IdentityListsDashboard = lazy(() => import('./pages/admin/IdentityListsDashboard'));
 const IdentityListDetail = lazy(() => import('./pages/admin/IdentityListDetail'));
+
+// Analytics Dashboard
+const AdminAnalyticsDashboard = lazy(() => import('./pages/admin/AdminAnalyticsDashboard'));
 
 // Public Verification Page (no auth required)
 const CustomerVerificationPage = lazy(() => import('./pages/public/CustomerVerificationPage'));
@@ -549,6 +553,13 @@ function App() {
             <RoleProtectedRoute allowedRoles={['broker', 'admin', 'compliance', 'super admin']}>
               <IdentityListDetail />
             </RoleProtectedRoute>
+          } />
+
+          {/* Analytics Dashboard - Super Admin Only */}
+          <Route path="admin/analytics" element={
+            <SuperAdminRoute>
+              <AdminAnalyticsDashboard />
+            </SuperAdminRoute>
           } />
              
              <Route path="unauthorized" element={<Unauthorized />} />

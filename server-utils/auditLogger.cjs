@@ -44,6 +44,8 @@ function getDb() {
  * @param {string} params.identityNumber - Identity number (will be masked)
  * @param {string} params.userId - User ID (if authenticated)
  * @param {string} params.userEmail - User email (if authenticated)
+ * @param {string} params.userName - User name (if authenticated)
+ * @param {string} params.userType - User type ('user', 'customer', 'system')
  * @param {string} params.ipAddress - Client IP address
  * @param {string} params.result - Result (success, failure, error)
  * @param {string} params.errorCode - Error code (if failed)
@@ -58,6 +60,8 @@ async function logVerificationAttempt(params) {
       identityNumber,
       userId,
       userEmail,
+      userName,
+      userType,
       ipAddress,
       result,
       errorCode,
@@ -77,6 +81,8 @@ async function logVerificationAttempt(params) {
       // User information
       userId: userId || 'anonymous',
       userEmail: userEmail || 'anonymous',
+      userName: userName || 'Anonymous',
+      userType: userType || 'customer', // 'user', 'customer', 'system'
       ipAddress: ipAddress || 'unknown',
       
       // Result
@@ -116,6 +122,8 @@ async function logVerificationAttempt(params) {
  * @param {string} params.responseData - Response data (will be masked)
  * @param {number} params.duration - Request duration in ms
  * @param {string} params.userId - User ID (if authenticated)
+ * @param {string} params.userName - User name (if authenticated)
+ * @param {string} params.userType - User type ('user', 'customer', 'system')
  * @param {string} params.ipAddress - Client IP address
  * @param {Object} params.metadata - Additional metadata
  * @returns {Promise<void>}
@@ -131,11 +139,17 @@ async function logAPICall(params) {
       responseData,
       duration,
       userId,
+      userName,
+      userType,
       ipAddress,
       metadata = {}
     } = params;
 
     const db = getDb();
+    
+    // Determine success from status code
+    const isSuccess = statusCode >= 200 && statusCode < 300;
+    
     const logEntry = {
       // Event information
       eventType: 'api_call',
@@ -148,9 +162,13 @@ async function logAPICall(params) {
       statusCode: statusCode || 0,
       responseDataMasked: maskResponseData(responseData),
       duration: duration || 0,
+      success: isSuccess,
+      result: isSuccess ? 'success' : 'failure',
       
       // User information
       userId: userId || 'system',
+      userName: userName || 'System',
+      userType: userType || 'system', // 'user', 'customer', 'system'
       ipAddress: ipAddress || 'unknown',
       
       // Metadata
