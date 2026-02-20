@@ -519,8 +519,8 @@ const BatchUploadDialog: React.FC<BatchUploadDialogProps> = ({
       fullWidth
       PaperProps={{ sx: { minHeight: '60vh' } }}
     >
-      <DialogTitle>
-        <Typography variant="h6">Create Remediation Batch</Typography>
+      <DialogTitle sx={{ bgcolor: '#800020', color: 'white', py: 2 }}>
+        <Typography variant="h6" sx={{ color: 'white' }}>Create Remediation Batch</Typography>
       </DialogTitle>
 
       <DialogContent dividers>

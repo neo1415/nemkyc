@@ -11828,7 +11828,7 @@ app.post('/api/identity/bulk-verify/:jobId/resume', requireAuth, requireBrokerOr
         // Process remaining entries in batches
         for (let i = 0; i < entries.length; i += job.batchSize) {
           // Check if job is paused again
-          const currentJob = bulkVerificationJobs.get(jobId);
+          let currentJob = bulkVerificationJobs.get(jobId);
           if (currentJob && currentJob.paused) {
             console.log(`⏸️ Job ${jobId} paused again at entry ${i}/${entries.length}`);
             currentJob.status = 'paused';
@@ -11855,7 +11855,7 @@ app.post('/api/identity/bulk-verify/:jobId/resume', requireAuth, requireBrokerOr
           );
           
           // Update job progress
-          const currentJob = bulkVerificationJobs.get(jobId);
+          currentJob = bulkVerificationJobs.get(jobId);
           if (currentJob) {
             batchResults.forEach(result => {
               currentJob.processed++;

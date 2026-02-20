@@ -135,6 +135,19 @@ export interface IdentityEntry {
   lastAttemptAt?: Date;
   lastAttemptError?: string;
   
+  // Duplicate tracking (Requirement 1.3, 1.4)
+  isDuplicateOf?: string;        // Entry ID of original verification if this is a duplicate
+  duplicateDetectedAt?: Date;    // When the duplicate was detected
+  duplicateSkippedBy?: string;   // User ID who triggered the operation that skipped this duplicate
+  skipReason?: string;           // Reason for skipping (e.g., 'already_verified', 'invalid_format')
+  skipDetails?: {                // Additional context for skip
+    originalListId?: string;     // List ID where original verification occurred
+    originalListName?: string;   // Name of the list where original verification occurred
+    originalVerificationDate?: Date; // When the original verification happened
+    originalBroker?: string;     // Broker who performed original verification
+    originalResult?: any;        // Original verification result data
+  };
+  
   // Metadata
   createdAt: Date;
   updatedAt: Date;

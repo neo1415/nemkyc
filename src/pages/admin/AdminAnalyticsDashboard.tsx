@@ -14,6 +14,7 @@ import { CostTracker } from '../../components/analytics/CostTracker';
 import { AuditLogsViewer } from '../../components/analytics/AuditLogsViewer';
 import { ReportGenerator } from '../../components/analytics/ReportGenerator';
 import { useAnalyticsDashboard } from '../../hooks/analytics/useAnalyticsDashboard';
+import { useBudgetMonitoring } from '../../hooks/analytics/useBudgetMonitoring';
 import { useRealtimeUpdates } from '../../hooks/analytics/useRealtimeUpdates';
 import { FilterState } from '../../types/analytics';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -43,6 +44,13 @@ const AdminAnalyticsDashboard: React.FC = () => {
     error,
     refetch
   } = useAnalyticsDashboard(filters);
+
+  // Budget monitoring
+  const {
+    budgetConfig,
+    updateBudgetConfig,
+    loading: budgetLoading
+  } = useBudgetMonitoring();
 
   // Real-time updates
   const { lastUpdate } = useRealtimeUpdates(30000); // 30 seconds
@@ -336,8 +344,9 @@ const AdminAnalyticsDashboard: React.FC = () => {
           {/* Cost Tracker */}
           <CostTracker 
             data={costTracking} 
-            budgetConfig={null}
-            loading={loading}
+            budgetConfig={budgetConfig}
+            onUpdateBudget={updateBudgetConfig}
+            loading={loading || budgetLoading}
           />
 
           {/* Usage Charts */}

@@ -274,7 +274,7 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth sx={{ zIndex: 1300 }}>
-      <DialogTitle>Upload Customer List</DialogTitle>
+      <DialogTitle sx={{ bgcolor: '#800020', color: 'white', py: 2 }}>Upload Customer List</DialogTitle>
       <DialogContent sx={{ overflowY: 'auto' }}>
         {/* Upload Mode Selector */}
         {/* NOTE: Flexible Mode is hidden from UI but code remains available for future use */}
