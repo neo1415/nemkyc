@@ -116,6 +116,23 @@ const {
   acknowledgeAlert
 } = require('./server-utils/healthMonitor.cjs');
 
+// Import duplicate detector for bulk verification
+const {
+  checkDuplicate,
+  batchCheckDuplicates
+} = require('./server-utils/duplicateDetector.cjs');
+
+// Import identity validator for format validation
+const {
+  validateIdentityFormat,
+  batchValidateIdentities
+} = require('./server-utils/identityValidator.cjs');
+
+// Import cost calculator for bulk verification analysis
+const {
+  calculateCost: calculateVerificationCost
+} = require('./server-utils/costCalculator.cjs');
+
 // ============= LOGGING UTILITY =============
 
 /**
@@ -176,6 +193,7 @@ async function logVerificationComplete(db, params) {
     userId,
     userEmail,
     userName,
+    userType = 'customer', // Default to customer
     ipAddress,
     errorCode,
     errorMessage,
@@ -189,10 +207,10 @@ async function logVerificationComplete(db, params) {
     // Calculate cost based on provider and success
     const cost = calculateCost(provider, success);
     
-    // Look up broker information from listId
+    // Look up broker information from listId for API usage tracking only
     const brokerInfo = await lookupBrokerInfo(db, listId);
     
-    // Track API usage with complete data (replaces trackDataproAPICall/trackVerifydataAPICall)
+    // Track API usage with broker context (for cost attribution)
     if (provider === 'datapro') {
       await trackDataproAPICall(db, {
         nin: identityNumber ? identityNumber.substring(0, 4) + '*******' : '****',
@@ -213,14 +231,14 @@ async function logVerificationComplete(db, params) {
       });
     }
     
-    // Log verification attempt with complete data (single entry)
+    // Log verification attempt with CUSTOMER context (not broker)
     await logVerificationAttempt({
       verificationType,
       identityNumber,
-      userId: brokerInfo.userId,
-      userEmail: brokerInfo.userEmail,
-      userName: brokerInfo.userName,
-      userType: 'customer',
+      userId: userId, // Customer name/ID from params
+      userEmail: userEmail, // Customer email from params
+      userName: userName, // Customer name from params
+      userType: userType, // Customer or broker
       ipAddress: ipAddress || 'unknown',
       result: success ? 'success' : 'failure',
       errorCode: errorCode || null,
@@ -230,11 +248,13 @@ async function logVerificationComplete(db, params) {
       metadata: {
         ...metadata,
         listId,
-        entryId
+        entryId,
+        brokerUserId: brokerInfo.userId, // Track broker for reference
+        brokerEmail: brokerInfo.userEmail
       }
     });
     
-    console.log(`📝 [AUDIT] Consolidated logging complete: ${provider} ${verificationType} - ${success ? 'SUCCESS' : 'FAILED'}`);
+    console.log(`📝 [AUDIT] Consolidated logging complete: ${provider} ${verificationType} - ${success ? 'SUCCESS' : 'FAILED'} - User: ${userName}`);
     
   } catch (error) {
     console.error('[LogVerificationComplete] Error in consolidated logging:', error);
@@ -4530,6 +4550,7 @@ app.post('/api/verify/cac', verificationRateLimiter, async (req, res) => {
           userId: req.user?.uid || 'anonymous',
           userEmail: req.user?.email || 'anonymous',
           userName: req.user?.name || 'Anonymous',
+          userType: 'broker', // Demo endpoint - broker testing
           ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
           errorCode: null,
           errorMessage: null,
@@ -4564,6 +4585,7 @@ app.post('/api/verify/cac', verificationRateLimiter, async (req, res) => {
           userId: req.user?.uid || 'anonymous',
           userEmail: req.user?.email || 'anonymous',
           userName: req.user?.name || 'Anonymous',
+          userType: 'broker', // Demo endpoint - broker testing
           ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
           errorCode: verifydataResult.errorCode,
           errorMessage: verifydataResult.error || 'Verification failed',
@@ -9242,6 +9264,267 @@ app.delete('/api/identity/lists/:listId', requireAuth, requireBrokerOrAdmin, asy
 });
 
 /**
+ * POST /api/identity/lists/:listId/analyze-send-links
+ * Analyze entries before sending verification links to show confirmation modal
+ * 
+ * This endpoint:
+ * 1. Fetches all entries that need links sent (based on entryIds)
+ * 2. Validates format for each entry
+ * 3. Checks for duplicates across all lists
+ * 4. Returns analysis summary with analysisId
+ * 5. Caches results for 10 minutes
+ * 
+ * Body:
+ * - entryIds: string[] - Array of entry IDs to analyze
+ * - verificationType: 'NIN' | 'CAC' - Type of verification
+ * 
+ * Requirements: 2.1
+ */
+app.post('/api/identity/lists/:listId/analyze-send-links', requireAuth, requireBrokerOrAdmin, async (req, res) => {
+  try {
+    const { listId } = req.params;
+    const { entryIds, verificationType } = req.body;
+    
+    console.log(`🔍 Analyzing link sending for list ${listId}`);
+    
+    // Validate inputs
+    if (!entryIds || !Array.isArray(entryIds) || entryIds.length === 0) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        message: 'entryIds array is required and must not be empty'
+      });
+    }
+    
+    if (!verificationType || !['NIN', 'CAC'].includes(verificationType)) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        message: 'verificationType must be either "NIN" or "CAC"'
+      });
+    }
+    
+    // Validate list exists
+    const listDoc = await db.collection('identity-lists').doc(listId).get();
+    
+    if (!listDoc.exists) {
+      return res.status(404).json({
+        error: 'List not found',
+        message: `No list found with ID: ${listId}`
+      });
+    }
+    
+    const listData = listDoc.data();
+    
+    // Check ownership for brokers
+    if (normalizeRole(req.user.role) === 'broker' && listData.createdBy !== req.user.uid) {
+      console.log(`❌ Broker ${req.user.email} attempted to analyze list ${listId} owned by ${listData.createdBy}`);
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to analyze this list'
+      });
+    }
+    
+    // Fetch all selected entries (handle Firestore 'in' limit of 10)
+    let allEntries = [];
+    
+    for (let i = 0; i < entryIds.length; i += 10) {
+      const batchIds = entryIds.slice(i, i + 10);
+      const batchSnapshot = await db.collection('identity-entries')
+        .where('listId', '==', listId)
+        .where(admin.firestore.FieldPath.documentId(), 'in', batchIds)
+        .get();
+      allEntries = allEntries.concat(batchSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }
+    
+    console.log(`📋 Found ${allEntries.length} entries to analyze`);
+    
+    if (allEntries.length === 0) {
+      return res.json({
+        analysisId: null,
+        totalEntries: 0,
+        toSend: 0,
+        toSkip: 0,
+        skipReasons: {},
+        identityTypeBreakdown: { nin: 0, bvn: 0, cac: 0 }
+      });
+    }
+    
+    // Analyze each entry
+    const entriesToSend = [];
+    const skipReasons = {
+      already_verified: 0,
+      invalid_format: 0,
+      no_identity_data: 0,
+      invalid_email: 0
+    };
+    const identityTypeCounts = {
+      nin: 0,
+      bvn: 0,
+      cac: 0
+    };
+    
+    for (const entry of allEntries) {
+      // Validate email
+      if (!entry.email || !entry.email.includes('@')) {
+        skipReasons.invalid_email++;
+        entriesToSend.push({
+          entryId: entry.id,
+          email: entry.email,
+          shouldSend: false,
+          skipReason: 'invalid_email',
+          isDuplicate: false
+        });
+        continue;
+      }
+      
+      // For send links, we DON'T require identity data to exist
+      // The whole point is to send links to customers who need to provide their identity numbers
+      // We only validate that the email is valid (already done above)
+      
+      // CRITICAL CHECK: Check if this email is already associated with a verified entry
+      // of the same verification type across ALL lists (not just this list)
+      // This prevents sending duplicate verification requests to already verified customers
+      let foundExistingVerified = false;
+      try {
+        console.log(`🔍 Checking if email ${entry.email} already has verified ${verificationType}...`);
+        
+        // Query for any entry with this email that has verified status
+        const existingVerifiedQuery = await db.collection('identity-entries')
+          .where('email', '==', entry.email)
+          .where('status', '==', 'verified')
+          .limit(5) // Get up to 5 to check
+          .get();
+        
+        console.log(`   Found ${existingVerifiedQuery.size} verified entries for this email`);
+        
+        if (!existingVerifiedQuery.empty) {
+          // Check if any of these verified entries have the same verification type
+          for (const doc of existingVerifiedQuery.docs) {
+            const existingData = doc.data();
+            console.log(`   Checking entry ${doc.id}: verificationType=${existingData.verificationType}, status=${existingData.status}`);
+            
+            // Check if this verified entry is for the same verification type
+            if (existingData.verificationType === verificationType) {
+              console.log(`   ✅ Found existing verified ${verificationType} for ${entry.email} - SKIPPING`);
+              
+              skipReasons.already_verified++;
+              entriesToSend.push({
+                entryId: entry.id,
+                email: entry.email,
+                identityType: verificationType,
+                shouldSend: false,
+                skipReason: 'already_verified',
+                isDuplicate: true,
+                duplicateInfo: {
+                  originalEntryId: doc.id,
+                  originalListId: existingData.listId,
+                  verifiedAt: existingData.verifiedAt || existingData.updatedAt
+                }
+              });
+              foundExistingVerified = true;
+              break; // Exit inner loop
+            }
+          }
+        }
+        
+        if (!foundExistingVerified) {
+          console.log(`   No existing verified ${verificationType} found for ${entry.email} - OK to send`);
+        }
+      } catch (checkError) {
+        console.error('❌ Error checking for existing verified entry:', checkError);
+        // Continue with sending if check fails (don't block the operation)
+      }
+      
+      // If we found an existing verified entry, skip to next entry
+      if (foundExistingVerified) {
+        continue;
+      }
+      
+      // Check if this specific entry already has verified identity data
+      let identityValue = null;
+      
+      if (verificationType === 'NIN') {
+        identityValue = entry.data?.nin || entry.nin;
+      } else if (verificationType === 'BVN') {
+        identityValue = entry.data?.bvn || entry.bvn;
+      } else if (verificationType === 'CAC') {
+        identityValue = entry.data?.cac || entry.cac;
+      }
+      
+      // If THIS entry has identity data and it's verified, skip sending link
+      if (identityValue && entry.verificationStatus === 'verified') {
+        skipReasons.already_verified++;
+        entriesToSend.push({
+          entryId: entry.id,
+          email: entry.email,
+          identityType: verificationType,
+          shouldSend: false,
+          skipReason: 'already_verified',
+          isDuplicate: false
+        });
+        continue;
+      }
+      
+      // Otherwise, send the link (even if no identity data - that's the point!)
+      // No format validation needed since we're asking them to provide the data
+      
+      // Send the link - count it
+      const typeKey = verificationType.toLowerCase();
+      identityTypeCounts[typeKey]++;
+      
+      entriesToSend.push({
+        entryId: entry.id,
+        email: entry.email,
+        identityType: verificationType,
+        identityValue: identityValue || null,
+        shouldSend: true,
+        skipReason: null,
+        isDuplicate: false,
+        duplicateInfo: null
+      });
+    }
+    
+    // Generate analysis ID
+    const analysisId = `link_analysis_${listId}_${Date.now()}`;
+    
+    // Store in cache
+    const analysis = {
+      analysisId,
+      listId,
+      verificationType,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + ANALYSIS_CACHE_TTL,
+      totalEntries: allEntries.length,
+      entriesToSend,
+      identityTypeBreakdown: identityTypeCounts
+    };
+    
+    linkSendingAnalysisCache.set(analysisId, analysis);
+    
+    console.log(`✅ Link sending analysis complete for list ${listId}:`);
+    console.log(`   - Total entries: ${allEntries.length}`);
+    console.log(`   - To send: ${entriesToSend.filter(e => e.shouldSend).length}`);
+    console.log(`   - To skip: ${entriesToSend.filter(e => !e.shouldSend).length}`);
+    
+    // Return analysis summary
+    res.json({
+      analysisId,
+      totalEntries: allEntries.length,
+      toSend: entriesToSend.filter(e => e.shouldSend).length,
+      toSkip: entriesToSend.filter(e => !e.shouldSend).length,
+      skipReasons,
+      identityTypeBreakdown: identityTypeCounts
+    });
+    
+  } catch (error) {
+    console.error('❌ Error analyzing link sending:', error);
+    res.status(500).json({
+      error: 'Analysis failed',
+      message: error.message
+    });
+  }
+});
+
+/**
  * POST /api/identity/lists/:listId/send
  * Send verification links to selected entries
  * Brokers can only send for their own lists
@@ -9249,15 +9532,44 @@ app.delete('/api/identity/lists/:listId', requireAuth, requireBrokerOrAdmin, asy
  * Body:
  * - entryIds: string[] - Array of entry IDs to send links to
  * - verificationType: 'NIN' | 'CAC' - Type of verification to request
+ * - analysisId: string (optional) - ID from analyze-send-links endpoint to use cached analysis
  * 
- * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 5.4, 11.7, 11.8
+ * Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 5.4, 11.7, 11.8
  */
 app.post('/api/identity/lists/:listId/send', requireAuth, requireBrokerOrAdmin, async (req, res) => {
   try {
     const { listId } = req.params;
-    const { entryIds, verificationType } = req.body;
+    const { entryIds, verificationType, analysisId } = req.body;
     
     console.log(`📧 Sending ${verificationType} verification links for list ${listId}`);
+    if (analysisId) {
+      console.log(`   Using cached analysis: ${analysisId}`);
+    }
+    
+    // If analysisId provided, check cache
+    let cachedAnalysis = null;
+    if (analysisId) {
+      cachedAnalysis = linkSendingAnalysisCache.get(analysisId);
+      
+      if (!cachedAnalysis) {
+        // Cache expired or invalid analysisId
+        console.log(`❌ Link sending analysis cache miss or expired for ${analysisId}`);
+        return res.status(410).json({
+          error: 'Analysis expired',
+          message: 'The analysis results have expired. Please try again to get a fresh analysis.',
+          code: 'ANALYSIS_EXPIRED'
+        });
+      }
+      
+      // Verify the analysis is for this list
+      if (cachedAnalysis.listId !== listId) {
+        console.log(`❌ Analysis ${analysisId} is for list ${cachedAnalysis.listId}, not ${listId}`);
+        return res.status(400).json({
+          error: 'Invalid analysis',
+          message: 'The analysis ID does not match this list'
+        });
+      }
+    }
     
     // Validate inputs
     if (!entryIds || !Array.isArray(entryIds) || entryIds.length === 0) {
@@ -9321,6 +9633,7 @@ app.post('/api/identity/lists/:listId/send', requireAuth, requireBrokerOrAdmin, 
     const results = {
       sent: 0,
       failed: 0,
+      skipped: 0,
       errors: []
     };
     
@@ -9335,6 +9648,140 @@ app.post('/api/identity/lists/:listId/send', requireAuth, requireBrokerOrAdmin, 
     for (let i = 0; i < allEntries.length; i++) {
       const entry = allEntries[i];
       try {
+        // If we have cached analysis, check if this entry should be skipped
+        if (cachedAnalysis) {
+          const analysisEntry = cachedAnalysis.entriesToSend.find(e => e.entryId === entry.id);
+          
+          if (analysisEntry && !analysisEntry.shouldSend) {
+            // Skip this entry based on cached analysis
+            results.skipped++;
+            
+            // Log the skip with duplicate metadata if applicable
+            if (analysisEntry.isDuplicate && analysisEntry.duplicateInfo) {
+              await createIdentityActivityLog({
+                listId: listId,
+                entryId: entry.id,
+                action: 'link_send_skipped',
+                actorType: 'admin',
+                actorId: req.user.uid,
+                details: {
+                  reason: analysisEntry.skipReason,
+                  email: entry.email,
+                  verificationType: verificationType,
+                  originalListId: analysisEntry.duplicateInfo.originalListId,
+                  originalVerificationDate: analysisEntry.duplicateInfo.originalVerificationDate,
+                  originalBroker: analysisEntry.duplicateInfo.originalBroker,
+                  originalResult: analysisEntry.duplicateInfo.originalResult
+                },
+                ipAddress: req.ipData?.masked,
+                userAgent: req.headers['user-agent']
+              });
+              
+              console.log(`⊘ Skipped entry ${entry.id} - already verified in list ${analysisEntry.duplicateInfo.originalListId}`);
+            } else {
+              // Log skip for other reasons (invalid format, no data, etc.)
+              await createIdentityActivityLog({
+                listId: listId,
+                entryId: entry.id,
+                action: 'link_send_skipped',
+                actorType: 'admin',
+                actorId: req.user.uid,
+                details: {
+                  reason: analysisEntry.skipReason,
+                  email: entry.email,
+                  verificationType: verificationType
+                },
+                ipAddress: req.ipData?.masked,
+                userAgent: req.headers['user-agent']
+              });
+              
+              console.log(`⊘ Skipped entry ${entry.id} - ${analysisEntry.skipReason}`);
+            }
+            
+            continue;
+          }
+        } else {
+          // No cached analysis - perform duplicate check now
+          // Determine identity value based on verificationType
+          let identityValue = null;
+          
+          if (verificationType === 'NIN') {
+            identityValue = entry.data?.nin || entry.nin;
+          } else if (verificationType === 'BVN') {
+            identityValue = entry.data?.bvn || entry.bvn;
+          } else if (verificationType === 'CAC') {
+            identityValue = entry.data?.cac || entry.cac;
+          }
+          
+          // Check for duplicates if we have identity value
+          if (identityValue) {
+            // Convert to string if needed
+            if (typeof identityValue === 'number') {
+              identityValue = String(identityValue);
+            }
+            
+            // Validate format
+            const validation = validateIdentityFormat(verificationType, identityValue);
+            
+            if (!validation.isValid) {
+              results.skipped++;
+              results.errors.push({
+                entryId: entry.id,
+                email: entry.email,
+                error: `Invalid ${verificationType} format`
+              });
+              
+              await createIdentityActivityLog({
+                listId: listId,
+                entryId: entry.id,
+                action: 'link_send_skipped',
+                actorType: 'admin',
+                actorId: req.user.uid,
+                details: {
+                  reason: 'invalid_format',
+                  email: entry.email,
+                  verificationType: verificationType
+                },
+                ipAddress: req.ipData?.masked,
+                userAgent: req.headers['user-agent']
+              });
+              
+              console.log(`⊘ Skipped entry ${entry.id} - invalid format`);
+              continue;
+            }
+            
+            // Check for duplicates
+            const duplicateCheck = await checkDuplicate(verificationType, identityValue);
+            
+            if (duplicateCheck.isDuplicate) {
+              results.skipped++;
+              
+              // Log the skip with duplicate metadata
+              await createIdentityActivityLog({
+                listId: listId,
+                entryId: entry.id,
+                action: 'link_send_skipped',
+                actorType: 'admin',
+                actorId: req.user.uid,
+                details: {
+                  reason: 'already_verified',
+                  email: entry.email,
+                  verificationType: verificationType,
+                  originalListId: duplicateCheck.originalListId,
+                  originalVerificationDate: duplicateCheck.originalVerificationDate,
+                  originalBroker: duplicateCheck.originalBroker,
+                  originalResult: duplicateCheck.originalResult
+                },
+                ipAddress: req.ipData?.masked,
+                userAgent: req.headers['user-agent']
+              });
+              
+              console.log(`⊘ Skipped entry ${entry.id} - already verified in list ${duplicateCheck.originalListId}`);
+              continue;
+            }
+          }
+        }
+        
         // Validate email
         if (!entry.email || !entry.email.includes('@')) {
           results.failed++;
@@ -9454,13 +9901,14 @@ app.post('/api/identity/lists/:listId/send', requireAuth, requireBrokerOrAdmin, 
         totalSelected: entryIds.length,
         sent: results.sent,
         failed: results.failed,
+        skipped: results.skipped,
         sentBy: req.user.email
       },
       ipAddress: req.ipData?.masked,
       userAgent: req.headers['user-agent']
     });
     
-    console.log(`✅ Sent ${results.sent} verification links, ${results.failed} failed`);
+    console.log(`✅ Sent ${results.sent} verification links, ${results.failed} failed, ${results.skipped} skipped`);
     
     res.status(200).json(results);
     
@@ -10347,6 +10795,7 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
                 userId: userName,
                 userEmail: entry.email || 'anonymous',
                 userName: userName,
+                userType: 'customer', // Mark as customer verification
                 ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
                 errorCode: matchResult.matched ? null : 'FIELD_MISMATCH',
                 errorMessage: matchResult.matched ? null : 'Field mismatch detected',
@@ -10383,6 +10832,7 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
                 userId: userName,
                 userEmail: entry.email || 'anonymous',
                 userName: userName,
+                userType: 'customer', // Mark as customer verification
                 ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
                 errorCode: dataproResult.errorCode,
                 errorMessage: dataproResult.error || 'Verification failed',
@@ -10541,6 +10991,7 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
                 userId: userName,
                 userEmail: entry.email || 'anonymous',
                 userName: userName,
+                userType: 'customer', // Mark as customer verification
                 ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
                 errorCode: matchResult.matched ? null : 'FIELD_MISMATCH',
                 errorMessage: matchResult.matched ? null : 'Field mismatch detected',
@@ -10577,6 +11028,7 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
                 userId: userName,
                 userEmail: entry.email || 'anonymous',
                 userName: userName,
+                userType: 'customer', // Mark as customer verification
                 ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
                 errorCode: verifydataResult.errorCode,
                 errorMessage: verifydataResult.error || 'Verification failed',
@@ -11518,9 +11970,79 @@ app.get('/api/identity/api-usage/alerts', requireAuth, requireAdmin, async (req,
 // In-memory job tracking for bulk verification
 const bulkVerificationJobs = new Map();
 
+// In-memory cache for bulk verification analysis results
+// Structure: { analysisId: { listId, createdAt, expiresAt, totalEntries, entriesToVerify, costEstimate, identityTypeBreakdown } }
+const bulkVerificationAnalysisCache = new Map();
+
+// In-memory cache for link sending analysis results
+// Structure: { analysisId: { listId, verificationType, createdAt, expiresAt, totalEntries, entriesToSend, identityTypeBreakdown } }
+const linkSendingAnalysisCache = new Map();
+
+const ANALYSIS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const MAX_ANALYSIS_CACHE_SIZE = 1000;
+
+// Clean up expired analysis cache entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  let expiredCount = 0;
+  
+  for (const [analysisId, analysis] of bulkVerificationAnalysisCache.entries()) {
+    if (analysis.expiresAt < now) {
+      bulkVerificationAnalysisCache.delete(analysisId);
+      expiredCount++;
+    }
+  }
+  
+  // Clean up link sending analysis cache
+  for (const [analysisId, analysis] of linkSendingAnalysisCache.entries()) {
+    if (analysis.expiresAt < now) {
+      linkSendingAnalysisCache.delete(analysisId);
+      expiredCount++;
+    }
+  }
+  
+  if (expiredCount > 0) {
+    console.log(`🧹 Cleaned up ${expiredCount} expired analysis cache entries`);
+  }
+  
+  // LRU eviction if cache is too large
+  if (bulkVerificationAnalysisCache.size > MAX_ANALYSIS_CACHE_SIZE) {
+    const entriesToDelete = bulkVerificationAnalysisCache.size - MAX_ANALYSIS_CACHE_SIZE;
+    const sortedEntries = Array.from(bulkVerificationAnalysisCache.entries())
+      .sort((a, b) => a[1].createdAt - b[1].createdAt);
+    
+    for (let i = 0; i < entriesToDelete; i++) {
+      bulkVerificationAnalysisCache.delete(sortedEntries[i][0]);
+    }
+    
+    console.log(`🧹 Evicted ${entriesToDelete} old analysis cache entries (LRU)`);
+  }
+  
+  // LRU eviction for link sending cache
+  if (linkSendingAnalysisCache.size > MAX_ANALYSIS_CACHE_SIZE) {
+    const entriesToDelete = linkSendingAnalysisCache.size - MAX_ANALYSIS_CACHE_SIZE;
+    const sortedEntries = Array.from(linkSendingAnalysisCache.entries())
+      .sort((a, b) => a[1].createdAt - b[1].createdAt);
+    
+    for (let i = 0; i < entriesToDelete; i++) {
+      linkSendingAnalysisCache.delete(sortedEntries[i][0]);
+    }
+    
+    console.log(`🧹 Evicted ${entriesToDelete} old link sending analysis cache entries (LRU)`);
+  }
+}, 5 * 60 * 1000);
+
 // Helper function to execute bulk verification (can be called directly or from queue)
-async function executeBulkVerification(listId, entriesSnapshot, batchSize, userId, ipData, userAgent) {
-  const jobId = `bulk_verify_${listId}_${Date.now()}`;
+async function executeBulkVerification(listId, entriesSnapshot, batchSize, userId, ipData, userAgent, providedJobId) {
+  // Use provided jobId or generate new one (should always be provided)
+  const jobId = providedJobId || `bulk_verify_${listId}_${Date.now()}`;
+  
+  console.log(`📋 executeBulkVerification called for job ${jobId}`);
+  console.log(`   - listId: ${listId}`);
+  console.log(`   - entries: ${entriesSnapshot.size}`);
+  console.log(`   - batchSize: ${batchSize}`);
+  console.log(`   - userId: ${userId}`);
+  console.log(`   - providedJobId: ${providedJobId || 'NOT PROVIDED'}`);
   
   // Initialize job tracking
   const jobData = {
@@ -11534,6 +12056,21 @@ async function executeBulkVerification(listId, entriesSnapshot, batchSize, userI
     verified: 0,
     failed: 0,
     skipped: 0,
+    skipReasons: {
+      already_verified: 0,
+      invalid_format: 0,
+      no_identity_data: 0
+    },
+    costSavings: {
+      duplicatesSkipped: 0,
+      estimatedSaved: 0,
+      currency: process.env.COST_CURRENCY || 'NGN',
+      byType: {
+        NIN: 0,
+        BVN: 0,
+        CAC: 0
+      }
+    },
     details: [],
     paused: false,
     batchSize,
@@ -11541,6 +12078,8 @@ async function executeBulkVerification(listId, entriesSnapshot, batchSize, userI
   };
   
   bulkVerificationJobs.set(jobId, jobData);
+  console.log(`✅ Job ${jobId} initialized and stored in bulkVerificationJobs Map`);
+  console.log(`Current jobs in map: ${Array.from(bulkVerificationJobs.keys()).join(', ')}`);
   
   // Log bulk operation start
   try {
@@ -11605,7 +12144,30 @@ async function executeBulkVerification(listId, entriesSnapshot, batchSize, userI
           currentJob.processed++;
           if (result.status === 'verified') currentJob.verified++;
           else if (result.status === 'failed') currentJob.failed++;
-          else if (result.status === 'skipped') currentJob.skipped++;
+          else if (result.status === 'skipped') {
+            currentJob.skipped++;
+            // Track skip reasons
+            const reason = result.reason || 'unknown';
+            if (currentJob.skipReasons[reason] !== undefined) {
+              currentJob.skipReasons[reason]++;
+            } else {
+              currentJob.skipReasons[reason] = 1;
+            }
+            // Track cost savings for duplicates by verification type
+            if (reason === 'already_verified' && result.verificationType) {
+              currentJob.costSavings.duplicatesSkipped++;
+              
+              // Get cost for this verification type
+              const { loadCostConfig } = require('./server-utils/costCalculator.cjs');
+              const costConfig = loadCostConfig();
+              const costPerVerification = costConfig[result.verificationType] || costConfig.NIN;
+              
+              // Update total savings and by-type breakdown
+              currentJob.costSavings.estimatedSaved += costPerVerification;
+              currentJob.costSavings.byType[result.verificationType] = 
+                (currentJob.costSavings.byType[result.verificationType] || 0) + costPerVerification;
+            }
+          }
           currentJob.details.push(result);
         });
         
@@ -11651,7 +12213,7 @@ async function executeBulkVerification(listId, entriesSnapshot, batchSize, userI
       finalJob.completedAt = new Date();
       bulkVerificationJobs.set(jobId, finalJob);
       
-      // Log bulk operation completion
+      // Log bulk operation completion with detailed cost savings
       const duration = finalJob.completedAt - finalJob.startedAt;
       try {
         await logBulkOperation({
@@ -11666,10 +12228,24 @@ async function executeBulkVerification(listId, entriesSnapshot, batchSize, userI
             jobId,
             duration,
             skippedCount: finalJob.skipped,
+            skipReasons: finalJob.skipReasons,
+            costSavings: {
+              duplicatesSkipped: finalJob.costSavings.duplicatesSkipped,
+              estimatedSaved: finalJob.costSavings.estimatedSaved,
+              currency: finalJob.costSavings.currency,
+              byType: finalJob.costSavings.byType,
+              formattedSavings: `${finalJob.costSavings.currency} ${finalJob.costSavings.estimatedSaved.toFixed(2)}`
+            },
             batchSize,
             ipAddress: ipData?.masked || 'unknown'
           }
         });
+        
+        // Log summary to console for monitoring
+        console.log(`💰 Cost Savings Summary for job ${jobId}:`);
+        console.log(`   Total duplicates skipped: ${finalJob.costSavings.duplicatesSkipped}`);
+        console.log(`   Estimated savings: ${finalJob.costSavings.currency} ${finalJob.costSavings.estimatedSaved.toFixed(2)}`);
+        console.log(`   Savings by type:`, finalJob.costSavings.byType);
       } catch (logError) {
         console.error('❌ Failed to log bulk operation completion:', logError);
       }
@@ -11677,6 +12253,9 @@ async function executeBulkVerification(listId, entriesSnapshot, batchSize, userI
     
     console.log(`✅ Bulk verification complete for list ${listId}`);
     console.log(`   Processed: ${finalJob.processed}, Verified: ${finalJob.verified}, Failed: ${finalJob.failed}, Skipped: ${finalJob.skipped}`);
+    console.log(`   Skip reasons:`, finalJob.skipReasons);
+    console.log(`   Cost savings: ${finalJob.costSavings.currency} ${finalJob.costSavings.estimatedSaved.toFixed(2)} (${finalJob.costSavings.duplicatesSkipped} duplicates)`);
+    console.log(`   Savings by type:`, finalJob.costSavings.byType);
     
     // Clean up job after 1 hour
     setTimeout(() => {
@@ -11728,8 +12307,19 @@ async function executeBulkVerification(listId, entriesSnapshot, batchSize, userI
 }
 
 // Helper function to process a single entry
-async function processSingleEntry(entry, entryId, listId, userId, ipData, userAgent) {
+async function processSingleEntry(entry, entryId, listId, userId, ipData, userAgent, skipDuplicateCheck = false) {
   const entryRef = db.collection('identity-entries').doc(entryId);
+  
+  // 🔍 DIAGNOSTIC LOGGING - Log entry structure
+  console.log(`🔍 Processing entry ${entryId}:`);
+  console.log(`   Email: ${entry.email || 'N/A'}`);
+  console.log(`   Status: ${entry.status || 'N/A'}`);
+  console.log(`   Top-level fields: ${Object.keys(entry).join(', ')}`);
+  if (entry.data) {
+    console.log(`   entry.data fields: ${Object.keys(entry.data).join(', ')}`);
+  } else {
+    console.log(`   entry.data: NOT PRESENT`);
+  }
   
   // Skip if already verified (safety check)
   if (entry.status === 'verified') {
@@ -11759,6 +12349,12 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
   let hasNIN = entry.data?.nin || entry.data?.NIN || entry.nin;
   let hasBVN = entry.data?.bvn || entry.data?.BVN || entry.bvn;
   let hasCAC = entry.data?.cac || entry.data?.CAC || entry.cac;
+  
+  // 🔍 DIAGNOSTIC LOGGING - Log field detection results
+  console.log(`   Field detection results:`);
+  console.log(`     hasNIN: ${hasNIN ? `YES (${typeof hasNIN === 'object' ? 'encrypted' : 'plain'})` : 'NO'}`);
+  console.log(`     hasBVN: ${hasBVN ? `YES (${typeof hasBVN === 'object' ? 'encrypted' : 'plain'})` : 'NO'}`);
+  console.log(`     hasCAC: ${hasCAC ? `YES (${typeof hasCAC === 'object' ? 'encrypted' : 'plain'})` : 'NO'}`);
   
   // Decrypt encrypted identity fields if present
   if (hasNIN && isEncrypted(hasNIN)) {
@@ -11793,6 +12389,8 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
   
   // Skip if no identity data pre-filled
   if (!hasNIN && !hasBVN && !hasCAC) {
+    console.log(`⏭️ SKIPPING entry ${entryId}: No identity data found`);
+    console.log(`   Checked fields: entry.data?.nin, entry.data?.NIN, entry.nin, entry.data?.bvn, entry.data?.BVN, entry.bvn, entry.data?.cac, entry.data?.CAC, entry.cac`);
     return {
       entryId,
       email: entry.email,
@@ -11806,9 +12404,44 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
   let identityNumber;
   let verificationData = {};
   
+  console.log(`✅ Identity data found for entry ${entryId}`);
+  
   if (hasNIN || hasBVN) {
     verificationType = 'NIN';
     identityNumber = hasNIN || hasBVN;
+    
+    // 🔍 DIAGNOSTIC: Check data type and convert to string if needed
+    console.log(`   Raw identity data type: ${typeof identityNumber}`);
+    console.log(`   Raw identity data value:`, identityNumber);
+    
+    // Convert to string if it's an object or other type
+    if (typeof identityNumber === 'object' && identityNumber !== null) {
+      // If it's an encrypted object, it should have been decrypted already
+      // If it's still an object, try to extract the value
+      if (identityNumber.value) {
+        identityNumber = String(identityNumber.value);
+      } else if (identityNumber.encrypted) {
+        console.log(`⚠️ WARNING: Identity data is still encrypted object, attempting to decrypt...`);
+        try {
+          identityNumber = decryptData(identityNumber.encrypted, identityNumber.iv);
+        } catch (err) {
+          console.error(`❌ Failed to decrypt identity data:`, err.message);
+          return {
+            entryId,
+            email: entry.email,
+            status: 'skipped',
+            reason: 'decryption_failed'
+          };
+        }
+      } else {
+        // Try to convert object to string
+        identityNumber = String(identityNumber);
+      }
+    } else if (typeof identityNumber !== 'string') {
+      identityNumber = String(identityNumber);
+    }
+    
+    console.log(`   Type: NIN/BVN, Value: ${identityNumber.substring(0, 4)}***`);
     
     verificationData = {
       firstName: entry.data?.firstName || entry.data?.['First Name'] || entry.data?.['first name'],
@@ -11821,6 +12454,36 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
     verificationType = 'CAC';
     identityNumber = hasCAC;
     
+    // 🔍 DIAGNOSTIC: Check data type and convert to string if needed
+    console.log(`   Raw CAC data type: ${typeof identityNumber}`);
+    console.log(`   Raw CAC data value:`, identityNumber);
+    
+    // Convert to string if it's an object or other type
+    if (typeof identityNumber === 'object' && identityNumber !== null) {
+      if (identityNumber.value) {
+        identityNumber = String(identityNumber.value);
+      } else if (identityNumber.encrypted) {
+        console.log(`⚠️ WARNING: CAC data is still encrypted object, attempting to decrypt...`);
+        try {
+          identityNumber = decryptData(identityNumber.encrypted, identityNumber.iv);
+        } catch (err) {
+          console.error(`❌ Failed to decrypt CAC data:`, err.message);
+          return {
+            entryId,
+            email: entry.email,
+            status: 'skipped',
+            reason: 'decryption_failed'
+          };
+        }
+      } else {
+        identityNumber = String(identityNumber);
+      }
+    } else if (typeof identityNumber !== 'string') {
+      identityNumber = String(identityNumber);
+    }
+    
+    console.log(`   Type: CAC, Value: ${identityNumber}`);
+    
     verificationData = {
       companyName: entry.data?.companyName || entry.data?.['Company Name'] || entry.data?.['company name'],
       registrationNumber: entry.data?.registrationNumber || entry.data?.['Registration Number'] || entry.data?.['registration number'],
@@ -11831,12 +12494,90 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
   
   // Validate identity number format
   if (verificationType === 'NIN' && !/^\d{11}$/.test(identityNumber)) {
+    console.log(`⏭️ SKIPPING entry ${entryId}: Invalid NIN format (expected 11 digits, got: ${identityNumber})`);
     return {
       entryId,
       email: entry.email,
       status: 'skipped',
       reason: 'invalid_nin_format'
     };
+  }
+  
+  // 🔍 DUPLICATE CHECK - Check if identity has been verified before (unless already done in analysis phase)
+  if (!skipDuplicateCheck) {
+    try {
+      console.log(`🔍 Checking for duplicate: ${verificationType} ${identityNumber.substring(0, 4)}***`);
+      const duplicateResult = await checkDuplicate(verificationType, identityNumber);
+      
+      if (duplicateResult.isDuplicate) {
+        console.log(`⏭️ SKIPPING entry ${entryId}: Already verified in list ${duplicateResult.originalListId}`);
+        console.log(`   Original verification date: ${duplicateResult.originalVerificationDate}`);
+        console.log(`   Original broker: ${duplicateResult.originalBroker}`);
+        
+        // Log the duplicate skip for audit purposes
+        await createIdentityActivityLog({
+          listId,
+          entryId,
+          action: 'bulk_verify_skipped',
+          actorType: 'admin',
+          actorId: userId,
+          details: {
+            reason: 'already_verified',
+            email: entry.email,
+            verificationType,
+            identityNumber: identityNumber.substring(0, 4) + '***', // Masked for security
+            originalListId: duplicateResult.originalListId,
+            originalEntryId: duplicateResult.originalEntryId,
+            originalVerificationDate: duplicateResult.originalVerificationDate,
+            originalBroker: duplicateResult.originalBroker,
+            duplicateDetectedAt: new Date()
+          },
+          ipAddress: ipData?.masked,
+          userAgent
+        });
+        
+        return {
+          entryId,
+          email: entry.email,
+          status: 'skipped',
+          reason: 'already_verified',
+          verificationType,
+          duplicateInfo: {
+            originalListId: duplicateResult.originalListId,
+            originalEntryId: duplicateResult.originalEntryId,
+            originalDate: duplicateResult.originalVerificationDate,
+            originalBroker: duplicateResult.originalBroker
+          }
+        };
+      } else {
+        console.log(`✅ No duplicate found for ${verificationType} ${identityNumber.substring(0, 4)}***`);
+      }
+    } catch (duplicateCheckError) {
+      // Fail-open: Log error and proceed with verification to avoid blocking legitimate requests
+      console.error(`⚠️ Duplicate check failed for entry ${entryId}:`, duplicateCheckError.message);
+      console.error(`   Proceeding with verification (fail-open approach)`);
+      
+      // Log the duplicate check failure for monitoring
+      try {
+        await createIdentityActivityLog({
+          listId,
+          entryId,
+          action: 'duplicate_check_error',
+          actorType: 'system',
+          actorId: 'duplicate_detector',
+          details: {
+            error: duplicateCheckError.message,
+            verificationType,
+            identityNumber: identityNumber.substring(0, 4) + '***',
+            failOpenAction: 'proceeding_with_verification'
+          },
+          ipAddress: ipData?.masked,
+          userAgent
+        });
+      } catch (logError) {
+        console.error('Failed to log duplicate check error:', logError);
+      }
+    }
   }
   
   // Call verification API
@@ -11873,6 +12614,16 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
         }
         
         // ✅ CONSOLIDATED LOGGING - Single call replaces trackDataproAPICall + logVerificationAttempt
+        // Extract customer name from entry data for audit logging
+        let customerName = 'anonymous';
+        if (verificationData.firstName && verificationData.lastName) {
+          customerName = `${verificationData.firstName} ${verificationData.lastName}`;
+        } else if (verificationData.firstName) {
+          customerName = verificationData.firstName;
+        } else if (verificationData.lastName) {
+          customerName = verificationData.lastName;
+        }
+        
         try {
           await logVerificationComplete(db, {
             provider: 'datapro',
@@ -11881,14 +12632,16 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
             listId,
             entryId,
             identityNumber,
-            userId,
+            userId: customerName, // Customer name, not broker ID
             userEmail: entry.email || 'bulk_verification',
-            userName: 'Bulk Operation',
+            userName: customerName, // Customer name for display
             ipAddress: 'bulk_operation',
+            userType: 'customer', // Mark as customer verification
             errorCode: matchResult.matched ? null : 'FIELD_MISMATCH',
             errorMessage: matchResult.matched ? null : 'Field mismatch detected',
             metadata: {
               bulkOperation: true,
+              initiatedBy: userId, // Track broker who initiated bulk operation
               fieldsValidated: matchResult.details?.matchedFields || [],
               failedFields: matchResult.failedFields || []
             }
@@ -11906,6 +12659,16 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
         };
         
         // ✅ CONSOLIDATED LOGGING for failed verification
+        // Extract customer name from entry data for audit logging
+        let customerName = 'anonymous';
+        if (verificationData.firstName && verificationData.lastName) {
+          customerName = `${verificationData.firstName} ${verificationData.lastName}`;
+        } else if (verificationData.firstName) {
+          customerName = verificationData.firstName;
+        } else if (verificationData.lastName) {
+          customerName = verificationData.lastName;
+        }
+        
         try {
           await logVerificationComplete(db, {
             provider: 'datapro',
@@ -11914,14 +12677,16 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
             listId,
             entryId,
             identityNumber,
-            userId,
+            userId: customerName, // Customer name, not broker ID
             userEmail: entry.email || 'bulk_verification',
-            userName: 'Bulk Operation',
+            userName: customerName, // Customer name for display
             ipAddress: 'bulk_operation',
+            userType: 'customer', // Mark as customer verification
             errorCode: dataproResult.errorCode,
             errorMessage: dataproResult.error || 'Verification failed',
             metadata: {
-              bulkOperation: true
+              bulkOperation: true,
+              initiatedBy: userId // Track broker who initiated bulk operation
             }
           });
         } catch (logError) {
@@ -11972,6 +12737,9 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
         }
         
         // ✅ CONSOLIDATED LOGGING - Single call replaces trackVerifydataAPICall + logVerificationAttempt
+        // Extract customer (company) name from entry data for audit logging
+        const customerName = verificationData.companyName || 'anonymous';
+        
         try {
           await logVerificationComplete(db, {
             provider: 'verifydata',
@@ -11980,14 +12748,16 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
             listId,
             entryId,
             identityNumber,
-            userId,
+            userId: customerName, // Company name, not broker ID
             userEmail: entry.email || 'bulk_verification',
-            userName: 'Bulk Operation',
+            userName: customerName, // Company name for display
             ipAddress: 'bulk_operation',
+            userType: 'customer', // Mark as customer verification
             errorCode: matchResult.matched ? null : 'FIELD_MISMATCH',
             errorMessage: matchResult.matched ? null : 'Field mismatch detected',
             metadata: {
               bulkOperation: true,
+              initiatedBy: userId, // Track broker who initiated bulk operation
               fieldsValidated: matchResult.details?.matchedFields || [],
               failedFields: matchResult.failedFields || []
             }
@@ -12005,6 +12775,9 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
         };
         
         // ✅ CONSOLIDATED LOGGING for failed verification
+        // Extract customer (company) name from entry data for audit logging
+        const customerName = verificationData.companyName || 'anonymous';
+        
         try {
           await logVerificationComplete(db, {
             provider: 'verifydata',
@@ -12013,14 +12786,16 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
             listId,
             entryId,
             identityNumber,
-            userId,
+            userId: customerName, // Company name, not broker ID
             userEmail: entry.email || 'bulk_verification',
-            userName: 'Bulk Operation',
+            userName: customerName, // Company name for display
             ipAddress: 'bulk_operation',
+            userType: 'customer', // Mark as customer verification
             errorCode: verifydataResult.errorCode,
             errorMessage: verifydataResult.error || 'Verification failed',
             metadata: {
-              bulkOperation: true
+              bulkOperation: true,
+              initiatedBy: userId // Track broker who initiated bulk operation
             }
           });
         } catch (logError) {
@@ -12149,15 +12924,249 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
   }
 }
 
+/**
+ * POST /api/identity/lists/:listId/analyze-bulk-verify
+ * Analyze entries before bulk verification to show confirmation modal
+ * 
+ * This endpoint:
+ * 1. Fetches all unverified entries for the list
+ * 2. Validates format for each entry
+ * 3. Checks for duplicates across all lists
+ * 4. Calculates cost estimate
+ * 5. Returns analysis summary with analysisId
+ * 6. Caches results for 10 minutes
+ * 
+ * Requirements: 3.2, 3.3, 3.4, 3.5
+ */
+app.post('/api/identity/lists/:listId/analyze-bulk-verify', requireAuth, requireBrokerOrAdmin, async (req, res) => {
+  try {
+    const { listId } = req.params;
+    
+    console.log(`🔍 Analyzing bulk verification for list ${listId}`);
+    
+    // Validate list exists
+    const listDoc = await db.collection('identity-lists').doc(listId).get();
+    
+    if (!listDoc.exists) {
+      return res.status(404).json({
+        error: 'List not found',
+        message: `No list found with ID: ${listId}`
+      });
+    }
+    
+    const listData = listDoc.data();
+    
+    // Check ownership for brokers
+    if (normalizeRole(req.user.role) === 'broker' && listData.createdBy !== req.user.uid) {
+      console.log(`❌ Broker ${req.user.email} attempted to analyze list ${listId} owned by ${listData.createdBy}`);
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to analyze this list'
+      });
+    }
+    
+    // Fetch all unverified entries
+    const entriesSnapshot = await db.collection('identity-entries')
+      .where('listId', '==', listId)
+      .where('status', 'in', ['pending', 'link_sent'])
+      .get();
+    
+    console.log(`📋 Found ${entriesSnapshot.size} unverified entries to analyze`);
+    
+    if (entriesSnapshot.empty) {
+      return res.json({
+        analysisId: null,
+        totalEntries: 0,
+        toVerify: 0,
+        toSkip: 0,
+        skipReasons: {},
+        costEstimate: {
+          totalCost: 0,
+          currency: process.env.COST_CURRENCY || 'NGN',
+          breakdown: { nin: 0, bvn: 0, cac: 0 }
+        },
+        identityTypeBreakdown: { nin: 0, bvn: 0, cac: 0 }
+      });
+    }
+    
+    // Analyze each entry
+    const entriesToVerify = [];
+    const skipReasons = {
+      already_verified: 0,
+      invalid_format: 0,
+      no_identity_data: 0
+    };
+    const identityTypeCounts = {
+      nin: 0,
+      bvn: 0,
+      cac: 0
+    };
+    
+    for (const doc of entriesSnapshot.docs) {
+      const entry = doc.data();
+      const entryId = doc.id;
+      
+      // Determine verification type(s) - check NIN and CAC (BVN commented out for now)
+      // Note: We check in priority order, but only verify ONE type per entry
+      let verificationType = null;
+      let identityValue = null;
+      
+      // Priority 1: NIN
+      if (entry.data?.nin || entry.nin) {
+        verificationType = 'NIN';
+        identityValue = entry.data?.nin || entry.nin;
+      } 
+      // Priority 2: BVN (COMMENTED OUT - may be enabled later)
+      // else if (entry.data?.bvn || entry.bvn) {
+      //   verificationType = 'BVN';
+      //   identityValue = entry.data?.bvn || entry.bvn;
+      // }
+      // Priority 3: CAC
+      else if (entry.data?.cac || entry.cac) {
+        verificationType = 'CAC';
+        identityValue = entry.data?.cac || entry.cac;
+      }
+      
+      // Skip if no identity data
+      if (!verificationType || !identityValue) {
+        skipReasons.no_identity_data++;
+        continue;
+      }
+      
+      // Convert to string if needed
+      if (typeof identityValue === 'number') {
+        identityValue = String(identityValue);
+      } else if (typeof identityValue === 'object' && identityValue.encrypted) {
+        // Keep encrypted object as-is for now
+      } else if (typeof identityValue !== 'string') {
+        skipReasons.invalid_format++;
+        continue;
+      }
+      
+      // Validate format
+      const validation = validateIdentityFormat(verificationType, identityValue);
+      if (!validation.isValid) {
+        skipReasons.invalid_format++;
+        continue;
+      }
+      
+      // Check for duplicates
+      const duplicateCheck = await checkDuplicate(verificationType, identityValue);
+      
+      if (duplicateCheck.isDuplicate) {
+        skipReasons.already_verified++;
+        entriesToVerify.push({
+          entryId,
+          identityType: verificationType,
+          identityValue,
+          shouldVerify: false,
+          skipReason: 'already_verified',
+          isDuplicate: true,
+          duplicateInfo: duplicateCheck
+        });
+      } else {
+        // Count for cost calculation
+        const typeKey = verificationType.toLowerCase();
+        identityTypeCounts[typeKey]++;
+        
+        entriesToVerify.push({
+          entryId,
+          identityType: verificationType,
+          identityValue,
+          shouldVerify: true,
+          skipReason: null,
+          isDuplicate: false,
+          duplicateInfo: null
+        });
+      }
+    }
+    
+    // Calculate cost estimate
+    const costEstimate = calculateVerificationCost(identityTypeCounts);
+    
+    // Generate analysis ID
+    const analysisId = `analysis_${listId}_${Date.now()}`;
+    
+    // Store in cache
+    const analysis = {
+      analysisId,
+      listId,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + ANALYSIS_CACHE_TTL,
+      totalEntries: entriesSnapshot.size,
+      entriesToVerify,
+      costEstimate,
+      identityTypeBreakdown: identityTypeCounts
+    };
+    
+    bulkVerificationAnalysisCache.set(analysisId, analysis);
+    
+    console.log(`✅ Analysis complete for list ${listId}:`);
+    console.log(`   - Total entries: ${entriesSnapshot.size}`);
+    console.log(`   - To verify: ${entriesToVerify.filter(e => e.shouldVerify).length}`);
+    console.log(`   - To skip: ${Object.values(skipReasons).reduce((a, b) => a + b, 0)}`);
+    console.log(`   - Estimated cost: ${costEstimate.currency} ${costEstimate.totalCost}`);
+    
+    // Return analysis summary
+    res.json({
+      analysisId,
+      totalEntries: entriesSnapshot.size,
+      toVerify: entriesToVerify.filter(e => e.shouldVerify).length,
+      toSkip: Object.values(skipReasons).reduce((a, b) => a + b, 0),
+      skipReasons,
+      costEstimate,
+      identityTypeBreakdown: identityTypeCounts
+    });
+    
+  } catch (error) {
+    console.error('❌ Error analyzing bulk verification:', error);
+    res.status(500).json({
+      error: 'Analysis failed',
+      message: error.message
+    });
+  }
+});
+
 app.post('/api/identity/lists/:listId/bulk-verify', requireAuth, requireBrokerOrAdmin, bulkVerificationRateLimiter, async (req, res) => {
   try {
     const { listId } = req.params;
-    const { batchSize = 10 } = req.body;
+    const { batchSize = 10, analysisId } = req.body;
     
     // Validate batch size
     const validatedBatchSize = Math.min(20, Math.max(1, parseInt(batchSize) || 10));
     
     console.log(`🔄 Starting bulk verification for list ${listId} with batch size ${validatedBatchSize}`);
+    if (analysisId) {
+      console.log(`   Using cached analysis: ${analysisId}`);
+    }
+    
+    // If analysisId provided, check cache
+    let cachedAnalysis = null;
+    if (analysisId) {
+      cachedAnalysis = bulkVerificationAnalysisCache.get(analysisId);
+      
+      if (!cachedAnalysis) {
+        // Cache expired or invalid analysisId
+        console.log(`❌ Analysis cache miss or expired for ${analysisId}`);
+        return res.status(410).json({
+          error: 'Analysis expired',
+          message: 'The analysis results have expired. Please click "Verify All Unverified" again to get a fresh analysis.',
+          code: 'ANALYSIS_EXPIRED'
+        });
+      }
+      
+      // Verify the analysis is for this list
+      if (cachedAnalysis.listId !== listId) {
+        console.log(`❌ Analysis ${analysisId} is for list ${cachedAnalysis.listId}, not ${listId}`);
+        return res.status(400).json({
+          error: 'Invalid analysis',
+          message: 'The analysis results do not match this list.',
+          code: 'ANALYSIS_MISMATCH'
+        });
+      }
+      
+      console.log(`✅ Using cached analysis: ${cachedAnalysis.entriesToVerify.length} entries analyzed`);
+    }
     
     // Validate list exists
     const listDoc = await db.collection('identity-lists').doc(listId).get();
@@ -12260,7 +13269,8 @@ app.post('/api/identity/lists/:listId/bulk-verify', requireAuth, requireBrokerOr
           validatedBatchSize,
           req.user.uid,
           req.ipData,
-          req.headers['user-agent']
+          req.headers['user-agent'],
+          jobId  // Pass the jobId to ensure it matches!
         );
       } catch (error) {
         console.error('❌ Error during bulk verification:', error);
@@ -12321,17 +13331,33 @@ app.get('/api/identity/bulk-verify/:jobId/status', requireAuth, async (req, res)
       jobId: job.jobId,
       listId: job.listId,
       status: job.status,
+      completed: job.status === 'completed' || job.status === 'error' || job.status === 'paused',
       progress: job.progress || 0,
       processed: job.processed,
       verified: job.verified,
       failed: job.failed,
       skipped: job.skipped,
+      skipReasons: job.skipReasons || {
+        already_verified: 0,
+        invalid_format: 0,
+        no_identity_data: 0
+      },
       totalEntries: job.totalEntries,
       batchSize: job.batchSize,
       startedAt: job.startedAt,
       completedAt: job.completedAt || null,
       pausedAt: job.pausedAt || null,
-      error: job.error || null
+      error: job.error || null,
+      costSavings: job.costSavings || {
+        duplicatesSkipped: 0,
+        estimatedSaved: 0,
+        currency: process.env.COST_CURRENCY || 'NGN',
+        byType: {
+          NIN: 0,
+          BVN: 0,
+          CAC: 0
+        }
+      }
     };
     
     // Include details if requested
@@ -12564,7 +13590,22 @@ app.post('/api/identity/bulk-verify/:jobId/resume', requireAuth, requireBrokerOr
               currentJob.processed++;
               if (result.status === 'verified') currentJob.verified++;
               else if (result.status === 'failed') currentJob.failed++;
-              else if (result.status === 'skipped') currentJob.skipped++;
+              else if (result.status === 'skipped') {
+                currentJob.skipped++;
+                // Track skip reasons
+                const reason = result.reason || 'unknown';
+                if (currentJob.skipReasons[reason] !== undefined) {
+                  currentJob.skipReasons[reason]++;
+                } else {
+                  currentJob.skipReasons[reason] = 1;
+                }
+                // Track cost savings for duplicates
+                if (reason === 'already_verified') {
+                  currentJob.costSavings.duplicatesSkipped++;
+                  const costPerVerification = parseInt(process.env.NIN_VERIFICATION_COST || '50', 10);
+                  currentJob.costSavings.estimatedSaved += costPerVerification;
+                }
+              }
               currentJob.details.push(result);
             });
             
@@ -14373,7 +15414,8 @@ app.get('/api/analytics/audit-logs', requireAuth, requireSuperAdmin, async (req,
         timestamp,
         eventType: data.eventType || 'unknown',
         userId: data.userId || 'unknown',
-        userName: data.userEmail || data.userName || 'Unknown User',
+        userName: data.userName || 'Unknown User',
+        userEmail: data.userEmail || 'N/A',
         provider: logProvider,
         verificationType: logVerificationType,
         status: data.result || (isSuccess ? 'success' : 'failure'),
