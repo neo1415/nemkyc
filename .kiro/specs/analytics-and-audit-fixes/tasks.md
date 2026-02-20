@@ -18,15 +18,15 @@ The implementation follows an incremental approach, fixing each issue independen
     - Update both Datapro and VerifyData cost calculations
     - _Requirements: 1.1, 1.2_
   
-  - [x]* 1.2 Write property test for cost calculation completeness
+  - [ ]* 1.2 Write property test for cost calculation completeness
     - **Property 1: Cost Calculation Completeness**
     - **Validates: Requirements 1.1, 1.2, 1.4**
   
-  - [~]* 1.3 Write property test for cost consistency across components
+  - [ ]* 1.3 Write property test for cost consistency across components
     - **Property 2: Cost Consistency Across Components**
     - **Validates: Requirements 1.3**
   
-  - [~]* 1.4 Write unit tests for cost calculation edge cases
+  - [ ]* 1.4 Write unit tests for cost calculation edge cases
     - Test with only successful calls
     - Test with only failed calls
     - Test with missing fields (defaults to 0)
@@ -43,7 +43,7 @@ The implementation follows an incremental approach, fixing each issue independen
     - Only close dialog on success
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
   
-  - [~]* 2.2 Write unit tests for budget save feedback
+  - [ ]* 2.2 Write unit tests for budget save feedback
     - Test success toast is displayed on successful save
     - Test error toast is displayed on failed save
     - Test dialog closes on success
@@ -73,15 +73,15 @@ The implementation follows an incremental approach, fixing each issue independen
     - Ensure `userType` is set to 'customer' for token-based verifications
     - _Requirements: 3.1, 3.2, 3.6_
   
-  - [~]* 4.4 Write property test for customer context in audit logs
+  - [ ]* 4.4 Write property test for customer context in audit logs
     - **Property 3: Customer Context in Audit Logs**
     - **Validates: Requirements 3.1, 3.2, 3.6, 5.2, 5.4**
   
-  - [~]* 4.5 Write property test for audit log completeness
+  - [ ]* 4.5 Write property test for audit log completeness
     - **Property 5: Audit Log Completeness**
     - **Validates: Requirements 4.1, 4.2, 4.3, 4.4, 4.6**
   
-  - [~]* 4.6 Write unit tests for customer context extraction
+  - [ ]* 4.6 Write unit tests for customer context extraction
     - Test extraction with standard field names (firstName, lastName)
     - Test extraction with alternate field names (first_name, last_name)
     - Test extraction with Excel-style field names ('First Name', 'Last Name')
@@ -97,25 +97,25 @@ The implementation follows an incremental approach, fixing each issue independen
     - Ensure no broker information is displayed
     - _Requirements: 3.4, 3.5_
   
-  - [~]* 5.2 Write property test for customer info display in AuditLogsViewer
+  - [ ]* 5.2 Write property test for customer info display in AuditLogsViewer
     - **Property 4: Customer Info Display in AuditLogsViewer**
     - **Validates: Requirements 3.4, 3.5**
   
-  - [~]* 5.3 Write unit tests for AuditLogsViewer display
+  - [ ]* 5.3 Write unit tests for AuditLogsViewer display
     - Test customer name appears in "User" column
     - Test customer email appears in expanded row details
     - Test with multiple audit log entries
     - _Requirements: 3.4, 3.5_
 
 - [ ] 6. Integration testing and verification
-  - [~]* 6.1 Write end-to-end test for cost tracking
+  - [ ]* 6.1 Write end-to-end test for cost tracking
     - Create test verifications (successful and failed)
     - Query cost tracking API
     - Verify total cost includes both types
     - Verify CostTracker and MetricsOverview show same value
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
   
-  - [~]* 6.2 Write end-to-end test for budget save feedback
+  - [ ]* 6.2 Write end-to-end test for budget save feedback
     - Open Budget Configuration dialog
     - Change budget value
     - Click Save
@@ -124,7 +124,7 @@ The implementation follows an incremental approach, fixing each issue independen
     - Verify budget value is persisted
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
   
-  - [~]* 6.3 Write end-to-end test for audit logging
+  - [ ]* 6.3 Write end-to-end test for audit logging
     - Create identity entry with customer data
     - Submit verification through token link
     - Query audit logs

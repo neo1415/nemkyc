@@ -180,9 +180,9 @@ export class AnalyticsAPI {
       failureCount: day.failedCalls || 0,
       dataproCalls: day.dataproCalls || 0,
       verifydataCalls: day.verifydataCalls || 0,
-      dataproCost: (day.dataproCalls || 0) * 50,
+      dataproCost: (day.dataproCalls || 0) * 100, // Datapro NIN costs ₦100
       verifydataCost: (day.verifydataCalls || 0) * 100,
-      totalCost: ((day.dataproCalls || 0) * 50) + ((day.verifydataCalls || 0) * 100)
+      totalCost: ((day.dataproCalls || 0) * 100) + ((day.verifydataCalls || 0) * 100) // Both cost ₦100
     }));
   }
 
@@ -230,6 +230,11 @@ export class AnalyticsAPI {
       criticalThreshold: config.criticalThreshold / 100 // Convert 95 to 0.95
     };
     
+    console.log('🔧 Updating budget config:', backendConfig);
+    console.log('📍 API URL:', `${this.baseURL}/budget-config`);
+    console.log('🍪 Credentials:', 'include');
+    console.log('📋 Headers:', this.getHeaders());
+    
     const response = await fetch(`${this.baseURL}/budget-config`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -237,10 +242,16 @@ export class AnalyticsAPI {
       body: JSON.stringify(backendConfig),
     });
 
+    console.log('📡 Response status:', response.status);
+    console.log('📡 Response ok:', response.ok);
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Failed to update budget config' }));
+      console.error('❌ Budget update failed:', error);
       throw new Error(error.error || 'Failed to update budget config');
     }
+    
+    console.log('✅ Budget config updated successfully');
   }
 
   /**

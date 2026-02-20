@@ -67,9 +67,9 @@ export const VerificationDetailsDialog: React.FC<VerificationDetailsDialogProps>
 
   // Get status icon
   const getStatusIcon = () => {
-    if (isVerified) return <CheckIcon sx={{ color: '#2e7d32' }} />;
-    if (isFailed) return <ErrorIcon sx={{ color: '#d32f2f' }} />;
-    return <InfoIcon sx={{ color: '#B8860B' }} />;
+    if (isVerified) return <CheckIcon sx={{ color: 'white' }} />;
+    if (isFailed) return <ErrorIcon sx={{ color: 'white' }} />;
+    return <InfoIcon sx={{ color: 'white' }} />;
   };
 
   return (
@@ -82,11 +82,11 @@ export const VerificationDetailsDialog: React.FC<VerificationDetailsDialogProps>
         sx: { maxHeight: '90vh' }
       }}
     >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1 }}>
+      <DialogTitle sx={{ bgcolor: '#800020', color: 'white', display: 'flex', alignItems: 'center', gap: 1, pb: 1 }}>
         {getStatusIcon()}
         <Box sx={{ flexGrow: 1 }}>
-          <Typography variant="h6">Verification Details</Typography>
-          <Typography variant="caption" color="textSecondary">
+          <Typography variant="h6" sx={{ color: 'white' }}>Verification Details</Typography>
+          <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
             Entry ID: {entry.id}
           </Typography>
         </Box>

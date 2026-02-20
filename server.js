@@ -2063,7 +2063,8 @@ app.use((req, res, next) => {
     req.path === '/api/verify/nin' ||    // Demo NIN verification
     req.path === '/api/verify/cac' ||    // Demo CAC verification
     req.path.startsWith('/api/remediation/') ||  // Remediation endpoints (protected by auth)
-    req.path.startsWith('/api/identity/')) {  // Identity collection endpoints (protected by auth)
+    req.path.startsWith('/api/identity/') ||     // Identity collection endpoints (protected by auth)
+    req.path.startsWith('/api/analytics/')) {    // Analytics endpoints (protected by requireAuth + requireSuperAdmin)
     console.log('🔓 Skipping CSRF protection for:', req.path);
     return next(); // Skip CSRF for this route
   }
@@ -10533,7 +10534,7 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
               listId: entry.listId,
               entryId: entryDoc.id,
               blockedBeforeAPICall: true,
-              costSaved: verificationType === 'NIN' ? 50 : 100
+              costSaved: 100 // Both NIN and CAC cost ₦100
             }
           });
         } catch (logError) {
@@ -10565,7 +10566,7 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
             email: entry.email,
             error: 'Duplicate identity number',
             reason: `${verificationType} already verified in system`,
-            costSaved: verificationType === 'NIN' ? 50 : 100 // ₦50 for NIN, ₦100 for CAC
+            costSaved: 100 // Both NIN and CAC cost ₦100
           }
         });
         
@@ -12635,7 +12636,7 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
             userId: customerName, // Customer name, not broker ID
             userEmail: entry.email || 'bulk_verification',
             userName: customerName, // Customer name for display
-            ipAddress: 'bulk_operation',
+            ipAddress: req.ipData?.masked || req.ip || 'bulk_operation',
             userType: 'customer', // Mark as customer verification
             errorCode: matchResult.matched ? null : 'FIELD_MISMATCH',
             errorMessage: matchResult.matched ? null : 'Field mismatch detected',
@@ -12680,7 +12681,7 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
             userId: customerName, // Customer name, not broker ID
             userEmail: entry.email || 'bulk_verification',
             userName: customerName, // Customer name for display
-            ipAddress: 'bulk_operation',
+            ipAddress: req.ipData?.masked || req.ip || 'bulk_operation',
             userType: 'customer', // Mark as customer verification
             errorCode: dataproResult.errorCode,
             errorMessage: dataproResult.error || 'Verification failed',
@@ -12751,7 +12752,7 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
             userId: customerName, // Company name, not broker ID
             userEmail: entry.email || 'bulk_verification',
             userName: customerName, // Company name for display
-            ipAddress: 'bulk_operation',
+            ipAddress: req.ipData?.masked || req.ip || 'bulk_operation',
             userType: 'customer', // Mark as customer verification
             errorCode: matchResult.matched ? null : 'FIELD_MISMATCH',
             errorMessage: matchResult.matched ? null : 'Field mismatch detected',
@@ -12789,7 +12790,7 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
             userId: customerName, // Company name, not broker ID
             userEmail: entry.email || 'bulk_verification',
             userName: customerName, // Company name for display
-            ipAddress: 'bulk_operation',
+            ipAddress: req.ipData?.masked || req.ip || 'bulk_operation',
             userType: 'customer', // Mark as customer verification
             errorCode: verifydataResult.errorCode,
             errorMessage: verifydataResult.error || 'Verification failed',
@@ -13602,7 +13603,7 @@ app.post('/api/identity/bulk-verify/:jobId/resume', requireAuth, requireBrokerOr
                 // Track cost savings for duplicates
                 if (reason === 'already_verified') {
                   currentJob.costSavings.duplicatesSkipped++;
-                  const costPerVerification = parseInt(process.env.NIN_VERIFICATION_COST || '50', 10);
+                  const costPerVerification = parseInt(process.env.NIN_VERIFICATION_COST || '100', 10);
                   currentJob.costSavings.estimatedSaved += costPerVerification;
                 }
               }
@@ -14002,10 +14003,34 @@ app.get('/api/health/usage', requireAuth, requireAdmin, async (req, res) => {
     
     console.log(`💰 Admin ${req.user.email} checking API usage (${period})`);
     
-    const usage = await getAPIUsage(period);
+    // Query api-usage-logs collection directly for consistency with analytics dashboard
+    const now = new Date();
+    let startDate;
+    
+    if (period === 'day') {
+      // Start of today
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    } else {
+      // Start of current month
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    
+    const logsSnapshot = await db.collection('api-usage-logs')
+      .where('timestamp', '>=', startDate)
+      .get();
+    
+    let totalCalls = 0;
+    let totalCost = 0;
+    
+    logsSnapshot.forEach(doc => {
+      const data = doc.data();
+      totalCalls++;
+      totalCost += data.cost || 0;
+    });
     
     res.status(200).json({
-      ...usage,
+      calls: totalCalls,
+      cost: totalCost,
       period
     });
     
@@ -14266,7 +14291,7 @@ app.get('/api/analytics/overview', requireAuth, requireSuperAdmin, async (req, r
       failedCalls,
       dataproCalls,
       verifydataCalls,
-      dataproCost: dataproCalls * 50,
+      dataproCost: dataproCalls * 100, // Datapro NIN costs ₦100
       verifydataCost: verifydataCalls * 100,
       totalCost,
       successRate: parseFloat(successRate.toFixed(2)),
@@ -14777,7 +14802,7 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
       // If no cost data available, fall back to estimation
       if (data.totalCost === 0 && (data.dataproCalls > 0 || data.verifydataCalls > 0)) {
         // Fallback: Estimate cost if cost field not available in logs
-        data.totalCost = (data.dataproCalls * 50) + (data.verifydataCalls * 100);
+        data.totalCost = (data.dataproCalls * 100) + (data.verifydataCalls * 100); // Both cost ₦100
       }
       
       data.successRate = data.totalCalls > 0 
@@ -14950,7 +14975,7 @@ app.get('/api/analytics/cost-tracking', requireAuth, requireSuperAdmin, async (r
       verifydataCalls += (data.successCalls || 0) + (data.failedCalls || 0);
     });
     
-    const dataproCost = dataproCalls * 50;
+    const dataproCost = dataproCalls * 100; // Datapro NIN costs ₦100
     const verifydataCost = verifydataCalls * 100;
     const currentSpend = dataproCost + verifydataCost;
     
@@ -15125,6 +15150,254 @@ app.post('/api/analytics/budget-config', requireAuth, requireSuperAdmin, async (
 });
 
 /**
+ * Check budget usage and send alerts to super admins
+ * 
+ * This function checks current month's spending against budget limits
+ * and sends email alerts when 50% or 90% thresholds are reached.
+ * 
+ * Should be called periodically (e.g., every hour) via cron job or scheduled function.
+ */
+async function checkBudgetAlertsAndNotify() {
+  try {
+    console.log('🔔 Checking budget alerts...');
+    
+    // Get budget configuration
+    const budgetDoc = await db.collection('budget-config').doc('default').get();
+    const budgetConfig = budgetDoc.exists ? budgetDoc.data() : {
+      monthlyBudget: 100000,
+      warningThreshold: 0.8,
+      criticalThreshold: 0.95
+    };
+    
+    // Get current month's spending
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    
+    const logsSnapshot = await db.collection('api-usage-logs')
+      .where('timestamp', '>=', startOfMonth)
+      .where('timestamp', '<=', endOfMonth)
+      .get();
+    
+    let totalCost = 0;
+    logsSnapshot.forEach(doc => {
+      const log = doc.data();
+      if (log.cost && typeof log.cost === 'number') {
+        totalCost += log.cost;
+      }
+    });
+    
+    const utilization = totalCost / budgetConfig.monthlyBudget;
+    const utilizationPercent = (utilization * 100).toFixed(1);
+    
+    console.log(`💰 Current spending: ₦${totalCost.toFixed(2)} / ₦${budgetConfig.monthlyBudget} (${utilizationPercent}%)`);
+    
+    // Check if we need to send alerts
+    const alertsDoc = await db.collection('budget-alerts').doc('current-month').get();
+    const alertsData = alertsDoc.exists ? alertsDoc.data() : {
+      month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+      alert50Sent: false,
+      alert90Sent: false
+    };
+    
+    // Reset alerts if it's a new month
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    if (alertsData.month !== currentMonth) {
+      alertsData.month = currentMonth;
+      alertsData.alert50Sent = false;
+      alertsData.alert90Sent = false;
+    }
+    
+    let alertSent = false;
+    
+    // Check 90% threshold (critical)
+    if (utilization >= 0.90 && !alertsData.alert90Sent) {
+      await sendBudgetAlert(90, totalCost, budgetConfig.monthlyBudget, utilizationPercent);
+      alertsData.alert90Sent = true;
+      alertsData.alert90SentAt = new Date();
+      alertSent = true;
+      console.log('🚨 90% budget alert sent');
+    }
+    // Check 50% threshold (warning)
+    else if (utilization >= 0.50 && !alertsData.alert50Sent) {
+      await sendBudgetAlert(50, totalCost, budgetConfig.monthlyBudget, utilizationPercent);
+      alertsData.alert50Sent = true;
+      alertsData.alert50SentAt = new Date();
+      alertSent = true;
+      console.log('⚠️ 50% budget alert sent');
+    }
+    
+    // Save alert status
+    if (alertSent) {
+      await db.collection('budget-alerts').doc('current-month').set(alertsData, { merge: true });
+    }
+    
+    return { success: true, utilization: utilizationPercent, alertSent };
+    
+  } catch (error) {
+    console.error('❌ Error checking budget alerts:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Send budget alert email to all super admin users
+ */
+async function sendBudgetAlert(threshold, currentSpending, budgetLimit, utilizationPercent) {
+  try {
+    // Get all super admin users (normalized roles)
+    const usersSnapshot = await db.collection('userroles')
+      .where('normalizedRole', '==', 'super_admin')
+      .get();
+    
+    if (usersSnapshot.empty) {
+      console.log('⚠️ No super admin users found to send budget alert');
+      return;
+    }
+    
+    const superAdminEmails = [];
+    usersSnapshot.forEach(doc => {
+      const user = doc.data();
+      if (user.email) {
+        superAdminEmails.push(user.email);
+      }
+    });
+    
+    if (superAdminEmails.length === 0) {
+      console.log('⚠️ No super admin emails found');
+      return;
+    }
+    
+    const alertLevel = threshold >= 90 ? 'CRITICAL' : 'WARNING';
+    const alertColor = threshold >= 90 ? '#d32f2f' : '#ed6c02';
+    const alertIcon = threshold >= 90 ? '🚨' : '⚠️';
+    
+    const emailContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: ${alertColor}; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+          .content { background-color: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-top: none; }
+          .alert-box { background-color: white; border-left: 4px solid ${alertColor}; padding: 15px; margin: 15px 0; }
+          .stats { background-color: white; padding: 15px; margin: 15px 0; border-radius: 5px; }
+          .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+          .stat-label { font-weight: bold; }
+          .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          .button { display: inline-block; padding: 12px 24px; background-color: #800020; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>${alertIcon} Budget ${alertLevel} Alert</h1>
+            <p>API Usage Budget Threshold Reached</p>
+          </div>
+          <div class="content">
+            <div class="alert-box">
+              <h2 style="margin-top: 0; color: ${alertColor};">${threshold}% Budget Threshold Reached</h2>
+              <p>Your monthly API usage budget has reached ${utilizationPercent}% utilization.</p>
+            </div>
+            
+            <div class="stats">
+              <h3>Current Month Budget Status</h3>
+              <div class="stat-row">
+                <span class="stat-label">Current Spending:</span>
+                <span>₦${currentSpending.toFixed(2)}</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Monthly Budget:</span>
+                <span>₦${budgetLimit.toFixed(2)}</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Utilization:</span>
+                <span style="color: ${alertColor}; font-weight: bold;">${utilizationPercent}%</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Remaining Budget:</span>
+                <span>₦${(budgetLimit - currentSpending).toFixed(2)}</span>
+              </div>
+            </div>
+            
+            <div style="margin: 20px 0;">
+              <h3>Recommended Actions:</h3>
+              <ul>
+                ${threshold >= 90 ? `
+                  <li><strong>Review current API usage immediately</strong></li>
+                  <li>Consider temporarily pausing non-critical verification operations</li>
+                  <li>Increase monthly budget if additional spending is justified</li>
+                ` : `
+                  <li>Monitor API usage closely for the remainder of the month</li>
+                  <li>Review verification patterns to identify optimization opportunities</li>
+                  <li>Plan budget adjustments for next month if needed</li>
+                `}
+                <li>Check the Analytics Dashboard for detailed usage breakdown</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center;">
+              <a href="${process.env.FRONTEND_URL || 'https://kyc.nem-insurance.com'}/admin/analytics" class="button">
+                View Analytics Dashboard
+              </a>
+            </div>
+          </div>
+          <div class="footer">
+            <p>This is an automated alert from NEM Insurance KYC System</p>
+            <p>You are receiving this because you are a Super Admin</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    // Send email to all super admins
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: superAdminEmails.join(', '),
+      subject: `${alertIcon} ${alertLevel}: API Budget ${threshold}% Threshold Reached`,
+      html: emailContent
+    };
+    
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Budget alert email sent to ${superAdminEmails.length} super admin(s)`);
+    
+  } catch (error) {
+    console.error('❌ Error sending budget alert email:', error);
+    throw error;
+  }
+}
+
+// Check budget alerts every hour
+setInterval(async () => {
+  await checkBudgetAlertsAndNotify();
+}, 60 * 60 * 1000); // 1 hour
+
+// Also check on server startup (after a 1 minute delay to let everything initialize)
+setTimeout(async () => {
+  await checkBudgetAlertsAndNotify();
+}, 60 * 1000);
+
+/**
+ * Manual endpoint to trigger budget alert check (for testing)
+ * POST /api/analytics/check-budget-alerts
+ */
+app.post('/api/analytics/check-budget-alerts', requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    console.log(`🔔 Super Admin ${req.user.email} manually triggering budget alert check`);
+    const result = await checkBudgetAlertsAndNotify();
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('❌ Error in manual budget alert check:', error);
+    res.status(500).json({
+      error: 'Failed to check budget alerts',
+      message: error.message
+    });
+  }
+});
+
+/**
  * Export analytics report data
  * 
  * GET /api/analytics/export?format=csv&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&sections=overview,brokers,costs
@@ -15240,7 +15513,7 @@ app.get('/api/analytics/export', requireAuth, requireSuperAdmin, async (req, res
         }
         
         if (data.apiProvider === 'datapro') {
-          broker.totalCost += 50;
+          broker.totalCost += 100; // Datapro NIN costs ₦100
         } else if (data.apiProvider === 'verifydata') {
           broker.totalCost += 100;
         }
@@ -15280,7 +15553,7 @@ app.get('/api/analytics/export', requireAuth, requireSuperAdmin, async (req, res
       reportData.sections.costs = {
         datapro: {
           calls: dataproCalls,
-          cost: dataproCalls * 50
+          cost: dataproCalls * 100 // Datapro NIN costs ₦100
         },
         verifydata: {
           calls: verifydataCalls,
