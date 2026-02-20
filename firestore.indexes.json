@@ -315,6 +315,32 @@
       ]
     },
     {
+      "collectionGroup": "identity-entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "identityType", "order": "ASCENDING" },
+        { "fieldPath": "identityValue", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "identity-activity-logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "listId", "order": "ASCENDING" },
+        { "fieldPath": "action", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "identity-activity-logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "listId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "identity-logs",
       "queryScope": "COLLECTION",
       "fields": [

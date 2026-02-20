@@ -12,7 +12,7 @@
  * - Activity log panel showing recent actions
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -66,6 +66,8 @@ import { CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { DataGrid, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 import { SendConfirmDialog } from '../../components/identity/SendConfirmDialog';
 import { VerificationDetailsDialog } from '../../components/identity/VerificationDetailsDialog';
+import BulkVerifyConfirmDialog, { BulkVerifyAnalysis } from '../../components/identity/BulkVerifyConfirmDialog';
+import SendLinksConfirmDialog, { SendLinksAnalysis } from '../../components/identity/SendLinksConfirmDialog';
 import { useBrokerTourV2 } from '../../hooks/useBrokerTourV2';
 import type { IdentityEntry, ListDetails, EntryStatus, VerificationType, ActivityLog, ActivityAction } from '../../types/remediation';
 import { isEncrypted } from '../../utils/encryption';
@@ -122,6 +124,16 @@ export default function IdentityListDetail({
     failed: number;
     skipped: number;
   } | null>(null);
+
+  // Analysis and confirmation state
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<BulkVerifyAnalysis | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+
+  // Link sending analysis state
+  const [linkAnalyzing, setLinkAnalyzing] = useState(false);
+  const [linkAnalysisResult, setLinkAnalysisResult] = useState<any>(null);
+  const [linkConfirmDialogOpen, setLinkConfirmDialogOpen] = useState(false);
 
   // Failure details dialog state
   const [failureDetailsOpen, setFailureDetailsOpen] = useState(false);
@@ -678,9 +690,43 @@ export default function IdentityListDetail({
     }
   };
 
-  const handleSendClick = (type: VerificationType) => {
+  const handleSendClick = async (type: VerificationType) => {
+    const idsArray = getSelectedIdsArray();
+    if (idsArray.length === 0) {
+      setError('Please select at least one entry');
+      return;
+    }
+
     setVerificationType(type);
-    setSendDialogOpen(true);
+    
+    // Call analysis endpoint
+    try {
+      setLinkAnalyzing(true);
+      setLinkConfirmDialogOpen(true);
+      
+      const response = await fetch(`${API_BASE_URL}/api/identity/lists/${listId}/analyze-send-links`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entryIds: idsArray,
+          verificationType: type,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to analyze entries');
+      }
+
+      const analysis = await response.json();
+      setLinkAnalysisResult(analysis);
+    } catch (err) {
+      console.error('Error analyzing entries:', err);
+      setError(err instanceof Error ? err.message : 'Failed to analyze entries');
+      setLinkConfirmDialogOpen(false);
+    } finally {
+      setLinkAnalyzing(false);
+    }
   };
 
   // Helper to get selected IDs as array
@@ -693,6 +739,58 @@ export default function IdentityListDetail({
   };
 
   const selectedCount = selectedIds.type === 'include' ? selectedIds.ids.size : entries.length - selectedIds.ids.size;
+
+  const handleLinkSendConfirm = async () => {
+    const idsArray = getSelectedIdsArray();
+    if (idsArray.length === 0) return;
+
+    try {
+      setSending(true);
+      const response = await fetch(`${API_BASE_URL}/api/identity/lists/${listId}/send`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entryIds: idsArray,
+          verificationType,
+          analysisId: linkAnalysisResult?.analysisId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.code === 'ANALYSIS_EXPIRED') {
+          setError('Analysis expired. Please try again.');
+          setLinkConfirmDialogOpen(false);
+          return;
+        }
+        throw new Error('Failed to send verification links');
+      }
+
+      const result = await response.json();
+      setLinkConfirmDialogOpen(false);
+      setSelectedIds({ type: 'include', ids: new Set() });
+      fetchData();
+      
+      // Advance tour when emails are sent successfully
+      if (result.sent > 0) {
+        advanceTour();
+      }
+      
+      // Show success message
+      const message = `Sent ${result.sent} verification links.`;
+      const details = [];
+      if (result.failed > 0) details.push(`${result.failed} failed`);
+      if (result.skipped > 0) details.push(`${result.skipped} skipped`);
+      
+      setSuccessMessage(details.length > 0 ? `${message} ${details.join(', ')}.` : message);
+    } catch (err) {
+      console.error('Error sending links:', err);
+      setError(err instanceof Error ? err.message : 'Failed to send links');
+    } finally {
+      setSending(false);
+    }
+  };
 
   const handleSendConfirm = async () => {
     const idsArray = getSelectedIdsArray();
@@ -764,6 +862,7 @@ export default function IdentityListDetail({
   const [bulkVerifyProgress, setBulkVerifyProgress] = useState<number>(0);
   const [bulkVerifyStatus, setBulkVerifyStatus] = useState<'idle' | 'running' | 'paused' | 'completed' | 'error' | 'queued'>('idle');
   const [bulkVerifyPollInterval, setBulkVerifyPollInterval] = useState<NodeJS.Timeout | null>(null);
+  const pollingBackoffRef = useRef<number>(2000); // Start at 2 seconds
 
   // Poll for bulk verification progress
   const pollBulkVerifyProgress = async (jobId: string) => {
@@ -781,8 +880,12 @@ export default function IdentityListDetail({
       setBulkVerifyProgress(status.progress || 0);
       setBulkVerifyStatus(status.status);
       
-      // If job is completed or errored, stop polling and show results
-      if (status.status === 'completed' || status.status === 'error') {
+      // Reset backoff on successful response
+      pollingBackoffRef.current = 2000;
+      
+      // Check completed flag instead of string matching on status
+      if (status.completed) {
+        // Stop polling
         if (bulkVerifyPollInterval) {
           clearInterval(bulkVerifyPollInterval);
           setBulkVerifyPollInterval(null);
@@ -806,18 +909,79 @@ export default function IdentityListDetail({
       }
     } catch (err) {
       console.error('Error polling job status:', err);
+      
+      // Increase backoff on error (exponential: 2s, 4s, 8s, 16s, max 30s)
+      pollingBackoffRef.current = Math.min(pollingBackoffRef.current * 2, 30000);
     }
+  };
+
+  // Start polling with exponential backoff
+  const startPolling = (jobId: string) => {
+    // Reset backoff to initial value
+    pollingBackoffRef.current = 2000;
+    
+    const poll = () => {
+      pollBulkVerifyProgress(jobId).then(() => {
+        // Schedule next poll with current backoff interval
+        const timeout = setTimeout(poll, pollingBackoffRef.current);
+        setBulkVerifyPollInterval(timeout as any);
+      });
+    };
+    
+    // Start first poll immediately
+    poll();
   };
 
   const handleBulkVerify = async () => {
     if (!listId) return;
     
     try {
+      setAnalyzing(true);
+      setError(null);
+      
+      // Step 1: Analyze entries before verification
+      const analysisResponse = await fetch(`${API_BASE_URL}/api/identity/lists/${listId}/analyze-bulk-verify`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          batchSize: 10
+        })
+      });
+      
+      if (!analysisResponse.ok) {
+        const errorData = await analysisResponse.json();
+        throw new Error(errorData.message || 'Failed to analyze entries');
+      }
+      
+      const analysis = await analysisResponse.json();
+      
+      // Step 2: Show confirmation modal with analysis results
+      setAnalysisResult(analysis);
+      setConfirmDialogOpen(true);
+      
+    } catch (err) {
+      console.error('Analysis error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to analyze entries');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  // Handle confirmation from modal
+  const handleConfirmBulkVerify = async () => {
+    if (!listId || !analysisResult) return;
+    
+    try {
+      setConfirmDialogOpen(false);
       setBulkVerifying(true);
       setError(null);
       setBulkVerifyProgress(0);
       setBulkVerifyStatus('running');
       
+      // Step 3: Start verification with analysisId
       const response = await fetch(`${API_BASE_URL}/api/identity/lists/${listId}/bulk-verify`, {
         method: 'POST',
         credentials: 'include',
@@ -825,7 +989,8 @@ export default function IdentityListDetail({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          batchSize: 10 // Process 10 entries concurrently
+          batchSize: 10,
+          analysisId: analysisResult.analysisId
         })
       });
       
@@ -838,16 +1003,11 @@ export default function IdentityListDetail({
       
       // Check if request was queued
       if (result.queued) {
-        // Request was queued due to high load
         setBulkVerifying(false);
         setBulkVerifyStatus('queued');
         setError(null);
         
-        // Show queue notification
         alert(`Your bulk verification request has been queued.\n\nPosition: ${result.position}/${result.queueSize}\nEstimated wait: ${result.estimatedWaitTime} seconds\n\nYou will be notified when it completes.`);
-        
-        // Optionally poll queue status
-        // You can implement queue status polling here if needed
         
         return;
       }
@@ -855,12 +1015,8 @@ export default function IdentityListDetail({
       // Normal processing - not queued
       setBulkVerifyJobId(result.jobId);
       
-      // Start polling for progress
-      const interval = setInterval(() => {
-        pollBulkVerifyProgress(result.jobId);
-      }, 2000); // Poll every 2 seconds
-      
-      setBulkVerifyPollInterval(interval);
+      // Start polling for progress with exponential backoff
+      startPolling(result.jobId);
       
     } catch (err) {
       console.error('Bulk verification error:', err);
@@ -915,12 +1071,8 @@ export default function IdentityListDetail({
       
       setBulkVerifyStatus('running');
       
-      // Restart polling
-      const interval = setInterval(() => {
-        pollBulkVerifyProgress(bulkVerifyJobId);
-      }, 2000);
-      
-      setBulkVerifyPollInterval(interval);
+      // Restart polling with exponential backoff
+      startPolling(bulkVerifyJobId);
     } catch (err) {
       console.error('Error resuming bulk verification:', err);
       setError(err instanceof Error ? err.message : 'Failed to resume bulk verification');
@@ -1095,8 +1247,8 @@ export default function IdentityListDetail({
         <Box sx={{ flexGrow: 1 }} />
         <Button
           variant="outlined"
-          startIcon={bulkVerifying ? <CircularProgress size={20} /> : <RefreshIcon />}
-          disabled={bulkVerifying || !list || list.totalEntries === 0}
+          startIcon={analyzing ? <CircularProgress size={20} /> : bulkVerifying ? <CircularProgress size={20} /> : <RefreshIcon />}
+          disabled={analyzing || bulkVerifying || !list || list.totalEntries === 0}
           onClick={handleBulkVerify}
           sx={{ 
             borderColor: '#800020',
@@ -1107,7 +1259,7 @@ export default function IdentityListDetail({
             }
           }}
         >
-          {bulkVerifying ? `Verifying... ${bulkVerifyProgress}%` : 'Verify All Unverified'}
+          {analyzing ? 'Analyzing...' : bulkVerifying ? `Verifying... ${bulkVerifyProgress}%` : 'Verify All Unverified'}
         </Button>
         
         {/* Pause/Resume buttons for bulk verification */}
@@ -1148,32 +1300,39 @@ export default function IdentityListDetail({
         )}
         
         <Box data-tour="request-buttons" sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="contained"
-            startIcon={<SendIcon />}
-            disabled={selectedCount === 0}
-            onClick={() => handleSendClick('NIN')}
-            sx={{ 
-              bgcolor: '#800020', 
-              '&:hover': { bgcolor: '#600018' },
-              color: 'white'
-            }}
-          >
-            Request NIN ({selectedCount})
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<SendIcon />}
-            disabled={selectedCount === 0}
-            onClick={() => handleSendClick('CAC')}
-            sx={{ 
-              bgcolor: '#B8860B', 
-              '&:hover': { bgcolor: '#8B6914' },
-              color: 'white'
-            }}
-          >
-            Request CAC ({selectedCount})
-          </Button>
+          {/* Show Request NIN button only for individual lists */}
+          {(!list?.listType || list.listType === 'individual') && (
+            <Button
+              variant="contained"
+              startIcon={<SendIcon />}
+              disabled={selectedCount === 0}
+              onClick={() => handleSendClick('NIN')}
+              sx={{ 
+                bgcolor: '#800020', 
+                '&:hover': { bgcolor: '#600018' },
+                color: 'white'
+              }}
+            >
+              Request NIN ({selectedCount})
+            </Button>
+          )}
+          
+          {/* Show Request CAC button only for corporate lists */}
+          {list?.listType === 'corporate' && (
+            <Button
+              variant="contained"
+              startIcon={<SendIcon />}
+              disabled={selectedCount === 0}
+              onClick={() => handleSendClick('CAC')}
+              sx={{ 
+                bgcolor: '#B8860B', 
+                '&:hover': { bgcolor: '#8B6914' },
+                color: 'white'
+              }}
+            >
+              Request CAC ({selectedCount})
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -1224,6 +1383,32 @@ export default function IdentityListDetail({
         entries={selectedEntries}
         verificationType={verificationType}
         loading={sending}
+      />
+
+      {/* Bulk Verify Confirmation Dialog */}
+      <BulkVerifyConfirmDialog
+        open={confirmDialogOpen}
+        onClose={() => {
+          setConfirmDialogOpen(false);
+          setAnalysisResult(null);
+        }}
+        onConfirm={handleConfirmBulkVerify}
+        analysis={analysisResult}
+        loading={analyzing}
+      />
+
+      {/* Send Links Confirmation Dialog */}
+      <SendLinksConfirmDialog
+        open={linkConfirmDialogOpen}
+        onClose={() => {
+          setLinkConfirmDialogOpen(false);
+          setLinkAnalysisResult(null);
+        }}
+        onConfirm={handleLinkSendConfirm}
+        analysis={linkAnalysisResult}
+        loading={linkAnalyzing}
+        sending={sending}
+        verificationType={verificationType}
       />
 
       {/* Resend Confirmation Dialog */}

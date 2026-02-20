@@ -50,7 +50,7 @@ export function SendConfirmDialog({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
+      <DialogTitle sx={{ bgcolor: '#800020', color: 'white', py: 2 }}>
         Send Verification Links
       </DialogTitle>
       <DialogContent>
