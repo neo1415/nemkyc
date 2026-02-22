@@ -42,12 +42,20 @@ const REPORT_SECTIONS = [
 export function ReportGenerator({ data, currentUser }: ReportGeneratorProps) {
   const { toast } = useToast();
   const [format, setFormat] = useState<ReportFormat>('pdf');
-  const [selectedSections, setSelectedSections] = useState<string[]>(['overview']);
+  const [selectedSections, setSelectedSections] = useState<string[]>([
+    'overview',
+    'usage-charts',
+    'broker-attribution',
+    'audit-logs'
+  ]);
   const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>({
     start: new Date(new Date().setDate(new Date().getDate() - 30)),
     end: new Date(),
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [progressStatus, setProgressStatus] = useState<string>('');
+  const [progressPercent, setProgressPercent] = useState<number>(0);
+  const [showLargeDatasetWarning, setShowLargeDatasetWarning] = useState(false);
 
   const handleSectionToggle = (sectionId: string) => {
     setSelectedSections((prev) =>
@@ -67,7 +75,16 @@ export function ReportGenerator({ data, currentUser }: ReportGeneratorProps) {
       return;
     }
 
+    // Check for large dataset warning (but don't enforce limit for audit logs)
+    const estimatedRecords = (data.auditLogs?.length || 0) + (data.brokerUsage?.length || 0);
+    if (estimatedRecords > 10000 && !showLargeDatasetWarning) {
+      setShowLargeDatasetWarning(true);
+      return;
+    }
+
     setIsGenerating(true);
+    setProgressStatus('Initializing...');
+    setProgressPercent(0);
 
     try {
       const metadata: ReportMetadata = {
@@ -75,6 +92,13 @@ export function ReportGenerator({ data, currentUser }: ReportGeneratorProps) {
         generatedAt: new Date(),
         generatedBy: currentUser.displayName || currentUser.email,
         dateRange,
+        reportId: reportService.generateReportId(),
+      };
+
+      // Progress callback
+      const onProgress = (status: string, progress: number) => {
+        setProgressStatus(status);
+        setProgressPercent(progress);
       };
 
       let blob: Blob;
@@ -82,15 +106,15 @@ export function ReportGenerator({ data, currentUser }: ReportGeneratorProps) {
 
       switch (format) {
         case 'pdf':
-          blob = await reportService.generatePDFReport(data, metadata, selectedSections);
+          blob = await reportService.generatePDFReport(data, metadata, selectedSections, onProgress);
           filename = `analytics-report-${formatDate(new Date(), 'yyyy-MM-dd')}.pdf`;
           break;
         case 'excel':
-          blob = await reportService.generateExcelReport(data, metadata, selectedSections);
+          blob = await reportService.generateExcelReport(data, metadata, selectedSections, onProgress);
           filename = `analytics-report-${formatDate(new Date(), 'yyyy-MM-dd')}.xlsx`;
           break;
         case 'csv':
-          blob = await reportService.generateCSVReport(data, metadata, selectedSections);
+          blob = await reportService.generateCSVReport(data, metadata, selectedSections, onProgress);
           filename = `analytics-report-${formatDate(new Date(), 'yyyy-MM-dd')}.csv`;
           break;
       }
@@ -101,15 +125,19 @@ export function ReportGenerator({ data, currentUser }: ReportGeneratorProps) {
         title: 'Report generated',
         description: `Your ${format.toUpperCase()} report has been downloaded successfully.`,
       });
+      
+      setShowLargeDatasetWarning(false);
     } catch (error) {
       console.error('Error generating report:', error);
       toast({
         title: 'Report generation failed',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred. Please try again or reduce the date range.',
         variant: 'destructive',
       });
     } finally {
       setIsGenerating(false);
+      setProgressStatus('');
+      setProgressPercent(0);
     }
   };
 
@@ -129,7 +157,7 @@ export function ReportGenerator({ data, currentUser }: ReportGeneratorProps) {
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="pdf" id="format-pdf" />
               <Label htmlFor="format-pdf" className="font-normal cursor-pointer">
-                PDF - Formatted report with charts and tables
+                PDF - Formatted report with all data (no limits)
               </Label>
             </div>
             <div className="flex items-center space-x-2">
@@ -233,7 +261,7 @@ export function ReportGenerator({ data, currentUser }: ReportGeneratorProps) {
           {isGenerating ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generating Report...
+              {progressStatus || 'Generating Report...'}
             </>
           ) : (
             <>
@@ -243,7 +271,57 @@ export function ReportGenerator({ data, currentUser }: ReportGeneratorProps) {
           )}
         </Button>
 
-        {selectedSections.length === 0 && (
+        {/* Progress Indicator */}
+        {isGenerating && progressPercent > 0 && (
+          <div className="space-y-2">
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <p className="text-sm text-center text-muted-foreground">
+              {progressPercent}% complete
+            </p>
+          </div>
+        )}
+
+        {/* Large Dataset Warning Dialog */}
+        {showLargeDatasetWarning && (
+          <div className="p-4 border border-yellow-500 bg-yellow-50 rounded-md space-y-3">
+            <div className="flex items-start gap-2">
+              <svg className="w-5 h-5 text-yellow-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1">
+                <h4 className="font-semibold text-yellow-800">Large Dataset Warning</h4>
+                <p className="text-sm text-yellow-700 mt-1">
+                  This report contains over 10,000 records. Generation may take longer and the file size may be large.
+                </p>
+                <p className="text-sm text-yellow-700 mt-2">
+                  Consider reducing the date range or using CSV format for better performance.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowLargeDatasetWarning(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleGenerateReport}
+              >
+                Proceed Anyway
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {selectedSections.length === 0 && !showLargeDatasetWarning && (
           <p className="text-sm text-muted-foreground text-center">
             Select at least one section to generate a report
           </p>

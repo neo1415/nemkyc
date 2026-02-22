@@ -10,6 +10,10 @@
  * - Encryption key stored in environment variable
  * - Never log plaintext identity numbers
  * - Clear sensitive data from memory after use
+ * 
+ * Cache Lookup:
+ * - Uses deterministic HMAC-SHA256 for cache lookups
+ * - Separate from encryption to allow consistent cache keys
  */
 
 const crypto = require('crypto');
@@ -303,6 +307,53 @@ function generateEncryptionKey() {
   return crypto.randomBytes(KEY_LENGTH).toString('hex');
 }
 
+/**
+ * Creates a deterministic hash for cache lookups
+ * 
+ * Uses HMAC-SHA256 to create a consistent hash for the same input.
+ * This is used for database cache lookups where we need the same
+ * identity number to always produce the same hash.
+ * 
+ * IMPORTANT: This is different from encryptData() which uses a random IV
+ * and produces different outputs each time. Use this function ONLY for
+ * cache lookups, not for storing sensitive data.
+ * 
+ * @param {string} plaintext - The data to hash (e.g., NIN, CAC)
+ * @returns {string} Hex-encoded HMAC-SHA256 hash
+ * @throws {Error} If hashing fails
+ * 
+ * @example
+ * const hash1 = hashForCacheLookup('12345678901');
+ * const hash2 = hashForCacheLookup('12345678901');
+ * // hash1 === hash2 (deterministic)
+ * 
+ * // Use for cache lookups:
+ * const cacheKey = hashForCacheLookup(nin);
+ * const cached = await db.collection('verified-identities')
+ *   .where('identityHash', '==', cacheKey)
+ *   .limit(1)
+ *   .get();
+ */
+function hashForCacheLookup(plaintext) {
+  if (!plaintext || typeof plaintext !== 'string') {
+    throw new Error('Plaintext must be a non-empty string');
+  }
+  
+  try {
+    const key = getEncryptionKey();
+    
+    // Use HMAC-SHA256 for deterministic hashing
+    const hmac = crypto.createHmac('sha256', key);
+    hmac.update(plaintext);
+    const hash = hmac.digest('hex');
+    
+    return hash;
+  } catch (error) {
+    console.error('Hashing error:', error.message);
+    throw new Error('Failed to hash data for cache lookup');
+  }
+}
+
 module.exports = {
   encryptData,
   decryptData,
@@ -310,5 +361,6 @@ module.exports = {
   decryptIdentityFields,
   isEncrypted,
   clearSensitiveData,
-  generateEncryptionKey
+  generateEncryptionKey,
+  hashForCacheLookup
 };

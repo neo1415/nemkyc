@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Check, FileText } from 'lucide-react';
+import { Plus, Trash2, Check, FileText, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { get } from 'lodash';
@@ -23,6 +23,9 @@ import FormLoadingModal from '@/components/common/FormLoadingModal';
 import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
 import DatePicker from '@/components/common/DatePicker';
+import { useAutoFill } from '@/hooks/useAutoFill';
+import { IdentifierType } from '@/types/autoFill';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Form validation schema
 const corporateKYCSchema = yup.object().shape({
@@ -363,6 +366,8 @@ const FormSelect = ({ name, label, required = false, options, placeholder, ...pr
 
 const CorporateKYC: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const cacFieldRef = useRef<HTMLInputElement>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
   
@@ -394,6 +399,62 @@ const CorporateKYC: React.FC = () => {
     name: 'directors'
   });
   const watchedValues = formMethods.watch();
+
+  const formRef = useRef<HTMLFormElement | null>(null);
+
+  // Get form element from DOM after mount
+  useEffect(() => {
+    const formElement = document.querySelector('form');
+    if (formElement) {
+      formRef.current = formElement as HTMLFormElement;
+    }
+  }, []);
+
+  // Initialize auto-fill hook
+  const {
+    state: autoFillState,
+    attachToField,
+    clearAutoFill,
+    executeAutoFillCAC
+  } = useAutoFill({
+    formElement: formRef.current,
+    identifierType: IdentifierType.CAC,
+    userId: user?.uid || 'anonymous',
+    formId: 'corporate-kyc',
+    userName: user?.displayName || user?.email?.split('@')[0] || 'Anonymous',
+    userEmail: user?.email || 'anonymous',
+    reactHookFormSetValue: formMethods.setValue
+  });
+
+  // Extract state values for easier access
+  const autoFillStatus = autoFillState.status;
+  const autoFillError = autoFillState.error;
+  const autoFilledFields = autoFillState.autoFilledFields;
+  const populatedFieldCount = autoFillState.populatedFieldCount;
+
+  // Show toast notifications based on auto-fill status
+  useEffect(() => {
+    if (autoFillStatus === 'success') {
+      toast({
+        title: 'Auto-fill Successful',
+        description: `${populatedFieldCount} fields populated from CAC verification${autoFillState.cached ? ' (from cache)' : ''}`,
+        variant: 'default'
+      });
+    } else if (autoFillStatus === 'error' && autoFillError) {
+      toast({
+        title: 'Auto-fill Failed',
+        description: autoFillError.message || 'Could not auto-fill from CAC. Please fill manually.',
+        variant: 'destructive'
+      });
+    }
+  }, [autoFillStatus, autoFillError, populatedFieldCount, autoFillState.cached]);
+
+  // Attach auto-fill to CAC field when component mounts
+  useEffect(() => {
+    if (cacFieldRef.current) {
+      attachToField(cacFieldRef.current);
+    }
+  }, [attachToField]);
 
   // Restore saved step from pending submission
   useEffect(() => {
@@ -546,11 +607,55 @@ const CorporateKYC: React.FC = () => {
             required={true}
           />
 
-          <FormField
-            name="cacNumber"
-            label="CAC Number"
-            required={true}
-          />
+          <div className="space-y-2">
+            <Label htmlFor="cacNumber">
+              CAC Number
+              <span className="required-asterisk">*</span>
+              {autoFillStatus === 'loading' && (
+                <span className="ml-2 text-sm text-blue-600 inline-flex items-center">
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                  Verifying...
+                </span>
+              )}
+              {autoFillStatus === 'success' && (
+                <span className="ml-2 text-sm text-green-600 inline-flex items-center">
+                  <Check className="h-3 w-3 mr-1" />
+                  Verified
+                </span>
+              )}
+            </Label>
+            <Input
+              id="cacNumber"
+              ref={cacFieldRef}
+              {...formMethods.register('cacNumber', {
+                onChange: () => {
+                  if (formMethods.formState.errors.cacNumber) {
+                    formMethods.clearErrors('cacNumber');
+                  }
+                }
+              })}
+              className={cn(
+                formMethods.formState.errors.cacNumber && "border-destructive",
+                autoFilledFields.includes('cacNumber') && "bg-green-50 border-green-300"
+              )}
+              placeholder="Enter CAC/RC number"
+            />
+            {formMethods.formState.errors.cacNumber && (
+              <p className="text-sm text-destructive">
+                {formMethods.formState.errors.cacNumber.message?.toString()}
+              </p>
+            )}
+            {autoFillError && (
+              <p className="text-sm text-amber-600">
+                {autoFillError.message}
+              </p>
+            )}
+            {autoFilledFields.length > 0 && (
+              <p className="text-sm text-green-600">
+                {autoFilledFields.length} fields auto-filled from CAC verification
+              </p>
+            )}
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField

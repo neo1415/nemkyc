@@ -3,38 +3,39 @@ import * as XLSX from 'xlsx';
 /**
  * Template headers for Individual client identity collection
  * Based on Requirements 17.3 and 18.1-18.4
+ * Order: Policy Number, First Name, Last Name, Date of Birth, Email, Gender, Phone Number, Address
+ * Optional: BVN, Occupation, Nationality, NIN
  */
 export const INDIVIDUAL_TEMPLATE_HEADERS = [
   'Policy Number',      // Required for IES integration - FIRST COLUMN
-  'Title',
-  'First Name',
-  'Last Name',
-  'Phone Number',
-  'Email',
-  'Address',
-  'Gender',
-  'Date of Birth',      // Optional
+  'First Name',         // Required
+  'Last Name',          // Required
+  'Date of Birth',      // Required
+  'Email',              // Required
+  'Gender',             // Required
+  'Phone Number',       // Required
+  'Address',            // Required
+  'BVN',                // Optional
   'Occupation',         // Optional
   'Nationality',        // Optional
-  'BVN',               // Required for validation
-  'NIN'                // Optional - if already available
+  'NIN'                 // Optional - if already available
 ];
 
 /**
  * Template headers for Corporate client identity collection
  * Based on Requirements 17.4 and 18.5-18.9
+ * Order: Policy Number, Company Name, Registration Date, Company Type, Company Address, Email Address, Phone Number
+ * Optional: CAC Number
  */
 export const CORPORATE_TEMPLATE_HEADERS = [
   'Policy Number',          // Required for IES integration - FIRST COLUMN
-  'Company Name',
-  'Company Address',
-  'Email Address',
-  'Company Type',
-  'Phone Number',
-  'Registration Number',    // Required for corporate verification
+  'Company Name',           // Required
   'Registration Date',      // Required for corporate verification
-  'Business Address',       // Required for corporate verification
-  'CAC'                    // Optional - if already available
+  'Company Type',           // Required
+  'Company Address',        // Required
+  'Email Address',          // Required
+  'Phone Number',           // Required
+  'CAC Number'              // Optional - if already available
 ];
 
 /**
@@ -71,12 +72,19 @@ export function generateExcelTemplate(type: 'individual' | 'corporate'): Blob {
 /**
  * Trigger download of the generated template file
  * @param type - The type of template to download
+ * @param userName - Optional user name to include in filename
  */
-export function downloadTemplate(type: 'individual' | 'corporate'): void {
+export function downloadTemplate(type: 'individual' | 'corporate', userName?: string): void {
   const blob = generateExcelTemplate(type);
-  const filename = type === 'individual' 
-    ? 'NEM_Individual_Template.xlsx' 
-    : 'NEM_Corporate_Template.xlsx';
+  
+  // Format date as YYYY-MM-DD
+  const today = new Date();
+  const dateStr = today.toISOString().split('T')[0];
+  
+  // Create filename with user name and date if provided
+  const userPart = userName ? `${userName.replace(/\s+/g, '_')}_` : '';
+  const typeLabel = type === 'individual' ? 'Individual' : 'Corporate';
+  const filename = `${userPart}${typeLabel}_Template_${dateStr}.xlsx`;
   
   // Create temporary download link
   const url = URL.createObjectURL(blob);
