@@ -68,6 +68,7 @@ import {
 } from '../../utils/fileParser';
 import { downloadTemplate } from '../../utils/templateGenerator';
 import { useBrokerTourV2 } from '../../hooks/useBrokerTourV2';
+import { useAuth } from '../../contexts/AuthContext';
 import type { FileParseResult, UploadMode, ListType, TemplateValidationResult } from '../../types/remediation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
@@ -81,6 +82,7 @@ interface UploadDialogProps {
 export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
   // Tour integration
   const { advanceTour } = useBrokerTourV2();
+  const { user } = useAuth();
   
   // Default to template mode (flexible mode hidden but available in code)
   const [uploadMode, setUploadMode] = useState<UploadMode>('template');
@@ -119,7 +121,9 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
   };
 
   const handleDownloadTemplate = (type: 'individual' | 'corporate') => {
-    downloadTemplate(type);
+    // Pass user name to template generator for filename
+    const userName = user?.email?.split('@')[0] || 'User';
+    downloadTemplate(type, userName);
     setShowTemplateMenu(false);
     
     // Advance tour when template is downloaded
@@ -310,11 +314,14 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
         {/* NAICOM Compliance Message */}
         <Alert severity="info" icon={<InfoIcon />} sx={{ mb: 3, bgcolor: '#f0f7ff' }}>
           <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
-            📋 NAICOM/NAIIRA Regulatory Compliance
+            📋 NAICOM/NIIRA Regulatory Compliance
           </Typography>
           <Typography variant="body2" sx={{ mb: 1 }}>
-            As a registered insurance broker, you are required to maintain accurate Know Your Customer (KYC) records 
-            for all clients in accordance with NAICOM and NAIIRA regulations.
+            Pursuant to Section 64(4) of the Nigeria Insurance Industry Reform Act (NIIRA) 2025 and NAICOM's 
+            circular on the mandatory submission of the National Identification Number (NIN) and Certificate of 
+            Incorporation as material information for insurance contracts, this system has been implemented to 
+            ensure the collection and verification of NIN for individual policyholders and Corporate Affairs 
+            Commission (CAC) registration details for corporate entities.
           </Typography>
           <Typography variant="body2">
             This system helps you collect and verify National Identity Numbers (NIN) for individual clients and 

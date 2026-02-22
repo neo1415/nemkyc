@@ -216,6 +216,7 @@ export interface ActivityLog {
 export interface ListSummary {
   id: string;
   name: string;
+  listType?: ListType;           // Type of list (individual, corporate, flexible) - optional for backward compatibility
   totalEntries: number;
   verifiedCount: number;
   pendingCount: number;

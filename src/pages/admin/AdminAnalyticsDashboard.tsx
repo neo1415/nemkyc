@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -21,6 +21,8 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ConnectionStatus from '../../components/analytics/ConnectionStatus';
 import { showErrorToast, retryOperation } from '../../utils/errorHandling';
 import { toast } from '@/hooks/use-toast';
+import { analyticsAPI } from '../../services/analytics/AnalyticsAPI';
+import { formatDateForAPI } from '../../services/analytics/filterUtils';
 import '../../styles/analytics-responsive.css';
 
 const AdminAnalyticsDashboard: React.FC = () => {
@@ -33,6 +35,9 @@ const AdminAnalyticsDashboard: React.FC = () => {
     provider: 'all',
     status: 'all'
   });
+
+  // State for audit logs (for report generation)
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
   // Fetch dashboard data
   const {
@@ -49,11 +54,35 @@ const AdminAnalyticsDashboard: React.FC = () => {
   const {
     budgetConfig,
     updateBudgetConfig,
+    refetch: refetchBudget,
     loading: budgetLoading
   } = useBudgetMonitoring();
 
   // Real-time updates
   const { lastUpdate } = useRealtimeUpdates(30000); // 30 seconds
+
+  // Fetch audit logs for report generation
+  useEffect(() => {
+    const fetchAuditLogs = async () => {
+      try {
+        const startDate = formatDateForAPI(filters.dateRange.start);
+        const endDate = formatDateForAPI(filters.dateRange.end);
+        
+        const logs = await analyticsAPI.fetchAuditLogs({
+          startDate,
+          endDate,
+          limit: 10000 // Fetch more for reports
+        });
+        
+        setAuditLogs(logs);
+      } catch (error) {
+        console.error('Error fetching audit logs for report:', error);
+        setAuditLogs([]);
+      }
+    };
+
+    fetchAuditLogs();
+  }, [filters.dateRange]);
 
   // Handle filter changes
   const handleDateRangeChange = (start: Date | undefined, end: Date | undefined) => {
@@ -345,7 +374,10 @@ const AdminAnalyticsDashboard: React.FC = () => {
           <CostTracker 
             data={costTracking} 
             budgetConfig={budgetConfig}
-            onUpdateBudget={updateBudgetConfig}
+            onUpdateBudget={async (config) => {
+              await updateBudgetConfig(config);
+              refetchBudget();
+            }}
             loading={loading || budgetLoading}
           />
 
@@ -363,10 +395,10 @@ const AdminAnalyticsDashboard: React.FC = () => {
           {/* Report Generator */}
           <ReportGenerator 
             data={{
-              summary: summary || {} as any,
-              usageData: [],
-              brokerUsage: userAttribution || [],
-              auditLogs: []
+              summary: summary || undefined,
+              usageData: dailyUsage && dailyUsage.length > 0 ? dailyUsage : undefined,
+              brokerUsage: userAttribution && userAttribution.length > 0 ? userAttribution : undefined,
+              auditLogs: auditLogs && auditLogs.length > 0 ? auditLogs : undefined
             }}
             currentUser={{
               email: 'admin@example.com',

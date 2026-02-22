@@ -25,6 +25,8 @@ import {
   Alert,
   CircularProgress,
   Tooltip,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -63,11 +65,22 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteListId, setDeleteListId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [currentTab, setCurrentTab] = useState<'individual' | 'corporate'>('individual');
 
-  // Calculate overall stats
-  const totalEntries = lists.reduce((sum, list) => sum + list.totalEntries, 0);
-  const totalVerified = lists.reduce((sum, list) => sum + list.verifiedCount, 0);
-  const totalPending = lists.reduce((sum, list) => sum + list.pendingCount, 0);
+  // Filter lists by tab
+  // For backward compatibility: if listType is not set, show in both tabs
+  const filteredLists = lists.filter(list => {
+    if (!list.listType || list.listType === 'flexible') {
+      // Lists without listType or with 'flexible' type show in both tabs
+      return true;
+    }
+    return list.listType === currentTab;
+  });
+
+  // Calculate overall stats for current tab
+  const totalEntries = filteredLists.reduce((sum, list) => sum + list.totalEntries, 0);
+  const totalVerified = filteredLists.reduce((sum, list) => sum + list.verifiedCount, 0);
+  const totalPending = filteredLists.reduce((sum, list) => sum + list.pendingCount, 0);
   const overallProgress = totalEntries > 0 ? Math.round((totalVerified / totalEntries) * 100) : 0;
 
   const fetchLists = useCallback(async () => {
@@ -216,6 +229,30 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
         </Alert>
       )}
 
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs 
+          value={currentTab} 
+          onChange={(_, newValue) => setCurrentTab(newValue)}
+          sx={{
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontSize: '1rem',
+              fontWeight: 500,
+            },
+            '& .Mui-selected': {
+              color: '#800020',
+            },
+            '& .MuiTabs-indicator': {
+              backgroundColor: '#800020',
+            },
+          }}
+        >
+          <Tab label="Individual Lists" value="individual" />
+          <Tab label="Corporate Lists" value="corporate" />
+        </Tabs>
+      </Box>
+
       {/* Stats Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {/* @ts-expect-error - MUI Grid v6 type issue with item prop */}
@@ -223,9 +260,9 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
-                Total Lists
+                {currentTab === 'individual' ? 'Individual Lists' : 'Corporate Lists'}
               </Typography>
-              <Typography variant="h4">{lists.length}</Typography>
+              <Typography variant="h4">{filteredLists.length}</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -278,14 +315,14 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
           <CircularProgress />
         </Box>
-      ) : lists.length === 0 ? (
+      ) : filteredLists.length === 0 ? (
         <Card sx={{ textAlign: 'center', py: 6 }}>
           <UploadIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
           <Typography variant="h6" color="textSecondary" gutterBottom>
-            No customer lists yet
+            No {currentTab} lists yet
           </Typography>
           <Typography color="textSecondary" sx={{ mb: 3 }}>
-            Upload a CSV or Excel file to get started
+            Upload a CSV or Excel file with {currentTab} customer data to get started
           </Typography>
           <Button
             variant="contained"
@@ -302,7 +339,7 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
         </Card>
       ) : (
         <Grid container spacing={2}>
-          {lists.map((list, index) => (
+          {filteredLists.map((list, index) => (
             // @ts-expect-error - MUI Grid v6 type issue with item prop
             <Grid item xs={12} sm={6} md={4} key={list.id}>
               <Card 
