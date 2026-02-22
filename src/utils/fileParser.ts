@@ -26,17 +26,16 @@ export interface IndividualTemplateSchema {
 export const INDIVIDUAL_TEMPLATE: IndividualTemplateSchema = {
   required: [
     'policy number',    // Required for IES integration (Requirement 18.1) - FIRST COLUMN
-    'title',
     'first name',
     'last name',
-    'phone number',
+    'date of birth',
     'email',
-    'address',
     'gender',
-    'bvn'              // Required for validation with NIN (Requirement 18.2)
+    'phone number',
+    'address'
   ],
   optional: [
-    'date of birth',
+    'bvn',              // Optional
     'occupation',
     'nationality',
     'nin'              // Optional - pre-filled if broker already has it (Requirement 18.3)
@@ -56,16 +55,14 @@ export const CORPORATE_TEMPLATE: CorporateTemplateSchema = {
   required: [
     'policy number',           // Required for IES integration (Requirement 18.5) - FIRST COLUMN
     'company name',
+    'registration date',       // Required for corporate verification (Requirement 18.7)
+    'company type',
     'company address',
     'email address',
-    'company type',
-    'phone number',
-    'registration number',     // Required for corporate verification (Requirement 18.6)
-    'registration date',       // Required for corporate verification (Requirement 18.7)
-    'business address'         // Required for corporate verification (Requirement 18.8)
+    'phone number'
   ],
   optional: [
-    'cac'                      // Optional - pre-filled if broker already has it (Requirement 18.9)
+    'cac number'               // Optional - pre-filled if broker already has it (Requirement 18.9)
   ]
 };
 

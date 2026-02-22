@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
@@ -19,6 +19,13 @@ interface CostTrackerProps {
 export function CostTracker({ data, budgetConfig, onUpdateBudget, loading }: CostTrackerProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [monthlyLimit, setMonthlyLimit] = useState(budgetConfig?.monthlyLimit || 100000);
+
+  // Update local state when budgetConfig changes
+  useEffect(() => {
+    if (budgetConfig?.monthlyLimit) {
+      setMonthlyLimit(budgetConfig.monthlyLimit);
+    }
+  }, [budgetConfig?.monthlyLimit]);
 
   if (loading) {
     return (

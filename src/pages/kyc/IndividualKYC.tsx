@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Check, Info } from 'lucide-react';
+import { Check, Info, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
@@ -22,6 +22,9 @@ import FormLoadingModal from '@/components/common/FormLoadingModal';
 import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
 import DatePicker from '@/components/common/DatePicker';
+import { useAutoFill } from '@/hooks/useAutoFill';
+import { IdentifierType } from '@/types/autoFill';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 // Form validation schema
@@ -270,12 +273,15 @@ const FormSelect = ({ name, label, required = false, placeholder, children, ...p
 
 const IndividualKYC: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const ninFieldRef = useRef<HTMLInputElement>(null);
   
   // Make toast available globally for MultiStepForm
   useEffect(() => {
     (window as any).toast = toast;
   }, [toast]);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const formRef = useRef<HTMLFormElement | null>(null);
   
   const formMethods = useForm<any>({
     resolver: yupResolver(individualKYCSchema),
@@ -284,19 +290,71 @@ const IndividualKYC: React.FC = () => {
   });
 
   const { saveDraft, clearDraft } = useFormDraft('individualKYC', formMethods);
+  const [formElement, setFormElement] = useState<HTMLFormElement | null>(null);
 
+  // Get form element from DOM after mount
+  useEffect(() => {
+    const form = document.querySelector('form');
+    if (form) {
+      formRef.current = form as HTMLFormElement;
+      setFormElement(form as HTMLFormElement);
+    }
+  }, []);
+
+  // Initialize auto-fill hook
   const {
-    handleSubmit: handleEnhancedSubmit,
-    showSummary,
-    setShowSummary,
-    showLoading,
-    loadingMessage,
-    showSuccess,
-    confirmSubmit,
-    closeSuccess,
-    formData: submissionData,
-    isSubmitting
-  } = useEnhancedFormSubmit({
+    state: autoFillState,
+    attachToField,
+    clearAutoFill,
+    executeAutoFillNIN
+  } = useAutoFill({
+    formElement: formElement,
+    identifierType: IdentifierType.NIN,
+    userId: user?.uid || 'anonymous',
+    formId: 'individual-kyc',
+    userName: user?.displayName || user?.email?.split('@')[0] || 'Anonymous',
+    userEmail: user?.email || 'anonymous',
+    reactHookFormSetValue: formMethods.setValue
+  });
+
+  // Extract state values for easier access
+  const autoFillStatus = autoFillState.status;
+  const autoFillError = autoFillState.error;
+  const autoFilledFields = autoFillState.autoFilledFields;
+  const populatedFieldCount = autoFillState.populatedFieldCount;
+
+  // Show toast notifications based on auto-fill status
+  useEffect(() => {
+    if (autoFillStatus === 'success') {
+      toast({
+        title: 'Auto-fill Successful',
+        description: `${populatedFieldCount} fields populated from NIN verification${autoFillState.cached ? ' (from cache)' : ''}`,
+        variant: 'default'
+      });
+    } else if (autoFillStatus === 'error' && autoFillError) {
+      toast({
+        title: 'Auto-fill Failed',
+        description: autoFillError.message || 'Could not auto-fill from NIN. Please fill manually.',
+        variant: 'destructive'
+      });
+    }
+  }, [autoFillStatus, autoFillError, populatedFieldCount, autoFillState.cached, toast]);
+
+  // Attach auto-fill to NIN field - use a slight delay to ensure the input is rendered
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const ninInput = document.getElementById('NIN') as HTMLInputElement;
+      if (ninInput) {
+        ninFieldRef.current = ninInput;
+        attachToField(ninInput);
+        console.log('[IndividualKYC] Auto-fill attached to NIN field');
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [attachToField]);
+
+  const { handleSubmit: handleEnhancedSubmit, showSummary, setShowSummary, showLoading, loadingMessage, showSuccess, confirmSubmit, closeSuccess, formData: submissionData, isSubmitting } = useEnhancedFormSubmit({
     formType: 'Individual KYC',
     onSuccess: () => clearDraft()
   });
@@ -412,8 +470,54 @@ const IndividualKYC: React.FC = () => {
               <FormField name="BVN" label="BVN" required maxLength={11} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField name="NIN" label="NIN (National Identification Number)" required maxLength={11} />
+            <div className="space-y-2">
+              <Label htmlFor="NIN">
+                NIN (National Identification Number)
+                <span className="required-asterisk">*</span>
+                {autoFillStatus === 'loading' && (
+                  <span className="ml-2 text-sm text-blue-600 inline-flex items-center">
+                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    Verifying...
+                  </span>
+                )}
+                {autoFillStatus === 'success' && (
+                  <span className="ml-2 text-sm text-green-600 inline-flex items-center">
+                    <Check className="h-3 w-3 mr-1" />
+                    Verified
+                  </span>
+                )}
+              </Label>
+              <Input
+                id="NIN"
+                maxLength={11}
+                {...formMethods.register('NIN', {
+                  onChange: () => {
+                    if (formMethods.formState.errors.NIN) {
+                      formMethods.clearErrors('NIN');
+                    }
+                  }
+                })}
+                className={cn(
+                  formMethods.formState.errors.NIN && "border-destructive",
+                  autoFilledFields.includes('NIN') && "bg-green-50 border-green-300"
+                )}
+                placeholder="Enter 11-digit NIN"
+              />
+              {formMethods.formState.errors.NIN && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.NIN.message?.toString()}
+                </p>
+              )}
+              {autoFillError && (
+                <p className="text-sm text-amber-600">
+                  {autoFillError.message}
+                </p>
+              )}
+              {autoFilledFields.length > 0 && (
+                <p className="text-sm text-green-600">
+                  {autoFilledFields.length} fields auto-filled from NIN verification
+                </p>
+              )}
             </div>
 
             <FormSelect name="identificationType" label="ID Type" required placeholder="Choose ID Type">

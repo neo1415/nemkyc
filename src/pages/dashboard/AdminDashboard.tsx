@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Users, FileText, CheckCircle, Clock, TrendingUp, TrendingDown, RefreshCw, Activity, AlertTriangle, DollarSign, BarChart3 } from 'lucide-react';
+import { Users, FileText, CheckCircle, Clock, TrendingUp, TrendingDown, RefreshCw, Activity, AlertTriangle, Banknote, BarChart3 } from 'lucide-react';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useAuth } from '../../contexts/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
@@ -436,23 +436,18 @@ const AdminDashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* API Usage Today */}
+            {/* API Usage All-Time */}
             <Card className="flex-1 min-w-[250px]">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">API Calls (Today)</p>
+                    <p className="text-sm text-gray-600">API Calls (All-Time)</p>
                     <p className="text-3xl font-bold">{apiUsage?.calls || 0}</p>
                     <p className="text-xs text-gray-500 mt-1">
                       ₦{(apiUsage?.cost || 0).toFixed(2)} cost
                     </p>
-                    {apiUsage && apiUsage.calls > 0 && (
-                      <p className="text-xs text-gray-400 mt-1">
-                        ~₦{((apiUsage.cost / apiUsage.calls) * 30 * apiUsage.calls).toFixed(0)} monthly projection
-                      </p>
-                    )}
                   </div>
-                  <DollarSign className="h-8 w-8 text-blue-600" />
+                  <Banknote className="h-8 w-8 text-blue-600" />
                 </div>
               </CardContent>
             </Card>

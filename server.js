@@ -33,7 +33,8 @@ const {
   encryptData,
   decryptData,
   isEncrypted,
-  clearSensitiveData
+  clearSensitiveData,
+  hashForCacheLookup
 } = require('./server-utils/encryption.cjs');
 
 // Import Datapro NIN verification client
@@ -496,7 +497,7 @@ const allowedOrigins = [
   // Development environments
   'http://localhost:3000',
   'http://localhost:3001',
-  'http://localhost:8080',
+  'http://localhost:8080', // Vite dev server
   
   // Production NEM domains
   'https://nemforms.com',
@@ -2062,6 +2063,8 @@ app.use((req, res, next) => {
     req.path === '/api/register' ||       // Registration doesn't need CSRF (user not authenticated yet)
     req.path === '/api/verify/nin' ||    // Demo NIN verification
     req.path === '/api/verify/cac' ||    // Demo CAC verification
+    req.path === '/api/autofill/verify-nin' ||  // Auto-fill NIN verification (self-verification, protected by rate limiting)
+    req.path === '/api/autofill/verify-cac' ||  // Auto-fill CAC verification (self-verification, protected by rate limiting)
     req.path.startsWith('/api/remediation/') ||  // Remediation endpoints (protected by auth)
     req.path.startsWith('/api/identity/') ||     // Identity collection endpoints (protected by auth)
     req.path.startsWith('/api/analytics/')) {    // Analytics endpoints (protected by requireAuth + requireSuperAdmin)
@@ -4622,6 +4625,493 @@ app.post('/api/verify/cac', verificationRateLimiter, async (req, res) => {
         metadata: {
           userAgent: req.headers['user-agent'],
           demoMode: false
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log verification attempt:', logError);
+    }
+    
+    return res.status(500).json({ 
+      status: false, 
+      message: 'Verification service error. Please try again.' 
+    });
+  }
+});
+
+// ============================================================================
+// AUTO-FILL VERIFICATION ENDPOINTS WITH DATABASE CACHING
+// ============================================================================
+// These endpoints support the NIN/CAC auto-fill feature with:
+// - Database-backed caching in 'verified-identities' collection
+// - Cost savings by preventing duplicate API calls
+// - Integration with existing audit logging (metadata.source = 'auto-fill')
+// - Integration with existing API usage tracking
+// ============================================================================
+
+// NIN Auto-Fill Verification with Database Caching
+app.post('/api/autofill/verify-nin', verificationRateLimiter, async (req, res) => {
+  try {
+    const { nin, userId, formId, userName, userEmail } = req.body;
+    
+    // Input validation
+    if (!nin || typeof nin !== 'string' || nin.length !== 11 || !/^\d{11}$/.test(nin)) {
+      return res.status(400).json({ 
+        status: false, 
+        message: 'Valid 11-digit NIN is required' 
+      });
+    }
+
+    console.log('🔍 Auto-fill NIN verification request for:', nin.substring(0, 3) + '********');
+
+    // Step 1: Check database cache first using deterministic hash
+    const identityHash = hashForCacheLookup(nin);
+    const cacheQuery = await db.collection('verified-identities')
+      .where('identityType', '==', 'NIN')
+      .where('identityHash', '==', identityHash)
+      .where('source', '==', 'auto-fill')
+      .limit(1)
+      .get();
+
+    // Cache HIT - return cached data
+    if (!cacheQuery.empty) {
+      const cachedDoc = cacheQuery.docs[0];
+      const cachedData = cachedDoc.data();
+      
+      console.log('✅ Cache HIT - returning cached NIN data (cost = ₦0)');
+      
+      // Log cache hit with cost = 0
+      try {
+        await logVerificationAttempt({
+          verificationType: 'NIN',
+          identityNumber: nin,
+          userId: userId || 'anonymous',
+          userEmail: userEmail || 'anonymous',
+          userName: userName || 'Anonymous',
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          result: 'success',
+          metadata: {
+            source: 'auto-fill',
+            cacheHit: true,
+            cost: 0,
+            formId: formId || null,
+            userAgent: req.headers['user-agent']
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log cache hit:', logError);
+      }
+      
+      return res.json({
+        status: true,
+        message: 'NIN verified successfully (cached)',
+        data: cachedData.verificationData,
+        cached: true,
+        cachedAt: cachedData.createdAt?.toDate?.() || null
+      });
+    }
+
+    // Cache MISS - call Datapro API
+    console.log('❌ Cache MISS - calling Datapro API (cost = ₦100)');
+
+    // Log verification attempt before API call
+    try {
+      await logVerificationAttempt({
+        verificationType: 'NIN',
+        identityNumber: nin,
+        userId: userId || 'anonymous',
+        userEmail: userEmail || 'anonymous',
+        userName: userName || 'Anonymous',
+        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+        result: 'pending',
+        metadata: {
+          source: 'auto-fill',
+          cacheHit: false,
+          formId: formId || null,
+          userAgent: req.headers['user-agent']
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log verification attempt:', logError);
+    }
+
+    // Apply Datapro rate limiting
+    try {
+      await applyDataproRateLimit();
+    } catch (rateLimitError) {
+      console.error('❌ Datapro rate limit exceeded:', rateLimitError);
+      return res.status(429).json({
+        status: false,
+        message: 'Too many verification requests. Please try again in a moment.'
+      });
+    }
+
+    // Track API call start time
+    const apiStartTime = Date.now();
+
+    // Call Datapro NIN verification API
+    const dataproResult = await dataproVerifyNIN(nin);
+    
+    // Calculate API call duration
+    const apiDuration = Date.now() - apiStartTime;
+    
+    if (dataproResult.success) {
+      console.log('✅ NIN verification successful - caching result');
+      
+      // Store in database cache
+      try {
+        const encryptedNIN = encryptData(nin);
+        await db.collection('verified-identities').add({
+          identityType: 'NIN',
+          identityHash: identityHash, // Deterministic hash for cache lookups
+          encryptedIdentityNumber: encryptedNIN.encrypted, // Encrypted for security
+          encryptedIV: encryptedNIN.iv, // IV for decryption
+          verificationData: dataproResult.data,
+          source: 'auto-fill',
+          provider: 'datapro',
+          userId: userId || 'anonymous',
+          userName: userName || 'Anonymous',
+          userEmail: userEmail || 'anonymous',
+          formId: formId || null,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          cost: 100 // ₦100 per NIN verification
+        });
+        console.log('✅ Verification result cached in database');
+      } catch (cacheError) {
+        console.error('Failed to cache verification result:', cacheError);
+        // Continue execution - caching failure shouldn't block response
+      }
+      
+      // Log successful verification with cost
+      try {
+        await logVerificationComplete(db, {
+          provider: 'datapro',
+          verificationType: 'NIN',
+          success: true,
+          listId: null,
+          entryId: null,
+          identityNumber: nin,
+          userId: userId || 'anonymous',
+          userEmail: userEmail || 'anonymous',
+          userName: userName || 'Anonymous',
+          userType: 'user',
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          errorCode: null,
+          errorMessage: null,
+          metadata: {
+            source: 'auto-fill',
+            cacheHit: false,
+            cost: 100,
+            formId: formId || null,
+            userAgent: req.headers['user-agent'],
+            fieldsValidated: dataproResult.data ? Object.keys(dataproResult.data) : [],
+            apiDuration
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log verification:', logError);
+      }
+      
+      return res.json({
+        status: true,
+        message: 'NIN verified successfully',
+        data: dataproResult.data,
+        cached: false
+      });
+    } else {
+      console.log('❌ NIN verification failed:', dataproResult.error);
+      
+      // Log failed verification
+      try {
+        await logVerificationComplete(db, {
+          provider: 'datapro',
+          verificationType: 'NIN',
+          success: false,
+          listId: null,
+          entryId: null,
+          identityNumber: nin,
+          userId: userId || 'anonymous',
+          userEmail: userEmail || 'anonymous',
+          userName: userName || 'Anonymous',
+          userType: 'user',
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          errorCode: dataproResult.errorCode,
+          errorMessage: dataproResult.error || 'Verification failed',
+          metadata: {
+            source: 'auto-fill',
+            cacheHit: false,
+            formId: formId || null,
+            userAgent: req.headers['user-agent'],
+            apiDuration
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log verification:', logError);
+      }
+      
+      return res.json({
+        status: false,
+        message: dataproGetUserFriendlyError(dataproResult.errorCode, dataproResult.details) || 'Verification failed. Please check your NIN and try again.'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Auto-fill NIN verification error:', error);
+    
+    // Log error verification
+    try {
+      await logVerificationAttempt({
+        verificationType: 'NIN',
+        identityNumber: req.body.nin,
+        userId: req.body.userId || 'anonymous',
+        userEmail: req.body.userEmail || 'anonymous',
+        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+        result: 'error',
+        errorCode: 'INTERNAL_ERROR',
+        errorMessage: error.message || 'Verification service error',
+        metadata: {
+          source: 'auto-fill',
+          formId: req.body.formId || null,
+          userAgent: req.headers['user-agent']
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log verification attempt:', logError);
+    }
+    
+    return res.status(500).json({ 
+      status: false, 
+      message: 'Verification service error. Please try again.' 
+    });
+  }
+});
+
+// CAC Auto-Fill Verification with Database Caching
+app.post('/api/autofill/verify-cac', verificationRateLimiter, async (req, res) => {
+  try {
+    const { rc_number, company_name, userId, formId, userName, userEmail } = req.body;
+    
+    // Input validation
+    if (!rc_number || typeof rc_number !== 'string' || rc_number.trim().length === 0) {
+      return res.status(400).json({ 
+        status: false, 
+        message: 'Valid RC number is required' 
+      });
+    }
+
+    if (!company_name || typeof company_name !== 'string' || company_name.trim().length === 0) {
+      return res.status(400).json({ 
+        status: false, 
+        message: 'Company name is required' 
+      });
+    }
+
+    console.log('🔍 Auto-fill CAC verification request for:', rc_number);
+
+    // Step 1: Check database cache first using deterministic hash
+    const identityHash = hashForCacheLookup(rc_number);
+    const cacheQuery = await db.collection('verified-identities')
+      .where('identityType', '==', 'CAC')
+      .where('identityHash', '==', identityHash)
+      .where('source', '==', 'auto-fill')
+      .limit(1)
+      .get();
+
+    // Cache HIT - return cached data
+    if (!cacheQuery.empty) {
+      const cachedDoc = cacheQuery.docs[0];
+      const cachedData = cachedDoc.data();
+      
+      console.log('✅ Cache HIT - returning cached CAC data (cost = ₦0)');
+      
+      // Log cache hit with cost = 0
+      try {
+        await logVerificationAttempt({
+          verificationType: 'CAC',
+          identityNumber: rc_number,
+          userId: userId || 'anonymous',
+          userEmail: userEmail || 'anonymous',
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          result: 'success',
+          metadata: {
+            source: 'auto-fill',
+            cacheHit: true,
+            cost: 0,
+            formId: formId || null,
+            userAgent: req.headers['user-agent']
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log cache hit:', logError);
+      }
+      
+      return res.json({
+        status: true,
+        message: 'CAC verified successfully (cached)',
+        data: cachedData.verificationData,
+        cached: true,
+        cachedAt: cachedData.createdAt?.toDate?.() || null
+      });
+    }
+
+    // Cache MISS - call VerifyData API
+    console.log('❌ Cache MISS - calling VerifyData API (cost = ₦100)');
+
+    // Log verification attempt before API call
+    try {
+      await logVerificationAttempt({
+        verificationType: 'CAC',
+        identityNumber: rc_number,
+        userId: userId || 'anonymous',
+        userEmail: userEmail || 'anonymous',
+        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+        result: 'pending',
+        metadata: {
+          source: 'auto-fill',
+          cacheHit: false,
+          formId: formId || null,
+          userAgent: req.headers['user-agent']
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log verification attempt:', logError);
+    }
+
+    // Apply VerifyData rate limiting
+    try {
+      await applyVerifydataRateLimit();
+    } catch (rateLimitError) {
+      console.error('❌ VerifyData rate limit exceeded:', rateLimitError);
+      return res.status(429).json({
+        status: false,
+        message: 'Too many verification requests. Please try again in a moment.'
+      });
+    }
+
+    // Track API call start time
+    const apiStartTime = Date.now();
+
+    // Call VerifyData CAC verification API
+    const verifydataResult = await verifydataVerifyCAC(rc_number);
+    
+    // Calculate API call duration
+    const apiDuration = Date.now() - apiStartTime;
+    
+    if (verifydataResult.success) {
+      console.log('✅ CAC verification successful - caching result');
+      
+      // Store in database cache
+      try {
+        const encryptedRC = encryptData(rc_number);
+        await db.collection('verified-identities').add({
+          identityType: 'CAC',
+          identityHash: identityHash, // Deterministic hash for cache lookups
+          encryptedIdentityNumber: encryptedRC.encrypted, // Encrypted for security
+          encryptedIV: encryptedRC.iv, // IV for decryption
+          verificationData: verifydataResult.data,
+          source: 'auto-fill',
+          provider: 'verifydata',
+          userId: userId || 'anonymous',
+          userName: userName || 'Anonymous',
+          userEmail: userEmail || 'anonymous',
+          formId: formId || null,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          cost: 100 // ₦100 per CAC verification
+        });
+        console.log('✅ Verification result cached in database');
+      } catch (cacheError) {
+        console.error('Failed to cache verification result:', cacheError);
+        // Continue execution - caching failure shouldn't block response
+      }
+      
+      // Log successful verification with cost
+      try {
+        await logVerificationComplete(db, {
+          provider: 'verifydata',
+          verificationType: 'CAC',
+          success: true,
+          listId: null,
+          entryId: null,
+          identityNumber: rc_number,
+          userId: userId || 'anonymous',
+          userEmail: userEmail || 'anonymous',
+          userName: userName || 'Anonymous',
+          userType: 'user',
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          errorCode: null,
+          errorMessage: null,
+          metadata: {
+            source: 'auto-fill',
+            cacheHit: false,
+            cost: 100,
+            formId: formId || null,
+            userAgent: req.headers['user-agent'],
+            fieldsValidated: verifydataResult.data ? Object.keys(verifydataResult.data) : [],
+            apiDuration
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log verification:', logError);
+      }
+      
+      return res.json({
+        status: true,
+        message: 'CAC verified successfully',
+        data: verifydataResult.data,
+        cached: false
+      });
+    } else {
+      console.log('❌ CAC verification failed:', verifydataResult.error);
+      
+      // Log failed verification
+      try {
+        await logVerificationComplete(db, {
+          provider: 'verifydata',
+          verificationType: 'CAC',
+          success: false,
+          listId: null,
+          entryId: null,
+          identityNumber: rc_number,
+          userId: userId || 'anonymous',
+          userEmail: userEmail || 'anonymous',
+          userName: userName || 'Anonymous',
+          userType: 'user',
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          errorCode: verifydataResult.errorCode,
+          errorMessage: verifydataResult.error || 'Verification failed',
+          metadata: {
+            source: 'auto-fill',
+            cacheHit: false,
+            formId: formId || null,
+            userAgent: req.headers['user-agent'],
+            apiDuration
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log verification:', logError);
+      }
+      
+      return res.json({
+        status: false,
+        message: verifydataGetUserFriendlyError(verifydataResult.errorCode, verifydataResult.details) || 'Verification failed. Please check your CAC/RC number and try again.'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Auto-fill CAC verification error:', error);
+    
+    // Log error verification
+    try {
+      await logVerificationAttempt({
+        verificationType: 'CAC',
+        identityNumber: req.body.rc_number,
+        userId: req.body.userId || 'anonymous',
+        userEmail: req.body.userEmail || 'anonymous',
+        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+        result: 'error',
+        errorCode: 'INTERNAL_ERROR',
+        errorMessage: error.message || 'Verification service error',
+        metadata: {
+          source: 'auto-fill',
+          formId: req.body.formId || null,
+          userAgent: req.headers['user-agent']
         }
       });
     } catch (logError) {
@@ -13990,33 +14480,12 @@ app.get('/api/health/error-rate', requireAuth, requireAdmin, async (req, res) =>
  * - cost: Total cost
  * - period: Period queried
  */
-app.get('/api/health/usage', requireAuth, requireAdmin, async (req, res) => {
+app.get('/api/health/usage', requireAuth, requireSuperAdmin, async (req, res) => {
   try {
-    const period = req.query.period || 'day';
+    console.log(`💰 Super Admin ${req.user.email} checking API usage (all-time)`);
     
-    if (!['day', 'month'].includes(period)) {
-      return res.status(400).json({
-        error: 'Invalid period',
-        message: 'Period must be "day" or "month"'
-      });
-    }
-    
-    console.log(`💰 Admin ${req.user.email} checking API usage (${period})`);
-    
-    // Query api-usage-logs collection directly for consistency with analytics dashboard
-    const now = new Date();
-    let startDate;
-    
-    if (period === 'day') {
-      // Start of today
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    } else {
-      // Start of current month
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    }
-    
+    // Query api-usage-logs collection for all-time data (consistent with analytics dashboard)
     const logsSnapshot = await db.collection('api-usage-logs')
-      .where('timestamp', '>=', startDate)
       .get();
     
     let totalCalls = 0;
@@ -14031,7 +14500,7 @@ app.get('/api/health/usage', requireAuth, requireAdmin, async (req, res) => {
     res.status(200).json({
       calls: totalCalls,
       cost: totalCost,
-      period
+      period: 'all-time'
     });
     
   } catch (error) {
@@ -14250,7 +14719,7 @@ app.get('/api/analytics/overview', requireAuth, requireSuperAdmin, async (req, r
     // Use calculated cost from logs if available, otherwise fall back to estimation
     const totalCost = totalCostFromLogs > 0 
       ? totalCostFromLogs 
-      : (dataproCalls * 50) + (verifydataCalls * 100);
+      : (dataproCalls * 100) + (verifydataCalls * 100); // Both NIN and CAC cost ₦100
     const successRate = totalCalls > 0 ? (successfulCalls / totalCalls) * 100 : 0;
     
     // Get previous month for comparison
@@ -14377,8 +14846,8 @@ app.get('/api/analytics/daily-usage', requireAuth, requireSuperAdmin, async (req
     }
     
     // Validate date range
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = new Date(startDate + 'T00:00:00Z'); // Parse as UTC midnight
+    const end = new Date(endDate + 'T23:59:59Z'); // Parse as UTC end of day
     const now = new Date();
     
     if (start > end) {
@@ -14388,10 +14857,18 @@ app.get('/api/analytics/daily-usage', requireAuth, requireSuperAdmin, async (req
       });
     }
     
-    if (end > now) {
+    // Allow endDate to be today or in the past (compare dates only, not time)
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endDateOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    
+    // Allow endDate to be up to tomorrow (to account for timezone differences)
+    const tomorrowMidnight = new Date(todayMidnight);
+    tomorrowMidnight.setDate(tomorrowMidnight.getDate() + 1);
+    
+    if (endDateOnly > tomorrowMidnight) {
       return res.status(400).json({
         error: 'Invalid date range',
-        message: 'endDate cannot be in the future'
+        message: 'endDate cannot be more than 1 day in the future'
       });
     }
     
@@ -14579,8 +15056,8 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
     }
     
     // Validate date range
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = new Date(startDate + 'T00:00:00Z'); // Parse as UTC midnight
+    const end = new Date(endDate + 'T23:59:59Z'); // Parse as UTC end of day
     const now = new Date();
     
     if (start > end) {
@@ -14590,10 +15067,18 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
       });
     }
     
-    if (end > now) {
+    // Allow endDate to be today or in the past (compare dates only, not time)
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endDateOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    
+    // Allow endDate to be up to tomorrow (to account for timezone differences)
+    const tomorrowMidnight = new Date(todayMidnight);
+    tomorrowMidnight.setDate(tomorrowMidnight.getDate() + 1);
+    
+    if (endDateOnly > tomorrowMidnight) {
       return res.status(400).json({
         error: 'Invalid date range',
-        message: 'endDate cannot be in the future'
+        message: 'endDate cannot be more than 1 day in the future'
       });
     }
     
