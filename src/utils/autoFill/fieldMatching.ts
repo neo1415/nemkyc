@@ -78,10 +78,15 @@ function getCommonAbbreviations(fieldName: string): string[] {
     middleName: ['middle_name', 'Middle Name', 'middlename', 'MiddleName'],
     lastName: ['last_name', 'Last Name', 'lastname', 'LastName', 'surname', 'Surname'],
     gender: ['sex', 'Sex', 'Gender'],
-    companyName: ['company_name', 'Company Name', 'name', 'Name', 'businessName', 'business_name'],
+    companyName: ['company_name', 'Company Name', 'name', 'Name', 'businessName', 'business_name', 'insured', 'Insured'],
     registrationNumber: ['registration_number', 'Registration Number', 'rcNumber', 'rc_number', 'RC Number', 'cacNumber', 'cac_number'],
-    registrationDate: ['registration_date', 'Registration Date', 'dateRegistered', 'date_registered'],
-    companyStatus: ['company_status', 'Company Status', 'status', 'Status']
+    registrationDate: ['registration_date', 'Registration Date', 'dateRegistered', 'date_registered', 'dateOfIncorporationRegistration', 'date_of_incorporation_registration', 'Date of Incorporation/Registration'],
+    companyStatus: ['company_status', 'Company Status', 'status', 'Status'],
+    typeOfEntity: ['type_of_entity', 'Type Of Entity', 'entityType', 'entity_type', 'natureOfBusiness', 'nature_of_business', 'Nature of Business', 'Business Type/Occupation'],
+    // Reverse mappings for Corporate KYC form
+    insured: ['companyName', 'company_name', 'Company Name', 'name', 'Name', 'businessName', 'business_name'],
+    dateOfIncorporationRegistration: ['registrationDate', 'registration_date', 'Registration Date', 'dateRegistered', 'date_registered'],
+    natureOfBusiness: ['typeOfEntity', 'type_of_entity', 'Type Of Entity', 'entityType', 'entity_type', 'Business Type/Occupation']
   };
 
   return abbreviationMap[fieldName] || [];

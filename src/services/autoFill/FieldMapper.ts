@@ -172,11 +172,11 @@ export class FieldMapper {
    * Maps CAC data to form fields
    * 
    * Attempts to find matching form fields for each CAC data field:
-   * - companyName
+   * - companyName → insured (Corporate KYC form uses "insured" for company name)
    * - registrationNumber
-   * - registrationDate
+   * - registrationDate → dateOfIncorporationRegistration
    * - companyStatus
-   * - typeOfEntity
+   * - typeOfEntity → natureOfBusiness
    * 
    * Skips fields that:
    * - Don't exist in the form
@@ -193,12 +193,15 @@ export class FieldMapper {
   ): FieldMapping[] {
     const mappings: FieldMapping[] = [];
 
-    // Map companyName
+    console.log('🔍 [FieldMapper] Starting CAC field mapping with data:', normalizedData);
+
+    // Map companyName → insured (Corporate KYC form uses "insured" for company name)
     if (normalizedData.companyName) {
-      const field = findFormField(formElement, 'companyName');
+      const field = findFormField(formElement, 'insured');
+      console.log(`🔍 [FieldMapper] companyName: ${normalizedData.companyName} → insured field found:`, !!field);
       if (field) {
         mappings.push({
-          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'companyName',
+          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'insured',
           formFieldElement: field,
           value: normalizedData.companyName,
           sourceField: 'companyName'
@@ -209,6 +212,7 @@ export class FieldMapper {
     // Map registrationNumber
     if (normalizedData.registrationNumber) {
       const field = findFormField(formElement, 'registrationNumber');
+      console.log(`🔍 [FieldMapper] registrationNumber: ${normalizedData.registrationNumber} → field found:`, !!field);
       if (field) {
         mappings.push({
           formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'registrationNumber',
@@ -219,12 +223,13 @@ export class FieldMapper {
       }
     }
 
-    // Map registrationDate
+    // Map registrationDate → dateOfIncorporationRegistration
     if (normalizedData.registrationDate) {
-      const field = findFormField(formElement, 'registrationDate');
+      const field = findFormField(formElement, 'dateOfIncorporationRegistration');
+      console.log(`🔍 [FieldMapper] registrationDate: ${normalizedData.registrationDate} → dateOfIncorporationRegistration field found:`, !!field);
       if (field) {
         mappings.push({
-          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'registrationDate',
+          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'dateOfIncorporationRegistration',
           formFieldElement: field,
           value: normalizedData.registrationDate,
           sourceField: 'registrationDate'
@@ -235,6 +240,7 @@ export class FieldMapper {
     // Map companyStatus
     if (normalizedData.companyStatus) {
       const field = findFormField(formElement, 'companyStatus');
+      console.log(`🔍 [FieldMapper] companyStatus: ${normalizedData.companyStatus} → field found:`, !!field);
       if (field) {
         mappings.push({
           formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'companyStatus',
@@ -245,18 +251,21 @@ export class FieldMapper {
       }
     }
 
-    // Map typeOfEntity
+    // Map typeOfEntity → natureOfBusiness
     if (normalizedData.typeOfEntity) {
-      const field = findFormField(formElement, 'typeOfEntity');
+      const field = findFormField(formElement, 'natureOfBusiness');
+      console.log(`🔍 [FieldMapper] typeOfEntity: ${normalizedData.typeOfEntity} → natureOfBusiness field found:`, !!field);
       if (field) {
         mappings.push({
-          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'typeOfEntity',
+          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'natureOfBusiness',
           formFieldElement: field,
           value: normalizedData.typeOfEntity,
           sourceField: 'typeOfEntity'
         });
       }
     }
+
+    console.log(`🔍 [FieldMapper] Total CAC fields mapped: ${mappings.length}`, mappings.map(m => `${m.sourceField} → ${m.formFieldName}`));
 
     return mappings;
   }
