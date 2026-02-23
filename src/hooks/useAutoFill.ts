@@ -17,6 +17,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { AutoFillEngine, AutoFillEngineConfig } from '../services/autoFill/AutoFillEngine';
 import { InputTriggerHandler, InputTriggerConfig } from '../services/autoFill/InputTriggerHandler';
 import { IdentifierType } from '../types/autoFill';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * Auto-fill state
@@ -40,6 +41,7 @@ export interface UseAutoFillConfig {
   userName?: string;
   userEmail?: string;
   reactHookFormSetValue?: (name: string, value: any) => void;
+  requireAuth?: boolean; // New: Whether to require authentication for auto-fill
 }
 
 /**
@@ -50,7 +52,7 @@ export interface UseAutoFillReturn {
   attachToField: (inputElement: HTMLInputElement) => void;
   clearAutoFill: () => void;
   executeAutoFillNIN: (nin: string) => Promise<void>;
-  executeAutoFillCAC: (rcNumber: string, companyName: string) => Promise<void>;
+  executeAutoFillCAC: (rcNumber: string) => Promise<void>;
 }
 
 /**
@@ -59,7 +61,11 @@ export interface UseAutoFillReturn {
  * Manages auto-fill state and provides functions for form integration
  */
 export function useAutoFill(config: UseAutoFillConfig): UseAutoFillReturn {
-  const { formElement, identifierType, userId, formId, userName, userEmail, reactHookFormSetValue } = config;
+  const { formElement, identifierType, userId, formId, userName, userEmail, reactHookFormSetValue, requireAuth = true } = config;
+  
+  // Get authentication status
+  const { user } = useAuth();
+  const isAuthenticated = user !== null && user !== undefined;
 
   // State
   const [state, setState] = useState<AutoFillState>({
@@ -123,22 +129,39 @@ export function useAutoFill(config: UseAutoFillConfig): UseAutoFillReturn {
    * Attach auto-fill trigger to an input field
    */
   const attachToField = useCallback((inputElement: HTMLInputElement) => {
+    console.log('[useAutoFill] ===== ATTACH TO FIELD CALLBACK START =====');
+    console.log('[useAutoFill] Input element:', inputElement);
+    console.log('[useAutoFill] Input element ID:', inputElement?.id);
+    console.log('[useAutoFill] Identifier type:', identifierType);
+    console.log('[useAutoFill] Require auth:', requireAuth);
+    console.log('[useAutoFill] Is authenticated:', isAuthenticated);
+    
     if (!inputElement) {
-      console.warn('[useAutoFill] Cannot attach to null input element');
+      console.warn('[useAutoFill] ❌ Cannot attach to null input element');
+      return;
+    }
+
+    // Check authentication requirement
+    if (requireAuth && !isAuthenticated) {
+      console.log('[useAutoFill] ⚠️ Authentication required but user is not authenticated. Skipping auto-fill attachment.');
+      // Don't attach trigger handler for anonymous users
       return;
     }
 
     // Detach previous handler if exists
     if (triggerHandlerRef.current) {
+      console.log('[useAutoFill] Detaching previous handler...');
       triggerHandlerRef.current.detachFromField();
     }
 
+    console.log('[useAutoFill] Creating new InputTriggerHandler...');
     // Create new trigger handler
     const handler = new InputTriggerHandler({
       identifierType,
       userId,
       formId,
       onVerificationStart: () => {
+        console.log('[useAutoFill] onVerificationStart callback fired');
         setState(prev => ({
           ...prev,
           status: 'loading',
@@ -146,11 +169,29 @@ export function useAutoFill(config: UseAutoFillConfig): UseAutoFillReturn {
         }));
       },
       onVerificationComplete: async (success: boolean, data?: any) => {
+        console.log('[useAutoFill] onVerificationComplete callback fired, success:', success);
+        console.log('[useAutoFill] Identifier type:', identifierType);
+        console.log('[useAutoFill] Data received:', data);
+        
         if (success && data && engineRef.current) {
           // Execute auto-fill with the verified data
           if (identifierType === IdentifierType.NIN) {
+            console.log('[useAutoFill] Executing NIN auto-fill...');
             const nin = inputElement.value.trim();
             const result = await engineRef.current.executeAutoFillNIN(nin);
+            
+            setState(prev => ({
+              ...prev,
+              status: result.success ? 'success' : 'error',
+              error: result.error || null,
+              autoFilledFields: result.populatedFields,
+              populatedFieldCount: result.populatedFieldCount,
+              cached: result.cached
+            }));
+          } else if (identifierType === IdentifierType.CAC) {
+            console.log('[useAutoFill] Executing CAC auto-fill...');
+            const rcNumber = inputElement.value.trim();
+            const result = await engineRef.current.executeAutoFillCAC(rcNumber);
             
             setState(prev => ({
               ...prev,
@@ -178,9 +219,12 @@ export function useAutoFill(config: UseAutoFillConfig): UseAutoFillReturn {
       }
     });
 
+    console.log('[useAutoFill] Calling handler.attachToField...');
     handler.attachToField(inputElement);
     triggerHandlerRef.current = handler;
-  }, [identifierType, userId, formId]);
+    console.log('[useAutoFill] ✅ Handler attached and stored in ref');
+    console.log('[useAutoFill] ===== ATTACH TO FIELD CALLBACK END =====');
+  }, [identifierType, userId, formId, requireAuth, isAuthenticated]);
 
   /**
    * Execute NIN auto-fill manually
@@ -188,6 +232,17 @@ export function useAutoFill(config: UseAutoFillConfig): UseAutoFillReturn {
   const executeAutoFillNIN = useCallback(async (nin: string) => {
     if (!engineRef.current) {
       console.warn('[useAutoFill] Engine not initialized');
+      return;
+    }
+
+    // Check authentication requirement
+    if (requireAuth && !isAuthenticated) {
+      console.warn('[useAutoFill] Authentication required for auto-fill');
+      setState(prev => ({
+        ...prev,
+        status: 'error',
+        error: { code: 'AUTH_REQUIRED', message: 'Please sign in to use auto-fill' }
+      }));
       return;
     }
 
@@ -203,20 +258,32 @@ export function useAutoFill(config: UseAutoFillConfig): UseAutoFillReturn {
       populatedFieldCount: result.populatedFieldCount,
       cached: result.cached
     }));
-  }, []);
+  }, [requireAuth, isAuthenticated]);
 
   /**
    * Execute CAC auto-fill manually
+   * Note: The VerifyData API only needs the RC number - it returns company name and other details
    */
-  const executeAutoFillCAC = useCallback(async (rcNumber: string, companyName: string) => {
+  const executeAutoFillCAC = useCallback(async (rcNumber: string) => {
     if (!engineRef.current) {
       console.warn('[useAutoFill] Engine not initialized');
       return;
     }
 
+    // Check authentication requirement
+    if (requireAuth && !isAuthenticated) {
+      console.warn('[useAutoFill] Authentication required for auto-fill');
+      setState(prev => ({
+        ...prev,
+        status: 'error',
+        error: { code: 'AUTH_REQUIRED', message: 'Please sign in to use auto-fill' }
+      }));
+      return;
+    }
+
     setState(prev => ({ ...prev, status: 'loading', error: null }));
 
-    const result = await engineRef.current.executeAutoFillCAC(rcNumber, companyName);
+    const result = await engineRef.current.executeAutoFillCAC(rcNumber);
 
     setState(prev => ({
       ...prev,
@@ -226,7 +293,7 @@ export function useAutoFill(config: UseAutoFillConfig): UseAutoFillReturn {
       populatedFieldCount: result.populatedFieldCount,
       cached: result.cached
     }));
-  }, []);
+  }, [requireAuth, isAuthenticated]);
 
   /**
    * Clear auto-fill state and cleanup

@@ -2,9 +2,11 @@
  * Utility for normalizing and handling role variations across the application
  */
 
+import { UserRole } from '../types';
+
 // Map of role variations to standardized role names
 // All keys should be lowercase since we normalize input to lowercase before lookup
-const ROLE_MAPPINGS: Record<string, string> = {
+const ROLE_MAPPINGS: Record<string, UserRole> = {
   // Super admin variations (all lowercase - input is lowercased before lookup)
   'superadmin': 'super admin',
   'super-admin': 'super admin',
@@ -43,13 +45,13 @@ const ROLE_MAPPINGS: Record<string, string> = {
 };
 
 // Standard admin roles
-export const ADMIN_ROLES = ['super admin', 'admin', 'compliance', 'claims'];
+export const ADMIN_ROLES: UserRole[] = ['super admin', 'admin', 'compliance', 'claims'];
 
 /**
  * Normalize a role string to its standard format
  * Handles case variations, spacing, and alternative names
  */
-export const normalizeRole = (role: string | undefined): string => {
+export const normalizeRole = (role: string | undefined): UserRole => {
   if (!role) return 'default';
   
   // Trim and convert to lowercase

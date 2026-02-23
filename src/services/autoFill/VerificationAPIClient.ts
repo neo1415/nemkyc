@@ -207,15 +207,16 @@ export class VerificationAPIClient {
    * 3. If cache MISS: calls VerifyData API (cost = ₦100) and caches result
    * 4. Logs all attempts with metadata.source = 'auto-fill'
    * 
+   * Note: The VerifyData API only needs the RC number - it returns company name and other details
+   * 
    * @param rcNumber - The RC number to verify
-   * @param companyName - The company name (required by VerifyData API)
    * @param userId - Optional user ID for audit logging
    * @param formId - Optional form ID for tracking
    * @param userName - Optional user name for audit logging
    * @param userEmail - Optional user email for audit logging
    * @returns Promise resolving to CAC verification response
    */
-  async verifyCAC(rcNumber: string, companyName: string, userId?: string, formId?: string, userName?: string, userEmail?: string): Promise<CACVerificationResponse> {
+  async verifyCAC(rcNumber: string, userId?: string, formId?: string, userName?: string, userEmail?: string): Promise<CACVerificationResponse> {
     // Validate input
     if (!rcNumber || typeof rcNumber !== 'string') {
       return {
@@ -223,16 +224,6 @@ export class VerificationAPIClient {
         error: {
           code: 'INVALID_INPUT',
           message: 'RC number is required'
-        }
-      };
-    }
-
-    if (!companyName || typeof companyName !== 'string') {
-      return {
-        success: false,
-        error: {
-          code: 'INVALID_INPUT',
-          message: 'Company name is required'
         }
       };
     }
@@ -262,7 +253,6 @@ export class VerificationAPIClient {
         },
         body: JSON.stringify({ 
           rc_number: rcNumber,
-          company_name: companyName,
           userId,
           formId,
           userName,
@@ -295,6 +285,9 @@ export class VerificationAPIClient {
 
       // Transform backend response to CACVerificationResponse format
       if (data.status && data.data) {
+        // Log full API response for debugging
+        console.log('🔍 [DEBUG] Full CAC API response:', JSON.stringify(data.data, null, 2));
+        
         const result: CACVerificationResponse = {
           success: true,
           data: {
