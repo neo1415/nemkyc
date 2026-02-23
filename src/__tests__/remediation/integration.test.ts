@@ -445,7 +445,7 @@ class RemediationService {
         error: result.error,
       };
     } else {
-      const result = await this.paystack.verifyCAC(request.identityNumber, request.companyName || '');
+      const result = await this.paystack.verifyCAC(request.identityNumber, '');
       verificationResult = {
         success: result.success,
         name: result.data?.companyName,

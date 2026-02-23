@@ -16,6 +16,7 @@ import {
   signInWithCustomToken
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { useQueryClient } from '@tanstack/react-query';
 import { auth, db } from '../firebase/config';
 import { User } from '../types';
 import { normalizeRole, isAdminRole, rolesMatch } from '../utils/roleNormalization';
@@ -61,6 +62,7 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             if (firebaseUser.email === 'neowalker502@gmail.com' && !rolesMatch(userRole, 'super admin')) {
               userRole = 'super admin';
-              // Update in Firestore
+              // Update in Firestore - store as 'super admin' for firestore rules compatibility
               await setDoc(doc(db, 'userroles', firebaseUser.uid), {
                 ...userData,
                 role: 'super admin',
@@ -774,6 +776,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const sessionValue = sessionStorage.getItem(key);
       console.log(`🔍 Logout: Key ${key} - localStorage: ${localValue ? 'EXISTS' : 'MISSING'}, sessionStorage: ${sessionValue ? 'EXISTS' : 'MISSING'}`);
     });
+    
+    // CRITICAL FIX: Clear React Query cache to prevent data leakage between users
+    console.log('🔍 Logout: Clearing React Query cache');
+    queryClient.clear();
+    console.log('✅ Logout: React Query cache cleared');
     
     await signOut(auth);
   };

@@ -1,5 +1,5 @@
 // User role types
-export type UserRole = 'default' | 'broker' | 'compliance' | 'claims' | 'admin' | 'super_admin';
+export type UserRole = 'default' | 'broker' | 'compliance' | 'claims' | 'admin' | 'super admin';
 
 export interface User {
   uid: string;

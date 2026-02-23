@@ -321,11 +321,12 @@ export class AutoFillEngine {
    * 7. Populate form
    * 8. Show success/error feedback
    * 
+   * Note: The VerifyData API only needs the RC number - it returns company name and other details
+   * 
    * @param rcNumber - The RC number to verify
-   * @param companyName - The company name (required by VerifyData API)
    * @returns Promise resolving to auto-fill result
    */
-  async executeAutoFillCAC(rcNumber: string, companyName: string): Promise<AutoFillResult> {
+  async executeAutoFillCAC(rcNumber: string): Promise<AutoFillResult> {
     console.log('[AutoFillEngine] Starting CAC auto-fill workflow');
 
     // Step 1: Detect form type
@@ -361,7 +362,6 @@ export class AutoFillEngine {
       console.log('[AutoFillEngine] Calling CAC verification API');
       const response = await this.apiClient.verifyCAC(
         rcNumber,
-        companyName,
         this.config.userId,
         this.config.formId,
         this.config.userName,

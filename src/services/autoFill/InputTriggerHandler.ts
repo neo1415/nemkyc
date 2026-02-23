@@ -57,6 +57,12 @@ export class InputTriggerHandler {
    * @param inputElement - The input element to attach to
    */
   attachToField(inputElement: HTMLInputElement): void {
+    console.log('[InputTriggerHandler] ===== ATTACH TO FIELD START =====');
+    console.log('[InputTriggerHandler] Input element:', inputElement);
+    console.log('[InputTriggerHandler] Input element ID:', inputElement?.id);
+    console.log('[InputTriggerHandler] Input element name:', inputElement?.name);
+    console.log('[InputTriggerHandler] Identifier type:', this.config.identifierType);
+    
     // Detach from previous field if any
     this.detachFromField();
 
@@ -64,10 +70,15 @@ export class InputTriggerHandler {
 
     // Create blur handler
     this.blurHandler = async (event: FocusEvent) => {
+      console.log('[InputTriggerHandler] ===== BLUR EVENT FIRED =====');
+      console.log('[InputTriggerHandler] Event target:', event.target);
+      
       const value = (event.target as HTMLInputElement).value.trim();
+      console.log('[InputTriggerHandler] Input value:', value);
 
       // Skip if empty
       if (!value) {
+        console.log('[InputTriggerHandler] Value is empty, skipping');
         return;
       }
 
@@ -84,7 +95,10 @@ export class InputTriggerHandler {
       }
 
       // Validate identifier format
+      console.log('[InputTriggerHandler] Validating identifier format...');
       const validationResult = this.validateIdentifier(value);
+      console.log('[InputTriggerHandler] Validation result:', validationResult);
+      
       if (!validationResult.valid) {
         console.log('[InputTriggerHandler] Invalid identifier format:', validationResult.error);
         // Don't trigger verification for invalid format
@@ -92,13 +106,15 @@ export class InputTriggerHandler {
         return;
       }
 
+      console.log('[InputTriggerHandler] Validation passed, triggering verification...');
       // Trigger verification
       await this.triggerVerification(value);
     };
 
     // Attach blur event listener
     this.inputElement.addEventListener('blur', this.blurHandler);
-    console.log(`[InputTriggerHandler] Attached to ${this.config.identifierType} field`);
+    console.log(`[InputTriggerHandler] ✅ Blur event listener attached to ${this.config.identifierType} field`);
+    console.log('[InputTriggerHandler] ===== ATTACH TO FIELD END =====');
   }
 
   /**
@@ -198,12 +214,13 @@ export class InputTriggerHandler {
         );
       } else if (this.config.identifierType === IdentifierType.CAC) {
         // Verify CAC
-        // Note: For CAC, we need the company name which should be provided separately
-        // For now, we'll skip CAC verification in the trigger handler
-        // The form will need to handle CAC verification differently since it requires both RC number and company name
-        console.log('[InputTriggerHandler] CAC verification requires company name - skipping auto-trigger');
-        this.isVerifying = false;
-        return;
+        // The VerifyData API only needs the RC number - it returns company name and other details
+        console.log('[InputTriggerHandler] Triggering CAC verification');
+        response = await this.apiClient.verifyCAC(
+          value,
+          this.config.userId,
+          this.config.formId
+        );
       } else {
         throw new Error('Unknown identifier type');
       }

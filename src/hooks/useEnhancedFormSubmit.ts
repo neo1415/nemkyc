@@ -10,6 +10,11 @@ interface UseEnhancedFormSubmitOptions {
   onSuccess?: () => void;
   onError?: (error: Error) => void;
   customValidation?: (data: any) => Promise<boolean>;
+  verificationData?: {
+    identityNumber?: string;
+    identityType?: 'NIN' | 'CAC';
+    isVerified?: boolean;
+  };
 }
 
 interface UseEnhancedFormSubmitReturn {
@@ -80,6 +85,26 @@ const makeAuthenticatedRequest = async (url: string, data: any, method: string =
   });
 };
 
+// Helper function to verify identity number (NIN or CAC)
+const verifyIdentity = async (identityNumber: string, identityType: 'NIN' | 'CAC', user: any) => {
+  const endpoint = identityType === 'NIN' 
+    ? `${API_BASE_URL}/api/autofill/verify-nin`
+    : `${API_BASE_URL}/api/autofill/verify-cac`;
+  
+  const payload = identityType === 'NIN'
+    ? { nin: identityNumber, userId: user.uid, userName: user.displayName, userEmail: user.email }
+    : { rc_number: identityNumber, userId: user.uid, userName: user.displayName, userEmail: user.email };
+
+  const response = await makeAuthenticatedRequest(endpoint, payload);
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || `${identityType} verification failed`);
+  }
+  
+  return await response.json();
+};
+
 /**
  * Enhanced form submission hook with consistent UX
  * 
@@ -110,7 +135,7 @@ const makeAuthenticatedRequest = async (url: string, data: any, method: string =
 export const useEnhancedFormSubmit = (
   options: UseEnhancedFormSubmitOptions
 ): UseEnhancedFormSubmitReturn => {
-  const { formType, onSuccess, onError, customValidation } = options;
+  const { formType, onSuccess, onError, customValidation, verificationData } = options;
   const { user } = useAuth();
   const navigate = useNavigate();
   
@@ -139,6 +164,9 @@ export const useEnhancedFormSubmit = (
       const pendingData = sessionStorage.getItem('pendingSubmission');
       
       if (pendingData && user) {
+        // Add a small delay to ensure session cookie is set
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const { formData: savedFormData, formType: savedFormType, timestamp } = JSON.parse(pendingData);
         
         // Only process if it's for this form type and not expired (30 minutes)
@@ -147,36 +175,98 @@ export const useEnhancedFormSubmit = (
           hasProcessedPending.current = true;
           
           console.log('🎯 Processing pending submission for', formType);
-          setLoadingMessage('Processing your submission...');
-          setIsSubmitting(true);
           
-          try {
-            const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
-              formData: savedFormData,
-              formType: savedFormType,
-              userEmail: user.email,
-              userUid: user.uid
-            });
+          // Check if we need to verify identity for this form
+          const needsVerification = 
+            (formType === 'Individual KYC' || formType === 'Corporate KYC') &&
+            verificationData?.identityNumber &&
+            !verificationData?.isVerified;
 
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.error || 'Form submission failed');
+          if (needsVerification) {
+            setLoadingMessage('Verifying identity...');
+            setIsSubmitting(true);
+
+            try {
+              // Verify the identity number
+              const verificationResult = await verifyIdentity(
+                verificationData!.identityNumber!,
+                verificationData!.identityType!,
+                user
+              );
+
+              if (!verificationResult.status) {
+                throw new Error(verificationResult.message || 'Identity verification failed');
+              }
+
+              // Verification succeeded, add verification data to formData
+              const enrichedFormData = {
+                ...savedFormData,
+                verificationData: verificationResult.data,
+                verified: true
+              };
+
+              // Now proceed with form submission
+              setLoadingMessage('Processing your submission...');
+              const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
+                formData: enrichedFormData,
+                formType: savedFormType,
+                userEmail: user.email,
+                userUid: user.uid
+              });
+
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Form submission failed');
+              }
+
+              // Clear pending submission after successful submit
+              sessionStorage.removeItem('pendingSubmission');
+              sessionStorage.removeItem('pendingSubmissionKey');
+              setIsSubmitting(false);
+              setShowSuccess(true);
+              toast.success('Form submitted successfully!');
+              onSuccess?.();
+            } catch (error: any) {
+              console.error('Error processing pending submission:', error);
+              sessionStorage.removeItem('pendingSubmission');
+              sessionStorage.removeItem('pendingSubmissionKey');
+              setIsSubmitting(false);
+              toast.error(error.message || 'Failed to verify identity or submit form. Please try again.');
+              onError?.(error);
             }
+          } else {
+            // No verification needed, proceed directly
+            setLoadingMessage('Processing your submission...');
+            setIsSubmitting(true);
+            
+            try {
+              const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
+                formData: savedFormData,
+                formType: savedFormType,
+                userEmail: user.email,
+                userUid: user.uid
+              });
 
-            // Clear pending submission after successful submit
-            sessionStorage.removeItem('pendingSubmission');
-            sessionStorage.removeItem('pendingSubmissionKey');
-            setIsSubmitting(false);
-            setShowSuccess(true);
-            toast.success('Form submitted successfully!');
-            onSuccess?.();
-          } catch (error: any) {
-            console.error('Error processing pending submission:', error);
-            sessionStorage.removeItem('pendingSubmission');
-            sessionStorage.removeItem('pendingSubmissionKey');
-            setIsSubmitting(false);
-            toast.error(error.message || 'Failed to submit form. Please try again.');
-            onError?.(error);
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Form submission failed');
+              }
+
+              // Clear pending submission after successful submit
+              sessionStorage.removeItem('pendingSubmission');
+              sessionStorage.removeItem('pendingSubmissionKey');
+              setIsSubmitting(false);
+              setShowSuccess(true);
+              toast.success('Form submitted successfully!');
+              onSuccess?.();
+            } catch (error: any) {
+              console.error('Error processing pending submission:', error);
+              sessionStorage.removeItem('pendingSubmission');
+              sessionStorage.removeItem('pendingSubmissionKey');
+              setIsSubmitting(false);
+              toast.error(error.message || 'Failed to submit form. Please try again.');
+              onError?.(error);
+            }
           }
         } else if (savedFormType === formType) {
           // Expired submission for this form
@@ -187,7 +277,7 @@ export const useEnhancedFormSubmit = (
     };
 
     checkAndProcessPendingSubmission();
-  }, [user, formType, onSuccess, onError]);
+  }, [user, formType, onSuccess, onError, verificationData]);
 
   /**
    * Handle initial submit - shows loading immediately, then validates
@@ -230,7 +320,7 @@ export const useEnhancedFormSubmit = (
   const confirmSubmit = async () => {
     if (!formData) return;
 
-    // Check authentication
+    // Check authentication FIRST (preserve existing flow)
     if (!user) {
       // Store pending submission
       sessionStorage.setItem('pendingSubmission', JSON.stringify({
@@ -244,32 +334,88 @@ export const useEnhancedFormSubmit = (
       return;
     }
 
-    // User is authenticated, proceed with submission
-    setShowSummary(false);
-    setLoadingMessage('Submitting your form...');
-    setIsSubmitting(true);
+    // User is authenticated, now check if we need to verify identity
+    // Only verify for KYC forms that have identity numbers
+    const needsVerification = 
+      (formType === 'Individual KYC' || formType === 'Corporate KYC') &&
+      verificationData?.identityNumber &&
+      !verificationData?.isVerified;
 
-    try {
-      const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
-        formData,
-        formType,
-        userEmail: user.email,
-        userUid: user.uid
-      });
+    if (needsVerification) {
+      setShowSummary(false);
+      setLoadingMessage('Verifying identity...');
+      setIsSubmitting(true);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Form submission failed');
+      try {
+        // Verify the identity number
+        const verificationResult = await verifyIdentity(
+          verificationData!.identityNumber!,
+          verificationData!.identityType!,
+          user
+        );
+
+        if (!verificationResult.status) {
+          throw new Error(verificationResult.message || 'Identity verification failed');
+        }
+
+        // Verification succeeded, add verification data to formData
+        const enrichedFormData = {
+          ...formData,
+          verificationData: verificationResult.data,
+          verified: true
+        };
+
+        // Now proceed with form submission
+        setLoadingMessage('Submitting your form...');
+        const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
+          formData: enrichedFormData,
+          formType,
+          userEmail: user.email,
+          userUid: user.uid
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Form submission failed');
+        }
+
+        setIsSubmitting(false);
+        setShowSuccess(true);
+        toast.success('Form submitted successfully!');
+        onSuccess?.();
+      } catch (error: any) {
+        setIsSubmitting(false);
+        toast.error(error.message || 'Failed to verify identity or submit form. Please try again.');
+        onError?.(error);
       }
+    } else {
+      // No verification needed, proceed directly with submission
+      setShowSummary(false);
+      setLoadingMessage('Submitting your form...');
+      setIsSubmitting(true);
 
-      setIsSubmitting(false);
-      setShowSuccess(true);
-      toast.success('Form submitted successfully!');
-      onSuccess?.();
-    } catch (error: any) {
-      setIsSubmitting(false);
-      toast.error(error.message || 'Failed to submit form. Please try again.');
-      onError?.(error);
+      try {
+        const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
+          formData,
+          formType,
+          userEmail: user.email,
+          userUid: user.uid
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Form submission failed');
+        }
+
+        setIsSubmitting(false);
+        setShowSuccess(true);
+        toast.success('Form submitted successfully!');
+        onSuccess?.();
+      } catch (error: any) {
+        setIsSubmitting(false);
+        toast.error(error.message || 'Failed to submit form. Please try again.');
+        onError?.(error);
+      }
     }
   };
 
