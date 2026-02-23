@@ -55,6 +55,7 @@ const {
 
 // Import rate limiter
 const {
+  RateLimiter,
   applyDataproRateLimit,
   applyVerifydataRateLimit,
   getDataproRateLimitStatus,
@@ -116,6 +117,50 @@ const {
   getUnacknowledgedAlerts,
   acknowledgeAlert
 } = require('./server-utils/healthMonitor.cjs');
+
+// ========================================
+// IP-Based Rate Limiter for Verification Endpoints
+// ========================================
+// Create IP-based rate limiter instance (100 requests per minute, max queue size 50)
+const ipRateLimiter = new RateLimiter(100, 60000, 50);
+
+/**
+ * IP-based rate limiting middleware
+ * Backup defense against abuse even for authenticated users
+ */
+async function ipBasedRateLimit(req, res, next) {
+  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+  
+  try {
+    await ipRateLimiter.acquire();
+    next();
+  } catch (error) {
+    // Log rate limit violation
+    try {
+      await logAuditSecurityEvent({
+        eventType: 'rate_limit_exceeded',
+        severity: 'high',
+        description: `IP ${ip} exceeded rate limit for verification endpoints`,
+        userId: req.user?.uid || 'anonymous',
+        ipAddress: ip,
+        metadata: {
+          endpoint: req.path,
+          method: req.method,
+          userAgent: req.headers['user-agent'],
+          queueStatus: ipRateLimiter.getStatus()
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log rate limit violation:', logError);
+    }
+    
+    console.warn(`⚠️  IP rate limit exceeded for ${ip} on ${req.path}`);
+    res.status(429).json({
+      status: false,
+      message: 'Too many requests. Please try again later.'
+    });
+  }
+}
 
 // Import duplicate detector for bulk verification
 const {
@@ -792,6 +837,25 @@ const requireAuth = async (req, res, next) => {
     
     if (!sessionToken) {
       console.log('❌ No session token found in cookie or Authorization header');
+      
+      // Log unauthenticated access attempt
+      try {
+        await logAuditSecurityEvent({
+          eventType: 'unauthenticated_verification_attempt',
+          severity: 'medium',
+          description: 'Attempted to access protected endpoint without authentication',
+          userId: 'anonymous',
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          metadata: {
+            endpoint: req.path,
+            method: req.method,
+            userAgent: req.headers['user-agent']
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log security event:', logError);
+      }
+      
       return res.status(401).json({ 
         error: 'Authentication required',
         message: 'Please sign in to access this resource'
@@ -803,6 +867,25 @@ const requireAuth = async (req, res, next) => {
     
     if (!userDoc.exists) {
       console.log('❌ Auth failed: Invalid session token');
+      
+      // Log invalid session attempt
+      try {
+        await logAuditSecurityEvent({
+          eventType: 'unauthenticated_verification_attempt',
+          severity: 'medium',
+          description: 'Attempted to access protected endpoint with invalid session token',
+          userId: 'anonymous',
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          metadata: {
+            endpoint: req.path,
+            method: req.method,
+            userAgent: req.headers['user-agent']
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log security event:', logError);
+      }
+      
       return res.status(401).json({ 
         error: 'Invalid session',
         message: 'Your session has expired. Please sign in again.'
@@ -4649,7 +4732,7 @@ app.post('/api/verify/cac', verificationRateLimiter, async (req, res) => {
 // ============================================================================
 
 // NIN Auto-Fill Verification with Database Caching
-app.post('/api/autofill/verify-nin', verificationRateLimiter, async (req, res) => {
+app.post('/api/autofill/verify-nin', requireAuth, ipBasedRateLimit, verificationRateLimiter, async (req, res) => {
   try {
     const { nin, userId, formId, userName, userEmail } = req.body;
     
@@ -4885,22 +4968,16 @@ app.post('/api/autofill/verify-nin', verificationRateLimiter, async (req, res) =
 });
 
 // CAC Auto-Fill Verification with Database Caching
-app.post('/api/autofill/verify-cac', verificationRateLimiter, async (req, res) => {
+app.post('/api/autofill/verify-cac', requireAuth, ipBasedRateLimit, verificationRateLimiter, async (req, res) => {
   try {
-    const { rc_number, company_name, userId, formId, userName, userEmail } = req.body;
+    const { rc_number, userId, formId, userName, userEmail } = req.body;
     
-    // Input validation
+    // Input validation - only RC number is required
+    // The VerifyData API returns company name and other details based on RC number lookup
     if (!rc_number || typeof rc_number !== 'string' || rc_number.trim().length === 0) {
       return res.status(400).json({ 
         status: false, 
         message: 'Valid RC number is required' 
-      });
-    }
-
-    if (!company_name || typeof company_name !== 'string' || company_name.trim().length === 0) {
-      return res.status(400).json({ 
-        status: false, 
-        message: 'Company name is required' 
       });
     }
 
@@ -4924,11 +5001,17 @@ app.post('/api/autofill/verify-cac', verificationRateLimiter, async (req, res) =
       
       // Log cache hit with cost = 0
       try {
+        // Use company name from cached data if userName is Anonymous
+        const displayName = (userName === 'Anonymous' || !userName) && cachedData.verificationData?.name 
+          ? cachedData.verificationData.name 
+          : userName || 'Anonymous';
+        
         await logVerificationAttempt({
           verificationType: 'CAC',
           identityNumber: rc_number,
           userId: userId || 'anonymous',
-          userEmail: userEmail || 'anonymous',
+          userEmail: userEmail || '',
+          userName: displayName,
           ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
           result: 'success',
           metadata: {
@@ -4954,26 +5037,6 @@ app.post('/api/autofill/verify-cac', verificationRateLimiter, async (req, res) =
 
     // Cache MISS - call VerifyData API
     console.log('❌ Cache MISS - calling VerifyData API (cost = ₦100)');
-
-    // Log verification attempt before API call
-    try {
-      await logVerificationAttempt({
-        verificationType: 'CAC',
-        identityNumber: rc_number,
-        userId: userId || 'anonymous',
-        userEmail: userEmail || 'anonymous',
-        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-        result: 'pending',
-        metadata: {
-          source: 'auto-fill',
-          cacheHit: false,
-          formId: formId || null,
-          userAgent: req.headers['user-agent']
-        }
-      });
-    } catch (logError) {
-      console.error('Failed to log verification attempt:', logError);
-    }
 
     // Apply VerifyData rate limiting
     try {
@@ -5024,6 +5087,11 @@ app.post('/api/autofill/verify-cac', verificationRateLimiter, async (req, res) =
       
       // Log successful verification with cost
       try {
+        // Use company name from verification data if userName is Anonymous
+        const displayName = (userName === 'Anonymous' || !userName) && verifydataResult.data?.name 
+          ? verifydataResult.data.name 
+          : userName || 'Anonymous';
+        
         await logVerificationComplete(db, {
           provider: 'verifydata',
           verificationType: 'CAC',
@@ -5032,8 +5100,8 @@ app.post('/api/autofill/verify-cac', verificationRateLimiter, async (req, res) =
           entryId: null,
           identityNumber: rc_number,
           userId: userId || 'anonymous',
-          userEmail: userEmail || 'anonymous',
-          userName: userName || 'Anonymous',
+          userEmail: userEmail || '', // Leave empty if not provided
+          userName: displayName,
           userType: 'user',
           ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
           errorCode: null,
@@ -9460,6 +9528,7 @@ app.get('/api/identity/lists', requireAuth, requireBrokerOrAdmin, async (req, re
       return {
         id: doc.id,
         name: data.name,
+        listType: data.listType, // Include listType for tab filtering
         totalEntries: total,
         verifiedCount: verified,
         pendingCount: data.pendingCount || 0,
