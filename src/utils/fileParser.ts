@@ -31,10 +31,10 @@ export const INDIVIDUAL_TEMPLATE: IndividualTemplateSchema = {
     'date of birth',
     'email',
     'gender',
-    'phone number',
-    'address'
+    'phone number'
   ],
   optional: [
+    'address',          // Optional
     'bvn',              // Optional
     'occupation',
     'nationality',
@@ -57,11 +57,11 @@ export const CORPORATE_TEMPLATE: CorporateTemplateSchema = {
     'company name',
     'registration date',       // Required for corporate verification (Requirement 18.7)
     'company type',
-    'company address',
     'email address',
     'phone number'
   ],
   optional: [
+    'company address',         // Optional
     'cac number'               // Optional - pre-filled if broker already has it (Requirement 18.9)
   ]
 };
@@ -238,6 +238,30 @@ export function validateTemplate(columns: string[]): TemplateValidationResult {
 }
 
 /**
+ * Filter out system-generated columns that should not be in user data
+ * These columns are added by error reports and should be removed if user re-uploads the error report file
+ */
+function filterSystemColumns(columns: string[]): string[] {
+  const systemColumns = ['Validation Errors', 'Edited Values'];
+  return columns.filter(col => !systemColumns.includes(col));
+}
+
+/**
+ * Remove system columns from row data
+ */
+function filterSystemColumnsFromRows(rows: Record<string, any>[], systemColumns: string[]): Record<string, any>[] {
+  return rows.map(row => {
+    const filteredRow: Record<string, any> = {};
+    for (const [key, value] of Object.entries(row)) {
+      if (!systemColumns.includes(key)) {
+        filteredRow[key] = value;
+      }
+    }
+    return filteredRow;
+  });
+}
+
+/**
  * Parse a CSV file and return all columns and rows
  */
 export function parseCSV(file: File): Promise<FileParseResult> {
@@ -255,8 +279,13 @@ export function parseCSV(file: File): Promise<FileParseResult> {
           }
         }
 
-        const columns = results.meta.fields || [];
-        const rows = results.data as Record<string, any>[];
+        const allColumns = results.meta.fields || [];
+        const allRows = results.data as Record<string, any>[];
+        
+        // Filter out system-generated columns (Validation Errors, Edited Values)
+        const systemColumns = ['Validation Errors', 'Edited Values'];
+        const columns = filterSystemColumns(allColumns);
+        const rows = filterSystemColumnsFromRows(allRows, systemColumns);
         const detectedEmailColumn = detectEmailColumn(columns);
         const detectedFileType = detectFileType(columns);
         const detectedNameColumns = detectNameColumns(columns, detectedFileType);
