@@ -9289,6 +9289,39 @@ app.post('/api/identity/lists', requireAuth, requireBrokerOrAdmin, async (req, r
       });
     }
     
+    // Server-side identity data validation (Requirements: 7.1, 7.2, 7.3, 7.4)
+    const { validateIdentityData } = require('./server-utils/identityUploadValidator.cjs');
+    const templateType = listType || 'flexible';
+    const validationResult = validateIdentityData(entries, columns, { templateType });
+    
+    if (!validationResult.valid) {
+      console.warn(`⚠️ Server-side validation failed for list "${name}": ${validationResult.errorSummary.totalErrors} error(s) found`);
+      
+      // Log validation failures for monitoring
+      auditLogger.logSecurityEvent({
+        eventType: 'VALIDATION_FAILURE',
+        userId: req.user.uid,
+        userEmail: req.user.email,
+        details: {
+          listName: name,
+          totalErrors: validationResult.errorSummary.totalErrors,
+          affectedRows: validationResult.errorSummary.affectedRows,
+          templateType,
+        },
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+      
+      return res.status(400).json({
+        error: 'Validation failed',
+        message: 'Identity data validation failed',
+        validationErrors: validationResult.errors,
+        errorSummary: validationResult.errorSummary,
+      });
+    }
+    
+    console.log(`✅ Server-side validation passed for list "${name}"`);
+    
     // Create list document
     const listRef = db.collection('identity-lists').doc();
     const listId = listRef.id;

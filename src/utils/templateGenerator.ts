@@ -3,8 +3,8 @@ import * as XLSX from 'xlsx';
 /**
  * Template headers for Individual client identity collection
  * Based on Requirements 17.3 and 18.1-18.4
- * Order: Policy Number, First Name, Last Name, Date of Birth, Email, Gender, Phone Number, Address
- * Optional: BVN, Occupation, Nationality, NIN
+ * Order: Policy Number, First Name, Last Name, Date of Birth, Email, Gender, Phone Number
+ * Optional: Address, BVN, Occupation, Nationality, NIN
  */
 export const INDIVIDUAL_TEMPLATE_HEADERS = [
   'Policy Number',      // Required for IES integration - FIRST COLUMN
@@ -14,7 +14,7 @@ export const INDIVIDUAL_TEMPLATE_HEADERS = [
   'Email',              // Required
   'Gender',             // Required
   'Phone Number',       // Required
-  'Address',            // Required
+  'Address',            // Optional
   'BVN',                // Optional
   'Occupation',         // Optional
   'Nationality',        // Optional
@@ -24,17 +24,17 @@ export const INDIVIDUAL_TEMPLATE_HEADERS = [
 /**
  * Template headers for Corporate client identity collection
  * Based on Requirements 17.4 and 18.5-18.9
- * Order: Policy Number, Company Name, Registration Date, Company Type, Company Address, Email Address, Phone Number
- * Optional: CAC Number
+ * Order: Policy Number, Company Name, Registration Date, Company Type, Email Address, Phone Number
+ * Optional: Company Address, CAC Number
  */
 export const CORPORATE_TEMPLATE_HEADERS = [
   'Policy Number',          // Required for IES integration - FIRST COLUMN
   'Company Name',           // Required
   'Registration Date',      // Required for corporate verification
   'Company Type',           // Required
-  'Company Address',        // Required
   'Email Address',          // Required
   'Phone Number',           // Required
+  'Company Address',        // Optional
   'CAC Number'              // Optional - if already available
 ];
 
