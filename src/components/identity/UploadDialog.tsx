@@ -69,7 +69,21 @@ import {
 import { downloadTemplate } from '../../utils/templateGenerator';
 import { useBrokerTourV2 } from '../../hooks/useBrokerTourV2';
 import { useAuth } from '../../contexts/AuthContext';
+import { validateIdentityData } from '../../utils/validation/identityValidation';
+import { validateRow } from '../../utils/validation/rowValidation';
+import { ValidationErrorDisplay } from './ValidationErrorDisplay';
+import { EditablePreviewTable } from './EditablePreviewTable';
+import { 
+  getMergedRowData, 
+  updateEditState as updateEditStateHelper,
+  clearRowEditState,
+  getAllMergedData,
+  type EditState,
+  type ValidationState,
+  type EditingCell,
+} from '../../types/editablePreview';
 import type { FileParseResult, UploadMode, ListType, TemplateValidationResult } from '../../types/remediation';
+import type { ValidationResult } from '../../utils/validation/identityValidation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -89,20 +103,32 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
   const [file, setFile] = useState<File | null>(null);
   const [parseResult, setParseResult] = useState<FileParseResult | null>(null);
   const [templateValidation, setTemplateValidation] = useState<TemplateValidationResult | null>(null);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [listName, setListName] = useState('');
   const [emailColumn, setEmailColumn] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [parsing, setParsing] = useState(false);
+  const [validating, setValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTemplateMenu, setShowTemplateMenu] = useState(false);
+
+  // Edit state management
+  const [editState, setEditState] = useState<EditState>(new Map());
+  const [validationState, setValidationState] = useState<ValidationState>(new Map());
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
 
   const resetState = () => {
     setFile(null);
     setParseResult(null);
     setTemplateValidation(null);
+    setValidationResult(null);
     setListName('');
     setEmailColumn('');
     setError(null);
+    // Clear edit state
+    setEditState(new Map());
+    setValidationState(new Map());
+    setEditingCell(null);
   };
 
   const handleClose = () => {
@@ -118,6 +144,80 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
         resetState();
       }
     }
+  };
+
+  // Edit state handlers
+  const handleCellEdit = (rowIndex: number, column: string, value: any) => {
+    setEditState((prev) => updateEditStateHelper(prev, rowIndex, column, value));
+  };
+
+  const handleCellEditStart = (rowIndex: number, column: string) => {
+    setEditingCell({ rowIndex, column });
+  };
+
+  const handleCellEditEnd = () => {
+    setEditingCell(null);
+  };
+
+  const handleRowSave = (rowIndex: number) => {
+    if (!parseResult) return;
+
+    // Get merged row data (original + edits)
+    const mergedRow = getMergedRowData(parseResult.rows[rowIndex], rowIndex, editState);
+
+    // Determine template type for validation
+    const templateType = uploadMode === 'template' && templateValidation?.detectedType
+      ? templateValidation.detectedType
+      : 'flexible';
+
+    // Re-validate the row
+    const rowErrors = validateRow(mergedRow, rowIndex, parseResult.columns, { templateType });
+
+    // Update validation state for this row
+    setValidationState((prev) => {
+      const newState = new Map(prev);
+      if (rowErrors.length > 0) {
+        newState.set(rowIndex, rowErrors);
+      } else {
+        newState.delete(rowIndex);
+      }
+      return newState;
+    });
+
+    // Update overall validation result
+    if (validationResult) {
+      // Remove old errors for this row
+      const otherErrors = validationResult.errors.filter((e) => e.rowIndex !== rowIndex);
+      // Add new errors for this row
+      const allErrors = [...otherErrors, ...rowErrors];
+      const affectedRows = new Set(allErrors.map((e) => e.rowIndex)).size;
+
+      setValidationResult({
+        valid: allErrors.length === 0,
+        errors: allErrors,
+        errorSummary: {
+          totalErrors: allErrors.length,
+          affectedRows,
+        },
+      });
+
+      // Update error message
+      if (allErrors.length > 0) {
+        setError(`Validation failed: ${allErrors.length} error(s) found`);
+      } else {
+        setError(null);
+      }
+    }
+
+    // Clear editing cell
+    setEditingCell(null);
+  };
+
+  const handleRowCancel = (rowIndex: number) => {
+    // Clear edits for this row
+    setEditState((prev) => clearRowEditState(prev, rowIndex));
+    // Clear editing cell
+    setEditingCell(null);
   };
 
   const handleDownloadTemplate = (type: 'individual' | 'corporate') => {
@@ -166,8 +266,9 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
       }
 
       // Validate template if in template mode
+      let validation: TemplateValidationResult | null = null;
       if (uploadMode === 'template') {
-        const validation = validateTemplate(result.columns);
+        validation = validateTemplate(result.columns);
         setTemplateValidation(validation);
         
         if (!validation.valid) {
@@ -175,6 +276,31 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
         }
       } else {
         setTemplateValidation(null);
+      }
+
+      // Trigger identity data validation
+      setValidating(true);
+      try {
+        const templateType = uploadMode === 'template' && validation?.detectedType
+          ? validation.detectedType
+          : 'flexible';
+
+        const identityValidation = validateIdentityData(
+          result.rows,
+          result.columns,
+          { templateType }
+        );
+
+        setValidationResult(identityValidation);
+
+        if (!identityValidation.valid) {
+          setError(`Validation failed: ${identityValidation.errorSummary.totalErrors} error(s) found`);
+        }
+      } catch (validationErr) {
+        console.error('Validation error:', validationErr);
+        setError('Failed to validate data. Please check your file format.');
+      } finally {
+        setValidating(false);
       }
       
       // Advance tour to show "Create List" step
@@ -186,7 +312,7 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
     } finally {
       setParsing(false);
     }
-  }, [uploadMode]);
+  }, [uploadMode, advanceTour]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -211,6 +337,12 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
       return;
     }
 
+    // Check identity validation
+    if (validationResult && !validationResult.valid) {
+      setError('Cannot create list: validation errors must be fixed first');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -220,6 +352,9 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
       if (uploadMode === 'template' && templateValidation?.detectedType) {
         listType = templateValidation.detectedType;
       }
+
+      // Get merged data (original + edits)
+      const mergedEntries = getAllMergedData(parseResult.rows, editState);
 
       const response = await fetch(`${API_BASE_URL}/api/identity/lists`, {
         method: 'POST',
@@ -234,7 +369,7 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
           nameColumns: parseResult.detectedNameColumns || null,
           policyColumn: parseResult.detectedPolicyColumn || null,
           fileType: parseResult.detectedFileType || 'unknown',
-          entries: parseResult.rows,
+          entries: mergedEntries, // Use merged data instead of original
           originalFileName: file?.name || 'unknown',
           listType,
           uploadMode,
@@ -243,6 +378,23 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
 
       if (!response.ok) {
         const data = await response.json();
+        
+        // Check if this is a server-side validation error (Requirements: 7.3, 8.1)
+        if (response.status === 400 && data.validationErrors && data.errorSummary) {
+          console.warn('Server detected validation errors:', data.errorSummary);
+          
+          // Convert server validation errors to client format
+          const serverValidationResult: ValidationResult = {
+            valid: false,
+            errors: data.validationErrors,
+            errorSummary: data.errorSummary,
+          };
+          
+          setValidationResult(serverValidationResult);
+          setError(`Server validation failed: ${data.errorSummary.totalErrors} error(s) found. Please download the error report and fix the issues.`);
+          return;
+        }
+        
         throw new Error(data.message || 'Failed to create list');
       }
 
@@ -259,21 +411,6 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Get preview rows (first 10)
-  const previewRows = parseResult?.rows.slice(0, 10) || [];
-
-  // Helper to check if a column is a detected name column
-  const isNameColumn = (col: string): boolean => {
-    if (!parseResult?.detectedNameColumns) return false;
-    const nameCols = parseResult.detectedNameColumns;
-    return col === nameCols.firstName || 
-           col === nameCols.middleName || 
-           col === nameCols.lastName || 
-           col === nameCols.fullName || 
-           col === nameCols.insured ||
-           col === nameCols.companyName;
   };
 
   return (
@@ -405,6 +542,22 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
             {error}
           </Alert>
+        )}
+
+        {/* Validation Loading Indicator */}
+        {validating && (
+          <Alert severity="info" sx={{ mb: 2 }} icon={<CircularProgress size={20} />}>
+            <Typography variant="body2">
+              Validating data... Please wait.
+            </Typography>
+          </Alert>
+        )}
+
+        {/* Validation Error Display */}
+        {validationResult && !validationResult.valid && !validating && (
+          <ValidationErrorDisplay
+            validationResult={validationResult}
+          />
         )}
 
         {/* Template Validation Results */}
@@ -615,67 +768,20 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
             )}
 
             {/* Preview Table */}
-            <Typography variant="subtitle2" gutterBottom>
-              Preview (first {previewRows.length} rows)
-            </Typography>
-            <TableContainer component={Paper} sx={{ maxHeight: 300, overflowY: 'auto', pointerEvents: 'auto' }}>
-              <Table size="small" stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    {parseResult.columns.map((col) => (
-                      <TableCell
-                        key={col}
-                        sx={{
-                          bgcolor: col === emailColumn 
-                            ? 'success.light' 
-                            : isNameColumn(col) 
-                              ? '#e3f2fd' 
-                              : 'background.paper',
-                          fontWeight: 'bold',
-                        }}
-                      >
-                        {col}
-                        {col === emailColumn && (
-                          <EmailIcon sx={{ fontSize: 14, ml: 0.5, verticalAlign: 'middle' }} />
-                        )}
-                        {isNameColumn(col) && (
-                          <PersonIcon sx={{ fontSize: 14, ml: 0.5, verticalAlign: 'middle', color: '#1976d2' }} />
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {previewRows.map((row, idx) => (
-                    <TableRow key={idx}>
-                      {parseResult.columns.map((col) => (
-                        <TableCell
-                          key={col}
-                          sx={{
-                            bgcolor: col === emailColumn 
-                              ? 'success.lighter' 
-                              : isNameColumn(col) 
-                                ? '#f5f9ff' 
-                                : 'inherit',
-                            maxWidth: 200,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {String(row[col] || '')}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            {parseResult.totalRows > 10 && (
-              <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-                Showing 10 of {parseResult.totalRows} rows
-              </Typography>
-            )}
+            <EditablePreviewTable
+              columns={parseResult.columns}
+              rows={parseResult.rows}
+              emailColumn={emailColumn}
+              nameColumns={parseResult.detectedNameColumns}
+              editState={editState}
+              validationState={validationState}
+              editingCell={editingCell}
+              onCellEdit={handleCellEdit}
+              onRowSave={handleRowSave}
+              onRowCancel={handleRowCancel}
+              onCellEditStart={handleCellEditStart}
+              onCellEditEnd={handleCellEditEnd}
+            />
           </Box>
         )}
       </DialogContent>
@@ -692,7 +798,9 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
             !listName.trim() || 
             !emailColumn || 
             loading ||
-            (uploadMode === 'template' && templateValidation && !templateValidation.valid)
+            validating ||
+            (uploadMode === 'template' && templateValidation && !templateValidation.valid) ||
+            (validationResult && !validationResult.valid)
           }
         >
           {loading ? 'Creating...' : 'Create List'}
