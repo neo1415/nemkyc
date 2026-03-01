@@ -1,0 +1,188 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Fault Condition** - Customer CAC Document Upload Failure
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: For deterministic bugs, scope the property to the concrete failing case(s) to ensure reproducibility
+  - Test that customers accessing CAC verification page with valid token can upload all three required documents (Certificate of Incorporation, Particulars of Directors, Share Allotment)
+  - Test that document upload endpoint properly validates token, encrypts files with AES-256-GCM, stores in Firebase Storage, and creates metadata in Firestore
+  - Test that verify button is disabled until all three documents are uploaded
+  - Test that clear visual feedback is displayed (filename, size, checkmarks, error messages)
+  - The test assertions should match the Expected Behavior Properties from design:
+    - Document upload fields are displayed for CAC verification
+    - All three documents can be uploaded with validation (file type: PDF/JPEG/PNG, size: max 10MB)
+    - Documents are encrypted before storage
+    - Metadata is created in Firestore with correct fields
+    - Identity entry is updated with document references
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found to understand root cause:
+    - Backend endpoint may return errors due to incomplete implementation
+    - Documents may not be encrypted properly
+    - Metadata may not be created in Firestore
+    - Storage rules may not authorize customer uploads
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Non-CAC Verification Behavior
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-buggy inputs (NIN verification, admin features)
+  - Write property-based tests capturing observed behavior patterns from Preservation Requirements:
+    - NIN verification displays only NIN input field without document uploads
+    - Admin CAC document management features remain functional (preview, download, access control)
+    - Existing admin document preview component works correctly
+    - Admin access control enforced (only admin, super_admin, compliance roles)
+    - Encryption utilities continue to work for all use cases
+    - Audit logging infrastructure logs all verification attempts and document access
+    - Firebase Storage rules for other document types remain unchanged
+    - Token validation logic for both NIN and CAC remains unchanged
+    - VerifyData API integration for CAC number verification remains unchanged
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
+
+- [ ] 3. Fix for customer CAC document upload
+
+  - [x] 3.1 Verify and fix frontend implementation (CustomerVerificationPage.tsx)
+    - Verify document upload UI renders three file upload fields for CAC verification (lines 760-880)
+    - Verify handleDocumentSelect validates file type (PDF, JPEG, PNG) and size (max 10MB per file)
+    - Verify handleVerify uploads all three documents before CAC verification (lines 300-330)
+    - Verify visual feedback displays filename, size, checkmarks for success, error messages for validation failures
+    - Verify verify button is disabled until all three documents are uploaded (line 920)
+    - Fix any issues found in the frontend implementation
+    - _Bug_Condition: isBugCondition(input) where input.verificationType == 'CAC' AND documentUploadFieldsNotDisplayed()_
+    - _Expected_Behavior: documentUploadFieldsDisplayed(result) AND allThreeDocumentsCanBeUploaded(result) from design_
+    - _Preservation: NIN verification flow must remain unchanged (3.1, 3.2, 3.3)_
+    - _Requirements: 2.1, 2.2, 2.6_
+
+  - [x] 3.2 Verify and fix backend document upload endpoint (server.js)
+    - Verify POST /api/identity/verify/:token/upload-document endpoint exists (around line 11057)
+    - Verify token validation: check expiration, ensure verificationType is 'CAC'
+    - Verify file validation: validate file type (PDF, JPEG, PNG only) and file size (max 10MB)
+    - Verify encryption: encrypt file buffer using encryptData() from server-utils/encryption.cjs with AES-256-GCM
+    - Verify storage path: use format /cac-documents/{entryId}/{documentType}/{documentId}_{filename}
+    - Verify metadata creation in cac-documents Firestore collection with required fields:
+      - documentId, entryId, documentType, fileName, fileSize, contentType
+      - encryptionIV, storagePath, uploadedBy: 'customer', uploadedAt, uploadedByToken
+    - Verify identity entry update with document references in documents field
+    - Verify audit logging for document upload events
+    - Fix any issues found in the backend implementation
+    - _Bug_Condition: Backend endpoint incomplete or missing proper validation/encryption_
+    - _Expected_Behavior: documentsEncryptedBeforeStorage(result) AND metadataCreatedInFirestore(result) from design_
+    - _Preservation: Existing encryption utilities must continue to work (3.5)_
+    - _Requirements: 2.2, 2.3, 2.4, 2.5, 2.7_
+
+  - [x] 3.3 Verify Firebase Storage rules for customer uploads (storage.rules)
+    - Verify storage rules at path /cac-documents/{identityId}/{documentType}/{fileName} (lines 330-360)
+    - Verify create permission: allow when request.resource.metadata.uploadedBy == 'customer'
+    - Verify file type validation: PDF, JPEG, PNG only
+    - Verify file size validation: max 10MB
+    - Verify document type validation: certificate_of_incorporation, particulars_of_directors, share_allotment
+    - Test that backend can upload with admin SDK setting uploadedBy metadata
+    - Fix any issues found in storage rules
+    - _Bug_Condition: Storage rules may not properly authorize customer uploads_
+    - _Expected_Behavior: Customer uploads authorized via backend metadata_
+    - _Preservation: Firebase Storage rules for other document types must remain unchanged (3.7)_
+    - _Requirements: 2.4_
+
+  - [x] 3.4 Implement admin document access integration
+    - Verify GET /api/cac-documents/:documentId endpoint exists for document retrieval
+    - Verify authorization: check user role (admin, super_admin, or compliance only)
+    - Verify document retrieval: fetch metadata from Firestore cac-documents collection
+    - Verify decryption: decrypt document using decryptData() from server-utils/encryption.cjs with stored IV
+    - Verify response: return decrypted document with proper content-type headers
+    - Verify audit logging: log document access (view/download) with user ID, document ID, timestamp
+    - Verify existing CACDocumentPreview.tsx component works with customer-uploaded documents
+    - Verify identity dashboard displays document status indicators
+    - Fix any integration issues found
+    - _Bug_Condition: Admin document access may not work with customer-uploaded documents_
+    - _Expected_Behavior: Admins can preview and download customer documents with proper access control_
+    - _Preservation: Admin document management features must remain functional (3.4)_
+    - _Requirements: 2.4_
+
+  - [-] 3.5 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Customer CAC Document Upload Success
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - Verify all assertions pass:
+      - Document upload fields are displayed for CAC verification
+      - All three documents can be uploaded with validation
+      - Documents are encrypted before storage
+      - Metadata is created in Firestore
+      - Identity entry is updated with document references
+      - Verify button is disabled until all documents uploaded
+      - Clear visual feedback is displayed
+    - _Requirements: Expected Behavior Properties from design (2.1, 2.2, 2.3, 2.4, 2.5, 2.6)_
+
+  - [x] 3.6 Verify preservation tests still pass
+    - **Property 2: Preservation** - Non-CAC Verification Behavior
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Verify all preservation requirements still hold:
+      - NIN verification works exactly as before
+      - Admin document management features remain functional
+      - Existing admin components work correctly
+      - Access control is properly enforced
+      - Encryption utilities work for all use cases
+      - Audit logging infrastructure works correctly
+      - Storage rules for other document types unchanged
+      - Token validation logic unchanged
+      - VerifyData API integration unchanged
+    - Confirm all tests still pass after fix (no regressions)
+    - _Requirements: Preservation Requirements from design (3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7)_
+
+- [ ] 4. Write comprehensive integration tests
+
+  - [x] 4.1 End-to-end CAC verification flow test
+    - Test complete flow: token validation → document upload → encryption → storage → metadata creation → CAC verification → success
+    - Verify all three documents are uploaded successfully
+    - Verify documents are encrypted with AES-256-GCM
+    - Verify metadata is created in Firestore with correct fields
+    - Verify identity entry is updated with document references
+    - Verify CAC number is verified via VerifyData API
+    - Verify audit trail is created for all operations
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+
+  - [x] 4.2 Error recovery and validation tests
+    - Test failed upload → retry → success scenario
+    - Test partial upload: upload 2 documents → verify button disabled → upload 3rd → verify button enabled
+    - Test invalid file type → error message displayed
+    - Test file too large → error message displayed
+    - Test expired token → upload prevented with error message
+    - Test invalid token → upload prevented with error message
+    - _Requirements: 2.2, 2.6, 2.7_
+
+  - [x] 4.3 Admin document access integration tests
+    - Test admin views customer document → preview displays correctly
+    - Test admin downloads customer document → file downloaded successfully
+    - Test admin document access creates audit log entry
+    - Test non-admin user cannot access documents → 403 error returned
+    - Test existing CACDocumentPreview.tsx component works with customer-uploaded documents
+    - Test identity dashboard displays document status indicators correctly
+    - _Requirements: 2.4, 3.4_
+
+  - [x] 4.4 Concurrent operations and edge cases
+    - Test concurrent uploads: upload all 3 documents simultaneously
+    - Test storage rules: verify customer uploads are authorized via backend metadata
+    - Test multiple customers uploading documents concurrently
+    - Test document replacement: upload document → replace with new version
+    - Test network failures during upload → proper error handling
+    - _Requirements: 2.4, 2.6_
+
+- [x] 5. Checkpoint - Ensure all tests pass
+  - Run all unit tests and verify they pass
+  - Run all property-based tests and verify they pass
+  - Run all integration tests and verify they pass
+  - Verify no regressions in existing functionality
+  - Verify bug is completely fixed for all scenarios
+  - Ask the user if questions arise or if manual testing is needed

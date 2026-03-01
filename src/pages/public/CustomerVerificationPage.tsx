@@ -87,6 +87,26 @@ const CustomerVerificationPage: React.FC = () => {
   const [companyName, setCompanyName] = useState('');
   const [demoMode, setDemoMode] = useState(false);
   
+  // CAC Document upload state
+  const [cacDocuments, setCacDocuments] = useState<{
+    certificate_of_incorporation: File | null;
+    particulars_of_directors: File | null;
+    share_allotment: File | null;
+  }>({
+    certificate_of_incorporation: null,
+    particulars_of_directors: null,
+    share_allotment: null,
+  });
+  const [documentErrors, setDocumentErrors] = useState<{
+    certificate_of_incorporation: string | null;
+    particulars_of_directors: string | null;
+    share_allotment: string | null;
+  }>({
+    certificate_of_incorporation: null,
+    particulars_of_directors: null,
+    share_allotment: null,
+  });
+  
   // Verification state
   const [verificationState, setVerificationState] = useState<VerificationState>('idle');
   const [attemptsRemaining, setAttemptsRemaining] = useState<number>(3);
@@ -211,6 +231,49 @@ const CustomerVerificationPage: React.FC = () => {
     return cacNumber.trim().length > 0;
   };
 
+  // Handle document file selection
+  const handleDocumentSelect = (e: React.ChangeEvent<HTMLInputElement>, documentType: keyof typeof cacDocuments) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!validTypes.includes(file.type)) {
+      setDocumentErrors(prev => ({
+        ...prev,
+        [documentType]: 'Please upload a PDF, JPEG, or PNG file'
+      }));
+      return;
+    }
+
+    // Validate file size (10MB max)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setDocumentErrors(prev => ({
+        ...prev,
+        [documentType]: 'File size must not exceed 10MB'
+      }));
+      return;
+    }
+
+    // File is valid
+    setCacDocuments(prev => ({
+      ...prev,
+      [documentType]: file
+    }));
+    setDocumentErrors(prev => ({
+      ...prev,
+      [documentType]: null
+    }));
+  };
+
+  // Check if all CAC documents are uploaded
+  const allCACDocumentsUploaded = () => {
+    return cacDocuments.certificate_of_incorporation !== null &&
+           cacDocuments.particulars_of_directors !== null &&
+           cacDocuments.share_allotment !== null;
+  };
+
   // Handle verification submission
   const handleVerify = async () => {
     if (!entryInfo) return;
@@ -228,12 +291,49 @@ const CustomerVerificationPage: React.FC = () => {
         toast.error('Please enter a valid CAC number.');
         return;
       }
+      if (!allCACDocumentsUploaded()) {
+        toast.error('Please upload all three required CAC documents.');
+        return;
+      }
     }
 
     setVerificationState('verifying');
     setVerificationError('');
 
     try {
+      // For CAC verification, upload documents first
+      let documentIds: Record<string, string> = {};
+      
+      if (!isNIN) {
+        toast.info('Uploading documents...');
+        
+        // Upload each document
+        for (const [docType, file] of Object.entries(cacDocuments)) {
+          if (!file) continue;
+          
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('documentType', docType);
+          formData.append('token', token || '');
+          
+          const uploadResponse = await fetch(`${API_BASE_URL}/api/identity/verify/${token}/upload-document`, {
+            method: 'POST',
+            credentials: 'include',
+            body: formData,
+          });
+          
+          if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.json();
+            throw new Error(errorData.error || `Failed to upload ${docType}`);
+          }
+          
+          const uploadData = await uploadResponse.json();
+          documentIds[docType] = uploadData.documentId;
+        }
+        
+        toast.success('Documents uploaded successfully!');
+      }
+
       // Use the appropriate API based on which system validated the token
       const apiEndpoint = apiSystem === 'identity' 
         ? `${API_BASE_URL}/api/identity/verify/${token}`
@@ -245,7 +345,7 @@ const CustomerVerificationPage: React.FC = () => {
         credentials: 'include',
         body: JSON.stringify({
           identityNumber,
-          // Company name is not sent by customer - backend will use stored data for validation
+          documentIds: !isNIN ? documentIds : undefined,
           demoMode,
         }),
       });
@@ -266,8 +366,8 @@ const CustomerVerificationPage: React.FC = () => {
     } catch (error) {
       console.error('Verification error:', error);
       setVerificationState('failed');
-      setVerificationError('Network error. Please try again.');
-      toast.error('Verification failed. Please try again.');
+      setVerificationError(error instanceof Error ? error.message : 'Network error. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Verification failed. Please try again.');
     }
   };
 
@@ -651,24 +751,128 @@ const CustomerVerificationPage: React.FC = () => {
 
               {/* CAC Input (number only) - Requirement 20.5 */}
               {!isNIN && (
-                <div className="space-y-2">
-                  <Label htmlFor="identityNumber" className="text-sm font-semibold text-slate-700">
-                    CAC/RC Registration Number
-                  </Label>
-                  <Input
-                    id="identityNumber"
-                    type="text"
-                    placeholder="e.g., RC123456 or BN1234567"
-                    value={identityNumber}
-                    onChange={(e) => setIdentityNumber(formatIdentityNumber(e.target.value, 'CAC'))}
-                    className="h-12 border-2 focus:border-emerald-500"
-                    maxLength={15}
-                    disabled={verificationState === 'verifying'}
-                  />
-                  <p className="text-xs text-slate-500 mt-2">
-                    Only your CAC number is required. We will validate it against the company information shown above.
-                  </p>
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="identityNumber" className="text-sm font-semibold text-slate-700">
+                      CAC/RC Registration Number
+                    </Label>
+                    <Input
+                      id="identityNumber"
+                      type="text"
+                      placeholder="e.g., RC123456 or BN1234567"
+                      value={identityNumber}
+                      onChange={(e) => setIdentityNumber(formatIdentityNumber(e.target.value, 'CAC'))}
+                      className="h-12 border-2 focus:border-emerald-500"
+                      maxLength={15}
+                      disabled={verificationState === 'verifying'}
+                    />
+                  </div>
+
+                  {/* CAC Document Upload Fields */}
+                  <div className="space-y-4 mt-6 pt-6 border-t border-slate-200">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-700 mb-2">
+                        Required CAC Documents
+                      </h3>
+                      <p className="text-xs text-slate-500 mb-4">
+                        Please upload the following three documents as required by NAICOM and CAMA 2020 regulations:
+                      </p>
+                    </div>
+
+                    {/* Certificate of Incorporation */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">
+                        1. Certificate of Incorporation *
+                      </Label>
+                      <Input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => handleDocumentSelect(e, 'certificate_of_incorporation')}
+                        disabled={verificationState === 'verifying'}
+                        className="h-10"
+                      />
+                      {cacDocuments.certificate_of_incorporation && (
+                        <p className="text-xs text-green-600 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          {cacDocuments.certificate_of_incorporation.name} ({(cacDocuments.certificate_of_incorporation.size / 1024 / 1024).toFixed(2)} MB)
+                        </p>
+                      )}
+                      {documentErrors.certificate_of_incorporation && (
+                        <p className="text-xs text-red-600 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          {documentErrors.certificate_of_incorporation}
+                        </p>
+                      )}
+                      {!cacDocuments.certificate_of_incorporation && !documentErrors.certificate_of_incorporation && (
+                        <p className="text-xs text-slate-500">
+                          Accepted: PDF, JPEG, PNG (Max 10MB)
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Particulars of Directors */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">
+                        2. Particulars of Directors *
+                      </Label>
+                      <Input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => handleDocumentSelect(e, 'particulars_of_directors')}
+                        disabled={verificationState === 'verifying'}
+                        className="h-10"
+                      />
+                      {cacDocuments.particulars_of_directors && (
+                        <p className="text-xs text-green-600 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          {cacDocuments.particulars_of_directors.name} ({(cacDocuments.particulars_of_directors.size / 1024 / 1024).toFixed(2)} MB)
+                        </p>
+                      )}
+                      {documentErrors.particulars_of_directors && (
+                        <p className="text-xs text-red-600 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          {documentErrors.particulars_of_directors}
+                        </p>
+                      )}
+                      {!cacDocuments.particulars_of_directors && !documentErrors.particulars_of_directors && (
+                        <p className="text-xs text-slate-500">
+                          Accepted: PDF, JPEG, PNG (Max 10MB)
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Share Allotment */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">
+                        3. Share Allotment (Status Update) *
+                      </Label>
+                      <Input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => handleDocumentSelect(e, 'share_allotment')}
+                        disabled={verificationState === 'verifying'}
+                        className="h-10"
+                      />
+                      {cacDocuments.share_allotment && (
+                        <p className="text-xs text-green-600 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          {cacDocuments.share_allotment.name} ({(cacDocuments.share_allotment.size / 1024 / 1024).toFixed(2)} MB)
+                        </p>
+                      )}
+                      {documentErrors.share_allotment && (
+                        <p className="text-xs text-red-600 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          {documentErrors.share_allotment}
+                        </p>
+                      )}
+                      {!cacDocuments.share_allotment && !documentErrors.share_allotment && (
+                        <p className="text-xs text-slate-500">
+                          Accepted: PDF, JPEG, PNG (Max 10MB)
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
 
               {/* Verification Error */}
@@ -710,7 +914,7 @@ const CustomerVerificationPage: React.FC = () => {
                 disabled={
                   verificationState === 'verifying' ||
                   (isNIN && !isValidNIN(identityNumber)) ||
-                  (!isNIN && !isValidCAC(identityNumber)) ||
+                  (!isNIN && (!isValidCAC(identityNumber) || !allCACDocumentsUploaded())) ||
                   attemptsRemaining === 0
                 }
                 className={`w-full h-12 text-base font-semibold ${isNIN ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
