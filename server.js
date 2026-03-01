@@ -799,7 +799,7 @@ const db = admin.firestore();
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max file size
+    fileSize: 10 * 1024 * 1024, // 10MB max file size (matches CAC document validation)
     files: 5, // Max 5 files per request
     fields: 50, // Max 50 fields
     parts: 100 // Max 100 parts (fields + files)
@@ -1581,6 +1581,12 @@ app.use((req, res, next) => {
   // Skip for specific routes that might not send JSON
   const skipPaths = ['/health', '/csrf-token'];
   if (skipPaths.includes(req.path)) {
+    return next();
+  }
+  
+  // Skip for file upload routes that use multipart/form-data
+  const fileUploadPaths = ['/api/identity/verify/', '/upload-document'];
+  if (fileUploadPaths.some(path => req.path.includes(path))) {
     return next();
   }
   
@@ -6875,6 +6881,57 @@ const createRemediationAuditLog = async (logData) => {
 };
 
 /**
+ * Create CAC document audit log
+ * 
+ * Logs CAC document operations to both console and Firestore audit collection.
+ * Used for tracking document uploads, metadata writes, and admin queries.
+ * 
+ * @param {string} action - Action type (CAC_DOCUMENT_UPLOAD_STARTED, CAC_DOCUMENT_METADATA_WRITTEN, etc.)
+ * @param {Object} params - Audit log parameters
+ * @param {string} params.documentType - Document type (certificate_of_incorporation, etc.)
+ * @param {string} params.identityRecordId - Identity record ID
+ * @param {string} params.userId - User ID performing the action
+ * @param {string} params.documentId - Document ID (optional)
+ * @param {Object} params.metadata - Additional metadata (optional)
+ * @returns {Promise<Object|null>} Audit log entry or null if failed
+ */
+const createCACDocumentAuditLog = async (action, params) => {
+  try {
+    const {
+      documentType,
+      identityRecordId,
+      userId,
+      documentId,
+      metadata = {}
+    } = params;
+    
+    const auditLogRef = db.collection('audit-logs').doc();
+    const auditLog = {
+      id: auditLogRef.id,
+      action,
+      documentType: documentType || null,
+      identityRecordId: identityRecordId || null,
+      userId: userId || 'system',
+      documentId: documentId || null,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      metadata: {
+        ...metadata,
+        source: 'server',
+        loggedAt: new Date().toISOString()
+      }
+    };
+    
+    await auditLogRef.set(auditLog);
+    console.log(`✅ CAC audit log created: ${action} for identity ${identityRecordId}`);
+    return auditLog;
+  } catch (error) {
+    console.error('❌ Failed to create CAC audit log:', error);
+    // Don't throw - audit logging failures shouldn't break the main operation
+    return null;
+  }
+};
+
+/**
  * GET /api/remediation/batches
  * Get all remediation batches with summary statistics
  * 
@@ -11163,7 +11220,7 @@ app.post('/api/identity/verify/:token/upload-document', upload.single('file'), a
     });
     
     // Store document metadata in Firestore
-    await db.collection('cac-documents').doc(documentId).set({
+    const metadataDoc = {
       id: documentId,
       identityRecordId: entryDoc.id,
       listId: entry.listId,
@@ -11175,10 +11232,55 @@ app.post('/api/identity/verify/:token/upload-document', upload.single('file'), a
       encryptionAlgorithm: 'aes-256-gcm',
       encryptionIV: iv,
       uploadedBy: 'customer',
+      uploaderId: 'customer',
       uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
-      status: 'active',
+      status: 'uploaded',
       version: 1,
-      isLatest: true
+      isCurrent: true
+    };
+    
+    console.log('[CAC Upload] Writing metadata to Firestore:', {
+      documentId,
+      identityRecordId: entryDoc.id,
+      documentType,
+      collection: 'cac-document-metadata',
+      isCurrent: true,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Log upload started
+    await createCACDocumentAuditLog('CAC_DOCUMENT_UPLOAD_STARTED', {
+      documentType,
+      identityRecordId: entryDoc.id,
+      userId: 'customer',
+      documentId,
+      metadata: {
+        filename: file.originalname,
+        fileSize: file.size,
+        mimeType: file.mimetype
+      }
+    });
+    
+    await db.collection('cac-document-metadata').doc(documentId).set(metadataDoc);
+    
+    console.log('[CAC Upload] Metadata written successfully:', {
+      documentId,
+      identityRecordId: entryDoc.id,
+      documentType,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Log metadata written
+    await createCACDocumentAuditLog('CAC_DOCUMENT_METADATA_WRITTEN', {
+      documentType,
+      identityRecordId: entryDoc.id,
+      userId: 'customer',
+      documentId,
+      metadata: {
+        storagePath: storagePath,
+        version: 1,
+        isCurrent: true
+      }
     });
     
     // Update entry with document reference
@@ -11194,6 +11296,18 @@ app.post('/api/identity/verify/:token/upload-document', upload.single('file'), a
     });
     
     console.log(`✅ Document uploaded successfully: ${documentId}`);
+    
+    // Log upload completed
+    await createCACDocumentAuditLog('CAC_DOCUMENT_UPLOAD_COMPLETED', {
+      documentType,
+      identityRecordId: entryDoc.id,
+      userId: 'customer',
+      documentId,
+      metadata: {
+        filename: file.originalname,
+        success: true
+      }
+    });
     
     res.json({
       success: true,

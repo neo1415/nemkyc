@@ -61,19 +61,68 @@ import {
   GetApp as DownloadIcon,
   Pause as PauseIcon,
   PlayArrow as PlayArrowIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
-import { CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, FileText } from 'lucide-react';
 import { DataGrid, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 import { SendConfirmDialog } from '../../components/identity/SendConfirmDialog';
 import { VerificationDetailsDialog } from '../../components/identity/VerificationDetailsDialog';
 import BulkVerifyConfirmDialog, { BulkVerifyAnalysis } from '../../components/identity/BulkVerifyConfirmDialog';
 import SendLinksConfirmDialog, { SendLinksAnalysis } from '../../components/identity/SendLinksConfirmDialog';
+import { CACDocumentPreview, useDocumentPreview } from '../../components/identity/CACDocumentPreview';
 import { useBrokerTourV2 } from '../../hooks/useBrokerTourV2';
 import type { IdentityEntry, ListDetails, EntryStatus, VerificationType, ActivityLog, ActivityAction } from '../../types/remediation';
 import { isEncrypted } from '../../utils/encryption';
 import { formatDate, formatDateLong, formatDateTime } from '../../utils/dateFormatter';
+import { getDocumentsByIdentityRecord, getDocumentStatusSummary } from '../../services/cacMetadataService';
+import type { CACDocumentMetadata, DocumentStatusSummary } from '../../types/cacDocuments';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { useAuth } from '../../contexts/AuthContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+
+/**
+ * Creates an audit log entry for CAC admin actions
+ */
+async function createCACAdminAuditLog(
+  action: string,
+  params: {
+    identityRecordId?: string;
+    userId?: string;
+    documentId?: string;
+    metadata?: Record<string, any>;
+  }
+): Promise<void> {
+  try {
+    const {
+      identityRecordId,
+      userId,
+      documentId,
+      metadata = {}
+    } = params;
+    
+    const auditLogRef = collection(db, 'audit-logs');
+    const auditLog = {
+      action,
+      identityRecordId: identityRecordId || null,
+      userId: userId || 'anonymous',
+      documentId: documentId || null,
+      timestamp: Timestamp.now(),
+      metadata: {
+        ...metadata,
+        source: 'admin-ui',
+        loggedAt: new Date().toISOString()
+      }
+    };
+    
+    await addDoc(auditLogRef, auditLog);
+    console.log(`✅ CAC admin audit log created: ${action}`);
+  } catch (error) {
+    console.error('❌ Failed to create CAC admin audit log:', error);
+    // Don't throw - audit logging failures shouldn't break the main operation
+  }
+}
 
 interface IdentityListDetailProps {
   listId?: string;
@@ -88,6 +137,7 @@ export default function IdentityListDetail({
 }: IdentityListDetailProps = {}) {
   const { listId: paramListId } = useParams<{ listId: string }>();
   const navigate = useNavigate();
+  const { firebaseUser } = useAuth();
   
   // Tour integration
   const { advanceTour } = useBrokerTourV2();
@@ -151,6 +201,13 @@ export default function IdentityListDetail({
   const [activityExpanded, setActivityExpanded] = useState(false);
   const [activityStartDate, setActivityStartDate] = useState<string>('');
   const [activityEndDate, setActivityEndDate] = useState<string>('');
+
+  // CAC Document preview state
+  const { previewDocument, previewOpen, previewOwnerId, openPreview, closePreview } = useDocumentPreview();
+  const [cacDocumentsDialogOpen, setCacDocumentsDialogOpen] = useState(false);
+  const [selectedEntryDocuments, setSelectedEntryDocuments] = useState<CACDocumentMetadata[]>([]);
+  const [selectedEntryId, setSelectedEntryId] = useState<string>('');
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!listId) return;
@@ -277,6 +334,54 @@ export default function IdentityListDetail({
         return `List exported (${details.entryCount || 0} entries)`;
       default:
         return (log.action as string).replace(/_/g, ' ');
+    }
+  };
+
+  // Handle viewing CAC documents
+  const handleViewCACDocuments = async (entryId: string) => {
+    try {
+      setLoadingDocuments(true);
+      setSelectedEntryId(entryId);
+      
+      console.log('[CAC Admin UI] Fetching documents for entry:', entryId);
+      
+      // Fetch documents for this entry
+      const documents = await getDocumentsByIdentityRecord(entryId);
+      
+      console.log('[CAC Admin UI] Documents fetched:', {
+        entryId,
+        documentCount: documents.length,
+        documentTypes: documents.map(d => d.documentType)
+      });
+      
+      // Create audit log for admin viewing documents
+      await createCACAdminAuditLog('CAC_ADMIN_VIEW_DOCUMENTS', {
+        identityRecordId: entryId,
+        userId: firebaseUser?.uid || 'unknown',
+        metadata: {
+          documentCount: documents.length,
+          documentTypes: documents.map(d => d.documentType),
+          userEmail: firebaseUser?.email || 'unknown',
+          viewedAt: new Date().toISOString()
+        }
+      });
+      
+      if (documents.length === 0) {
+        console.warn('[CAC Admin UI] No documents found for entry:', entryId);
+        setError(`No CAC documents found for this entry. Entry ID: ${entryId}`);
+      }
+      
+      setSelectedEntryDocuments(documents);
+      setCacDocumentsDialogOpen(true);
+    } catch (error) {
+      console.error('[CAC Admin UI] Error loading CAC documents:', {
+        entryId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      setError(`Failed to load CAC documents. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoadingDocuments(false);
     }
   };
 
@@ -574,6 +679,56 @@ export default function IdentityListDetail({
           );
         }
         return params.value || '-';
+      },
+    });
+
+    // Add CAC Documents column
+    columns.push({
+      field: 'cacDocuments',
+      headerName: 'CAC Documents',
+      width: 150,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => {
+        const entry = params.row as IdentityEntry;
+        
+        // Only show for CAC verification types
+        if (entry.verificationType !== 'CAC') {
+          return <Typography variant="body2" color="textSecondary">N/A</Typography>;
+        }
+
+        // Show status based on verification status
+        if (entry.status === 'verified' || entry.status === 'verification_failed') {
+          return (
+            <Tooltip title="View uploaded CAC documents">
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<FileText size={16} />}
+                onClick={() => handleViewCACDocuments(entry.id)}
+                sx={{
+                  fontSize: '0.75rem',
+                  py: 0.5,
+                  px: 1,
+                  borderColor: '#800020',
+                  color: '#800020',
+                  '&:hover': {
+                    borderColor: '#600018',
+                    bgcolor: 'rgba(128, 0, 32, 0.04)'
+                  }
+                }}
+              >
+                View Docs
+              </Button>
+            </Tooltip>
+          );
+        }
+
+        return (
+          <Typography variant="body2" color="textSecondary">
+            Not uploaded
+          </Typography>
+        );
       },
     });
 
@@ -1701,6 +1856,100 @@ export default function IdentityListDetail({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* CAC Documents Dialog */}
+      <Dialog
+        open={cacDocumentsDialogOpen}
+        onClose={() => !loadingDocuments && setCacDocumentsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="h6">CAC Documents</Typography>
+            <IconButton onClick={() => setCacDocumentsDialogOpen(false)} disabled={loadingDocuments}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {loadingDocuments ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : selectedEntryDocuments.length === 0 ? (
+            <Alert severity="info">
+              No CAC documents have been uploaded for this entry yet.
+            </Alert>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                The following documents were uploaded by the customer during verification:
+              </Alert>
+              
+              {selectedEntryDocuments.map((doc) => (
+                <Paper
+                  key={doc.id}
+                  sx={{
+                    p: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&:hover': {
+                      bgcolor: 'action.hover'
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <FileText size={24} color="#800020" />
+                    <Box>
+                      <Typography variant="body1" fontWeight="medium">
+                        {doc.documentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        {doc.filename} • {(doc.fileSize / 1024 / 1024).toFixed(2)} MB
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary" display="block">
+                        Uploaded: {formatDateTime(doc.uploadedAt)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => openPreview(doc, selectedEntryId)}
+                    sx={{
+                      borderColor: '#800020',
+                      color: '#800020',
+                      '&:hover': {
+                        borderColor: '#600018',
+                        bgcolor: 'rgba(128, 0, 32, 0.04)'
+                      }
+                    }}
+                  >
+                    Preview
+                  </Button>
+                </Paper>
+              ))}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCacDocumentsDialogOpen(false)}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* CAC Document Preview Component */}
+      <CACDocumentPreview
+        open={previewOpen}
+        onClose={closePreview}
+        document={previewDocument}
+        ownerId={previewOwnerId}
+      />
     </Box>
   );
 }

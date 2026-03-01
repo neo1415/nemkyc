@@ -1,0 +1,155 @@
+# Implementation Plan
+
+- [ ] 1. Write bug condition exploration test
+  - **Property 1: Fault Condition** - State Desynchronization on Rapid File Selection
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the state desynchronization bug
+  - **Scoped PBT Approach**: Scope the property to the concrete failing case: 3 CAC documents selected in rapid succession (< 100ms between selections)
+  - Test that when 3 CAC documents are selected rapidly:
+    - UI shows 3 green checkmarks
+    - `cacDocuments` state contains all 3 files (from Fault Condition in design)
+    - All 3 documents are uploaded to Firebase Storage
+    - Metadata is written for all 3 documents
+  - The test assertions should match the Expected Behavior Properties from design (requirements 2.1, 2.2, 2.3)
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found:
+    - How many files are actually in state vs expected
+    - Which documents are missing
+    - Whether uploads are triggered at all
+    - Whether metadata is written
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Non-Buggy Upload Scenarios
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-buggy inputs:
+    - Single document upload (select 1 document, verify it uploads)
+    - Document replacement (replace existing document, verify it works)
+    - Slow sequential selection (select 3 documents with 2+ second delays between each)
+    - File validation (select invalid file types/sizes, verify rejection)
+    - Network error handling (simulate network failure, verify error display)
+  - Write property-based tests capturing observed behavior patterns from Preservation Requirements:
+    - For all single document uploads, behavior matches original
+    - For all document replacements, behavior matches original
+    - For all validation scenarios, behavior matches original
+    - For all error scenarios, behavior matches original
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
+
+- [x] 3. Investigate and fix CAC document upload state synchronization
+
+  - [x] 3.1 Locate legacy integration point
+    - Search codebase for where CAC documents are collected in state before upload
+    - Check `CorporateKYC.tsx` for `cacDocuments` state usage
+    - Check for verification dialogs or modals that handle CAC uploads
+    - Look for `handleVerify` or similar functions that read from document state
+    - Identify the component/function that manages the 3-document selection flow
+    - Document findings with file paths and line numbers
+    - Add logging to trace execution flow: `console.log('[CAC Investigation] Found legacy integration at:', { file, function, line })`
+    - _Bug_Condition: isBugCondition(input) where input.selectedFiles.length == 3 AND input.cacDocumentsState.length < 3_
+    - _Expected_Behavior: All 3 selected files immediately uploaded with progress indicators_
+    - _Preservation: Single uploads, replacements, validation, error handling unchanged_
+    - _Requirements: 1.1, 1.2, 1.4, 1.5_
+
+  - [x] 3.2 Analyze state update pattern
+    - Examine how file selections update the `cacDocuments` state
+    - Check if using `setState` with object spread (potential batching issue)
+    - Check if updates are synchronous or asynchronous
+    - Verify if React 18 automatic batching is affecting updates
+    - Test with console logs to capture state before/after each selection
+    - Document the exact state update mechanism causing the bug
+    - Add logging: `console.log('[CAC State] Before update:', cacDocuments); console.log('[CAC State] After update:', newCacDocuments)`
+    - _Requirements: 1.1, 1.5_
+
+  - [x] 3.3 Implement immediate upload on file selection
+    - Replace state-based upload pattern with immediate upload
+    - Remove `cacDocuments` state object that collects File objects
+    - Call upload function immediately when each file is selected
+    - Store upload metadata references instead of File objects
+    - Use `CACDocumentUpload` component pattern as reference (src/components/identity/CACDocumentUpload.tsx)
+    - Implement upload progress tracking state for each document type
+    - Display progress bars during upload with percentage
+    - Show success checkmarks only after upload completes (not on selection)
+    - Disable "Verify CAC" button until all 3 uploads complete
+    - Add comprehensive logging for each step:
+      - File selection: `console.log('[CAC Upload] File selected:', { documentType, filename, fileSize, timestamp })`
+      - Upload start: `console.log('[CAC Upload] Upload started:', { documentType, identityRecordId, timestamp })`
+      - Upload progress: `console.log('[CAC Upload] Upload progress:', { documentType, progress, timestamp })`
+      - Upload complete: `console.log('[CAC Upload] Upload complete:', { documentType, storagePath, metadataId, timestamp })`
+    - _Bug_Condition: isBugCondition(input) from design_
+    - _Expected_Behavior: expectedBehavior(result) from design - immediate uploads with progress indicators_
+    - _Preservation: Validation, storage paths, metadata structure unchanged_
+    - _Requirements: 2.1, 2.2, 2.4, 2.5, 3.1, 3.4, 3.5_
+
+  - [x] 3.4 Update verification function to skip upload
+    - Modify `handleVerify` function to only perform verification (not upload)
+    - Add state validation before verification: check all 3 documents are uploaded
+    - Display clear error message if any document is missing
+    - Prevent verification from proceeding with incomplete uploads
+    - Add logging before verification: `console.log('[CAC Upload] Verification initiated:', { uploadedDocuments, allUploadsComplete, timestamp })`
+    - _Requirements: 2.6_
+
+  - [x] 3.5 Investigate admin document visibility issue
+    - Check admin UI component that displays CAC documents
+    - Verify Firestore query uses correct collection name (`cac-document-metadata`)
+    - Ensure query filters match metadata field names (customerId, documentType, etc.)
+    - Test query with known uploaded documents to verify results
+    - Add error logging for failed queries: `console.error('[CAC Admin] Query failed:', error)`
+    - Add success logging: `console.log('[CAC Admin] Documents queried:', { identityRecordId, resultsCount, timestamp })`
+    - If query is correct, check if metadata is being written correctly during upload
+    - Fix any mismatches between metadata write and query read
+    - _Requirements: 1.3, 2.3, 3.6_
+
+  - [x] 3.6 Add comprehensive audit logging
+    - Add server-side audit logs for metadata writes
+    - Add server-side audit logs for admin queries
+    - Ensure all client-side logs are also written to Firestore audit collection
+    - Log format: `{ action, documentType, identityRecordId, userId, timestamp, metadata }`
+    - _Requirements: All requirements for traceability_
+
+  - [x] 3.7 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - All Selected Documents Uploaded
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - Verify all assertions pass:
+      - 3 files in state after rapid selection
+      - 3 uploads triggered immediately
+      - 3 metadata records written
+      - UI shows 3 green checkmarks only after uploads complete
+      - Verify button disabled until all uploads complete
+    - _Requirements: Expected Behavior Properties from design (2.1, 2.2, 2.3, 2.4, 2.5)_
+
+  - [x] 3.8 Verify preservation tests still pass
+    - **Property 2: Preservation** - Non-Buggy Upload Scenarios
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all preservation tests still pass:
+      - Single document uploads work exactly as before
+      - Document replacements work exactly as before
+      - File validation works exactly as before
+      - Error handling works exactly as before
+      - Storage paths unchanged
+      - Metadata structure unchanged
+      - Admin queries work for existing documents
+    - _Requirements: Preservation Requirements from design (3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7)_
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Run all exploration tests - should PASS
+  - Run all preservation tests - should PASS
+  - Run all unit tests - should PASS
+  - Run all integration tests - should PASS
+  - Verify in browser: select 3 CAC documents rapidly, verify all 3 upload with progress indicators
+  - Verify in admin UI: check that all 3 documents are visible after upload
+  - Check console logs for complete audit trail of all operations
+  - If any issues arise, document them and ask the user for guidance
