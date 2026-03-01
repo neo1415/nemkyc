@@ -40,8 +40,57 @@ import {
 const COLLECTIONS = {
   METADATA: 'cac-document-metadata',
   VERSION_HISTORY: 'cac-document-version-history',
-  AUDIT_LOGS: 'cac-document-audit-logs'
+  AUDIT_LOGS: 'audit-logs'
 };
+
+/**
+ * Creates an audit log entry in Firestore
+ * 
+ * @param action - Action type
+ * @param params - Audit log parameters
+ * @returns Promise resolving when audit log is created
+ */
+async function createAuditLog(
+  action: string,
+  params: {
+    documentType?: string;
+    identityRecordId?: string;
+    userId?: string;
+    documentId?: string;
+    metadata?: Record<string, any>;
+  }
+): Promise<void> {
+  try {
+    const {
+      documentType,
+      identityRecordId,
+      userId,
+      documentId,
+      metadata = {}
+    } = params;
+    
+    const auditLogRef = doc(collection(db, COLLECTIONS.AUDIT_LOGS));
+    const auditLog = {
+      action,
+      documentType: documentType || null,
+      identityRecordId: identityRecordId || null,
+      userId: userId || 'anonymous',
+      documentId: documentId || null,
+      timestamp: Timestamp.now(),
+      metadata: {
+        ...metadata,
+        source: 'client',
+        loggedAt: new Date().toISOString()
+      }
+    };
+    
+    await setDoc(auditLogRef, auditLog);
+    console.log(`✅ CAC audit log created: ${action}`);
+  } catch (error) {
+    console.error('❌ Failed to create CAC audit log:', error);
+    // Don't throw - audit logging failures shouldn't break the main operation
+  }
+}
 
 /**
  * Converts Firestore Timestamp to Date
@@ -195,6 +244,12 @@ export async function getDocumentsByIdentityRecord(
   identityRecordId: string
 ): Promise<CACDocumentMetadata[]> {
   try {
+    console.log('[CAC Admin] Querying documents:', {
+      identityRecordId,
+      collection: COLLECTIONS.METADATA,
+      timestamp: new Date().toISOString()
+    });
+    
     const q = query(
       collection(db, COLLECTIONS.METADATA),
       where('identityRecordId', '==', identityRecordId),
@@ -204,16 +259,49 @@ export async function getDocumentsByIdentityRecord(
     
     const querySnap = await getDocs(q);
     
-    return querySnap.docs.map((doc) => {
+    console.log('[CAC Admin] Documents queried:', {
+      identityRecordId,
+      resultsCount: querySnap.docs.length,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Create audit log for query
+    await createAuditLog('CAC_DOCUMENTS_QUERIED', {
+      identityRecordId,
+      userId: 'admin', // Will be updated with actual user ID from context
+      metadata: {
+        resultsCount: querySnap.docs.length,
+        queryTimestamp: new Date().toISOString()
+      }
+    });
+    
+    const documents = querySnap.docs.map((doc) => {
       const data = doc.data();
+      console.log('[CAC Admin] Document found:', {
+        documentId: doc.id,
+        documentType: data.documentType,
+        uploadedAt: data.uploadedAt,
+        isCurrent: data.isCurrent,
+        identityRecordId: data.identityRecordId
+      });
       return {
         ...data,
         uploadedAt: timestampToDate(data.uploadedAt),
         status: data.status as DocumentStatus
       } as CACDocumentMetadata;
     });
+    
+    if (documents.length === 0) {
+      console.warn('[CAC Admin] No documents found for identity record:', identityRecordId);
+    }
+    
+    return documents;
   } catch (error) {
-    console.error('Failed to query documents by identity record:', error);
+    console.error('[CAC Admin] Query failed:', {
+      identityRecordId,
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString()
+    });
     throw new Error('Failed to query documents. Please try again.');
   }
 }
