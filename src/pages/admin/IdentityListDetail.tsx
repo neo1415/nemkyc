@@ -1019,68 +1019,72 @@ export default function IdentityListDetail({
   const [bulkVerifyPollInterval, setBulkVerifyPollInterval] = useState<NodeJS.Timeout | null>(null);
   const pollingBackoffRef = useRef<number>(2000); // Start at 2 seconds
 
-  // Poll for bulk verification progress
-  const pollBulkVerifyProgress = async (jobId: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/identity/bulk-verify/${jobId}/status`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to get job status');
-      }
-      
-      const status = await response.json();
-      setBulkVerifyProgress(status.progress || 0);
-      setBulkVerifyStatus(status.status);
-      
-      // Reset backoff on successful response
-      pollingBackoffRef.current = 2000;
-      
-      // Check completed flag instead of string matching on status
-      if (status.completed) {
-        // Stop polling
-        if (bulkVerifyPollInterval) {
-          clearInterval(bulkVerifyPollInterval);
-          setBulkVerifyPollInterval(null);
-        }
-        
-        // Fetch full results with details
-        const detailsResponse = await fetch(`${API_BASE_URL}/api/identity/bulk-verify/${jobId}/status?includeDetails=true`, {
-          method: 'GET',
-          credentials: 'include',
-        });
-        
-        if (detailsResponse.ok) {
-          const results = await detailsResponse.json();
-          setBulkVerifyResults(results);
-          setBulkVerifyDialogOpen(true);
-        }
-        
-        // Refresh data to show updated statuses
-        await fetchData();
-        setBulkVerifying(false);
-      }
-    } catch (err) {
-      console.error('Error polling job status:', err);
-      
-      // Increase backoff on error (exponential: 2s, 4s, 8s, 16s, max 30s)
-      pollingBackoffRef.current = Math.min(pollingBackoffRef.current * 2, 30000);
-    }
-  };
-
   // Start polling with exponential backoff
   const startPolling = (jobId: string) => {
     // Reset backoff to initial value
     pollingBackoffRef.current = 2000;
     
-    const poll = () => {
-      pollBulkVerifyProgress(jobId).then(() => {
-        // Schedule next poll with current backoff interval
-        const timeout = setTimeout(poll, pollingBackoffRef.current);
-        setBulkVerifyPollInterval(timeout as any);
-      });
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    const poll = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/identity/bulk-verify/${jobId}/status`, {
+          method: 'GET',
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to get job status');
+        }
+        
+        const status = await response.json();
+        setBulkVerifyProgress(status.progress || 0);
+        setBulkVerifyStatus(status.status);
+        
+        // Reset backoff on successful response
+        pollingBackoffRef.current = 2000;
+        
+        // Check completed flag - if completed, stop polling
+        if (status.completed) {
+          // Clear any pending timeout
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          setBulkVerifyPollInterval(null);
+          
+          // Fetch full results with details
+          const detailsResponse = await fetch(`${API_BASE_URL}/api/identity/bulk-verify/${jobId}/status?includeDetails=true`, {
+            method: 'GET',
+            credentials: 'include',
+          });
+          
+          if (detailsResponse.ok) {
+            const results = await detailsResponse.json();
+            setBulkVerifyResults(results);
+            setBulkVerifyDialogOpen(true);
+          }
+          
+          // Refresh data to show updated statuses
+          await fetchData();
+          setBulkVerifying(false);
+          return; // Stop polling
+        }
+        
+        // Schedule next poll only if not completed
+        timeoutId = setTimeout(poll, pollingBackoffRef.current);
+        setBulkVerifyPollInterval(timeoutId as any);
+        
+      } catch (err) {
+        console.error('Error polling job status:', err);
+        
+        // Increase backoff on error (exponential: 2s, 4s, 8s, 16s, max 30s)
+        pollingBackoffRef.current = Math.min(pollingBackoffRef.current * 2, 30000);
+        
+        // Schedule retry
+        timeoutId = setTimeout(poll, pollingBackoffRef.current);
+        setBulkVerifyPollInterval(timeoutId as any);
+      }
     };
     
     // Start first poll immediately
@@ -1455,34 +1459,96 @@ export default function IdentityListDetail({
         )}
         
         <Box data-tour="request-buttons" sx={{ display: 'flex', gap: 1 }}>
-          {/* Show both buttons for all list types for testing */}
-          <Button
-            variant="contained"
-            startIcon={<SendIcon />}
-            disabled={selectedCount === 0}
-            onClick={() => handleSendClick('NIN')}
-            sx={{ 
-              bgcolor: '#800020', 
-              '&:hover': { bgcolor: '#600018' },
-              color: 'white'
-            }}
-          >
-            Request NIN ({selectedCount})
-          </Button>
-          
-          <Button
-            variant="contained"
-            startIcon={<SendIcon />}
-            disabled={selectedCount === 0}
-            onClick={() => handleSendClick('CAC')}
-            sx={{ 
-              bgcolor: '#B8860B', 
-              '&:hover': { bgcolor: '#8B6914' },
-              color: 'white'
-            }}
-          >
-            Request CAC ({selectedCount})
-          </Button>
+          {/* Determine list type - with intelligent fallback for legacy lists */}
+          {(() => {
+            // Get listType from database, or infer from list name for legacy lists
+            let listType = list?.listType;
+            
+            if (!listType && list?.name) {
+              // Infer from list name for backward compatibility
+              const nameLower = list.name.toLowerCase();
+              if (nameLower.includes('individual') || nameLower.includes('_individual_')) {
+                listType = 'individual';
+              } else if (nameLower.includes('corporate') || nameLower.includes('_corporate_')) {
+                listType = 'corporate';
+              } else {
+                listType = 'flexible';
+              }
+            } else if (!listType) {
+              listType = 'flexible';
+            }
+            
+            // Show Request NIN button only for individual lists
+            if (listType === 'individual') {
+              return (
+                <Button
+                  variant="contained"
+                  startIcon={<SendIcon />}
+                  disabled={selectedCount === 0}
+                  onClick={() => handleSendClick('NIN')}
+                  sx={{ 
+                    bgcolor: '#800020', 
+                    '&:hover': { bgcolor: '#600018' },
+                    color: 'white'
+                  }}
+                >
+                  Request NIN ({selectedCount})
+                </Button>
+              );
+            }
+            
+            // Show Request CAC button only for corporate lists
+            if (listType === 'corporate') {
+              return (
+                <Button
+                  variant="contained"
+                  startIcon={<SendIcon />}
+                  disabled={selectedCount === 0}
+                  onClick={() => handleSendClick('CAC')}
+                  sx={{ 
+                    bgcolor: '#B8860B', 
+                    '&:hover': { bgcolor: '#8B6914' },
+                    color: 'white'
+                  }}
+                >
+                  Request CAC ({selectedCount})
+                </Button>
+              );
+            }
+            
+            // Show both buttons for flexible lists or when listType is not set
+            return (
+              <>
+                <Button
+                  variant="contained"
+                  startIcon={<SendIcon />}
+                  disabled={selectedCount === 0}
+                  onClick={() => handleSendClick('NIN')}
+                  sx={{ 
+                    bgcolor: '#800020', 
+                    '&:hover': { bgcolor: '#600018' },
+                    color: 'white'
+                  }}
+                >
+                  Request NIN ({selectedCount})
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  startIcon={<SendIcon />}
+                  disabled={selectedCount === 0}
+                  onClick={() => handleSendClick('CAC')}
+                  sx={{ 
+                    bgcolor: '#B8860B', 
+                    '&:hover': { bgcolor: '#8B6914' },
+                    color: 'white'
+                  }}
+                >
+                  Request CAC ({selectedCount})
+                </Button>
+              </>
+            );
+          })()}
         </Box>
       </Box>
 

@@ -364,19 +364,44 @@ export async function getDocumentForPreview(
   mimeType: string
 ): Promise<ArrayBuffer> {
   try {
+    console.log('📄 [Preview] Starting document preview fetch', {
+      storagePath,
+      mimeType,
+      encryptionMetadata: {
+        algorithm: encryptionMetadata.algorithm,
+        keyVersion: encryptionMetadata.keyVersion,
+        hasIV: !!encryptionMetadata.iv
+      },
+      timestamp: new Date().toISOString()
+    });
+
     // Get storage reference
     const storageRef = ref(storage, storagePath);
+    
+    console.log('📄 [Preview] Getting download URL from Firebase Storage');
     
     // Get download URL
     const downloadURL = await getDownloadURL(storageRef);
     
+    console.log('📄 [Preview] Download URL obtained, fetching encrypted data', {
+      urlLength: downloadURL.length
+    });
+    
     // Fetch encrypted data
     const response = await fetch(downloadURL);
     if (!response.ok) {
+      console.error('❌ [Preview] Failed to fetch from storage', {
+        status: response.status,
+        statusText: response.statusText
+      });
       throw new Error('Failed to fetch document from storage');
     }
     
     const encryptedData = await response.arrayBuffer();
+    
+    console.log('📄 [Preview] Encrypted data fetched, starting decryption', {
+      encryptedDataSize: encryptedData.byteLength
+    });
     
     // Decrypt the document
     const { decryptedData } = await decryptDocument(
@@ -385,9 +410,20 @@ export async function getDocumentForPreview(
       mimeType
     );
     
+    console.log('✅ [Preview] Document decrypted successfully', {
+      decryptedDataSize: decryptedData.byteLength,
+      mimeType
+    });
+    
     return decryptedData;
   } catch (error) {
-    console.error('Document preview fetch failed:', error);
+    console.error('❌ [Preview] Document preview fetch failed:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      storagePath,
+      mimeType,
+      timestamp: new Date().toISOString()
+    });
     throw new Error('Failed to load document preview. Please try again.');
   }
 }

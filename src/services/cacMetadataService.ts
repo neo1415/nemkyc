@@ -161,11 +161,20 @@ export async function getDocumentMetadata(
     
     const data = metadataSnap.data();
     
+    // Transform backend encryption data to frontend EncryptionMetadata format
+    const encryptionMetadata = data.encryptionMetadata || {
+      iv: data.encryptionIV || '',
+      algorithm: data.encryptionAlgorithm || 'aes-256-gcm',
+      keyVersion: 'v1',
+      authTag: ''
+    };
+    
     // Convert Firestore Timestamps to Date objects
     return {
       ...data,
       uploadedAt: timestampToDate(data.uploadedAt),
-      status: data.status as DocumentStatus
+      status: data.status as DocumentStatus,
+      encryptionMetadata
     } as CACDocumentMetadata;
   } catch (error) {
     console.error('Failed to retrieve document metadata:', error);
@@ -282,12 +291,26 @@ export async function getDocumentsByIdentityRecord(
         documentType: data.documentType,
         uploadedAt: data.uploadedAt,
         isCurrent: data.isCurrent,
-        identityRecordId: data.identityRecordId
+        identityRecordId: data.identityRecordId,
+        hasEncryptionIV: !!data.encryptionIV,
+        hasEncryptionMetadata: !!data.encryptionMetadata
       });
+      
+      // Transform backend encryption data to frontend EncryptionMetadata format
+      // Backend stores: encryptionIV, encryptionAlgorithm
+      // Frontend expects: { iv, algorithm, keyVersion, authTag }
+      const encryptionMetadata = data.encryptionMetadata || {
+        iv: data.encryptionIV || '',
+        algorithm: data.encryptionAlgorithm || 'aes-256-gcm',
+        keyVersion: 'v1',
+        authTag: '' // Not stored by backend, but required by frontend type
+      };
+      
       return {
         ...data,
         uploadedAt: timestampToDate(data.uploadedAt),
-        status: data.status as DocumentStatus
+        status: data.status as DocumentStatus,
+        encryptionMetadata
       } as CACDocumentMetadata;
     });
     
@@ -333,10 +356,20 @@ export async function getDocumentsByType(
     
     return querySnap.docs.map((doc) => {
       const data = doc.data();
+      
+      // Transform backend encryption data to frontend EncryptionMetadata format
+      const encryptionMetadata = data.encryptionMetadata || {
+        iv: data.encryptionIV || '',
+        algorithm: data.encryptionAlgorithm || 'aes-256-gcm',
+        keyVersion: 'v1',
+        authTag: ''
+      };
+      
       return {
         ...data,
         uploadedAt: timestampToDate(data.uploadedAt),
-        status: data.status as DocumentStatus
+        status: data.status as DocumentStatus,
+        encryptionMetadata
       } as CACDocumentMetadata;
     });
   } catch (error) {
@@ -374,10 +407,20 @@ export async function getDocumentsByDateRange(
     
     return querySnap.docs.map((doc) => {
       const data = doc.data();
+      
+      // Transform backend encryption data to frontend EncryptionMetadata format
+      const encryptionMetadata = data.encryptionMetadata || {
+        iv: data.encryptionIV || '',
+        algorithm: data.encryptionAlgorithm || 'aes-256-gcm',
+        keyVersion: 'v1',
+        authTag: ''
+      };
+      
       return {
         ...data,
         uploadedAt: timestampToDate(data.uploadedAt),
-        status: data.status as DocumentStatus
+        status: data.status as DocumentStatus,
+        encryptionMetadata
       } as CACDocumentMetadata;
     });
   } catch (error) {
@@ -638,6 +681,88 @@ export async function getDocumentStatusSummary(
     throw new Error('Failed to get document status summary. Please try again.');
   }
 }
+/**
+ * Gets document status summary for all entries in a list
+ * Returns aggregated status showing if ANY entry has documents uploaded
+ *
+ * @param listId - Identity list ID
+ * @returns Promise resolving to aggregated document status summary
+ */
+export async function getListDocumentStatusSummary(
+  listId: string
+): Promise<DocumentStatusSummary> {
+  try {
+    // Query all documents for this list
+    const metadataRef = collection(db, COLLECTIONS.METADATA);
+    const q = query(
+      metadataRef,
+      where('listId', '==', listId),
+      where('isCurrent', '==', true)
+    );
+
+    const snapshot = await getDocs(q);
+
+    // Initialize status summary
+    const summary: DocumentStatusSummary = {
+      identityRecordId: listId, // Using listId as identifier
+      certificateOfIncorporation: DocumentStatus.MISSING,
+      particularsOfDirectors: DocumentStatus.MISSING,
+      shareAllotment: DocumentStatus.MISSING,
+      uploadTimestamps: {},
+      isComplete: false
+    };
+
+    // Track if we found any documents of each type
+    const foundTypes = new Set<CACDocumentType>();
+
+    // Update status for each document type found
+    snapshot.docs.forEach((docSnapshot) => {
+      const doc = docSnapshot.data() as CACDocumentMetadata;
+
+      // Only count uploaded documents
+      if (doc.status === DocumentStatus.UPLOADED) {
+        foundTypes.add(doc.documentType);
+
+        switch (doc.documentType) {
+          case CACDocumentType.CERTIFICATE_OF_INCORPORATION:
+            summary.certificateOfIncorporation = DocumentStatus.UPLOADED;
+            if (!summary.uploadTimestamps[CACDocumentType.CERTIFICATE_OF_INCORPORATION] ||
+                doc.uploadedAt > summary.uploadTimestamps[CACDocumentType.CERTIFICATE_OF_INCORPORATION]) {
+              summary.uploadTimestamps[CACDocumentType.CERTIFICATE_OF_INCORPORATION] = doc.uploadedAt;
+            }
+            break;
+          case CACDocumentType.PARTICULARS_OF_DIRECTORS:
+            summary.particularsOfDirectors = DocumentStatus.UPLOADED;
+            if (!summary.uploadTimestamps[CACDocumentType.PARTICULARS_OF_DIRECTORS] ||
+                doc.uploadedAt > summary.uploadTimestamps[CACDocumentType.PARTICULARS_OF_DIRECTORS]) {
+              summary.uploadTimestamps[CACDocumentType.PARTICULARS_OF_DIRECTORS] = doc.uploadedAt;
+            }
+            break;
+          case CACDocumentType.SHARE_ALLOTMENT:
+            summary.shareAllotment = DocumentStatus.UPLOADED;
+            if (!summary.uploadTimestamps[CACDocumentType.SHARE_ALLOTMENT] ||
+                doc.uploadedAt > summary.uploadTimestamps[CACDocumentType.SHARE_ALLOTMENT]) {
+              summary.uploadTimestamps[CACDocumentType.SHARE_ALLOTMENT] = doc.uploadedAt;
+            }
+            break;
+        }
+      }
+    });
+
+    // Check if all documents are uploaded (at least one of each type found)
+    summary.isComplete =
+      summary.certificateOfIncorporation === DocumentStatus.UPLOADED &&
+      summary.particularsOfDirectors === DocumentStatus.UPLOADED &&
+      summary.shareAllotment === DocumentStatus.UPLOADED;
+
+    return summary;
+  } catch (error) {
+    console.error('Failed to get list document status summary:', error);
+    throw new Error('Failed to get list document status summary. Please try again.');
+  }
+}
+
+
 
 /**
  * Links a document to an identity record
