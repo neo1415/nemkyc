@@ -11054,6 +11054,163 @@ app.get('/api/identity/verify/:token', async (req, res) => {
 });
 
 /**
+ * POST /api/identity/verify/:token/upload-document
+ * Upload CAC document during customer verification
+ * 
+ * This endpoint allows customers to upload required CAC documents
+ * during the verification process using their verification token.
+ * Documents are encrypted before storage for security.
+ */
+app.post('/api/identity/verify/:token/upload-document', upload.single('file'), async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { documentType } = req.body;
+    const file = req.file;
+    
+    if (!token || !documentType || !file) {
+      return res.status(400).json({
+        success: false,
+        error: 'Token, document type, and file are required'
+      });
+    }
+    
+    // Validate document type
+    const validTypes = ['certificate_of_incorporation', 'particulars_of_directors', 'share_allotment'];
+    if (!validTypes.includes(documentType)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid document type'
+      });
+    }
+    
+    // Validate file type
+    const validMimeTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!validMimeTypes.includes(file.mimetype)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid file type. Please upload PDF, JPEG, or PNG'
+      });
+    }
+    
+    // Validate file size (10MB max)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      return res.status(400).json({
+        success: false,
+        error: 'File size must not exceed 10MB'
+      });
+    }
+    
+    console.log(`📄 Uploading CAC document: ${documentType} for token: ${token.substring(0, 8)}...`);
+    
+    // Find entry by token
+    const entriesSnapshot = await db.collection('identity-entries')
+      .where('token', '==', token)
+      .limit(1)
+      .get();
+    
+    if (entriesSnapshot.empty) {
+      return res.status(404).json({
+        success: false,
+        error: 'Invalid verification link'
+      });
+    }
+    
+    const entryDoc = entriesSnapshot.docs[0];
+    const entry = entryDoc.data();
+    
+    // Verify this is a CAC verification
+    if (entry.verificationType !== 'CAC') {
+      return res.status(400).json({
+        success: false,
+        error: 'Document upload is only available for CAC verification'
+      });
+    }
+    
+    // Check token expiration
+    const tokenExpiresAt = entry.tokenExpiresAt?.toDate ? entry.tokenExpiresAt.toDate() : new Date(entry.tokenExpiresAt);
+    if (tokenExpiresAt < new Date()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Verification link has expired'
+      });
+    }
+    
+    // Encrypt document
+    const fileBuffer = file.buffer;
+    const base64File = fileBuffer.toString('base64');
+    const { encrypted, iv } = encryptData(base64File);
+    
+    // Generate document ID
+    const documentId = `${entryDoc.id}_${documentType}_${Date.now()}`;
+    
+    // Store encrypted document in Firebase Storage
+    const storagePath = `cac-documents/${entryDoc.id}/${documentType}/${documentId}_${file.originalname}`;
+    const storageRef = admin.storage().bucket().file(storagePath);
+    
+    await storageRef.save(Buffer.from(encrypted, 'base64'), {
+      metadata: {
+        contentType: file.mimetype,
+        metadata: {
+          encrypted: 'true',
+          iv: iv,
+          originalName: file.originalname,
+          documentType: documentType,
+          entryId: entryDoc.id,
+          uploadedAt: new Date().toISOString()
+        }
+      }
+    });
+    
+    // Store document metadata in Firestore
+    await db.collection('cac-documents').doc(documentId).set({
+      id: documentId,
+      identityRecordId: entryDoc.id,
+      listId: entry.listId,
+      documentType: documentType,
+      storagePath: storagePath,
+      filename: file.originalname,
+      mimeType: file.mimetype,
+      fileSize: file.size,
+      encryptionAlgorithm: 'aes-256-gcm',
+      encryptionIV: iv,
+      uploadedBy: 'customer',
+      uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+      status: 'active',
+      version: 1,
+      isLatest: true
+    });
+    
+    // Update entry with document reference
+    const documentField = `cacDocuments.${documentType}`;
+    await entryDoc.ref.update({
+      [documentField]: {
+        documentId: documentId,
+        status: 'uploaded',
+        uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+        filename: file.originalname
+      },
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+    console.log(`✅ Document uploaded successfully: ${documentId}`);
+    
+    res.json({
+      success: true,
+      documentId: documentId,
+      filename: file.originalname
+    });
+    
+  } catch (error) {
+    console.error('Document upload error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upload document. Please try again.'
+    });
+  }
+});
+
+/**
  * POST /api/identity/verify/:token
  * Submit identity verification (NIN or CAC)
  * 
@@ -14592,7 +14749,7 @@ app.get('/api/cac-documents/:documentId', requireAuth, async (req, res) => {
     console.log(`📄 User ${userEmail} requesting CAC document: ${documentId}`);
     
     // Get document metadata from Firestore
-    const docRef = db.collection('cac-document-metadata').doc(documentId);
+    const docRef = db.collection('cac-documents').doc(documentId);
     const docSnap = await docRef.get();
     
     if (!docSnap.exists) {
@@ -14687,9 +14844,9 @@ app.get('/api/cac-documents/identity/:identityId', requireAuth, async (req, res)
     }
     
     // Query documents for this identity record
-    const docsSnapshot = await db.collection('cac-document-metadata')
+    const docsSnapshot = await db.collection('cac-documents')
       .where('identityRecordId', '==', identityId)
-      .where('isCurrent', '==', true)
+      .where('isLatest', '==', true)
       .orderBy('uploadedAt', 'desc')
       .get();
     
@@ -14748,7 +14905,7 @@ app.put('/api/cac-documents/:documentId/replace', requireAuth, requireBrokerOrAd
     console.log(`📄 User ${userEmail} replacing CAC document: ${documentId}`);
     
     // Get existing document metadata
-    const docRef = db.collection('cac-document-metadata').doc(documentId);
+    const docRef = db.collection('cac-documents').doc(documentId);
     const docSnap = await docRef.get();
     
     if (!docSnap.exists) {
@@ -14829,7 +14986,7 @@ app.delete('/api/cac-documents/:documentId', requireAuth, requireBrokerOrAdmin, 
     console.log(`📄 User ${userEmail} deleting CAC document: ${documentId}`);
     
     // Get document metadata
-    const docRef = db.collection('cac-document-metadata').doc(documentId);
+    const docRef = db.collection('cac-documents').doc(documentId);
     const docSnap = await docRef.get();
     
     if (!docSnap.exists) {
@@ -14915,7 +15072,7 @@ app.get('/api/cac-documents/:documentId/download', requireAuth, async (req, res)
     console.log(`📄 User ${userEmail} downloading CAC document: ${documentId}`);
     
     // Get document metadata
-    const docRef = db.collection('cac-document-metadata').doc(documentId);
+    const docRef = db.collection('cac-documents').doc(documentId);
     const docSnap = await docRef.get();
     
     if (!docSnap.exists) {
