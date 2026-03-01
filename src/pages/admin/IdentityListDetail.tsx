@@ -1886,11 +1886,13 @@ export default function IdentityListDetail({
       >
         <DialogTitle>Retry Verification</DialogTitle>
         <DialogContent>
-          <DialogContentText>
+          <DialogContentText component="div">
             {retryEntry && (
               <>
-                Are you sure you want to manually retry verification for{' '}
-                <strong>{retryEntry.email}</strong>?
+                <Box>
+                  Are you sure you want to manually retry verification for{' '}
+                  <strong>{retryEntry.email}</strong>?
+                </Box>
                 <Box sx={{ mt: 2 }}>
                   This will attempt to verify the identity information again using the stored data.
                 </Box>
