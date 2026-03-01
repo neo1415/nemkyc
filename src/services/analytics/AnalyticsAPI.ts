@@ -173,6 +173,7 @@ export class AnalyticsAPI {
     const data = await response.json();
     
     // Transform backend response to match UsageDataPoint interface
+    // Backend now calculates costs server-side (₦100 per successful call, ₦0 for failures)
     return (data.dailyData || []).map((day: any) => ({
       date: day.date,
       totalCalls: day.totalCalls || 0,
@@ -180,9 +181,9 @@ export class AnalyticsAPI {
       failureCount: day.failedCalls || 0,
       dataproCalls: day.dataproCalls || 0,
       verifydataCalls: day.verifydataCalls || 0,
-      dataproCost: (day.dataproCalls || 0) * 100, // Datapro NIN costs ₦100
-      verifydataCost: (day.verifydataCalls || 0) * 100,
-      totalCost: ((day.dataproCalls || 0) * 100) + ((day.verifydataCalls || 0) * 100) // Both cost ₦100
+      dataproCost: day.dataproCost || 0, // Use backend-calculated cost
+      verifydataCost: day.verifydataCost || 0, // Use backend-calculated cost
+      totalCost: day.totalCost || 0 // Use backend-calculated cost
     }));
   }
 

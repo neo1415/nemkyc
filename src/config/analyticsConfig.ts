@@ -6,8 +6,8 @@
 
 // API Cost Rates (in Nigerian Naira)
 export const API_COSTS = {
-  DATAPRO: 50, // ₦50 per NIN verification call
-  VERIFYDATA: 100, // ₦100 per CAC verification call
+  DATAPRO: 100, // ₦100 per NIN verification call (only successful calls are charged)
+  VERIFYDATA: 100, // ₦100 per CAC verification call (only successful calls are charged)
 } as const;
 
 // Update Intervals (in milliseconds)

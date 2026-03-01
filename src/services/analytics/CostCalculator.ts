@@ -11,13 +11,13 @@ import { API_COSTS, BUDGET_THRESHOLDS } from '../../config/analyticsConfig';
 import type { BudgetConfig } from '../../types/analytics';
 
 export class CostCalculator {
-  private readonly DATAPRO_COST = API_COSTS.DATAPRO; // ₦50 per call
-  private readonly VERIFYDATA_COST = API_COSTS.VERIFYDATA; // ₦100 per call
+  private readonly DATAPRO_COST = API_COSTS.DATAPRO; // ₦100 per successful call
+  private readonly VERIFYDATA_COST = API_COSTS.VERIFYDATA; // ₦100 per successful call
 
   /**
    * Calculates total cost for given usage
    * 
-   * Formula: (dataproCalls × ₦50) + (verifydataCalls × ₦100)
+   * Formula: (dataproCalls × ₦100) + (verifydataCalls × ₦100)
    * 
    * @param dataproCalls - Number of Datapro (NIN) verification calls
    * @param verifydataCalls - Number of VerifyData (CAC) verification calls
@@ -94,14 +94,14 @@ export class CostCalculator {
 
   /**
    * Calculates projected end-of-month cost based on current spending
-   * Rounds to nearest ₦50 (Datapro cost unit) for realistic projections
+   * Rounds to nearest ₦100 (API cost unit) for realistic projections
    * 
-   * Formula: round((currentSpending / daysElapsed) × totalDaysInMonth / 50) × 50
+   * Formula: round((currentSpending / daysElapsed) × totalDaysInMonth / 100) × 100
    * 
    * @param currentSpending - Current spending amount
    * @param daysElapsed - Number of days elapsed in the month
    * @param totalDaysInMonth - Total days in the month
-   * @returns Projected cost for the full month, rounded to nearest ₦50
+   * @returns Projected cost for the full month, rounded to nearest ₦100
    * 
    * Requirements: 6.3, 6.7
    */
@@ -116,9 +116,9 @@ export class CostCalculator {
     const dailyAverage = currentSpending / daysElapsed;
     const rawProjection = dailyAverage * totalDaysInMonth;
     
-    // Round to nearest ₦50 since that's the minimum API cost unit
-    // This gives more realistic projections (₦50, ₦100, ₦150, etc.)
-    return Math.round(rawProjection / 50) * 50;
+    // Round to nearest ₦100 since that's the minimum API cost unit
+    // This gives more realistic projections (₦100, ₦200, ₦300, etc.)
+    return Math.round(rawProjection / 100) * 100;
   }
 
   /**
