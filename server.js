@@ -243,6 +243,9 @@ const {
   calculateCost: calculateVerificationCost
 } = require('./server-utils/costCalculator.cjs');
 
+// Debug: Verify the import loaded correctly
+console.log('🔍 DEBUG: calculateVerificationCost imported, type:', typeof calculateVerificationCost);
+
 // ============= LOGGING UTILITY =============
 
 /**
@@ -2230,7 +2233,8 @@ app.use((req, res, next) => {
     req.path === '/api/autofill/verify-cac' ||  // Auto-fill CAC verification (self-verification, protected by rate limiting)
     req.path.startsWith('/api/remediation/') ||  // Remediation endpoints (protected by auth)
     req.path.startsWith('/api/identity/') ||     // Identity collection endpoints (protected by auth)
-    req.path.startsWith('/api/analytics/')) {    // Analytics endpoints (protected by requireAuth + requireSuperAdmin)
+    req.path.startsWith('/api/analytics/') ||    // Analytics endpoints (protected by requireAuth + requireSuperAdmin)
+    req.path.startsWith('/api/cac-documents/')) {    // CAC document endpoints (protected by auth)
     console.log('🔓 Skipping CSRF protection for:', req.path);
     return next(); // Skip CSRF for this route
   }
@@ -10538,6 +10542,9 @@ app.post('/api/identity/lists/:listId/send', requireAuth, requireBrokerOrAdmin, 
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
         
+        // Format expiration date (declare before using in console.log)
+        const expirationDateStr = formatDateLong(tokenExpiresAt);
+        
         console.log(`   ✓ Token saved for entry ${entry.id}: ${token.substring(0, 8)}... (${token.length} chars)`);
         console.log(`   ✓ Verification type: ${verificationType}`);
         console.log(`   ✓ Expires: ${expirationDateStr}`);
@@ -10551,9 +10558,6 @@ app.post('/api/identity/lists/:listId/send', requireAuth, requireBrokerOrAdmin, 
                              entry.data?.customerName || entry.data?.CustomerName ||
                              entry.data?.fullName || entry.data?.FullName ||
                              'Valued Customer';
-        
-        // Format expiration date
-        const expirationDateStr = formatDateLong(tokenExpiresAt);
         
         // Send verification email
         const mailOptions = {
@@ -13311,9 +13315,10 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
   }
   
   // Check if entry has pre-filled identity data
-  let hasNIN = entry.data?.nin || entry.data?.NIN || entry.nin;
-  let hasBVN = entry.data?.bvn || entry.data?.BVN || entry.bvn;
-  let hasCAC = entry.data?.cac || entry.data?.CAC || entry.cac;
+  let hasNIN = entry.data?.nin || entry.data?.NIN || entry.data?.Nin || entry.data?.['NIN'] || entry.nin;
+  let hasBVN = entry.data?.bvn || entry.data?.BVN || entry.data?.Bvn || entry.data?.['BVN'] || entry.bvn;
+  let hasCAC = entry.data?.cac || entry.data?.CAC || entry.data?.Cac || entry.data?.['CAC'] || 
+               entry.data?.['CAC Number'] || entry.data?.['cac number'] || entry.data?.['Cac Number'] || entry.cac;
   
   // 🔍 DIAGNOSTIC LOGGING - Log field detection results
   console.log(`   Field detection results:`);
@@ -13716,7 +13721,7 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
             userId: customerName, // Company name, not broker ID
             userEmail: entry.email || 'bulk_verification',
             userName: customerName, // Company name for display
-            ipAddress: req.ipData?.masked || req.ip || 'bulk_operation',
+            ipAddress: ipData?.masked || 'bulk_operation',
             userType: 'customer', // Mark as customer verification
             errorCode: matchResult.matched ? null : 'FIELD_MISMATCH',
             errorMessage: matchResult.matched ? null : 'Field mismatch detected',
@@ -13977,19 +13982,31 @@ app.post('/api/identity/lists/:listId/analyze-bulk-verify', requireAuth, require
       let identityValue = null;
       
       // Priority 1: NIN
-      if (entry.data?.nin || entry.nin) {
+      // Check encrypted field first, then data object with various column name variations
+      if (entry.nin) {
         verificationType = 'NIN';
-        identityValue = entry.data?.nin || entry.nin;
-      } 
+        identityValue = entry.nin;
+      } else if (entry.data?.nin || entry.data?.NIN || entry.data?.Nin || entry.data?.['NIN']) {
+        verificationType = 'NIN';
+        identityValue = entry.data.nin || entry.data.NIN || entry.data.Nin || entry.data['NIN'];
+      }
       // Priority 2: BVN (COMMENTED OUT - may be enabled later)
-      // else if (entry.data?.bvn || entry.bvn) {
+      // else if (entry.bvn) {
       //   verificationType = 'BVN';
-      //   identityValue = entry.data?.bvn || entry.bvn;
+      //   identityValue = entry.bvn;
+      // } else if (entry.data?.bvn || entry.data?.BVN || entry.data?.Bvn || entry.data?.['BVN']) {
+      //   verificationType = 'BVN';
+      //   identityValue = entry.data.bvn || entry.data.BVN || entry.data.Bvn || entry.data['BVN'];
       // }
       // Priority 3: CAC
-      else if (entry.data?.cac || entry.cac) {
+      else if (entry.cac) {
         verificationType = 'CAC';
-        identityValue = entry.data?.cac || entry.cac;
+        identityValue = entry.cac;
+      } else if (entry.data?.cac || entry.data?.CAC || entry.data?.Cac || entry.data?.['CAC'] || 
+                 entry.data?.['CAC Number'] || entry.data?.['cac number'] || entry.data?.['Cac Number']) {
+        verificationType = 'CAC';
+        identityValue = entry.data.cac || entry.data.CAC || entry.data.Cac || entry.data['CAC'] || 
+                        entry.data['CAC Number'] || entry.data['cac number'] || entry.data['Cac Number'];
       }
       
       // Skip if no identity data
@@ -13998,11 +14015,18 @@ app.post('/api/identity/lists/:listId/analyze-bulk-verify', requireAuth, require
         continue;
       }
       
-      // Convert to string if needed
+      // Convert to string if needed and decrypt if encrypted
       if (typeof identityValue === 'number') {
         identityValue = String(identityValue);
       } else if (typeof identityValue === 'object' && identityValue.encrypted) {
-        // Keep encrypted object as-is for now
+        // Decrypt encrypted identity data
+        try {
+          identityValue = decryptData(identityValue.encrypted, identityValue.iv);
+        } catch (decryptError) {
+          console.error(`Failed to decrypt ${verificationType} for entry ${entryId}:`, decryptError.message);
+          skipReasons.invalid_format++;
+          continue;
+        }
       } else if (typeof identityValue !== 'string') {
         skipReasons.invalid_format++;
         continue;
@@ -14047,6 +14071,9 @@ app.post('/api/identity/lists/:listId/analyze-bulk-verify', requireAuth, require
     }
     
     // Calculate cost estimate
+    console.log('🔍 DEBUG: About to call calculateVerificationCost');
+    console.log('🔍 DEBUG: typeof calculateVerificationCost:', typeof calculateVerificationCost);
+    console.log('🔍 DEBUG: identityTypeCounts:', identityTypeCounts);
     const costEstimate = calculateVerificationCost(identityTypeCounts);
     
     // Generate analysis ID
@@ -15244,6 +15271,173 @@ app.get('/api/cac-documents/:documentId/download', requireAuth, async (req, res)
     res.status(500).json({
       error: 'Failed to process document download',
       message: error.message
+    });
+  }
+});
+
+/**
+ * Encrypt CAC Document
+ * 
+ * POST /api/cac-documents/encrypt
+ * 
+ * Body:
+ * - data: Base64 data to encrypt
+ * 
+ * Returns encrypted data with IV
+ * 
+ * Requirements: 3.2, 3.6, 4.1, 5.1
+ */
+app.post('/api/cac-documents/encrypt', requireAuth, requireBrokerOrAdmin, async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const { data } = req.body;
+    const userEmail = req.user?.email || 'unknown';
+    const userId = req.user?.uid || 'unknown';
+    const userRole = req.user?.role || 'unknown';
+    
+    console.log('� [Server Encrypt] Document encryption request received', {
+      userEmail,
+      userId,
+      userRole,
+      hasData: !!data,
+      dataLength: data?.length || 0,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Validate required fields
+    if (!data) {
+      console.error('❌ [Server Encrypt] Missing data field', { userEmail });
+      return res.status(400).json({
+        success: false,
+        error: 'Data is required for encryption'
+      });
+    }
+    
+    console.log('🔐 [Server Encrypt] Starting encryption', {
+      userEmail,
+      dataLength: data.length
+    });
+    
+    // Encrypt the data
+    const { encrypted, iv } = encryptData(data);
+    
+    const duration = Date.now() - startTime;
+    console.log('✅ [Server Encrypt] Document encrypted successfully', {
+      userEmail,
+      userId,
+      encryptedDataLength: encrypted?.length || 0,
+      ivLength: iv?.length || 0,
+      durationMs: duration,
+      timestamp: new Date().toISOString()
+    });
+    
+    res.status(200).json({
+      success: true,
+      encrypted,
+      iv,
+      authTag: '' // Not used by current encryption implementation
+    });
+    
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error('❌ [Server Encrypt] Error encrypting document:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      userEmail: req.user?.email || 'unknown',
+      userId: req.user?.uid || 'unknown',
+      durationMs: duration,
+      timestamp: new Date().toISOString()
+    });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to encrypt document',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * Decrypt CAC Document
+ * 
+ * POST /api/cac-documents/decrypt
+ * 
+ * Body:
+ * - encryptedData: Base64 encrypted data
+ * - iv: Initialization vector
+ * 
+ * Returns decrypted data as base64
+ * 
+ * Requirements: 3.2, 3.6, 4.1, 5.1
+ */
+app.post('/api/cac-documents/decrypt', requireAuth, requireBrokerOrAdmin, async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const { encryptedData, iv } = req.body;
+    const userEmail = req.user?.email || 'unknown';
+    const userId = req.user?.uid || 'unknown';
+    const userRole = req.user?.role || 'unknown';
+    
+    console.log('🔓 [Server Decrypt] Document decryption request received', {
+      userEmail,
+      userId,
+      userRole,
+      hasEncryptedData: !!encryptedData,
+      encryptedDataLength: encryptedData?.length || 0,
+      hasIV: !!iv,
+      ivLength: iv?.length || 0,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Validate required fields
+    if (!encryptedData || !iv) {
+      console.error('❌ [Server Decrypt] Missing required fields', {
+        hasEncryptedData: !!encryptedData,
+        hasIV: !!iv,
+        userEmail
+      });
+      return res.status(400).json({
+        success: false,
+        error: 'Encrypted data and IV are required'
+      });
+    }
+    
+    console.log('🔐 [Server Decrypt] Starting decryption', {
+      userEmail,
+      encryptedDataLength: encryptedData.length,
+      ivLength: iv.length
+    });
+    
+    // Decrypt the data
+    const decryptedData = decryptData(encryptedData, iv);
+    
+    const duration = Date.now() - startTime;
+    console.log('✅ [Server Decrypt] Document decrypted successfully', {
+      userEmail,
+      userId,
+      decryptedDataLength: decryptedData?.length || 0,
+      durationMs: duration,
+      timestamp: new Date().toISOString()
+    });
+    
+    res.status(200).json({
+      success: true,
+      decrypted: decryptedData
+    });
+    
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error('❌ [Server Decrypt] Error decrypting document:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      userEmail: req.user?.email || 'unknown',
+      userId: req.user?.uid || 'unknown',
+      durationMs: duration,
+      timestamp: new Date().toISOString()
+    });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to decrypt document',
+      message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

@@ -85,8 +85,24 @@ export const CACDocumentPreview: React.FC<CACDocumentPreviewProps> = ({
    */
   const loadDocument = useCallback(async () => {
     if (!document || !canViewDocument) {
+      console.log('🔒 [Preview] Cannot load document', {
+        hasDocument: !!document,
+        canViewDocument,
+        documentId: document?.id
+      });
       return;
     }
+
+    console.log('📄 [Preview] Starting document load', {
+      documentId: document.id,
+      documentType: document.documentType,
+      fileName: document.filename,
+      fileSize: document.fileSize,
+      mimeType: document.mimeType,
+      storagePath: document.storagePath,
+      hasEncryptionMetadata: !!document.encryptionMetadata,
+      timestamp: new Date().toISOString()
+    });
 
     setLoading(true);
     setError(null);
@@ -97,9 +113,11 @@ export const CACDocumentPreview: React.FC<CACDocumentPreviewProps> = ({
       let decryptedData: ArrayBuffer;
 
       if (documentCache.has(cacheKey)) {
+        console.log('✅ [Preview] Using cached document data', { documentId: document.id });
         // Use cached data
         decryptedData = documentCache.get(cacheKey)!;
       } else {
+        console.log('📥 [Preview] Fetching and decrypting document', { documentId: document.id });
         // Fetch and decrypt document
         decryptedData = await getDocumentForPreview(
           document.storagePath,
@@ -107,9 +125,18 @@ export const CACDocumentPreview: React.FC<CACDocumentPreviewProps> = ({
           document.mimeType
         );
 
+        console.log('💾 [Preview] Caching decrypted document', {
+          documentId: document.id,
+          dataSize: decryptedData.byteLength
+        });
         // Cache for session
         documentCache.set(cacheKey, decryptedData);
       }
+
+      console.log('🎨 [Preview] Creating blob and object URL', {
+        documentId: document.id,
+        mimeType: document.mimeType
+      });
 
       // Create blob and object URL for preview
       const blob = createBlobFromDecryptedData(decryptedData, document.mimeType);
@@ -122,8 +149,20 @@ export const CACDocumentPreview: React.FC<CACDocumentPreviewProps> = ({
 
       objectUrlRef.current = url;
       setDocumentUrl(url);
+      
+      console.log('✅ [Preview] Document loaded successfully', {
+        documentId: document.id,
+        objectUrl: url.substring(0, 50) + '...'
+      });
     } catch (err) {
-      console.error('Failed to load document preview:', err);
+      console.error('❌ [Preview] Failed to load document preview:', {
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+        documentId: document.id,
+        documentType: document.documentType,
+        fileName: document.filename,
+        timestamp: new Date().toISOString()
+      });
       setError(
         err instanceof Error
           ? err.message

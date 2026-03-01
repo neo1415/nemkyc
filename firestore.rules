@@ -509,6 +509,7 @@ service cloud.firestore {
 
     // CAC document audit logs - Tracks all document access and operations
     // SECURITY: Append-only logs for compliance and security auditing
+    // Support both camelCase and hyphenated collection names for backward compatibility
     match /cacDocumentAuditLogs/{docId} {
       // Admins, super admins, and compliance can read all audit logs
       // Brokers can read logs for documents linked to their identity lists
@@ -517,9 +518,44 @@ service cloud.firestore {
          exists(/databases/$(database)/documents/identity-lists/$(get(/databases/$(database)/documents/identity-entries/$(resource.data.identityRecordId)).data.listId)) &&
          get(/databases/$(database)/documents/identity-lists/$(get(/databases/$(database)/documents/identity-entries/$(resource.data.identityRecordId)).data.listId)).data.createdBy == request.auth.uid);
       
-      // Audit logs are created by the backend system only
-      // No direct client writes allowed - all writes go through backend API
-      allow create: if false;
+      // Audit logs can be created by authenticated brokers, admins, and super admins (for client-side audit logging)
+      // Backend system also creates audit logs via service account
+      allow create: if isBrokerOrAdminOrCompliance();
+      // Audit logs are immutable - no updates allowed
+      allow update: if false;
+      // Audit logs cannot be deleted
+      allow delete: if false;
+    }
+
+    // CAC document audit logs (hyphenated collection name) - Same rules as camelCase version
+    match /cac-document-audit-logs/{docId} {
+      // Admins, super admins, and compliance can read all audit logs
+      // Brokers can read logs for documents linked to their identity lists
+      allow read: if isAdminOrSuperAdmin() || isCompliance() || 
+        (isBroker() && exists(/databases/$(database)/documents/identity-entries/$(resource.data.identityRecordId)) &&
+         exists(/databases/$(database)/documents/identity-lists/$(get(/databases/$(database)/documents/identity-entries/$(resource.data.identityRecordId)).data.listId)) &&
+         get(/databases/$(database)/documents/identity-lists/$(get(/databases/$(database)/documents/identity-entries/$(resource.data.identityRecordId)).data.listId)).data.createdBy == request.auth.uid);
+      
+      // Audit logs can be created by authenticated brokers, admins, and super admins (for client-side audit logging)
+      // Backend system also creates audit logs via service account
+      allow create: if isBrokerOrAdminOrCompliance();
+      // Audit logs are immutable - no updates allowed
+      allow update: if false;
+      // Audit logs cannot be deleted
+      allow delete: if false;
+    }
+
+    // ========== General Audit Logs ==========
+    
+    // General audit logs - System-wide audit trail for all operations
+    // SECURITY: Append-only logs for compliance and security auditing
+    match /audit-logs/{docId} {
+      // Admins, super admins, and compliance can read all audit logs
+      allow read: if isAdminOrSuperAdmin() || isCompliance();
+      
+      // Audit logs can be created by authenticated users (for client-side audit logging)
+      // Backend system also creates audit logs via service account
+      allow create: if isAuthenticatedUser();
       // Audit logs are immutable - no updates allowed
       allow update: if false;
       // Audit logs cannot be deleted
