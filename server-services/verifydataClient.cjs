@@ -144,6 +144,7 @@ async function verifyCAC(rcNumber) {
     console.error('[VerifydataClient] RC number is required');
     return {
       success: false,
+      cost: 0, // Failed verifications cost ₦0
       error: 'RC number is required',
       errorCode: 'INVALID_INPUT',
       details: {}
@@ -155,6 +156,7 @@ async function verifyCAC(rcNumber) {
     console.error('[VerifydataClient] VERIFYDATA_SECRET_KEY not configured');
     return {
       success: false,
+      cost: 0, // Failed verifications cost ₦0
       error: 'VerifyData API not configured. Please contact support.',
       errorCode: 'NOT_CONFIGURED',
       details: {}
@@ -177,6 +179,7 @@ async function verifyCAC(rcNumber) {
     console.error(`[VerifydataClient] Rate limit exceeded: ${rateLimitError.message}`);
     return {
       success: false,
+      cost: 0, // Failed verifications cost ₦0
       error: 'Too many verification requests. Please try again later.',
       errorCode: 'RATE_LIMIT_EXCEEDED',
       details: { message: rateLimitError.message }
@@ -218,6 +221,7 @@ async function verifyCAC(rcNumber) {
           if (parseResult.errorCode === 'EMPTY_RESPONSE') {
             return {
               success: false,
+              cost: 0, // Failed verifications cost ₦0
               error: 'RC number not found in CAC database. Please verify the RC number and try again.',
               errorCode: 'CAC_NOT_FOUND',
               details: parseResult.details
@@ -225,6 +229,7 @@ async function verifyCAC(rcNumber) {
           }
           return {
             success: false,
+            cost: 0, // Failed verifications cost ₦0
             error: 'Invalid response from verification service',
             errorCode: parseResult.errorCode,
             details: parseResult.details
@@ -261,6 +266,7 @@ async function verifyCAC(rcNumber) {
           
           return {
             success: true,
+            cost: 100, // Successful CAC verification costs ₦100
             data: {
               name: cleanValue(parsedData.data.name),
               registrationNumber: cleanValue(parsedData.data.registrationNumber),
@@ -278,6 +284,7 @@ async function verifyCAC(rcNumber) {
           console.warn(`[VerifydataClient] Verification failed: ${parsedData.message || 'Unknown error'}`);
           return {
             success: false,
+            cost: 0, // Failed verifications cost ₦0
             error: parsedData.message || 'RC number not found in CAC database',
             errorCode: 'CAC_NOT_FOUND',
             details: {
@@ -299,6 +306,7 @@ async function verifyCAC(rcNumber) {
           console.error(`[VerifydataClient] Failed to parse 400 response: ${parseResult.error}`);
           return {
             success: false,
+            cost: 0, // Failed verifications cost ₦0
             error: 'Invalid RC number format. Please check and try again.',
             errorCode: 'BAD_REQUEST',
             details: { statusCode: 400, ...parseResult.details }
@@ -314,6 +322,7 @@ async function verifyCAC(rcNumber) {
           console.error('[VerifydataClient] Invalid secret key (FF)');
           return {
             success: false,
+            cost: 0, // Failed verifications cost ₦0
             error: 'Verification service unavailable. Please contact support.',
             errorCode: 'INVALID_SECRET_KEY',
             details: { statusCode: 400, responseStatusCode: 'FF' }
@@ -322,6 +331,7 @@ async function verifyCAC(rcNumber) {
           console.error('[VerifydataClient] Insufficient balance (IB)');
           return {
             success: false,
+            cost: 0, // Failed verifications cost ₦0
             error: 'Verification service unavailable. Please contact support.',
             errorCode: 'INSUFFICIENT_BALANCE',
             details: { statusCode: 400, responseStatusCode: 'IB' }
@@ -330,6 +340,7 @@ async function verifyCAC(rcNumber) {
           console.error('[VerifydataClient] Contact administrator (BR)');
           return {
             success: false,
+            cost: 0, // Failed verifications cost ₦0
             error: 'Verification service unavailable. Please contact support.',
             errorCode: 'CONTACT_ADMINISTRATOR',
             details: { statusCode: 400, responseStatusCode: 'BR' }
@@ -338,6 +349,7 @@ async function verifyCAC(rcNumber) {
           console.error('[VerifydataClient] No active service (EE)');
           return {
             success: false,
+            cost: 0, // Failed verifications cost ₦0
             error: 'Verification service unavailable. Please contact support.',
             errorCode: 'NO_ACTIVE_SERVICE',
             details: { statusCode: 400, responseStatusCode: 'EE' }
@@ -346,6 +358,7 @@ async function verifyCAC(rcNumber) {
           console.error(`[VerifydataClient] Bad request (400) with unknown statusCode: ${responseStatusCode}`);
           return {
             success: false,
+            cost: 0, // Failed verifications cost ₦0
             error: 'Invalid RC number format. Please check and try again.',
             errorCode: 'BAD_REQUEST',
             details: { statusCode: 400, responseStatusCode }
@@ -356,6 +369,7 @@ async function verifyCAC(rcNumber) {
         // This is retryable
         lastError = {
           success: false,
+          cost: 0, // Failed verifications cost ₦0
           error: 'Network error. Please try again later.',
           errorCode: 'SERVER_ERROR',
           details: { statusCode: 500, attempt }
@@ -374,6 +388,7 @@ async function verifyCAC(rcNumber) {
         console.error(`[VerifydataClient] Unexpected status code: ${statusCode}`);
         return {
           success: false,
+          cost: 0, // Failed verifications cost ₦0
           error: 'Unexpected error from verification service',
           errorCode: 'UNEXPECTED_STATUS',
           details: { statusCode }
@@ -383,6 +398,7 @@ async function verifyCAC(rcNumber) {
       console.error(`[VerifydataClient] Request error on attempt ${attempt}: ${error.message}`);
       lastError = {
         success: false,
+        cost: 0, // Failed verifications cost ₦0
         error: 'Network error. Please try again later.',
         errorCode: 'NETWORK_ERROR',
         details: { 
@@ -406,6 +422,7 @@ async function verifyCAC(rcNumber) {
   console.error(`[VerifydataClient] All ${MAX_RETRIES} attempts failed for RC: ${maskRCNumber(rcNumber)}`);
   return lastError || {
     success: false,
+    cost: 0, // Failed verifications cost ₦0
     error: 'Network error. Please try again later.',
     errorCode: 'MAX_RETRIES_EXCEEDED',
     details: { maxRetries: MAX_RETRIES }

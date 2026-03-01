@@ -37,12 +37,19 @@ import {
   Schedule as PendingIcon,
   Error as FailedIcon,
   Refresh as RefreshIcon,
+  CheckCircleOutline as CheckIcon,
+  Cancel as CancelIcon,
+  Description as DocumentIcon,
 } from '@mui/icons-material';
 import { UploadDialog } from '../../components/identity/UploadDialog';
 import IdentityListDetail from './IdentityListDetail';
 import '../../styles/broker-tour.css';
 import type { ListSummary } from '../../types/remediation';
 import { formatDate } from '../../utils/dateFormatter';
+import { getDocumentStatusSummary } from '../../services/cacMetadataService';
+import { DocumentStatusSummary, DocumentStatus, CACDocumentType } from '../../types/cacDocuments';
+import { CACDocumentPreview, useDocumentPreview } from '../../components/identity/CACDocumentPreview';
+import { getDocumentsByType } from '../../services/cacMetadataService';
 
 // Import tour reset utility for testing (makes it available in console)
 import '../../utils/resetBrokerTour';
@@ -66,6 +73,13 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
   const [deleteListId, setDeleteListId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [currentTab, setCurrentTab] = useState<'individual' | 'corporate'>('individual');
+  
+  // Document status state for corporate lists
+  const [documentStatuses, setDocumentStatuses] = useState<Map<string, DocumentStatusSummary>>(new Map());
+  const [loadingDocumentStatuses, setLoadingDocumentStatuses] = useState(false);
+  
+  // Document preview hook
+  const { previewDocument, previewOpen, previewOwnerId, openPreview, closePreview } = useDocumentPreview();
 
   // Filter lists by tab
   // For backward compatibility: if listType is not set, show in both tabs
@@ -106,9 +120,59 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
     }
   }, []);
 
+  /**
+   * Fetches document status for corporate lists
+   * Requirement: 7.7 - Update status in real-time when documents are uploaded
+   */
+  const fetchDocumentStatuses = useCallback(async (corporateLists: ListSummary[]) => {
+    if (corporateLists.length === 0) {
+      return;
+    }
+
+    try {
+      setLoadingDocumentStatuses(true);
+      const statusMap = new Map<string, DocumentStatusSummary>();
+
+      // Fetch document status for each corporate list
+      await Promise.all(
+        corporateLists.map(async (list) => {
+          try {
+            const status = await getDocumentStatusSummary(list.id);
+            statusMap.set(list.id, status);
+          } catch (err) {
+            console.error(`Failed to fetch document status for list ${list.id}:`, err);
+            // Set default missing status on error
+            statusMap.set(list.id, {
+              identityRecordId: list.id,
+              certificateOfIncorporation: DocumentStatus.MISSING,
+              particularsOfDirectors: DocumentStatus.MISSING,
+              shareAllotment: DocumentStatus.MISSING,
+              uploadTimestamps: {},
+              isComplete: false
+            });
+          }
+        })
+      );
+
+      setDocumentStatuses(statusMap);
+    } catch (err) {
+      console.error('Error fetching document statuses:', err);
+    } finally {
+      setLoadingDocumentStatuses(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchLists();
   }, [fetchLists]);
+
+  // Fetch document statuses when lists change and we're on corporate tab
+  useEffect(() => {
+    const corporateLists = lists.filter(list => list.listType === 'corporate');
+    if (corporateLists.length > 0 && currentTab === 'corporate') {
+      fetchDocumentStatuses(corporateLists);
+    }
+  }, [lists, currentTab, fetchDocumentStatuses]);
 
   useEffect(() => {
     if (location.state?.openUploadDialog) {
@@ -172,6 +236,36 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
     fetchLists();
   };
 
+  /**
+   * Handles clicking on a document status indicator to preview the document
+   * Requirement: 7.5 - Make status indicators clickable to preview documents
+   */
+  const handleDocumentStatusClick = async (
+    e: React.MouseEvent,
+    listId: string,
+    documentType: CACDocumentType,
+    status: DocumentStatus
+  ) => {
+    e.stopPropagation(); // Prevent list card click
+
+    // Only open preview if document is uploaded
+    if (status !== DocumentStatus.UPLOADED) {
+      return;
+    }
+
+    try {
+      // Fetch the document metadata
+      const documents = await getDocumentsByType(documentType, listId);
+      if (documents.length > 0) {
+        const document = documents[0]; // Get the current version
+        openPreview(document, listId);
+      }
+    } catch (err) {
+      console.error('Failed to load document for preview:', err);
+      setError('Failed to load document preview. Please try again.');
+    }
+  };
+
   // If embedded and a list is selected, show the detail view
   if (isEmbedded && selectedListId) {
     return <IdentityListDetail listId={selectedListId} onBack={handleBackToList} isEmbedded />;
@@ -192,6 +286,75 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
       bgcolor: progress >= 100 ? '#2e7d32' : progress >= 50 ? '#B8860B' : '#800020'
     }
   });
+
+  /**
+   * Renders a document status indicator
+   * Requirements: 7.2, 7.3, 7.4, 7.5
+   */
+  const renderDocumentStatus = (
+    listId: string,
+    documentType: CACDocumentType,
+    status: DocumentStatus,
+    uploadTimestamp?: Date
+  ) => {
+    const isUploaded = status === DocumentStatus.UPLOADED;
+    const isMissing = status === DocumentStatus.MISSING;
+    const isClickable = isUploaded;
+
+    const getDocumentLabel = (type: CACDocumentType): string => {
+      switch (type) {
+        case CACDocumentType.CERTIFICATE_OF_INCORPORATION:
+          return 'Certificate';
+        case CACDocumentType.PARTICULARS_OF_DIRECTORS:
+          return 'Directors';
+        case CACDocumentType.SHARE_ALLOTMENT:
+          return 'Share Allotment';
+        default:
+          return 'Document';
+      }
+    };
+
+    return (
+      <Tooltip
+        title={
+          isUploaded && uploadTimestamp
+            ? `Uploaded ${formatDate(uploadTimestamp)}`
+            : isMissing
+            ? 'Not uploaded'
+            : 'Pending'
+        }
+      >
+        <Box
+          onClick={(e) => isClickable && handleDocumentStatusClick(e, listId, documentType, status)}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            cursor: isClickable ? 'pointer' : 'default',
+            padding: '4px 8px',
+            borderRadius: 1,
+            bgcolor: isUploaded ? '#e8f5e9' : '#ffebee',
+            border: '1px solid',
+            borderColor: isUploaded ? '#2e7d32' : '#d32f2f',
+            transition: 'all 0.2s',
+            '&:hover': isClickable ? {
+              boxShadow: 1,
+              transform: 'translateY(-1px)'
+            } : {}
+          }}
+        >
+          {isUploaded ? (
+            <CheckIcon sx={{ fontSize: 16, color: '#2e7d32' }} />
+          ) : (
+            <CancelIcon sx={{ fontSize: 16, color: '#d32f2f' }} />
+          )}
+          <Typography variant="caption" sx={{ fontSize: '0.7rem', fontWeight: 500 }}>
+            {getDocumentLabel(documentType)}
+          </Typography>
+        </Box>
+      </Tooltip>
+    );
+  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -429,6 +592,58 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
                         : list.createdAt
                     )} • {list.totalEntries} entries
                   </Typography>
+
+                  {/* CAC Document Status for Corporate Lists - Requirement: 7.1, 7.6 */}
+                  {list.listType === 'corporate' && (
+                    <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                        <DocumentIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                        <Typography variant="caption" color="textSecondary" fontWeight="medium">
+                          CAC Documents
+                        </Typography>
+                      </Box>
+                      {loadingDocumentStatuses ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
+                          <CircularProgress size={20} />
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {(() => {
+                            const docStatus = documentStatuses.get(list.id);
+                            if (!docStatus) {
+                              return (
+                                <Typography variant="caption" color="textSecondary">
+                                  No document status available
+                                </Typography>
+                              );
+                            }
+                            return (
+                              <>
+                                {renderDocumentStatus(
+                                  list.id,
+                                  CACDocumentType.CERTIFICATE_OF_INCORPORATION,
+                                  docStatus.certificateOfIncorporation,
+                                  docStatus.uploadTimestamps[CACDocumentType.CERTIFICATE_OF_INCORPORATION]
+                                )}
+                                {renderDocumentStatus(
+                                  list.id,
+                                  CACDocumentType.PARTICULARS_OF_DIRECTORS,
+                                  docStatus.particularsOfDirectors,
+                                  docStatus.uploadTimestamps[CACDocumentType.PARTICULARS_OF_DIRECTORS]
+                                )}
+                                {renderDocumentStatus(
+                                  list.id,
+                                  CACDocumentType.SHARE_ALLOTMENT,
+                                  docStatus.shareAllotment,
+                                  docStatus.uploadTimestamps[CACDocumentType.SHARE_ALLOTMENT]
+                                )}
+                              </>
+                            );
+                          })()}
+                        </Box>
+                      )}
+                    </Box>
+                  )}
                 </CardContent>
               </Card>
             </Grid>
@@ -441,6 +656,14 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
         open={uploadDialogOpen}
         onClose={() => setUploadDialogOpen(false)}
         onSuccess={handleUploadSuccess}
+      />
+
+      {/* Document Preview Dialog - Requirement: 7.5 */}
+      <CACDocumentPreview
+        open={previewOpen}
+        onClose={closePreview}
+        document={previewDocument}
+        ownerId={previewOwnerId}
       />
 
       {/* Delete Confirmation Dialog */}
