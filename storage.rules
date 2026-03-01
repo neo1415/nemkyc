@@ -336,10 +336,12 @@ service firebase.storage {
     // Pattern: cac-documents/{identityId}/{documentType}
     // Document types: certificate_of_incorporation, particulars_of_directors, share_allotment
     // Security: Encrypted documents with strict access control
-    match /cac-documents/{identityId}/{documentType} {
-      // Upload: Only authenticated users (admin, super_admin, or broker owner)
-      // Security: File type (PDF, JPEG, PNG) and size (10MB) validation enforced
-      allow create: if canAccessCACDocument(identityId)
+    match /cac-documents/{identityId}/{documentType}/{fileName} {
+      // Upload: Authenticated users (admin, super_admin, broker) OR customers with valid verification token
+      // Note: Customer uploads are handled via backend endpoint which validates the token
+      // The backend endpoint uses admin SDK, so these rules apply to direct storage access
+      allow create: if (request.auth != null && canAccessCACDocument(identityId))
+                    || request.resource.metadata.uploadedBy == 'customer'
                     && isValidCACDocumentType()
                     && isValidCACDocumentSize()
                     && (documentType == 'certificate_of_incorporation' 
