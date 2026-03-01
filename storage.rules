@@ -67,6 +67,32 @@ service firebase.storage {
       return request.resource.size <= 5 * 1024 * 1024;
     }
     
+    // Validate CAC document file size (10MB max)
+    function isValidCACDocumentSize() {
+      return request.resource.size <= 10 * 1024 * 1024;
+    }
+    
+    // Validate CAC document file type (PDF, JPEG, PNG only)
+    function isValidCACDocumentType() {
+      return request.resource.contentType.matches('image/jpeg')
+          || request.resource.contentType.matches('image/jpg')
+          || request.resource.contentType.matches('image/png')
+          || request.resource.contentType == 'application/pdf';
+    }
+    
+    // Check if user is a broker who owns the identity record
+    function isBrokerOwner(identityId) {
+      return request.auth != null 
+        && firestore.exists(/databases/(default)/documents/identityLists/$(identityId))
+        && firestore.get(/databases/(default)/documents/identityLists/$(identityId)).data.createdBy == request.auth.uid;
+    }
+    
+    // Check if user can access CAC documents for this identity
+    function canAccessCACDocument(identityId) {
+      return request.auth != null 
+        && (isAdminOrSuperAdmin() || isBrokerOwner(identityId));
+    }
+    
     // ========== KYC Forms ==========
     // Pattern: individual-kyc/{folder}/{fileName}
     // The fileService creates nested paths: path/timestamp_filename
@@ -304,6 +330,37 @@ service firebase.storage {
       
       // Only admins can update/delete
       allow update, delete: if isAdminOrSuperAdmin();
+    }
+    
+    // ========== CAC Documents ==========
+    // Pattern: cac-documents/{identityId}/{documentType}
+    // Document types: certificate_of_incorporation, particulars_of_directors, share_allotment
+    // Security: Encrypted documents with strict access control
+    match /cac-documents/{identityId}/{documentType} {
+      // Upload: Only authenticated users (admin, super_admin, or broker owner)
+      // Security: File type (PDF, JPEG, PNG) and size (10MB) validation enforced
+      allow create: if canAccessCACDocument(identityId)
+                    && isValidCACDocumentType()
+                    && isValidCACDocumentSize()
+                    && (documentType == 'certificate_of_incorporation' 
+                        || documentType == 'particulars_of_directors' 
+                        || documentType == 'share_allotment');
+      
+      // Read: Only authenticated users with proper authorization
+      // Note: Documents are encrypted, so even if accessed, content is protected
+      allow read: if canAccessCACDocument(identityId);
+      
+      // Update/Replace: Only authenticated users with proper authorization
+      // Security: Same validation as create
+      allow update: if canAccessCACDocument(identityId)
+                    && isValidCACDocumentType()
+                    && isValidCACDocumentSize()
+                    && (documentType == 'certificate_of_incorporation' 
+                        || documentType == 'particulars_of_directors' 
+                        || documentType == 'share_allotment');
+      
+      // Delete: Only admins and super admins (cleanup and compliance)
+      allow delete: if isAdminOrSuperAdmin();
     }
     
     // ========== Deny Everything Else ==========

@@ -1300,39 +1300,34 @@ export default function IdentityListDetail({
         )}
         
         <Box data-tour="request-buttons" sx={{ display: 'flex', gap: 1 }}>
-          {/* Show Request NIN button only for individual lists */}
-          {(!list?.listType || list.listType === 'individual') && (
-            <Button
-              variant="contained"
-              startIcon={<SendIcon />}
-              disabled={selectedCount === 0}
-              onClick={() => handleSendClick('NIN')}
-              sx={{ 
-                bgcolor: '#800020', 
-                '&:hover': { bgcolor: '#600018' },
-                color: 'white'
-              }}
-            >
-              Request NIN ({selectedCount})
-            </Button>
-          )}
+          {/* Show both buttons for all list types for testing */}
+          <Button
+            variant="contained"
+            startIcon={<SendIcon />}
+            disabled={selectedCount === 0}
+            onClick={() => handleSendClick('NIN')}
+            sx={{ 
+              bgcolor: '#800020', 
+              '&:hover': { bgcolor: '#600018' },
+              color: 'white'
+            }}
+          >
+            Request NIN ({selectedCount})
+          </Button>
           
-          {/* Show Request CAC button only for corporate lists */}
-          {list?.listType === 'corporate' && (
-            <Button
-              variant="contained"
-              startIcon={<SendIcon />}
-              disabled={selectedCount === 0}
-              onClick={() => handleSendClick('CAC')}
-              sx={{ 
-                bgcolor: '#B8860B', 
-                '&:hover': { bgcolor: '#8B6914' },
-                color: 'white'
-              }}
-            >
-              Request CAC ({selectedCount})
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            startIcon={<SendIcon />}
+            disabled={selectedCount === 0}
+            onClick={() => handleSendClick('CAC')}
+            sx={{ 
+              bgcolor: '#B8860B', 
+              '&:hover': { bgcolor: '#8B6914' },
+              color: 'white'
+            }}
+          >
+            Request CAC ({selectedCount})
+          </Button>
         </Box>
       </Box>
 

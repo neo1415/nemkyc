@@ -1,0 +1,706 @@
+/**
+ * CAC Document Upload Management - Responsive Styles
+ * 
+ * Provides responsive styling for CAC document upload, preview, and status display
+ * Requirements: 15.1, 15.2, 15.3, 15.4, 15.5, 15.6
+ */
+
+/* ============================================
+   Upload Fields - Responsive Layout
+   Requirement: 15.1
+   ============================================ */
+
+.cac-upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.cac-upload-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.cac-upload-field:hover {
+  border-color: #800020;
+  background-color: #f9f9f9;
+}
+
+.cac-upload-field.has-file {
+  border-color: #2e7d32;
+  border-style: solid;
+  background-color: #e8f5e9;
+}
+
+.cac-upload-field-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cac-upload-field-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.cac-upload-field-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.cac-upload-file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.cac-upload-progress {
+  width: 100%;
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.cac-upload-progress-bar {
+  height: 100%;
+  background-color: #800020;
+  transition: width 0.3s ease;
+}
+
+/* Tablet and below - Stack upload fields */
+@media (max-width: 768px) {
+  .cac-upload-container {
+    gap: 1rem;
+    padding: 0.75rem;
+  }
+
+  .cac-upload-field {
+    padding: 0.75rem;
+  }
+
+  .cac-upload-field-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cac-upload-field-title {
+    font-size: 0.9rem;
+  }
+
+  .cac-upload-field-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* Mobile - Optimize for small screens */
+@media (max-width: 480px) {
+  .cac-upload-container {
+    gap: 0.75rem;
+    padding: 0.5rem;
+  }
+
+  .cac-upload-field {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .cac-upload-field-title {
+    font-size: 0.85rem;
+  }
+
+  .cac-upload-file-info {
+    font-size: 0.75rem;
+  }
+}
+
+/* Minimum width support - 320px */
+@media (max-width: 320px) {
+  .cac-upload-container {
+    padding: 0.25rem;
+  }
+
+  .cac-upload-field {
+    padding: 0.5rem;
+  }
+
+  .cac-upload-field-title {
+    font-size: 0.8rem;
+  }
+}
+
+/* ============================================
+   Preview Modal - Responsive Design
+   Requirement: 15.2
+   ============================================ */
+
+.cac-preview-modal {
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+  max-height: 90vh;
+}
+
+.cac-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.cac-preview-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
+}
+
+.cac-preview-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.cac-preview-content {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.cac-preview-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.cac-preview-pdf {
+  width: 100%;
+  height: 100%;
+  border: none;
+  min-height: 600px;
+}
+
+/* Tablet - Adjust preview modal */
+@media (max-width: 768px) {
+  .cac-preview-modal {
+    height: 95vh;
+    max-height: 95vh;
+  }
+
+  .cac-preview-header {
+    padding: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .cac-preview-title {
+    font-size: 1rem;
+    max-width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  .cac-preview-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .cac-preview-content {
+    padding: 0.75rem;
+  }
+
+  .cac-preview-pdf {
+    min-height: 400px;
+  }
+}
+
+/* Mobile - Full screen preview */
+@media (max-width: 480px) {
+  .cac-preview-modal {
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .cac-preview-header {
+    padding: 0.5rem;
+  }
+
+  .cac-preview-title {
+    font-size: 0.9rem;
+  }
+
+  .cac-preview-content {
+    padding: 0.5rem;
+  }
+
+  .cac-preview-pdf {
+    min-height: 300px;
+  }
+
+  /* Hide zoom percentage on very small screens */
+  .cac-preview-zoom-display {
+    display: none;
+  }
+}
+
+/* Minimum width - 320px */
+@media (max-width: 320px) {
+  .cac-preview-header {
+    padding: 0.25rem;
+  }
+
+  .cac-preview-title {
+    font-size: 0.8rem;
+  }
+
+  .cac-preview-content {
+    padding: 0.25rem;
+  }
+}
+
+/* ============================================
+   Status Indicators - Mobile Friendly
+   Requirement: 15.3
+   ============================================ */
+
+.cac-status-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.cac-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.cac-status-indicator.uploaded {
+  background-color: #e8f5e9;
+  border-color: #2e7d32;
+  color: #2e7d32;
+}
+
+.cac-status-indicator.missing {
+  background-color: #ffebee;
+  border-color: #d32f2f;
+  color: #d32f2f;
+}
+
+.cac-status-indicator.pending {
+  background-color: #fff8e1;
+  border-color: #f57c00;
+  color: #f57c00;
+}
+
+.cac-status-indicator:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.cac-status-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.cac-status-label {
+  white-space: nowrap;
+}
+
+/* Tablet - Adjust status indicators */
+@media (max-width: 768px) {
+  .cac-status-container {
+    gap: 0.375rem;
+  }
+
+  .cac-status-indicator {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+  }
+
+  .cac-status-icon {
+    font-size: 0.9rem;
+  }
+}
+
+/* Mobile - Compact status indicators */
+@media (max-width: 480px) {
+  .cac-status-container {
+    gap: 0.25rem;
+  }
+
+  .cac-status-indicator {
+    padding: 2px 4px;
+    font-size: 0.65rem;
+  }
+
+  .cac-status-icon {
+    font-size: 0.8rem;
+  }
+
+  /* Abbreviate labels on mobile */
+  .cac-status-label.full-text {
+    display: none;
+  }
+
+  .cac-status-label.short-text {
+    display: inline;
+  }
+}
+
+/* Desktop - Show full labels */
+@media (min-width: 481px) {
+  .cac-status-label.short-text {
+    display: none;
+  }
+
+  .cac-status-label.full-text {
+    display: inline;
+  }
+}
+
+/* Minimum width - 320px */
+@media (max-width: 320px) {
+  .cac-status-indicator {
+    padding: 2px 3px;
+    font-size: 0.6rem;
+  }
+
+  .cac-status-icon {
+    font-size: 0.75rem;
+  }
+}
+
+/* ============================================
+   Touch-Friendly Controls
+   Requirement: 15.4
+   ============================================ */
+
+/* Increase touch target size on mobile */
+@media (max-width: 768px) {
+  .cac-touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Buttons */
+  .cac-button {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
+
+  /* Icon buttons */
+  .cac-icon-button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.5rem;
+  }
+
+  /* File input areas */
+  .cac-file-input-area {
+    min-height: 100px;
+    padding: 1rem;
+  }
+
+  /* Clickable status indicators */
+  .cac-status-indicator {
+    min-height: 36px;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+/* Extra spacing for touch on small screens */
+@media (max-width: 480px) {
+  .cac-touch-target {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  .cac-button {
+    min-height: 48px;
+    padding: 0.875rem 1.125rem;
+  }
+
+  .cac-icon-button {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  .cac-file-input-area {
+    min-height: 120px;
+  }
+
+  .cac-status-indicator {
+    min-height: 40px;
+  }
+}
+
+/* ============================================
+   Mobile Preview Optimization
+   Requirement: 15.6
+   ============================================ */
+
+/* Optimize image rendering for mobile */
+@media (max-width: 768px) {
+  .cac-preview-image {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+
+  /* Reduce PDF quality on mobile for faster loading */
+  .cac-preview-pdf {
+    image-rendering: auto;
+  }
+}
+
+/* Mobile-specific preview optimizations */
+@media (max-width: 480px) {
+  /* Enable hardware acceleration */
+  .cac-preview-content {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+
+  /* Optimize scrolling */
+  .cac-preview-content {
+    -webkit-overflow-scrolling: touch;
+    overflow-scrolling: touch;
+  }
+
+  /* Prevent zoom on double tap for preview controls */
+  .cac-preview-controls * {
+    touch-action: manipulation;
+  }
+}
+
+/* ============================================
+   Loading States - Responsive
+   ============================================ */
+
+.cac-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.cac-loading-spinner {
+  width: 60px;
+  height: 60px;
+}
+
+.cac-loading-text {
+  font-size: 1rem;
+  color: #666;
+}
+
+@media (max-width: 480px) {
+  .cac-loading-container {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+
+  .cac-loading-spinner {
+    width: 40px;
+    height: 40px;
+  }
+
+  .cac-loading-text {
+    font-size: 0.875rem;
+  }
+}
+
+/* ============================================
+   Error Messages - Responsive
+   ============================================ */
+
+.cac-error-message {
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: #ffebee;
+  border: 1px solid #d32f2f;
+  color: #d32f2f;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 480px) {
+  .cac-error-message {
+    padding: 0.75rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* ============================================
+   Document List - Responsive Grid
+   ============================================ */
+
+.cac-document-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .cac-document-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .cac-document-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+}
+
+/* ============================================
+   Accessibility Enhancements
+   ============================================ */
+
+/* Focus visible for keyboard navigation */
+.cac-upload-field:focus-within,
+.cac-status-indicator:focus-visible,
+.cac-button:focus-visible {
+  outline: 2px solid #800020;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .cac-upload-field {
+    border-width: 3px;
+  }
+
+  .cac-status-indicator {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .cac-upload-field,
+  .cac-status-indicator,
+  .cac-preview-image {
+    transition: none;
+  }
+}
+
+/* ============================================
+   Print Styles
+   ============================================ */
+
+@media print {
+  .cac-upload-field-actions,
+  .cac-preview-controls {
+    display: none;
+  }
+
+  .cac-preview-modal {
+    height: auto;
+    max-height: none;
+  }
+
+  .cac-preview-content {
+    overflow: visible;
+  }
+}
+
+/* ============================================
+   Landscape Orientation Optimizations
+   ============================================ */
+
+@media (max-width: 768px) and (orientation: landscape) {
+  .cac-preview-modal {
+    height: 100vh;
+  }
+
+  .cac-preview-header {
+    padding: 0.5rem;
+  }
+
+  .cac-preview-content {
+    padding: 0.5rem;
+  }
+
+  .cac-preview-pdf {
+    min-height: 250px;
+  }
+}
+
+/* ============================================
+   Dark Mode Support (Optional)
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  .cac-upload-field {
+    background-color: #1e1e1e;
+    border-color: #444;
+  }
+
+  .cac-upload-field:hover {
+    background-color: #2a2a2a;
+    border-color: #a00028;
+  }
+
+  .cac-upload-field.has-file {
+    background-color: #1a3a1a;
+    border-color: #4caf50;
+  }
+
+  .cac-upload-field-title {
+    color: #e0e0e0;
+  }
+
+  .cac-upload-file-info {
+    color: #b0b0b0;
+  }
+
+  .cac-preview-header {
+    background-color: #1e1e1e;
+    border-bottom-color: #444;
+  }
+
+  .cac-preview-title {
+    color: #e0e0e0;
+  }
+
+  .cac-loading-text {
+    color: #b0b0b0;
+  }
+}

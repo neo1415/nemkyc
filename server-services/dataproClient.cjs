@@ -144,6 +144,7 @@ async function verifyNIN(nin) {
     console.error('[DataproClient] NIN is required');
     return {
       success: false,
+      cost: 0, // Failed verifications cost ₦0
       error: 'NIN is required',
       errorCode: 'INVALID_INPUT',
       details: {}
@@ -155,6 +156,7 @@ async function verifyNIN(nin) {
     console.error(`[DataproClient] Invalid NIN format: ${maskNIN(nin)}`);
     return {
       success: false,
+      cost: 0, // Failed verifications cost ₦0
       error: 'Invalid NIN format. NIN must be 11 digits.',
       errorCode: 'INVALID_FORMAT',
       details: { nin: maskNIN(nin) }
@@ -166,6 +168,7 @@ async function verifyNIN(nin) {
     console.error('[DataproClient] DATAPRO_SERVICE_ID not configured');
     return {
       success: false,
+      cost: 0, // Failed verifications cost ₦0
       error: 'Datapro API not configured. Please contact support.',
       errorCode: 'NOT_CONFIGURED',
       details: {}
@@ -188,6 +191,7 @@ async function verifyNIN(nin) {
     console.error(`[DataproClient] Rate limit exceeded: ${rateLimitError.message}`);
     return {
       success: false,
+      cost: 0, // Failed verifications cost ₦0
       error: 'Too many verification requests. Please try again later.',
       errorCode: 'RATE_LIMIT_EXCEEDED',
       details: { message: rateLimitError.message }
@@ -222,6 +226,7 @@ async function verifyNIN(nin) {
           if (parseResult.errorCode === 'EMPTY_RESPONSE') {
             return {
               success: false,
+              cost: 0, // Failed verifications cost ₦0
               error: 'NIN not found in NIMC database. Please verify the NIN and try again.',
               errorCode: 'NIN_NOT_FOUND',
               details: parseResult.details
@@ -229,6 +234,7 @@ async function verifyNIN(nin) {
           }
           return {
             success: false,
+            cost: 0, // Failed verifications cost ₦0
             error: 'Invalid response from verification service',
             errorCode: parseResult.errorCode,
             details: parseResult.details
@@ -242,6 +248,7 @@ async function verifyNIN(nin) {
           console.error('[DataproClient] Invalid response structure');
           return {
             success: false,
+            cost: 0, // Failed verifications cost ₦0
             error: 'Invalid response structure from verification service',
             errorCode: 'INVALID_RESPONSE',
             details: {}
@@ -253,6 +260,7 @@ async function verifyNIN(nin) {
           console.warn(`[DataproClient] Verification failed with code: ${parsedData.ResponseInfo.ResponseCode}`);
           return {
             success: false,
+            cost: 0, // Failed verifications cost ₦0
             error: parsedData.ResponseInfo.Message || 'NIN not found in NIMC database',
             errorCode: 'NIN_NOT_FOUND',
             details: {
@@ -273,6 +281,7 @@ async function verifyNIN(nin) {
         
         return {
           success: true,
+          cost: 100, // Successful NIN verification costs ₦100
           data: {
             firstName: cleanValue(parsedData.ResponseData.FirstName || parsedData.ResponseData.firstname),
             middleName: cleanValue(parsedData.ResponseData.MiddleName || parsedData.ResponseData.middlename),
@@ -297,6 +306,7 @@ async function verifyNIN(nin) {
         console.error(`[DataproClient] Bad request (400) for NIN: ${maskNIN(nin)}`);
         return {
           success: false,
+          cost: 0, // Failed verifications cost ₦0
           error: 'Invalid NIN format. Please check and try again.',
           errorCode: 'BAD_REQUEST',
           details: { statusCode: 400 }
@@ -305,6 +315,7 @@ async function verifyNIN(nin) {
         console.error('[DataproClient] Authorization failed (401)');
         return {
           success: false,
+          cost: 0, // Failed verifications cost ₦0
           error: 'Verification service unavailable. Please contact support.',
           errorCode: 'UNAUTHORIZED',
           details: { statusCode: 401 }
@@ -313,6 +324,7 @@ async function verifyNIN(nin) {
         console.error('[DataproClient] Invalid service ID (87)');
         return {
           success: false,
+          cost: 0, // Failed verifications cost ₦0
           error: 'Verification service unavailable. Please contact support.',
           errorCode: 'INVALID_SERVICE_ID',
           details: { statusCode: 87 }
@@ -322,6 +334,7 @@ async function verifyNIN(nin) {
         // This is retryable
         lastError = {
           success: false,
+          cost: 0, // Failed verifications cost ₦0
           error: 'Network error. Please try again later.',
           errorCode: 'NETWORK_ERROR',
           details: { statusCode: 88, attempt }
@@ -340,6 +353,7 @@ async function verifyNIN(nin) {
         console.error(`[DataproClient] Unexpected status code: ${statusCode}`);
         return {
           success: false,
+          cost: 0, // Failed verifications cost ₦0
           error: 'Unexpected error from verification service',
           errorCode: 'UNEXPECTED_STATUS',
           details: { statusCode }
@@ -349,6 +363,7 @@ async function verifyNIN(nin) {
       console.error(`[DataproClient] Request error on attempt ${attempt}: ${error.message}`);
       lastError = {
         success: false,
+        cost: 0, // Failed verifications cost ₦0
         error: 'Network error. Please try again later.',
         errorCode: 'NETWORK_ERROR',
         details: { 
@@ -372,6 +387,7 @@ async function verifyNIN(nin) {
   console.error(`[DataproClient] All ${MAX_RETRIES} attempts failed for NIN: ${maskNIN(nin)}`);
   return lastError || {
     success: false,
+    cost: 0, // Failed verifications cost ₦0
     error: 'Network error. Please try again later.',
     errorCode: 'MAX_RETRIES_EXCEEDED',
     details: { maxRetries: MAX_RETRIES }

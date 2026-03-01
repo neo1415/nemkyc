@@ -110,9 +110,9 @@ describe('Duplicate Detection Infrastructure Integration', () => {
 
       const costEstimate = calculateCost(toVerify);
 
-      expect(costEstimate.totalCost).toBe(8 * 50 + 4 * 50 + 3 * 100); // 400 + 200 + 300 = 900
+      expect(costEstimate.totalCost).toBe(8 * 100 + 4 * 50 + 3 * 100); // 800 + 200 + 300 = 1300
       expect(costEstimate.currency).toBe('NGN');
-      expect(costEstimate.breakdown.nin).toBe(400);
+      expect(costEstimate.breakdown.nin).toBe(800);
       expect(costEstimate.breakdown.bvn).toBe(200);
       expect(costEstimate.breakdown.cac).toBe(300);
     });

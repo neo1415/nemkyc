@@ -28,5 +28,10 @@ export default defineConfig(({ mode }) => ({
       'server-utils/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
       'server-services/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'
     ],
+    css: {
+      modules: {
+        classNameStrategy: 'non-scoped'
+      }
+    }
   },
 }));

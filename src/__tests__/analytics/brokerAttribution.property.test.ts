@@ -234,7 +234,7 @@ describe('Broker Attribution Property Tests', () => {
               totalCalls: calls,
               dataproCalls: Math.floor(calls / 2),
               verifydataCalls: Math.floor(calls / 2),
-              totalCost: calls * 50,
+              totalCost: calls * 100, // Both providers cost ₦100 per call
               successRate: 95,
               lastActivity: new Date(),
             }));

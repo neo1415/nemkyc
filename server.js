@@ -162,6 +162,70 @@ async function ipBasedRateLimit(req, res, next) {
   }
 }
 
+// ========================================
+// SESSION CACHE (to reduce Firestore reads)
+// ========================================
+const sessionCache = new Map();
+const SESSION_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache TTL
+
+/**
+ * Get user session from cache or Firestore
+ * @param {string} sessionToken - The session token
+ * @param {object} db - Firestore database instance
+ * @returns {Promise<object|null>} User data or null if not found
+ */
+async function getCachedSession(sessionToken, db) {
+  const now = Date.now();
+  const cached = sessionCache.get(sessionToken);
+  
+  // Return cached data if still valid
+  if (cached && (now - cached.timestamp) < SESSION_CACHE_TTL) {
+    return cached.data;
+  }
+  
+  // Fetch from Firestore
+  const userDoc = await db.collection('userroles').doc(sessionToken).get();
+  
+  if (!userDoc.exists) {
+    // Remove from cache if exists
+    sessionCache.delete(sessionToken);
+    return null;
+  }
+  
+  const userData = userDoc.data();
+  
+  // Cache the result
+  sessionCache.set(sessionToken, {
+    data: userData,
+    timestamp: now
+  });
+  
+  return userData;
+}
+
+/**
+ * Invalidate session cache for a specific token
+ * @param {string} sessionToken - The session token to invalidate
+ */
+function invalidateSessionCache(sessionToken) {
+  sessionCache.delete(sessionToken);
+}
+
+/**
+ * Clear expired cache entries (run periodically)
+ */
+function cleanupSessionCache() {
+  const now = Date.now();
+  for (const [token, cached] of sessionCache.entries()) {
+    if ((now - cached.timestamp) >= SESSION_CACHE_TTL) {
+      sessionCache.delete(token);
+    }
+  }
+}
+
+// Run cache cleanup every 10 minutes
+setInterval(cleanupSessionCache, 10 * 60 * 1000);
+
 // Import duplicate detector for bulk verification
 const {
   checkDuplicate,
@@ -637,6 +701,8 @@ app.use(cors({
     'CSRF-Token',
     'X-Requested-With',
     'Authorization',
+    'Accept',
+    'Origin',
     'x-timestamp',
     'x-nonce',
     'x-request-id',
@@ -862,10 +928,10 @@ const requireAuth = async (req, res, next) => {
       });
     }
 
-    // Get user data from Firestore
-    const userDoc = await db.collection('userroles').doc(sessionToken).get();
+    // Get user data from cache or Firestore
+    const userData = await getCachedSession(sessionToken, db);
     
-    if (!userDoc.exists) {
+    if (!userData) {
       console.log('❌ Auth failed: Invalid session token');
       
       // Log invalid session attempt
@@ -891,11 +957,10 @@ const requireAuth = async (req, res, next) => {
         message: 'Your session has expired. Please sign in again.'
       });
     }
-
-    const userData = userDoc.data();
     
     // ✅ SESSION TIMEOUT CHECK (2 hours of inactivity)
     const SESSION_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours (increased from 30 minutes)
+    const ACTIVITY_UPDATE_INTERVAL = 5 * 60 * 1000; // Only update lastActivity every 5 minutes
     
     // Check timeout if lastActivity exists
     if (userData.lastActivity) {
@@ -904,24 +969,33 @@ const requireAuth = async (req, res, next) => {
       if (timeSinceLastActivity > SESSION_TIMEOUT) {
         logger.warn(`Session expired due to inactivity: ${userData.email}`);
         // Don't delete the userroles document! Just clear the session cookie
+        invalidateSessionCache(sessionToken); // Clear from cache
         res.clearCookie('__session');
         return res.status(401).json({ 
           error: 'Session expired',
           message: 'Your session has expired due to inactivity. Please sign in again.'
         });
       }
+      
+      // Only update lastActivity if it's been more than 5 minutes since last update
+      if (timeSinceLastActivity > ACTIVITY_UPDATE_INTERVAL) {
+        // Update in background (don't await to avoid slowing down requests)
+        db.collection('userroles').doc(sessionToken).update({
+          lastActivity: Date.now()
+        }).then(() => {
+          // Invalidate cache so next request gets fresh data
+          invalidateSessionCache(sessionToken);
+        }).catch(err => logger.error('Failed to update lastActivity:', err));
+      }
     } else {
       // ✅ MIGRATION: If lastActivity doesn't exist, set it now (for existing sessions)
       logger.info(`Initializing lastActivity for existing session: ${userData.email}`);
-      await db.collection('userroles').doc(sessionToken).update({
+      db.collection('userroles').doc(sessionToken).update({
         lastActivity: Date.now()
+      }).then(() => {
+        invalidateSessionCache(sessionToken);
       }).catch(err => logger.error('Failed to initialize lastActivity:', err));
     }
-    
-    // Update last activity timestamp (don't await to avoid slowing down requests)
-    db.collection('userroles').doc(sessionToken).update({
-      lastActivity: Date.now()
-    }).catch(err => logger.error('Failed to update lastActivity:', err));
     
     // Attach user data to request for use in route handlers
     req.user = {
@@ -4883,7 +4957,6 @@ app.post('/api/autofill/verify-nin', requireAuth, ipBasedRateLimit, verification
           metadata: {
             source: 'auto-fill',
             cacheHit: false,
-            cost: 100,
             formId: formId || null,
             userAgent: req.headers['user-agent'],
             fieldsValidated: dataproResult.data ? Object.keys(dataproResult.data) : [],
@@ -5109,7 +5182,6 @@ app.post('/api/autofill/verify-cac', requireAuth, ipBasedRateLimit, verification
           metadata: {
             source: 'auto-fill',
             cacheHit: false,
-            cost: 100,
             formId: formId || null,
             userAgent: req.headers['user-agent'],
             fieldsValidated: verifydataResult.data ? Object.keys(verifydataResult.data) : [],
@@ -10409,6 +10481,10 @@ app.post('/api/identity/lists/:listId/send', requireAuth, requireBrokerOrAdmin, 
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
         
+        console.log(`   ✓ Token saved for entry ${entry.id}: ${token.substring(0, 8)}... (${token.length} chars)`);
+        console.log(`   ✓ Verification type: ${verificationType}`);
+        console.log(`   ✓ Expires: ${expirationDateStr}`);
+        
         // Generate verification URL
         const baseUrl = process.env.FRONTEND_URL || 'https://nemforms.com';
         const verificationUrl = `${baseUrl}/verify/${token}`;
@@ -10676,6 +10752,15 @@ function escapeHtmlServer(text) {
 }
 
 /**
+ * OPTIONS /api/identity/verify/:token
+ * Handle preflight requests for CORS
+ */
+app.options('/api/identity/verify/:token', (req, res) => {
+  console.log('✅ CORS Preflight: /api/identity/verify/:token from origin:', req.headers.origin);
+  res.status(204).send();
+});
+
+/**
  * GET /api/identity/verify/:token
  * Validate a verification token and return entry info
  * 
@@ -10694,6 +10779,13 @@ app.get('/api/identity/verify/:token', async (req, res) => {
   try {
     const { token } = req.params;
     
+    // Log CORS headers for debugging
+    console.log('🔍 CORS Debug - Request Origin:', req.headers.origin);
+    console.log('🔍 CORS Debug - Response Headers:', {
+      'Access-Control-Allow-Origin': res.getHeader('Access-Control-Allow-Origin'),
+      'Access-Control-Allow-Credentials': res.getHeader('Access-Control-Allow-Credentials')
+    });
+    
     if (!token) {
       return res.status(400).json({
         valid: false,
@@ -10702,6 +10794,7 @@ app.get('/api/identity/verify/:token', async (req, res) => {
     }
     
     console.log(`🔍 Validating identity verification token: ${token.substring(0, 8)}...`);
+    console.log(`   Full token length: ${token.length} characters`);
     
     // Find entry by token
     const entriesSnapshot = await db.collection('identity-entries')
@@ -10709,8 +10802,16 @@ app.get('/api/identity/verify/:token', async (req, res) => {
       .limit(1)
       .get();
     
+    console.log(`   Query result: ${entriesSnapshot.empty ? 'NO MATCH' : 'FOUND'}`);
+    
     if (entriesSnapshot.empty) {
-      console.log('❌ Token not found');
+      console.log('❌ Token not found in database');
+      console.log('   Checking if any entries exist in collection...');
+      
+      // Debug: Check if collection has any entries at all
+      const anyEntriesSnapshot = await db.collection('identity-entries').limit(1).get();
+      console.log(`   Collection has entries: ${!anyEntriesSnapshot.empty}`);
+      
       return res.json({
         valid: false,
         error: 'Invalid verification link. Please check the link or contact your insurance provider.'
@@ -14369,6 +14470,515 @@ app.get('/api/identity/queue/stats', requireAuth, requireAdmin, async (req, res)
 
 // ============= END IDENTITY COLLECTION SYSTEM API =============
 
+// ============= CAC DOCUMENT UPLOAD MANAGEMENT API =============
+
+/**
+ * Upload CAC Document
+ * 
+ * POST /api/cac-documents/upload
+ * 
+ * Body:
+ * - file: File (multipart/form-data)
+ * - documentType: string (certificate_of_incorporation, particulars_of_directors, share_allotment)
+ * - identityRecordId: string
+ * - isReplacement: boolean
+ * - replacementReason: string (optional)
+ * 
+ * Requirements: 3.2, 3.6, 4.1, 5.1, 11.2
+ */
+app.post('/api/cac-documents/upload', requireAuth, requireBrokerOrAdmin, async (req, res) => {
+  try {
+    const { documentType, identityRecordId, isReplacement, replacementReason } = req.body;
+    const userId = req.user.uid;
+    const userEmail = req.user.email;
+    
+    console.log(`📄 User ${userEmail} uploading CAC document: ${documentType} for identity ${identityRecordId}`);
+    
+    // Validate required fields
+    if (!documentType || !identityRecordId) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'documentType and identityRecordId are required'
+      });
+    }
+    
+    // Validate document type
+    const validDocumentTypes = ['certificate_of_incorporation', 'particulars_of_directors', 'share_allotment'];
+    if (!validDocumentTypes.includes(documentType)) {
+      return res.status(400).json({
+        error: 'Invalid document type',
+        message: `documentType must be one of: ${validDocumentTypes.join(', ')}`
+      });
+    }
+    
+    // Check access control - user must have access to the identity record
+    const identityRef = db.collection('identity-lists').doc(identityRecordId);
+    const identityDoc = await identityRef.get();
+    
+    if (!identityDoc.exists) {
+      return res.status(404).json({
+        error: 'Identity record not found',
+        message: `Identity record ${identityRecordId} does not exist`
+      });
+    }
+    
+    const identityData = identityDoc.data();
+    const userRole = req.user.role;
+    
+    // Check if user has access to this identity record
+    const hasAccess = await canAccessIdentityList(userId, userRole, identityRecordId);
+    if (!hasAccess) {
+      // Log failed access attempt
+      await createAuditLog('cac_document_upload_denied', {
+        documentType,
+        identityRecordId,
+        reason: 'Insufficient permissions'
+      }, 'user', userId, {
+        userEmail,
+        userRole
+      });
+      
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'You do not have permission to upload documents for this identity record'
+      });
+    }
+    
+    // Note: File upload handling would be done on the frontend with Firebase Storage
+    // This endpoint receives metadata after successful upload
+    // The actual file upload is handled by the frontend cacStorageService
+    
+    // Log successful upload
+    await createAuditLog('cac_document_uploaded', {
+      documentType,
+      identityRecordId,
+      isReplacement: isReplacement || false,
+      replacementReason: replacementReason || null
+    }, 'user', userId, {
+      userEmail,
+      userRole
+    });
+    
+    console.log(`✅ CAC document upload logged for identity ${identityRecordId}`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Document upload logged successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error handling CAC document upload:', error);
+    res.status(500).json({
+      error: 'Failed to process document upload',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Get CAC Document by ID
+ * 
+ * GET /api/cac-documents/:documentId
+ * 
+ * Requirements: 3.2, 4.1
+ */
+app.get('/api/cac-documents/:documentId', requireAuth, async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const userId = req.user.uid;
+    const userEmail = req.user.email;
+    const userRole = req.user.role;
+    
+    console.log(`📄 User ${userEmail} requesting CAC document: ${documentId}`);
+    
+    // Get document metadata from Firestore
+    const docRef = db.collection('cac-document-metadata').doc(documentId);
+    const docSnap = await docRef.get();
+    
+    if (!docSnap.exists) {
+      return res.status(404).json({
+        error: 'Document not found',
+        message: `Document ${documentId} does not exist`
+      });
+    }
+    
+    const docData = docSnap.data();
+    const identityRecordId = docData.identityRecordId;
+    
+    // Check access control
+    const hasAccess = await canAccessIdentityList(userId, userRole, identityRecordId);
+    if (!hasAccess) {
+      // Log failed access attempt
+      await createAuditLog('cac_document_access_denied', {
+        documentId,
+        identityRecordId,
+        action: 'view',
+        reason: 'Insufficient permissions'
+      }, 'user', userId, {
+        userEmail,
+        userRole
+      });
+      
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'You do not have permission to view this document'
+      });
+    }
+    
+    // Log successful access
+    await createAuditLog('cac_document_viewed', {
+      documentId,
+      identityRecordId,
+      documentType: docData.documentType
+    }, 'user', userId, {
+      userEmail,
+      userRole
+    });
+    
+    console.log(`✅ CAC document ${documentId} accessed by ${userEmail}`);
+    
+    res.status(200).json({
+      success: true,
+      document: docData
+    });
+    
+  } catch (error) {
+    console.error('❌ Error retrieving CAC document:', error);
+    res.status(500).json({
+      error: 'Failed to retrieve document',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Get CAC Documents by Identity Record ID
+ * 
+ * GET /api/cac-documents/identity/:identityId
+ * 
+ * Requirements: 3.6, 4.1
+ */
+app.get('/api/cac-documents/identity/:identityId', requireAuth, async (req, res) => {
+  try {
+    const { identityId } = req.params;
+    const userId = req.user.uid;
+    const userEmail = req.user.email;
+    const userRole = req.user.role;
+    
+    console.log(`📄 User ${userEmail} requesting CAC documents for identity: ${identityId}`);
+    
+    // Check access control
+    const hasAccess = await canAccessIdentityList(userId, userRole, identityId);
+    if (!hasAccess) {
+      // Log failed access attempt
+      await createAuditLog('cac_documents_access_denied', {
+        identityRecordId: identityId,
+        action: 'list',
+        reason: 'Insufficient permissions'
+      }, 'user', userId, {
+        userEmail,
+        userRole
+      });
+      
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'You do not have permission to view documents for this identity record'
+      });
+    }
+    
+    // Query documents for this identity record
+    const docsSnapshot = await db.collection('cac-document-metadata')
+      .where('identityRecordId', '==', identityId)
+      .where('isCurrent', '==', true)
+      .orderBy('uploadedAt', 'desc')
+      .get();
+    
+    const documents = [];
+    docsSnapshot.forEach(doc => {
+      documents.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    // Log successful access
+    await createAuditLog('cac_documents_listed', {
+      identityRecordId: identityId,
+      documentCount: documents.length
+    }, 'user', userId, {
+      userEmail,
+      userRole
+    });
+    
+    console.log(`✅ Retrieved ${documents.length} CAC documents for identity ${identityId}`);
+    
+    res.status(200).json({
+      success: true,
+      documents,
+      count: documents.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Error retrieving CAC documents:', error);
+    res.status(500).json({
+      error: 'Failed to retrieve documents',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Replace CAC Document
+ * 
+ * PUT /api/cac-documents/:documentId/replace
+ * 
+ * Body:
+ * - replacementReason: string (optional)
+ * 
+ * Requirements: 11.2, 4.1, 5.1
+ */
+app.put('/api/cac-documents/:documentId/replace', requireAuth, requireBrokerOrAdmin, async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const { replacementReason } = req.body;
+    const userId = req.user.uid;
+    const userEmail = req.user.email;
+    const userRole = req.user.role;
+    
+    console.log(`📄 User ${userEmail} replacing CAC document: ${documentId}`);
+    
+    // Get existing document metadata
+    const docRef = db.collection('cac-document-metadata').doc(documentId);
+    const docSnap = await docRef.get();
+    
+    if (!docSnap.exists) {
+      return res.status(404).json({
+        error: 'Document not found',
+        message: `Document ${documentId} does not exist`
+      });
+    }
+    
+    const docData = docSnap.data();
+    const identityRecordId = docData.identityRecordId;
+    
+    // Check access control
+    const hasAccess = await canAccessIdentityList(userId, userRole, identityRecordId);
+    if (!hasAccess) {
+      // Log failed access attempt
+      await createAuditLog('cac_document_replace_denied', {
+        documentId,
+        identityRecordId,
+        reason: 'Insufficient permissions'
+      }, 'user', userId, {
+        userEmail,
+        userRole
+      });
+      
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'You do not have permission to replace this document'
+      });
+    }
+    
+    // Note: Actual file replacement is handled by frontend
+    // This endpoint logs the replacement event
+    
+    // Log replacement event
+    await createAuditLog('cac_document_replaced', {
+      documentId,
+      identityRecordId,
+      documentType: docData.documentType,
+      oldVersion: docData.version,
+      newVersion: (docData.version || 1) + 1,
+      replacementReason: replacementReason || 'No reason provided'
+    }, 'user', userId, {
+      userEmail,
+      userRole
+    });
+    
+    console.log(`✅ CAC document ${documentId} replacement logged`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Document replacement logged successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error handling CAC document replacement:', error);
+    res.status(500).json({
+      error: 'Failed to process document replacement',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Delete CAC Document
+ * 
+ * DELETE /api/cac-documents/:documentId
+ * 
+ * Requirements: 4.1, 5.1
+ */
+app.delete('/api/cac-documents/:documentId', requireAuth, requireBrokerOrAdmin, async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const userId = req.user.uid;
+    const userEmail = req.user.email;
+    const userRole = req.user.role;
+    
+    console.log(`📄 User ${userEmail} deleting CAC document: ${documentId}`);
+    
+    // Get document metadata
+    const docRef = db.collection('cac-document-metadata').doc(documentId);
+    const docSnap = await docRef.get();
+    
+    if (!docSnap.exists) {
+      return res.status(404).json({
+        error: 'Document not found',
+        message: `Document ${documentId} does not exist`
+      });
+    }
+    
+    const docData = docSnap.data();
+    const identityRecordId = docData.identityRecordId;
+    
+    // Check access control
+    const hasAccess = await canAccessIdentityList(userId, userRole, identityRecordId);
+    if (!hasAccess) {
+      // Log failed access attempt
+      await createAuditLog('cac_document_delete_denied', {
+        documentId,
+        identityRecordId,
+        reason: 'Insufficient permissions'
+      }, 'user', userId, {
+        userEmail,
+        userRole
+      });
+      
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'You do not have permission to delete this document'
+      });
+    }
+    
+    // Note: Actual file deletion is handled by frontend
+    // This endpoint marks the document as deleted in metadata
+    
+    // Mark document as deleted
+    await docRef.update({
+      status: 'deleted',
+      deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+      deletedBy: userId,
+      isCurrent: false
+    });
+    
+    // Log deletion event
+    await createAuditLog('cac_document_deleted', {
+      documentId,
+      identityRecordId,
+      documentType: docData.documentType
+    }, 'user', userId, {
+      userEmail,
+      userRole
+    });
+    
+    console.log(`✅ CAC document ${documentId} deleted by ${userEmail}`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Document deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error deleting CAC document:', error);
+    res.status(500).json({
+      error: 'Failed to delete document',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Download CAC Document
+ * 
+ * GET /api/cac-documents/:documentId/download
+ * 
+ * Requirements: 4.1, 5.1, 9.1
+ */
+app.get('/api/cac-documents/:documentId/download', requireAuth, async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const userId = req.user.uid;
+    const userEmail = req.user.email;
+    const userRole = req.user.role;
+    
+    console.log(`📄 User ${userEmail} downloading CAC document: ${documentId}`);
+    
+    // Get document metadata
+    const docRef = db.collection('cac-document-metadata').doc(documentId);
+    const docSnap = await docRef.get();
+    
+    if (!docSnap.exists) {
+      return res.status(404).json({
+        error: 'Document not found',
+        message: `Document ${documentId} does not exist`
+      });
+    }
+    
+    const docData = docSnap.data();
+    const identityRecordId = docData.identityRecordId;
+    
+    // Check access control
+    const hasAccess = await canAccessIdentityList(userId, userRole, identityRecordId);
+    if (!hasAccess) {
+      // Log failed access attempt
+      await createAuditLog('cac_document_download_denied', {
+        documentId,
+        identityRecordId,
+        reason: 'Insufficient permissions'
+      }, 'user', userId, {
+        userEmail,
+        userRole
+      });
+      
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'You do not have permission to download this document'
+      });
+    }
+    
+    // Log download event
+    await createAuditLog('cac_document_downloaded', {
+      documentId,
+      identityRecordId,
+      documentType: docData.documentType,
+      filename: docData.filename
+    }, 'user', userId, {
+      userEmail,
+      userRole
+    });
+    
+    console.log(`✅ CAC document ${documentId} download logged for ${userEmail}`);
+    
+    // Note: Actual file download is handled by frontend using Firebase Storage
+    // This endpoint logs the download event and returns metadata
+    res.status(200).json({
+      success: true,
+      document: docData,
+      message: 'Download authorized'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error handling CAC document download:', error);
+    res.status(500).json({
+      error: 'Failed to process document download',
+      message: error.message
+    });
+  }
+});
+
+// ============= END CAC DOCUMENT UPLOAD MANAGEMENT API =============
+
 // ============= AUDIT LOGGING API =============
 
 /**
@@ -14789,6 +15399,10 @@ app.get('/api/analytics/overview', requireAuth, requireSuperAdmin, async (req, r
     let usageLogsSnapshot;
     let dataproCalls = 0;
     let verifydataCalls = 0;
+    let dataproSuccessCalls = 0;
+    let verifydataSuccessCalls = 0;
+    let dataproCost = 0;
+    let verifydataCost = 0;
     let totalCostFromLogs = 0;
     
     try {
@@ -14799,11 +15413,19 @@ app.get('/api/analytics/overview', requireAuth, requireSuperAdmin, async (req, r
       usageLogsSnapshot.forEach(doc => {
         const data = doc.data();
         
-        // Count calls by provider
+        // Count calls by provider and track successful calls
         if (data.apiProvider === 'datapro') {
           dataproCalls++;
+          if (data.success) {
+            dataproSuccessCalls++;
+            dataproCost += 100; // ₦100 per successful NIN verification
+          }
         } else if (data.apiProvider === 'verifydata') {
           verifydataCalls++;
+          if (data.success) {
+            verifydataSuccessCalls++;
+            verifydataCost += 100; // ₦100 per successful CAC verification
+          }
         }
         
         // Sum actual costs from logs (uses stored cost field if available)
@@ -14821,7 +15443,7 @@ app.get('/api/analytics/overview', requireAuth, requireSuperAdmin, async (req, r
     // Use calculated cost from logs if available, otherwise fall back to estimation
     const totalCost = totalCostFromLogs > 0 
       ? totalCostFromLogs 
-      : (dataproCalls * 100) + (verifydataCalls * 100); // Both NIN and CAC cost ₦100
+      : dataproCost + verifydataCost; // Use calculated costs based on successful calls only
     const successRate = totalCalls > 0 ? (successfulCalls / totalCalls) * 100 : 0;
     
     // Get previous month for comparison
@@ -14862,8 +15484,8 @@ app.get('/api/analytics/overview', requireAuth, requireSuperAdmin, async (req, r
       failedCalls,
       dataproCalls,
       verifydataCalls,
-      dataproCost: dataproCalls * 100, // Datapro NIN costs ₦100
-      verifydataCost: verifydataCalls * 100,
+      dataproCost, // Use calculated cost (only successful calls)
+      verifydataCost, // Use calculated cost (only successful calls)
       totalCost,
       successRate: parseFloat(successRate.toFixed(2)),
       failureRate: parseFloat(((failedCalls / totalCalls) * 100 || 0).toFixed(2)),
@@ -15031,7 +15653,12 @@ app.get('/api/analytics/daily-usage', requireAuth, requireSuperAdmin, async (req
           successfulCalls: 0,
           failedCalls: 0,
           dataproCalls: 0,
-          verifydataCalls: 0
+          verifydataCalls: 0,
+          dataproSuccessCalls: 0,
+          verifydataSuccessCalls: 0,
+          dataproCost: 0,
+          verifydataCost: 0,
+          totalCost: 0
         });
       }
       
@@ -15044,11 +15671,22 @@ app.get('/api/analytics/daily-usage', requireAuth, requireSuperAdmin, async (req
         stats.failedCalls++;
       }
       
-      // Count by provider
+      // Count by provider and calculate costs
+      // Only successful calls are charged: ₦100 per successful verification
       if (data.apiProvider === 'datapro') {
         stats.dataproCalls++;
+        if (data.success) {
+          stats.dataproSuccessCalls++;
+          stats.dataproCost += 100; // ₦100 per successful NIN verification
+          stats.totalCost += 100;
+        }
       } else if (data.apiProvider === 'verifydata') {
         stats.verifydataCalls++;
+        if (data.success) {
+          stats.verifydataSuccessCalls++;
+          stats.verifydataCost += 100; // ₦100 per successful CAC verification
+          stats.totalCost += 100;
+        }
       }
     });
     
@@ -15069,7 +15707,12 @@ app.get('/api/analytics/daily-usage', requireAuth, requireSuperAdmin, async (req
           successfulCalls: 0,
           failedCalls: 0,
           dataproCalls: 0,
-          verifydataCalls: 0
+          verifydataCalls: 0,
+          dataproSuccessCalls: 0,
+          verifydataSuccessCalls: 0,
+          dataproCost: 0,
+          verifydataCost: 0,
+          totalCost: 0
         });
       }
       
@@ -15548,22 +16191,31 @@ app.get('/api/analytics/cost-tracking', requireAuth, requireSuperAdmin, async (r
     let dataproCalls = 0;
     let verifydataCalls = 0;
     
+    let dataproSuccessCalls = 0;
+    let verifydataSuccessCalls = 0;
+    
     dataproSnapshot.forEach(doc => {
       const data = doc.data();
-      // Count both successful and failed calls for accurate cost tracking
-      // API providers charge for both successful and failed verification attempts
+      // Only count successful calls for cost calculation
+      // Failed verifications cost ₦0 per pricing policy
+      dataproSuccessCalls += (data.successCalls || 0);
       dataproCalls += (data.successCalls || 0) + (data.failedCalls || 0);
     });
     
     verifydataSnapshot.forEach(doc => {
       const data = doc.data();
-      // Count both successful and failed calls for accurate cost tracking
-      // API providers charge for both successful and failed verification attempts
+      // Only count successful calls for cost calculation
+      // Failed verifications cost ₦0 per pricing policy
+      verifydataSuccessCalls += (data.successCalls || 0);
       verifydataCalls += (data.successCalls || 0) + (data.failedCalls || 0);
     });
     
-    const dataproCost = dataproCalls * 100; // Datapro NIN costs ₦100
-    const verifydataCost = verifydataCalls * 100;
+    // Cost calculation: Only successful verifications are charged
+    // Datapro: ₦100 per successful NIN verification
+    // VerifyData: ₦100 per successful CAC verification
+    // Failed verifications: ₦0
+    const dataproCost = dataproSuccessCalls * 100;
+    const verifydataCost = verifydataSuccessCalls * 100;
     const currentSpend = dataproCost + verifydataCost;
     
     // Calculate projection
@@ -16146,7 +16798,7 @@ app.get('/api/analytics/export', requireAuth, requireSuperAdmin, async (req, res
           calls: verifydataCalls,
           cost: verifydataCalls * 100
         },
-        total: (dataproCalls * 50) + (verifydataCalls * 100)
+        total: (dataproCalls * 100) + (verifydataCalls * 100)
       };
     }
     
@@ -16279,7 +16931,7 @@ app.get('/api/analytics/audit-logs', requireAuth, requireSuperAdmin, async (req,
         provider: logProvider,
         verificationType: logVerificationType,
         status: data.result || (isSuccess ? 'success' : 'failure'),
-        cost: data.metadata?.cost || data.cost || 0,
+        cost: data.cost || 0, // Read cost from top-level field (correct location)
         ipAddress: data.ipAddress || 'unknown',
         deviceInfo: data.metadata?.userAgent || 'unknown',
         errorMessage: data.errorMessage || null,

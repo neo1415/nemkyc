@@ -7,7 +7,7 @@
  * Validates: Requirements 2.2, 2.5, 5.2, 6.1, 6.8
  * 
  * Property: For any set of API calls, the total cost should equal
- * (datapro_calls × ₦50) + (verifydata_calls × ₦100), and the sum of
+ * (datapro_calls × ₦100) + (verifydata_calls × ₦100), and the sum of
  * provider costs should equal the total cost.
  */
 
@@ -18,14 +18,14 @@ import { CostCalculator } from '../../services/analytics/CostCalculator';
 describe('Feature: api-analytics-dashboard, Property 4: Cost Calculation Correctness', () => {
   const calculator = new CostCalculator();
 
-  it('total cost equals (datapro_calls × ₦50) + (verifydata_calls × ₦100)', () => {
+  it('total cost equals (datapro_calls × ₦100) + (verifydata_calls × ₦100)', () => {
     fc.assert(
       fc.property(
         fc.nat(10000), // datapro calls (0-10000)
         fc.nat(10000), // verifydata calls (0-10000)
         (dataproCalls, verifydataCalls) => {
           const result = calculator.calculateTotalCost(dataproCalls, verifydataCalls);
-          const expectedTotal = (dataproCalls * 50) + (verifydataCalls * 100);
+          const expectedTotal = (dataproCalls * 100) + (verifydataCalls * 100);
           
           expect(result.total).toBe(expectedTotal);
         }
@@ -49,7 +49,7 @@ describe('Feature: api-analytics-dashboard, Property 4: Cost Calculation Correct
     );
   });
 
-  it('datapro cost equals datapro_calls × ₦50', () => {
+  it('datapro cost equals datapro_calls × ₦100', () => {
     fc.assert(
       fc.property(
         fc.nat(10000),
@@ -57,7 +57,7 @@ describe('Feature: api-analytics-dashboard, Property 4: Cost Calculation Correct
         (dataproCalls, verifydataCalls) => {
           const result = calculator.calculateTotalCost(dataproCalls, verifydataCalls);
           
-          expect(result.dataproCost).toBe(dataproCalls * 50);
+          expect(result.dataproCost).toBe(dataproCalls * 100);
         }
       ),
       { numRuns: 100 }
