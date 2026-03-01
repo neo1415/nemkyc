@@ -278,7 +278,9 @@ export const VerificationDetailsDialog: React.FC<VerificationDetailsDialogProps>
                 <Box>
                   <Typography variant="caption" color="textSecondary">NIN</Typography>
                   <Typography variant="body2" fontWeight="medium" sx={{ fontFamily: 'monospace' }}>
-                    {entry.nin.substring(0, 4)}****{entry.nin.substring(entry.nin.length - 3)}
+                    {typeof entry.nin === 'string' 
+                      ? `${entry.nin.substring(0, 4)}****${entry.nin.substring(entry.nin.length - 3)}`
+                      : '******* (encrypted)'}
                   </Typography>
                 </Box>
               )}
@@ -286,7 +288,9 @@ export const VerificationDetailsDialog: React.FC<VerificationDetailsDialogProps>
                 <Box>
                   <Typography variant="caption" color="textSecondary">BVN</Typography>
                   <Typography variant="body2" fontWeight="medium" sx={{ fontFamily: 'monospace' }}>
-                    {entry.bvn.substring(0, 4)}****{entry.bvn.substring(entry.bvn.length - 3)}
+                    {typeof entry.bvn === 'string' 
+                      ? `${entry.bvn.substring(0, 4)}****${entry.bvn.substring(entry.bvn.length - 3)}`
+                      : '******* (encrypted)'}
                   </Typography>
                 </Box>
               )}

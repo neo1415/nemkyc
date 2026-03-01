@@ -12604,6 +12604,113 @@ app.post('/api/identity/entries/:entryId/resend', requireAuth, requireBrokerOrAd
 });
 
 /**
+ * POST /api/identity/entries/:entryId/retry-verification
+ * Manually retry verification for a failed entry
+ * Admin/Compliance only - brokers must use bulk verify
+ */
+app.post('/api/identity/entries/:entryId/retry-verification', requireAuth, requireRole('compliance', 'admin', 'super admin'), async (req, res) => {
+  try {
+    const { entryId } = req.params;
+    
+    console.log(`🔄 Manually retrying verification for entry ${entryId}`);
+    
+    // Validate entryId
+    if (!entryId || typeof entryId !== 'string') {
+      return res.status(400).json({
+        error: 'Validation failed',
+        message: 'Entry ID is required'
+      });
+    }
+    
+    // Fetch the entry
+    const entryRef = db.collection('identity-entries').doc(entryId);
+    const entryDoc = await entryRef.get();
+    
+    if (!entryDoc.exists) {
+      return res.status(404).json({
+        error: 'Entry not found',
+        message: `No entry found with ID: ${entryId}`
+      });
+    }
+    
+    const entry = entryDoc.data();
+    
+    // Check if entry has already been verified
+    if (entry.status === 'verified') {
+      return res.status(400).json({
+        error: 'Already verified',
+        message: 'This entry has already been verified.'
+      });
+    }
+    
+    // Check if entry has verification data
+    if (!entry.data) {
+      return res.status(400).json({
+        error: 'No verification data',
+        message: 'Entry does not have verification data stored.'
+      });
+    }
+    
+    // Determine verification type
+    const verificationType = entry.verificationType || 
+      (entry.data.nin || entry.data.NIN ? 'NIN' : 
+       entry.data.cac || entry.data.CAC ? 'CAC' : null);
+    
+    if (!verificationType) {
+      return res.status(400).json({
+        error: 'Unknown verification type',
+        message: 'Cannot determine verification type for this entry.'
+      });
+    }
+    
+    // Process the verification using the same logic as bulk verify
+    const result = await processSingleEntry(
+      entry,
+      entryId,
+      entry.listId,
+      req.user.uid,
+      req.ipData,
+      req.headers['user-agent'],
+      false // Don't skip duplicate check
+    );
+    
+    // Create activity log
+    await createIdentityActivityLog({
+      listId: entry.listId,
+      entryId: entryId,
+      action: 'manual_retry',
+      actorType: 'admin',
+      actorId: req.user.uid,
+      details: {
+        email: entry.email,
+        verificationType: verificationType,
+        result: result.status,
+        retriedBy: req.user.email
+      },
+      ipAddress: req.ipData?.masked,
+      userAgent: req.headers['user-agent']
+    });
+    
+    console.log(`✅ Manual retry completed for ${entry.email}: ${result.status}`);
+    
+    res.status(200).json({
+      success: result.status === 'verified',
+      status: result.status,
+      message: result.status === 'verified' ? 'Verification successful' : result.reason || 'Verification failed',
+      error: result.status !== 'verified' ? result.reason : null
+    });
+    
+  } catch (error) {
+    console.error('❌ Error retrying verification:', error);
+    
+    res.status(500).json({
+      error: 'Failed to retry verification',
+      message: error.message
+    });
+  }
+});
+
+/**
  * GET /api/identity/lists/:listId/activity
  * Get activity logs for a specific list with filtering and pagination
  * Brokers can only view activity logs for their own lists
@@ -13605,7 +13712,7 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
             userId: customerName, // Customer name, not broker ID
             userEmail: entry.email || 'bulk_verification',
             userName: customerName, // Customer name for display
-            ipAddress: req.ipData?.masked || req.ip || 'bulk_operation',
+            ipAddress: ipData?.masked || 'bulk_operation',
             userType: 'customer', // Mark as customer verification
             errorCode: matchResult.matched ? null : 'FIELD_MISMATCH',
             errorMessage: matchResult.matched ? null : 'Field mismatch detected',
@@ -13650,7 +13757,7 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
             userId: customerName, // Customer name, not broker ID
             userEmail: entry.email || 'bulk_verification',
             userName: customerName, // Customer name for display
-            ipAddress: req.ipData?.masked || req.ip || 'bulk_operation',
+            ipAddress: ipData?.masked || 'bulk_operation',
             userType: 'customer', // Mark as customer verification
             errorCode: dataproResult.errorCode,
             errorMessage: dataproResult.error || 'Verification failed',
@@ -13759,7 +13866,7 @@ async function processSingleEntry(entry, entryId, listId, userId, ipData, userAg
             userId: customerName, // Company name, not broker ID
             userEmail: entry.email || 'bulk_verification',
             userName: customerName, // Company name for display
-            ipAddress: req.ipData?.masked || req.ip || 'bulk_operation',
+            ipAddress: ipData?.masked || 'bulk_operation',
             userType: 'customer', // Mark as customer verification
             errorCode: verifydataResult.errorCode,
             errorMessage: verifydataResult.error || 'Verification failed',
@@ -16342,15 +16449,18 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
     });
     
     // Query api-usage-logs for the date range with limit
+    // Use date field for filtering (more reliable than timestamp)
     let logsSnapshot;
     try {
       logsSnapshot = await db.collection('api-usage-logs')
-        .where('timestamp', '>=', new Date(startDate))
-        .where('timestamp', '<=', new Date(endDate + 'T23:59:59'))
+        .where('date', '>=', startDate)
+        .where('date', '<=', endDate)
         .limit(10000) // Hard limit to prevent memory issues
         .get();
+      
+      console.log(`📊 [UserAttribution] Query returned ${logsSnapshot.size} api-usage-logs documents for ${startDate} to ${endDate}`);
     } catch (error) {
-      console.error('Error querying api-usage-logs by timestamp:', error);
+      console.error('Error querying api-usage-logs by date:', error);
       return res.status(500).json({
         error: 'Database query failed',
         message: 'Unable to query analytics data. This endpoint requires Firestore composite indexes. Please check Firebase console.'
@@ -16365,6 +16475,8 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
     
     // First, aggregate by listId (not userId, since customer verifications have userId = null)
     const listStatsMap = new Map();
+    
+    console.log(`📊 [UserAttribution] Processing ${logsSnapshot.size} api-usage-logs documents`);
     
     logsSnapshot.forEach(doc => {
       const data = doc.data();
@@ -16403,18 +16515,32 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
       }
     });
     
+    console.log(`📊 [UserAttribution] Aggregated into ${listStatsMap.size} unique lists`);
+    
     // Now look up createdBy for each listId and aggregate by user
     const userStatsMap = new Map();
     
+    console.log(`📊 [UserAttribution] Looking up createdBy for ${listStatsMap.size} lists`);
+    
     for (const [listId, stats] of listStatsMap.entries()) {
-      if (listId === 'unknown') continue;
+      console.log(`📊 [UserAttribution] Processing listId: ${listId}, calls: ${stats.totalCalls}, cost: ${stats.totalCost}`);
+      
+      if (listId === 'unknown') {
+        console.log(`⏭️ [UserAttribution] Skipping 'unknown' listId`);
+        continue;
+      }
       
       try {
         const listDoc = await db.collection('identity-lists').doc(listId).get();
-        if (!listDoc.exists) continue;
+        if (!listDoc.exists) {
+          console.log(`⚠️ [UserAttribution] List ${listId} not found in identity-lists collection`);
+          continue;
+        }
         
         const listData = listDoc.data();
         const createdBy = listData.createdBy || 'unknown';
+        
+        console.log(`✅ [UserAttribution] List ${listId} created by: ${createdBy}`);
         
         if (!userStatsMap.has(createdBy)) {
           userStatsMap.set(createdBy, {
@@ -16439,15 +16565,20 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
         userStats.dataproCalls += stats.dataproCalls;
         userStats.verifydataCalls += stats.verifydataCalls;
         userStats.totalCost += stats.totalCost;  // NEW: Accumulate actual cost from logs
+        
+        console.log(`📊 [UserAttribution] User ${createdBy} now has ${userStats.totalCalls} calls, cost: ${userStats.totalCost}`);
       } catch (err) {
-        console.error(`Error fetching list ${listId}:`, err);
+        console.error(`❌ [UserAttribution] Error fetching list ${listId}:`, err);
       }
     }
     
     // Fetch user details including role and lastActivity
     const users = [];
+    
+    console.log(`📊 [UserAttribution] Looking up details for ${userStatsMap.size} users`);
+    
     for (const [userId, data] of userStatsMap.entries()) {
-      console.log(`[UserAttribution] Processing userId: ${userId}`);
+      console.log(`[UserAttribution] Processing userId: ${userId}, calls: ${data.totalCalls}, cost: ${data.totalCost}`);
       
       try {
         // Get user profile from users collection
@@ -16537,6 +16668,8 @@ app.get('/api/analytics/user-attribution', requireAuth, requireSuperAdmin, async
     
     // Apply limit
     const limitedUsers = users.slice(0, parsedLimit);
+    
+    console.log(`📊 [UserAttribution] Returning ${limitedUsers.length} users (total found: ${users.length})`);
     
     res.status(200).json({ 
       users: limitedUsers,
