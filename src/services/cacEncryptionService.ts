@@ -143,27 +143,57 @@ async function callBackendEncryption(data: string): Promise<{
   authTag?: string;
 }> {
   try {
+    console.log('🔐 [Encryption] Starting backend encryption call', {
+      dataLength: data.length,
+      timestamp: new Date().toISOString()
+    });
+
     const response = await fetch('/api/cac-documents/encrypt', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ data })
+      body: JSON.stringify({ data }),
+      credentials: 'include' // Include cookies for authentication
     });
     
+    console.log('🔐 [Encryption] Backend response received', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
+    });
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ [Encryption] Backend returned error', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText
+      });
       throw new Error(`Encryption service returned ${response.status}`);
     }
     
     const result = await response.json();
     
+    console.log('✅ [Encryption] Backend encryption successful', {
+      hasEncrypted: !!result.encrypted,
+      hasIV: !!result.iv,
+      encryptedLength: result.encrypted?.length || 0,
+      ivLength: result.iv?.length || 0
+    });
+
     if (!result.encrypted || !result.iv) {
+      console.error('❌ [Encryption] Invalid response - missing data', result);
       throw new Error('Invalid encryption response');
     }
     
     return result;
   } catch (error) {
-    console.error('Backend encryption call failed:', error);
+    console.error('❌ [Encryption] Backend encryption call failed:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    });
     throw new Error('Encryption service unavailable');
   }
 }
@@ -180,27 +210,57 @@ async function callBackendDecryption(
   iv: string
 ): Promise<string> {
   try {
+    console.log('🔓 [Decryption] Starting backend decryption call', {
+      encryptedDataLength: encryptedData.length,
+      ivLength: iv.length,
+      timestamp: new Date().toISOString()
+    });
+
     const response = await fetch('/api/cac-documents/decrypt', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ encryptedData, iv })
+      body: JSON.stringify({ encryptedData, iv }),
+      credentials: 'include' // Include cookies for authentication
     });
     
+    console.log('🔓 [Decryption] Backend response received', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: Object.fromEntries(response.headers.entries())
+    });
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ [Decryption] Backend returned error', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText
+      });
       throw new Error(`Decryption service returned ${response.status}`);
     }
     
     const result = await response.json();
     
+    console.log('✅ [Decryption] Backend decryption successful', {
+      hasDecryptedData: !!result.decrypted,
+      decryptedDataLength: result.decrypted?.length || 0
+    });
+
     if (!result.decrypted) {
+      console.error('❌ [Decryption] Invalid response - missing decrypted data', result);
       throw new Error('Invalid decryption response');
     }
     
     return result.decrypted;
   } catch (error) {
-    console.error('Backend decryption call failed:', error);
+    console.error('❌ [Decryption] Backend decryption call failed:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    });
     throw new Error('Decryption service unavailable');
   }
 }

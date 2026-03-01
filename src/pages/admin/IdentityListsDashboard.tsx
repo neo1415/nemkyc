@@ -46,7 +46,7 @@ import IdentityListDetail from './IdentityListDetail';
 import '../../styles/broker-tour.css';
 import type { ListSummary } from '../../types/remediation';
 import { formatDate } from '../../utils/dateFormatter';
-import { getDocumentStatusSummary } from '../../services/cacMetadataService';
+import { getListDocumentStatusSummary } from '../../services/cacMetadataService';
 import { DocumentStatusSummary, DocumentStatus, CACDocumentType } from '../../types/cacDocuments';
 import { CACDocumentPreview, useDocumentPreview } from '../../components/identity/CACDocumentPreview';
 import { getDocumentsByType } from '../../services/cacMetadataService';
@@ -137,7 +137,7 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
       await Promise.all(
         corporateLists.map(async (list) => {
           try {
-            const status = await getDocumentStatusSummary(list.id);
+            const status = await getListDocumentStatusSummary(list.id);
             statusMap.set(list.id, status);
           } catch (err) {
             console.error(`Failed to fetch document status for list ${list.id}:`, err);
