@@ -586,23 +586,30 @@ function matchCACFields(apiData, excelData) {
   }
   
   // Match Registration Number (required)
-  const apiRegNumber = normalizeRCNumber(apiData.registrationNumber);
-  const excelRegNumber = normalizeRCNumber(
-    excelData.registrationNumber || 
+  // IMPORTANT: If Excel data has empty registration number, skip this validation
+  // The customer is providing the RC number during verification
+  const excelRegNumberRaw = excelData.registrationNumber || 
     excelData['Registration Number'] || 
     excelData['registration number'] ||
     excelData.rcNumber ||
     excelData['RC Number'] ||
     excelData['rc number'] ||
     excelData.cac ||
-    excelData['CAC']
-  );
-  const regNumberMatched = apiRegNumber === excelRegNumber;
+    excelData['CAC'];
+  
+  const apiRegNumber = normalizeRCNumber(apiData.registrationNumber);
+  const excelRegNumber = normalizeRCNumber(excelRegNumberRaw);
+  
+  // Skip registration number validation if Excel data is empty
+  // This allows customers to provide RC number during verification
+  const shouldValidateRegNumber = excelRegNumberRaw && excelRegNumberRaw.trim() !== '';
+  const regNumberMatched = shouldValidateRegNumber ? (apiRegNumber === excelRegNumber) : true;
   
   details.registrationNumber = {
     api: apiData.registrationNumber,
-    excel: excelData.registrationNumber || excelData['Registration Number'] || excelData['registration number'] || excelData.rcNumber || excelData['RC Number'] || excelData['rc number'] || excelData.cac || excelData['CAC'],
-    matched: regNumberMatched
+    excel: excelRegNumberRaw || '(not provided in upload)',
+    matched: regNumberMatched,
+    skipped: !shouldValidateRegNumber
   };
   
   if (!regNumberMatched) {

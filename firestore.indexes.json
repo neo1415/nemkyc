@@ -702,6 +702,15 @@
         { "fieldPath": "action", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "cac-document-metadata",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "identityRecordId", "order": "ASCENDING" },
+        { "fieldPath": "isCurrent", "order": "ASCENDING" },
+        { "fieldPath": "uploadedAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
