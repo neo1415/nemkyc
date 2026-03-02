@@ -144,6 +144,18 @@ const AdminDashboard: React.FC = () => {
           <p className="text-gray-600 mt-1">Manage all forms and user submissions</p>
         </div>
         <div className="flex items-center gap-4">
+          {/* User Management Button - Super Admin Only */}
+          {isSuperAdmin && (
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => navigate('/admin/users')}
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
+            >
+              <Users className="h-4 w-4" />
+              User Management
+            </Button>
+          )}
           {/* Analytics Dashboard Button - Super Admin Only */}
           {isSuperAdmin && (
             <Button 

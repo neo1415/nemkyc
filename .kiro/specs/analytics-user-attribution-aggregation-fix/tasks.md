@@ -1,0 +1,87 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Fault Condition** - Incomplete API Call Attribution
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: Test with the concrete failing scenario - 11 api-usage-logs across 7 listIds where some lists don't exist in identity-lists
+  - Test that `/api/analytics/user-attribution` endpoint aggregates ALL api-usage-logs documents to users, not just those with valid list metadata
+  - Generate test data: 11 api-usage-logs documents with mixed scenarios (missing lists, 'unknown' listIds, valid lists)
+  - Query endpoint with date range covering the test data
+  - Assert that response includes all 11 calls aggregated to users (not just 1 call)
+  - Assert that total cost is calculated correctly based on successful calls (not 0)
+  - Assert that api-usage-logs with 'unknown' listIds are attributed using userId field
+  - Assert that api-usage-logs with missing lists are attributed using userId field
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found: "Only 1 user returned with 1 call instead of all 11 calls attributed to correct user"
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Valid List Attribution Behavior
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for api-usage-logs with valid listIds that exist in identity-lists
+  - Create test data: api-usage-logs documents with listIds that exist in identity-lists with valid createdBy fields
+  - Query endpoint with date range covering the test data on UNFIXED code
+  - Observe and record: aggregation results, user attribution, statistics calculation, cost calculation
+  - Write property-based tests capturing observed behavior patterns:
+    - For all api-usage-logs with valid listIds, aggregation uses list.createdBy for attribution
+    - Date filtering by date field returns correct documents
+    - Statistics aggregation (totalCalls, successfulCalls, failedCalls, provider counts) is accurate
+    - User detail fetching populates userName, userEmail, userRole, lastActivity
+    - Sorting and limiting work correctly with sortBy, order, limit parameters
+    - Success rate calculation: (successfulCalls / totalCalls) * 100
+    - Response metadata includes totalUsers, returnedUsers, hitQueryLimit, requestTime, generatedAt
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
+
+- [x] 3. Fix for analytics user attribution aggregation
+
+  - [x] 3.1 Implement fallback attribution logic
+    - Modify the list-to-user aggregation loop in server.js (lines 16500-16580)
+    - Store userId field alongside listId during initial api-usage-logs aggregation
+    - Create listToUserIdMap to track userId values for each listId for fallback
+    - Replace `continue` statements with fallback attribution logic
+    - When listId is 'unknown', use userId from api-usage-logs document
+    - When list doesn't exist in identity-lists, use userId from api-usage-logs document
+    - When list lookup throws error, catch and use userId from api-usage-logs document
+    - When both listId and userId are unavailable, aggregate under 'unknown' user category
+    - Handle multiple userIds per listId scenario (use first userId with warning log)
+    - Add detailed logging for attribution decisions (fallback usage, skipped entries, final counts)
+    - _Bug_Condition: isBugCondition(apiUsageLog) where listId is 'unknown' OR list doesn't exist OR list has no createdBy OR list lookup fails_
+    - _Expected_Behavior: All api-usage-logs documents are aggregated to users using list-based attribution first, then fallback to userId field when list lookup fails_
+    - _Preservation: Date filtering, initial listStatsMap aggregation, user detail fetching, sorting, limiting, success rate calculation, cost calculation fallback, response formatting remain unchanged_
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
+
+  - [x] 3.2 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Complete API Call Attribution
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - Verify all 11 api-usage-logs are aggregated to users
+    - Verify total cost is calculated correctly
+    - Verify 'unknown' listIds are attributed using userId field
+    - Verify missing lists are attributed using userId field
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+
+  - [x] 3.3 Verify preservation tests still pass
+    - **Property 2: Preservation** - Valid List Attribution Behavior
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all tests still pass after fix (no regressions)
+    - Verify valid list-based attribution still works the same way
+    - Verify date filtering, statistics aggregation, user details, sorting, limiting unchanged
+    - Verify success rate and cost calculation unchanged for valid entries
+    - Verify response format and metadata unchanged
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
