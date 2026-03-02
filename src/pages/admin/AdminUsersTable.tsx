@@ -32,8 +32,9 @@ import {
 } from '../../components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { ChevronDown, Trash2 } from 'lucide-react';
+import { ChevronDown, Trash2, UserPlus } from 'lucide-react';
 import { normalizeRole, isAdminRole } from '../../utils/roleNormalization';
+import { CreateUserModal } from '../../components/admin/CreateUserModal';
 
 interface UserRole {
   id: string;
@@ -50,6 +51,7 @@ const AdminUsersTable: React.FC = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const [roleChangeDialog, setRoleChangeDialog] = useState<{
     open: boolean;
@@ -291,11 +293,29 @@ const AdminUsersTable: React.FC = () => {
     );
   }
 
+  const handleCreateSuccess = () => {
+    fetchUsers();
+    toast({
+      title: "Success",
+      description: "User created successfully. Welcome email sent.",
+      duration: 3000,
+    });
+  };
+
   return (
     <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">User Management</h1>
-        <p className="text-muted-foreground">Manage user roles and permissions</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">User Management</h1>
+          <p className="text-muted-foreground">Manage user roles and permissions</p>
+        </div>
+        <Button 
+          onClick={() => setCreateModalOpen(true)}
+          className="flex items-center gap-2"
+        >
+          <UserPlus className="h-4 w-4" />
+          Create User
+        </Button>
       </div>
 
       <Tabs defaultValue="regular" className="w-full">
@@ -344,6 +364,13 @@ const AdminUsersTable: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create User Modal */}
+      <CreateUserModal
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onSuccess={handleCreateSuccess}
+      />
     </div>
   );
 };

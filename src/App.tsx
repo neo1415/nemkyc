@@ -7,13 +7,14 @@ import Layout from './components/layout/Layout';
 import Index from './pages/Index';
 import SignIn from './pages/auth/SignIn';
 import SignUp from './pages/auth/SignUp';
+import BrokerSignUp from './pages/auth/BrokerSignUp';
 import ResetPassword from './pages/auth/ResetPassword';
 import ResetPasswordConfirm from './pages/auth/ResetPasswordConfirm';
 import UserDashboard from './pages/dashboard/UserDashboard';
 import { useInactivityTimeout } from './hooks/useInactivityTimeout';
 
 // ============= CRITICAL PATH COMPONENTS (Eager Loaded) =============
-// These load immediately for best first-time user experience
+// These load immediately for best-time user experience
 import NotFound from './pages/NotFound';
 import Unauthorized from './pages/Unauthorized';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -21,6 +22,8 @@ import RoleProtectedRoute from './components/auth/RoleProtectedRoute';
 import SuperAdminRoute from './components/auth/SuperAdminRoute';
 import MFAEnrollment from './components/auth/MFAEnrollment';
 import MFAVerification from './components/auth/MFAVerification';
+import PasswordResetPage from './pages/auth/PasswordResetPage';
+import { PasswordResetGuard } from './components/auth/PasswordResetGuard';
 
 // Component to handle inactivity timeout (must be inside AuthProvider)
 const InactivityHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -175,6 +178,7 @@ function App() {
               {/* Auth routes with /auth prefix */}
               <Route path="auth/signin" element={<SignIn />} />
               <Route path="auth/signup" element={<SignUp />} />
+              <Route path="auth/broker-signup" element={<BrokerSignUp />} />
               <Route path="auth/reset-password" element={<ResetPassword />} />
               
               {/* Password reset confirmation from email link */}
@@ -183,6 +187,9 @@ function App() {
               {/* MFA Routes */}
               <Route path="auth/mfa/enroll" element={<MFAEnrollment />} />
               <Route path="auth/mfa/verify" element={<MFAVerification />} />
+              
+              {/* Password Reset Route - Task 17: Authentication Flow Integration */}
+              <Route path="auth/password-reset" element={<PasswordResetPage />} />
              
              {/* Claims Routes */}
              <Route path="/claims" element={<ClaimsForms />} />
@@ -226,24 +233,30 @@ function App() {
              
              {/* Salvage Presentation - Use standalone HTML at /salvage-presentation.html */}
              
-             {/* Protected Routes */}
+             {/* Protected Routes - Wrapped with PasswordResetGuard (Task 17) */}
              <Route path="dashboard" element={
-               <ProtectedRoute>
-                 <UserDashboard />
-               </ProtectedRoute>
+               <PasswordResetGuard>
+                 <ProtectedRoute>
+                   <UserDashboard />
+                 </ProtectedRoute>
+               </PasswordResetGuard>
              } />
              
              {/* User Form Viewer Route */}
              <Route path="submission/:collection/:id" element={
-               <ProtectedRoute>
-                 <UserFormViewer />
-               </ProtectedRoute>
+               <PasswordResetGuard>
+                 <ProtectedRoute>
+                   <UserFormViewer />
+                 </ProtectedRoute>
+               </PasswordResetGuard>
              } />
              
               <Route path="admin" element={
-                <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super admin']}>
-                  <AdminDashboard />
-                </RoleProtectedRoute>
+                <PasswordResetGuard>
+                  <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super admin']}>
+                    <AdminDashboard />
+                  </RoleProtectedRoute>
+                </PasswordResetGuard>
               } />
 
            <Route path="admin/profile" element={

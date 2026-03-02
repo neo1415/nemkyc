@@ -10,6 +10,7 @@ export interface User {
   phone?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  mustChangePassword?: boolean;          // Flag to force password reset on next login
   // Tour tracking fields
   onboardingTourStep?: number;           // Current step (0-6), default 0
   onboardingTourStartedAt?: Date;        // When tour was first started

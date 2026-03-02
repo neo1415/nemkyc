@@ -213,3 +213,245 @@ module.exports = {
   resetDataproRateLimit,
   resetVerifydataRateLimit
 };
+
+/**
+ * User Creation Rate Limiter
+ * 
+ * Implements Firestore-based rate limiting for user creation operations.
+ * Limits each super admin to 10 user creations per hour.
+ * 
+ * Features:
+ * - Firestore-backed rate limit tracking
+ * - Per-user rate limiting (by super admin ID)
+ * - Automatic cleanup of expired rate limit documents
+ * - Returns retry-after time when limit exceeded
+ */
+
+const admin = require('firebase-admin');
+
+/**
+ * Middleware to apply rate limiting to user creation
+ * Limits each super admin to 10 user creations per hour
+ * 
+ * Usage in Express:
+ * app.post('/api/users/create', requireAuth, requireSuperAdmin, userCreationRateLimit, async (req, res) => {
+ *   // Create user
+ * });
+ * 
+ * @param {Object} req - Express request object (must have req.user.uid)
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Promise<void>}
+ */
+async function userCreationRateLimit(req, res, next) {
+  try {
+    const superAdminId = req.user?.uid;
+    
+    if (!superAdminId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required',
+        code: 'AUTH_REQUIRED'
+      });
+    }
+    
+    const db = admin.firestore();
+    const rateLimitRef = db.collection('rateLimits').doc(superAdminId);
+    
+    // Get current rate limit document
+    const rateLimitDoc = await rateLimitRef.get();
+    const now = Date.now();
+    const windowMs = 60 * 60 * 1000; // 1 hour in milliseconds
+    const maxCreations = 10;
+    
+    if (!rateLimitDoc.exists) {
+      // First creation - create rate limit document
+      await rateLimitRef.set({
+        superAdminId,
+        userCreationCount: 1,
+        windowStartTime: admin.firestore.Timestamp.fromMillis(now),
+        windowEndTime: admin.firestore.Timestamp.fromMillis(now + windowMs),
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      console.log(`[RateLimiter] User creation rate limit initialized for ${superAdminId}: 1/${maxCreations}`);
+      return next();
+    }
+    
+    const rateLimitData = rateLimitDoc.data();
+    const windowEndTime = rateLimitData.windowEndTime.toMillis();
+    
+    // Check if window has expired
+    if (now >= windowEndTime) {
+      // Window expired - reset counter
+      await rateLimitRef.set({
+        superAdminId,
+        userCreationCount: 1,
+        windowStartTime: admin.firestore.Timestamp.fromMillis(now),
+        windowEndTime: admin.firestore.Timestamp.fromMillis(now + windowMs),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      console.log(`[RateLimiter] User creation rate limit reset for ${superAdminId}: 1/${maxCreations}`);
+      return next();
+    }
+    
+    // Window still active - check if limit exceeded
+    if (rateLimitData.userCreationCount >= maxCreations) {
+      const retryAfterMs = windowEndTime - now;
+      const retryAfterMinutes = Math.ceil(retryAfterMs / 60000);
+      
+      console.warn(`[RateLimiter] User creation rate limit exceeded for ${superAdminId}: ${rateLimitData.userCreationCount}/${maxCreations}`);
+      
+      // Log rate limit violation (async, don't wait)
+      const auditLogger = require('./auditLogger.cjs');
+      auditLogger.logSecurityEvent({
+        eventType: 'RATE_LIMIT_EXCEEDED',
+        severity: 'medium',
+        description: `User creation rate limit exceeded: ${rateLimitData.userCreationCount}/${maxCreations}`,
+        userId: superAdminId,
+        metadata: {
+          operation: 'user_creation',
+          currentCount: rateLimitData.userCreationCount,
+          maxAllowed: maxCreations,
+          retryAfterMinutes
+        }
+      }).catch(err => console.error('Failed to log rate limit violation:', err.message));
+      
+      return res.status(429).json({
+        success: false,
+        error: `User creation rate limit exceeded. Please try again in ${retryAfterMinutes} minute${retryAfterMinutes !== 1 ? 's' : ''}`,
+        code: 'RATE_LIMIT_EXCEEDED',
+        retryAfter: Math.ceil(retryAfterMs / 1000), // seconds
+        details: {
+          currentCount: rateLimitData.userCreationCount,
+          maxAllowed: maxCreations,
+          windowEndTime: new Date(windowEndTime).toISOString()
+        }
+      });
+    }
+    
+    // Increment counter
+    await rateLimitRef.update({
+      userCreationCount: admin.firestore.FieldValue.increment(1),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+    console.log(`[RateLimiter] User creation rate limit check passed for ${superAdminId}: ${rateLimitData.userCreationCount + 1}/${maxCreations}`);
+    next();
+    
+  } catch (error) {
+    console.error('[RateLimiter] Error checking user creation rate limit:', error.message);
+    // Don't block request on rate limiter errors
+    next();
+  }
+}
+
+/**
+ * Cleanup expired rate limit documents
+ * Should be called periodically (e.g., via cron job or Cloud Function)
+ * 
+ * @returns {Promise<number>} Number of documents deleted
+ */
+async function cleanupExpiredRateLimits() {
+  try {
+    const db = admin.firestore();
+    const now = admin.firestore.Timestamp.now();
+    
+    // Find expired rate limit documents
+    const expiredDocs = await db.collection('rateLimits')
+      .where('windowEndTime', '<', now)
+      .get();
+    
+    if (expiredDocs.empty) {
+      console.log('[RateLimiter] No expired rate limit documents to clean up');
+      return 0;
+    }
+    
+    // Delete expired documents in batch
+    const batch = db.batch();
+    expiredDocs.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+    
+    await batch.commit();
+    
+    console.log(`[RateLimiter] Cleaned up ${expiredDocs.size} expired rate limit documents`);
+    return expiredDocs.size;
+    
+  } catch (error) {
+    console.error('[RateLimiter] Error cleaning up expired rate limits:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Get rate limit status for a super admin
+ * 
+ * @param {string} superAdminId - Super admin user ID
+ * @returns {Promise<Object>} Rate limit status
+ */
+async function getUserCreationRateLimitStatus(superAdminId) {
+  try {
+    const db = admin.firestore();
+    const rateLimitDoc = await db.collection('rateLimits').doc(superAdminId).get();
+    
+    if (!rateLimitDoc.exists) {
+      return {
+        currentCount: 0,
+        maxAllowed: 10,
+        remaining: 10,
+        windowActive: false
+      };
+    }
+    
+    const rateLimitData = rateLimitDoc.data();
+    const now = Date.now();
+    const windowEndTime = rateLimitData.windowEndTime.toMillis();
+    const windowActive = now < windowEndTime;
+    
+    return {
+      currentCount: rateLimitData.userCreationCount,
+      maxAllowed: 10,
+      remaining: Math.max(0, 10 - rateLimitData.userCreationCount),
+      windowActive,
+      windowEndTime: windowActive ? new Date(windowEndTime).toISOString() : null,
+      retryAfterSeconds: windowActive ? Math.ceil((windowEndTime - now) / 1000) : 0
+    };
+    
+  } catch (error) {
+    console.error('[RateLimiter] Error getting rate limit status:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Reset rate limit for a super admin (admin function)
+ * 
+ * @param {string} superAdminId - Super admin user ID
+ * @returns {Promise<void>}
+ */
+async function resetUserCreationRateLimit(superAdminId) {
+  try {
+    const db = admin.firestore();
+    await db.collection('rateLimits').doc(superAdminId).delete();
+    console.log(`[RateLimiter] User creation rate limit reset for ${superAdminId}`);
+  } catch (error) {
+    console.error('[RateLimiter] Error resetting rate limit:', error.message);
+    throw error;
+  }
+}
+
+module.exports = {
+  RateLimiter,
+  applyDataproRateLimit,
+  applyVerifydataRateLimit,
+  getDataproRateLimitStatus,
+  getVerifydataRateLimitStatus,
+  resetDataproRateLimit,
+  resetVerifydataRateLimit,
+  userCreationRateLimit,
+  cleanupExpiredRateLimits,
+  getUserCreationRateLimitStatus,
+  resetUserCreationRateLimit
+};
