@@ -81,28 +81,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('🔍 Auth: Checking user data for UID:', firebaseUser.uid, 'Email:', firebaseUser.email);
           
           // Get user data from Firestore userroles collection
-          const userDoc = await getDoc(doc(db, 'userroles', firebaseUser.uid));
+          const userRoleDoc = await getDoc(doc(db, 'userroles', firebaseUser.uid));
           
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
+          if (userRoleDoc.exists()) {
+            const userRoleData = userRoleDoc.data();
             
             // Debug logging for role normalization
             console.log('🔍 Auth: Found user in userroles collection');
-            console.log('🔍 Auth: Raw role from Firestore:', userData.role);
+            console.log('🔍 Auth: Raw role from Firestore:', userRoleData.role);
             
             // Auto-assign super admin role to neowalker502@gmail.com
-            let userRole = normalizeRole(userData.role || 'default');
+            let userRole = normalizeRole(userRoleData.role || 'default');
             console.log('🔍 Auth: Normalized role:', userRole);
             
             if (firebaseUser.email === 'neowalker502@gmail.com' && !rolesMatch(userRole, 'super admin')) {
               userRole = 'super admin';
               // Update in Firestore - store as 'super admin' for firestore rules compatibility
               await setDoc(doc(db, 'userroles', firebaseUser.uid), {
-                ...userData,
+                ...userRoleData,
                 role: 'super admin',
                 dateModified: new Date()
               }, { merge: true });
               console.log('🔍 Auth: Auto-assigned super admin role to neowalker502@gmail.com');
+            }
+            
+            // CRITICAL FIX: Load mustChangePassword from 'users' collection (where backend sets it)
+            let mustChangePassword = false;
+            try {
+              const usersDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+              if (usersDoc.exists()) {
+                const usersData = usersDoc.data();
+                mustChangePassword = usersData.mustChangePassword || false;
+                console.log('🔍 Auth: mustChangePassword from users collection:', mustChangePassword);
+              }
+            } catch (error) {
+              console.error('⚠️ Auth: Failed to load mustChangePassword from users collection:', error);
             }
             
             console.log('✅ Auth: Setting user with role:', userRole, 'for email:', firebaseUser.email);
@@ -110,12 +123,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser({
               uid: firebaseUser.uid,
               email: firebaseUser.email!,
-              name: userData.name,
+              name: userRoleData.name,
               role: userRole,
-              notificationPreference: userData.notificationPreference || 'email',
-              phone: userData.phone,
-              createdAt: userData.dateCreated?.toDate(),
-              updatedAt: userData.dateModified?.toDate()
+              notificationPreference: userRoleData.notificationPreference || 'email',
+              phone: userRoleData.phone,
+              createdAt: userRoleData.dateCreated?.toDate(),
+              updatedAt: userRoleData.dateModified?.toDate(),
+              mustChangePassword
             });
           } else {
             console.log('⚠️ Auth: User NOT found in userroles collection, checking users collection...');
@@ -291,6 +305,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       console.log('✅ AUTHENTICATION SUCCESSFUL - User can access application (MFA disabled)');
+      
+      // Check if user must change password (Task 17: Authentication Flow Integration)
+      try {
+        const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          if (userData.mustChangePassword === true) {
+            console.log('🔐 User must change password - redirecting to password reset page');
+            // The App.tsx routing will handle the redirect based on this flag
+            // We don't prevent login, but the route guard will redirect them
+          }
+        }
+      } catch (error) {
+        console.error('Error checking mustChangePassword flag:', error);
+        // Don't block login if we can't check the flag
+      }
       
       // Check if this is an admin role that needs MFA check
       // COMMENTED OUT: MFA every 3rd login logic

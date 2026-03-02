@@ -237,7 +237,7 @@ This implementation secures KYC auto-fill verification endpoints by removing ano
   - Verify authentication tokens are validated on every request
   - _Requirements: 3.1, 3.2, 4.1, 4.2, 8.1, 8.2, 8.3_
 
-- [ ] 17.1 Write security tests
+- [~] 17.1 Write security tests
   - Test authentication bypass attempts
   - Test rate limit bypass attempts
   - Test sensitive data logging

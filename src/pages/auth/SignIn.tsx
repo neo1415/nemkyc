@@ -133,7 +133,14 @@ const SignIn: React.FC = () => {
     if (user && !loading && !mfaRequired && !mfaEnrollmentRequired && !emailVerificationRequired && !loginError) {
       console.log('🎯 User already authenticated, checking for redirect');
       
-      // Check for pending submission first - HIGHEST PRIORITY
+      // PRIORITY 1: Check if user must change password
+      if (user.mustChangePassword) {
+        console.log('🔐 User must change password, redirecting to password reset page');
+        navigate('/auth/password-reset', { replace: true });
+        return;
+      }
+      
+      // PRIORITY 2: Check for pending submission
       const pendingData = sessionStorage.getItem('pendingSubmission');
       if (pendingData) {
         console.log('🎯 Pending submission detected, redirecting to form page');
@@ -145,14 +152,14 @@ const SignIn: React.FC = () => {
         return;
       }
       
-      // Check for redirect parameter (e.g., from email link)
+      // PRIORITY 3: Check for redirect parameter (e.g., from email link)
       if (redirectParam === 'dashboard') {
         console.log('🎯 Redirect parameter detected, redirecting to /dashboard');
         navigate('/dashboard', { replace: true });
         return;
       }
       
-      // Role-based navigation
+      // PRIORITY 4: Role-based navigation
       if (user.role === 'broker') {
         console.log('🎯 Broker user already authenticated, redirecting to /admin/identity with upload dialog');
         navigate('/admin/identity', { replace: true, state: { openUploadDialog: true } });

@@ -76,26 +76,33 @@ service cloud.firestore {
     match /users/{userId} {
       // Users can create their own document with basic fields
       // Role is restricted to 'default' or 'broker' on client-side creation for security
-      allow create: if request.auth != null && 
-        request.auth.uid == userId &&
-        (!("role" in request.resource.data) || request.resource.data.role in ['default', 'broker']);
+      // Super admins can create user documents for user management
+      allow create: if request.auth != null && (
+        (request.auth.uid == userId &&
+         (!("role" in request.resource.data) || request.resource.data.role in ['default', 'broker'])) ||
+        isSuperAdmin()
+      );
 
-      // Users can read their own document (needed for tour tracking and profile)
-      // Admins and super admins can read any user document
+      // Users can read their own document (needed for tour tracking, profile, and password reset check)
+      // Super admins can read any user document (for user management)
       allow read: if request.auth != null && (
         request.auth.uid == userId || 
-        isAdminOrSuperAdmin()
+        isSuperAdmin()
       );
       
-      // Users can update their own document (for tour completion, profile updates, etc.)
-      // Admins can update any user document (for role changes)
+      // Users can update their own document (for tour completion, profile updates, password changes)
+      // Super admins can update any user document (for user management, password resets)
+      // Users can only update password-related fields (mustChangePassword, passwordChangedAt) in their own document
       allow update: if request.auth != null && (
-        request.auth.uid == userId ||
-        isAdminOrSuperAdmin()
+        (request.auth.uid == userId && (
+          // Allow users to update password-related fields
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['email', 'role', 'createdBy', 'createdAt'])
+        )) ||
+        isSuperAdmin()
       );
       
       // Only super admins can delete user documents
-      allow delete: if isAdminOrSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // ========== /userroles/{userId} ==========
@@ -103,9 +110,13 @@ service cloud.firestore {
     match /userroles/{userId} {
       // Users can create their own document with basic fields
       // Role is restricted to 'default' or 'user' on client-side creation for security
-      allow create: if request.auth != null && 
-        request.auth.uid == userId &&
-        (!("role" in request.resource.data) || request.resource.data.role in ['default', 'user']);
+      // Super admins can create role documents for user management
+      allow create: if request.auth != null && (
+        (request.auth.uid == userId &&
+         (!("role" in request.resource.data) || request.resource.data.role in ['default', 'user'])) ||
+        (exists(/databases/$(database)/documents/userroles/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/userroles/$(request.auth.uid)).data.role in ['super admin', 'superAdmin', 'super-admin', 'SuperAdmin'])
+      );
 
       // Users can read their own document, super admins can read any
       // Note: We check super admin role directly here to avoid circular dependency
@@ -116,7 +127,7 @@ service cloud.firestore {
       );
       
       // Users can update their own document (including tour fields)
-      // Super admins can update any document
+      // Super admins can update any document (for role changes)
       // Tour fields: onboardingTourStep, onboardingTourStartedAt, onboardingTourLastAction, onboardingTourCompleted
       allow update: if request.auth != null && (
         request.auth.uid == userId ||
@@ -550,8 +561,9 @@ service cloud.firestore {
     // General audit logs - System-wide audit trail for all operations
     // SECURITY: Append-only logs for compliance and security auditing
     match /audit-logs/{docId} {
-      // Admins, super admins, and compliance can read all audit logs
-      allow read: if isAdminOrSuperAdmin() || isCompliance();
+      // Super admins can read all audit logs (for user management audit trail)
+      // Admins and compliance can read audit logs
+      allow read: if isSuperAdmin() || isAdmin() || isCompliance();
       
       // Audit logs can be created by authenticated users (for client-side audit logging)
       // Backend system also creates audit logs via service account
@@ -559,6 +571,19 @@ service cloud.firestore {
       // Audit logs are immutable - no updates allowed
       allow update: if false;
       // Audit logs cannot be deleted
+      allow delete: if false;
+    }
+
+    // ========== Rate Limits Collection ==========
+    
+    // Rate limits - Backend-only collection for rate limiting enforcement
+    // SECURITY: No direct client access - all operations handled by backend
+    match /rateLimits/{docId} {
+      // No client read access - backend only
+      allow read: if false;
+      // No client write access - backend only
+      allow create: if false;
+      allow update: if false;
       allow delete: if false;
     }
 
