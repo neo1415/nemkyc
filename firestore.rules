@@ -166,7 +166,9 @@ service cloud.firestore {
 
     match /Individual-kyc-form/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
-      allow create: if isAuthenticatedUser();
+      allow create: if isAuthenticatedUser() && 
+                      (request.resource.data.formType == 'kyc' || 
+                       request.resource.data.formType == 'legacy');
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();
     }
@@ -180,7 +182,9 @@ service cloud.firestore {
 
     match /corporate-kyc-form/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
-      allow create: if isAuthenticatedUser();
+      allow create: if isAuthenticatedUser() && 
+                      (request.resource.data.formType == 'kyc' || 
+                       request.resource.data.formType == 'legacy');
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();
     }
@@ -195,6 +199,26 @@ service cloud.firestore {
     match /agents-kyc/{docId} {
       allow read: if isAdminOrCompliance() || isClaims() || isDefault();
       allow create: if isAuthenticatedUser();
+      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    // NFIU Forms - Individual
+    match /individual-nfiu-form/{docId} {
+      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow create: if isAuthenticatedUser() && 
+                      request.resource.data.formType == 'nfiu' &&
+                      request.resource.data.formVariant == 'individual';
+      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    // NFIU Forms - Corporate
+    match /corporate-nfiu-form/{docId} {
+      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow create: if isAuthenticatedUser() && 
+                      request.resource.data.formType == 'nfiu' &&
+                      request.resource.data.formVariant == 'corporate';
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();
     }

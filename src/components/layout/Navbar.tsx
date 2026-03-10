@@ -90,6 +90,11 @@ const Navbar: React.FC = () => {
     { name: 'Brokers CDD', path: '/cdd/brokers', icon: FileText }
   ];
 
+  const nfiuForms = [
+    { name: 'Individual NFIU', path: '/nfiu/individual', icon: User },
+    { name: 'Corporate NFIU', path: '/nfiu/corporate', icon: Building2 }
+  ];
+
   const claimsForms = [
     { name: 'Motor Claim', path: '/claims/motor', icon: Car },
     { name: 'Professional Indemnity', path: '/claims/professional-indemnity', icon: Shield },
@@ -197,6 +202,37 @@ const Navbar: React.FC = () => {
                   </NavigationMenuContent>
                 </NavigationMenuItem>
 
+                {/* NFIU Navigation */}
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="group">
+                    <Link 
+                      to="/nfiu" 
+                      className="flex items-center space-x-1 px-3 py-2 text-gray-700 hover:text-primary transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>NFIU</span>
+                    </Link>
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <div className="w-64 p-3 bg-background">
+                      <div className="grid gap-1">
+                        {nfiuForms.map((form) => (
+                          <NavigationMenuLink key={form.path} asChild>
+                            <Link 
+                              to={form.path} 
+                              className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 transition-colors"
+                            >
+                              <form.icon className="h-4 w-4" />
+                              <span>{form.name}</span>
+                            </Link>
+                          </NavigationMenuLink>
+                        ))}
+                      </div>
+                    </div>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+
                 {/* Claims Navigation */}
                 <NavigationMenuItem>
                   <NavigationMenuTrigger className="group">
@@ -293,6 +329,9 @@ const Navbar: React.FC = () => {
               </Link>
               <Link to="/cdd" className="block px-3 py-2 text-gray-700 hover:text-primary">
                 CDD Forms
+              </Link>
+              <Link to="/nfiu" className="block px-3 py-2 text-gray-700 hover:text-primary">
+                NFIU Forms
               </Link>
               <Link to="/claims" className="block px-3 py-2 text-gray-700 hover:text-primary">
                 Claims Forms

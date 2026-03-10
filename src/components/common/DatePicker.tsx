@@ -14,6 +14,8 @@ interface DatePickerProps {
   name: string;
   label: string;
   required?: boolean;
+  onBlur?: (e: React.FocusEvent) => void;
+  className?: string;
 }
 
 /**
@@ -24,16 +26,29 @@ interface DatePickerProps {
  * - Click calendar button to open picker with month/year dropdowns
  * - Full calendar view for date selection
  * - Auto-validates and formats dates
+ * - Integrates with react-hook-form for validation
+ * - Supports external onBlur handlers for real-time validation
  * 
  * Usage:
  * <DatePicker name="dateOfBirth" label="Date of Birth" required />
  */
-export const DatePicker: React.FC<DatePickerProps> = ({ name, label, required = false }) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
+export const DatePicker: React.FC<DatePickerProps> = ({ name, label, required = false, onBlur, className }) => {
+  const { setValue, watch, formState: { errors }, clearErrors, register } = useFormContext();
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const value = watch(name);
   const error = get(errors, name);
+  
+  // Register the field with react-hook-form on mount
+  React.useEffect(() => {
+    register(name);
+    console.log(`[DatePicker] Registered field: ${name}`);
+  }, [name, register]);
+  
+  // Debug: Log when value changes
+  React.useEffect(() => {
+    console.log(`[DatePicker] Value changed for ${name}:`, value, typeof value);
+  }, [value, name]);
   
   // Format date for display (DD/MM/YYYY)
   const formatDisplayDate = (date: any) => {
@@ -77,23 +92,55 @@ export const DatePicker: React.FC<DatePickerProps> = ({ name, label, required = 
     const input = e.target.value;
     setInputValue(input);
     
+    console.log('[DatePicker] Input changed:', { fieldName: name, input });
+    
     // Try to parse the date
     const parsed = parseTypedDate(input);
     if (parsed) {
+      console.log('[DatePicker] Parsed date:', { fieldName: name, parsed, formatted: formatDisplayDate(parsed) });
       setValue(name, parsed);
       if (error) clearErrors(name);
     }
   };
 
-  const handleInputBlur = () => {
+  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     // Format the input on blur if we have a valid date
     if (value) {
       setInputValue(formatDisplayDate(value));
+    }
+    // Call external onBlur handler if provided (for validation)
+    if (onBlur) {
+      // Create a proper synthetic event that mimics a real blur event
+      // The validation system expects the event to have the field name
+      const syntheticEvent = {
+        ...e,
+        target: {
+          ...e.target,
+          name: name,
+          value: value,
+          id: name
+        },
+        currentTarget: {
+          ...e.currentTarget,
+          name: name,
+          value: value,
+          id: name
+        }
+      } as React.FocusEvent<HTMLInputElement>;
+      
+      console.log('[DatePicker] Calling onBlur with synthetic event:', {
+        fieldName: name,
+        value: value,
+        formattedValue: formatDisplayDate(value)
+      });
+      
+      onBlur(syntheticEvent);
     }
   };
 
   const handleCalendarSelect = (date: Date | undefined) => {
     if (date) {
+      console.log('[DatePicker] Calendar date selected:', { fieldName: name, date, formatted: formatDisplayDate(date) });
       setValue(name, date);
       setInputValue(formatDisplayDate(date));
       if (error) clearErrors(name);
@@ -119,12 +166,13 @@ export const DatePicker: React.FC<DatePickerProps> = ({ name, label, required = 
       <div className="flex gap-2">
         <Input
           id={name}
+          name={name}
           type="text"
           placeholder="DD/MM/YYYY"
           value={displayValue}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
-          className={cn("flex-1", error && "border-destructive")}
+          className={cn("flex-1", error && "border-destructive", className)}
           maxLength={10}
         />
         <Popover open={isOpen} onOpenChange={setIsOpen}>

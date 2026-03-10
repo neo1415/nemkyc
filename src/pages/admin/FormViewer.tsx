@@ -13,6 +13,7 @@ import { sendStatusUpdateNotification } from '../../services/emailService';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../firebase/config';
 import CorporateKYCViewer from './CorporateKYCViewer';
+import CorporateNFIUViewer from './CorporateNFIUViewer';
 import IndividualKYCViewer from './IndividualKYCViewer';
 import IndividualCDDViewer from './IndividualCDDViewer';
 import BrokersCDDViewer from './BrokersCDDViewer';
@@ -124,8 +125,36 @@ const FormViewer: React.FC = () => {
         }
         return 'partners-cdd';
       },
+      'formSubmissions': (data: any) => {
+        // Detect NFIU forms from legacy formSubmissions collection
+        const formType = data.formType?.toLowerCase() || '';
+        const formVariant = data.formVariant?.toLowerCase() || '';
+        
+        // Check for Corporate NFIU
+        if (
+          (formType.includes('corporate') && formType.includes('nfiu')) ||
+          (formVariant === 'corporate' && formType.includes('nfiu')) ||
+          (data.incorporationNumber && data.insured && !data.firstName)
+        ) {
+          return 'corporate-nfiu-form';
+        }
+        
+        // Check for Individual NFIU
+        if (
+          (formType.includes('individual') && formType.includes('nfiu')) ||
+          (formVariant === 'individual' && formType.includes('nfiu')) ||
+          (data.firstName && data.lastName && data.NIN && !data.incorporationNumber)
+        ) {
+          return 'individual-nfiu-form';
+        }
+        
+        // Fallback to generic formSubmissions
+        return 'formSubmissions';
+      },
       'Individual-kyc-form': 'individual-kyc',
-      'corporate-kyc-form': 'corporate-kyc',
+      'corporate-kyc-form': 'corporate-kyc-form',
+      'corporate-nfiu-form': 'corporate-nfiu-form',
+      'individual-nfiu-form': 'individual-nfiu-form',
       'motor-claims': 'motor-claims',
       'fire-claims': 'fire-special-perils-claims',
       'professional-indemnity': 'professional-indemnity-claims',
@@ -193,6 +222,19 @@ const FormViewer: React.FC = () => {
     const hasFlatDirectorFields = directorFieldKeys.some(key => data[key] !== undefined && data[key] !== '');
     
     let processedData = { ...data };
+    
+    // NFIU Corporate Form Backward Compatibility
+    // Handle old submissions with separate natureOfBusiness and businessOccupation fields
+    if (collection === 'corporate-nfiu-form') {
+      // If businessTypeOccupation doesn't exist but old fields do, concatenate them
+      if (!processedData.businessTypeOccupation && 
+          (processedData.natureOfBusiness || processedData.businessOccupation)) {
+        const parts = [];
+        if (processedData.natureOfBusiness) parts.push(processedData.natureOfBusiness);
+        if (processedData.businessOccupation) parts.push(processedData.businessOccupation);
+        processedData.businessTypeOccupation = parts.join(' - ');
+      }
+    }
     
     // If we don't have a directors array but have flat director fields, synthesize directors
     if (!hasDirectorsArray && hasFlatDirectorFields) {
@@ -845,6 +887,32 @@ const FormViewer: React.FC = () => {
             Back
           </Button>
           <CorporateKYCViewer 
+            data={formData} 
+            onClose={() => navigate(-1)} 
+          />
+        </Box>
+      </ThemeProvider>
+    );
+  }
+
+  if (collection === 'corporate-nfiu-form') {
+    return (
+      <ThemeProvider theme={theme}>
+        <Box sx={{ 
+          p: { xs: 2, sm: 3 }, 
+          maxWidth: '1200px', 
+          mx: 'auto',
+          width: '100%',
+          minHeight: '100vh'
+        }}>
+          <Button
+            startIcon={<ArrowLeft />}
+            onClick={() => navigate(-1)}
+            sx={{ mb: 3 }}
+          >
+            Back
+          </Button>
+          <CorporateNFIUViewer 
             data={formData} 
             onClose={() => navigate(-1)} 
           />

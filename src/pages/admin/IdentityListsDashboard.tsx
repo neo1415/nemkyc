@@ -43,6 +43,7 @@ import {
 } from '@mui/icons-material';
 import { UploadDialog } from '../../components/identity/UploadDialog';
 import IdentityListDetail from './IdentityListDetail';
+import VerificationFlowChart from '../../components/identity/VerificationFlowChart';
 import '../../styles/broker-tour.css';
 import type { ListSummary } from '../../types/remediation';
 import { formatDate } from '../../utils/dateFormatter';
@@ -391,6 +392,16 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
           {error}
         </Alert>
       )}
+
+      {/* Verification Flow Chart */}
+      <div className="flex justify-center mb-6">
+        <div className="w-full max-w-6xl">
+          <VerificationFlowChart 
+            currentStep={filteredLists.length === 0 ? 1 : 2} 
+            className="w-full" 
+          />
+        </div>
+      </div>
 
       {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>

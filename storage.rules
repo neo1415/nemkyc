@@ -205,6 +205,23 @@ service firebase.storage {
       allow delete: if isAdminOrSuperAdmin();
     }
     
+    // ========== NFIU Forms ==========
+    // Pattern: individual-nfiu/{folder}/{fileName} and corporate-nfiu/{folder}/{fileName}
+    // The fileService creates nested paths: path/timestamp_filename
+    match /corporate-nfiu/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /individual-nfiu/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
     // ========== Claims Forms ==========
     match /motor-claims/{folder}/{fileName} {
       allow create: if isValidFileType() && isValidFileSize();

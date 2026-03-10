@@ -78,6 +78,14 @@ const Index = () => {
       gradient: 'from-blue-500 to-indigo-500'
     },
     {
+      icon: FileText,
+      title: 'NFIU Forms',
+      description: 'NFIU forms are for regulatory reporting to the Nigerian Financial Intelligence Unit',
+      forms: ['Individual NFIU', 'Corporate NFIU'],
+      path: '/nfiu',
+      gradient: 'from-purple-500 to-violet-500'
+    },
+    {
       icon: Building2,
       title: 'CDD Forms',
       description: 'Customer Due Diligence for various business relationships',
@@ -176,7 +184,7 @@ const Index = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {formCategories.map((category, index) => (
               <Card 
                 key={index} 

@@ -50,7 +50,8 @@ export interface NINVerificationResponse {
     middleName?: string;
     lastName: string;
     gender: string;
-    dateOfBirth: string;
+    dateOfBirth: string; // For autofill field mapping
+    birthdate: string;   // For validation config matching (same value as dateOfBirth)
     phoneNumber?: string;
     birthstate?: string;
     birthlga?: string;

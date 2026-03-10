@@ -4,7 +4,7 @@
 export interface FormField {
   key: string;
   label: string;
-  type: 'text' | 'date' | 'email' | 'url' | 'array' | 'object' | 'boolean' | 'number' | 'currency' | 'textarea' | 'file' | 'radio' | 'select';
+  type: 'text' | 'date' | 'time' | 'email' | 'url' | 'array' | 'object' | 'boolean' | 'number' | 'currency' | 'textarea' | 'file' | 'radio' | 'select';
   editable?: boolean;
   options?: Array<{ value: string; label: string }>;
   conditional?: {
@@ -1765,7 +1765,6 @@ export const FORM_MAPPINGS: FormMapping = {
     {
       title: 'Company Information',
       fields: [
-        { key: 'branchOffice', label: 'NEM Branch Office', type: 'text', editable: true },
         { key: 'insured', label: 'Insured', type: 'text', editable: true },
         { key: 'officeAddress', label: 'Office Address', type: 'textarea', editable: true },
         { 
@@ -1779,9 +1778,9 @@ export const FORM_MAPPINGS: FormMapping = {
             { value: 'Both', label: 'Both' },
           ]
         },
-        { key: 'contactPerson', label: 'Contact Person', type: 'text', editable: true },
+        { key: 'contactPerson', label: 'Name of Contact Person', type: 'text', editable: true },
         { key: 'website', label: 'Website', type: 'url', editable: true },
-        { key: 'incorporationNumber', label: 'Incorporation Number', type: 'text', editable: true },
+        { key: 'cacNumber', label: 'CAC/Incorporation Number', type: 'text', editable: true },
         { key: 'incorporationState', label: 'Incorporation State', type: 'text', editable: true },
         { key: 'dateOfIncorporationRegistration', label: 'Date of Incorporation/Registration', type: 'date', editable: true },
         { key: 'BVNNumber', label: 'BVN', type: 'text', editable: true },
@@ -1800,24 +1799,6 @@ export const FORM_MAPPINGS: FormMapping = {
             { value: '51 Million - 200 Million', label: '51 Million - 200 Million' },
             { value: 'More Than 200 Million', label: 'More Than 200 Million' },
           ]
-        },
-        { 
-          key: 'premiumPaymentSource', 
-          label: 'Premium Payment Source', 
-          type: 'select', 
-          editable: true,
-          options: [
-            { value: 'Salary or Business Income', label: 'Salary or Business Income' },
-            { value: 'Investments or Dividends', label: 'Investments or Dividends' },
-            { value: 'Other', label: 'Other' },
-          ]
-        },
-        { 
-          key: 'premiumPaymentSourceOther', 
-          label: 'Please specify other income source', 
-          type: 'text', 
-          editable: true, 
-          conditional: { dependsOn: 'premiumPaymentSource', value: 'Other' } 
         }
       ]
     },
@@ -2230,6 +2211,160 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'identification', label: 'Identification Means for Director 1', type: 'file', editable: true },
           { key: 'identification2', label: 'Identification Means for Director 2', type: 'file', editable: true },
           { key: 'NAICOMForm', label: 'NAICOM License Certificate', type: 'file', editable: true },
+        ]
+      }
+    ]
+  },
+
+  'corporate-nfiu-form': {
+    title: 'NFIU Corporate Form',
+    sections: [
+      {
+        title: 'Company Information',
+        fields: [
+          { key: 'insured', label: 'Company Name', type: 'text', editable: true },
+          { key: 'officeAddress', label: 'Office Address', type: 'textarea', editable: true },
+          { 
+            key: 'ownershipOfCompany', 
+            label: 'Ownership of Company', 
+            type: 'select', 
+            editable: true,
+            options: [
+              { value: 'Nigerian', label: 'Nigerian' },
+              { value: 'Foreign', label: 'Foreign' },
+              { value: 'Both', label: 'Both' },
+            ]
+          },
+          { key: 'website', label: 'Website', type: 'url', editable: true },
+          { key: 'incorporationNumber', label: 'Incorporation Number', type: 'text', editable: true },
+          { key: 'incorporationState', label: 'State of Incorporation', type: 'text', editable: true },
+          { key: 'dateOfIncorporationRegistration', label: 'Date of Incorporation', type: 'date', editable: true },
+          { key: 'contactPersonNo', label: 'Company Contact Number', type: 'text', editable: true },
+          { key: 'businessTypeOccupation', label: 'Business Type/Occupation', type: 'text', editable: true },
+          { key: 'taxIDNo', label: 'Tax Identification Number', type: 'text', editable: true },
+          { key: 'emailAddress', label: 'Email Address of the Company', type: 'email', editable: true },
+          { 
+            key: 'premiumPaymentSource', 
+            label: 'Premium Payment Source', 
+            type: 'select', 
+            editable: true,
+            options: [
+              { value: 'Salary or Business Income', label: 'Salary or Business Income' },
+              { value: 'Investments or Dividends', label: 'Investments or Dividends' },
+              { value: 'Other', label: 'Other' },
+            ]
+          },
+          { 
+            key: 'premiumPaymentSourceOther', 
+            label: 'Please specify other payment source', 
+            type: 'text', 
+            editable: true, 
+            conditional: { dependsOn: 'premiumPaymentSource', value: 'Other' } 
+          }
+        ]
+      },
+      {
+        title: 'Director Information',
+        fields: [
+          { key: 'directors', label: 'Directors', type: 'array', editable: true }
+        ]
+      },
+      {
+        title: 'Account Details',
+        fields: [
+          { key: 'localBankName', label: 'Bank Name (Naira Account)', type: 'text', editable: true },
+          { key: 'localAccountNumber', label: 'Account Number (Naira Account)', type: 'text', editable: true },
+          { key: 'localBankBranch', label: 'Bank Branch (Naira Account)', type: 'text', editable: true },
+          { key: 'localAccountOpeningDate', label: 'Account Opening Date (Naira Account)', type: 'date', editable: true },
+          { key: 'foreignBankName', label: 'Bank Name (Domiciliary Account)', type: 'text', editable: true },
+          { key: 'foreignAccountNumber', label: 'Account Number (Domiciliary Account)', type: 'text', editable: true },
+          { key: 'foreignBankBranch', label: 'Bank Branch (Domiciliary Account)', type: 'text', editable: true },
+          { key: 'foreignAccountOpeningDate', label: 'Account Opening Date (Domiciliary Account)', type: 'date', editable: true },
+        ]
+      },
+      {
+        title: 'Document Upload',
+        fields: [
+          { key: 'verificationDocUrl', label: 'CAC Verification Document', type: 'file', editable: true }
+        ]
+      },
+      {
+        title: 'Data Privacy & Declaration',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'I agree to the data privacy terms and declaration and confirm that all information provided is true and accurate to the best of my knowledge', type: 'boolean', editable: true },
+          { key: 'signature', label: 'Digital Signature', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'individual-nfiu-form': {
+    title: 'NFIU Individual Form',
+    sections: [
+      {
+        title: 'Personal Information',
+        fields: [
+          { key: 'firstName', label: 'First Name', type: 'text', editable: true },
+          { key: 'middleName', label: 'Middle Name', type: 'text', editable: true },
+          { key: 'lastName', label: 'Last Name', type: 'text', editable: true },
+          { key: 'dateOfBirth', label: 'Date of Birth', type: 'date', editable: true },
+          { key: 'placeOfBirth', label: 'Place of Birth', type: 'text', editable: true },
+          { key: 'nationality', label: 'Nationality', type: 'text', editable: true },
+          { key: 'occupation', label: 'Occupation', type: 'text', editable: true },
+          { key: 'NIN', label: 'NIN (National Identification Number)', type: 'text', editable: true },
+          { key: 'BVN', label: 'BVN (Bank Verification Number)', type: 'text', editable: true },
+          { key: 'taxIDNo', label: 'Tax Identification Number', type: 'text', editable: true },
+          { key: 'identificationType', label: 'ID Type', type: 'text', editable: true },
+          { key: 'idNumber', label: 'ID Number', type: 'text', editable: true },
+          { key: 'issuingBody', label: 'Issuing Body', type: 'text', editable: true },
+          { key: 'issuedDate', label: 'Issue Date', type: 'date', editable: true },
+          { key: 'expiryDate', label: 'Expiry Date', type: 'date', editable: true },
+          { key: 'emailAddress', label: 'Email Address', type: 'email', editable: true },
+          { key: 'GSMno', label: 'Phone Number', type: 'text', editable: true },
+          { 
+            key: 'sourceOfIncome', 
+            label: 'Source of Income', 
+            type: 'select', 
+            editable: true,
+            options: [
+              { value: 'Salary or Business Income', label: 'Salary or Business Income' },
+              { value: 'Investments or Dividends', label: 'Investments or Dividends' },
+              { value: 'Other', label: 'Other' },
+            ]
+          },
+          { 
+            key: 'sourceOfIncomeOther', 
+            label: 'Please specify other income source', 
+            type: 'text', 
+            editable: true, 
+            conditional: { dependsOn: 'sourceOfIncome', value: 'Other' } 
+          }
+        ]
+      },
+      {
+        title: 'Document Upload',
+        fields: [
+          { key: 'identification', label: 'Identification Document', type: 'file', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
         ]
       }
     ]

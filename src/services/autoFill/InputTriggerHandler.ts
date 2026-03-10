@@ -17,6 +17,7 @@
 
 import { IdentifierType } from '../../types/autoFill';
 import { VerificationAPIClient } from './VerificationAPIClient';
+import { getVerificationCache } from '../VerificationCache';
 
 /**
  * Configuration for InputTriggerHandler
@@ -228,6 +229,11 @@ export class InputTriggerHandler {
       // Handle response
       if (response.success && response.data) {
         console.log('[InputTriggerHandler] Verification successful');
+        
+        // Store in frontend cache for realtime validation
+        const cache = getVerificationCache();
+        cache.set(value, response.data, this.config.identifierType);
+        console.log('[InputTriggerHandler] Stored verification data in frontend cache for:', value);
         
         // Update last verified value
         this.lastVerifiedValue = value;

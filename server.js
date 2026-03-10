@@ -88,6 +88,10 @@ const {
   logEncryptionOperation,
   logSecurityEvent: logAuditSecurityEvent,
   logBulkOperation,
+  logFormView,
+  logFormSubmission,
+  logDocumentUpload,
+  logAdminAction,
   queryAuditLogs,
   getAuditLogStats
 } = require('./server-utils/auditLogger.cjs');
@@ -908,19 +912,54 @@ const isClaimsOrAdminOrCompliance = (role) => {
 
 /**
  * Middleware to require authentication
- * Verifies session cookie and attaches user data to request
+ * Verifies session cookie OR Firebase ID token and attaches user data to request
  */
 const requireAuth = async (req, res, next) => {
   try {
     // Accept session token from cookie OR Authorization header (for localhost cross-port)
     let sessionToken = req.cookies.__session;
+    let isFirebaseIdToken = false;
     
     // Fallback: Check Authorization header for localhost development
     if (!sessionToken && req.headers.authorization) {
       const authHeader = req.headers.authorization;
       if (authHeader.startsWith('Bearer ')) {
         sessionToken = authHeader.substring(7);
-        console.log('🔑 Using session token from Authorization header (localhost fallback)');
+        console.log('🔑 Using token from Authorization header (localhost fallback)');
+        
+        // Try to verify as Firebase ID token first
+        try {
+          const decodedToken = await admin.auth().verifyIdToken(sessionToken);
+          console.log('✅ Valid Firebase ID token for user:', decodedToken.uid);
+          
+          // Fetch user data from userroles collection using UID
+          const userDoc = await db.collection('userroles').doc(decodedToken.uid).get();
+          
+          if (!userDoc.exists) {
+            console.log('❌ User not found in userroles collection:', decodedToken.uid);
+            return res.status(401).json({ 
+              error: 'User not found',
+              message: 'Your account is not properly configured. Please contact support.'
+            });
+          }
+          
+          const userData = userDoc.data();
+          
+          // Attach user data to request
+          req.user = {
+            uid: decodedToken.uid,
+            email: userData.email,
+            role: userData.role,
+            name: userData.name,
+            ...userData
+          };
+          
+          isFirebaseIdToken = true;
+          return next();
+        } catch (firebaseError) {
+          console.log('⚠️ Not a valid Firebase ID token, trying as session token:', firebaseError.message);
+          // Continue to try as session token below
+        }
       }
     }
     
@@ -951,85 +990,95 @@ const requireAuth = async (req, res, next) => {
       });
     }
 
-    // Get user data from cache or Firestore
-    const userData = await getCachedSession(sessionToken, db);
-    
-    if (!userData) {
-      console.log('❌ Auth failed: Invalid session token');
+    // If we reach here and it's not a Firebase ID token, try as session token
+    if (!isFirebaseIdToken) {
+      // Get user data from cache or Firestore
+      const userData = await getCachedSession(sessionToken, db);
       
-      // Log invalid session attempt
-      try {
-        await logAuditSecurityEvent({
-          eventType: 'unauthenticated_verification_attempt',
-          severity: 'medium',
-          description: 'Attempted to access protected endpoint with invalid session token',
-          userId: 'anonymous',
-          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-          metadata: {
-            endpoint: req.path,
-            method: req.method,
-            userAgent: req.headers['user-agent']
-          }
+      if (!userData) {
+        console.log('❌ Auth failed: Invalid session token');
+        
+        // Log invalid session attempt
+        try {
+          await logAuditSecurityEvent({
+            eventType: 'unauthenticated_verification_attempt',
+            severity: 'medium',
+            description: 'Attempted to access protected endpoint with invalid session token',
+            userId: 'anonymous',
+            ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+            metadata: {
+              endpoint: req.path,
+              method: req.method,
+              userAgent: req.headers['user-agent']
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log security event:', logError);
+        }
+        
+        return res.status(401).json({ 
+          error: 'Invalid session',
+          message: 'Your session has expired. Please sign in again.'
         });
-      } catch (logError) {
-        console.error('Failed to log security event:', logError);
       }
-      
-      return res.status(401).json({ 
-        error: 'Invalid session',
-        message: 'Your session has expired. Please sign in again.'
-      });
     }
     
-    // ✅ SESSION TIMEOUT CHECK (2 hours of inactivity)
-    const SESSION_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours (increased from 30 minutes)
-    const ACTIVITY_UPDATE_INTERVAL = 5 * 60 * 1000; // Only update lastActivity every 5 minutes
-    
-    // Check timeout if lastActivity exists
-    if (userData.lastActivity) {
-      const timeSinceLastActivity = Date.now() - userData.lastActivity;
+    // ✅ SESSION TIMEOUT CHECK (2 hours of inactivity) - only for session tokens
+    if (!isFirebaseIdToken) {
+      const SESSION_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours (increased from 30 minutes)
+      const ACTIVITY_UPDATE_INTERVAL = 5 * 60 * 1000; // Only update lastActivity every 5 minutes
       
-      if (timeSinceLastActivity > SESSION_TIMEOUT) {
-        logger.warn(`Session expired due to inactivity: ${userData.email}`);
-        // Don't delete the userroles document! Just clear the session cookie
-        invalidateSessionCache(sessionToken); // Clear from cache
-        res.clearCookie('__session');
-        return res.status(401).json({ 
-          error: 'Session expired',
-          message: 'Your session has expired due to inactivity. Please sign in again.'
-        });
-      }
+      // Get user data from cache or Firestore
+      const userData = await getCachedSession(sessionToken, db);
       
-      // Only update lastActivity if it's been more than 5 minutes since last update
-      if (timeSinceLastActivity > ACTIVITY_UPDATE_INTERVAL) {
-        // Update in background (don't await to avoid slowing down requests)
+      // Check timeout if lastActivity exists
+      if (userData.lastActivity) {
+        const timeSinceLastActivity = Date.now() - userData.lastActivity;
+        
+        if (timeSinceLastActivity > SESSION_TIMEOUT) {
+          logger.warn(`Session expired due to inactivity: ${userData.email}`);
+          // Don't delete the userroles document! Just clear the session cookie
+          invalidateSessionCache(sessionToken); // Clear from cache
+          res.clearCookie('__session');
+          return res.status(401).json({ 
+            error: 'Session expired',
+            message: 'Your session has expired due to inactivity. Please sign in again.'
+          });
+        }
+        
+        // Only update lastActivity if it's been more than 5 minutes since last update
+        if (timeSinceLastActivity > ACTIVITY_UPDATE_INTERVAL) {
+          // Update in background (don't await to avoid slowing down requests)
+          db.collection('userroles').doc(sessionToken).update({
+            lastActivity: Date.now()
+          }).then(() => {
+            // Invalidate cache so next request gets fresh data
+            invalidateSessionCache(sessionToken);
+          }).catch(err => logger.error('Failed to update lastActivity:', err));
+        }
+      } else {
+        // ✅ MIGRATION: If lastActivity doesn't exist, set it now (for existing sessions)
+        logger.info(`Initializing lastActivity for existing session: ${userData.email}`);
         db.collection('userroles').doc(sessionToken).update({
           lastActivity: Date.now()
         }).then(() => {
-          // Invalidate cache so next request gets fresh data
           invalidateSessionCache(sessionToken);
-        }).catch(err => logger.error('Failed to update lastActivity:', err));
+        }).catch(err => logger.error('Failed to initialize lastActivity:', err));
       }
-    } else {
-      // ✅ MIGRATION: If lastActivity doesn't exist, set it now (for existing sessions)
-      logger.info(`Initializing lastActivity for existing session: ${userData.email}`);
-      db.collection('userroles').doc(sessionToken).update({
-        lastActivity: Date.now()
-      }).then(() => {
-        invalidateSessionCache(sessionToken);
-      }).catch(err => logger.error('Failed to initialize lastActivity:', err));
-    }
-    
-    // Attach user data to request for use in route handlers
-    req.user = {
-      uid: sessionToken,
-      email: userData.email,
-      name: userData.name || userData.displayName,
-      role: normalizeRole(userData.role),
-      rawRole: userData.role // Keep original for logging
-    };
+      
+      // Attach user data to request for use in route handlers
+      req.user = {
+        uid: sessionToken,
+        email: userData.email,
+        name: userData.name || userData.displayName,
+        role: normalizeRole(userData.role),
+        rawRole: userData.role // Keep original for logging
+      };
 
-    console.log('✅ Auth success:', req.user.email, 'Role:', req.user.role);
+      console.log('✅ Auth success:', req.user.email, 'Role:', req.user.role);
+    }
+    // If Firebase ID token was used, req.user is already set above
+    
     next();
     
   } catch (error) {
@@ -2362,13 +2411,27 @@ try {
 // Fetch all admin emails from Firebase
 async function getAllAdminEmails() {
   try {
+    // Check email recipients mode from environment variable
+    const emailMode = process.env.EMAIL_RECIPIENTS_MODE || 'all';
+    
+    let roles = ['admin', 'compliance'];
+    
+    // If in super-admin-only mode, only fetch super admin emails
+    if (emailMode === 'super-admin') {
+      console.log('📧 EMAIL MODE: super-admin only (testing mode)');
+      roles = ['super admin', 'super-admin', 'superadmin'];
+    } else {
+      console.log('📧 EMAIL MODE: all recipients (normal mode)');
+    }
+
     const usersSnapshot = await admin
       .firestore()
       .collection('userroles')
-      .where('role', 'in', ['admin', 'compliance'])
+      .where('role', 'in', roles)
       .get();
 
     const adminEmails = usersSnapshot.docs.map((doc) => doc.data().email);
+    console.log(`📧 Found ${adminEmails.length} recipient(s):`, adminEmails);
     return adminEmails;
   } catch (error) {
     console.error('Error fetching admin emails from Firestore:', error);
@@ -2413,8 +2476,20 @@ async function sendEmailToAdmins(adminEmails, formType, formData) {
 //  Reusable helper
 async function getEmailsByRoles(rolesArray) {
   try {
-    // Always include admin and super admin roles (with both variants)
-    const allRoles = [...new Set([...rolesArray, 'admin', 'super admin', 'super-admin', 'superadmin'])];
+    // Check email recipients mode from environment variable
+    const emailMode = process.env.EMAIL_RECIPIENTS_MODE || 'all';
+    
+    let allRoles;
+    
+    // If in super-admin-only mode, only include super admin roles
+    if (emailMode === 'super-admin') {
+      console.log('📧 EMAIL MODE: super-admin only (testing mode)');
+      allRoles = ['super admin', 'super-admin', 'superadmin'];
+    } else {
+      console.log('📧 EMAIL MODE: all recipients (normal mode)');
+      // Always include admin and super admin roles (with both variants)
+      allRoles = [...new Set([...rolesArray, 'admin', 'super admin', 'super-admin', 'superadmin'])];
+    }
     
     const usersSnapshot = await admin.firestore()
       .collection('userroles')
@@ -4670,6 +4745,10 @@ const ALLOWED_COLLECTIONS = [
   'Individual-kyc-form',
   'corporate-kyc-form',
   
+  // NFIU Forms
+  'individual-nfiu-form',
+  'corporate-nfiu-form',
+  
   // CDD Forms
   'individual-kyc',
   'corporate-kyc',
@@ -4746,6 +4825,16 @@ const getFirestoreCollection = (formType) => {
   else if (formTypeLower.includes('corporate') && formTypeLower.includes('kyc')) {
     console.log('✅ Matched: Corporate KYC -> corporate-kyc-form');
     collection = 'corporate-kyc-form';
+  }
+  
+  // NFIU forms
+  else if (formTypeLower.includes('individual') && formTypeLower.includes('nfiu')) {
+    console.log('✅ Matched: Individual NFIU -> individual-nfiu-form');
+    collection = 'individual-nfiu-form';
+  }
+  else if (formTypeLower.includes('corporate') && formTypeLower.includes('nfiu')) {
+    console.log('✅ Matched: Corporate NFIU -> corporate-nfiu-form');
+    collection = 'corporate-nfiu-form';
   }
   
   // CDD forms
@@ -18316,6 +18405,256 @@ app.get('/api/analytics/audit-logs', requireAuth, requireSuperAdmin, async (req,
 });
 
 // ============= END ANALYTICS API =============
+
+// ============= AUDIT LOGGING API =============
+
+/**
+ * Log form view event
+ * POST /api/audit/form_view
+ * 
+ * Body:
+ * - userId: string (optional)
+ * - userRole: string (optional)
+ * - userEmail: string (optional)
+ * - formType: string (required)
+ * - formVariant: string (required)
+ * - deviceInfo: object (optional)
+ * - location: object (optional)
+ */
+app.post('/api/audit/form_view', async (req, res) => {
+  try {
+    const {
+      userId,
+      userRole,
+      userEmail,
+      formType,
+      formVariant,
+      deviceInfo,
+      location
+    } = req.body;
+
+    // Get IP address
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+    await logFormView({
+      userId,
+      userRole,
+      userEmail,
+      formType,
+      formVariant,
+      ipAddress,
+      deviceInfo,
+      location
+    });
+
+    res.json({ success: true, message: 'Form view logged' });
+  } catch (error) {
+    console.error('❌ Failed to log form view:', error);
+    res.status(500).json({ error: 'Failed to log form view' });
+  }
+});
+
+/**
+ * Log form submission event
+ * POST /api/audit/form_submission
+ * 
+ * Body:
+ * - userId: string (required)
+ * - userRole: string (optional)
+ * - userEmail: string (optional)
+ * - formType: string (required)
+ * - formVariant: string (required)
+ * - submissionId: string (required)
+ * - formData: object (optional, will be masked)
+ * - deviceInfo: object (optional)
+ * - location: object (optional)
+ */
+app.post('/api/audit/form_submission', async (req, res) => {
+  try {
+    const {
+      userId,
+      userRole,
+      userEmail,
+      formType,
+      formVariant,
+      submissionId,
+      formData,
+      deviceInfo,
+      location
+    } = req.body;
+
+    // Get IP address
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+    await logFormSubmission({
+      userId,
+      userRole,
+      userEmail,
+      formType,
+      formVariant,
+      submissionId,
+      ipAddress,
+      deviceInfo,
+      location,
+      formData
+    });
+
+    res.json({ success: true, message: 'Form submission logged' });
+  } catch (error) {
+    console.error('❌ Failed to log form submission:', error);
+    res.status(500).json({ error: 'Failed to log form submission' });
+  }
+});
+
+/**
+ * Log document upload event
+ * POST /api/audit/document_upload
+ * 
+ * Body:
+ * - userId: string (required)
+ * - userRole: string (optional)
+ * - userEmail: string (optional)
+ * - formType: string (required)
+ * - documentType: string (required)
+ * - fileName: string (required)
+ * - fileSize: number (required)
+ * - deviceInfo: object (optional)
+ * - location: object (optional)
+ */
+app.post('/api/audit/document_upload', async (req, res) => {
+  try {
+    const {
+      userId,
+      userRole,
+      userEmail,
+      formType,
+      documentType,
+      fileName,
+      fileSize,
+      deviceInfo,
+      location
+    } = req.body;
+
+    // Get IP address
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+    await logDocumentUpload({
+      userId,
+      userRole,
+      userEmail,
+      formType,
+      documentType,
+      fileName,
+      fileSize,
+      ipAddress,
+      deviceInfo,
+      location
+    });
+
+    res.json({ success: true, message: 'Document upload logged' });
+  } catch (error) {
+    console.error('❌ Failed to log document upload:', error);
+    res.status(500).json({ error: 'Failed to log document upload' });
+  }
+});
+
+/**
+ * Log admin action event
+ * POST /api/audit/admin_action
+ * 
+ * Body:
+ * - adminUserId: string (required)
+ * - adminRole: string (optional)
+ * - adminEmail: string (optional)
+ * - formType: string (required)
+ * - formVariant: string (optional)
+ * - submissionId: string (required)
+ * - action: string (required) - view, edit, approve, reject
+ * - changedFields: array (optional)
+ * - oldValues: object (optional, will be masked)
+ * - newValues: object (optional, will be masked)
+ * - deviceInfo: object (optional)
+ * - location: object (optional)
+ */
+app.post('/api/audit/admin_action', requireAuth, async (req, res) => {
+  try {
+    const {
+      adminUserId,
+      adminRole,
+      adminEmail,
+      formType,
+      formVariant,
+      submissionId,
+      action,
+      changedFields,
+      oldValues,
+      newValues,
+      deviceInfo,
+      location
+    } = req.body;
+
+    // Get IP address
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+    await logAdminAction({
+      adminUserId,
+      adminRole,
+      adminEmail,
+      formType,
+      formVariant,
+      submissionId,
+      action,
+      changedFields,
+      oldValues,
+      newValues,
+      ipAddress,
+      deviceInfo,
+      location
+    });
+
+    res.json({ success: true, message: 'Admin action logged' });
+  } catch (error) {
+    console.error('❌ Failed to log admin action:', error);
+    res.status(500).json({ error: 'Failed to log admin action' });
+  }
+});
+
+/**
+ * Query audit logs
+ * GET /api/audit/logs
+ * 
+ * Query params:
+ * - eventType: string (optional)
+ * - userId: string (optional)
+ * - formType: string (optional)
+ * - startDate: ISO date string (optional)
+ * - endDate: ISO date string (optional)
+ * - limit: number (optional, default 100)
+ * 
+ * Requires super admin role
+ */
+app.get('/api/audit/logs', requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const { eventType, userId, formType, startDate, endDate, limit } = req.query;
+
+    const filters = {};
+    if (eventType) filters.eventType = eventType;
+    if (userId) filters.userId = userId;
+    if (formType) filters.formType = formType;
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
+    if (limit) filters.limit = parseInt(limit);
+
+    const logs = await queryAuditLogs(filters);
+
+    res.json({ success: true, logs, count: logs.length });
+  } catch (error) {
+    console.error('❌ Failed to query audit logs:', error);
+    res.status(500).json({ error: 'Failed to query audit logs' });
+  }
+});
+
+// ============= END AUDIT LOGGING API =============
 
 // ============= END IDENTITY REMEDIATION SYSTEM =============
 

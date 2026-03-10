@@ -73,6 +73,7 @@ import { validateIdentityData } from '../../utils/validation/identityValidation'
 import { validateRow } from '../../utils/validation/rowValidation';
 import { ValidationErrorDisplay } from './ValidationErrorDisplay';
 import { EditablePreviewTable } from './EditablePreviewTable';
+import VerificationFlowChart from './VerificationFlowChart';
 import { 
   getMergedRowData, 
   updateEditState as updateEditStateHelper,
@@ -111,6 +112,7 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
   const [validating, setValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTemplateMenu, setShowTemplateMenu] = useState(false);
+  const [showFlowchart, setShowFlowchart] = useState(true);
 
   // Edit state management
   const [editState, setEditState] = useState<EditState>(new Map());
@@ -125,6 +127,7 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
     setListName('');
     setEmailColumn('');
     setError(null);
+    setShowFlowchart(true);
     // Clear edit state
     setEditState(new Map());
     setValidationState(new Map());
@@ -415,6 +418,15 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth sx={{ zIndex: 1300 }}>
+      {/* Vertical Floating Flowchart - only show when modal is open and user hasn't closed it */}
+      {open && showFlowchart && (
+        <VerificationFlowChart 
+          currentStep={parseResult ? (listName.trim() && emailColumn ? 4 : 3) : (file ? 2 : 1)}
+          orientation="vertical"
+          isFloating={true}
+          onClose={() => setShowFlowchart(false)}
+        />
+      )}
       <DialogTitle sx={{ bgcolor: '#800020', color: 'white', py: 2 }}>Upload Customer List</DialogTitle>
       <DialogContent sx={{ overflowY: 'auto' }}>
         {/* Upload Mode Selector */}

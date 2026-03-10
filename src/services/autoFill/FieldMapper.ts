@@ -45,23 +45,27 @@ export class FieldMapper {
    * 
    * @param normalizedData - Normalized NIN data
    * @param formElement - The form element to populate
+   * @param fieldPrefix - Optional prefix for nested fields (e.g., "directors.0.")
    * @returns Array of field mappings
    */
   mapNINFields(
     normalizedData: NormalizedNINData,
-    formElement: HTMLFormElement
+    formElement: HTMLFormElement,
+    fieldPrefix: string = ''
   ): FieldMapping[] {
     const mappings: FieldMapping[] = [];
     
     console.log('🔍 [FieldMapper] Starting NIN field mapping with data:', normalizedData);
+    console.log('🔍 [FieldMapper] Field prefix:', fieldPrefix || '(none)');
 
     // Map firstName
     if (normalizedData.firstName) {
-      const field = findFormField(formElement, 'firstName');
-      console.log(`🔍 [FieldMapper] firstName: ${normalizedData.firstName} → field found:`, !!field);
+      const fieldName = `${fieldPrefix}firstName`;
+      const field = findFormField(formElement, fieldName);
+      console.log(`🔍 [FieldMapper] firstName: ${normalizedData.firstName} → searching for "${fieldName}" → field found:`, !!field);
       if (field) {
         mappings.push({
-          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'firstName',
+          formFieldName: field.getAttribute('name') || field.getAttribute('id') || fieldName,
           formFieldElement: field,
           value: normalizedData.firstName,
           sourceField: 'firstName'
@@ -71,10 +75,11 @@ export class FieldMapper {
 
     // Map middleName
     if (normalizedData.middleName) {
-      const field = findFormField(formElement, 'middleName');
+      const fieldName = `${fieldPrefix}middleName`;
+      const field = findFormField(formElement, fieldName);
       if (field) {
         mappings.push({
-          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'middleName',
+          formFieldName: field.getAttribute('name') || field.getAttribute('id') || fieldName,
           formFieldElement: field,
           value: normalizedData.middleName,
           sourceField: 'middleName'
@@ -84,10 +89,11 @@ export class FieldMapper {
 
     // Map lastName
     if (normalizedData.lastName) {
-      const field = findFormField(formElement, 'lastName');
+      const fieldName = `${fieldPrefix}lastName`;
+      const field = findFormField(formElement, fieldName);
       if (field) {
         mappings.push({
-          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'lastName',
+          formFieldName: field.getAttribute('name') || field.getAttribute('id') || fieldName,
           formFieldElement: field,
           value: normalizedData.lastName,
           sourceField: 'lastName'
@@ -97,11 +103,12 @@ export class FieldMapper {
 
     // Map gender
     if (normalizedData.gender) {
-      const field = findFormField(formElement, 'gender');
-      console.log(`🔍 [FieldMapper] gender: ${normalizedData.gender} → field found:`, !!field);
+      const fieldName = `${fieldPrefix}gender`;
+      const field = findFormField(formElement, fieldName);
+      console.log(`🔍 [FieldMapper] gender: ${normalizedData.gender} → searching for "${fieldName}" → field found:`, !!field);
       if (field) {
         mappings.push({
-          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'gender',
+          formFieldName: field.getAttribute('name') || field.getAttribute('id') || fieldName,
           formFieldElement: field,
           value: normalizedData.gender,
           sourceField: 'gender'
@@ -109,13 +116,22 @@ export class FieldMapper {
       }
     }
 
-    // Map dateOfBirth
+    // Map dateOfBirth (try both dob and dateOfBirth)
     if (normalizedData.dateOfBirth) {
-      const field = findFormField(formElement, 'dateOfBirth');
-      console.log(`🔍 [FieldMapper] dateOfBirth: ${normalizedData.dateOfBirth} → field found:`, !!field);
+      // Try dob first (common abbreviation)
+      let fieldName = `${fieldPrefix}dob`;
+      let field = findFormField(formElement, fieldName);
+      
+      // If not found, try dateOfBirth
+      if (!field) {
+        fieldName = `${fieldPrefix}dateOfBirth`;
+        field = findFormField(formElement, fieldName);
+      }
+      
+      console.log(`🔍 [FieldMapper] dateOfBirth: ${normalizedData.dateOfBirth} → searching for "${fieldName}" → field found:`, !!field);
       if (field) {
         mappings.push({
-          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'dateOfBirth',
+          formFieldName: field.getAttribute('name') || field.getAttribute('id') || fieldName,
           formFieldElement: field,
           value: normalizedData.dateOfBirth,
           sourceField: 'dateOfBirth'
@@ -125,11 +141,12 @@ export class FieldMapper {
 
     // Map phoneNumber
     if (normalizedData.phoneNumber) {
-      const field = findFormField(formElement, 'phoneNumber');
-      console.log(`🔍 [FieldMapper] phoneNumber: ${normalizedData.phoneNumber} → field found:`, !!field);
+      const fieldName = `${fieldPrefix}phoneNumber`;
+      const field = findFormField(formElement, fieldName);
+      console.log(`🔍 [FieldMapper] phoneNumber: ${normalizedData.phoneNumber} → searching for "${fieldName}" → field found:`, !!field);
       if (field) {
         mappings.push({
-          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'phoneNumber',
+          formFieldName: field.getAttribute('name') || field.getAttribute('id') || fieldName,
           formFieldElement: field,
           value: normalizedData.phoneNumber,
           sourceField: 'phoneNumber'
@@ -139,12 +156,20 @@ export class FieldMapper {
     
     console.log(`🔍 [FieldMapper] Total fields mapped: ${mappings.length}`, mappings.map(m => m.sourceField));
 
-    // Map birthstate
+    // Map birthstate (try placeOfBirth as well)
     if (normalizedData.birthstate) {
-      const field = findFormField(formElement, 'birthstate');
+      let fieldName = `${fieldPrefix}birthstate`;
+      let field = findFormField(formElement, fieldName);
+      
+      // If not found, try placeOfBirth
+      if (!field) {
+        fieldName = `${fieldPrefix}placeOfBirth`;
+        field = findFormField(formElement, fieldName);
+      }
+      
       if (field) {
         mappings.push({
-          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'birthstate',
+          formFieldName: field.getAttribute('name') || field.getAttribute('id') || fieldName,
           formFieldElement: field,
           value: normalizedData.birthstate,
           sourceField: 'birthstate'
@@ -154,10 +179,11 @@ export class FieldMapper {
 
     // Map birthlga
     if (normalizedData.birthlga) {
-      const field = findFormField(formElement, 'birthlga');
+      const fieldName = `${fieldPrefix}birthlga`;
+      const field = findFormField(formElement, fieldName);
       if (field) {
         mappings.push({
-          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'birthlga',
+          formFieldName: field.getAttribute('name') || field.getAttribute('id') || fieldName,
           formFieldElement: field,
           value: normalizedData.birthlga,
           sourceField: 'birthlga'
@@ -172,16 +198,21 @@ export class FieldMapper {
    * Maps CAC data to form fields
    * 
    * Attempts to find matching form fields for each CAC data field:
-   * - companyName → insured (Corporate KYC form uses "insured" for company name)
+   * - companyName → insured (both forms use "insured" for company name)
    * - registrationNumber
    * - registrationDate → dateOfIncorporationRegistration
    * - companyStatus
    * - typeOfEntity → natureOfBusiness
+   * - email → emailAddress (maps to "Email Address of the Company" for NFIU, "Contact Person's Email Address" for KYC)
    * 
    * Skips fields that:
    * - Don't exist in the form
    * - Have empty/null values
    * - Cannot be matched
+   * 
+   * Note: The email field mapping is flexible - it will map to whichever email field exists in the form.
+   * NFIU Corporate has "emailAddress" (labeled "Email Address of the Company")
+   * KYC Corporate has "contactPersonEmail" (labeled "Contact Person's Email Address")
    * 
    * @param normalizedData - Normalized CAC data
    * @param formElement - The form element to populate
@@ -195,7 +226,7 @@ export class FieldMapper {
 
     console.log('🔍 [FieldMapper] Starting CAC field mapping with data:', normalizedData);
 
-    // Map companyName → insured (Corporate KYC form uses "insured" for company name)
+    // Map companyName → insured (both forms use "insured" for company name)
     if (normalizedData.companyName) {
       const field = findFormField(formElement, 'insured');
       console.log(`🔍 [FieldMapper] companyName: ${normalizedData.companyName} → insured field found:`, !!field);
@@ -251,17 +282,28 @@ export class FieldMapper {
       }
     }
 
-    // Map typeOfEntity → natureOfBusiness
+    // Map typeOfEntity → natureOfBusiness or businessTypeOccupation
+    // KYC Corporate uses: natureOfBusiness
+    // NFIU Corporate uses: businessTypeOccupation
     if (normalizedData.typeOfEntity) {
-      const field = findFormField(formElement, 'natureOfBusiness');
-      console.log(`🔍 [FieldMapper] typeOfEntity: ${normalizedData.typeOfEntity} → natureOfBusiness field found:`, !!field);
+      // Try natureOfBusiness first (KYC Corporate)
+      let field = findFormField(formElement, 'natureOfBusiness');
+      
+      // If not found, try businessTypeOccupation (NFIU Corporate)
+      if (!field) {
+        field = findFormField(formElement, 'businessTypeOccupation');
+      }
+      
+      console.log(`🔍 [FieldMapper] typeOfEntity: ${normalizedData.typeOfEntity} → field found:`, !!field);
       if (field) {
+        const fieldName = field.getAttribute('name') || field.getAttribute('id') || 'natureOfBusiness';
         mappings.push({
-          formFieldName: field.getAttribute('name') || field.getAttribute('id') || 'natureOfBusiness',
+          formFieldName: fieldName,
           formFieldElement: field,
           value: normalizedData.typeOfEntity,
           sourceField: 'typeOfEntity'
         });
+        console.log(`🔍 [FieldMapper] Mapped typeOfEntity to field: ${fieldName}`);
       }
     }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Check, Info } from 'lucide-react';
+import { Check, Info, Loader2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
@@ -21,7 +21,20 @@ import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
 import FormLoadingModal from '@/components/common/FormLoadingModal';
 import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
+import { ErrorModal } from '@/components/common/ErrorModal';
+import { VerificationMismatchModal } from '@/components/common/VerificationMismatchModal';
 import DatePicker from '@/components/common/DatePicker';
+import { useAuth } from '@/contexts/AuthContext';
+import { validateNINFormat, FormatValidationResult } from '@/utils/identityFormatValidator';
+import { useAutoFill } from '@/hooks/useAutoFill';
+import { IdentifierType } from '@/types/autoFill';
+import { auditService } from '@/services/auditService';
+import { useRealtimeVerificationValidation } from '@/hooks/useRealtimeVerificationValidation';
+import { NIN_FIELDS_CONFIG } from '@/config/realtimeValidationConfig';
+import { FieldValidationIndicator } from '@/components/validation/FieldValidationIndicator';
+import { ValidationTooltip } from '@/components/validation/ValidationTooltip';
+import { ValidationAnnouncer } from '@/components/validation/ValidationAnnouncer';
+import { FieldValidationStatus } from '@/types/realtimeVerificationValidation';
 
 
 // Form validation schema
@@ -49,10 +62,6 @@ const individualKYCSchema = yup.object().shape({
     .matches(/^[0-9+\-()]+$/, "Phone number can only contain numbers and +, -, (, ) characters")
     .max(15, "Phone number cannot exceed 15 characters"),
   emailAddress: yup.string().email("Please enter a valid email address").required("Email is required"),
-  BVN: yup.string()
-    .required("BVN is required")
-    .matches(/^[0-9]+$/, "BVN can only contain numbers")
-    .length(11, "BVN must be exactly 11 digits"),
   NIN: yup.string()
     .required("NIN is required")
     .matches(/^[0-9]+$/, "NIN can only contain numbers")
@@ -148,7 +157,6 @@ const defaultValues = {
   GSMno: '',
   emailAddress: '',
   taxIDNo: '',
-  BVN: '',
   NIN: '',
   identificationType: '',
   idNumber: '',
@@ -270,12 +278,18 @@ const FormSelect = ({ name, label, required = false, placeholder, children, ...p
 
 const IndividualKYC: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAuthenticated = user !== null && user !== undefined;
+  const formRef = React.useRef<HTMLFormElement>(null);
+  const ninInputRef = React.useRef<HTMLInputElement>(null);
   
   // Make toast available globally for MultiStepForm
   useEffect(() => {
     (window as any).toast = toast;
   }, [toast]);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [ninValidation, setNinValidation] = useState<FormatValidationResult | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
   
   const formMethods = useForm<any>({
     resolver: yupResolver(individualKYCSchema),
@@ -284,6 +298,28 @@ const IndividualKYC: React.FC = () => {
   });
 
   const { saveDraft, clearDraft } = useFormDraft('individualKYC', formMethods);
+
+  // Initialize autofill with requireAuth=true for KYC form
+  const autoFillState = useAutoFill({
+    formElement: formRef.current,
+    identifierType: IdentifierType.NIN,
+    userId: user?.uid,
+    formId: 'kyc-individual',
+    userName: user?.name || undefined,
+    userEmail: user?.email || undefined,
+    reactHookFormSetValue: formMethods.setValue,
+    requireAuth: true // CRITICAL: Require authentication for autofill
+  });
+
+  // Initialize real-time verification validation
+  const realtimeValidation = useRealtimeVerificationValidation({
+    formType: 'Individual KYC',
+    identifierFieldName: 'NIN',
+    identifierType: 'NIN',
+    fieldsToValidate: NIN_FIELDS_CONFIG,
+    formMethods,
+    isAuthenticated
+  });
 
   const {
     handleSubmit: handleEnhancedSubmit,
@@ -295,11 +331,33 @@ const IndividualKYC: React.FC = () => {
     confirmSubmit,
     closeSuccess,
     formData: submissionData,
-    isSubmitting
+    isSubmitting,
+    showError,
+    errorMessage,
+    closeError,
+    showVerificationMismatch,
+    verificationMismatchData,
+    closeVerificationMismatch
   } = useEnhancedFormSubmit({
     formType: 'Individual KYC',
-    onSuccess: () => clearDraft()
+    onSuccess: () => clearDraft(),
+    verificationData: {
+      identityNumber: formMethods.watch('NIN'),
+      identityType: 'NIN',
+      isVerified: autoFillState.state.status === 'success'
+    }
   });
+
+  // Log form view on mount
+  useEffect(() => {
+    auditService.logFormView({
+      userId: user?.uid,
+      userRole: user?.role,
+      userEmail: user?.email,
+      formType: 'kyc',
+      formVariant: 'individual'
+    });
+  }, [user]);
 
   // Auto-save draft
   useEffect(() => {
@@ -308,6 +366,48 @@ const IndividualKYC: React.FC = () => {
     });
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
+
+  // Attach autofill and real-time validation to NIN field when authenticated
+  // Using a ref callback to ensure the element is mounted before attaching
+  const ninRefCallback = useCallback((element: HTMLInputElement | null) => {
+    console.log('[IndividualKYC] ===== NIN REF CALLBACK FIRED =====');
+    console.log('[IndividualKYC] NIN input element:', element);
+    console.log('[IndividualKYC] NIN input ID:', element?.id);
+    console.log('[IndividualKYC] Is authenticated:', isAuthenticated);
+    
+    if (element && isAuthenticated) {
+      // Store the ref
+      ninInputRef.current = element;
+      
+      console.log('[IndividualKYC] Attaching handlers...');
+      
+      // Attach handlers - these add native DOM event listeners
+      autoFillState.attachToField(element);
+      realtimeValidation.attachToIdentifierField(element);
+      
+      console.log('[IndividualKYC] ✅ Handlers attached successfully');
+    } else if (!element) {
+      console.log('[IndividualKYC] NIN ref callback: element unmounted');
+    } else {
+      console.log('[IndividualKYC] ⚠️ Cannot attach handlers: not authenticated');
+    }
+  }, [isAuthenticated, autoFillState.attachToField, realtimeValidation.attachToIdentifierField]);
+
+  // NIN change handler with format validation
+  const handleNINChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const validation = validateNINFormat(value);
+    setNinValidation(validation);
+    // Don't call setValue here - let the input's natural onChange handle it
+    if (validation.valid) {
+      formMethods.clearErrors('NIN');
+    }
+  };
+
+  // Authentication-based messaging for NIN field
+  const ninMessage = isAuthenticated
+    ? "Enter your NIN and press Tab to auto-fill"
+    : "Your NIN will be verified when you submit";
 
   const onFinalSubmit = async (data: any) => {
     try {
@@ -336,6 +436,18 @@ const IndividualKYC: React.FC = () => {
 
       console.log('Calling handleEnhancedSubmit with finalData:', finalData);
       
+      // Log form submission
+      const submissionId = `kyc-individual-${Date.now()}`;
+      await auditService.logFormSubmission({
+        userId: user?.uid || 'anonymous',
+        userRole: user?.role,
+        userEmail: user?.email,
+        formType: 'kyc',
+        formVariant: 'individual',
+        submissionId,
+        formData: finalData
+      });
+      
       // Use enhanced submit which will show loading immediately
       await handleEnhancedSubmit(finalData);
     } catch (error) {
@@ -352,32 +464,136 @@ const IndividualKYC: React.FC = () => {
     {
       id: 'personal',
       title: 'Personal Information',
+      isValid: realtimeValidation.canProceedToNextStep, // Block navigation if fields are mismatched
       component: (
         <FormProvider {...formMethods}>
-          <div className="space-y-4">
+          <form ref={formRef}>
+            <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField name="officeLocation" label="Office Location" required />
               <FormField name="title" label="Title" required />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField name="firstName" label="First Name" required />
+              <div className="space-y-2">
+                <Label htmlFor="firstName">
+                  First Name
+                  <span className="required-asterisk">*</span>
+                </Label>
+                <Input
+                  id="firstName"
+                  {...formMethods.register('firstName', {
+                    onChange: () => {
+                      if (formMethods.formState.errors.firstName) {
+                        formMethods.clearErrors('firstName');
+                      }
+                    }
+                  })}
+                  {...realtimeValidation.getFieldValidationProps('firstName')}
+                  className={cn(
+                    formMethods.formState.errors.firstName && "border-destructive",
+                    realtimeValidation.getFieldValidationProps('firstName').className
+                  )}
+                />
+                {formMethods.formState.errors.firstName && (
+                  <p className="text-sm text-destructive">{formMethods.formState.errors.firstName.message?.toString()}</p>
+                )}
+                <FieldValidationIndicator
+                  status={realtimeValidation.fieldValidationStates['firstName']?.status || FieldValidationStatus.NOT_VERIFIED}
+                  errorMessage={realtimeValidation.fieldValidationStates['firstName']?.errorMessage || null}
+                  fieldId="firstName"
+                  fieldLabel="First Name"
+                />
+              </div>
               <FormField name="middleName" label="Middle Name" />
-              <FormField name="lastName" label="Last Name" required />
+              <div className="space-y-2">
+                <Label htmlFor="lastName">
+                  Last Name
+                  <span className="required-asterisk">*</span>
+                </Label>
+                <Input
+                  id="lastName"
+                  {...formMethods.register('lastName', {
+                    onChange: () => {
+                      if (formMethods.formState.errors.lastName) {
+                        formMethods.clearErrors('lastName');
+                      }
+                    }
+                  })}
+                  {...realtimeValidation.getFieldValidationProps('lastName')}
+                  className={cn(
+                    formMethods.formState.errors.lastName && "border-destructive",
+                    realtimeValidation.getFieldValidationProps('lastName').className
+                  )}
+                />
+                {formMethods.formState.errors.lastName && (
+                  <p className="text-sm text-destructive">{formMethods.formState.errors.lastName.message?.toString()}</p>
+                )}
+                <FieldValidationIndicator
+                  status={realtimeValidation.fieldValidationStates['lastName']?.status || FieldValidationStatus.NOT_VERIFIED}
+                  errorMessage={realtimeValidation.fieldValidationStates['lastName']?.errorMessage || null}
+                  fieldId="lastName"
+                  fieldLabel="Last Name"
+                />
+              </div>
             </div>
 
             <FormTextarea name="contactAddress" label="Contact Address" required />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField name="occupation" label="Occupation" required />
-              <FormSelect name="gender" label="Gender" required placeholder="Select Gender">
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
-              </FormSelect>
+              <div className="space-y-2">
+                <Label>
+                  Gender
+                  <span className="required-asterisk">*</span>
+                </Label>
+                <Select
+                  value={formMethods.watch('gender')}
+                  onValueChange={(val) => {
+                    formMethods.setValue('gender', val);
+                    if (formMethods.formState.errors.gender) {
+                      formMethods.clearErrors('gender');
+                    }
+                  }}
+                >
+                  <SelectTrigger className={cn(
+                    formMethods.formState.errors.gender && "border-destructive",
+                    realtimeValidation.getFieldValidationProps('gender').className
+                  )}>
+                    <SelectValue placeholder="Select Gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formMethods.formState.errors.gender && (
+                  <p className="text-sm text-destructive">{formMethods.formState.errors.gender.message?.toString()}</p>
+                )}
+                <FieldValidationIndicator
+                  status={realtimeValidation.fieldValidationStates['gender']?.status || FieldValidationStatus.NOT_VERIFIED}
+                  errorMessage={realtimeValidation.fieldValidationStates['gender']?.errorMessage || null}
+                  fieldId="gender"
+                  fieldLabel="Gender"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DatePicker name="dateOfBirth" label="Date of Birth" required />
+              <div className="space-y-2">
+                <DatePicker 
+                  name="dateOfBirth" 
+                  label="Date of Birth" 
+                  required 
+                  {...realtimeValidation.getFieldValidationProps('dateOfBirth')}
+                />
+                <FieldValidationIndicator
+                  status={realtimeValidation.fieldValidationStates['dateOfBirth']?.status || FieldValidationStatus.NOT_VERIFIED}
+                  errorMessage={realtimeValidation.fieldValidationStates['dateOfBirth']?.errorMessage || null}
+                  fieldId="dateOfBirth"
+                  fieldLabel="Date of Birth"
+                />
+              </div>
               <FormField name="mothersMaidenName" label="Mother's Maiden Name" required />
             </div>
 
@@ -409,11 +625,69 @@ const IndividualKYC: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField name="taxIDNo" label="Tax Identification Number" />
-              <FormField name="BVN" label="BVN" required maxLength={11} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField name="NIN" label="NIN (National Identification Number)" required maxLength={11} />
+            <div className="space-y-2">
+              <Label htmlFor="NIN">
+                NIN (National Identification Number)
+                <span className="required-asterisk">*</span>
+              </Label>
+              <div className="relative">
+                <Input
+                  id="NIN"
+                  maxLength={11}
+                  {...(() => {
+                    const { ref, ...rest } = formMethods.register('NIN', {
+                      onChange: handleNINChange
+                    });
+                    return {
+                      ...rest,
+                      ref: (e: HTMLInputElement | null) => {
+                        // Call both refs
+                        ref(e);
+                        ninRefCallback(e);
+                      }
+                    };
+                  })()}
+                  className={cn(
+                    formMethods.formState.errors.NIN && "border-destructive",
+                    ninValidation && !ninValidation.valid && "border-destructive",
+                    ninValidation && ninValidation.valid && "border-green-500"
+                  )}
+                />
+                {(isVerifying || autoFillState.state.status === 'loading') && (
+                  <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-blue-500" />
+                )}
+                {!isVerifying && autoFillState.state.status !== 'loading' && ninValidation && ninValidation.valid && (
+                  <Check className="absolute right-3 top-3 h-4 w-4 text-green-500" />
+                )}
+                {!isVerifying && autoFillState.state.status !== 'loading' && ninValidation && !ninValidation.valid && (
+                  <AlertCircle className="absolute right-3 top-3 h-4 w-4 text-destructive" />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Info className="h-3 w-3" />
+                {ninMessage}
+              </p>
+              {ninValidation && !ninValidation.valid && (
+                <p className="text-sm text-destructive">{ninValidation.error}</p>
+              )}
+              {autoFillState.state.status === 'success' && (
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <Check className="h-4 w-4" />
+                  {autoFillState.state.populatedFieldCount} fields auto-filled
+                  {autoFillState.state.cached && ' (from cache)'}
+                </p>
+              )}
+              {autoFillState.state.status === 'error' && autoFillState.state.error && (
+                <p className="text-sm text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4" />
+                  {autoFillState.state.error.message}
+                </p>
+              )}
+              {formMethods.formState.errors.NIN && (
+                <p className="text-sm text-destructive">{formMethods.formState.errors.NIN.message?.toString()}</p>
+              )}
             </div>
 
             <FormSelect name="identificationType" label="ID Type" required placeholder="Choose ID Type">
@@ -461,6 +735,7 @@ const IndividualKYC: React.FC = () => {
               <FormField name="premiumPaymentSourceOther" label="Please specify other payment source" required />
             )}
           </div>
+          </form>
         </FormProvider>
       )
     },
@@ -514,6 +789,16 @@ const IndividualKYC: React.FC = () => {
                   }));
                   formMethods.setValue('identification', file);
                   formMethods.trigger('identification');
+                  // Log document upload
+                  auditService.logDocumentUpload({
+                    userId: user?.uid || 'anonymous',
+                    userRole: user?.role,
+                    userEmail: user?.email,
+                    formType: 'kyc',
+                    documentType: 'identification',
+                    fileName: file.name,
+                    fileSize: file.size
+                  });
                 }}
                 onFileRemove={() => {
                   setUploadedFiles(prev => ({
@@ -623,7 +908,7 @@ const IndividualKYC: React.FC = () => {
 
   // Define field mappings for each step
   const stepFieldMappings = {
-    0: ['officeLocation', 'title', 'firstName', 'middleName', 'lastName', 'contactAddress', 'occupation', 'gender', 'dateOfBirth', 'mothersMaidenName', 'city', 'state', 'country', 'nationality', 'residentialAddress', 'GSMno', 'emailAddress', 'BVN', 'NIN', 'identificationType', 'idNumber', 'issuingCountry', 'issuedDate', 'sourceOfIncome', 'sourceOfIncomeOther', 'annualIncomeRange', 'premiumPaymentSource', 'premiumPaymentSourceOther'],
+    0: ['officeLocation', 'title', 'firstName', 'middleName', 'lastName', 'contactAddress', 'occupation', 'gender', 'dateOfBirth', 'mothersMaidenName', 'city', 'state', 'country', 'nationality', 'residentialAddress', 'GSMno', 'emailAddress', 'NIN', 'identificationType', 'idNumber', 'issuingCountry', 'issuedDate', 'sourceOfIncome', 'sourceOfIncomeOther', 'annualIncomeRange', 'premiumPaymentSource', 'premiumPaymentSourceOther'],
     1: ['bankName', 'accountNumber', 'bankBranch', 'accountOpeningDate'],
     2: ['identification'], // File upload validation
     3: ['agreeToDataPrivacy', 'signature']
@@ -631,13 +916,19 @@ const IndividualKYC: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Accessibility: Screen reader announcements for validation state changes */}
+      <ValidationAnnouncer
+        fieldValidationStates={realtimeValidation.fieldValidationStates}
+        fieldLabels={realtimeValidation.fieldLabels}
+      />
+      
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             Individual KYC Form
           </CardTitle>
           <CardDescription>
-            Know Your Customer - Please provide accurate information for regulatory compliance
+            KYC forms are for customer onboarding and verification. Complete these forms to establish a business relationship.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -647,6 +938,22 @@ const IndividualKYC: React.FC = () => {
             formMethods={formMethods}
             submitButtonText="Submit KYC Form"
             stepFieldMappings={stepFieldMappings}
+            validateStep={async (stepId) => {
+              // For personal information step, check real-time validation
+              if (stepId === 'personal') {
+                if (!realtimeValidation.canProceedToNextStep) {
+                  // Show toast with mismatched fields
+                  toast({
+                    title: 'Please correct highlighted fields',
+                    description: `The following fields need correction: ${realtimeValidation.mismatchedFieldLabels.join(', ')}`,
+                    variant: 'destructive'
+                  });
+                  return false;
+                }
+              }
+              
+              return true;
+            }}
           />
         </CardContent>
       </Card>
@@ -752,10 +1059,6 @@ const IndividualKYC: React.FC = () => {
               <div className="border rounded-lg p-4">
                 <h3 className="font-semibold text-lg mb-3">Identification</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-600">BVN:</span>
-                    <p className="text-gray-900">{data.BVN || 'Not provided'}</p>
-                  </div>
                   <div>
                     <span className="font-medium text-gray-600">ID Type:</span>
                     <p className="text-gray-900">{data.identificationType || 'Not provided'}</p>
@@ -882,6 +1185,22 @@ const IndividualKYC: React.FC = () => {
         title="KYC Form Submitted Successfully!"
         message="Your Individual KYC form has been submitted successfully. You will receive a confirmation email shortly."
         formType="Individual KYC"
+      />
+      
+      {/* Error Modal */}
+      <ErrorModal 
+        isOpen={showError} 
+        onClose={closeError} 
+        message={errorMessage} 
+      />
+
+      {/* Verification Mismatch Modal */}
+      <VerificationMismatchModal
+        open={showVerificationMismatch}
+        onClose={closeVerificationMismatch}
+        mismatches={verificationMismatchData?.mismatches || []}
+        warnings={verificationMismatchData?.warnings || []}
+        identityType={verificationMismatchData?.identityType || 'NIN'}
       />
     </div>
   );

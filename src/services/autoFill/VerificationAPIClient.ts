@@ -14,6 +14,7 @@
  */
 
 import { NINVerificationResponse, CACVerificationResponse } from '../../types/autoFill';
+import { auth } from '../../firebase/config';
 
 // API configuration
 const API_TIMEOUT = 15000; // 15 seconds timeout for auto-fill (increased from 5s to handle slow API responses)
@@ -85,28 +86,40 @@ export class VerificationAPIClient {
       });
 
       // Create fetch + parse promise - call new auto-fill endpoint
-      const fetchPromise = fetch(`${API_BASE_URL}/api/autofill/verify-nin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          nin,
-          userId,
-          formId,
-          userName,
-          userEmail
-        }),
-        signal: this.abortController.signal
-      }).then(async (response) => {
-        // Check if request was aborted
-        if (this.abortController.signal.aborted) {
-          throw new Error('AbortError');
+      const fetchPromise = (async () => {
+        // Get Firebase ID token for authentication
+        const user = auth.currentUser;
+        if (!user) {
+          throw new Error('User not authenticated');
         }
-        // Parse JSON immediately
-        const data = await response.json();
-        return { response, data };
-      });
+        
+        // Force token refresh to ensure it's valid
+        const idToken = await user.getIdToken(true);
+        
+        return fetch(`${API_BASE_URL}/api/autofill/verify-nin`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({ 
+            nin,
+            userId,
+            formId,
+            userName,
+            userEmail
+          }),
+          signal: this.abortController.signal
+        }).then(async (response) => {
+          // Check if request was aborted
+          if (this.abortController.signal.aborted) {
+            throw new Error('AbortError');
+          }
+          // Parse JSON immediately
+          const data = await response.json();
+          return { response, data };
+        });
+      })();
 
       // Race between timeout and fetch+parse
       const { response, data } = await Promise.race([fetchPromise, timeoutPromise]);
@@ -127,6 +140,9 @@ export class VerificationAPIClient {
         // Log full API response for debugging
         console.log('🔍 [DEBUG] Full NIN API response:', JSON.stringify(data.data, null, 2));
         
+        // Extract birthdate value once
+        const birthdateValue = data.data.birthdate || data.data.dateOfBirth || '';
+        
         const result: NINVerificationResponse = {
           success: true,
           data: {
@@ -134,7 +150,8 @@ export class VerificationAPIClient {
             middleName: data.data.middlename || data.data.middleName || undefined,
             lastName: data.data.surname || data.data.lastName || '',
             gender: data.data.gender || '',
-            dateOfBirth: data.data.birthdate || data.data.dateOfBirth || '',
+            dateOfBirth: birthdateValue, // For autofill field mapping
+            birthdate: birthdateValue,   // For validation config matching
             phoneNumber: data.data.phone || data.data.phoneNumber || undefined,
             birthstate: data.data.birthstate || undefined,
             birthlga: data.data.birthlga || undefined,
@@ -162,8 +179,18 @@ export class VerificationAPIClient {
         };
       }
     } catch (error: any) {
+      // Handle authentication errors
+      if (error.message === 'User not authenticated') {
+        return {
+          success: false,
+          error: {
+            code: 'AUTHENTICATION_REQUIRED',
+            message: 'Please sign in to use auto-fill verification'
+          }
+        };
+      }
       // Handle timeout
-      if (error.message === 'Request timeout') {
+      else if (error.message === 'Request timeout') {
         return {
           success: false,
           error: {
@@ -246,28 +273,40 @@ export class VerificationAPIClient {
       });
 
       // Create fetch + parse promise - call new auto-fill endpoint
-      const fetchPromise = fetch(`${API_BASE_URL}/api/autofill/verify-cac`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          rc_number: rcNumber,
-          userId,
-          formId,
-          userName,
-          userEmail
-        }),
-        signal: this.abortController.signal
-      }).then(async (response) => {
-        // Check if request was aborted
-        if (this.abortController.signal.aborted) {
-          throw new Error('AbortError');
+      const fetchPromise = (async () => {
+        // Get Firebase ID token for authentication
+        const user = auth.currentUser;
+        if (!user) {
+          throw new Error('User not authenticated');
         }
-        // Parse JSON immediately
-        const data = await response.json();
-        return { response, data };
-      });
+        
+        // Force token refresh to ensure it's valid
+        const idToken = await user.getIdToken(true);
+        
+        return fetch(`${API_BASE_URL}/api/autofill/verify-cac`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({ 
+            rc_number: rcNumber,
+            userId,
+            formId,
+            userName,
+            userEmail
+          }),
+          signal: this.abortController.signal
+        }).then(async (response) => {
+          // Check if request was aborted
+          if (this.abortController.signal.aborted) {
+            throw new Error('AbortError');
+          }
+          // Parse JSON immediately
+          const data = await response.json();
+          return { response, data };
+        });
+      })();
 
       // Race between timeout and fetch+parse
       const { response, data } = await Promise.race([fetchPromise, timeoutPromise]);
@@ -321,8 +360,18 @@ export class VerificationAPIClient {
         };
       }
     } catch (error: any) {
+      // Handle authentication errors
+      if (error.message === 'User not authenticated') {
+        return {
+          success: false,
+          error: {
+            code: 'AUTHENTICATION_REQUIRED',
+            message: 'Please sign in to use auto-fill verification'
+          }
+        };
+      }
       // Handle timeout
-      if (error.message === 'Request timeout') {
+      else if (error.message === 'Request timeout') {
         return {
           success: false,
           error: {

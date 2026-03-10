@@ -102,22 +102,24 @@ This implementation secures KYC auto-fill verification endpoints by removing ano
   - **Property 10: Rate limit violations are logged**
   - **Validates: Requirements 4.3, 8.2**
 
-- [x] 7. Update IndividualKYC form UI for anonymous users
+- [x] 7. Update IndividualKYC form UI for anonymous users (INTEGRATED INTO KYC-NFIU SEPARATION TASK 3.1)
   - Modify `src/pages/kyc/IndividualKYC.tsx`
   - Check authentication status using `useAuth()` hook
   - For anonymous users: display message "Your NIN will be verified when you submit"
   - For authenticated users: keep existing message "Enter your NIN and press Tab to auto-fill"
   - Show format validation feedback for all users (checkmark for valid, error for invalid)
   - Update error messages to be specific about format issues
+  - **NOTE**: This task is now part of kyc-nfiu-separation spec Task 3.1
   - _Requirements: 5.1, 5.2, 5.3_
 
-- [x] 8. Update CorporateKYC form UI for anonymous users
+- [x] 8. Update CorporateKYC form UI for anonymous users (INTEGRATED INTO KYC-NFIU SEPARATION TASK 3.5)
   - Modify `src/pages/kyc/CorporateKYC.tsx`
   - Check authentication status using `useAuth()` hook
   - For anonymous users: display message "Your CAC will be verified when you submit"
   - For authenticated users: keep existing message "Enter your CAC and press Tab to auto-fill"
   - Show format validation feedback for all users
   - Update error messages to be specific about format issues
+  - **NOTE**: This task is now part of kyc-nfiu-separation spec Task 3.5
   - _Requirements: 5.1, 5.2, 5.3_
 
 - [x] 8.1 Write unit tests for UI messaging
@@ -229,23 +231,26 @@ This implementation secures KYC auto-fill verification endpoints by removing ano
   - Test cache hit/miss scenarios
   - _Requirements: All requirements_
 
-- [ ] 17. Security testing
+- [ ] 17. Security testing (INTEGRATED INTO KYC-NFIU SEPARATION TASK 3.10)
   - Verify unauthenticated requests are always rejected
   - Verify rate limiting cannot be bypassed
   - Verify security events are logged for all violations
   - Verify sensitive data (NIN, CAC) is never logged in plaintext
   - Verify authentication tokens are validated on every request
+  - **NOTE**: This task is now part of kyc-nfiu-separation spec Task 3.10
   - _Requirements: 3.1, 3.2, 4.1, 4.2, 8.1, 8.2, 8.3_
 
-- [~] 17.1 Write security tests
+- [ ] 17.1 Write security tests (INTEGRATED INTO KYC-NFIU SEPARATION TASK 3.10)
   - Test authentication bypass attempts
   - Test rate limit bypass attempts
   - Test sensitive data logging
   - Test token validation
+  - **NOTE**: This task is now part of kyc-nfiu-separation spec Task 3.10
   - _Requirements: Security requirements_
 
-- [ ] 18. Final checkpoint - Ensure all tests pass
+- [ ] 18. Final checkpoint - Ensure all tests pass (INTEGRATED INTO KYC-NFIU SEPARATION TASK 3.10)
   - Ensure all tests pass, ask the user if questions arise.
+  - **NOTE**: This task is now part of kyc-nfiu-separation spec Task 3.10
 
 ## Notes
 
