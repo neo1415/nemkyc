@@ -334,6 +334,7 @@ const fetchForms = async () => {
       'partners-kyc': 'partners-c-d-d',
       'Individual-kyc-form': 'individual-k-y-c',
       'corporate-kyc-form': 'corporate-k-y-c',
+      'corporate-nfiu-form': 'corporate-nfiu-form',
       'naicom-corporate-cdd': 'naicom-corporate-c-d-d',
       'naicom-partners-cdd': 'naicom-partners-c-d-d',
       'motor-claims': 'motor-claims',
@@ -365,6 +366,19 @@ const fetchForms = async () => {
     if (!mapping) return data;
 
     const organizedData = { ...data };
+
+    // NFIU Corporate Form Backward Compatibility
+    // Handle old submissions with separate natureOfBusiness and businessOccupation fields
+    if (collectionName === 'corporate-nfiu-form') {
+      // If businessTypeOccupation doesn't exist but old fields do, concatenate them
+      if (!organizedData.businessTypeOccupation && 
+          (organizedData.natureOfBusiness || organizedData.businessOccupation)) {
+        const parts = [];
+        if (organizedData.natureOfBusiness) parts.push(organizedData.natureOfBusiness);
+        if (organizedData.businessOccupation) parts.push(organizedData.businessOccupation);
+        organizedData.businessTypeOccupation = parts.join(' / ');
+      }
+    }
 
     // Normalize director data if needed
     if (mapping.sections.find(s => s.title === 'Directors Information')) {

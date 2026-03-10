@@ -106,7 +106,11 @@ export class FormTypeDetector {
         'registration-number',
         'cacnumber',
         'cac_number',
-        'cac-number'
+        'cac-number',
+        'incorporation',
+        'incorporationnumber',
+        'incorporation_number',
+        'incorporation-number'
       ]
     };
 

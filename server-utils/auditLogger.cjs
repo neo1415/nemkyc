@@ -559,13 +559,358 @@ async function getAuditLogStats(filters = {}) {
   }
 }
 
+/**
+ * Log form view event
+ * 
+ * @param {Object} params - Form view parameters
+ * @param {string} params.userId - User ID (if authenticated)
+ * @param {string} params.userRole - User role
+ * @param {string} params.userEmail - User email
+ * @param {string} params.formType - Form type (kyc, nfiu)
+ * @param {string} params.formVariant - Form variant (individual, corporate)
+ * @param {string} params.ipAddress - Client IP address
+ * @param {Object} params.deviceInfo - Device information
+ * @param {Object} params.location - Location information
+ * @param {Object} params.metadata - Additional metadata
+ * @returns {Promise<void>}
+ */
+async function logFormView(params) {
+  try {
+    const {
+      userId,
+      userRole,
+      userEmail,
+      formType,
+      formVariant,
+      ipAddress,
+      deviceInfo,
+      location,
+      metadata = {}
+    } = params;
+
+    const db = getDb();
+    const logEntry = {
+      // Event information
+      eventType: 'form_view',
+      formType: formType || 'unknown',
+      formVariant: formVariant || 'unknown',
+      
+      // User information
+      userId: userId || 'anonymous',
+      userRole: userRole || 'customer',
+      userEmail: userEmail || 'anonymous',
+      ipAddress: ipAddress || 'unknown',
+      
+      // Device and location
+      deviceInfo: deviceInfo || {},
+      location: location || {},
+      
+      // Metadata
+      metadata: {
+        ...metadata,
+        userAgent: deviceInfo?.userAgent || 'unknown',
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      },
+      
+      // Timestamp
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+
+    await db.collection('verification-audit-logs').add(logEntry);
+    
+    console.log(`📝 [AUDIT] Form view logged: ${formType}-${formVariant} by ${userId || 'anonymous'}`);
+  } catch (error) {
+    console.error('❌ Failed to log form view:', error.message);
+    // Don't throw - logging failures shouldn't break the application
+  }
+}
+
+/**
+ * Log form submission event
+ * 
+ * @param {Object} params - Form submission parameters
+ * @param {string} params.userId - User ID
+ * @param {string} params.userRole - User role
+ * @param {string} params.userEmail - User email
+ * @param {string} params.formType - Form type (kyc, nfiu)
+ * @param {string} params.formVariant - Form variant (individual, corporate)
+ * @param {string} params.submissionId - Submission document ID
+ * @param {string} params.ipAddress - Client IP address
+ * @param {Object} params.deviceInfo - Device information
+ * @param {Object} params.location - Location information
+ * @param {Object} params.formData - Form data (will be masked)
+ * @param {Object} params.metadata - Additional metadata
+ * @returns {Promise<void>}
+ */
+async function logFormSubmission(params) {
+  try {
+    const {
+      userId,
+      userRole,
+      userEmail,
+      formType,
+      formVariant,
+      submissionId,
+      ipAddress,
+      deviceInfo,
+      location,
+      formData,
+      metadata = {}
+    } = params;
+
+    const db = getDb();
+    const logEntry = {
+      // Event information
+      eventType: 'form_submission',
+      formType: formType || 'unknown',
+      formVariant: formVariant || 'unknown',
+      submissionId: submissionId || 'unknown',
+      
+      // User information
+      userId: userId || 'unknown',
+      userRole: userRole || 'customer',
+      userEmail: userEmail || 'unknown',
+      ipAddress: ipAddress || 'unknown',
+      
+      // Device and location
+      deviceInfo: deviceInfo || {},
+      location: location || {},
+      
+      // Masked form data
+      formDataMasked: maskFormData(formData),
+      
+      // Metadata
+      metadata: {
+        ...metadata,
+        userAgent: deviceInfo?.userAgent || 'unknown',
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      },
+      
+      // Timestamp
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+
+    await db.collection('verification-audit-logs').add(logEntry);
+    
+    console.log(`📝 [AUDIT] Form submission logged: ${formType}-${formVariant} by ${userId} (${submissionId})`);
+  } catch (error) {
+    console.error('❌ Failed to log form submission:', error.message);
+    // Don't throw - logging failures shouldn't break the application
+  }
+}
+
+/**
+ * Log document upload event
+ * 
+ * @param {Object} params - Document upload parameters
+ * @param {string} params.userId - User ID
+ * @param {string} params.userRole - User role
+ * @param {string} params.userEmail - User email
+ * @param {string} params.formType - Form type (kyc, nfiu)
+ * @param {string} params.documentType - Document type (identification, cac, etc.)
+ * @param {string} params.fileName - File name
+ * @param {number} params.fileSize - File size in bytes
+ * @param {string} params.ipAddress - Client IP address
+ * @param {Object} params.deviceInfo - Device information
+ * @param {Object} params.location - Location information
+ * @param {Object} params.metadata - Additional metadata
+ * @returns {Promise<void>}
+ */
+async function logDocumentUpload(params) {
+  try {
+    const {
+      userId,
+      userRole,
+      userEmail,
+      formType,
+      documentType,
+      fileName,
+      fileSize,
+      ipAddress,
+      deviceInfo,
+      location,
+      metadata = {}
+    } = params;
+
+    const db = getDb();
+    const logEntry = {
+      // Event information
+      eventType: 'document_upload',
+      formType: formType || 'unknown',
+      documentType: documentType || 'unknown',
+      fileName: fileName || 'unknown',
+      fileSize: fileSize || 0,
+      
+      // User information
+      userId: userId || 'unknown',
+      userRole: userRole || 'customer',
+      userEmail: userEmail || 'unknown',
+      ipAddress: ipAddress || 'unknown',
+      
+      // Device and location
+      deviceInfo: deviceInfo || {},
+      location: location || {},
+      
+      // Metadata
+      metadata: {
+        ...metadata,
+        userAgent: deviceInfo?.userAgent || 'unknown',
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      },
+      
+      // Timestamp
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+
+    await db.collection('verification-audit-logs').add(logEntry);
+    
+    console.log(`📝 [AUDIT] Document upload logged: ${documentType} by ${userId} (${fileName}, ${fileSize} bytes)`);
+  } catch (error) {
+    console.error('❌ Failed to log document upload:', error.message);
+    // Don't throw - logging failures shouldn't break the application
+  }
+}
+
+/**
+ * Log admin action event
+ * 
+ * @param {Object} params - Admin action parameters
+ * @param {string} params.adminUserId - Admin user ID
+ * @param {string} params.adminRole - Admin role
+ * @param {string} params.adminEmail - Admin email
+ * @param {string} params.formType - Form type (kyc, nfiu)
+ * @param {string} params.formVariant - Form variant (individual, corporate)
+ * @param {string} params.submissionId - Submission document ID
+ * @param {string} params.action - Action performed (view, edit, approve, reject)
+ * @param {Array<string>} params.changedFields - Fields that were changed (for edit actions)
+ * @param {Object} params.oldValues - Old values (masked)
+ * @param {Object} params.newValues - New values (masked)
+ * @param {string} params.ipAddress - Client IP address
+ * @param {Object} params.deviceInfo - Device information
+ * @param {Object} params.location - Location information
+ * @param {Object} params.metadata - Additional metadata
+ * @returns {Promise<void>}
+ */
+async function logAdminAction(params) {
+  try {
+    const {
+      adminUserId,
+      adminRole,
+      adminEmail,
+      formType,
+      formVariant,
+      submissionId,
+      action,
+      changedFields,
+      oldValues,
+      newValues,
+      ipAddress,
+      deviceInfo,
+      location,
+      metadata = {}
+    } = params;
+
+    const db = getDb();
+    const logEntry = {
+      // Event information
+      eventType: 'admin_action',
+      formType: formType || 'unknown',
+      formVariant: formVariant || 'unknown',
+      submissionId: submissionId || 'unknown',
+      action: action || 'unknown', // view, edit, approve, reject
+      
+      // Admin information
+      adminUserId: adminUserId || 'unknown',
+      adminRole: adminRole || 'admin',
+      adminEmail: adminEmail || 'unknown',
+      ipAddress: ipAddress || 'unknown',
+      
+      // Device and location
+      deviceInfo: deviceInfo || {},
+      location: location || {},
+      
+      // Change tracking (for edit actions)
+      changedFields: changedFields || [],
+      oldValuesMasked: oldValues ? maskFormData(oldValues) : null,
+      newValuesMasked: newValues ? maskFormData(newValues) : null,
+      
+      // Metadata
+      metadata: {
+        ...metadata,
+        userAgent: deviceInfo?.userAgent || 'unknown',
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      },
+      
+      // Timestamp
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+
+    await db.collection('verification-audit-logs').add(logEntry);
+    
+    console.log(`📝 [AUDIT] Admin action logged: ${action} on ${formType}-${formVariant} by ${adminUserId} (${submissionId})`);
+  } catch (error) {
+    console.error('❌ Failed to log admin action:', error.message);
+    // Don't throw - logging failures shouldn't break the application
+  }
+}
+
+/**
+ * Mask form data for logging
+ * Masks sensitive fields (NIN, BVN, account numbers, etc.)
+ * @param {Object} formData - Form data to mask
+ * @returns {Object} Masked form data
+ */
+function maskFormData(formData) {
+  if (!formData || typeof formData !== 'object') return null;
+  
+  const masked = { ...formData };
+  
+  // Sensitive fields to mask
+  const sensitiveFields = [
+    'NIN', 'nin', 'NINNumber',
+    'BVN', 'bvn', 'BVNNumber',
+    'CAC', 'cac', 'cacNumber',
+    'taxIDNo', 'taxIDNumber',
+    'idNumber', 'identificationType',
+    'localAccountNumber', 'foreignAccountNumber',
+    'accountNumber', 'bankAccountNumber'
+  ];
+  
+  // Mask top-level sensitive fields
+  for (const field of sensitiveFields) {
+    if (masked[field]) {
+      masked[field] = maskSensitiveData(String(masked[field]));
+    }
+  }
+  
+  // Mask directors array if present
+  if (Array.isArray(masked.directors)) {
+    masked.directors = masked.directors.map(director => {
+      const maskedDirector = { ...director };
+      for (const field of sensitiveFields) {
+        if (maskedDirector[field]) {
+          maskedDirector[field] = maskSensitiveData(String(maskedDirector[field]));
+        }
+      }
+      return maskedDirector;
+    });
+  }
+  
+  return masked;
+}
+
 module.exports = {
   logVerificationAttempt,
   logAPICall,
   logEncryptionOperation,
   logSecurityEvent,
   logBulkOperation,
+  logFormView,
+  logFormSubmission,
+  logDocumentUpload,
+  logAdminAction,
   queryAuditLogs,
   getAuditLogStats,
-  maskSensitiveData
+  maskSensitiveData,
+  maskFormData
 };

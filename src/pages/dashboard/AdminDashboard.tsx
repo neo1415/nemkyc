@@ -347,6 +347,22 @@ const AdminDashboard: React.FC = () => {
             </Card>
           )}
 
+          {/* Show NFIU Forms for compliance, admin, and super admin - NEW */}
+          {canViewKYCCDD && (
+            <Card className="flex-1 min-w-[200px]">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">NFIU Forms</p>
+                    <p className="text-2xl font-bold text-purple-600">-</p>
+                    <p className="text-xs text-gray-500">Individual & Corporate</p>
+                  </div>
+                  <FileText className="h-6 w-6 text-purple-600" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Show CDD Forms for compliance, admin, and super admin */}
           {canViewKYCCDD && (
             <Card className="flex-1 min-w-[200px]">
@@ -379,6 +395,40 @@ const AdminDashboard: React.FC = () => {
             </Card>
           )}
         </div>
+
+        {/* NFIU Management Section - NEW */}
+        {canViewKYCCDD && (
+          <Card>
+            <CardHeader>
+              <CardTitle>NFIU Submissions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Manage NFIU (Nigerian Financial Intelligence Unit) regulatory reporting submissions
+                </p>
+                <div className="flex gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/admin/nfiu/individual')}
+                    className="flex-1"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Individual NFIU
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/admin/nfiu/corporate')}
+                    className="flex-1"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Corporate NFIU
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* System Health Monitoring - Only for admin and super admin */}

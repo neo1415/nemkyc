@@ -30,6 +30,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
   const { user } = useAuth();
   const location = useLocation();
   const [kycOpen, setKycOpen] = useState(false);
+  const [nfiuOpen, setNfiuOpen] = useState(false);
   const [cddOpen, setCddOpen] = useState(false);
   const [claimsOpen, setClaimsOpen] = useState(false);
 
@@ -70,6 +71,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
   const kycItems = [
     { name: 'Individual KYC', href: '/admin/kyc/individual' },
     { name: 'Corporate KYC', href: '/admin/kyc/corporate' }
+  ];
+
+  const nfiuItems = [
+    { name: 'Individual NFIU', href: '/admin/nfiu/individual' },
+    { name: 'Corporate NFIU', href: '/admin/nfiu/corporate' }
   ];
 
   const cddItems = [
@@ -157,6 +163,35 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-1">
                 {kycItems.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    className={({ isActive }) =>
+                      cn(
+                        "group flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md",
+                        isActive
+                          ? "bg-red-100 text-red-900"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      )
+                    }
+                  >
+                    {item.name}
+                  </NavLink>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {/* NFIU Section - Only for compliance, admin, and super admin */}
+          {canViewKYCCDD && (
+            <Collapsible open={nfiuOpen} onOpenChange={setNfiuOpen}>
+              <CollapsibleTrigger className="group flex items-center w-full px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900">
+                <Shield className="mr-3 h-5 w-5" />
+                NFIU Forms
+                <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", nfiuOpen && "rotate-180")} />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-1">
+                {nfiuItems.map((item) => (
                   <NavLink
                     key={item.name}
                     to={item.href}

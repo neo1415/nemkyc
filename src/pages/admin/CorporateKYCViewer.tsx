@@ -80,10 +80,7 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
         email: data.email || '',
         phoneNumber: data.phoneNumber || '',
         BVNNumber: data.BVNNumber || '',
-        employersName: data.employersName || '',
-        employersPhoneNumber: data.employersPhoneNumber || '',
-        residentialAddress: data.residentialAddress || '',
-        taxIDNumber: data.taxIDNumber || '',
+        NINNumber: data.NINNumber || '',
         idType: data.idType || '',
         idNumber: data.idNumber || '',
         issuingBody: data.issuingBody || '',
@@ -108,10 +105,7 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
         email: data.email2 || '',
         phoneNumber: data.phoneNumber2 || '',
         BVNNumber: data.BVNNumber2 || '',
-        employersName: data.employersName2 || '',
-        employersPhoneNumber: data.employersPhoneNumber2 || '',
-        residentialAddress: data.residentialAddress2 || '',
-        taxIDNumber: data.taxIDNumber2 || '',
+        NINNumber: data.NINNumber2 || '',
         idType: data.idType2 || '',
         idNumber: data.idNumber2 || '',
         issuingBody: data.issuingBody2 || '',
@@ -256,10 +250,6 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="font-medium text-sm text-muted-foreground">Branch Office</p>
-                <p className="font-medium">{formatValue(data.branchOffice)}</p>
-              </div>
-              <div>
                 <p className="font-medium text-sm text-muted-foreground">Insured</p>
                 <p className="font-medium">{formatValue(data.insured)}</p>
               </div>
@@ -272,7 +262,7 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
                 <p className="font-medium">{formatValue(data.ownershipOfCompany)}</p>
               </div>
               <div>
-                <p className="font-medium text-sm text-muted-foreground">Contact Person</p>
+                <p className="font-medium text-sm text-muted-foreground">Name of Contact Person</p>
                 <p className="font-medium">{formatValue(data.contactPerson)}</p>
               </div>
               <div>
@@ -280,8 +270,8 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
                 <p className="font-medium">{formatValue(data.website)}</p>
               </div>
               <div>
-                <p className="font-medium text-sm text-muted-foreground">Incorporation Number</p>
-                <p className="font-medium">{formatValue(data.incorporationNumber)}</p>
+                <p className="font-medium text-sm text-muted-foreground">CAC/Incorporation Number</p>
+                <p className="font-medium">{formatValue(data.cacNumber || data.incorporationNumber)}</p>
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Incorporation State</p>
@@ -292,16 +282,8 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
                 <p className="font-medium">{formatDate(data.dateOfIncorporationRegistration)}</p>
               </div>
               <div>
-                <p className="font-medium text-sm text-muted-foreground">CAC Number</p>
-                <p className="font-medium">{formatValue(data.cacNumber)}</p>
-              </div>
-              <div>
                 <p className="font-medium text-sm text-muted-foreground">BVN Number</p>
                 <p className="font-medium">{formatValue(data.BVNNumber)}</p>
-              </div>
-              <div>
-                <p className="font-medium text-sm text-muted-foreground">NIN Number</p>
-                <p className="font-medium">{formatValue(data.NINNumber)}</p>
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Contact Person Mobile</p>
@@ -323,16 +305,6 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
                 <p className="font-medium text-sm text-muted-foreground">Estimated Turnover</p>
                 <p className="font-medium">{formatValue(data.estimatedTurnover)}</p>
               </div>
-              <div>
-                <p className="font-medium text-sm text-muted-foreground">Premium Payment Source</p>
-                <p className="font-medium">{formatValue(data.premiumPaymentSource)}</p>
-              </div>
-              {data.premiumPaymentSource === 'Other' && (
-                <div>
-                  <p className="font-medium text-sm text-muted-foreground">Other Premium Payment Source</p>
-                  <p className="font-medium">{formatValue(data.premiumPaymentSourceOther)}</p>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -402,22 +374,6 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
                         <p className="font-medium">{formatValue(director.NINNumber)}</p>
                       </div>
                       <div>
-                        <p className="font-medium text-sm text-muted-foreground">Employer Name</p>
-                        <p className="font-medium">{formatValue(director.employersName)}</p>
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm text-muted-foreground">Employer Phone</p>
-                        <p className="font-medium">{formatValue(director.employersPhoneNumber)}</p>
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm text-muted-foreground">Residential Address</p>
-                        <p className="font-medium">{formatValue(director.residentialAddress)}</p>
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm text-muted-foreground">Tax ID Number</p>
-                        <p className="font-medium">{formatValue(director.taxIDNumber)}</p>
-                      </div>
-                      <div>
                         <p className="font-medium text-sm text-muted-foreground">ID Type</p>
                         <p className="font-medium">{formatValue(director.idType)}</p>
                       </div>
@@ -453,66 +409,6 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
               </div>
             ) : (
               <p className="text-muted-foreground">No directors information available</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Account Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Account Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="font-semibold text-md mb-3">Local Account</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="font-medium text-sm text-muted-foreground">Bank Name</p>
-                  <p className="font-medium">{formatValue(data.localBankName)}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-sm text-muted-foreground">Account Number</p>
-                  <p className="font-medium">{formatValue(data.localAccountNumber)}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-sm text-muted-foreground">Bank Branch</p>
-                  <p className="font-medium">{formatValue(data.localBankBranch)}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-sm text-muted-foreground">Account Opening Date</p>
-                  <p className="font-medium">{formatDate(data.localAccountOpeningDate)}</p>
-                </div>
-              </div>
-            </div>
-            
-            {(data.foreignBankName || data.foreignAccountNumber || data.foreignBankBranch || data.foreignAccountOpeningDate) && (
-              <>
-                <Separator className="my-4" />
-                <div>
-                  <h4 className="font-semibold text-md mb-3">Foreign Account</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="font-medium text-sm text-muted-foreground">Bank Name</p>
-                      <p className="font-medium">{formatValue(data.foreignBankName)}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm text-muted-foreground">Account Number</p>
-                      <p className="font-medium">{formatValue(data.foreignAccountNumber)}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm text-muted-foreground">Bank Branch</p>
-                      <p className="font-medium">{formatValue(data.foreignBankBranch)}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm text-muted-foreground">Account Opening Date</p>
-                      <p className="font-medium">{formatDate(data.foreignAccountOpeningDate)}</p>
-                    </div>
-                  </div>
-                </div>
-              </>
             )}
           </CardContent>
         </Card>

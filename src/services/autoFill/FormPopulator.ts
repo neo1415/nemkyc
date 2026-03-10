@@ -111,13 +111,44 @@ export class FormPopulator {
           // Controlled component - update state
           this.populateControlledField(fieldName, value, formState, setFormState, markAsAutoFilled);
         } else {
-          // Try React Hook Form setValue first (for custom components like Select)
+          // Try React Hook Form setValue first (for custom components like DatePicker)
           if (this.reactHookFormSetValue) {
-            this.reactHookFormSetValue(fieldName, value);
+            // Convert date strings to Date objects for date fields
+            let processedValue: any = value;
+            if (fieldName.toLowerCase().includes('date') || fieldName.toLowerCase().includes('dob')) {
+              console.log(`[FormPopulator] Processing date field "${fieldName}" with value:`, value, typeof value);
+              // Check if value is a date string in various formats
+              if (typeof value === 'string' && value.trim()) {
+                // Handle DD-MM-YYYY format (common in NIN API)
+                if (/^\d{2}-\d{2}-\d{4}$/.test(value)) {
+                  const [day, month, year] = value.split('-');
+                  processedValue = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                  console.log(`[FormPopulator] DD-MM-YYYY format detected for "${fieldName}", converted to:`, processedValue);
+                }
+                // Handle YYYY-MM-DD format
+                else if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                  processedValue = new Date(value);
+                  console.log(`[FormPopulator] YYYY-MM-DD format detected for "${fieldName}", converted to:`, processedValue);
+                }
+                // Handle other date formats
+                else {
+                  const parsed = new Date(value);
+                  if (!isNaN(parsed.getTime())) {
+                    processedValue = parsed;
+                    console.log(`[FormPopulator] Other date format detected for "${fieldName}", converted to:`, processedValue);
+                  }
+                }
+              }
+            }
+            
+            console.log(`[FormPopulator] Setting React Hook Form value for "${fieldName}":`, processedValue);
+            this.reactHookFormSetValue(fieldName, processedValue);
           }
           
-          // Also update DOM directly for standard inputs
-          this.populateUncontrolledField(fieldElement, value);
+          // Also update DOM directly for standard inputs (skip if virtual element)
+          if (!fieldElement.getAttribute('data-virtual')) {
+            this.populateUncontrolledField(fieldElement, value);
+          }
         }
 
         // Mark as auto-filled

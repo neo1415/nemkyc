@@ -29,6 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
   const location = useLocation();
   const { user } = useAuth();
   const [kycOpen, setKycOpen] = React.useState(false);
+  const [nfiuOpen, setNfiuOpen] = React.useState(false);
   const [cddOpen, setCddOpen] = React.useState(false);
   const [claimsOpen, setClaimsOpen] = React.useState(false);
 
@@ -51,6 +52,11 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
   const kycItems = [
     { name: 'Individual KYC', href: '/admin/kyc/individual' },
     { name: 'Corporate KYC', href: '/admin/kyc/corporate' }
+  ];
+
+  const nfiuItems = [
+    { name: 'Individual NFIU', href: '/admin/nfiu/individual' },
+    { name: 'Corporate NFIU', href: '/admin/nfiu/corporate' }
   ];
 
   const cddItems = [
@@ -134,6 +140,32 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
             </CollapsibleTrigger>
             <CollapsibleContent className="ml-6 mt-2 space-y-1">
               {kycItems.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={cn(
+                    'block px-3 py-2 text-sm rounded-lg transition-colors',
+                    location.pathname === item.href
+                      ? 'bg-red-50 text-red-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  )}
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Collapsible open={nfiuOpen} onOpenChange={setNfiuOpen}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+              <div className="flex items-center space-x-3">
+                <FileText className="h-5 w-5" />
+                <span>NFIU</span>
+              </div>
+              {nfiuOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="ml-6 mt-2 space-y-1">
+              {nfiuItems.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}

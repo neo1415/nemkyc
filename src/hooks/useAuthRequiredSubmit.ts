@@ -213,6 +213,14 @@ export const getFormPageUrl = (formType: string) => {
     return '/kyc/corporate';
   }
   
+  // NFIU Forms
+  if (formTypeLower.includes('individual nfiu')) {
+    return '/nfiu/individual';
+  }
+  if (formTypeLower.includes('corporate nfiu')) {
+    return '/nfiu/corporate';
+  }
+  
   // CDD Forms - IMPORTANT: Check NAICOM forms FIRST before generic forms
   if (formTypeLower.includes('naicom corporate')) {
     return '/cdd/naicom-corporate';

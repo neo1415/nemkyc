@@ -197,19 +197,14 @@ const BrokerSignUp: React.FC = () => {
       errors.confirmPassword = 'Passwords do not match';
     }
     
-    // Date of birth validation - must be 18+
+    // Date of incorporation validation
     if (!formData.dateOfBirth) {
-      errors.dateOfBirth = 'Date of birth is required';
+      errors.dateOfBirth = 'Date of incorporation is required';
     } else {
-      const birthDate = new Date(formData.dateOfBirth);
+      const incorporationDate = new Date(formData.dateOfBirth);
       const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      if (age < 18) {
-        errors.dateOfBirth = 'You must be at least 18 years old to register';
+      if (incorporationDate > today) {
+        errors.dateOfBirth = 'Date of incorporation cannot be in the future';
       }
     }
 
@@ -331,7 +326,7 @@ const BrokerSignUp: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="dateOfBirth">Date of Birth</Label>
+              <Label htmlFor="dateOfBirth">Date of Incorporation</Label>
               <Input
                 id="dateOfBirth"
                 type="date"
@@ -343,13 +338,9 @@ const BrokerSignUp: React.FC = () => {
                 className={fieldErrors.dateOfBirth ? 'border-red-500' : ''}
                 required
                 disabled={isSubmitting}
-                max={(() => {
-                  const date = new Date();
-                  date.setFullYear(date.getFullYear() - 18);
-                  return date.toISOString().split('T')[0];
-                })()}
+                max={new Date().toISOString().split('T')[0]}
               />
-              <p className="text-xs text-slate-500">You must be at least 18 years old</p>
+              <p className="text-xs text-slate-500">Date when your company was incorporated</p>
               {fieldErrors.dateOfBirth && (
                 <p className="text-sm text-red-500">{fieldErrors.dateOfBirth}</p>
               )}

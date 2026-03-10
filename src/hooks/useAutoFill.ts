@@ -42,6 +42,7 @@ export interface UseAutoFillConfig {
   userEmail?: string;
   reactHookFormSetValue?: (name: string, value: any) => void;
   requireAuth?: boolean; // New: Whether to require authentication for auto-fill
+  fieldPrefix?: string; // Optional prefix for nested fields (e.g., "directors.0.")
 }
 
 /**
@@ -61,7 +62,7 @@ export interface UseAutoFillReturn {
  * Manages auto-fill state and provides functions for form integration
  */
 export function useAutoFill(config: UseAutoFillConfig): UseAutoFillReturn {
-  const { formElement, identifierType, userId, formId, userName, userEmail, reactHookFormSetValue, requireAuth = true } = config;
+  const { formElement, identifierType, userId, formId, userName, userEmail, reactHookFormSetValue, requireAuth = true, fieldPrefix } = config;
   
   // Get authentication status
   const { user } = useAuth();
@@ -81,6 +82,7 @@ export function useAutoFill(config: UseAutoFillConfig): UseAutoFillReturn {
 
   // Initialize engine when form element is available
   useEffect(() => {
+    // Don't initialize if formElement is null
     if (!formElement) {
       return;
     }
@@ -93,6 +95,7 @@ export function useAutoFill(config: UseAutoFillConfig): UseAutoFillReturn {
       userName,
       userEmail,
       reactHookFormSetValue,
+      fieldPrefix, // Pass the field prefix to the engine
       onSuccess: (populatedFieldCount: number) => {
         setState(prev => ({
           ...prev,
@@ -123,7 +126,7 @@ export function useAutoFill(config: UseAutoFillConfig): UseAutoFillReturn {
         engineRef.current = null;
       }
     };
-  }, [formElement, userId, formId, userName, userEmail, reactHookFormSetValue]);
+  }, [formElement, userId, formId, userName, userEmail, reactHookFormSetValue, fieldPrefix]);
 
   /**
    * Attach auto-fill trigger to an input field
@@ -135,9 +138,16 @@ export function useAutoFill(config: UseAutoFillConfig): UseAutoFillReturn {
     console.log('[useAutoFill] Identifier type:', identifierType);
     console.log('[useAutoFill] Require auth:', requireAuth);
     console.log('[useAutoFill] Is authenticated:', isAuthenticated);
+    console.log('[useAutoFill] Form element:', formElement);
     
     if (!inputElement) {
       console.warn('[useAutoFill] ❌ Cannot attach to null input element');
+      return;
+    }
+
+    // Don't attach if form element is not available
+    if (!formElement) {
+      console.warn('[useAutoFill] ❌ Form element not available, skipping attachment');
       return;
     }
 
@@ -224,7 +234,7 @@ export function useAutoFill(config: UseAutoFillConfig): UseAutoFillReturn {
     triggerHandlerRef.current = handler;
     console.log('[useAutoFill] ✅ Handler attached and stored in ref');
     console.log('[useAutoFill] ===== ATTACH TO FIELD CALLBACK END =====');
-  }, [identifierType, userId, formId, requireAuth, isAuthenticated]);
+  }, [identifierType, userId, formId, requireAuth, isAuthenticated, formElement]);
 
   /**
    * Execute NIN auto-fill manually
