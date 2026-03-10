@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Check, FileText } from 'lucide-react';
+import { Plus, Trash2, Check, FileText, Loader2, AlertCircle, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { get } from 'lodash';
@@ -22,18 +22,29 @@ import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
 import FormLoadingModal from '@/components/common/FormLoadingModal';
 import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
+import { ErrorModal } from '@/components/common/ErrorModal';
+import { VerificationMismatchModal } from '@/components/common/VerificationMismatchModal';
 import DatePicker from '@/components/common/DatePicker';
+import { useAuth } from '@/contexts/AuthContext';
+import { validateCACFormat, FormatValidationResult } from '@/utils/identityFormatValidator';
+import { useAutoFill } from '@/hooks/useAutoFill';
+import { IdentifierType } from '@/types/autoFill';
+import { auditService } from '@/services/auditService';
+import { useRealtimeVerificationValidation } from '@/hooks/useRealtimeVerificationValidation';
+import { CAC_FIELDS_CONFIG, normalizeDate, normalizeText } from '@/config/realtimeValidationConfig';
+import { FieldValidationIndicator } from '@/components/validation/FieldValidationIndicator';
+import { ValidationTooltip } from '@/components/validation/ValidationTooltip';
+import { ValidationAnnouncer } from '@/components/validation/ValidationAnnouncer';
+import { FieldValidationStatus } from '@/types/realtimeVerificationValidation';
 
 // Form validation schema
 const corporateKYCSchema = yup.object().shape({
   // Company Info
-  branchOffice: yup.string().required("Branch Office is required"),
   insured: yup.string().required("Insured field is required"),
   officeAddress: yup.string().required("Office address is required"),
   ownershipOfCompany: yup.string().required("Ownership of company is required"),
   contactPerson: yup.string().required("Contact person is required"),
-  website: yup.string().required("Website is required"),
-  incorporationNumber: yup.string().required("Incorporation number is required"),
+  website: yup.string().notRequired(),
   incorporationState: yup.string().required("Incorporation state is required"),
   dateOfIncorporationRegistration: yup.date()
     .required("Date of incorporation is required")
@@ -45,35 +56,18 @@ const corporateKYCSchema = yup.object().shape({
     })
     .typeError('Please select a valid date'),
   cacNumber: yup.string()
-    .required("CAC number is required")
-    .matches(/^[A-Za-z0-9]+$/, "CAC number must contain only letters and numbers"),
-  BVNNumber: yup.string()
-    .required("BVN is required")
-    .matches(/^\d+$/, "BVN must contain only numbers")
-    .length(11, "BVN must be exactly 11 digits"),
-  NINNumber: yup.string()
-    .required("NIN is required")
-    .matches(/^\d+$/, "NIN must contain only numbers")
-    .length(11, "NIN must be exactly 11 digits"),
+    .required("CAC/RC number is required")
+    .matches(/^[A-Za-z0-9]+$/, "CAC/RC number must contain only letters and numbers"),
   contactPersonNo: yup.string()
     .required("Contact person mobile is required")
     .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
     .max(15, "Phone number cannot exceed 15 characters"),
-  taxIDNo: yup.string()
-    .matches(/^\d*$/, "Tax ID must contain only numbers")
-    .max(10, "Tax ID cannot exceed 10 digits"),
   emailAddress: yup.string()
     .required("Email is required")
     .email("Please enter a valid email")
     .typeError("Please enter a valid email"),
   natureOfBusiness: yup.string().required("Business type is required"),
   estimatedTurnover: yup.string().required("Estimated turnover is required"),
-  premiumPaymentSource: yup.string().required("Premium payment source is required"),
-  premiumPaymentSourceOther: yup.string().when('premiumPaymentSource', {
-    is: 'Other',
-    then: (schema) => schema.required('Please specify other income source'),
-    otherwise: (schema) => schema.notRequired()
-  }),
 
   // Directors
   directors: yup.array().of(yup.object().shape({
@@ -101,22 +95,10 @@ const corporateKYCSchema = yup.object().shape({
       .required("Phone number is required")
       .matches(/^[\d\s+\-()]+$/, "Invalid phone number format")
       .max(15, "Phone number cannot exceed 15 characters"),
-    BVNNumber: yup.string()
-      .required("BVN is required")
-      .matches(/^\d+$/, "BVN must contain only numbers")
-      .length(11, "BVN must be exactly 11 digits"),
     NINNumber: yup.string()
       .required("NIN is required")
       .matches(/^\d+$/, "NIN must contain only numbers")
       .length(11, "NIN must be exactly 11 digits"),
-    employersName: yup.string(),
-    employersPhoneNumber: yup.string()
-      .matches(/^[\d\s+\-()]*$/, "Invalid phone number format")
-      .max(15, "Phone number cannot exceed 15 characters"),
-    residentialAddress: yup.string().required("Residential address is required"),
-    taxIDNumber: yup.string()
-      .matches(/^\d*$/, "Tax ID must contain only numbers")
-      .max(10, "Tax ID cannot exceed 10 digits"),
     idType: yup.string().required("ID type is required"),
     idNumber: yup.string().required("Identification number is required"),
     issuingBody: yup.string().required("Issuing body is required"),
@@ -145,47 +127,6 @@ const corporateKYCSchema = yup.object().shape({
     })
   })).min(1, "At least one director is required"),
 
-  // Account Details
-  localBankName: yup.string()
-    .required("Bank name is required")
-    .min(2, "Bank name must be at least 2 characters")
-    .max(100, "Bank name cannot exceed 100 characters"),
-  localAccountNumber: yup.string()
-    .required("Account number is required")
-    .matches(/^\d+$/, "Account number must contain only numbers")
-    .min(10, "Account number must be at least 10 digits")
-    .max(10, "Account number must be exactly 10 digits"),
-  localBankBranch: yup.string()
-    .required("Bank branch is required")
-    .min(2, "Bank branch must be at least 2 characters")
-    .max(100, "Bank branch cannot exceed 100 characters"),
-  localAccountOpeningDate: yup.date()
-    .required("Account opening date is required")
-    .test('not-future', 'Date cannot be in the future', function(value) {
-      if (!value) return false;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return value <= today;
-    })
-    .typeError('Please select a valid date'),
-
-  // Foreign Account (optional)
-  foreignBankName: yup.string()
-    .max(100, "Bank name cannot exceed 100 characters"),
-  foreignAccountNumber: yup.string()
-    .matches(/^[\d\-]*$/, "Account number must contain only numbers and dashes")
-    .max(30, "Account number cannot exceed 30 characters"),
-  foreignBankBranch: yup.string()
-    .max(100, "Bank branch cannot exceed 100 characters"),
-  foreignAccountOpeningDate: yup.date()
-    .test('not-future', 'Date cannot be in the future', function(value) {
-      if (!value) return true; // Optional field
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return value <= today;
-    })
-    .typeError('Please select a valid date'),
-
   // Verification
   companyNameVerificationDoc: yup.string().required("Verification document type is required"),
   verificationDoc: yup.mixed().required("Verification document upload is required"),
@@ -196,25 +137,18 @@ const corporateKYCSchema = yup.object().shape({
 });
 
 const defaultValues = {
-  branchOffice: '',
   insured: '',
   officeAddress: '',
   ownershipOfCompany: '',
   contactPerson: '',
   website: '',
-  incorporationNumber: '',
   incorporationState: '',
   dateOfIncorporationRegistration: undefined,
   cacNumber: '',
-  BVNNumber: '',
-  NINNumber: '',
   contactPersonNo: '',
-  taxIDNo: '',
   emailAddress: '',
   natureOfBusiness: '',
   estimatedTurnover: '',
-  premiumPaymentSource: '',
-  premiumPaymentSourceOther: '',
   directors: [{
     firstName: '',
     middleName: '',
@@ -226,12 +160,7 @@ const defaultValues = {
     occupation: '',
     email: '',
     phoneNumber: '',
-    BVNNumber: '',
     NINNumber: '',
-    employersName: '',
-    employersPhoneNumber: '',
-    residentialAddress: '',
-    taxIDNumber: '',
     idType: '',
     idNumber: '',
     issuingBody: '',
@@ -240,14 +169,6 @@ const defaultValues = {
     sourceOfIncome: '',
     sourceOfIncomeOther: ''
   }],
-  localBankName: '',
-  localAccountNumber: '',
-  localBankBranch: '',
-  localAccountOpeningDate: undefined,
-  foreignBankName: '',
-  foreignAccountNumber: '',
-  foreignBankBranch: '',
-  foreignAccountOpeningDate: undefined,
   companyNameVerificationDoc: '',
   agreeToDataPrivacy: false,
   signature: ''
@@ -363,24 +284,16 @@ const FormSelect = ({ name, label, required = false, options, placeholder, ...pr
 
 const CorporateKYC: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAuthenticated = user !== null && user !== undefined;
   const [currentStep, setCurrentStep] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [cacValidation, setCacValidation] = useState<FormatValidationResult | null>(null);
+  const formRef = React.useRef<HTMLFormElement>(null);
+  const cacInputRef = React.useRef<HTMLInputElement>(null);
   
-  const {
-    handleSubmit: handleEnhancedSubmit,
-    showSummary,
-    setShowSummary,
-    showLoading,
-    loadingMessage,
-    showSuccess,
-    confirmSubmit,
-    closeSuccess,
-    formData: submissionData,
-    isSubmitting
-  } = useEnhancedFormSubmit({
-    formType: 'Corporate KYC',
-    onSuccess: () => clearDraft()
-  });
+  // Store refs for each director's NIN field
+  const directorNinRefs = React.useRef<Map<number, HTMLInputElement>>(new Map());
 
   const formMethods = useForm<any>({
     resolver: yupResolver(corporateKYCSchema),
@@ -394,6 +307,156 @@ const CorporateKYC: React.FC = () => {
     name: 'directors'
   });
   const watchedValues = formMethods.watch();
+
+  // Initialize autofill with requireAuth=true for KYC form
+  const autoFillState = useAutoFill({
+    formElement: formRef.current,
+    identifierType: IdentifierType.CAC,
+    userId: user?.uid,
+    formId: 'kyc-corporate',
+    userName: user?.name || undefined,
+    userEmail: user?.email || undefined,
+    reactHookFormSetValue: formMethods.setValue,
+    requireAuth: true // CRITICAL: Require authentication for autofill
+  });
+
+  // Initialize real-time verification validation
+  const realtimeValidation = useRealtimeVerificationValidation({
+    formType: 'Corporate KYC',
+    identifierFieldName: 'cacNumber',
+    identifierType: 'CAC',
+    fieldsToValidate: CAC_FIELDS_CONFIG,
+    formMethods,
+    isAuthenticated
+  });
+  
+  // Initialize NIN autofill and validation for directors
+  // Only create hooks for directors that exist to avoid performance overhead
+  const directorCount = fields.length;
+  
+  // Create hooks for director 0 (always exists)
+  const director0AutoFill = useAutoFill({
+    formElement: directorCount > 0 ? formRef.current : null, // Only initialize if director exists
+    identifierType: IdentifierType.NIN,
+    userId: user?.uid,
+    formId: 'kyc-corporate-director-0',
+    userName: user?.name || undefined,
+    userEmail: user?.email || undefined,
+    reactHookFormSetValue: formMethods.setValue,
+    requireAuth: true,
+    fieldPrefix: 'directors.0.'
+  });
+  
+  const director0Validation = useRealtimeVerificationValidation({
+    formType: 'Corporate KYC' as any,
+    identifierFieldName: 'directors.0.NINNumber',
+    identifierType: 'NIN',
+    fieldsToValidate: [
+      { fieldName: 'directors.0.firstName', fieldLabel: 'First Name', verificationKey: 'firstName', normalizer: normalizeText },
+      { fieldName: 'directors.0.lastName', fieldLabel: 'Last Name', verificationKey: 'lastName', normalizer: normalizeText },
+      { fieldName: 'directors.0.dob', fieldLabel: 'Date of Birth', verificationKey: 'birthdate', normalizer: normalizeDate }
+    ],
+    formMethods,
+    isAuthenticated
+  });
+  
+  // Create hooks for director 1 (only if exists)
+  const director1AutoFill = useAutoFill({
+    formElement: directorCount > 1 ? formRef.current : null, // Only initialize if director exists
+    identifierType: IdentifierType.NIN,
+    userId: user?.uid,
+    formId: 'kyc-corporate-director-1',
+    userName: user?.name || undefined,
+    userEmail: user?.email || undefined,
+    reactHookFormSetValue: formMethods.setValue,
+    requireAuth: true,
+    fieldPrefix: 'directors.1.'
+  });
+  
+  const director1Validation = useRealtimeVerificationValidation({
+    formType: 'Corporate KYC' as any,
+    identifierFieldName: 'directors.1.NINNumber',
+    identifierType: 'NIN',
+    fieldsToValidate: [
+      { fieldName: 'directors.1.firstName', fieldLabel: 'First Name', verificationKey: 'firstName', normalizer: normalizeText },
+      { fieldName: 'directors.1.lastName', fieldLabel: 'Last Name', verificationKey: 'lastName', normalizer: normalizeText },
+      { fieldName: 'directors.1.dob', fieldLabel: 'Date of Birth', verificationKey: 'birthdate', normalizer: normalizeDate }
+    ],
+    formMethods,
+    isAuthenticated
+  });
+  
+  // Create hooks for director 2 (only if exists)
+  const director2AutoFill = useAutoFill({
+    formElement: directorCount > 2 ? formRef.current : null, // Only initialize if director exists
+    identifierType: IdentifierType.NIN,
+    userId: user?.uid,
+    formId: 'kyc-corporate-director-2',
+    userName: user?.name || undefined,
+    userEmail: user?.email || undefined,
+    reactHookFormSetValue: formMethods.setValue,
+    requireAuth: true,
+    fieldPrefix: 'directors.2.'
+  });
+  
+  const director2Validation = useRealtimeVerificationValidation({
+    formType: 'Corporate KYC' as any,
+    identifierFieldName: 'directors.2.NINNumber',
+    identifierType: 'NIN',
+    fieldsToValidate: [
+      { fieldName: 'directors.2.firstName', fieldLabel: 'First Name', verificationKey: 'firstName', normalizer: normalizeText },
+      { fieldName: 'directors.2.lastName', fieldLabel: 'Last Name', verificationKey: 'lastName', normalizer: normalizeText },
+      { fieldName: 'directors.2.dob', fieldLabel: 'Date of Birth', verificationKey: 'birthdate', normalizer: normalizeDate }
+    ],
+    formMethods,
+    isAuthenticated
+  });
+  
+  // Map director index to hooks
+  const getDirectorHooks = (index: number) => {
+    if (index === 0) return { autoFill: director0AutoFill, validation: director0Validation };
+    if (index === 1) return { autoFill: director1AutoFill, validation: director1Validation };
+    if (index === 2) return { autoFill: director2AutoFill, validation: director2Validation };
+    return null; // For directors beyond index 2, no autofill/validation
+  };
+  
+  const {
+    handleSubmit: handleEnhancedSubmit,
+    showSummary,
+    setShowSummary,
+    showLoading,
+    loadingMessage,
+    showSuccess,
+    confirmSubmit,
+    closeSuccess,
+    formData: submissionData,
+    isSubmitting,
+    showVerificationMismatch,
+    verificationMismatchData,
+    closeVerificationMismatch,
+    showError,
+    errorMessage,
+    closeError
+  } = useEnhancedFormSubmit({
+    formType: 'Corporate KYC',
+    onSuccess: () => clearDraft(),
+    verificationData: {
+      identityNumber: formMethods.watch('cacNumber'),
+      identityType: 'CAC',
+      isVerified: autoFillState.state.status === 'success'
+    }
+  });
+
+  // Log form view on mount
+  useEffect(() => {
+    auditService.logFormView({
+      userId: user?.uid,
+      userRole: user?.role,
+      userEmail: user?.email,
+      formType: 'kyc',
+      formVariant: 'corporate'
+    });
+  }, []);
 
   // Restore saved step from pending submission
   useEffect(() => {
@@ -409,6 +472,48 @@ const CorporateKYC: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [formMethods, saveDraft]);
 
+  // Attach autofill and real-time validation to CAC field when authenticated
+  // Using a ref callback to ensure the element is mounted before attaching
+  const cacRefCallback = useCallback((element: HTMLInputElement | null) => {
+    console.log('[CorporateKYC] ===== CAC REF CALLBACK FIRED =====');
+    console.log('[CorporateKYC] CAC input element:', element);
+    console.log('[CorporateKYC] CAC input ID:', element?.id);
+    console.log('[CorporateKYC] Is authenticated:', isAuthenticated);
+    
+    if (element && isAuthenticated) {
+      // Store the ref
+      cacInputRef.current = element;
+      
+      console.log('[CorporateKYC] Attaching handlers...');
+      
+      // Attach handlers - these add native DOM event listeners
+      autoFillState.attachToField(element);
+      realtimeValidation.attachToIdentifierField(element);
+      
+      console.log('[CorporateKYC] ✅ Handlers attached successfully');
+    } else if (!element) {
+      console.log('[CorporateKYC] CAC ref callback: element unmounted');
+    } else {
+      console.log('[CorporateKYC] ⚠️ Cannot attach handlers: not authenticated');
+    }
+  }, [isAuthenticated, autoFillState.attachToField, realtimeValidation.attachToIdentifierField]);
+
+  // CAC change handler with format validation
+  const handleCACChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const validation = validateCACFormat(value);
+    setCacValidation(validation);
+    // Don't call setValue here - let the input's natural onChange handle it
+    if (validation.valid) {
+      formMethods.clearErrors('cacNumber');
+    }
+  };
+
+  // Authentication-based messaging for CAC field
+  const cacMessage = isAuthenticated
+    ? "Enter your CAC and press Tab to auto-fill"
+    : "Your CAC will be verified when you submit";
+
   const onFinalSubmit = async (data: any) => {
     try {
       console.log('Form data before sanitization:', data);
@@ -422,6 +527,17 @@ const CorporateKYC: React.FC = () => {
       
       for (const [key, file] of Object.entries(uploadedFiles)) {
         if (file) {
+          // Log document upload
+          await auditService.logDocumentUpload({
+            userId: user?.uid,
+            userRole: user?.role,
+            userEmail: user?.email,
+            formType: 'kyc',
+            documentType: key,
+            fileName: file.name,
+            fileSize: file.size
+          });
+          
           fileUploadPromises.push(
             uploadFile(file, `corporate-kyc/${Date.now()}-${file.name}`).then(url => [key, url])
           );
@@ -437,6 +553,18 @@ const CorporateKYC: React.FC = () => {
         status: 'processing',
         formType: 'Corporate KYC'
       };
+
+      // Log form submission
+      const submissionId = `kyc-corporate-${Date.now()}`;
+      await auditService.logFormSubmission({
+        userId: user?.uid,
+        userRole: user?.role,
+        userEmail: user?.email,
+        formType: 'kyc',
+        formVariant: 'corporate',
+        submissionId,
+        formData: sanitizedData
+      });
 
       await handleEnhancedSubmit(finalData);
     } catch (error) {
@@ -463,15 +591,13 @@ const CorporateKYC: React.FC = () => {
   // Step field mappings - define which fields belong to each step
   const stepFieldMappings = {
     0: [
-      'branchOffice', 'insured', 'officeAddress', 'ownershipOfCompany', 'contactPerson', 
-      'website', 'incorporationNumber', 'incorporationState', 'dateOfIncorporationRegistration',
-      'cacNumber', 'BVNNumber', 'NINNumber', 'contactPersonNo', 'taxIDNo', 'emailAddress', 'natureOfBusiness', 
-      'estimatedTurnover', 'premiumPaymentSource', 'premiumPaymentSourceOther'
+      'insured', 'officeAddress', 'ownershipOfCompany', 'contactPerson', 
+      'website', 'incorporationState', 'dateOfIncorporationRegistration',
+      'cacNumber', 'contactPersonNo', 'emailAddress', 'natureOfBusiness', 
+      'estimatedTurnover'
     ],
     1: ['directors'],
     2: [
-      'localBankName', 'localAccountNumber', 'localBankBranch', 'localAccountOpeningDate',
-      'foreignBankName', 'foreignAccountNumber', 'foreignBankBranch', 'foreignAccountOpeningDate',
       'companyNameVerificationDoc', 'verificationDoc'
     ],
     3: ['agreeToDataPrivacy', 'signature']
@@ -481,26 +607,72 @@ const CorporateKYC: React.FC = () => {
     {
       id: 'company',
       title: 'Company Information',
+      isValid: realtimeValidation.canProceedToNextStep, // Block navigation if fields are mismatched
       component: (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              name="branchOffice"
-              label="NEM Branch Office"
-              required={true}
-            />
-            <FormField
-              name="insured"
-              label="Insured"
-              required={true}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="insured">
+                Insured
+                <span className="required-asterisk">*</span>
+              </Label>
+              <Input
+                id="insured"
+                {...formMethods.register('insured', {
+                  onChange: () => {
+                    if (formMethods.formState.errors.insured) {
+                      formMethods.clearErrors('insured');
+                    }
+                  }
+                })}
+                {...realtimeValidation.getFieldValidationProps('insured')}
+                className={cn(
+                  formMethods.formState.errors.insured && 'border-destructive',
+                  realtimeValidation.getFieldValidationProps('insured').className
+                )}
+              />
+              {formMethods.formState.errors.insured && (
+                <p className="text-sm text-destructive">{formMethods.formState.errors.insured.message?.toString()}</p>
+              )}
+              <FieldValidationIndicator
+                status={realtimeValidation.fieldValidationStates['insured']?.status || FieldValidationStatus.NOT_VERIFIED}
+                errorMessage={realtimeValidation.fieldValidationStates['insured']?.errorMessage || null}
+                fieldId="insured"
+                fieldLabel="Company Name"
+              />
+            </div>
           </div>
 
-          <FormTextarea
-            name="officeAddress"
-            label="Office Address"
-            required={true}
-          />
+          <div className="space-y-2">
+            <Label htmlFor="officeAddress">
+              Office Address
+              <span className="required-asterisk">*</span>
+            </Label>
+            <Textarea
+              id="officeAddress"
+              {...formMethods.register('officeAddress', {
+                onChange: () => {
+                  if (formMethods.formState.errors.officeAddress) {
+                    formMethods.clearErrors('officeAddress');
+                  }
+                }
+              })}
+              {...realtimeValidation.getFieldValidationProps('officeAddress')}
+              className={cn(
+                formMethods.formState.errors.officeAddress && 'border-destructive',
+                realtimeValidation.getFieldValidationProps('officeAddress').className
+              )}
+            />
+            {formMethods.formState.errors.officeAddress && (
+              <p className="text-sm text-destructive">{formMethods.formState.errors.officeAddress.message?.toString()}</p>
+            )}
+            <FieldValidationIndicator
+              status={realtimeValidation.fieldValidationStates['officeAddress']?.status || FieldValidationStatus.NOT_VERIFIED}
+              errorMessage={realtimeValidation.fieldValidationStates['officeAddress']?.errorMessage || null}
+              fieldId="officeAddress"
+              fieldLabel="Office Address"
+            />
+          </div>
 
           <FormSelect
             name="ownershipOfCompany"
@@ -517,22 +689,17 @@ const CorporateKYC: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               name="contactPerson"
-              label="Contact Person"
+              label="Name of Contact Person"
               required={true}
             />
             <FormField
               name="website"
               label="Website"
-              required={true}
+              required={false}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              name="incorporationNumber"
-              label="Incorporation Number"
-              required={true}
-            />
             <FormField
               name="incorporationState"
               label="Incorporation State"
@@ -540,31 +707,76 @@ const CorporateKYC: React.FC = () => {
             />
           </div>
 
-          <DatePicker
-            name="dateOfIncorporationRegistration"
-            label="Date of Incorporation/Registration"
-            required={true}
-          />
-
-          <FormField
-            name="cacNumber"
-            label="CAC Number"
-            required={true}
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              name="BVNNumber"
-              label="BVN"
+          <div className="space-y-2">
+            <DatePicker
+              name="dateOfIncorporationRegistration"
+              label="Date of Incorporation/Registration"
               required={true}
-              maxLength={11}
+              {...realtimeValidation.getFieldValidationProps('dateOfIncorporationRegistration')}
             />
-            <FormField
-              name="NINNumber"
-              label="NIN (National Identification Number)"
-              required={true}
-              maxLength={11}
+            <FieldValidationIndicator
+              status={realtimeValidation.fieldValidationStates['dateOfIncorporationRegistration']?.status || FieldValidationStatus.NOT_VERIFIED}
+              errorMessage={realtimeValidation.fieldValidationStates['dateOfIncorporationRegistration']?.errorMessage || null}
+              fieldId="dateOfIncorporationRegistration"
+              fieldLabel="Incorporation Date"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cacNumber">
+              CAC/RC Number
+              <span className="required-asterisk">*</span>
+            </Label>
+            <div className="relative">
+              <Input
+                id="cacNumber"
+                {...(() => {
+                  const { ref, ...rest } = formMethods.register('cacNumber', {
+                    onChange: handleCACChange
+                  });
+                  return {
+                    ...rest,
+                    ref: (e: HTMLInputElement | null) => {
+                      // Call both refs
+                      ref(e);
+                      cacRefCallback(e);
+                    }
+                  };
+                })()}
+                className={cn(
+                  formMethods.formState.errors.cacNumber && "border-destructive",
+                  cacValidation && !cacValidation.valid && "border-destructive",
+                  cacValidation && cacValidation.valid && "border-green-500",
+                  autoFillState.state.status === 'loading' && "border-blue-500"
+                )}
+              />
+              {autoFillState.state.status === 'loading' && (
+                <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-blue-500" />
+              )}
+              {autoFillState.state.status === 'success' && (
+                <Check className="absolute right-3 top-3 h-4 w-4 text-green-500" />
+              )}
+              {autoFillState.state.status === 'error' && (
+                <AlertCircle className="absolute right-3 top-3 h-4 w-4 text-destructive" />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Info className="h-3 w-3" />
+              {cacMessage}
+            </p>
+            {cacValidation && !cacValidation.valid && (
+              <p className="text-sm text-destructive">{cacValidation.error}</p>
+            )}
+            {autoFillState.state.status === 'error' && autoFillState.state.error && (
+              <p className="text-sm text-destructive">
+                {typeof autoFillState.state.error === 'string' 
+                  ? autoFillState.state.error 
+                  : autoFillState.state.error.message || 'Verification failed'}
+              </p>
+            )}
+            {formMethods.formState.errors.cacNumber && (
+              <p className="text-sm text-destructive">{formMethods.formState.errors.cacNumber.message?.toString()}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -575,15 +787,6 @@ const CorporateKYC: React.FC = () => {
               maxLength={15}
             />
             <FormField
-              name="taxIDNo"
-              label="Tax Identification Number"
-              required={false}
-              maxLength={10}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
               name="emailAddress"
               label="Email Address"
               required={true}
@@ -591,11 +794,36 @@ const CorporateKYC: React.FC = () => {
             />
           </div>
 
-          <FormField
-            name="natureOfBusiness"
-            label="Business Type/Occupation"
-            required={true}
-          />
+          <div className="space-y-2">
+            <Label htmlFor="natureOfBusiness">
+              Business Type/Occupation
+              <span className="required-asterisk">*</span>
+            </Label>
+            <Input
+              id="natureOfBusiness"
+              {...formMethods.register('natureOfBusiness', {
+                onChange: () => {
+                  if (formMethods.formState.errors.natureOfBusiness) {
+                    formMethods.clearErrors('natureOfBusiness');
+                  }
+                }
+              })}
+              {...realtimeValidation.getFieldValidationProps('natureOfBusiness')}
+              className={cn(
+                formMethods.formState.errors.natureOfBusiness && 'border-destructive',
+                realtimeValidation.getFieldValidationProps('natureOfBusiness').className
+              )}
+            />
+            {formMethods.formState.errors.natureOfBusiness && (
+              <p className="text-sm text-destructive">{formMethods.formState.errors.natureOfBusiness.message?.toString()}</p>
+            )}
+            <FieldValidationIndicator
+              status={realtimeValidation.fieldValidationStates['natureOfBusiness']?.status || FieldValidationStatus.NOT_VERIFIED}
+              errorMessage={realtimeValidation.fieldValidationStates['natureOfBusiness']?.errorMessage || null}
+              fieldId="natureOfBusiness"
+              fieldLabel="Business Type/Occupation"
+            />
+          </div>
 
           <FormSelect
             name="estimatedTurnover"
@@ -609,26 +837,6 @@ const CorporateKYC: React.FC = () => {
               { value: "More Than 200 Million", label: "More Than 200 Million" }
             ]}
           />
-
-          <FormSelect
-            name="premiumPaymentSource"
-            label="Premium Payment Source"
-            required={true}
-            placeholder="Choose Income Source"
-            options={[
-              { value: "Salary or Business Income", label: "Salary or Business Income" },
-              { value: "Investments or Dividends", label: "Investments or Dividends" },
-              { value: "Other", label: "Other (please specify)" }
-            ]}
-          />
-
-          {formMethods.watch('premiumPaymentSource') === 'Other' && (
-            <FormField
-              name="premiumPaymentSourceOther"
-              label="Please specify other income source"
-              required={true}
-            />
-          )}
         </div>
       )
     },
@@ -655,29 +863,53 @@ const CorporateKYC: React.FC = () => {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <FormField
-                  name={`directors.${index}.firstName`}
-                  label="First Name"
-                  required={true}
-                />
+                <div className="space-y-2">
+                  <FormField
+                    name={`directors.${index}.firstName`}
+                    label="First Name"
+                    required={true}
+                  />
+                  <FieldValidationIndicator
+                    status={getDirectorHooks(index)?.validation.fieldValidationStates[`directors.${index}.firstName`]?.status || FieldValidationStatus.NOT_VERIFIED}
+                    errorMessage={getDirectorHooks(index)?.validation.fieldValidationStates[`directors.${index}.firstName`]?.errorMessage || null}
+                    fieldId={`directors.${index}.firstName`}
+                    fieldLabel="First Name"
+                  />
+                </div>
                 <FormField
                   name={`directors.${index}.middleName`}
                   label="Middle Name"
                   required={false}
                 />
-                <FormField
-                  name={`directors.${index}.lastName`}
-                  label="Last Name"
-                  required={true}
-                />
+                <div className="space-y-2">
+                  <FormField
+                    name={`directors.${index}.lastName`}
+                    label="Last Name"
+                    required={true}
+                  />
+                  <FieldValidationIndicator
+                    status={getDirectorHooks(index)?.validation.fieldValidationStates[`directors.${index}.lastName`]?.status || FieldValidationStatus.NOT_VERIFIED}
+                    errorMessage={getDirectorHooks(index)?.validation.fieldValidationStates[`directors.${index}.lastName`]?.errorMessage || null}
+                    fieldId={`directors.${index}.lastName`}
+                    fieldLabel="Last Name"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <DatePicker
-                  name={`directors.${index}.dob`}
-                  label="Date of Birth"
-                  required={true}
-                />
+                <div className="space-y-2">
+                  <DatePicker
+                    name={`directors.${index}.dob`}
+                    label="Date of Birth"
+                    required={true}
+                  />
+                  <FieldValidationIndicator
+                    status={getDirectorHooks(index)?.validation.fieldValidationStates[`directors.${index}.dob`]?.status || FieldValidationStatus.NOT_VERIFIED}
+                    errorMessage={getDirectorHooks(index)?.validation.fieldValidationStates[`directors.${index}.dob`]?.errorMessage || null}
+                    fieldId={`directors.${index}.dob`}
+                    fieldLabel="Date of Birth"
+                  />
+                </div>
                 <FormField
                   name={`directors.${index}.placeOfBirth`}
                   label="Place of Birth"
@@ -719,50 +951,118 @@ const CorporateKYC: React.FC = () => {
                   required={true}
                   maxLength={15}
                 />
-                <FormField
-                  name={`directors.${index}.BVNNumber`}
-                  label="BVN"
-                  required={true}
-                  maxLength={11}
-                />
+                <div className="space-y-2">
+                  <Label htmlFor={`directors.${index}.NINNumber`}>
+                    NIN (National Identification Number)
+                    <span className="required-asterisk">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id={`directors.${index}.NINNumber`}
+                      maxLength={11}
+                      {...(() => {
+                        const { ref, ...rest } = formMethods.register(`directors.${index}.NINNumber`, {
+                          onChange: () => {
+                            const error = get(formMethods.formState.errors, `directors.${index}.NINNumber`);
+                            if (error) {
+                              formMethods.clearErrors(`directors.${index}.NINNumber`);
+                            }
+                          }
+                        });
+                        return {
+                          ...rest,
+                          ref: (e: HTMLInputElement | null) => {
+                            // Call both refs
+                            ref(e);
+                            // Create and call the ref callback for this director
+                            const directorNinRefCallback = (element: HTMLInputElement | null) => {
+                              console.log(`[CorporateKYC] ===== DIRECTOR ${index} NIN REF CALLBACK FIRED =====`);
+                              console.log(`[CorporateKYC] Director ${index} NIN input element:`, element);
+                              console.log(`[CorporateKYC] Director ${index} NIN input ID:`, element?.id);
+                              console.log('[CorporateKYC] Is authenticated:', isAuthenticated);
+                              
+                              if (element && isAuthenticated) {
+                                console.log(`[CorporateKYC] Attaching handlers for director ${index}...`);
+                                
+                                // Get the hooks for this director
+                                const hooks = getDirectorHooks(index);
+                                if (hooks) {
+                                  // Attach handlers - these add native DOM event listeners
+                                  hooks.autoFill.attachToField(element);
+                                  hooks.validation.attachToIdentifierField(element);
+                                  
+                                  console.log(`[CorporateKYC] ✅ Handlers attached successfully for director ${index}`);
+                                } else {
+                                  console.log(`[CorporateKYC] ⚠️ No hooks available for director ${index}`);
+                                }
+                              } else if (!element) {
+                                console.log(`[CorporateKYC] Director ${index} NIN ref callback: element unmounted`);
+                              } else {
+                                console.log(`[CorporateKYC] ⚠️ Cannot attach handlers for director ${index}: not authenticated`);
+                              }
+                            };
+                            directorNinRefCallback(e);
+                          }
+                        };
+                      })()}
+                      className={cn(
+                        get(formMethods.formState.errors, `directors.${index}.NINNumber`) && "border-destructive"
+                      )}
+                    />
+                    {(() => {
+                      const hooks = getDirectorHooks(index);
+                      if (!hooks) return null;
+                      return (
+                        <>
+                          {hooks.autoFill.state.status === 'loading' && (
+                            <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-blue-500" />
+                          )}
+                          {hooks.autoFill.state.status === 'success' && (
+                            <Check className="absolute right-3 top-3 h-4 w-4 text-green-500" />
+                          )}
+                          {hooks.autoFill.state.status === 'error' && (
+                            <AlertCircle className="absolute right-3 top-3 h-4 w-4 text-destructive" />
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Info className="h-3 w-3" />
+                    {isAuthenticated 
+                      ? "Enter NIN and press Tab to auto-fill" 
+                      : "NIN will be verified when you submit"}
+                  </p>
+                  {(() => {
+                    const hooks = getDirectorHooks(index);
+                    if (!hooks) return null;
+                    return (
+                      <>
+                        {hooks.autoFill.state.status === 'success' && (
+                          <p className="text-sm text-green-600 flex items-center gap-1">
+                            <Check className="h-4 w-4" />
+                            {hooks.autoFill.state.populatedFieldCount} fields auto-filled
+                            {hooks.autoFill.state.cached && ' (from cache)'}
+                          </p>
+                        )}
+                        {hooks.autoFill.state.status === 'error' && hooks.autoFill.state.error && (
+                          <p className="text-sm text-destructive flex items-center gap-1">
+                            <AlertCircle className="h-4 w-4" />
+                            {hooks.autoFill.state.error.message}
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
+                  {get(formMethods.formState.errors, `directors.${index}.NINNumber`) && (
+                    <p className="text-sm text-destructive">
+                      {get(formMethods.formState.errors, `directors.${index}.NINNumber`)?.message?.toString()}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <FormField
-                  name={`directors.${index}.NINNumber`}
-                  label="NIN (National Identification Number)"
-                  required={true}
-                  maxLength={11}
-                />
-                <FormField
-                  name={`directors.${index}.employersName`}
-                  label="Employers Name"
-                  required={false}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <FormField
-                  name={`directors.${index}.employersPhoneNumber`}
-                  label="Employers Phone Number"
-                  required={false}
-                  maxLength={15}
-                />
-              </div>
-
-              <FormTextarea
-                name={`directors.${index}.residentialAddress`}
-                label="Residential Address"
-                required={true}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <FormField
-                  name={`directors.${index}.taxIDNumber`}
-                  label="Tax ID Number"
-                  required={false}
-                  maxLength={10}
-                />
                 <FormSelect
                   name={`directors.${index}.idType`}
                   label="ID Type"
@@ -775,14 +1075,14 @@ const CorporateKYC: React.FC = () => {
                     { value: "Voters Card", label: "Voters Card" }
                   ]}
                 />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <FormField
                   name={`directors.${index}.idNumber`}
                   label="Identification Number"
                   required={true}
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <FormField
                   name={`directors.${index}.issuingBody`}
                   label="Issuing Body"
@@ -844,17 +1144,13 @@ const CorporateKYC: React.FC = () => {
               phoneNumber: '',
               BVNNumber: '',
               NINNumber: '',
-              employersName: '',
-              employersPhoneNumber: '',
-              residentialAddress: '',
-              taxIDNumber: '',
               idType: '',
               idNumber: '',
               issuingBody: '',
               issuedDate: '',
               expiryDate: '',
-              sourcOfIncome: '',
-              sourcOfIncomeOther: ''
+              sourceOfIncome: '',
+              sourceOfIncomeOther: ''
             })}
             className="w-full"
           >
@@ -865,74 +1161,12 @@ const CorporateKYC: React.FC = () => {
       )
     },
     {
-      id: 'accounts',
-      title: 'Account Details & Verification Upload',
+      id: 'verification',
+      title: 'Verification Upload',
       component: (
         <div className="space-y-6">
-          {/* Local Account Details */}
-          <div>
-            <h3 className="text-lg font-medium mb-4">Local Account Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                name="localBankName"
-                label="Bank Name"
-                required={true}
-                maxLength={100}
-              />
-              <FormField
-                name="localAccountNumber"
-                label="Account Number"
-                required={true}
-                maxLength={10}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <FormField
-                name="localBankBranch"
-                label="Bank Branch"
-                required={true}
-                maxLength={100}
-              />
-              <DatePicker
-                name="localAccountOpeningDate"
-                label="Account Opening Date"
-                required={true}
-              />
-            </div>
-          </div>
-
-          {/* Foreign Account Details (Optional) */}
-          <div>
-            <h3 className="text-lg font-medium mb-4">Foreign Account Details (Optional)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                name="foreignBankName"
-                label="Bank Name"
-                maxLength={100}
-              />
-              <FormField
-                name="foreignAccountNumber"
-                label="Account Number"
-                maxLength={30}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <FormField
-                name="foreignBankBranch"
-                label="Bank Branch"
-                maxLength={100}
-              />
-              <DatePicker
-                name="foreignAccountOpeningDate"
-                label="Account Opening Date"
-              />
-            </div>
-          </div>
-
           {/* Verification Document */}
-          <div className="pt-6 border-t">
+          <div>
             <h3 className="text-lg font-medium mb-4">Verification Document</h3>
             <FormSelect
               name="companyNameVerificationDoc"
@@ -1031,7 +1265,14 @@ const CorporateKYC: React.FC = () => {
 
   return (
     <FormProvider {...formMethods}>
-      <div className="container mx-auto px-4 py-8">
+      <form ref={formRef}>
+        {/* Accessibility: Screen reader announcements for validation state changes */}
+        <ValidationAnnouncer
+          fieldValidationStates={realtimeValidation.fieldValidationStates}
+          fieldLabels={realtimeValidation.fieldLabels}
+        />
+        
+        <div className="container mx-auto px-4 py-8">
         <Card className="max-w-6xl mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1039,7 +1280,7 @@ const CorporateKYC: React.FC = () => {
               Corporate KYC Form
             </CardTitle>
             <CardDescription>
-              Know Your Customer - Please provide accurate information for regulatory compliance
+              KYC forms are for customer onboarding and verification. Complete these forms to establish a business relationship.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -1051,6 +1292,36 @@ const CorporateKYC: React.FC = () => {
               stepFieldMappings={stepFieldMappings}
               initialStep={currentStep}
               onStepChange={setCurrentStep}
+              validateStep={async (stepId) => {
+                // For company information step, check real-time validation
+                if (stepId === 'company') {
+                  if (!realtimeValidation.canProceedToNextStep) {
+                    // Show toast with mismatched fields
+                    toast({
+                      title: 'Please correct highlighted fields',
+                      description: `The following fields need correction: ${realtimeValidation.mismatchedFieldLabels.join(', ')}`,
+                      variant: 'destructive'
+                    });
+                    return false;
+                  }
+                }
+                
+                // Validate step fields using react-hook-form
+                const currentStepFields = stepFieldMappings[stepId === 'company' ? 0 : stepId === 'directors' ? 1 : stepId === 'verification' ? 2 : 3] || [];
+                if (currentStepFields.length > 0) {
+                  const isValid = await formMethods.trigger(currentStepFields);
+                  if (!isValid) {
+                    toast({
+                      title: 'Validation Error',
+                      description: 'Please fill all required fields before proceeding',
+                      variant: 'destructive'
+                    });
+                    return false;
+                  }
+                }
+                
+                return true;
+              }}
             />
           </CardContent>
         </Card>
@@ -1079,10 +1350,6 @@ const CorporateKYC: React.FC = () => {
                 <h3 className="font-semibold text-lg mb-3">Company Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="font-medium text-gray-600">Branch Office:</span>
-                    <p className="text-gray-900">{data.branchOffice || 'Not provided'}</p>
-                  </div>
-                  <div>
                     <span className="font-medium text-gray-600">Insured:</span>
                     <p className="text-gray-900">{data.insured || 'Not provided'}</p>
                   </div>
@@ -1095,7 +1362,7 @@ const CorporateKYC: React.FC = () => {
                     <p className="text-gray-900">{data.ownershipOfCompany || 'Not provided'}</p>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-600">Contact Person:</span>
+                    <span className="font-medium text-gray-600">Name of Contact Person:</span>
                     <p className="text-gray-900">{data.contactPerson || 'Not provided'}</p>
                   </div>
                   <div>
@@ -1103,20 +1370,8 @@ const CorporateKYC: React.FC = () => {
                     <p className="text-gray-900">{data.website || 'Not provided'}</p>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-600">Incorporation Number:</span>
-                    <p className="text-gray-900">{data.incorporationNumber || 'Not provided'}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-600">CAC Number:</span>
-                    <p className="text-gray-900">{data.cacNumber || 'Not provided'}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-600">BVN:</span>
-                    <p className="text-gray-900">{data.BVNNumber || 'Not provided'}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-600">NIN:</span>
-                    <p className="text-gray-900">{data.NINNumber || 'Not provided'}</p>
+                    <span className="font-medium text-gray-600">CAC/Incorporation Number:</span>
+                    <p className="text-gray-900">{data.cacNumber || data.incorporationNumber || 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">Email:</span>
@@ -1162,10 +1417,6 @@ const CorporateKYC: React.FC = () => {
                           <p className="text-gray-900">{director.phoneNumber || 'Not provided'}</p>
                         </div>
                         <div>
-                          <span className="font-medium text-gray-600">BVN:</span>
-                          <p className="text-gray-900">{director.BVNNumber || 'Not provided'}</p>
-                        </div>
-                        <div>
                           <span className="font-medium text-gray-600">NIN:</span>
                           <p className="text-gray-900">{director.NINNumber || 'Not provided'}</p>
                         </div>
@@ -1174,41 +1425,6 @@ const CorporateKYC: React.FC = () => {
                   ))}
                 </div>
               )}
-
-              {/* Bank Details */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-3">Bank Details</h3>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium text-gray-800 mb-2">Local Account</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="font-medium text-gray-600">Bank Name:</span>
-                        <p className="text-gray-900">{data.localBankName || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-600">Account Number:</span>
-                        <p className="text-gray-900">{data.localAccountNumber || 'Not provided'}</p>
-                      </div>
-                    </div>
-                  </div>
-                  {data.foreignBankName && (
-                    <div className="border-t pt-4">
-                      <h4 className="font-medium text-gray-800 mb-2">Foreign Account</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium text-gray-600">Bank Name:</span>
-                          <p className="text-gray-900">{data.foreignBankName || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-600">Account Number:</span>
-                          <p className="text-gray-900">{data.foreignAccountNumber || 'Not provided'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
 
               {/* Documents */}
               <div className="border rounded-lg p-4">
@@ -1233,7 +1449,24 @@ const CorporateKYC: React.FC = () => {
         message="Your Corporate KYC form has been submitted successfully. You will receive a confirmation email shortly."
         formType="Corporate KYC"
       />
+
+      {/* Verification Mismatch Modal */}
+      <VerificationMismatchModal
+        open={showVerificationMismatch}
+        onClose={closeVerificationMismatch}
+        mismatches={verificationMismatchData?.mismatches || []}
+        warnings={verificationMismatchData?.warnings || []}
+        identityType={verificationMismatchData?.identityType || 'CAC'}
+      />
+      
+      {/* Error Modal */}
+      <ErrorModal 
+        isOpen={showError} 
+        onClose={closeError} 
+        message={errorMessage} 
+      />
       </div>
+      </form>
     </FormProvider>
   );
 };

@@ -238,9 +238,8 @@ export function useBrokerTour() {
     await completeTour();
   }, [completeTour]);
 
-  // Check if tour is active - DISABLED FOR NOW
-  const isTourActive = false; // TODO: Re-enable after proper implementation
-  // const isTourActive = !loading && !tourCompleted && currentStep < 5;
+  // Check if tour is active - RE-ENABLED
+  const isTourActive = !loading && !tourCompleted && currentStep < 5;
 
   // Expose debug info for console access
   if (DEBUG_MODE && typeof window !== 'undefined') {

@@ -37,6 +37,7 @@ export interface AutoFillEngineConfig {
   onSuccess?: (populatedFieldCount: number) => void;
   onError?: (error: { code: string; message: string }) => void;
   onComplete?: () => void;
+  fieldPrefix?: string; // Optional prefix for nested fields (e.g., "directors.0.")
 }
 
 /**
@@ -207,7 +208,11 @@ export class AutoFillEngine {
 
       // Step 7: Map fields
       console.log('[AutoFillEngine] Mapping NIN fields to form');
-      const fieldMappings = this.fieldMapper.mapNINFields(normalizedData, this.config.formElement);
+      const fieldMappings = this.fieldMapper.mapNINFields(
+        normalizedData, 
+        this.config.formElement,
+        this.config.fieldPrefix || ''
+      );
 
       if (fieldMappings.length === 0) {
         console.log('[AutoFillEngine] No fields could be mapped');

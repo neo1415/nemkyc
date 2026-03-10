@@ -55,8 +55,17 @@ const KYCForms: React.FC = () => {
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">KYC Forms</h1>
           <p className="text-lg text-gray-600">
-            Complete your Know Your Customer verification to access our insurance services
+            KYC forms are for customer onboarding and verification. Complete your Know Your Customer verification to access our insurance services.
           </p>
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start space-x-2">
+              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-800">
+                <p className="font-medium">KYC vs NFIU Forms:</p>
+                <p>KYC forms are for customer onboarding and verification, while NFIU forms are for regulatory reporting to the Nigerian Financial Intelligence Unit. If you need to submit NFIU forms, please visit the <Link to="/nfiu" className="underline font-medium">NFIU Forms page</Link>.</p>
+              </div>
+            </div>
+          </div>
           <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
             <div className="flex items-start space-x-2">
               <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />

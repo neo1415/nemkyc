@@ -48,6 +48,10 @@ const AdminKYCTable = lazy(() => import('./pages/admin/AdminKYCTable'));
 const AdminIndividualKYCTable = lazy(() => import('./pages/admin/AdminIndividualKYCTable'));
 const AdminCorporateKYCTable = lazy(() => import('./pages/admin/AdminCorporateKYCTable'));
 
+// Admin Tables - NFIU
+const AdminIndividualNFIUTable = lazy(() => import('./pages/admin/AdminIndividualNFIUTable'));
+const AdminCorporateNFIUTable = lazy(() => import('./pages/admin/AdminCorporateNFIUTable'));
+
 // Admin Tables - CDD
 const AdminCDDTable = lazy(() => import('./pages/admin/AdminCDDTable'));
 const AdminIndividualCDDTable = lazy(() => import('./pages/admin/AdminIndividualCDDTable'));
@@ -78,6 +82,11 @@ const AdminUsersTable = lazy(() => import('./pages/admin/AdminUsersTable'));
 const KYCForms = lazy(() => import('./pages/kyc/KYCForms'));
 const IndividualKYC = lazy(() => import('./pages/kyc/IndividualKYC'));
 const CorporateKYC = lazy(() => import('./pages/kyc/CorporateKYC'));
+
+// NFIU Forms
+const NFIULanding = lazy(() => import('./pages/nfiu/NFIULanding'));
+const IndividualNFIU = lazy(() => import('./pages/nfiu/IndividualNFIU'));
+const CorporateNFIU = lazy(() => import('./pages/nfiu/CorporateNFIU'));
 
 // CDD Forms
 const CDDForms = lazy(() => import('./pages/cdd/CDDForms'));
@@ -212,6 +221,11 @@ function App() {
              <Route path="kyc" element={<KYCForms />} />
              <Route path="kyc/individual" element={<IndividualKYC />} />
              <Route path="kyc/corporate" element={<CorporateKYC />} />
+             
+             {/* NFIU Routes - accessible without authentication */}
+             <Route path="nfiu" element={<NFIULanding />} />
+             <Route path="nfiu/individual" element={<IndividualNFIU />} />
+             <Route path="nfiu/corporate" element={<CorporateNFIU />} />
              
              {/* CDD Routes - accessible without authentication */}
              <Route path="cdd" element={<CDDForms />} />
@@ -374,6 +388,19 @@ function App() {
           <Route path="admin/kyc/corporate" element={
             <ProtectedRoute>
               <AdminCorporateKYCTable />
+            </ProtectedRoute>
+          } />
+
+          {/* Admin NFIU Tables */}
+          <Route path="admin/nfiu/individual" element={
+            <ProtectedRoute>
+              <AdminIndividualNFIUTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/nfiu/corporate" element={
+            <ProtectedRoute>
+              <AdminCorporateNFIUTable />
             </ProtectedRoute>
           } />
 

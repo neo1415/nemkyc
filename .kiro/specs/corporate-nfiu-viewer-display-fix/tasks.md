@@ -1,0 +1,108 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Fault Condition** - Corporate NFIU Forms Display Issues
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: Scope the property to Corporate NFIU forms (collection === 'corporate-nfiu-form')
+  - Test that Corporate NFIU forms display fields in consistent order across multiple page loads
+  - Test that technical metadata fields like "_rowHeight" and numeric keys do NOT appear in the display
+  - Test that directors are displayed in separate cards with "Director 1", "Director 2" headers
+  - Test that PDF generation uses html2canvas + jsPDF with NEM Insurance branding
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found:
+    - Field order is random due to Object.entries() iteration
+    - Technical metadata fields appear in the display
+    - Directors are not in separate cards
+    - PDF lacks NEM branding and uses table layout
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Non-Corporate-NFIU Form Routing
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-Corporate-NFIU forms:
+    - corporate-kyc-form routes to CorporateKYCViewer
+    - Individual-kyc-form routes to IndividualKYCViewer
+    - individual-nfiu-form uses appropriate viewer
+    - Claims forms use generic FormViewer rendering
+    - All viewers receive formData and navigation handlers correctly
+    - PDF generation handles multi-page content correctly
+    - File upload fields display with download buttons
+    - Date, time, and currency formatting works correctly
+    - Ticket ID displays prominently when present
+  - Write property-based tests capturing observed behavior patterns:
+    - For all form collections !== 'corporate-nfiu-form', routing behavior is unchanged
+    - For all form types, formData passing is unchanged
+    - For all form types, PDF generation is unchanged
+    - For all form types, field display formatting is unchanged
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8_
+
+- [x] 3. Fix for Corporate NFIU viewer display and PDF generation
+
+  - [x] 3.1 Create CorporateNFIUViewer component
+    - Create new file `src/pages/admin/CorporateNFIUViewer.tsx`
+    - Copy structure from CorporateKYCViewer.tsx as template
+    - Import React, UI components (Card, Button, Separator, Badge), icons (Download, FileText, Building2, Users, CreditCard, FileCheck)
+    - Import jsPDF and html2canvas for PDF generation
+    - Define CorporateNFIUViewerProps interface with data and onClose props
+    - Implement helper functions: formatValue, formatDate, extractDirectorsData
+    - Define explicit field ordering for Company Information section (insured, officeAddress, ownershipOfCompany, website, incorporationNumber, incorporationState, dateOfIncorporationRegistration, contactPersonNo, businessTypeOccupation, taxIDNo, emailAddress, premiumPaymentSource, premiumPaymentSourceOther)
+    - Define explicit field ordering for Directors Information section (firstName, middleName, lastName, dateOfBirth, placeOfBirth, nationality, occupation, email, phoneNumber, BVNNumber, NINNumber, taxIDNumber, residentialAddress, employersName, employersPhoneNumber, idType, idNumber, issuingBody, issuedDate, expiryDate, sourceOfIncome, sourceOfIncomeOther)
+    - Implement PDF generation with NEM branding using html2canvas + jsPDF
+    - Implement 2-column grid layout with Card components
+    - Filter technical metadata by only displaying explicitly defined fields
+    - _Bug_Condition: isBugCondition(input) where input.collection === 'corporate-nfiu-form' AND currentViewer === 'FormViewer'_
+    - _Expected_Behavior: Fields displayed in consistent order, no technical metadata, directors in separate cards, professional PDF with NEM branding_
+    - _Preservation: Non-Corporate-NFIU forms continue to use their appropriate viewers_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
+
+  - [x] 3.2 Add routing logic in FormViewer
+    - Open `src/pages/admin/FormViewer.tsx`
+    - Add import statement: `import CorporateNFIUViewer from './CorporateNFIUViewer';`
+    - Add conditional rendering block for collection === 'corporate-nfiu-form'
+    - Position condition BEFORE generic FormViewer rendering logic
+    - Wrap CorporateNFIUViewer in ThemeProvider with proper Box styling
+    - Pass formData as data prop and navigate(-1) as onClose handler
+    - Add Back button with ArrowLeft icon
+    - _Bug_Condition: isBugCondition(input) where input.collection === 'corporate-nfiu-form'_
+    - _Expected_Behavior: Corporate NFIU forms route to CorporateNFIUViewer instead of generic FormViewer_
+    - _Preservation: All other form types continue to route to their existing viewers_
+    - _Requirements: 2.7, 3.1_
+
+  - [x] 3.3 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Corporate NFIU Forms Use Dedicated Viewer
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - Verify field order is consistent across multiple page loads
+    - Verify technical metadata fields do not appear
+    - Verify directors are in separate cards with headers
+    - Verify PDF has NEM branding and professional formatting
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
+
+  - [x] 3.4 Verify preservation tests still pass
+    - **Property 2: Preservation** - Non-Corporate-NFIU Form Routing
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Verify corporate-kyc-form still routes to CorporateKYCViewer
+    - Verify Individual-kyc-form still routes to IndividualKYCViewer
+    - Verify individual-nfiu-form routing is unchanged
+    - Verify claims forms routing is unchanged
+    - Verify formData passing is unchanged for all viewers
+    - Verify PDF generation is unchanged for all form types
+    - Verify field display formatting is unchanged for all form types
+    - Confirm all tests still pass after fix (no regressions)
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

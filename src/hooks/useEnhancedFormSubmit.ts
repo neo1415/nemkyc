@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { matchCACData, matchNINData } from '../utils/verificationMatcher';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -17,20 +18,32 @@ interface UseEnhancedFormSubmitOptions {
   };
 }
 
+interface VerificationMismatchData {
+  mismatches: string[];
+  warnings: string[];
+  identityType: 'NIN' | 'CAC';
+}
+
 interface UseEnhancedFormSubmitReturn {
   // State
   isValidating: boolean;
   isSubmitting: boolean;
   showSummary: boolean;
   showSuccess: boolean;
+  showError: boolean;
+  errorMessage: string;
   showLoading: boolean;
   loadingMessage: string;
+  showVerificationMismatch: boolean;
+  verificationMismatchData: VerificationMismatchData | null;
   
   // Actions
   handleSubmit: (data: any) => Promise<void>;
   setShowSummary: (show: boolean) => void;
   confirmSubmit: () => Promise<void>;
   closeSuccess: () => void;
+  closeError: () => void;
+  closeVerificationMismatch: () => void;
   
   // Data
   formData: any;
@@ -143,14 +156,27 @@ export const useEnhancedFormSubmit = (
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [formData, setFormData] = useState<any>(null);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [showVerificationMismatch, setShowVerificationMismatch] = useState(false);
+  const [verificationMismatchData, setVerificationMismatchData] = useState<VerificationMismatchData | null>(null);
 
   // Computed state
   const showLoading = isValidating || isSubmitting;
   
   // Ref to track if we've already processed a pending submission
   const hasProcessedPending = useRef(false);
+  // Ref to prevent duplicate submissions
+  const isSubmittingRef = useRef(false);
+
+  // Reset submission guard when summary dialog closes
+  useEffect(() => {
+    if (!showSummary && !isSubmitting) {
+      isSubmittingRef.current = false;
+    }
+  }, [showSummary, isSubmitting]);
 
   // Check for pending submission on mount and process it
   useEffect(() => {
@@ -176,26 +202,103 @@ export const useEnhancedFormSubmit = (
           
           console.log('🎯 Processing pending submission for', formType);
           
+          // Get the CURRENT identity number from savedFormData (not from the stale verificationData)
+          let currentIdentityNumber: string | undefined;
+          let currentIdentityType: 'NIN' | 'CAC' | undefined;
+          let currentIsVerified = verificationData?.isVerified || false;
+
+          if (formType === 'Individual KYC' || formType === 'Individual NFIU') {
+            currentIdentityNumber = savedFormData.NIN;
+            currentIdentityType = 'NIN';
+          } else if (formType === 'Corporate KYC' || formType === 'Corporate NFIU') {
+            // Support both cacNumber (CorporateKYC) and incorporationNumber (CorporateNFIU)
+            currentIdentityNumber = savedFormData.cacNumber || savedFormData.incorporationNumber;
+            currentIdentityType = 'CAC';
+          }
+
           // Check if we need to verify identity for this form
           const needsVerification = 
-            (formType === 'Individual KYC' || formType === 'Corporate KYC') &&
-            verificationData?.identityNumber &&
-            !verificationData?.isVerified;
+            currentIdentityNumber &&
+            currentIdentityType &&
+            !currentIsVerified;
 
           if (needsVerification) {
             setLoadingMessage('Verifying identity...');
             setIsSubmitting(true);
 
             try {
+              console.log(`🔍 Verifying ${currentIdentityType}: ${currentIdentityNumber}`);
+              
               // Verify the identity number
               const verificationResult = await verifyIdentity(
-                verificationData!.identityNumber!,
-                verificationData!.identityType!,
+                currentIdentityNumber!,
+                currentIdentityType!,
                 user
               );
 
               if (!verificationResult.status) {
                 throw new Error(verificationResult.message || 'Identity verification failed');
+              }
+
+              console.log('✅ Verification successful:', verificationResult);
+
+              // Perform data matching to ensure user-entered data matches verification
+              let matchResult;
+              if (currentIdentityType === 'CAC') {
+                console.log('🔍 Matching CAC data:');
+                console.log('  User entered:', {
+                  insured: savedFormData.insured,
+                  dateOfIncorporationRegistration: savedFormData.dateOfIncorporationRegistration,
+                  officeAddress: savedFormData.officeAddress
+                });
+                console.log('  Verification data:', verificationResult.data);
+                
+                matchResult = matchCACData(
+                  {
+                    insured: savedFormData.insured,
+                    dateOfIncorporationRegistration: savedFormData.dateOfIncorporationRegistration,
+                    officeAddress: savedFormData.officeAddress
+                  },
+                  verificationResult.data
+                );
+                
+                console.log('  Match result:', matchResult);
+              } else if (currentIdentityType === 'NIN') {
+                matchResult = matchNINData(
+                  {
+                    firstName: savedFormData.firstName,
+                    lastName: savedFormData.lastName,
+                    dateOfBirth: savedFormData.dateOfBirth,
+                    gender: savedFormData.gender
+                  },
+                  verificationResult.data
+                );
+              }
+
+              // Check for mismatches
+              if (matchResult && !matchResult.matches) {
+                console.log('❌ Verification data mismatch:', matchResult.mismatches);
+                sessionStorage.removeItem('pendingSubmission');
+                sessionStorage.removeItem('pendingSubmissionKey');
+                setIsSubmitting(false);
+                
+                // Show verification mismatch modal
+                setVerificationMismatchData({
+                  mismatches: matchResult.mismatches,
+                  warnings: matchResult.warnings,
+                  identityType: currentIdentityType!
+                });
+                setShowVerificationMismatch(true);
+                
+                onError?.(new Error('Verification data mismatch'));
+                return;
+              }
+
+              // Show warnings if any
+              if (matchResult && matchResult.warnings.length > 0) {
+                matchResult.warnings.forEach((warning: string) => {
+                  toast.warning(warning);
+                });
               }
 
               // Verification succeeded, add verification data to formData
@@ -227,11 +330,12 @@ export const useEnhancedFormSubmit = (
               toast.success('Form submitted successfully!');
               onSuccess?.();
             } catch (error: any) {
-              console.error('Error processing pending submission:', error);
+              console.error('❌ Error processing pending submission:', error);
               sessionStorage.removeItem('pendingSubmission');
               sessionStorage.removeItem('pendingSubmissionKey');
               setIsSubmitting(false);
-              toast.error(error.message || 'Failed to verify identity or submit form. Please try again.');
+              setErrorMessage(error.message || 'Failed to verify identity or submit form. Please try again.');
+              setShowError(true);
               onError?.(error);
             }
           } else {
@@ -264,7 +368,8 @@ export const useEnhancedFormSubmit = (
               sessionStorage.removeItem('pendingSubmission');
               sessionStorage.removeItem('pendingSubmissionKey');
               setIsSubmitting(false);
-              toast.error(error.message || 'Failed to submit form. Please try again.');
+              setErrorMessage(error.message || 'Failed to submit form. Please try again.');
+              setShowError(true);
               onError?.(error);
             }
           }
@@ -277,7 +382,8 @@ export const useEnhancedFormSubmit = (
     };
 
     checkAndProcessPendingSubmission();
-  }, [user, formType, onSuccess, onError, verificationData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, formType]); // Only depend on user and formType - verificationData causes infinite loops
 
   /**
    * Handle initial submit - shows loading immediately, then validates
@@ -309,7 +415,8 @@ export const useEnhancedFormSubmit = (
     } catch (error: any) {
       console.error('Error in handleSubmit:', error);
       setIsValidating(false);
-      toast.error(error.message || 'Validation failed');
+      setErrorMessage(error.message || 'Validation failed');
+      setShowError(true);
       onError?.(error);
     }
   };
@@ -318,7 +425,19 @@ export const useEnhancedFormSubmit = (
    * Confirm submission from summary dialog
    */
   const confirmSubmit = async () => {
-    if (!formData) return;
+    if (!formData) {
+      console.log('⏭️  No form data available');
+      return;
+    }
+
+    // Prevent duplicate submissions - check FIRST before any other logic
+    if (isSubmittingRef.current) {
+      console.log('⏭️  Submission already in progress, skipping duplicate');
+      return;
+    }
+
+    // Mark as submitting immediately
+    isSubmittingRef.current = true;
 
     // Check authentication FIRST (preserve existing flow)
     if (!user) {
@@ -329,17 +448,33 @@ export const useEnhancedFormSubmit = (
         timestamp: Date.now()
       }));
       
+      // Reset submission guard since we're redirecting
+      isSubmittingRef.current = false;
       setShowSummary(false);
       navigate('/auth/signin');
       return;
     }
 
     // User is authenticated, now check if we need to verify identity
-    // Only verify for KYC forms that have identity numbers
+    // Get the CURRENT identity number from formData (not from the stale verificationData)
+    let currentIdentityNumber: string | undefined;
+    let currentIdentityType: 'NIN' | 'CAC' | undefined;
+    let currentIsVerified = verificationData?.isVerified || false;
+
+    if (formType === 'Individual KYC' || formType === 'Individual NFIU') {
+      currentIdentityNumber = formData.NIN;
+      currentIdentityType = 'NIN';
+    } else if (formType === 'Corporate KYC' || formType === 'Corporate NFIU') {
+      // Support both cacNumber (CorporateKYC) and incorporationNumber (CorporateNFIU)
+      currentIdentityNumber = formData.cacNumber || formData.incorporationNumber;
+      currentIdentityType = 'CAC';
+    }
+
+    // Only verify for KYC/NFIU forms that have identity numbers and are not already verified
     const needsVerification = 
-      (formType === 'Individual KYC' || formType === 'Corporate KYC') &&
-      verificationData?.identityNumber &&
-      !verificationData?.isVerified;
+      currentIdentityNumber &&
+      currentIdentityType &&
+      !currentIsVerified;
 
     if (needsVerification) {
       setShowSummary(false);
@@ -347,15 +482,77 @@ export const useEnhancedFormSubmit = (
       setIsSubmitting(true);
 
       try {
+        console.log(`🔍 Verifying ${currentIdentityType}: ${currentIdentityNumber}`);
+        
         // Verify the identity number
         const verificationResult = await verifyIdentity(
-          verificationData!.identityNumber!,
-          verificationData!.identityType!,
+          currentIdentityNumber!,
+          currentIdentityType!,
           user
         );
 
         if (!verificationResult.status) {
           throw new Error(verificationResult.message || 'Identity verification failed');
+        }
+
+        console.log('✅ Verification successful:', verificationResult);
+
+        // Perform data matching to ensure user-entered data matches verification
+        let matchResult;
+        if (currentIdentityType === 'CAC') {
+          console.log('🔍 Matching CAC data (confirmSubmit):');
+          console.log('  User entered:', {
+            insured: formData.insured,
+            dateOfIncorporationRegistration: formData.dateOfIncorporationRegistration,
+            officeAddress: formData.officeAddress
+          });
+          console.log('  Verification data:', verificationResult.data);
+          
+          matchResult = matchCACData(
+            {
+              insured: formData.insured,
+              dateOfIncorporationRegistration: formData.dateOfIncorporationRegistration,
+              officeAddress: formData.officeAddress
+            },
+            verificationResult.data
+          );
+          
+          console.log('  Match result:', matchResult);
+        } else if (currentIdentityType === 'NIN') {
+          matchResult = matchNINData(
+            {
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              dateOfBirth: formData.dateOfBirth,
+              gender: formData.gender
+            },
+            verificationResult.data
+          );
+        }
+
+        // Check for mismatches
+        if (matchResult && !matchResult.matches) {
+          console.log('❌ Verification data mismatch:', matchResult.mismatches);
+          setIsSubmitting(false);
+          isSubmittingRef.current = false;
+          
+          // Show verification mismatch modal
+          setVerificationMismatchData({
+            mismatches: matchResult.mismatches,
+            warnings: matchResult.warnings,
+            identityType: currentIdentityType!
+          });
+          setShowVerificationMismatch(true);
+          
+          onError?.(new Error('Verification data mismatch'));
+          return;
+        }
+
+        // Show warnings if any
+        if (matchResult && matchResult.warnings.length > 0) {
+          matchResult.warnings.forEach((warning: string) => {
+            toast.warning(warning);
+          });
         }
 
         // Verification succeeded, add verification data to formData
@@ -380,12 +577,16 @@ export const useEnhancedFormSubmit = (
         }
 
         setIsSubmitting(false);
-        setShowSuccess(true);
+        isSubmittingRef.current = false; // Reset submission guard
+        setShowSummary(true);
         toast.success('Form submitted successfully!');
         onSuccess?.();
       } catch (error: any) {
+        console.error('❌ Verification or submission error:', error);
         setIsSubmitting(false);
-        toast.error(error.message || 'Failed to verify identity or submit form. Please try again.');
+        isSubmittingRef.current = false; // Reset submission guard
+        setErrorMessage(error.message || 'Failed to verify identity or submit form. Please try again.');
+        setShowError(true);
         onError?.(error);
       }
     } else {
@@ -408,12 +609,15 @@ export const useEnhancedFormSubmit = (
         }
 
         setIsSubmitting(false);
+        isSubmittingRef.current = false; // Reset submission guard
         setShowSuccess(true);
         toast.success('Form submitted successfully!');
         onSuccess?.();
       } catch (error: any) {
         setIsSubmitting(false);
-        toast.error(error.message || 'Failed to submit form. Please try again.');
+        isSubmittingRef.current = false; // Reset submission guard
+        setErrorMessage(error.message || 'Failed to submit form. Please try again.');
+        setShowError(true);
         onError?.(error);
       }
     }
@@ -427,20 +631,42 @@ export const useEnhancedFormSubmit = (
     setFormData(null);
   };
 
+  /**
+   * Close error modal
+   */
+  const closeError = () => {
+    setShowError(false);
+    setErrorMessage('');
+  };
+
+  /**
+   * Close verification mismatch modal
+   */
+  const closeVerificationMismatch = () => {
+    setShowVerificationMismatch(false);
+    setVerificationMismatchData(null);
+  };
+
   return {
     // State
     isValidating,
     isSubmitting,
     showSummary,
     showSuccess,
+    showError,
+    errorMessage,
     showLoading,
     loadingMessage,
+    showVerificationMismatch,
+    verificationMismatchData,
     
     // Actions
     handleSubmit,
     setShowSummary,
     confirmSubmit,
     closeSuccess,
+    closeError,
+    closeVerificationMismatch,
     
     // Data
     formData
