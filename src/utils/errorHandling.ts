@@ -37,7 +37,7 @@ export function logError(error: Error, context?: ErrorContext): void {
   };
 
   // Log to console in development
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.MODE === 'development') {
     console.error('Error logged:', errorLog);
   }
 

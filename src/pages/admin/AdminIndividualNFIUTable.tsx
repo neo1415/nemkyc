@@ -8,7 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { collection, query, getDocs, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useToast } from '../../hooks/use-toast';
-import { auditService } from '../../services/auditService';
+// CSV export - no PDF library needed
 
 const theme = createTheme({
   palette: {
@@ -42,60 +42,22 @@ const AdminIndividualNFIUTable: React.FC = () => {
 
   const fetchNFIUForms = async () => {
     try {
-      // Query both collections to get all Individual NFIU forms (old and new)
-      const nfiuCollectionQuery = query(collection(db, 'individual-nfiu-form'), orderBy('submittedAt', 'desc'));
-      const nfiuSnapshot = await getDocs(nfiuCollectionQuery);
+      // Sort by timestamp descending (latest first)
+      const q = query(collection(db, 'individual-nfiu-form'), orderBy('timestamp', 'desc'));
+      const querySnapshot = await getDocs(q);
       
-      // Query formSubmissions collection for old Individual NFIU forms
-      const formSubmissionsQuery = query(collection(db, 'formSubmissions'), orderBy('submittedAt', 'desc'));
-      const formSubmissionsSnapshot = await getDocs(formSubmissionsQuery);
-      
-      // Process individual-nfiu-form collection
-      const nfiuForms = nfiuSnapshot.docs.map((doc) => {
+      const forms = querySnapshot.docs.map((doc) => {
         const data = doc.data();
         return {
           id: doc.id,
           ...data,
-          submittedAt: data.submittedAt?.toDate ? data.submittedAt.toDate() : data.submittedAt,
+          // Handle createdAt safely - check if it has toDate method before calling it
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt || data.submittedAt || data.timestamp),
           updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
-          formType: 'NFIU',
-          _sourceCollection: 'individual-nfiu-form', // Track source collection for routing
         };
       });
-      
-      // Process formSubmissions collection - filter for Individual NFIU forms only
-      const oldNfiuForms = formSubmissionsSnapshot.docs
-        .map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            submittedAt: data.submittedAt?.toDate ? data.submittedAt.toDate() : data.submittedAt,
-            updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
-            formType: 'NFIU',
-            _sourceCollection: 'formSubmissions', // Track source collection for routing
-          };
-        })
-        .filter((form) => {
-          // Filter for Individual NFIU forms based on formType field or presence of individual-specific fields
-          const formType = form.formType?.toLowerCase() || '';
-          const formVariant = form.formVariant?.toLowerCase() || '';
-          return (
-            formType.includes('individual') && formType.includes('nfiu') ||
-            formVariant === 'individual' && formType.includes('nfiu') ||
-            // Check for individual-specific fields as fallback
-            (form.firstName && form.lastName && form.NIN && !form.incorporationNumber)
-          );
-        });
-      
-      // Combine both arrays and sort by submittedAt
-      const allForms = [...nfiuForms, ...oldNfiuForms].sort((a, b) => {
-        const dateA = a.submittedAt instanceof Date ? a.submittedAt : new Date(a.submittedAt || 0);
-        const dateB = b.submittedAt instanceof Date ? b.submittedAt : new Date(b.submittedAt || 0);
-        return dateB.getTime() - dateA.getTime();
-      });
 
-      setNfiuForms(allForms);
+      setNfiuForms(forms);
     } catch (error) {
       console.error('Error fetching Individual NFIU forms:', error);
       toast({
@@ -112,31 +74,8 @@ const AdminIndividualNFIUTable: React.FC = () => {
     if (!deleteDialog.id) return;
     
     try {
-      // Try to delete from individual-nfiu-form collection first
-      try {
-        await deleteDoc(doc(db, 'individual-nfiu-form', deleteDialog.id));
-      } catch (error: any) {
-        // If not found in individual-nfiu-form, try formSubmissions
-        if (error.code === 'not-found') {
-          await deleteDoc(doc(db, 'formSubmissions', deleteDialog.id));
-        } else {
-          throw error;
-        }
-      }
-      
+      await deleteDoc(doc(db, 'individual-nfiu-form', deleteDialog.id));
       setNfiuForms(prev => prev.filter(form => form.id !== deleteDialog.id));
-      
-      // Log admin action
-      await auditService.logAdminAction({
-        adminUserId: user?.uid || 'unknown',
-        adminRole: user?.role,
-        adminEmail: user?.email,
-        formType: 'nfiu',
-        formVariant: 'individual',
-        submissionId: deleteDialog.id,
-        action: 'delete'
-      });
-      
       toast({
         title: 'Success',
         description: 'Form deleted successfully',
@@ -183,43 +122,70 @@ const AdminIndividualNFIUTable: React.FC = () => {
   };
 
   const exportToCSV = () => {
+    // CSV headers - all fields in exact form order
     const headers = [
-      'ID', 'Form Type', 'Submitted At', 'Status', 'First Name', 'Middle Name', 'Last Name',
-      'Date of Birth', 'Place of Birth', 'Nationality', 'Occupation',
-      'NIN', 'BVN', 'Tax ID', 'ID Type', 'ID Number', 'Issuing Body',
-      'Issued Date', 'Expiry Date', 'Email', 'Phone', 'Source of Income'
+      'ID', 'Created At', 'Office Location', 'Title', 'First Name', 'Middle Name', 'Last Name',
+      'Contact Address', 'Occupation', 'Gender', 'Date of Birth', 'Mothers Maiden Name',
+      'Employers Name', 'Employers Telephone', 'Employers Address',
+      'City', 'State', 'Country', 'Nationality', 'Residential Address', 'Mobile Number',
+      'Email Address', 'Tax ID Number', 'BVN', 'NIN', 'ID Type', 'ID Number', 'Issuing Country',
+      'Issued Date', 'Expiry Date', 'Source of Income', 'Annual Income Range', 'Premium Payment Source',
+      'Bank Name', 'Account Number', 'Bank Branch', 'Account Opening Date',
+      'Foreign Bank Name', 'Foreign Account Number', 'Foreign Bank Branch', 'Foreign Account Opening Date'
     ];
 
+    // CSV rows - all data
     const rows = nfiuForms.map(form => [
       form.id || 'N/A',
-      form.formType || 'NFIU',
-      form.submittedAt?.toLocaleDateString() || formatDate(form.submittedAt),
-      form.status || 'N/A',
+      form.createdAt?.toLocaleDateString() || formatDate(form.createdAt || form.timestamp || form.submittedAt),
+      form.officeLocation || 'N/A',
+      form.title || 'N/A',
       form.firstName || 'N/A',
       form.middleName || 'N/A',
       form.lastName || 'N/A',
-      form.dateOfBirth || 'N/A',
-      form.placeOfBirth || 'N/A',
-      form.nationality || 'N/A',
+      form.contactAddress || 'N/A',
       form.occupation || 'N/A',
-      form.NIN || 'N/A',
-      form.BVN || 'N/A',
+      form.gender || 'N/A',
+      form.dateOfBirth || 'N/A',
+      form.mothersMaidenName || 'N/A',
+      form.employersName || 'N/A',
+      form.employersTelephoneNumber || 'N/A',
+      form.employersAddress || 'N/A',
+      form.city || 'N/A',
+      form.state || 'N/A',
+      form.country || 'N/A',
+      form.nationality || 'N/A',
+      form.residentialAddress || 'N/A',
+      form.GSMno || 'N/A',
+      form.emailAddress || 'N/A',
       form.taxIDNo || 'N/A',
+      form.BVN || 'N/A',
+      form.NIN || 'N/A',
       form.identificationType || 'N/A',
       form.idNumber || 'N/A',
-      form.issuingBody || 'N/A',
+      form.issuingCountry || 'N/A',
       form.issuedDate || 'N/A',
       form.expiryDate || 'N/A',
-      form.emailAddress || 'N/A',
-      form.GSMno || 'N/A',
-      form.sourceOfIncome || form.sourceOfIncomeOther || 'N/A'
+      form.sourceOfIncome || form.sourceOfIncomeOther || 'N/A',
+      form.annualIncomeRange || 'N/A',
+      form.premiumPaymentSource || form.premiumPaymentSourceOther || 'N/A',
+      form.bankName || 'N/A',
+      form.accountNumber || 'N/A',
+      form.bankBranch || 'N/A',
+      form.accountOpeningDate || 'N/A',
+      form.bankName2 || 'N/A',
+      form.accountNumber2 || 'N/A',
+      form.bankBranch2 || 'N/A',
+      form.accountOpeningDate2 || 'N/A'
     ]);
 
+    // Create CSV content
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
     ].join('\n');
 
+    // Download CSV
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -232,7 +198,9 @@ const AdminIndividualNFIUTable: React.FC = () => {
     });
   };
 
+  // Column definitions in exact form order - following the changelog methodology
   const columns: GridColDef[] = [
+    // Action columns first (as per changelog)
     {
       field: 'actions',
       headerName: 'Actions',
@@ -243,21 +211,7 @@ const AdminIndividualNFIUTable: React.FC = () => {
           key="view"
           icon={<Visibility />}
           label="View"
-          onClick={async () => {
-            // Log admin action
-            await auditService.logAdminAction({
-              adminUserId: user?.uid || 'unknown',
-              adminRole: user?.role,
-              adminEmail: user?.email,
-              formType: 'nfiu',
-              formVariant: 'individual',
-              submissionId: params.row.id as string,
-              action: 'view'
-            });
-            // Route to the correct collection based on source
-            const sourceCollection = params.row._sourceCollection || 'individual-nfiu-form';
-            navigate(`/admin/form/${sourceCollection}/${params.row.id}`);
-          }}
+          onClick={() => navigate(`/admin/form/individual-nfiu-form/${params.row.id}`)}
         />,
         <GridActionsCellItem
           key="delete"
@@ -267,29 +221,25 @@ const AdminIndividualNFIUTable: React.FC = () => {
         />,
       ],
     },
+    // Created At column second (as per changelog)
     {
-      field: 'formType',
-      headerName: 'Form Type',
-      width: 100,
-      renderCell: (params) => (
-        <Chip label="NFIU" color="primary" size="small" />
-      ),
-    },
-    {
-      field: 'submittedAt',
-      headerName: 'Submitted At',
+      field: 'createdAt',
+      headerName: 'Created At',
       width: 130,
-      renderCell: (params) => formatDate(params.row.submittedAt),
+      renderCell: (params) => formatDate(params.row.createdAt || params.row.timestamp || params.row.submittedAt),
+    },
+    // All form fields in exact order they appear in the form (using renderCell as per changelog)
+    {
+      field: 'officeLocation',
+      headerName: 'Office Location',
+      width: 150,
+      renderCell: (params) => params.row.officeLocation || 'N/A',
     },
     {
-      field: 'status',
-      headerName: 'Status',
-      width: 120,
-      renderCell: (params) => {
-        const status = params.row.status || 'processing';
-        const color = status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'warning';
-        return <Chip label={status} color={color} size="small" />;
-      },
+      field: 'title',
+      headerName: 'Title',
+      width: 100,
+      renderCell: (params) => params.row.title || 'N/A',
     },
     {
       field: 'firstName',
@@ -310,22 +260,10 @@ const AdminIndividualNFIUTable: React.FC = () => {
       renderCell: (params) => params.row.lastName || 'N/A',
     },
     {
-      field: 'dateOfBirth',
-      headerName: 'Date of Birth',
-      width: 130,
-      renderCell: (params) => formatDate(params.row.dateOfBirth),
-    },
-    {
-      field: 'placeOfBirth',
-      headerName: 'Place of Birth',
-      width: 150,
-      renderCell: (params) => params.row.placeOfBirth || 'N/A',
-    },
-    {
-      field: 'nationality',
-      headerName: 'Nationality',
-      width: 120,
-      renderCell: (params) => params.row.nationality || 'N/A',
+      field: 'contactAddress',
+      headerName: 'Contact Address',
+      width: 180,
+      renderCell: (params) => params.row.contactAddress || 'N/A',
     },
     {
       field: 'occupation',
@@ -334,10 +272,88 @@ const AdminIndividualNFIUTable: React.FC = () => {
       renderCell: (params) => params.row.occupation || 'N/A',
     },
     {
-      field: 'NIN',
-      headerName: 'NIN',
+      field: 'gender',
+      headerName: 'Gender',
+      width: 100,
+      renderCell: (params) => params.row.gender || 'N/A',
+    },
+    {
+      field: 'dateOfBirth',
+      headerName: 'Date of Birth',
       width: 130,
-      renderCell: (params) => params.row.NIN || 'N/A',
+      renderCell: (params) => params.row.dateOfBirth || 'N/A',
+    },
+    {
+      field: 'mothersMaidenName',
+      headerName: 'Mothers Maiden Name',
+      width: 160,
+      renderCell: (params) => params.row.mothersMaidenName || 'N/A',
+    },
+    {
+      field: 'employersName',
+      headerName: 'Employers Name',
+      width: 150,
+      renderCell: (params) => params.row.employersName || 'N/A',
+    },
+    {
+      field: 'employersTelephoneNumber',
+      headerName: 'Employers Telephone',
+      width: 150,
+      renderCell: (params) => params.row.employersTelephoneNumber || 'N/A',
+    },
+    {
+      field: 'employersAddress',
+      headerName: 'Employers Address',
+      width: 180,
+      renderCell: (params) => params.row.employersAddress || 'N/A',
+    },
+    {
+      field: 'city',
+      headerName: 'City',
+      width: 120,
+      renderCell: (params) => params.row.city || 'N/A',
+    },
+    {
+      field: 'state',
+      headerName: 'State',
+      width: 120,
+      renderCell: (params) => params.row.state || 'N/A',
+    },
+    {
+      field: 'country',
+      headerName: 'Country',
+      width: 120,
+      renderCell: (params) => params.row.country || 'N/A',
+    },
+    {
+      field: 'nationality',
+      headerName: 'Nationality',
+      width: 120,
+      renderCell: (params) => params.row.nationality || 'N/A',
+    },
+    {
+      field: 'residentialAddress',
+      headerName: 'Residential Address',
+      width: 180,
+      renderCell: (params) => params.row.residentialAddress || 'N/A',
+    },
+    {
+      field: 'GSMno',
+      headerName: 'Mobile Number',
+      width: 140,
+      renderCell: (params) => params.row.GSMno || 'N/A',
+    },
+    {
+      field: 'emailAddress',
+      headerName: 'Email Address',
+      width: 180,
+      renderCell: (params) => params.row.emailAddress || 'N/A',
+    },
+    {
+      field: 'taxIDNo',
+      headerName: 'Tax ID Number',
+      width: 130,
+      renderCell: (params) => params.row.taxIDNo || 'N/A',
     },
     {
       field: 'BVN',
@@ -346,10 +362,10 @@ const AdminIndividualNFIUTable: React.FC = () => {
       renderCell: (params) => params.row.BVN || 'N/A',
     },
     {
-      field: 'taxIDNo',
-      headerName: 'Tax ID',
+      field: 'NIN',
+      headerName: 'NIN',
       width: 130,
-      renderCell: (params) => params.row.taxIDNo || 'N/A',
+      renderCell: (params) => params.row.NIN || 'N/A',
     },
     {
       field: 'identificationType',
@@ -364,40 +380,95 @@ const AdminIndividualNFIUTable: React.FC = () => {
       renderCell: (params) => params.row.idNumber || 'N/A',
     },
     {
-      field: 'issuingBody',
-      headerName: 'Issuing Body',
+      field: 'issuingCountry',
+      headerName: 'Issuing Country',
       width: 130,
-      renderCell: (params) => params.row.issuingBody || 'N/A',
+      renderCell: (params) => params.row.issuingCountry || 'N/A',
     },
     {
       field: 'issuedDate',
       headerName: 'Issued Date',
       width: 120,
-      renderCell: (params) => formatDate(params.row.issuedDate),
+      renderCell: (params) => params.row.issuedDate || 'N/A',
     },
     {
       field: 'expiryDate',
       headerName: 'Expiry Date',
       width: 120,
-      renderCell: (params) => formatDate(params.row.expiryDate),
+      renderCell: (params) => params.row.expiryDate || 'N/A',
     },
-    {
-      field: 'emailAddress',
-      headerName: 'Email',
-      width: 180,
-      renderCell: (params) => params.row.emailAddress || 'N/A',
-    },
-    {
-      field: 'GSMno',
-      headerName: 'Phone',
-      width: 140,
-      renderCell: (params) => params.row.GSMno || 'N/A',
-    },
+    // Handle conditional fields properly (as per changelog methodology)
     {
       field: 'sourceOfIncome',
       headerName: 'Source of Income',
       width: 150,
-      renderCell: (params) => params.row.sourceOfIncome || params.row.sourceOfIncomeOther || 'N/A',
+      renderCell: (params) => {
+        return params.row.sourceOfIncome || params.row.sourceOfIncomeOther || 'N/A';
+      }
+    },
+    {
+      field: 'annualIncomeRange',
+      headerName: 'Annual Income Range',
+      width: 160,
+      renderCell: (params) => params.row.annualIncomeRange || 'N/A',
+    },
+    {
+      field: 'premiumPaymentSource',
+      headerName: 'Premium Payment Source',
+      width: 180,
+      renderCell: (params) => {
+        return params.row.premiumPaymentSource || params.row.premiumPaymentSourceOther || 'N/A';
+      }
+    },
+    // Account Details
+    {
+      field: 'bankName',
+      headerName: 'Bank Name',
+      width: 150,
+      renderCell: (params) => params.row.bankName || 'N/A',
+    },
+    {
+      field: 'accountNumber',
+      headerName: 'Account Number',
+      width: 140,
+      renderCell: (params) => params.row.accountNumber || 'N/A',
+    },
+    {
+      field: 'bankBranch',
+      headerName: 'Bank Branch',
+      width: 130,
+      renderCell: (params) => params.row.bankBranch || 'N/A',
+    },
+    {
+      field: 'accountOpeningDate',
+      headerName: 'Account Opening Date',
+      width: 160,
+      renderCell: (params) => params.row.accountOpeningDate || 'N/A',
+    },
+    // Foreign Account Details (Optional)
+    {
+      field: 'bankName2',
+      headerName: 'Foreign Bank Name',
+      width: 150,
+      renderCell: (params) => params.row.bankName2 || 'N/A',
+    },
+    {
+      field: 'accountNumber2',
+      headerName: 'Foreign Account Number',
+      width: 160,
+      renderCell: (params) => params.row.accountNumber2 || 'N/A',
+    },
+    {
+      field: 'bankBranch2',
+      headerName: 'Foreign Bank Branch',
+      width: 150,
+      renderCell: (params) => params.row.bankBranch2 || 'N/A',
+    },
+    {
+      field: 'accountOpeningDate2',
+      headerName: 'Foreign Account Opening Date',
+      width: 190,
+      renderCell: (params) => params.row.accountOpeningDate2 || 'N/A',
     },
   ];
 

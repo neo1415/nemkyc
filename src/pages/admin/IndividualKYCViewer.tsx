@@ -15,8 +15,17 @@ interface IndividualKYCViewerProps {
 const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose }) => {
   // Helper function to format values
   const formatValue = (value: any, isFile: boolean = false) => {
-    if (!value || value === '') {
+    if (!value || value === '' || value === null || value === undefined) {
       return isFile ? 'Document not uploaded' : 'N/A';
+    }
+    
+    // For file fields, check if it's a valid URL
+    if (isFile && typeof value === 'string') {
+      if (value.startsWith('http') || value.startsWith('https')) {
+        return 'Document uploaded';
+      } else {
+        return 'Document not uploaded';
+      }
     }
     
     // Handle Firebase Timestamp objects
@@ -360,7 +369,23 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <p className="font-medium text-sm text-muted-foreground">Identification Document</p>
+                <p className="font-medium text-sm text-muted-foreground">NIN Document</p>
+                {data.identityDocument ? (
+                  <a 
+                    href={data.identityDocument} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    View NIN Document
+                  </a>
+                ) : (
+                  <p className="text-muted-foreground">{formatValue(data.identityDocument, true)}</p>
+                )}
+              </div>
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Additional Identification Document</p>
                 {data.identification ? (
                   <a 
                     href={data.identification} 
@@ -369,7 +394,7 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
                     className="text-primary hover:underline flex items-center gap-2"
                   >
                     <FileText className="h-4 w-4" />
-                    View Document
+                    View Additional Document
                   </a>
                 ) : (
                   <p className="text-muted-foreground">{formatValue(data.identification, true)}</p>

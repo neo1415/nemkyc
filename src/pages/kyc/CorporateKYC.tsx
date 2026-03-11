@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Check, FileText, Loader2, AlertCircle, Info } from 'lucide-react';
+import { Plus, Trash2, Check, FileText, Loader2, AlertCircle, Info, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { get } from 'lodash';
@@ -36,6 +36,7 @@ import { FieldValidationIndicator } from '@/components/validation/FieldValidatio
 import { ValidationTooltip } from '@/components/validation/ValidationTooltip';
 import { ValidationAnnouncer } from '@/components/validation/ValidationAnnouncer';
 import { FieldValidationStatus } from '@/types/realtimeVerificationValidation';
+import { DocumentUploadSection } from '@/components/gemini/DocumentUploadSection';
 
 // Form validation schema
 const corporateKYCSchema = yup.object().shape({
@@ -127,9 +128,7 @@ const corporateKYCSchema = yup.object().shape({
     })
   })).min(1, "At least one director is required"),
 
-  // Verification
-  companyNameVerificationDoc: yup.string().required("Verification document type is required"),
-  verificationDoc: yup.mixed().required("Verification document upload is required"),
+
 
   // Declaration
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to data privacy"),
@@ -169,7 +168,6 @@ const defaultValues = {
     sourceOfIncome: '',
     sourceOfIncomeOther: ''
   }],
-  companyNameVerificationDoc: '',
   agreeToDataPrivacy: false,
   signature: ''
 };
@@ -597,9 +595,7 @@ const CorporateKYC: React.FC = () => {
       'estimatedTurnover'
     ],
     1: ['directors'],
-    2: [
-      'companyNameVerificationDoc', 'verificationDoc'
-    ],
+    2: [],
     3: ['agreeToDataPrivacy', 'signature']
   };
 
@@ -1165,49 +1161,72 @@ const CorporateKYC: React.FC = () => {
       title: 'Verification Upload',
       component: (
         <div className="space-y-6">
-          {/* Verification Document */}
-          <div>
-            <h3 className="text-lg font-medium mb-4">Verification Document</h3>
-            <FormSelect
-              name="companyNameVerificationDoc"
-              label="Company Name Verification Document"
-              required={true}
-              placeholder="Verification Document"
-              options={[
-                { value: "Certificate of Incorporation or Business Registration", label: "Certificate of Incorporation or Business Registration" },
-                { value: "CAC Status Report", label: "CAC Status Report" },
-                { value: "Board Resolution", label: "Board Resolution" },
-                { value: "Power of Attorney", label: "Power of Attorney" }
-              ]}
-            />
-
-            <div className="mt-4">
-              <Label>Upload Your Verification Document <span className="required-asterisk">*</span></Label>
-              <FileUpload
-                accept=".png,.jpg,.jpeg,.pdf"
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({
-                    ...prev,
-                    verificationDoc: file
-                  }));
-                  formMethods.setValue('verificationDoc', file);
-                  if (formMethods.formState.errors.verificationDoc) {
-                    formMethods.clearErrors('verificationDoc');
-                  }
-                }}
-                maxSize={3 * 1024 * 1024}
-              />
-              {uploadedFiles.verificationDoc && (
-                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                  <Check className="h-4 w-4" />
-                  {uploadedFiles.verificationDoc.name}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">CAC Document Verification</h3>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-blue-900">Upload Your CAC Certificate</h4>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Please upload a clear photo or scan of your Certificate of Incorporation (CAC) or Company Registration Certificate. 
+                    This document will be automatically verified against the company information you provided in the form.
+                  </p>
                 </div>
-              )}
-              {formMethods.formState.errors.verificationDoc && (
-                <p className="text-sm text-destructive">{formMethods.formState.errors.verificationDoc.message?.toString()}</p>
-              )}
+              </div>
             </div>
           </div>
+          
+          {/* Document Verification with Gemini */}
+          <DocumentUploadSection
+            formId="kyc-corporate"
+            documentType="cac"
+            formData={{
+              companyName: formMethods.watch('insured'),
+              rcNumber: formMethods.watch('cacNumber'),
+              registrationDate: formMethods.watch('dateOfIncorporationRegistration'),
+              address: formMethods.watch('officeAddress'),
+              directors: formMethods.watch('directors')?.map(d => `${d.firstName} ${d.lastName}`) || []
+            }}
+            currentFile={uploadedFiles.cacDocument || null}
+            onVerificationComplete={(result) => {
+              console.log('CAC verification completed:', result);
+              // The DocumentUploadSection handles form submission blocking internally
+            }}
+            onStatusChange={(status) => {
+              // Let DocumentUploadSection handle its own error display
+              // No need for generic toast - detailed errors are shown in the component
+            }}
+            onFileSelect={(file) => {
+              // Integrate with form state like additional documents
+              setUploadedFiles(prev => ({
+                ...prev,
+                cacDocument: file
+              }));
+              formMethods.setValue('cacDocument', file);
+              formMethods.trigger('cacDocument');
+              
+              // Log document upload
+              auditService.logDocumentUpload({
+                userId: user?.uid || 'anonymous',
+                userRole: user?.role,
+                userEmail: user?.email,
+                formType: 'kyc',
+                documentType: 'cac',
+                fileName: file.name,
+                fileSize: file.size
+              });
+            }}
+            onFileRemove={() => {
+              // Remove from form state
+              setUploadedFiles(prev => ({
+                ...prev,
+                cacDocument: null
+              }));
+              formMethods.setValue('cacDocument', null);
+            }}
+          />
+
         </div>
       )
     },
@@ -1429,11 +1448,27 @@ const CorporateKYC: React.FC = () => {
               {/* Documents */}
               <div className="border rounded-lg p-4">
                 <h3 className="font-semibold text-lg mb-3">Uploaded Documents</h3>
-                <div className="grid grid-cols-1 gap-2 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-600">Verification Document:</span>
-                    <p className="text-gray-900">{data.verificationDoc ? 'Γ£ô Uploaded' : 'Not uploaded'}</p>
-                  </div>
+                <div className="space-y-3 text-sm">
+                  {data.cacDocument && typeof data.cacDocument === 'string' && data.cacDocument.startsWith('http') ? (
+                    <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="w-5 h-5 text-green-600" />
+                        <div>
+                          <p className="font-medium text-green-800">CAC Certificate</p>
+                          <p className="text-green-600 text-xs">Document uploaded and verified</p>
+                        </div>
+                      </div>
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <FileText className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-gray-600">CAC Certificate</p>
+                        <p className="text-gray-500 text-xs">No document uploaded</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

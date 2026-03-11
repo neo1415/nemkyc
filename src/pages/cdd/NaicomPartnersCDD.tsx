@@ -965,7 +965,7 @@ const NaicomPartnersCDD: React.FC = () => {
                     formMethods.clearErrors('certificateOfIncorporation');
                   }
                 }}
-                maxSize={3 * 1024 * 1024}
+                maxSize={5}
               />
               {uploadedFiles.certificateOfIncorporation && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
@@ -994,7 +994,7 @@ const NaicomPartnersCDD: React.FC = () => {
                     formMethods.clearErrors('directorId1');
                   }
                 }}
-                maxSize={3 * 1024 * 1024}
+                maxSize={5}
               />
               {uploadedFiles.directorId1 && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
@@ -1023,7 +1023,7 @@ const NaicomPartnersCDD: React.FC = () => {
                     formMethods.clearErrors('directorId2');
                   }
                 }}
-                maxSize={3 * 1024 * 1024}
+                maxSize={5}
               />
               {uploadedFiles.directorId2 && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
@@ -1052,7 +1052,7 @@ const NaicomPartnersCDD: React.FC = () => {
                     formMethods.clearErrors('cacStatusReport');
                   }
                 }}
-                maxSize={3 * 1024 * 1024}
+                maxSize={5}
               />
               {uploadedFiles.cacStatusReport && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
@@ -1081,7 +1081,7 @@ const NaicomPartnersCDD: React.FC = () => {
                     formMethods.clearErrors('vatRegistrationLicense');
                   }
                 }}
-                maxSize={3 * 1024 * 1024}
+                maxSize={5}
               />
               {uploadedFiles.vatRegistrationLicense && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
@@ -1110,7 +1110,7 @@ const NaicomPartnersCDD: React.FC = () => {
                     formMethods.clearErrors('taxClearanceCertificate');
                   }
                 }}
-                maxSize={3 * 1024 * 1024}
+                maxSize={5}
               />
               {uploadedFiles.taxClearanceCertificate && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
@@ -1139,7 +1139,7 @@ const NaicomPartnersCDD: React.FC = () => {
                     formMethods.clearErrors('naicomLicenseCertificate');
                   }
                 }}
-                maxSize={3 * 1024 * 1024}
+                maxSize={5}
               />
               {uploadedFiles.naicomLicenseCertificate && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">

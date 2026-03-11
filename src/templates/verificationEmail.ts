@@ -601,7 +601,7 @@ export function generateStaffNotificationEmailHtml(data: StaffNotificationEmailD
 
   const documentType = verificationType === 'NIN' ? 'NIN' : 'CAC Registration Number';
   const adminPortalLink = listId && entryId 
-    ? `${process.env.REACT_APP_BASE_URL || 'https://app.nem-insurance.com'}/admin/identity/${listId}`
+    ? `${import.meta.env.VITE_BASE_URL || 'https://app.nem-insurance.com'}/admin/identity/${listId}`
     : null;
 
   return `
@@ -772,7 +772,7 @@ export function generateStaffNotificationEmailText(data: StaffNotificationEmailD
 
   const documentType = verificationType === 'NIN' ? 'NIN' : 'CAC Registration Number';
   const adminPortalLink = listId && entryId 
-    ? `${process.env.REACT_APP_BASE_URL || 'https://app.nem-insurance.com'}/admin/identity/${listId}`
+    ? `${import.meta.env.VITE_BASE_URL || 'https://app.nem-insurance.com'}/admin/identity/${listId}`
     : null;
 
   return `

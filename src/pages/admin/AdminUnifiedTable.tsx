@@ -332,7 +332,7 @@ const fetchForms = async () => {
       'corporate-kyc': 'corporate-c-d-d',
       'individual-kyc': 'individual-c-d-d',
       'partners-kyc': 'partners-c-d-d',
-      'Individual-kyc-form': 'individual-k-y-c',
+      'Individual-kyc-form': 'Individual-kyc-form',
       'corporate-kyc-form': 'corporate-k-y-c',
       'corporate-nfiu-form': 'corporate-nfiu-form',
       'naicom-corporate-cdd': 'naicom-corporate-c-d-d',

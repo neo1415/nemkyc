@@ -542,6 +542,30 @@ service cloud.firestore {
       allow delete: if isAdminOrSuperAdmin();
     }
 
+    // CAC document metadata (hyphenated collection name) - Same rules as camelCase version
+    match /cac-document-metadata/{docId} {
+      // Admins, super admins, and compliance can read all metadata
+      // Brokers can read metadata for documents linked to their identity lists
+      allow read: if isAdminOrSuperAdmin() || isCompliance() || 
+        (isBroker() && exists(/databases/$(database)/documents/identity-entries/$(resource.data.identityRecordId)) &&
+         exists(/databases/$(database)/documents/identity-lists/$(get(/databases/$(database)/documents/identity-entries/$(resource.data.identityRecordId)).data.listId)) &&
+         get(/databases/$(database)/documents/identity-lists/$(get(/databases/$(database)/documents/identity-entries/$(resource.data.identityRecordId)).data.listId)).data.createdBy == request.auth.uid);
+      
+      // Brokers and admins can create metadata (during document upload)
+      // Must include required fields: identityRecordId, documentType, uploadedBy
+      allow create: if (isBroker() || isAdminOrSuperAdmin()) && 
+        request.resource.data.keys().hasAll(['identityRecordId', 'documentType', 'uploadedBy', 'uploadedAt']) &&
+        request.resource.data.uploadedBy == request.auth.uid;
+      
+      // Brokers can update metadata for their own documents, admins can update all
+      // Version history and replacement operations are handled through updates
+      allow update: if isAdminOrSuperAdmin() || 
+        (isBroker() && resource.data.uploadedBy == request.auth.uid);
+      
+      // Only admins and super admins can delete metadata
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
     // CAC document audit logs - Tracks all document access and operations
     // SECURITY: Append-only logs for compliance and security auditing
     // Support both camelCase and hyphenated collection names for backward compatibility

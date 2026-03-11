@@ -1748,7 +1748,7 @@ const GoodsInTransitClaim: React.FC = () => {
                         formMethods.clearErrors('carriageConditionDocument');
                       }
                     }}
-                    maxSize={3 * 1024 * 1024}
+                    maxSize={5}
                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                   />
                   {uploadedFiles.carriageConditionDocument && (

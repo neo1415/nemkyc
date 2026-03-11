@@ -15,9 +15,19 @@ interface CorporateKYCViewerProps {
 const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }) => {
   // Helper function to format values
   const formatValue = (value: any, isFile: boolean = false) => {
-    if (!value || value === '') {
+    if (!value || value === '' || value === null || value === undefined) {
       return isFile ? 'Document not uploaded' : 'N/A';
     }
+    
+    // For file fields, check if it's a valid URL
+    if (isFile && typeof value === 'string') {
+      if (value.startsWith('http') || value.startsWith('https')) {
+        return 'Document uploaded';
+      } else {
+        return 'Document not uploaded';
+      }
+    }
+    
     return value;
   };
 

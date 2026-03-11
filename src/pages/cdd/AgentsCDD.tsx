@@ -723,7 +723,7 @@ const AgentsCDD: React.FC = () => {
                     formMethods.clearErrors('agentId');
                   }
                 }}
-                maxSize={3 * 1024 * 1024}
+                maxSize={5}
               />
               {uploadedFiles.agentId && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
@@ -752,7 +752,7 @@ const AgentsCDD: React.FC = () => {
                     formMethods.clearErrors('naicomCertificate');
                   }
                 }}
-                maxSize={3 * 1024 * 1024}
+                maxSize={5}
               />
               {uploadedFiles.naicomCertificate && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">

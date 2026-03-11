@@ -255,11 +255,23 @@ export default function IdentityListsDashboard({ isEmbedded = false }: IdentityL
     }
 
     try {
+      // Fetch the full list details to get the createdBy (broker's UID)
+      const listResponse = await fetch(`${API_BASE_URL}/api/identity/lists/${listId}`, {
+        credentials: 'include',
+      });
+      
+      if (!listResponse.ok) {
+        throw new Error('Failed to fetch list details');
+      }
+      
+      const listData = await listResponse.json();
+      const list = listData.list;
+
       // Fetch the document metadata
       const documents = await getDocumentsByType(documentType, listId);
       if (documents.length > 0) {
         const document = documents[0]; // Get the current version
-        openPreview(document, listId);
+        openPreview(document, list.createdBy);
       }
     } catch (err) {
       console.error('Failed to load document for preview:', err);
