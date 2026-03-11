@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Check, Info, Loader2, AlertCircle } from 'lucide-react';
+import { Check, Info, Loader2, AlertCircle, FileText, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
@@ -35,6 +35,8 @@ import { FieldValidationIndicator } from '@/components/validation/FieldValidatio
 import { ValidationTooltip } from '@/components/validation/ValidationTooltip';
 import { ValidationAnnouncer } from '@/components/validation/ValidationAnnouncer';
 import { FieldValidationStatus } from '@/types/realtimeVerificationValidation';
+import { DocumentUploadSection } from '@/components/gemini/DocumentUploadSection';
+import { formSubmissionController } from '@/services/geminiFormSubmissionController';
 
 
 // Form validation schema
@@ -121,12 +123,12 @@ const individualKYCSchema = yup.object().shape({
     }
     return value;
   }).max(new Date(), "Account opening date cannot be in the future"),
-  // File validation
-  identification: yup.mixed().required("Identification document is required").test(
+  // File validation - now optional since we have document verification
+  identification: yup.mixed().nullable().test(
     'fileType',
     'Only PNG, JPG, JPEG, or PDF files are allowed',
     (value: any) => {
-      if (!value) return false;
+      if (!value) return true; // Optional field
       const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'application/pdf'];
       return allowedTypes.includes(value?.type);
     }
@@ -290,6 +292,9 @@ const IndividualKYC: React.FC = () => {
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
   const [ninValidation, setNinValidation] = useState<FormatValidationResult | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [documentVerificationStatus, setDocumentVerificationStatus] = useState<'idle' | 'uploading' | 'processing' | 'verified' | 'failed'>('idle');
+  const [documentVerificationBlocked, setDocumentVerificationBlocked] = useState(false);
+  const [documentVerificationResult, setDocumentVerificationResult] = useState<any>(null);
   
   const formMethods = useForm<any>({
     resolver: yupResolver(individualKYCSchema),
@@ -298,6 +303,34 @@ const IndividualKYC: React.FC = () => {
   });
 
   const { saveDraft, clearDraft } = useFormDraft('individualKYC', formMethods);
+
+  // Save document verification state to localStorage
+  const saveDocumentVerificationState = useCallback((status: string, blocked: boolean, result: any = null) => {
+    const docState = { status, blocked, result, timestamp: Date.now() };
+    localStorage.setItem('kyc-individual-doc-verification', JSON.stringify(docState));
+  }, []);
+
+  // Restore document verification state from localStorage
+  useEffect(() => {
+    const savedState = localStorage.getItem('kyc-individual-doc-verification');
+    if (savedState) {
+      try {
+        const docState = JSON.parse(savedState);
+        // Only restore if saved within last 24 hours
+        if (Date.now() - docState.timestamp < 24 * 60 * 60 * 1000) {
+          setDocumentVerificationStatus(docState.status);
+          setDocumentVerificationBlocked(docState.blocked);
+          setDocumentVerificationResult(docState.result);
+        } else {
+          // Clear expired state
+          localStorage.removeItem('kyc-individual-doc-verification');
+        }
+      } catch (error) {
+        console.error('Error restoring document verification state:', error);
+        localStorage.removeItem('kyc-individual-doc-verification');
+      }
+    }
+  }, []);
 
   // Initialize autofill with requireAuth=true for KYC form
   const autoFillState = useAutoFill({
@@ -340,7 +373,11 @@ const IndividualKYC: React.FC = () => {
     closeVerificationMismatch
   } = useEnhancedFormSubmit({
     formType: 'Individual KYC',
-    onSuccess: () => clearDraft(),
+    onSuccess: () => {
+      clearDraft();
+      // Clear document verification state on successful submission
+      localStorage.removeItem('kyc-individual-doc-verification');
+    },
     verificationData: {
       identityNumber: formMethods.watch('NIN'),
       identityType: 'NIN',
@@ -775,49 +812,146 @@ const IndividualKYC: React.FC = () => {
     {
       id: 'upload',
       title: 'Upload Documents',
+      isValid: !documentVerificationBlocked, // Block navigation if document verification fails
       component: (
         <FormProvider {...formMethods}>
-          <div className="space-y-4">
-            <div>
-              <Label>Upload Means of Identification <span className="required-asterisk">*</span></Label>
-              <FileUpload
-                accept=".png,.jpg,.jpeg,.pdf"
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Identity Document Verification</h3>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-blue-900">Upload Your NIN Document</h4>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Please upload a clear photo or scan of your National Identification Number (NIN) slip or card. 
+                      This document will be automatically verified against the information you provided in the form.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Show verification status if document was previously verified */}
+              {documentVerificationStatus === 'verified' && documentVerificationResult && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-sm text-green-700 font-medium">
+                      Document successfully verified
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              <DocumentUploadSection
+                formId="kyc-individual"
+                documentType="individual"
+                formData={{
+                  fullName: [
+                    formMethods.watch('firstName'),
+                    formMethods.watch('middleName'),
+                    formMethods.watch('lastName')
+                  ].filter(name => name && name.trim()).join(' '),
+                  dateOfBirth: formMethods.watch('dateOfBirth'),
+                  nin: formMethods.watch('NIN'),
+                  gender: formMethods.watch('gender')
+                }}
+                currentFile={uploadedFiles.identityDocument || null}
+                onVerificationComplete={(result) => {
+                  console.log('Document verification completed:', result);
+                  setDocumentVerificationResult(result);
+                  saveDocumentVerificationState('verified', false, result);
+                  // The DocumentUploadSection handles form submission controller updates internally
+                  // No need to call it again here
+                }}
+                onStatusChange={(status) => {
+                  setDocumentVerificationStatus(status);
+                  // Block form submission if verification fails
+                  const blocked = status === 'failed';
+                  setDocumentVerificationBlocked(blocked);
+                  saveDocumentVerificationState(status, blocked, documentVerificationResult);
+                }}
                 onFileSelect={(file) => {
+                  // Integrate with form state like additional documents
                   setUploadedFiles(prev => ({
                     ...prev,
-                    identification: file
+                    identityDocument: file
                   }));
-                  formMethods.setValue('identification', file);
-                  formMethods.trigger('identification');
+                  formMethods.setValue('identityDocument', file);
+                  formMethods.trigger('identityDocument');
+                  
                   // Log document upload
                   auditService.logDocumentUpload({
                     userId: user?.uid || 'anonymous',
                     userRole: user?.role,
                     userEmail: user?.email,
                     formType: 'kyc',
-                    documentType: 'identification',
+                    documentType: 'identity',
                     fileName: file.name,
                     fileSize: file.size
                   });
                 }}
                 onFileRemove={() => {
+                  // Remove from form state
                   setUploadedFiles(prev => ({
                     ...prev,
-                    identification: null
+                    identityDocument: null
                   }));
-                  formMethods.setValue('identification', null);
-                  formMethods.trigger('identification');
+                  formMethods.setValue('identityDocument', null);
+                  
+                  // Clear verification state
+                  setDocumentVerificationStatus('idle');
+                  setDocumentVerificationResult(null);
+                  setDocumentVerificationBlocked(false);
+                  localStorage.removeItem('kyc-individual-doc-verification');
                 }}
-                currentFile={uploadedFiles.identification}
-                maxSize={3}
-                error={formMethods.formState.errors.identification?.message?.toString()}
+                className="mb-6"
               />
-              {uploadedFiles.identification && (
-                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                  <Check className="h-4 w-4" />
-                  {uploadedFiles.identification.name}
-                </div>
-              )}
+            </div>
+
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4">Additional Documents (Optional)</h3>
+              <div>
+                <Label>Upload Additional Identification <span className="text-sm text-gray-500">(Optional)</span></Label>
+                <FileUpload
+                  accept=".png,.jpg,.jpeg,.pdf"
+                  onFileSelect={(file) => {
+                    setUploadedFiles(prev => ({
+                      ...prev,
+                      identification: file
+                    }));
+                    formMethods.setValue('identification', file);
+                    formMethods.trigger('identification');
+                    // Log document upload
+                    auditService.logDocumentUpload({
+                      userId: user?.uid || 'anonymous',
+                      userRole: user?.role,
+                      userEmail: user?.email,
+                      formType: 'kyc',
+                      documentType: 'identification',
+                      fileName: file.name,
+                      fileSize: file.size
+                    });
+                  }}
+                  onFileRemove={() => {
+                    setUploadedFiles(prev => ({
+                      ...prev,
+                      identification: null
+                    }));
+                    formMethods.setValue('identification', null);
+                    formMethods.trigger('identification');
+                  }}
+                  currentFile={uploadedFiles.identification}
+                  maxSize={3}
+                  error={formMethods.formState.errors.identification?.message?.toString()}
+                />
+                {uploadedFiles.identification && (
+                  <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                    <Check className="h-4 w-4" />
+                    {uploadedFiles.identification.name}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </FormProvider>
@@ -946,6 +1080,18 @@ const IndividualKYC: React.FC = () => {
                   toast({
                     title: 'Please correct highlighted fields',
                     description: `The following fields need correction: ${realtimeValidation.mismatchedFieldLabels.join(', ')}`,
+                    variant: 'destructive'
+                  });
+                  return false;
+                }
+              }
+              
+              // For upload step, check document verification status
+              if (stepId === 'upload') {
+                if (documentVerificationBlocked) {
+                  toast({
+                    title: 'Document verification required',
+                    description: 'Please upload and verify your identity document before proceeding.',
                     variant: 'destructive'
                   });
                   return false;
@@ -1159,6 +1305,54 @@ const IndividualKYC: React.FC = () => {
                 <div className="text-sm">
                   <span className="font-medium text-gray-600">Preferred Office:</span>
                   <p className="text-gray-900">{data.officeLocation || 'Not provided'}</p>
+                </div>
+              </div>
+
+              {/* Section 7: Uploaded Documents */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Uploaded Documents</h3>
+                <div className="space-y-3 text-sm">
+                  {data.identityDocument && typeof data.identityDocument === 'string' && data.identityDocument.startsWith('http') ? (
+                    <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="w-5 h-5 text-green-600" />
+                        <div>
+                          <p className="font-medium text-green-800">Identity Document</p>
+                          <p className="text-green-600 text-xs">Document uploaded and verified</p>
+                        </div>
+                      </div>
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <FileText className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-gray-600">Identity Document</p>
+                        <p className="text-gray-500 text-xs">No document uploaded</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {data.identification && typeof data.identification === 'string' && data.identification.startsWith('http') ? (
+                    <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="w-5 h-5 text-green-600" />
+                        <div>
+                          <p className="font-medium text-green-800">Additional Document</p>
+                          <p className="text-green-600 text-xs">Document uploaded successfully</p>
+                        </div>
+                      </div>
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <FileText className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-gray-600">Additional Document</p>
+                        <p className="text-gray-500 text-xs">No document uploaded</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

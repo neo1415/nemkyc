@@ -10,12 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Check, Info, Loader2, AlertCircle } from 'lucide-react';
+import { Check, Info, Loader2, AlertCircle, FileText, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import FileUpload from '@/components/common/FileUpload';
+import { DocumentUploadSection } from '@/components/gemini/DocumentUploadSection';
 import { uploadFile } from '@/services/fileService';
 import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
 import FormLoadingModal from '@/components/common/FormLoadingModal';
@@ -764,8 +764,10 @@ const IndividualNFIU: React.FC = () => {
           <div className="space-y-4">
             <div>
               <Label>Upload Means of Identification <span className="required-asterisk">*</span></Label>
-              <FileUpload
-                accept=".png,.jpg,.jpeg,.pdf"
+              <DocumentUploadSection
+                formId="individual-nfiu"
+                documentType="individual"
+                formData={formMethods.watch()}
                 onFileSelect={(file) => {
                   setUploadedFiles(prev => ({
                     ...prev,
@@ -792,14 +794,12 @@ const IndividualNFIU: React.FC = () => {
                   formMethods.trigger('identification');
                 }}
                 currentFile={uploadedFiles.identification}
-                maxSize={3}
-                error={formMethods.formState.errors.identification?.message?.toString()}
+                disabled={isSubmitting}
               />
-              {uploadedFiles.identification && (
-                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                  <Check className="h-4 w-4" />
-                  {uploadedFiles.identification.name}
-                </div>
+              {formMethods.formState.errors.identification && (
+                <p className="text-sm text-destructive">
+                  {formMethods.formState.errors.identification.message?.toString()}
+                </p>
               )}
             </div>
           </div>
@@ -1141,6 +1141,33 @@ const IndividualNFIU: React.FC = () => {
                 <div className="text-sm">
                   <span className="font-medium text-gray-600">Preferred Office:</span>
                   <p className="text-gray-900">{data.officeLocation || 'Not provided'}</p>
+                </div>
+              </div>
+
+              {/* Uploaded Documents */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">Uploaded Documents</h3>
+                <div className="space-y-3 text-sm">
+                  {data.identification && typeof data.identification === 'string' && data.identification.startsWith('http') ? (
+                    <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="w-5 h-5 text-green-600" />
+                        <div>
+                          <p className="font-medium text-green-800">Identification Document</p>
+                          <p className="text-green-600 text-xs">Document uploaded successfully</p>
+                        </div>
+                      </div>
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <FileText className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-gray-600">Identification Document</p>
+                        <p className="text-gray-500 text-xs">No document uploaded</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

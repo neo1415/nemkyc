@@ -525,7 +525,7 @@ const IndividualCDD: React.FC = () => {
                   formMethods.clearErrors('identification');
                 }
               }}
-              maxSize={3 * 1024 * 1024}
+              maxSize={5}
             />
             {uploadedFiles.identification && (
               <div className="flex items-center gap-2 mt-2 text-sm text-green-600">

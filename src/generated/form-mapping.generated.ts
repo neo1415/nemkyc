@@ -399,10 +399,7 @@ export const FORM_MAPPINGS = {
       },
       {
         "title": "Account Details & Verification Upload",
-        "fields": [
-          { "key": "companyNameVerificationDoc", "label": "Company Name Verification Document", "type": "select", "editable": true },
-          { "key": "verificationDoc", "label": "Upload Your Verification Document", "type": "file", "editable": true }
-        ]
+        "fields": []
       }
     ]
   },
