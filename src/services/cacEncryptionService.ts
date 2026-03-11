@@ -148,7 +148,19 @@ async function callBackendEncryption(data: string): Promise<{
       timestamp: new Date().toISOString()
     });
 
-    const response = await fetch('/api/cac-documents/encrypt', {
+    // Use absolute URL in production to avoid routing issues
+    const baseUrl = window.location.origin;
+    let apiUrl = `${baseUrl}/api/cac-documents/encrypt`;
+    
+    // In production, try the direct server URL first if we're on the main domain
+    if (baseUrl.includes('nemforms.com')) {
+      apiUrl = `https://nem-server-rhdb.onrender.com/api/cac-documents/encrypt`;
+      console.log('🔐 [Encryption] Using direct server URL for production:', apiUrl);
+    } else {
+      console.log('🔐 [Encryption] Using relative URL:', apiUrl);
+    }
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -216,7 +228,19 @@ async function callBackendDecryption(
       timestamp: new Date().toISOString()
     });
 
-    const response = await fetch('/api/cac-documents/decrypt', {
+    // Use absolute URL in production to avoid routing issues
+    const baseUrl = window.location.origin;
+    let apiUrl = `${baseUrl}/api/cac-documents/decrypt`;
+    
+    // In production, try the direct server URL first if we're on the main domain
+    if (baseUrl.includes('nemforms.com')) {
+      apiUrl = `https://nem-server-rhdb.onrender.com/api/cac-documents/decrypt`;
+      console.log('🔓 [Decryption] Using direct server URL for production:', apiUrl);
+    } else {
+      console.log('🔓 [Decryption] Using relative URL:', apiUrl);
+    }
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -229,7 +253,8 @@ async function callBackendDecryption(
       status: response.status,
       statusText: response.statusText,
       ok: response.ok,
-      headers: Object.fromEntries(response.headers.entries())
+      headers: Object.fromEntries(response.headers.entries()),
+      url: response.url
     });
 
     if (!response.ok) {
@@ -237,12 +262,102 @@ async function callBackendDecryption(
       console.error('❌ [Decryption] Backend returned error', {
         status: response.status,
         statusText: response.statusText,
-        errorText
+        errorText: errorText.substring(0, 500), // Limit error text length
+        url: response.url
       });
-      throw new Error(`Decryption service returned ${response.status}`);
+      
+      throw new Error(`Decryption service returned ${response.status}: ${response.statusText}`);
     }
     
-    const result = await response.json();
+    const contentType = response.headers.get('content-type');
+    console.log('🔍 [Decryption] Response content type:', contentType);
+    
+    // Get response text first to check if it's HTML
+    const responseText = await response.text();
+    console.log('🔍 [Decryption] Response text preview:', responseText.substring(0, 200));
+    
+    // Check if response is HTML (common production issue)
+    if (responseText.includes('<!DOCTYPE') || responseText.includes('<html') || 
+        responseText.includes('<HTML') || responseText.startsWith('<')) {
+      console.error('❌ [Decryption] Received HTML response instead of JSON - server routing issue', {
+        contentType,
+        responsePreview: responseText.substring(0, 500),
+        url: response.url
+      });
+      
+      // Try fallback URL patterns for production
+      const fallbackUrls = [
+        `${baseUrl}/api/cac-documents/decrypt`,
+        `/api/cac-documents/decrypt`
+      ].filter(url => url !== apiUrl); // Remove the URL we already tried
+      
+      console.log('🔄 [Decryption] Trying fallback URLs due to HTML response...');
+      
+      for (const fallbackUrl of fallbackUrls) {
+        if (fallbackUrl === apiUrl) continue; // Skip the one we already tried
+        
+        try {
+          console.log('🔄 [Decryption] Trying fallback URL:', fallbackUrl);
+          
+          const fallbackResponse = await fetch(fallbackUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ encryptedData, iv }),
+            credentials: 'include'
+          });
+          
+          if (fallbackResponse.ok) {
+            const fallbackText = await fallbackResponse.text();
+            console.log('🔍 [Decryption] Fallback response preview:', fallbackText.substring(0, 200));
+            
+            // Check if fallback response is also HTML
+            if (fallbackText.includes('<!DOCTYPE') || fallbackText.includes('<html') || 
+                fallbackText.includes('<HTML') || fallbackText.startsWith('<')) {
+              console.log('❌ [Decryption] Fallback URL also returned HTML:', fallbackUrl);
+              continue;
+            }
+            
+            try {
+              const result = JSON.parse(fallbackText);
+              if (result.decrypted) {
+                console.log('✅ [Decryption] Fallback URL worked:', fallbackUrl);
+                return result.decrypted;
+              }
+            } catch (parseError) {
+              console.log('❌ [Decryption] Fallback URL returned invalid JSON:', fallbackUrl);
+              continue;
+            }
+          }
+        } catch (fallbackError) {
+          console.log('❌ [Decryption] Fallback URL failed:', fallbackUrl, fallbackError);
+        }
+      }
+      
+      throw new Error('Decryption service is currently unavailable. The server appears to be misconfigured or down. Please try again later or contact support.');
+    }
+    
+    // Check content type for non-HTML responses
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error('❌ [Decryption] Non-JSON response received', {
+        contentType,
+        responseText: responseText.substring(0, 500)
+      });
+      throw new Error('Decryption service returned invalid response format');
+    }
+    
+    // Parse JSON response
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ [Decryption] Failed to parse JSON response', {
+        parseError: parseError instanceof Error ? parseError.message : String(parseError),
+        responseText: responseText.substring(0, 500)
+      });
+      throw new Error('Decryption service returned invalid JSON response');
+    }
     
     console.log('✅ [Decryption] Backend decryption successful', {
       hasDecryptedData: !!result.decrypted,
@@ -261,7 +376,17 @@ async function callBackendDecryption(
       stack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString()
     });
-    throw new Error('Decryption service unavailable');
+    
+    // Provide more specific error messages
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error('Unable to connect to decryption service. Please check your internet connection and try again.');
+    }
+    
+    if (error instanceof Error && error.message.includes('JSON')) {
+      throw new Error('Decryption service returned invalid response. Please try again or contact support.');
+    }
+    
+    throw new Error(error instanceof Error ? error.message : 'Decryption service unavailable');
   }
 }
 
