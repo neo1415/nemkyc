@@ -692,15 +692,35 @@ export async function getListDocumentStatusSummary(
   listId: string
 ): Promise<DocumentStatusSummary> {
   try {
-    // Query all documents for this list
-    const metadataRef = collection(db, COLLECTIONS.METADATA);
-    const q = query(
-      metadataRef,
-      where('listId', '==', listId),
-      where('isCurrent', '==', true)
+    console.log('📊 [CAC Status] Fetching document status summary for list:', listId);
+
+    // First, get all identity entries for this list
+    const entriesRef = collection(db, 'identity-entries');
+    const entriesQuery = query(
+      entriesRef,
+      where('listId', '==', listId)
     );
 
-    const snapshot = await getDocs(q);
+    const entriesSnapshot = await getDocs(entriesQuery);
+    const identityRecordIds = entriesSnapshot.docs.map(doc => doc.id);
+
+    console.log('📊 [CAC Status] Found identity records:', {
+      listId,
+      identityRecordCount: identityRecordIds.length,
+      identityRecordIds: identityRecordIds.slice(0, 5) // Log first 5 for debugging
+    });
+
+    if (identityRecordIds.length === 0) {
+      console.log('📊 [CAC Status] No identity records found for list:', listId);
+      return {
+        identityRecordId: listId,
+        certificateOfIncorporation: DocumentStatus.MISSING,
+        particularsOfDirectors: DocumentStatus.MISSING,
+        shareAllotment: DocumentStatus.MISSING,
+        uploadTimestamps: {},
+        isComplete: false
+      };
+    }
 
     // Initialize status summary
     const summary: DocumentStatusSummary = {
@@ -712,12 +732,77 @@ export async function getListDocumentStatusSummary(
       isComplete: false
     };
 
-    // Track if we found any documents of each type
+    // Query documents in batches due to Firestore 'in' query limit of 10
+    const batchSize = 10;
+    const batches = [];
+    for (let i = 0; i < identityRecordIds.length; i += batchSize) {
+      batches.push(identityRecordIds.slice(i, i + batchSize));
+    }
+
+    console.log('📊 [CAC Status] Querying documents in batches:', {
+      listId,
+      totalBatches: batches.length,
+      batchSize
+    });
+
+    // Query all batches
+    const allDocuments: CACDocumentMetadata[] = [];
+    for (const batch of batches) {
+      const metadataRef = collection(db, COLLECTIONS.METADATA);
+      const documentsQuery = query(
+        metadataRef,
+        where('identityRecordId', 'in', batch),
+        where('isCurrent', '==', true)
+      );
+
+      const documentsSnapshot = await getDocs(documentsQuery);
+      documentsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        
+        // Transform backend encryption data to frontend EncryptionMetadata format
+        const encryptionMetadata = data.encryptionMetadata || {
+          iv: data.encryptionIV || '',
+          algorithm: data.encryptionAlgorithm || 'aes-256-gcm',
+          keyVersion: 'v1',
+          authTag: ''
+        };
+        
+        // Convert Firestore Timestamps to Date objects and ensure proper status
+        const transformedDoc: CACDocumentMetadata = {
+          ...data,
+          uploadedAt: timestampToDate(data.uploadedAt),
+          status: data.status as DocumentStatus,
+          encryptionMetadata
+        };
+        
+        allDocuments.push(transformedDoc);
+      });
+    }
+
+    console.log('📊 [CAC Status] Found documents:', {
+      listId,
+      documentCount: allDocuments.length,
+      documents: allDocuments.map(doc => ({
+        id: doc.id,
+        documentType: doc.documentType,
+        status: doc.status,
+        identityRecordId: doc.identityRecordId
+      }))
+    });
+
+    // Track document types found
     const foundTypes = new Set<CACDocumentType>();
 
     // Update status for each document type found
-    snapshot.docs.forEach((docSnapshot) => {
-      const doc = docSnapshot.data() as CACDocumentMetadata;
+    allDocuments.forEach((doc) => {
+      console.log('📊 [CAC Status] Processing document:', {
+        documentType: doc.documentType,
+        status: doc.status,
+        identityRecordId: doc.identityRecordId
+      });
+
+      // Convert Firestore Timestamps to Date objects if needed
+      const uploadedAt = timestampToDate(doc.uploadedAt);
 
       // Only count uploaded documents
       if (doc.status === DocumentStatus.UPLOADED) {
@@ -727,22 +812,22 @@ export async function getListDocumentStatusSummary(
           case CACDocumentType.CERTIFICATE_OF_INCORPORATION:
             summary.certificateOfIncorporation = DocumentStatus.UPLOADED;
             if (!summary.uploadTimestamps[CACDocumentType.CERTIFICATE_OF_INCORPORATION] ||
-                doc.uploadedAt > summary.uploadTimestamps[CACDocumentType.CERTIFICATE_OF_INCORPORATION]) {
-              summary.uploadTimestamps[CACDocumentType.CERTIFICATE_OF_INCORPORATION] = doc.uploadedAt;
+                uploadedAt > summary.uploadTimestamps[CACDocumentType.CERTIFICATE_OF_INCORPORATION]) {
+              summary.uploadTimestamps[CACDocumentType.CERTIFICATE_OF_INCORPORATION] = uploadedAt;
             }
             break;
           case CACDocumentType.PARTICULARS_OF_DIRECTORS:
             summary.particularsOfDirectors = DocumentStatus.UPLOADED;
             if (!summary.uploadTimestamps[CACDocumentType.PARTICULARS_OF_DIRECTORS] ||
-                doc.uploadedAt > summary.uploadTimestamps[CACDocumentType.PARTICULARS_OF_DIRECTORS]) {
-              summary.uploadTimestamps[CACDocumentType.PARTICULARS_OF_DIRECTORS] = doc.uploadedAt;
+                uploadedAt > summary.uploadTimestamps[CACDocumentType.PARTICULARS_OF_DIRECTORS]) {
+              summary.uploadTimestamps[CACDocumentType.PARTICULARS_OF_DIRECTORS] = uploadedAt;
             }
             break;
           case CACDocumentType.SHARE_ALLOTMENT:
             summary.shareAllotment = DocumentStatus.UPLOADED;
             if (!summary.uploadTimestamps[CACDocumentType.SHARE_ALLOTMENT] ||
-                doc.uploadedAt > summary.uploadTimestamps[CACDocumentType.SHARE_ALLOTMENT]) {
-              summary.uploadTimestamps[CACDocumentType.SHARE_ALLOTMENT] = doc.uploadedAt;
+                uploadedAt > summary.uploadTimestamps[CACDocumentType.SHARE_ALLOTMENT]) {
+              summary.uploadTimestamps[CACDocumentType.SHARE_ALLOTMENT] = uploadedAt;
             }
             break;
         }
@@ -755,9 +840,24 @@ export async function getListDocumentStatusSummary(
       summary.particularsOfDirectors === DocumentStatus.UPLOADED &&
       summary.shareAllotment === DocumentStatus.UPLOADED;
 
+    console.log('📊 [CAC Status] Final summary:', {
+      listId,
+      summary: {
+        certificateOfIncorporation: summary.certificateOfIncorporation,
+        particularsOfDirectors: summary.particularsOfDirectors,
+        shareAllotment: summary.shareAllotment,
+        isComplete: summary.isComplete
+      },
+      foundTypes: Array.from(foundTypes)
+    });
+
     return summary;
   } catch (error) {
-    console.error('Failed to get list document status summary:', error);
+    console.error('❌ [CAC Status] Failed to get list document status summary:', {
+      listId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     throw new Error('Failed to get list document status summary. Please try again.');
   }
 }
