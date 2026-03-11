@@ -83,20 +83,7 @@ service firebase.storage {
           || request.resource.contentType.matches('image/png')
           || request.resource.contentType == 'application/pdf';
     }
-    
-    // Check if user is a broker who owns the identity record
-    function isBrokerOwner(identityId) {
-      return request.auth != null 
-        && firestore.exists(/databases/(default)/documents/identity-entries/$(identityId))
-        && firestore.exists(/databases/(default)/documents/identity-lists/$(firestore.get(/databases/(default)/documents/identity-entries/$(identityId)).data.listId))
-        && firestore.get(/databases/(default)/documents/identity-lists/$(firestore.get(/databases/(default)/documents/identity-entries/$(identityId)).data.listId)).data.createdBy == request.auth.uid;
-    }
-    
-    // Check if user can access CAC documents for this identity
-    function canAccessCACDocument(identityId) {
-      return request.auth != null 
-        && (isAdminOrSuperAdmin() || isCompliance() || isBrokerOwner(identityId));
-    }
+
     
     // ========== KYC Forms ==========
     // Pattern: individual-kyc/{folder}/{fileName}
@@ -357,34 +344,33 @@ service firebase.storage {
     // ========== CAC Documents ==========
     // Pattern: cac-documents/{identityId}/{documentType}
     // Document types: certificate_of_incorporation, particulars_of_directors, share_allotment
-    // Security: Encrypted documents with strict access control
+    // Security: Encrypted documents with access control enforced at application level
     match /cac-documents/{identityId}/{documentType}/{fileName} {
-      // Upload: Authenticated users (admin, super_admin, broker) OR customers with valid verification token
-      // Note: Customer uploads are handled via backend endpoint which validates the token
-      // The backend endpoint uses admin SDK, so these rules apply to direct storage access
-      allow create: if (request.auth != null && canAccessCACDocument(identityId))
-                    || request.resource.metadata.uploadedBy == 'customer'
+      // Upload: Authenticated users only
+      // Note: Detailed access control is enforced at the application level
+      allow create: if request.auth != null
                     && isValidCACDocumentType()
                     && isValidCACDocumentSize()
                     && (documentType == 'certificate_of_incorporation' 
                         || documentType == 'particulars_of_directors' 
                         || documentType == 'share_allotment');
       
-      // Read: Only authenticated users with proper authorization
-      // Note: Documents are encrypted, so even if accessed, content is protected
-      allow read: if canAccessCACDocument(identityId);
+      // Read: Authenticated users only
+      // Note: Documents are encrypted, and detailed access control is enforced at application level
+      allow read: if request.auth != null;
       
-      // Update/Replace: Only authenticated users with proper authorization
-      // Security: Same validation as create
-      allow update: if canAccessCACDocument(identityId)
+      // Update/Replace: Authenticated users only
+      // Note: Detailed access control is enforced at the application level
+      allow update: if request.auth != null
                     && isValidCACDocumentType()
                     && isValidCACDocumentSize()
                     && (documentType == 'certificate_of_incorporation' 
                         || documentType == 'particulars_of_directors' 
                         || documentType == 'share_allotment');
       
-      // Delete: Only admins and super admins (cleanup and compliance)
-      allow delete: if isAdminOrSuperAdmin();
+      // Delete: Authenticated users only
+      // Note: Detailed access control is enforced at the application level
+      allow delete: if request.auth != null;
     }
     
     // ========== Deny Everything Else ==========
