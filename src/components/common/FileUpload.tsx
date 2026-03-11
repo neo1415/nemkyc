@@ -2,8 +2,9 @@
 import React, { useRef, useState } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
-import { Upload, File, X, Check } from 'lucide-react';
+import { Upload, File, X, Check, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -14,6 +15,7 @@ interface FileUploadProps {
   label?: string;
   required?: boolean;
   error?: string;
+  documentType?: 'cac' | 'nin' | 'document';
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({
@@ -24,10 +26,67 @@ const FileUpload: React.FC<FileUploadProps> = ({
   currentFile,
   label,
   required = false,
-  error
+  error,
+  documentType = 'document'
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+
+  const getDetailedErrorMessage = (errorType: string, details?: any) => {
+    switch (errorType) {
+      case 'INVALID_TYPE':
+        return {
+          title: 'Invalid File Format',
+          description: 'Only PDF, PNG, JPG, and JPEG files are supported. Please convert your file to one of these formats.',
+          suggestions: [
+            'Use PDF for scanned documents',
+            'Use PNG or JPG for photos',
+            'Avoid HEIC, WEBP, or other formats'
+          ]
+        };
+      case 'FILE_TOO_LARGE':
+        return {
+          title: 'File Too Large',
+          description: `Your file is larger than ${maxSize}MB. Please reduce the file size.`,
+          suggestions: [
+            'Compress your PDF using online tools',
+            'Reduce image quality when scanning',
+            'Split large documents into smaller files'
+          ]
+        };
+      case 'CORRUPTED_FILE':
+        return {
+          title: 'File Cannot Be Read',
+          description: 'The file appears to be corrupted or damaged.',
+          suggestions: [
+            'Try uploading the file again',
+            'Re-scan or re-photograph the document',
+            'Check that the file opens correctly on your device'
+          ]
+        };
+      default:
+        return {
+          title: 'Upload Failed',
+          description: 'There was an error uploading your file. Please try again.',
+          suggestions: [
+            'Check your internet connection',
+            'Try uploading a different file',
+            'Contact support if the problem persists'
+          ]
+        };
+    }
+  };
+
+  const showDetailedError = (errorType: string, details?: any) => {
+    const errorInfo = getDetailedErrorMessage(errorType, details);
+    
+    toast({
+      title: errorInfo.title,
+      description: errorInfo.description,
+      variant: 'destructive',
+      duration: 8000,
+    });
+  };
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -37,13 +96,19 @@ const FileUpload: React.FC<FileUploadProps> = ({
     // Validate file type
     const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'application/pdf'];
     if (!allowedTypes.includes(file.type)) {
-      alert('Only PNG, JPG, JPEG, or PDF files are allowed');
+      showDetailedError('INVALID_TYPE');
       return;
     }
     
     // Validate file size
     if (file.size > maxSize * 1024 * 1024) {
-      alert(`File size must be less than ${maxSize}MB`);
+      showDetailedError('FILE_TOO_LARGE');
+      return;
+    }
+    
+    // Try to validate file integrity (basic check)
+    if (file.size === 0) {
+      showDetailedError('CORRUPTED_FILE');
       return;
     }
     

@@ -51,6 +51,10 @@ service firebase.storage {
       return isClaims() || isAdmin() || isCompliance() || isSuperAdmin();
     }
     
+    function isBroker() {
+      return request.auth != null && normalizedRole() == 'broker';
+    }
+    
     // Validate file type - STRICT
     function isValidFileType() {
       return request.resource.contentType.matches('image/jpeg')
@@ -83,14 +87,15 @@ service firebase.storage {
     // Check if user is a broker who owns the identity record
     function isBrokerOwner(identityId) {
       return request.auth != null 
-        && firestore.exists(/databases/(default)/documents/identityLists/$(identityId))
-        && firestore.get(/databases/(default)/documents/identityLists/$(identityId)).data.createdBy == request.auth.uid;
+        && firestore.exists(/databases/(default)/documents/identity-entries/$(identityId))
+        && firestore.exists(/databases/(default)/documents/identity-lists/$(firestore.get(/databases/(default)/documents/identity-entries/$(identityId)).data.listId))
+        && firestore.get(/databases/(default)/documents/identity-lists/$(firestore.get(/databases/(default)/documents/identity-entries/$(identityId)).data.listId)).data.createdBy == request.auth.uid;
     }
     
     // Check if user can access CAC documents for this identity
     function canAccessCACDocument(identityId) {
       return request.auth != null 
-        && (isAdminOrSuperAdmin() || isBrokerOwner(identityId));
+        && (isAdminOrSuperAdmin() || isCompliance() || isBrokerOwner(identityId));
     }
     
     // ========== KYC Forms ==========

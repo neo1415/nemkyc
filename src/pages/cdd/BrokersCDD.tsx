@@ -946,7 +946,7 @@ const BrokersCDD: React.FC = () => {
                     formMethods.clearErrors('Incorporation');
                   }
                 }}
-                maxSize={3 * 1024 * 1024}
+                maxSize={5}
               />
               {uploadedFiles.Incorporation && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
@@ -975,7 +975,7 @@ const BrokersCDD: React.FC = () => {
                     formMethods.clearErrors('identification');
                   }
                 }}
-                maxSize={3 * 1024 * 1024}
+                maxSize={5}
               />
               {uploadedFiles.identification && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
@@ -1004,7 +1004,7 @@ const BrokersCDD: React.FC = () => {
                     formMethods.clearErrors('identification2');
                   }
                 }}
-                maxSize={3 * 1024 * 1024}
+                maxSize={5}
               />
               {uploadedFiles.identification2 && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
@@ -1025,7 +1025,7 @@ const BrokersCDD: React.FC = () => {
                   }));
                   formMethods.setValue('NAICOMForm', file);
                 }}
-                maxSize={3 * 1024 * 1024}
+                maxSize={5}
               />
               {uploadedFiles.NAICOMForm && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">

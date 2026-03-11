@@ -1987,7 +1987,7 @@ export default function IdentityListDetail({
                   <Button
                     variant="outlined"
                     size="small"
-                    onClick={() => openPreview(doc, selectedEntryId)}
+                    onClick={() => openPreview(doc, list?.createdBy || '')}
                     sx={{
                       borderColor: '#800020',
                       color: '#800020',
