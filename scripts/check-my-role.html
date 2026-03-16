@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check My Role</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .output {
+            background: #252526;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+        .success { color: #4ec9b0; }
+        .error { color: #f48771; }
+        .warning { color: #dcdcaa; }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #1177bb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Check My Role in Firestore</h1>
+    <p>This tool checks your current role in the Firestore database.</p>
+    <button onclick="checkRole()">Check My Role</button>
+    <div id="output" class="output"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDTyrzbQ4xYV0IAvngwgCUBf6EPnflacSw",
+            authDomain: "nem-customer-feedback-8d3fb.firebaseapp.com",
+            projectId: "nem-customer-feedback-8d3fb",
+            storageBucket: "nem-customer-feedback-8d3fb.appspot.com",
+            messagingSenderId: "524975485983",
+            appId: "1:524975485983:web:3a859424a3314d53ab112a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                log(`<span class="success">✅ Logged in as: ${user.email}</span>`);
+            } else {
+                log(`<span class="error">❌ Not logged in. Please log in to your app first.</span>`);
+            }
+        });
+
+        function log(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += message + '\n';
+        }
+
+        function clearLog() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        window.checkRole = async function() {
+            clearLog();
+            
+            if (!currentUser) {
+                log(`<span class="error">❌ Not logged in. Please log in to your app first, then refresh this page.</span>`);
+                return;
+            }
+
+            try {
+                log(`<span class="success">🔍 Checking role for: ${currentUser.email}</span>`);
+                log(`<span class="success">🔍 UID: ${currentUser.uid}</span>\n`);
+
+                // Check userroles collection
+                const userRoleRef = doc(db, 'userroles', currentUser.uid);
+                const userRoleDoc = await getDoc(userRoleRef);
+
+                if (userRoleDoc.exists()) {
+                    const data = userRoleDoc.data();
+                    log(`<span class="success">✅ Found in userroles collection:</span>`);
+                    log(`   Role: "<span class="warning">${data.role}</span>"`);
+                    log(`   Role Type: ${typeof data.role}`);
+                    log(`   Role Length: ${data.role?.length || 0} characters`);
+                    log(`   Name: ${data.name}`);
+                    log(`   Email: ${data.email}`);
+                    
+                    // Check for hidden characters
+                    if (data.role) {
+                        const roleBytes = [];
+                        for (let i = 0; i < data.role.length; i++) {
+                            roleBytes.push(data.role.charCodeAt(i));
+                        }
+                        log(`   Role Bytes: [${roleBytes.join(', ')}]`);
+                        
+                        // Check what it should be
+                        const expectedRoles = ['super admin', 'admin', 'claims', 'compliance', 'broker', 'default'];
+                        const matches = expectedRoles.filter(r => r === data.role);
+                        if (matches.length > 0) {
+                            log(`\n<span class="success">✅ Role format is CORRECT: "${data.role}"</span>`);
+                        } else {
+                            log(`\n<span class="error">❌ Role format is INCORRECT!</span>`);
+                            log(`<span class="warning">   Expected one of: ${expectedRoles.join(', ')}</span>`);
+                            log(`<span class="warning">   Got: "${data.role}"</span>`);
+                        }
+                    }
+                } else {
+                    log(`<span class="error">❌ NOT found in userroles collection</span>`);
+                }
+
+                // Check users collection
+                const usersRef = doc(db, 'users', currentUser.uid);
+                const usersDoc = await getDoc(usersRef);
+
+                if (usersDoc.exists()) {
+                    const data = usersDoc.data();
+                    log(`\n<span class="success">✅ Found in users collection:</span>`);
+                    log(`   Role: "<span class="warning">${data.role}</span>"`);
+                    log(`   Name: ${data.name || data.displayName}`);
+                } else {
+                    log(`\n<span class="warning">⚠️  NOT found in users collection</span>`);
+                }
+
+                log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
+            } catch (error) {
+                log(`<span class="error">❌ Error: ${error.message}</span>`);
+                console.error('Full error:', error);
+            }
+        };
+    </script>
+</body>
+</html>
