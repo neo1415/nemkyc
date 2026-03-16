@@ -895,7 +895,7 @@ const GoodsInTransitClaim: React.FC = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1">
-                        Goods Packaging *
+                        How Goods were packed *
                         <Info className="h-3 w-3" />
                       </FormLabel>
                       <FormControl>
@@ -1028,7 +1028,7 @@ const GoodsInTransitClaim: React.FC = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1">
-                        Inspection Address *
+                        Address where damaged goods can be inspected *
                         <Info className="h-3 w-3" />
                       </FormLabel>
                       <FormControl>
@@ -1061,7 +1061,7 @@ const GoodsInTransitClaim: React.FC = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1">
-                        Loss Circumstances *
+                        Circumstances of loss or damage *
                         <Info className="h-3 w-3" />
                       </FormLabel>
                       <FormControl>
@@ -1094,7 +1094,7 @@ const GoodsInTransitClaim: React.FC = () => {
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel className="flex items-center gap-1">
-                          Other Vehicle Involved
+                          Was Another Vehicle Involved?
                           <Info className="h-3 w-3" />
                         </FormLabel>
                       </div>
@@ -1223,11 +1223,11 @@ const GoodsInTransitClaim: React.FC = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1">
-                        Police Station Advised
+                        Address of Police Station advised of incident
                         <Info className="h-3 w-3" />
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter police station name" {...field} />
+                        <Input placeholder="Name and Address" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1275,7 +1275,7 @@ const GoodsInTransitClaim: React.FC = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1">
-                        Dispatch Address *
+                        Address from which Goods were dispatched *
                         <Info className="h-3 w-3" />
                       </FormLabel>
                       <FormControl>
@@ -1301,7 +1301,7 @@ const GoodsInTransitClaim: React.FC = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1">
-                        Dispatch Date *
+                        Date Dispatched *
                         <Info className="h-3 w-3" />
                       </FormLabel>
                       <FormControl>
@@ -1386,7 +1386,7 @@ const GoodsInTransitClaim: React.FC = () => {
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel className="flex items-center gap-1">
-                          I am the owner of the goods
+                          Are You The Owner of The Goods?
                           <Info className="h-3 w-3" />
                         </FormLabel>
                       </div>
@@ -1435,7 +1435,7 @@ const GoodsInTransitClaim: React.FC = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="flex items-center gap-1">
-                            Transporter Insurer Name *
+                            Name of Insurer *
                             <Info className="h-3 w-3" />
                           </FormLabel>
                           <FormControl>
@@ -1459,7 +1459,7 @@ const GoodsInTransitClaim: React.FC = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="flex items-center gap-1">
-                            Transporter Insurer Address *
+                            Address of Insurer *
                             <Info className="h-3 w-3" />
                           </FormLabel>
                           <FormControl>
@@ -1578,7 +1578,7 @@ const GoodsInTransitClaim: React.FC = () => {
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel className="flex items-center gap-1">
-                          Goods Sound on Receipt *
+                          Were the Goods in sound condition when received? *
                           <Info className="h-3 w-3" />
                         </FormLabel>
                       </div>
@@ -1615,7 +1615,7 @@ const GoodsInTransitClaim: React.FC = () => {
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel className="flex items-center gap-1">
-                          Checked by Driver *
+                          Were they checked by your driver? *
                           <Info className="h-3 w-3" />
                         </FormLabel>
                       </div>
@@ -1639,7 +1639,7 @@ const GoodsInTransitClaim: React.FC = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1">
-                        Vehicle Registration Number *
+                        Registered letters and number of your vehicle concerned *
                         <Info className="h-3 w-3" />
                       </FormLabel>
                       <FormControl>
@@ -1678,7 +1678,7 @@ const GoodsInTransitClaim: React.FC = () => {
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel className="flex items-center gap-1">
-                          Loaded by You or Staff *
+                          Did you or your employees load or unload the vehicle? *
                           <Info className="h-3 w-3" />
                         </FormLabel>
                       </div>
@@ -1716,7 +1716,7 @@ const GoodsInTransitClaim: React.FC = () => {
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel className="flex items-center gap-1">
-                            Receipt Given *
+                            If so, was a receipt given? *
                             <Info className="h-3 w-3" />
                           </FormLabel>
                         </div>
@@ -1791,7 +1791,7 @@ const GoodsInTransitClaim: React.FC = () => {
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel className="flex items-center gap-1">
-                          Claim Made Against You *
+                          Has a claim been made against you by the owner? *
                           <Info className="h-3 w-3" />
                         </FormLabel>
                       </div>
@@ -1816,7 +1816,7 @@ const GoodsInTransitClaim: React.FC = () => {
                     render={({ field }) => (
                       <FormItem className="ml-6">
                         <FormLabel className="flex items-center gap-1">
-                          Claim Date Received *
+                          Date Received *
                           <Info className="h-3 w-3" />
                         </FormLabel>
                         <FormControl>

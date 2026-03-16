@@ -742,6 +742,8 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
+// Static file serving will be added after API routes
+
 // Middleware setup
 app.use(morgan('combined', { stream: accessLogStream }));
 app.use(helmet());
@@ -2298,6 +2300,8 @@ app.use((req, res, next) => {
     req.path === '/api/register' ||       // Registration doesn't need CSRF (user not authenticated yet)
     req.path === '/api/verify/nin' ||    // Demo NIN verification
     req.path === '/api/verify/cac' ||    // Demo CAC verification
+    req.path === '/api/gemini/generate' || // Gemini API endpoint
+    req.path === '/api/test-endpoint' || // Test endpoint for debugging
     req.path === '/api/autofill/verify-nin' ||  // Auto-fill NIN verification (self-verification, protected by rate limiting)
     req.path === '/api/autofill/verify-cac' ||  // Auto-fill CAC verification (self-verification, protected by rate limiting)
     req.path.startsWith('/api/remediation/') ||  // Remediation endpoints (protected by auth)
@@ -2387,16 +2391,53 @@ const createEmailTransporter = () => {
       greetingTimeout: 30000,   // 30 seconds
       socketTimeout: 60000,     // 60 seconds
       logger: process.env.NODE_ENV !== 'production',
-      debug: process.env.NODE_ENV !== 'production'
+      debug: process.env.NODE_ENV !== 'production',
+      // Additional Office365 specific options
+      requireTLS: true,
+      tls: {
+        ciphers: 'SSLv3',
+        rejectUnauthorized: false
+      }
     });
   }
 };
 
 // Initialize transporter
 let transporter;
+
+// Test email configuration
+const testEmailConnection = async () => {
+  try {
+    console.log('🔍 Testing email connection...');
+    console.log('📧 Email config:', {
+      host: process.env.EMAIL_HOST || 'smtp.office365.com',
+      port: process.env.EMAIL_PORT || '587',
+      user: process.env.EMAIL_USER,
+      secure: process.env.EMAIL_SECURE === 'true'
+    });
+    
+    if (transporter) {
+      await transporter.verify();
+      console.log('✅ Email connection verified successfully');
+    }
+  } catch (error) {
+    console.error('❌ Email connection test failed:', error.message);
+    console.error('💡 Suggestions:');
+    console.error('   - Check if EMAIL_USER and EMAIL_PASS are correct');
+    console.error('   - Verify network connectivity to SMTP server');
+    console.error('   - Consider using App Password instead of regular password');
+    console.error('   - Try different ports (25, 465, 587)');
+  }
+};
 try {
   transporter = createEmailTransporter();
   console.log('✅ Email transporter initialized successfully');
+  
+  // Test the connection
+  setTimeout(() => {
+    testEmailConnection();
+  }, 2000); // Wait 2 seconds after server starts
+  
 } catch (error) {
   console.error('❌ Failed to initialize email transporter:', error.message);
   console.error('📧 Email functionality will not work until configuration is fixed');
@@ -4772,6 +4813,22 @@ const ALLOWED_COLLECTIONS = [
   'group-personal-accident-claims',
   'rent-assurance-claims',
   
+  // NEM Smart Protection Claims
+  'smart-motorist-protection-claims',
+  'smart-students-protection-claims',
+  'smart-traveller-protection-claims',
+  'smart-artisan-protection-claims',
+  'smart-generation-z-protection-claims',
+  'nem-home-protection-claims',
+  
+  // NEM Agricultural Claims
+  'farm-property-produce-claims',
+  'livestock-claims',
+  'poultry-claims',
+  'fishery-fish-farm-claims',
+  'yield-index-claims',
+  'multi-perils-crop-claims',
+  
   // General
   'formSubmissions'
 ];
@@ -4803,7 +4860,7 @@ const getFirestoreCollection = (formType) => {
   
   // Claims forms
   if (formTypeLower.includes('combined')) collection = 'combined-gpa-employers-liability-claims';
-  else if (formTypeLower.includes('motor')) collection = 'motor-claims';
+  else if (formTypeLower.includes('motor') && !formTypeLower.includes('smart')) collection = 'motor-claims';
   else if (formTypeLower.includes('burglary')) collection = 'burglary-claims';
   else if (formTypeLower.includes('fire')) collection = 'fire-special-perils-claims';
   else if (formTypeLower.includes('allrisk') || formTypeLower.includes('all risk')) collection = 'all-risk-claims';
@@ -4816,6 +4873,22 @@ const getFirestoreCollection = (formType) => {
   else if (formTypeLower.includes('contractors')) collection = 'contractors-claims';
   else if (formTypeLower.includes('group')) collection = 'group-personal-accident-claims';
   else if (formTypeLower.includes('rent')) collection = 'rent-assurance-claims';
+  
+  // NEM Smart Protection Claims
+  else if (formTypeLower.includes('smart motorist protection')) collection = 'smart-motorist-protection-claims';
+  else if (formTypeLower.includes('smart students protection')) collection = 'smart-students-protection-claims';
+  else if (formTypeLower.includes('smart traveller protection')) collection = 'smart-traveller-protection-claims';
+  else if (formTypeLower.includes('smart artisan protection')) collection = 'smart-artisan-protection-claims';
+  else if (formTypeLower.includes('smart generation z protection')) collection = 'smart-generation-z-protection-claims';
+  else if (formTypeLower.includes('nem home protection')) collection = 'nem-home-protection-claims';
+  
+  // NEM Agricultural Claims
+  else if (formTypeLower.includes('livestock')) collection = 'livestock-claims';
+  else if (formTypeLower.includes('poultry') || formTypeLower === 'poultry claim') collection = 'poultry-claims';
+  else if (formTypeLower.includes('fishery') || formTypeLower.includes('fish farm') || formTypeLower === 'fishery fish farm') collection = 'fishery-fish-farm-claims';
+  else if (formTypeLower.includes('farm') && (formTypeLower.includes('property') || formTypeLower.includes('produce'))) collection = 'farm-property-produce-claims';
+  else if (formTypeLower.includes('yield index')) collection = 'yield-index-claims';
+  else if (formTypeLower.includes('multi-perils crop') || formTypeLower.includes('multi perils crop')) collection = 'multi-perils-crop-claims';
   
   // KYC forms
   else if (formTypeLower.includes('individual') && formTypeLower.includes('kyc')) {
@@ -18915,6 +18988,47 @@ app.use((err, req, res, next) => {
   });
 });
 
+// ============= GEMINI API ENDPOINT =============
+app.post('/api/gemini/generate', async (req, res) => {
+  console.log('🤖 [GEMINI] Endpoint hit! Method:', req.method, 'Path:', req.path);
+  console.log('🤖 [GEMINI] Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('🤖 [GEMINI] Body keys:', Object.keys(req.body || {}));
+  
+  try {
+    const { contents } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      console.error('❌ Gemini API key not configured');
+      return res.status(500).json({ error: 'Gemini API key not configured' });
+    }
+
+    console.log('🤖 Making Gemini API call with', contents?.length || 0, 'content parts');
+
+    // Use global fetch (available in Node.js 18+)
+    const response = await globalThis.fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ contents })
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('❌ Gemini API error:', data);
+      return res.status(response.status).json({ error: data.error || 'Gemini API error' });
+    }
+
+    console.log('✅ Gemini API call successful');
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Gemini endpoint error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Handle 404 - Route not found
 app.use((req, res) => {
   res.status(404).json({
@@ -19024,6 +19138,12 @@ function validateServerConfiguration() {
 
 // Run configuration validation
 const configValidation = validateServerConfiguration();
+
+// ============= TEST ENDPOINT (for debugging) =============
+app.post('/api/test-endpoint', (req, res) => {
+  console.log('🧪 [TEST] Test endpoint hit!');
+  res.json({ message: 'Test endpoint working!' });
+});
 
 // ============= END CONFIGURATION VALIDATION =============
 
@@ -19200,6 +19320,17 @@ process.on('unhandledRejection', async (reason, promise) => {
   
   // Don't exit on unhandled rejection, just log it
   console.log('⚠️  Continuing after unhandled rejection...');
+});
+
+// ============= CATCH-ALL 404 HANDLER (for debugging) =============
+app.use('*', (req, res) => {
+  console.log('❌ [404] Unmatched route:', req.method, req.originalUrl);
+  console.log('❌ [404] Available routes should include: /api/gemini/generate');
+  res.status(404).json({
+    error: 'Not found',
+    message: 'The requested endpoint does not exist.',
+    path: req.originalUrl
+  });
 });
 
 console.log('✅ Graceful shutdown handlers registered');

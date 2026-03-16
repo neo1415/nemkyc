@@ -600,7 +600,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
               <div className="space-y-4">
                 <FormTextarea
                   name="claimNature"
-                  label="Nature of the claim or the circumstances"
+                  label="What is the precise nature of the claim or the circumstances which might give rise to a claim?"
                   placeholder="Describe the nature of the claim in detail"
                   rows={4}
                   required
@@ -609,19 +609,19 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormDatePicker
                     name="firstAwareDate"
-                    label="Date first became aware of the claim"
+                    label="On what date did you first become aware of the claim or circumstance?"
                     required
                   />
                   <FormDatePicker
                     name="claimMadeDate"
-                    label="Date claim or intimation of claim made to you"
+                    label="On what date was the Claim or intimation of a Claim first made to you?"
                     required
                   />
                 </div>
                 
                 <FormSelect
                   name="intimationMode"
-                  label="Was intimation oral or written?"
+                  label="Was the intimation of the Claim oral or written?"
                   placeholder="Select option"
                   required
                 >
@@ -642,8 +642,8 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                 {watchedValues.intimationMode === 'oral' && (
                   <FormTextarea
                     name="oralDetails"
-                    label="Details of oral intimation (first-person details)"
-                    placeholder="Provide details of the oral intimation"
+                    label='If ORAL above, please give "first person" account of the conversation'
+                    placeholder='Provide details of the conversation (i.e. "he said", "I said")'
                     rows={3}
                     required
                   />
@@ -651,7 +651,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                 
                 <FormField
                   name="amountClaimed"
-                  label="Amount claimed"
+                  label="What amount, if any, is claimed?"
                   type="number"
                   placeholder="Enter amount claimed"
                 />
@@ -762,7 +762,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
               <div className="space-y-4">
                 <FormTextarea
                   name="responseComments"
-                  label="Comments in response to the claim"
+                  label="What are your comments in response to the Claim or the fact or circumstance which might give rise to a claim?"
                   placeholder="Provide your response to the claim"
                   rows={4}
                   required
@@ -778,7 +778,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                 
                 <FormField
                   name="estimatedLiability"
-                  label="Estimated monetary liability"
+                  label="What is your estimate of your potential monetary liability, if any, to the Claimant?"
                   type="number"
                   placeholder="Enter estimated liability amount"
                   required
@@ -786,7 +786,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                 
                 <FormSelect
                   name="additionalInfo"
-                  label="Any other details or info that will help insurer?"
+                  label="Are there additional detail about which you wish to advise, or which may be of interest to an Insurer that will provide a better understanding of this matter?"
                   placeholder="Select option"
                   required
                 >
@@ -850,7 +850,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                       </div>
                       <FormField
                         name="solicitorRates"
-                        label="Rates"
+                        label="Charge Out Rates"
                         placeholder="Enter solicitor rates"
                         required
                       />

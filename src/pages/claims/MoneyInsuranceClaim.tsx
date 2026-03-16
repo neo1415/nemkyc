@@ -41,11 +41,7 @@ const moneyInsuranceSchema = yup.object().shape({
   moneyLocation: yup.string().oneOf(['transit', 'safe']).required('Money location is required'),
 
   // Discoverer Details
-  discovererName: yup.string().when('moneyLocation', {
-    is: 'transit',
-    then: (schema) => schema.notRequired(),
-    otherwise: (schema) => schema.notRequired()
-  }),
+  discovererName: yup.string().required('Name of person who discovered loss is required'),
   discovererPosition: yup.string().when('moneyLocation', {
     is: 'transit',
     then: (schema) => schema.notRequired(),
@@ -111,11 +107,6 @@ const moneyInsuranceSchema = yup.object().shape({
     otherwise: (schema) => schema.notRequired()
   }),
   previousLoss: yup.string().oneOf(['yes', 'no']).required('Previous loss status is required'),
-  previousLossDetails: yup.string().when('previousLoss', {
-    is: 'yes',
-    then: (schema) => schema.required('Previous loss details required'),
-    otherwise: (schema) => schema.notRequired()
-  }),
   lossAmount: yup.number().min(0, 'Loss amount must be positive').required('Loss amount is required'),
   lossDescription: yup.string().required('Loss description is required'),
 
@@ -170,7 +161,6 @@ interface MoneyInsuranceData {
   policeNotified: string;
   policeStation?: string;
   previousLoss: string;
-  previousLossDetails?: string;
   lossAmount: number;
   lossDescription: string;
 
@@ -335,7 +325,6 @@ const defaultValues: Partial<MoneyInsuranceData> = {
   policeNotified: '',
   policeStation: '',
   previousLoss: '',
-  previousLossDetails: '',
   lossAmount: 0,
   lossDescription: '',
   agreeToDataPrivacy: false,
@@ -495,7 +484,7 @@ const MoneyInsuranceClaim: React.FC = () => {
     0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
     1: ['companyName', 'address', 'phone', 'email'],
     2: [], // Custom validation for merged section
-    3: ['howItHappened', 'policeNotified', 'policeStation', 'previousLoss', 'previousLossDetails', 'lossAmount', 'lossDescription'],
+    3: ['howItHappened', 'policeNotified', 'policeStation', 'previousLoss', 'lossAmount', 'lossDescription'],
     4: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
   };
 
@@ -569,11 +558,11 @@ const MoneyInsuranceClaim: React.FC = () => {
                   </FormSelect>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField name="amountAtStart" label="Amount at journey start (₦)" type="number" step="0.01" required />
-                    <FormField name="disbursements" label="Disbursements during journey (₦)" type="number" step="0.01" required />
+                    <FormField name="amountAtStart" label="How much was in the employee's possession at the commencement of the journey? (₦)" type="number" step="0.01" required />
+                    <FormField name="disbursements" label="What disbursement were made by him during the journey? (₦)" type="number" step="0.01" required />
                   </div>
                   
-                  <FormSelect name="doubtIntegrity" label="Any reason to doubt integrity of employee?" required placeholder="Select yes or no">
+                  <FormSelect name="doubtIntegrity" label="Have you any reason to doubt the integrity of the employee?" required placeholder="Select yes or no">
                     <SelectItem value="yes">Yes</SelectItem>
                     <SelectItem value="no">No</SelectItem>
                   </FormSelect>
@@ -589,6 +578,8 @@ const MoneyInsuranceClaim: React.FC = () => {
               <div className="space-y-4">
                 <div className="p-4 border rounded-lg">
                   <h3 className="font-medium text-grey-900 mb-3">Safe Loss Details</h3>
+                  
+                  <FormField name="discovererName" label="Name of person who discovered loss" required />
                   
                   <FormSelect name="safeType" label="Was the safe bricked into wall or standing free?" required placeholder="Select option">
                     <SelectItem value="bricked">Bricked into wall</SelectItem>
@@ -665,14 +656,10 @@ const MoneyInsuranceClaim: React.FC = () => {
               <FormField name="policeStation" label="Police Station" required />
             )}
             
-            <FormSelect name="previousLoss" label="Previous loss under the policy?" required placeholder="Select yes or no">
+            <FormSelect name="previousLoss" label="Have you ever sustained a previous loss coming within the scope of the policy?" required placeholder="Select yes or no">
               <SelectItem value="yes">Yes</SelectItem>
               <SelectItem value="no">No</SelectItem>
             </FormSelect>
-            
-            {watchedValues.previousLoss === 'yes' && (
-              <FormTextarea name="previousLossDetails" label="Details of previous loss" required />
-            )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField name="lossAmount" label="What is the amount of loss? (₦)" type="number" step="0.01" required />

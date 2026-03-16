@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Gemini Backend</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { padding: 10px 20px; margin: 10px 0; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        #result { margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9; }
+        .success { border-color: #28a745; background: #d4edda; }
+        .error { border-color: #dc3545; background: #f8d7da; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <h1>🤖 Test Gemini Backend Integration</h1>
+    <p>This tests the Gemini API endpoint through your backend (no CSRF required).</p>
+    
+    <button onclick="testGemini()">Test Gemini API</button>
+    <button onclick="testWithDocument()">Test Document OCR</button>
+    
+    <div id="result"></div>
+
+    <script>
+        async function testGemini() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '⏳ Testing basic Gemini API...';
+            resultDiv.className = '';
+            
+            try {
+                const response = await fetch('/api/gemini/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: "Say hello and confirm you're working properly. Keep it brief."
+                            }]
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'success';
+                    resultDiv.innerHTML = `
+                        <h3>✅ Success!</h3>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Response:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'error';
+                    resultDiv.innerHTML = `
+                        <h3>❌ Error</h3>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `
+                    <h3>❌ Network Error</h3>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+
+        async function testWithDocument() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '⏳ Testing document OCR simulation...';
+            resultDiv.className = '';
+            
+            try {
+                const response = await fetch('/api/gemini/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `Extract information from this sample CAC document text and return as JSON:
+                                
+                                CERTIFICATE OF INCORPORATION
+                                Company Name: TECH SOLUTIONS LIMITED
+                                RC Number: RC123456
+                                Registration Date: 15/03/2020
+                                Registered Office: 123 Business Street, Lagos, Nigeria
+                                Company Type: Private Limited Company
+                                
+                                Return JSON with: companyName, rcNumber, registrationDate, companyAddress, companyType`
+                            }]
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'success';
+                    resultDiv.innerHTML = `
+                        <h3>✅ Document OCR Test Success!</h3>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Extracted Data:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'error';
+                    resultDiv.innerHTML = `
+                        <h3>❌ Error</h3>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `
+                    <h3>❌ Network Error</h3>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -266,12 +266,13 @@ export class GeminiOCREngine {
   }
 
   /**
-   * Make API call to Gemini
+   * Make API call to Gemini via backend
    */
   private async makeApiCall(request: GeminiRequest): Promise<GeminiResponse> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.config.model}:generateContent?key=${this.config.apiKey}`;
+    // Use absolute URL to backend server on port 3001
+    const url = 'http://localhost:3001/api/gemini/generate';
 
-    console.log('Making Gemini API call to:', url.replace(this.config.apiKey, 'API_KEY_HIDDEN'));
+    console.log('Making Gemini API call to backend:', url);
     console.log('Request payload structure:', {
       contents: request.contents.map(c => ({
         parts: c.parts.map(p => ({
@@ -294,17 +295,17 @@ export class GeminiOCREngine {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify({ contents: request.contents }),
         signal: controller.signal
       });
 
       clearTimeout(timeoutId);
 
-      console.log('Gemini API response status:', response.status, response.statusText);
+      console.log('Backend API response status:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Gemini API error response:', errorData);
+        console.error('Backend API error response:', errorData);
         
         // Provide more specific error messages based on status code
         let errorMessage = `API request failed: ${response.status} ${response.statusText}`;

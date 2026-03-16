@@ -76,6 +76,23 @@ const AdminPublicLiabilityClaimsTable = lazy(() => import('./pages/admin/AdminPu
 const AdminCombinedGPAEmployersLiabilityClaimsTable = lazy(() => import('./pages/admin/AdminCombinedGPAEmployersLiabilityClaimsTable'));
 const AdminGroupPersonalAccidentClaimsTable = lazy(() => import('./pages/admin/AdminGroupPersonalAccidentClaimsTable'));
 const AdminGoodsInTransitClaimsTable = lazy(() => import('./pages/admin/AdminGoodsInTransitClaimsTable'));
+
+// Admin Tables - NEM Smart Protection Claims
+const AdminSmartMotoristProtectionClaimsTable = lazy(() => import('./pages/admin/AdminSmartMotoristProtectionClaimsTable'));
+const AdminSmartStudentsProtectionClaimsTable = lazy(() => import('./pages/admin/AdminSmartStudentsProtectionClaimsTable'));
+const AdminSmartTravellerProtectionClaimsTable = lazy(() => import('./pages/admin/AdminSmartTravellerProtectionClaimsTable'));
+const AdminSmartArtisanProtectionClaimsTable = lazy(() => import('./pages/admin/AdminSmartArtisanProtectionClaimsTable'));
+const AdminSmartGenerationZProtectionClaimsTable = lazy(() => import('./pages/admin/AdminSmartGenerationZProtectionClaimsTable'));
+const AdminNEMHomeProtectionClaimsTable = lazy(() => import('./pages/admin/AdminNEMHomeProtectionClaimsTable'));
+
+// Admin Tables - NEM Agricultural Claims
+const AdminFarmPropertyProduceClaimsTable = lazy(() => import('./pages/admin/AdminFarmPropertyProduceClaimsTable'));
+const AdminLivestockClaimsTable = lazy(() => import('./pages/admin/AdminLivestockClaimsTable'));
+const AdminPoultryClaimsTable = lazy(() => import('./pages/admin/AdminPoultryClaimsTable'));
+const AdminFisheryFishFarmClaimsTable = lazy(() => import('./pages/admin/AdminFisheryFishFarmClaimsTable'));
+const AdminYieldIndexClaimsTable = lazy(() => import('./pages/admin/AdminYieldIndexClaimsTable'));
+const AdminMultiPerilsCropClaimsTable = lazy(() => import('./pages/admin/AdminMultiPerilsCropClaimsTable'));
+
 const AdminUsersTable = lazy(() => import('./pages/admin/AdminUsersTable'));
 
 // KYC Forms
@@ -114,6 +131,22 @@ const GoodsInTransitClaim = lazy(() => import('./pages/claims/GoodsInTransitClai
 const ContractorsPlantMachineryClaim = lazy(() => import('./pages/claims/ContractorsPlantMachineryClaim'));
 const AllRiskClaim = lazy(() => import('./pages/claims/AllRiskClaim'));
 const FidelityGuaranteeClaim = lazy(() => import('./pages/claims/FidelityGuaranteeClaim'));
+
+// NEM Smart Protection Claims - New claim forms
+const SmartMotoristProtectionClaim = lazy(() => import('./pages/claims/SmartMotoristProtectionClaim'));
+const SmartStudentsProtectionClaim = lazy(() => import('./pages/claims/SmartStudentsProtectionClaim'));
+const SmartTravellerProtectionClaim = lazy(() => import('./pages/claims/SmartTravellerProtectionClaim'));
+const SmartArtisanProtectionClaim = lazy(() => import('./pages/claims/SmartArtisanProtectionClaim'));
+const SmartGenerationZProtectionClaim = lazy(() => import('./pages/claims/SmartGenerationZProtectionClaim'));
+const NEMHomeProtectionClaim = lazy(() => import('./pages/claims/NEMHomeProtectionClaim'));
+
+// NEM Agricultural Claims - Batch 1
+const FarmPropertyProduceClaim = lazy(() => import('./pages/claims/FarmPropertyProduceClaim'));
+const LivestockClaim = lazy(() => import('./pages/claims/LivestockClaim'));
+const PoultryClaim = lazy(() => import('./pages/claims/PoultryClaim'));
+const FisheryFishFarmClaim = lazy(() => import('./pages/claims/FisheryFishFarmClaim'));
+const YieldIndexInsuranceClaim = lazy(() => import('./pages/claims/YieldIndexInsuranceClaim'));
+const MultiPerilsCropClaim = lazy(() => import('./pages/claims/MultiPerilsCropClaim'));
 
 // Demo Pages - Identity Verification
 const DemoConfig = lazy(() => import('./pages/demo/DemoConfig'));
@@ -216,6 +249,22 @@ function App() {
              <Route path="/claims/contractors-plant-machinery" element={<ContractorsPlantMachineryClaim />} />
              <Route path="/claims/all-risk" element={<AllRiskClaim />} />
              <Route path="/claims/fidelity-guarantee" element={<FidelityGuaranteeClaim />} />
+             
+             {/* NEM Smart Protection Claims Routes */}
+             <Route path="/claims/smart-motorist-protection" element={<SmartMotoristProtectionClaim />} />
+             <Route path="/claims/smart-students-protection" element={<SmartStudentsProtectionClaim />} />
+             <Route path="/claims/smart-traveller-protection" element={<SmartTravellerProtectionClaim />} />
+             <Route path="/claims/smart-artisan-protection" element={<SmartArtisanProtectionClaim />} />
+             <Route path="/claims/smart-generation-z-protection" element={<SmartGenerationZProtectionClaim />} />
+             <Route path="/claims/nem-home-protection" element={<NEMHomeProtectionClaim />} />
+             
+             {/* NEM Agricultural Claims Routes - Batch 1 */}
+             <Route path="/claims/farm-property-produce" element={<FarmPropertyProduceClaim />} />
+             <Route path="/claims/livestock" element={<LivestockClaim />} />
+             <Route path="/claims/poultry" element={<PoultryClaim />} />
+             <Route path="/claims/fishery-fish-farm" element={<FisheryFishFarmClaim />} />
+             <Route path="/claims/yield-index-insurance" element={<YieldIndexInsuranceClaim />} />
+             <Route path="/claims/multi-perils-crop" element={<MultiPerilsCropClaim />} />
              
              {/* KYC Routes - accessible without authentication */}
              <Route path="kyc" element={<KYCForms />} />
@@ -376,6 +425,80 @@ function App() {
           <Route path="admin/goods-in-transit-claims" element={
             <ProtectedRoute>
               <AdminGoodsInTransitClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          {/* Admin NEM Smart Protection Claims Routes */}
+          <Route path="admin/smart-motorist-protection-claims" element={
+            <ProtectedRoute>
+              <AdminSmartMotoristProtectionClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/smart-students-protection-claims" element={
+            <ProtectedRoute>
+              <AdminSmartStudentsProtectionClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/smart-traveller-protection-claims" element={
+            <ProtectedRoute>
+              <AdminSmartTravellerProtectionClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/smart-artisan-protection-claims" element={
+            <ProtectedRoute>
+              <AdminSmartArtisanProtectionClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/smart-generation-z-protection-claims" element={
+            <ProtectedRoute>
+              <AdminSmartGenerationZProtectionClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/nem-home-protection-claims" element={
+            <ProtectedRoute>
+              <AdminNEMHomeProtectionClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          {/* Admin NEM Agricultural Claims Routes */}
+          <Route path="admin/farm-property-produce-claims" element={
+            <ProtectedRoute>
+              <AdminFarmPropertyProduceClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/livestock-claims" element={
+            <ProtectedRoute>
+              <AdminLivestockClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/poultry-claims" element={
+            <ProtectedRoute>
+              <AdminPoultryClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/fishery-fish-farm-claims" element={
+            <ProtectedRoute>
+              <AdminFisheryFishFarmClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/yield-index-claims" element={
+            <ProtectedRoute>
+              <AdminYieldIndexClaimsTable />
+            </ProtectedRoute>
+          } />
+
+          <Route path="admin/multi-perils-crop-claims" element={
+            <ProtectedRoute>
+              <AdminMultiPerilsCropClaimsTable />
             </ProtectedRoute>
           } />
 

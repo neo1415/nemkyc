@@ -1,7 +1,7 @@
 // Configuration for Gemini Document Verification system
 
 export interface GeminiConfig {
-  apiKey: string;
+  apiKey: string; // Not used when calling via backend
   model: 'gemini-2.5-flash';
   maxTokens: number;
   temperature: number;
