@@ -100,7 +100,21 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
     { name: 'Money Insurance', href: '/admin/money-insurance-claims' },
     { name: 'Burglary Claims', href: '/admin/burglary-claims' },
     { name: 'Contractors Plant Machinery', href: '/admin/contractors-plant-machinery-claims' },
-    { name: 'Fidelity Guarantee', href: '/admin/fidelity-guarantee-claims' }
+    { name: 'Fidelity Guarantee', href: '/admin/fidelity-guarantee-claims' },
+    // NEM Smart Protection Claims
+    { name: 'Smart Motorist Protection', href: '/admin/smart-motorist-protection-claims' },
+    { name: 'Smart Students Protection', href: '/admin/smart-students-protection-claims' },
+    { name: 'Smart Traveller Protection', href: '/admin/smart-traveller-protection-claims' },
+    { name: 'Smart Artisan Protection', href: '/admin/smart-artisan-protection-claims' },
+    { name: 'Smart Generation Z Protection', href: '/admin/smart-generation-z-protection-claims' },
+    { name: 'NEM Home Protection', href: '/admin/nem-home-protection-claims' },
+    // NEM Agricultural Claims
+    { name: 'Farm Property & Produce', href: '/admin/farm-property-produce-claims' },
+    { name: 'Livestock Claims', href: '/admin/livestock-claims' },
+    { name: 'Poultry Claims', href: '/admin/poultry-claims' },
+    { name: 'Fishery & Fish Farm Claims', href: '/admin/fishery-fish-farm-claims' },
+    { name: 'Yield Index Claims', href: '/admin/yield-index-claims' },
+    { name: 'Multi-Perils Crop Claims', href: '/admin/multi-perils-crop-claims' }
   ];
 
   return (

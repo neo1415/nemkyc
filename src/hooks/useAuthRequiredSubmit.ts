@@ -244,7 +244,27 @@ export const getFormPageUrl = (formType: string) => {
     return '/cdd/partners';
   }
   
-  // Claims Forms
+  // Claims Forms - Smart Protection Claims (check specific types first)
+  if (formTypeLower.includes('smart motorist protection')) {
+    return '/claims/smart-motorist-protection';
+  }
+  if (formTypeLower.includes('smart students protection')) {
+    return '/claims/smart-students-protection';
+  }
+  if (formTypeLower.includes('smart traveller protection')) {
+    return '/claims/smart-traveller-protection';
+  }
+  if (formTypeLower.includes('smart artisan protection')) {
+    return '/claims/smart-artisan-protection';
+  }
+  if (formTypeLower.includes('smart generation z protection')) {
+    return '/claims/smart-generation-z-protection';
+  }
+  if (formTypeLower.includes('nem home protection')) {
+    return '/claims/nem-home-protection';
+  }
+  
+  // Other Claims Forms
   if (formTypeLower.includes('employers liability') && !formTypeLower.includes('combined')) {
     return '/claims/employers-liability';
   }
@@ -286,6 +306,26 @@ export const getFormPageUrl = (formType: string) => {
   }
   if (formTypeLower.includes('rent')) {
     return '/claims/rent-assurance';
+  }
+  
+  // Agricultural Claims - Batch 1
+  if (formTypeLower.includes('farm property and produce insurance') || (formTypeLower.includes('farm') && (formTypeLower.includes('property') || formTypeLower.includes('produce')))) {
+    return '/claims/farm-property-produce';
+  }
+  if (formTypeLower.includes('livestock')) {
+    return '/claims/livestock';
+  }
+  if (formTypeLower.includes('poultry')) {
+    return '/claims/poultry';
+  }
+  if (formTypeLower.includes('fishery and fish farm insurance') || formTypeLower.includes('fishery') || formTypeLower.includes('fish farm')) {
+    return '/claims/fishery-fish-farm';
+  }
+  if (formTypeLower.includes('yield index insurance')) {
+    return '/claims/yield-index-insurance';
+  }
+  if (formTypeLower.includes('multi-perils crop insurance') || formTypeLower.includes('multi perils crop insurance')) {
+    return '/claims/multi-perils-crop';
   }
   
   // Default fallback

@@ -100,12 +100,12 @@ const rentAssuranceSchema = yup.object({
     .typeError('Declaration amount must be a number')
     .required('Declaration amount is required')
     .min(0, 'Amount must be valid'),
-  declarationYear: yup
-    .number()
-    .typeError('Year must be a number')
-    .required('Declaration year is required')
-    .min(0, 'Enter a valid year')
-    .max(99, 'Enter a valid year'),
+  declarationDayMonth: yup
+    .string()
+    .required('Declaration day/month is required'),
+  declarationDate: yup
+    .date()
+    .required('Declaration date is required'),
   agreeToDataPrivacy: yup
     .boolean()
     .oneOf([true], 'You must agree to the data privacy policy'),
@@ -141,7 +141,8 @@ interface RentAssuranceClaimData {
   declarationName: string;
   declarationPlace: string;
   declarationAmount: number;
-  declarationYear: number;
+  declarationDayMonth: string;
+  declarationDate: Date;
   declarationStatement?: string;
   agreeToDataPrivacy: boolean;
   signature: string;
@@ -304,7 +305,7 @@ const RentAssuranceClaim = () => {
       declarationName: '',
       declarationPlace: '',
       declarationAmount: 0,
-      declarationYear: 0,
+      declarationDayMonth: '',
       agreeToDataPrivacy: false,
       signature: '',
     },
@@ -345,7 +346,7 @@ const RentAssuranceClaim = () => {
     const finalData = {
       ...data,
       ...fileUrls,
-      declarationStatement: `I ${data.declarationName} of ${data.declarationPlace} do hereby warrant the truth of the answers and particulars given on this form, and that I have withheld no material information and I hereby claim for loss as set out in the Schedule hereto, amounting in all to N${data.declarationAmount}. Dated this Date of 20${data.declarationYear}`,
+      declarationStatement: `I ${data.declarationName} of ${data.declarationPlace} do hereby warrant the truth of the answers and particulars given on this form, and that I have withheld no material information and I hereby claim for loss as set out in the Schedule hereto, amounting in all to N${data.declarationAmount}. Dated this ${data.declarationDayMonth} Date of ${format(new Date(data.declarationDate), 'PPP')}`,
       status: 'processing',
       formType: 'Rent Assurance Claim'
     };
@@ -364,7 +365,7 @@ const RentAssuranceClaim = () => {
     'policy-insured': ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'nameOfInsured', 'address', 'age', 'email', 'phone', 'nameOfLandlord', 'addressOfLandlord', 'livingAtPremisesFrom', 'livingAtPremisesTo'],
     'claim-beneficiary': ['periodOfDefaultFrom', 'periodOfDefaultTo', 'amountDefaulted', 'rentDueDate', 'rentPaymentFrequency', 'rentPaymentFrequencyOther', 'causeOfInabilityToPay', 'nameOfBeneficiary', 'beneficiaryAge', 'beneficiaryAddress', 'beneficiaryEmail', 'beneficiaryPhone', 'beneficiaryOccupation'],
     'documents': [], // handled via validateStep (rentAgreement required)
-    'declaration': ['agreeToDataPrivacy', 'declarationName', 'declarationPlace', 'declarationAmount', 'declarationYear', 'signature'],
+    'declaration': ['agreeToDataPrivacy', 'declarationName', 'declarationPlace', 'declarationAmount', 'declarationDayMonth', 'declarationDate', 'signature'],
   };
 
   const DatePickerField = ({ name, label }: { name: string; label: string }) => {
@@ -833,13 +834,42 @@ const RentAssuranceClaim = () => {
                 />
                 .
                 <br />
-                Dated this Date of 20
+                Dated this
                 <Input
-                  type="number"
-                  {...formMethods.register('declarationYear', { onChange: (e: any) => formMethods.setValue('declarationYear', Number(e.target.value)) })}
-                  placeholder="Year"
-                  className="mx-2 inline-block w-24 align-middle"
+                  {...formMethods.register('declarationDayMonth')}
+                  placeholder="Day/Month"
+                  className="mx-2 inline-block w-32 align-middle"
                 />
+                Date of
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "mx-2 inline-flex w-48 justify-start text-left font-normal align-middle",
+                        !formMethods.watch('declarationDate') && "text-muted-foreground",
+                        formMethods.formState.errors.declarationDate && "border-destructive"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formMethods.watch('declarationDate') ? format(new Date(formMethods.watch('declarationDate')), "PPP") : <span>Date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <ReactCalendar
+                      mode="single"
+                      selected={formMethods.watch('declarationDate') ? new Date(formMethods.watch('declarationDate')) : undefined}
+                      onSelect={(date) => {
+                        formMethods.setValue('declarationDate', date as any);
+                        if (formMethods.formState.errors.declarationDate) {
+                          formMethods.clearErrors('declarationDate');
+                        }
+                      }}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
               </p>
               <div className="grid md:grid-cols-2 gap-4 mt-2">
                 {formMethods.formState.errors.declarationName && (
@@ -851,8 +881,11 @@ const RentAssuranceClaim = () => {
                 {formMethods.formState.errors.declarationAmount && (
                   <p className="text-sm text-destructive">{String(formMethods.formState.errors.declarationAmount.message)}</p>
                 )}
-                {formMethods.formState.errors.declarationYear && (
-                  <p className="text-sm text-destructive">{String(formMethods.formState.errors.declarationYear.message)}</p>
+                {formMethods.formState.errors.declarationDayMonth && (
+                  <p className="text-sm text-destructive">{String(formMethods.formState.errors.declarationDayMonth.message)}</p>
+                )}
+                {formMethods.formState.errors.declarationDate && (
+                  <p className="text-sm text-destructive">{String(formMethods.formState.errors.declarationDate.message)}</p>
                 )}
               </div>
             </div>

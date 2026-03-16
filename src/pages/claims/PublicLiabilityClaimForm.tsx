@@ -549,14 +549,14 @@ const PublicLiabilityClaimForm: React.FC = () => {
                 </FormSelect>
                 
                 {watchedValues.otherInsurance === 'yes' && (
-                  <FormTextarea name="otherInsuranceDetails" label="Other insurance details" required rows={3} />
+                  <FormTextarea name="otherInsuranceDetails" label="Other Policy details" required rows={3} />
                 )}
               </div>
             </div>
 
             {/* Claimant Section */}
             <div className="p-4 rounded-lg">
-              <h3 className="font-semibold mb-4">Possible Claimant Information</h3>
+              <h3 className="font-semibold mb-4">PARTICULARS/INFORMATION OF POSSIBLE CLAIMANT</h3>
               <div className="space-y-4">
                 <FormField name="claimantName" label="Name" required />
                 <FormTextarea name="claimantAddress" label="Address" required />

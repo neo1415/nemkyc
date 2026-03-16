@@ -313,6 +313,48 @@ service firebase.storage {
       allow delete: if isAdminOrSuperAdmin();
     }
     
+    match /smart-motorist-protection-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /smart-students-protection-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /smart-traveller-protection-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /smart-artisan-protection-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /smart-generation-z-protection-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
+    match /nem-home-protection-claims/{folder}/{fileName} {
+      allow create: if isValidFileType() && isValidFileSize();
+      allow read: if true;
+      allow update: if false;
+      allow delete: if isAdminOrSuperAdmin();
+    }
+    
     // ========== Admin Uploads ==========
     // Pattern: admin-uploads/{fileName}
     match /admin-uploads/{fileName} {

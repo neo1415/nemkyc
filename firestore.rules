@@ -393,6 +393,116 @@ service cloud.firestore {
       allow delete: if isAdminOrSuperAdmin();
     }
 
+    match /smart-motorist-protection-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow create: if isAuthenticatedUser();
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    match /smart-students-protection-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow create: if isAuthenticatedUser();
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    match /smart-traveller-protection-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow create: if isAuthenticatedUser();
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    match /smart-artisan-protection-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow create: if isAuthenticatedUser();
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    match /smart-generation-z-protection-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow create: if isAuthenticatedUser();
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    match /nem-home-protection-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow create: if isAuthenticatedUser();
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    // ========== Agricultural Claims Collections ==========
+
+    match /livestock-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow create: if isAuthenticatedUser();
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    match /farm-property-produce-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow create: if isAuthenticatedUser();
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    match /poultry-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow create: if isAuthenticatedUser();
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    match /fishery-fish-farm-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow create: if isAuthenticatedUser();
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    match /yield-index-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow create: if isAuthenticatedUser();
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
+    match /multi-perils-crop-claims/{docId} {
+      allow read: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow create: if isAuthenticatedUser();
+      allow update: if isClaimsOrAdminOrCompliance() || 
+        (isAuthenticatedUser() && isOwner());
+      allow delete: if isAdminOrSuperAdmin();
+    }
+
     // ========== Legacy Claims Collections (camelCase - backward compatibility) ==========
 
     match /goodsInTransitClaims/{docId} {

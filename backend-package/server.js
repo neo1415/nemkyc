@@ -3727,6 +3727,20 @@ const ALLOWED_COLLECTIONS = [
   'group-personal-accident-claims',
   'rent-assurance-claims',
   
+  // NEM Smart Protection Claims
+  'smart-motorist-protection-claims',
+  'smart-students-protection-claims',
+  'smart-traveller-protection-claims',
+  'smart-artisan-protection-claims',
+  'smart-generation-z-protection-claims',
+  'nem-home-protection-claims',
+  
+  // NEM Agricultural Claims
+  'farm-property-produce-claims',
+  'livestock-claims',
+  'poultry-claims',
+  'fishery-fish-farm-claims',
+  
   // General
   'formSubmissions'
 ];
@@ -3758,7 +3772,7 @@ const getFirestoreCollection = (formType) => {
   
   // Claims forms
   if (formTypeLower.includes('combined')) collection = 'combined-gpa-employers-liability-claims';
-  else if (formTypeLower.includes('motor')) collection = 'motor-claims';
+  else if (formTypeLower.includes('motor') && !formTypeLower.includes('smart')) collection = 'motor-claims';
   else if (formTypeLower.includes('burglary')) collection = 'burglary-claims';
   else if (formTypeLower.includes('fire')) collection = 'fire-special-perils-claims';
   else if (formTypeLower.includes('allrisk') || formTypeLower.includes('all risk')) collection = 'all-risk-claims';
@@ -3771,6 +3785,14 @@ const getFirestoreCollection = (formType) => {
   else if (formTypeLower.includes('contractors')) collection = 'contractors-claims';
   else if (formTypeLower.includes('group')) collection = 'group-personal-accident-claims';
   else if (formTypeLower.includes('rent')) collection = 'rent-assurance-claims';
+  
+  // NEM Smart Protection Claims
+  else if (formTypeLower.includes('smart motorist protection')) collection = 'smart-motorist-protection-claims';
+  else if (formTypeLower.includes('smart students protection')) collection = 'smart-students-protection-claims';
+  else if (formTypeLower.includes('smart traveller protection')) collection = 'smart-traveller-protection-claims';
+  else if (formTypeLower.includes('smart artisan protection')) collection = 'smart-artisan-protection-claims';
+  else if (formTypeLower.includes('smart generation z protection')) collection = 'smart-generation-z-protection-claims';
+  else if (formTypeLower.includes('nem home protection')) collection = 'nem-home-protection-claims';
   
   // KYC forms
   else if (formTypeLower.includes('individual') && formTypeLower.includes('kyc')) {

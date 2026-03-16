@@ -69,7 +69,10 @@ const getCollectionsForRole = (role: string) => {
       'motor-claims', 'burglary-claims', 'all-risk-claims', 'money-insurance-claims',
       'fidelity-guarantee-claims', 'fire-special-perils-claims', 'goods-in-transit-claims',
       'group-personal-accident-claims', 'employers-liability-claims', 'professional-indemnity-claims',
-      'public-liability-claims', 'rent-assurance-claims', 'contractors-claims', 'combined-gpa-employers-liability-claims'
+      'public-liability-claims', 'rent-assurance-claims', 'contractors-claims', 'combined-gpa-employers-liability-claims',
+      // NEM Smart Protection Claims
+      'smart-motorist-protection-claims', 'smart-students-protection-claims', 'smart-traveller-protection-claims',
+      'smart-artisan-protection-claims', 'smart-generation-z-protection-claims', 'nem-home-protection-claims'
     );
   }
   

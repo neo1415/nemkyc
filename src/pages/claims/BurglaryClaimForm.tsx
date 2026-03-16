@@ -539,10 +539,10 @@ const BurglaryClaimForm: React.FC = () => {
             </div>
             
             <FormTextarea name="howEntryEffected" label="Give full details of how entry was affected" required />
-            <FormTextarea name="roomsEntered" label="Rooms entered" required />
+            <FormTextarea name="roomsEntered" label="Which rooms were entered?" required />
             
             <div className="space-y-2">
-              <Label>Premises occupied at time of loss? *</Label>
+              <Label>Were the premises occupied at time of loss? *</Label>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -579,13 +579,13 @@ const BurglaryClaimForm: React.FC = () => {
             </div>
             
             {watchedValues.premisesOccupied === false && (
-              <FormField name="lastOccupiedDate" label="Last occupied date/time" required />
+              <FormField name="lastOccupiedDate" label="state date and hour they were last occupied?" required />
             )}
             
             {/* Add similar validation patterns for all other boolean fields */}
             {/* SUSPICIONS SECTION */}
             <div className="space-y-2">
-              <Label>Suspicions on anyone? *</Label>
+              <Label>Do your suspicions rest upon anyone? *</Label>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -627,7 +627,7 @@ const BurglaryClaimForm: React.FC = () => {
             
             {/* POLICE SECTION */}
             <div className="space-y-2">
-              <Label>Police informed? *</Label>
+              <Label>Have you informed the Police? *</Label>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -665,7 +665,7 @@ const BurglaryClaimForm: React.FC = () => {
             
             {watchedValues.policeInformed === true && (
               <div className="space-y-4">
-                <FormDatePicker name="policeDate" label="Date" required />
+                <FormDatePicker name="policeDate" label="Date of notification" required />
                 <FormTextarea name="policeStation" label="Station address" required />
               </div>
             )}
@@ -675,7 +675,7 @@ const BurglaryClaimForm: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField name="totalContentsValue" label="At the time of loss, what amount would you value the total contents of your premises?" type="number" required />
-              <FormField name="sumInsuredFirePolicy" label="Sum insured under fire policy" type="number" required />
+              <FormField name="sumInsuredFirePolicy" label="What is the sum insured under your fire policy?" type="number" required />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -727,7 +727,7 @@ const BurglaryClaimForm: React.FC = () => {
             
             {/* OTHER INSURANCE SECTION */}
             <div className="space-y-2">
-              <Label>Is there any other insurance covering the said property? *</Label>
+              <Label>a) Is there any other insurance cover against this loss? *</Label>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -764,12 +764,12 @@ const BurglaryClaimForm: React.FC = () => {
             </div>
             
             {watchedValues.otherInsurance === true && (
-              <FormTextarea name="otherInsurerDetails" label="Please give full particulars" required />
+              <FormTextarea name="otherInsurerDetails" label="If YES, provide name and address of Insurers" required />
             )}
             
             {/* PREVIOUS LOSS SECTION */}
             <div className="space-y-2">
-              <Label>Have you or your household suffered any previous loss by theft, burglary or housebreaking within the last 5 years? *</Label>
+              <Label>Have you ever sustained a previous loss by burglary or theft? *</Label>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox

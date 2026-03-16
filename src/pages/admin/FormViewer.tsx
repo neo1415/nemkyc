@@ -169,7 +169,21 @@ const FormViewer: React.FC = () => {
       'fidelity-guarantee-claims': 'fidelity-guarantee-claims',
       'rent-assurance-claims': 'rent-assurance-claims',
       'contractors-plant-machinery-claims': 'contractors-plant-machinery-claims',
-      'combined-gpa-employers-liability-claims': 'combined-gpa-employers-liability-claims'
+      'combined-gpa-employers-liability-claims': 'combined-gpa-employers-liability-claims',
+      // NEM Smart Protection Claims
+      'smart-motorist-protection-claims': 'smart-motorist-protection-claims',
+      'smart-students-protection-claims': 'smart-students-protection-claims',
+      'smart-traveller-protection-claims': 'smart-traveller-protection-claims',
+      'smart-artisan-protection-claims': 'smart-artisan-protection-claims',
+      'smart-generation-z-protection-claims': 'smart-generation-z-protection-claims',
+      'nem-home-protection-claims': 'nem-home-protection-claims',
+      // NEM Agricultural Claims
+      'livestock-claims': 'livestock-claims',
+      'farm-property-produce-claims': 'farm-property-produce-claims',
+      'poultry-claims': 'poultry-claims',
+      'fishery-fish-farm-claims': 'fishery-fish-farm-claims',
+      'yield-index-claims': 'yield-index-claims',
+      'multi-perils-crop-claims': 'multi-perils-crop-claims'
     };
 
     const mappingKey = collectionMappings[collectionName];
