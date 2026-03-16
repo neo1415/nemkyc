@@ -365,8 +365,9 @@ export class GeminiOCREngine {
 
       console.log('Raw Gemini response text:', textContent);
 
-      // Parse JSON response
-      const parsedData = JSON.parse(textContent);
+      // Clean and parse JSON response (handles markdown code fences)
+      const cleanedText = this.cleanJsonResponse(textContent);
+      const parsedData = JSON.parse(cleanedText);
       console.log('Parsed Gemini data:', parsedData);
 
       // Transform data if needed for individual documents
@@ -445,6 +446,25 @@ export class GeminiOCREngine {
     // Add current request
     recentRequests.push(now);
     this.rateLimiter.set(key, recentRequests);
+  }
+
+  /**
+   * Clean JSON response from Gemini API (removes markdown code fences)
+   */
+  private cleanJsonResponse(response: string): string {
+    // Remove markdown code blocks
+    let cleaned = response.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+    
+    // Remove leading/trailing whitespace
+    cleaned = cleaned.trim();
+    
+    // Try to extract JSON from text if it's embedded
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      cleaned = jsonMatch[0];
+    }
+    
+    return cleaned;
   }
 }
 
