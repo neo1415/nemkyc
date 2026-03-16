@@ -48,7 +48,12 @@ const employersLiabilityClaimSchema = yup.object().shape({
   injuredPartyAddress: yup.string().required("Injured party address is required"),
   averageMonthlyEarnings: yup.number().required("Average monthly earnings is required"),
   occupation: yup.string().required("Occupation is required"),
-  dateOfEmployment: yup.date().required("Date of employment is required"),
+  isInDirectEmployment: yup.boolean().required("Direct employment field is required"),
+  dateOfEmployment: yup.date().when('isInDirectEmployment', {
+    is: true,
+    then: (schema) => schema.required("Date of employment is required"),
+    otherwise: (schema) => schema.notRequired()
+  }),
   maritalStatus: yup.string().required("Marital status is required"),
   numberOfChildren: yup.number().required("Number of children is required"),
   agesOfChildren: yup.string(),
@@ -61,9 +66,8 @@ const employersLiabilityClaimSchema = yup.object().shape({
 
   // Injury Details
   natureOfInjuries: yup.string().required("Nature of injuries is required"),
-  machineryInvolved: yup.string(),
-  supervisorName: yup.string(),
-  supervisorPosition: yup.string(),
+  personInChargeName: yup.string(),
+  personInChargePosition: yup.string(),
 
   // Accident Details
   accidentDate: yup.date().required("Accident date is required"),
@@ -300,7 +304,8 @@ interface EmployersLiabilityClaimData {
   injuredPartyAddress: string;
   averageMonthlyEarnings: number;
   occupation: string;
-  dateOfEmployment: Date;
+  isInDirectEmployment: boolean;
+  dateOfEmployment?: Date;
   maritalStatus: string;
   numberOfChildren: number;
   agesOfChildren?: string;
@@ -309,9 +314,8 @@ interface EmployersLiabilityClaimData {
 
   // Injury Details
   natureOfInjuries: string;
-  machineryInvolved?: string;
-  supervisorName?: string;
-  supervisorPosition?: string;
+  personInChargeName?: string;
+  personInChargePosition?: string;
 
   // Accident Details
   accidentDate: Date;
@@ -369,14 +373,14 @@ const defaultValues: Partial<EmployersLiabilityClaimData> = {
   injuredPartyAddress: '',
   averageMonthlyEarnings: 0,
   occupation: '',
+  isInDirectEmployment: false,
   maritalStatus: '',
   numberOfChildren: 0,
   agesOfChildren: '',
   previousAccidents: '',
   natureOfInjuries: '',
-  machineryInvolved: '',
-  supervisorName: '',
-  supervisorPosition: '',
+  personInChargeName: '',
+  personInChargePosition: '',
   accidentTime: '',
   accidentPlace: '',
   reportedBy: '',
@@ -513,7 +517,7 @@ const EmployersLiabilityClaim: React.FC = () => {
   // Step field mappings for validation
   const stepFieldMappings = {
     0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'name', 'address', 'phone', 'email'],
-    1: ['injuredPartyName', 'injuredPartyAge', 'injuredPartyAddress', 'averageMonthlyEarnings', 'occupation', 'dateOfEmployment', 'maritalStatus', 'numberOfChildren', 'agesOfChildren', 'previousAccidents', 'previousAccidentsDetails', 'natureOfInjuries', 'machineryInvolved', 'supervisorName', 'supervisorPosition'],
+    1: ['injuredPartyName', 'injuredPartyAge', 'injuredPartyAddress', 'averageMonthlyEarnings', 'occupation', 'isInDirectEmployment', 'dateOfEmployment', 'maritalStatus', 'numberOfChildren', 'agesOfChildren', 'previousAccidents', 'previousAccidentsDetails', 'natureOfInjuries', 'personInChargeName', 'personInChargePosition'],
     2: ['accidentDate', 'accidentTime', 'accidentPlace', 'dateReported', 'reportedBy', 'dateStoppedWork', 'workDescription', 'howAccidentOccurred', 'soberOrIntoxicated', 'receivingTreatment', 'hospitalName', 'hospitalAddress', 'doctorName', 'doctorAddress'],
     3: ['totallyDisabled', 'dateStoppedWorking', 'estimatedDuration', 'ableToDoAnyDuties', 'dutiesDetails', 'claimMadeOnYou', 'witnesses', 'otherInsurerName', 'otherInsurerAddress', 'otherInsurerPolicyNumber', 'earnings'],
     4: ['agreeToDataPrivacy', 'declarationTrue', 'declarationAdditionalInfo', 'declarationDocuments', 'signature']
@@ -657,7 +661,7 @@ const EmployersLiabilityClaim: React.FC = () => {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div>
-                          <FormField name="averageMonthlyEarnings" label="Average Monthly Earnings" type="number" required />
+                          <FormField name="averageMonthlyEarnings" label="State Injured Party's average monthly earnings" type="number" required />
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -668,7 +672,7 @@ const EmployersLiabilityClaim: React.FC = () => {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div>
-                          <FormField name="occupation" label="Occupation" required />
+                          <FormField name="occupation" label="Indicate Occupation in which he/she is employed" required />
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -677,23 +681,28 @@ const EmployersLiabilityClaim: React.FC = () => {
                     </Tooltip>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormSelect name="isInDirectEmployment" label="Is the Injured Party in your direct employment" required placeholder="Select yes or no">
+                    <SelectItem value="true">Yes</SelectItem>
+                    <SelectItem value="false">No</SelectItem>
+                  </FormSelect>
+                  
+                  {watchedValues.isInDirectEmployment === true && (
                     <FormDatePicker name="dateOfEmployment" label="Date of Employment" required />
-                    
-                    <FormSelect name="maritalStatus" label="Marital Status" required placeholder="Select marital status">
-                      <SelectItem value="Single">Single</SelectItem>
-                      <SelectItem value="Married">Married</SelectItem>
-                      <SelectItem value="Divorced">Divorced</SelectItem>
-                      <SelectItem value="Widowed">Widowed</SelectItem>
-                    </FormSelect>
-                  </div>
+                  )}
+                  
+                  <FormSelect name="maritalStatus" label="Injured Person's Marital Status" required placeholder="Select marital status">
+                    <SelectItem value="Single">Single</SelectItem>
+                    <SelectItem value="Married">Married</SelectItem>
+                    <SelectItem value="Divorced">Divorced</SelectItem>
+                    <SelectItem value="Widowed">Widowed</SelectItem>
+                  </FormSelect>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField name="numberOfChildren" label="Number of Children" type="number" required />
                     <FormTextarea name="agesOfChildren" label="Ages of Children" placeholder="e.g., 5, 8, 12" />
                   </div>
                   
-                  <FormSelect name="previousAccidents" label="Previous Accidents" required placeholder="Select yes or no">
+                  <FormSelect name="previousAccidents" label="Has the injured party been previously involved in any accident" required placeholder="Select yes or no">
                     <SelectItem value="yes">Yes</SelectItem>
                     <SelectItem value="no">No</SelectItem>
                   </FormSelect>
@@ -713,28 +722,22 @@ const EmployersLiabilityClaim: React.FC = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div>
-                        <FormTextarea name="natureOfInjuries" label="Nature of Injuries" required />
+                        <FormTextarea 
+                          name="natureOfInjuries" 
+                          label="Please state the full nature of the injuries sustained" 
+                          placeholder="If incident occurred in connection with any machinery, provide details of machinery involved"
+                          required 
+                        />
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Describe the nature and extent of injuries</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <FormTextarea name="machineryInvolved" label="Machinery Involved" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Describe any machinery involved in the incident</p>
+                      <p>Describe the nature and extent of injuries, including any machinery involved</p>
                     </TooltipContent>
                   </Tooltip>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField name="supervisorName" label="Name of Supervisor" />
-                    <FormField name="supervisorPosition" label="Position of Supervisor" />
+                    <FormField name="personInChargeName" label="Name of Person In Charge" />
+                    <FormField name="personInChargePosition" label="Position of Person In Charge" />
                   </div>
                 </div>
               </TooltipProvider>

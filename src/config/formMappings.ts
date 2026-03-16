@@ -67,7 +67,7 @@ export const FORM_MAPPINGS: FormMapping = {
       {
         title: 'Ownership & Recovery',
         fields: [
-          { key: 'soleOwner', label: 'Sole Owner', type: 'boolean', editable: true },
+          { key: 'soleOwner', label: 'Are you the sole owner of the property destroyed, stolen or damaged?', type: 'boolean', editable: true },
           { key: 'ownershipExplanation', label: 'Ownership Explanation', type: 'textarea', editable: true, conditional: { dependsOn: 'soleOwner', value: 'false' } },
           { key: 'hasHirePurchase', label: 'Has Hire Purchase', type: 'boolean', editable: true },
           { key: 'hirePurchaseCompany', label: 'Hire Purchase Company', type: 'text', editable: true, conditional: { dependsOn: 'hasHirePurchase', value: 'true' } },
@@ -75,13 +75,11 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'recoveryStepsTaken', label: 'Recovery Steps Taken', type: 'textarea', editable: true },
           { key: 'hasOtherInsurance', label: 'Has Other Insurance', type: 'boolean', editable: true },
           { key: 'otherInsuranceDetails', label: 'Other Insurance Details', type: 'textarea', editable: true, conditional: { dependsOn: 'hasOtherInsurance', value: 'true' } },
-          { key: 'hasPreviousLoss', label: 'Has Previous Loss', type: 'boolean', editable: true },
-          { key: 'previousLossDetails', label: 'Previous Loss Details', type: 'textarea', editable: true, conditional: { dependsOn: 'hasPreviousLoss', value: 'true' } },
           { key: 'totalPropertyValue', label: 'Total Property Value', type: 'currency', editable: true },
-          { key: 'hasOtherInsuranceAtTime', label: 'Has Other Insurance At Time', type: 'boolean', editable: true },
-          { key: 'otherInsuranceAtTimeDetails', label: 'Other Insurance At Time Details', type: 'textarea', editable: true, conditional: { dependsOn: 'hasOtherInsuranceAtTime', value: 'true' } },
-          { key: 'hasPriorClaims', label: 'Has Prior Claims', type: 'boolean', editable: true },
-          { key: 'priorClaimsDetails', label: 'Prior Claims Details', type: 'textarea', editable: true, conditional: { dependsOn: 'hasPriorClaims', value: 'true' } },
+          { key: 'hasOtherInsuranceAtTime', label: 'At the time of the incident, was there any other insurance cover in place?', type: 'boolean', editable: true },
+          { key: 'hasPriorClaims', label: 'Have you previously made a Claim with any Insurer in respect of risks covered by this policy?', type: 'boolean', editable: true },
+          { key: 'priorClaimsDetails', label: 'Prior Claims - Insurer/Policy Details', type: 'textarea', editable: true, conditional: { dependsOn: 'hasPriorClaims', value: 'true' } },
+          { key: 'hasPreviousBurglaryLoss', label: 'Have you previously suffered a loss by Burglary, Theft or Housebreaking?', type: 'boolean', editable: true },
           { key: 'policeInformed', label: 'Police Informed', type: 'boolean', editable: true },
           { key: 'policeStationDetails', label: 'Police Station Details', type: 'text', editable: true, conditional: { dependsOn: 'policeInformed', value: 'true' } },
         ]
@@ -275,6 +273,11 @@ export const FORM_MAPPINGS: FormMapping = {
     {
       title: 'Declaration & Signature',
       fields: [
+        { key: 'declarationName', label: 'Declaration Name', type: 'text', editable: false },
+        { key: 'declarationPlace', label: 'Declaration Place', type: 'text', editable: false },
+        { key: 'declarationAmount', label: 'Declaration Amount (₦)', type: 'currency', editable: false },
+        { key: 'declarationDayMonth', label: 'Declaration Day/Month', type: 'text', editable: false },
+        { key: 'declarationDate', label: 'Declaration Date', type: 'date', editable: false },
         { key: 'writtenDeclaration', label: 'Written Declaration', type: 'textarea', editable: false },
         { key: 'signature', label: 'Digital Signature', type: 'text', editable: false }
       ]
@@ -602,23 +605,23 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'injuredPartyName', label: 'Injured Party Name', type: 'text', editable: true },
           { key: 'injuredPartyAge', label: 'Injured Party Age', type: 'number', editable: true },
           { key: 'injuredPartyAddress', label: 'Injured Party Address', type: 'text', editable: true },
-          { key: 'averageMonthlyEarnings', label: 'Average Monthly Earnings', type: 'number', editable: true },
-          { key: 'occupation', label: 'Occupation', type: 'text', editable: true },
-          { key: 'dateOfEmployment', label: 'Date of Employment', type: 'date', editable: true },
-          { key: 'maritalStatus', label: 'Marital Status', type: 'text', editable: true },
+          { key: 'averageMonthlyEarnings', label: "State Injured Party's average monthly earnings", type: 'number', editable: true },
+          { key: 'occupation', label: 'Indicate Occupation in which he/she is employed', type: 'text', editable: true },
+          { key: 'isInDirectEmployment', label: 'Is the Injured Party in your direct employment', type: 'boolean', editable: true },
+          { key: 'dateOfEmployment', label: 'Date of Employment', type: 'date', editable: true, conditional: { dependsOn: 'isInDirectEmployment', value: 'true' } },
+          { key: 'maritalStatus', label: "Injured Person's Marital Status", type: 'text', editable: true },
           { key: 'numberOfChildren', label: 'Number of Children', type: 'number', editable: true },
           { key: 'agesOfChildren', label: 'Ages of Children', type: 'text', editable: true },
-          { key: 'previousAccidents', label: 'Previous Accidents', type: 'text', editable: true },
+          { key: 'previousAccidents', label: 'Has the injured party been previously involved in any accident', type: 'text', editable: true },
           { key: 'previousAccidentsDetails', label: 'Previous Accidents Details', type: 'text', editable: true, conditional: { dependsOn: 'previousAccidents', value: 'yes' } },
         ]
       },
       {
         title: 'Injury Details',
         fields: [
-          { key: 'natureOfInjuries', label: 'Nature of Injuries', type: 'text', editable: true },
-          { key: 'machineryInvolved', label: 'Machinery Involved', type: 'text', editable: true },
-          { key: 'supervisorName', label: 'Supervisor Name', type: 'text', editable: true },
-          { key: 'supervisorPosition', label: 'Supervisor Position', type: 'text', editable: true },
+          { key: 'natureOfInjuries', label: 'Please state the full nature of the injuries sustained', type: 'textarea', editable: true },
+          { key: 'personInChargeName', label: 'Name of Person In Charge', type: 'text', editable: true },
+          { key: 'personInChargePosition', label: 'Position of Person In Charge', type: 'text', editable: true },
         ]
       },
       {
@@ -848,23 +851,23 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'dateOfTheft', label: 'Date of Theft', type: 'date', editable: true },
           { key: 'timeOfTheft', label: 'Time of Theft', type: 'text', editable: true },
           { key: 'howEntryEffected', label: 'Give full details of how entry was affected', type: 'textarea', editable: true },
-          { key: 'roomsEntered', label: 'Rooms Entered', type: 'textarea', editable: true },
-          { key: 'premisesOccupied', label: 'Premises Occupied', type: 'boolean', editable: true },
-          { key: 'lastOccupiedDate', label: 'Last Occupied Date', type: 'text', editable: true },
-          { key: 'suspicions', label: 'Have Suspicions', type: 'boolean', editable: true },
+          { key: 'roomsEntered', label: 'Which rooms were entered?', type: 'textarea', editable: true },
+          { key: 'premisesOccupied', label: 'Were the premises occupied at time of loss?', type: 'boolean', editable: true },
+          { key: 'lastOccupiedDate', label: 'state date and hour they were last occupied?', type: 'text', editable: true },
+          { key: 'suspicions', label: 'Do your suspicions rest upon anyone?', type: 'boolean', editable: true },
           { key: 'suspicionName', label: 'Suspicion Name', type: 'text', editable: true },
-          { key: 'policeInformed', label: 'Police Informed', type: 'boolean', editable: true },
-          { key: 'policeDate', label: 'Police Date', type: 'date', editable: true },
+          { key: 'policeInformed', label: 'Have you informed the Police?', type: 'boolean', editable: true },
+          { key: 'policeDate', label: 'Date of notification', type: 'date', editable: true },
           { key: 'policeStation', label: 'Police Station', type: 'text', editable: true },
           { key: 'soleOwner', label: 'Sole Owner', type: 'boolean', editable: true },
           { key: 'ownerDetails', label: 'Owner Details', type: 'textarea', editable: true },
-          { key: 'otherInsurance', label: 'Other Insurance', type: 'boolean', editable: true },
-          { key: 'otherInsurerDetails', label: 'Other Insurer Details', type: 'textarea', editable: true },
+          { key: 'otherInsurance', label: 'a) Is there any other insurance cover against this loss?', type: 'boolean', editable: true },
+          { key: 'otherInsurerDetails', label: 'If YES, provide name and address of Insurers', type: 'textarea', editable: true },
           { key: 'totalContentsValue', label: 'Total Contents Value', type: 'currency', editable: true },
-          { key: 'sumInsuredFirePolicy', label: 'Sum Insured Fire Policy', type: 'currency', editable: true },
+          { key: 'sumInsuredFirePolicy', label: 'What is the sum insured under your fire policy?', type: 'currency', editable: true },
           { key: 'fireInsurerName', label: 'Fire Insurer Name', type: 'text', editable: true },
           { key: 'fireInsurerAddress', label: 'Fire Insurer Address', type: 'textarea', editable: true },
-          { key: 'previousLoss', label: 'Previous Loss', type: 'boolean', editable: true },
+          { key: 'previousLoss', label: 'Have you ever sustained a previous loss by burglary or theft?', type: 'boolean', editable: true },
           { key: 'previousLossDetails', label: 'Previous Loss Details', type: 'textarea', editable: true },
         ]
       },
@@ -1056,11 +1059,11 @@ export const FORM_MAPPINGS: FormMapping = {
               { value: 'no', label: 'No' }
             ]
           },
-          { key: 'amountAtStart', label: 'How much was in employee\'s possession at journey start? (₦)', type: 'currency', editable: true },
-          { key: 'disbursements', label: 'What disbursements were made by him during journey? (₦)', type: 'currency', editable: true },
+          { key: 'amountAtStart', label: 'How much was in the employee\'s possession at the commencement of the journey? (₦)', type: 'currency', editable: true },
+          { key: 'disbursements', label: 'What disbursement were made by him during the journey? (₦)', type: 'currency', editable: true },
           {
             key: 'doubtIntegrity',
-            label: 'Any reason to doubt integrity of employee?',
+            label: 'Have you any reason to doubt the integrity of the employee?',
             type: 'radio',
             editable: true,
             options: [
@@ -1110,7 +1113,7 @@ export const FORM_MAPPINGS: FormMapping = {
           { key: 'policeStation', label: 'Police Station', type: 'text', editable: true, conditional: { dependsOn: 'policeNotified', value: 'yes' } },
           {
             key: 'previousLoss',
-            label: 'Previous loss under the policy?',
+            label: 'Have you ever sustained a previous loss coming within the scope of the policy?',
             type: 'radio',
             editable: true,
             options: [
@@ -1118,7 +1121,6 @@ export const FORM_MAPPINGS: FormMapping = {
               { value: 'no', label: 'No' }
             ]
           },
-          { key: 'previousLossDetails', label: 'Details of previous loss', type: 'textarea', editable: true, conditional: { dependsOn: 'previousLoss', value: 'yes' } },
           { key: 'lossAmount', label: 'What is the amount of loss? (₦)', type: 'currency', editable: true },
           { key: 'lossDescription', label: 'What did it consist of?', type: 'textarea', editable: true },
         ]
@@ -1331,34 +1333,36 @@ export const FORM_MAPPINGS: FormMapping = {
       ]
     },
     {
-      title: 'Witness Information',
-      fields: [
-        { key: 'witnesses', label: 'Witnesses', type: 'array', editable: true },
-      ]
-    },
-    {
       title: 'Doctor Information',
       fields: [
-        { key: 'doctorName', label: 'Name of Doctor', type: 'text', editable: true },
-        { key: 'doctorAddress', label: 'Address of Doctor', type: 'textarea', editable: true },
+        { key: 'doctorName', label: 'Name of Doctor In Attendance', type: 'text', editable: true },
+        { key: 'doctorAddress', label: 'Address of Doctor In Attendance', type: 'textarea', editable: true },
         { key: 'isUsualDoctor', label: 'Is this your usual doctor?', type: 'boolean', editable: true },
       ]
     },
     {
       title: 'Incapacity Details',
       fields: [
-        { key: 'totalIncapacityFrom', label: 'Total Incapacity From', type: 'date', editable: true },
-        { key: 'totalIncapacityTo', label: 'Total Incapacity To', type: 'date', editable: true },
-        { key: 'partialIncapacityFrom', label: 'Partial Incapacity From', type: 'date', editable: true },
-        { key: 'partialIncapacityTo', label: 'Partial Incapacity To', type: 'date', editable: true },
+        { key: 'totalIncapacityFrom', label: 'How long have you been totally incapacitated from attending to your job? - From', type: 'date', editable: true },
+        { key: 'totalIncapacityTo', label: 'How long have you been totally incapacitated from attending to your job? - To', type: 'date', editable: true },
+        { key: 'partialIncapacityFrom', label: 'How long have you been partially incapacitated in the sense of being necessarily prevented from attending to a substantial and essential part of your occupation? - From', type: 'date', editable: true },
+        { key: 'partialIncapacityTo', label: 'How long have you been partially incapacitated in the sense of being necessarily prevented from attending to a substantial and essential part of your occupation? - To', type: 'date', editable: true },
       ]
     },
     {
       title: 'Other Insurers',
       fields: [
-        { key: 'otherInsurerName', label: 'Other Insurer Name', type: 'text', editable: true },
-        { key: 'otherInsurerAddress', label: 'Other Insurer Address', type: 'textarea', editable: true },
-        { key: 'otherPolicyNumber', label: 'Other Insurer Policy Number', type: 'text', editable: true },
+        { key: 'otherInsurerName', label: 'Please provide name, address and policy number of any insurers concerned with this accident - Name', type: 'text', editable: true },
+        { key: 'otherInsurerAddress', label: 'Please provide name, address and policy number of any insurers concerned with this accident - Address', type: 'textarea', editable: true },
+        { key: 'otherPolicyNumber', label: 'Please provide name, address and policy number of any insurers concerned with this accident - Policy Number', type: 'text', editable: true },
+      ]
+    },
+    {
+      title: 'Name and Address of Witnesses',
+      fields: [
+        { key: 'witnesses', label: 'Witnesses', type: 'array', editable: true },
+        { key: 'witnessName', label: 'Name of Witness', type: 'text', editable: true },
+        { key: 'witnessAddress', label: 'Address of Witness', type: 'textarea', editable: true },
       ]
     },
     {
@@ -2355,6 +2359,904 @@ export const FORM_MAPPINGS: FormMapping = {
         title: 'Document Upload',
         fields: [
           { key: 'identification', label: 'Identification Document', type: 'file', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'smart-students-protection-claims': {
+    title: 'Smart Students Protection Claim',
+    sections: [
+      {
+        title: 'Policy Information',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
+          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Insured Details',
+        fields: [
+          { key: 'nameOfInsured', label: 'Student/Pupil Name', type: 'text', editable: true },
+          { key: 'address', label: 'Contact Address', type: 'textarea', editable: true },
+          { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
+          { key: 'email', label: 'Email', type: 'email', editable: true }
+        ]
+      },
+      {
+        title: 'Details of Loss',
+        fields: [
+          { key: 'accidentDate', label: 'Date of Accident', type: 'date', editable: true },
+          { key: 'accidentTime', label: 'Time of Accident', type: 'text', editable: true },
+          { key: 'accidentLocation', label: 'Place of Accident', type: 'text', editable: true },
+          { key: 'accidentDescription', label: 'Incident Description', type: 'textarea', editable: true },
+          { key: 'injuryDescription', label: 'Particulars of Injuries', type: 'textarea', editable: true },
+          { key: 'doctorNameAddress', label: 'Doctor Name and Address', type: 'textarea', editable: true },
+          { key: 'isUsualDoctor', label: 'Is this your usual doctor?', type: 'text', editable: true, conditional: { dependsOn: 'doctorNameAddress', value: 'not_empty' } },
+          { key: 'totalIncapacityFrom', label: 'Total Incapacity From', type: 'date', editable: true },
+          { key: 'totalIncapacityTo', label: 'Total Incapacity To', type: 'date', editable: true },
+          { key: 'partialIncapacityFrom', label: 'Partial Incapacity From', type: 'date', editable: true },
+          { key: 'partialIncapacityTo', label: 'Partial Incapacity To', type: 'date', editable: true },
+          { key: 'otherInsurerName', label: 'Other Insurer Name', type: 'text', editable: true },
+          { key: 'otherInsurerAddress', label: 'Other Insurer Address', type: 'textarea', editable: true },
+          { key: 'otherInsurerPolicyNumber', label: 'Other Insurer Policy Number', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Witnesses',
+        fields: [
+          { key: 'witnesses', label: 'Witnesses', type: 'array', editable: true }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature', type: 'text', editable: false }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'smart-traveller-protection-claims': {
+    title: 'Smart Traveller Protection Claim',
+    sections: [
+      {
+        title: 'Policy Information',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
+          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Insured Details',
+        fields: [
+          { key: 'companyName', label: 'Company Name', type: 'text', editable: true },
+          { key: 'address', label: 'Address', type: 'textarea', editable: true },
+          { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
+          { key: 'email', label: 'Email', type: 'email', editable: true }
+        ]
+      },
+      {
+        title: 'Details of Loss',
+        fields: [
+          { key: 'accidentDate', label: 'Date of Accident', type: 'date', editable: true },
+          { key: 'accidentTime', label: 'Time of Accident', type: 'text', editable: true },
+          { key: 'accidentLocation', label: 'Place of Accident', type: 'text', editable: true },
+          { key: 'accidentDescription', label: 'Incident Description', type: 'textarea', editable: true },
+          { key: 'injuryDescription', label: 'Particulars of Injuries', type: 'textarea', editable: true },
+          { key: 'doctorNameAddress', label: 'Doctor Name and Address', type: 'textarea', editable: true },
+          { key: 'isUsualDoctor', label: 'Is this your usual doctor?', type: 'text', editable: true, conditional: { dependsOn: 'doctorNameAddress', value: 'not_empty' } },
+          { key: 'totalIncapacityFrom', label: 'Total Incapacity From', type: 'date', editable: true },
+          { key: 'totalIncapacityTo', label: 'Total Incapacity To', type: 'date', editable: true },
+          { key: 'partialIncapacityFrom', label: 'Partial Incapacity From', type: 'date', editable: true },
+          { key: 'partialIncapacityTo', label: 'Partial Incapacity To', type: 'date', editable: true },
+          { key: 'otherInsurerName', label: 'Other Insurer Name', type: 'text', editable: true },
+          { key: 'otherInsurerAddress', label: 'Other Insurer Address', type: 'textarea', editable: true },
+          { key: 'otherInsurerPolicyNumber', label: 'Other Insurer Policy Number', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Witnesses',
+        fields: [
+          { key: 'witnesses', label: 'Witnesses', type: 'array', editable: true }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature', type: 'text', editable: false }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'smart-artisan-protection-claims': {
+    title: 'Smart Artisan Protection Claim',
+    sections: [
+      {
+        title: 'Policy Information',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
+          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Insured Details',
+        fields: [
+          { key: 'nameOfInsured', label: 'Insured Name', type: 'text', editable: true },
+          { key: 'address', label: 'Address', type: 'textarea', editable: true },
+          { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
+          { key: 'email', label: 'Email', type: 'email', editable: true }
+        ]
+      },
+      {
+        title: 'Details of Loss',
+        fields: [
+          { key: 'accidentDate', label: 'Date of Accident', type: 'date', editable: true },
+          { key: 'accidentTime', label: 'Time of Accident', type: 'text', editable: true },
+          { key: 'accidentLocation', label: 'Place of Accident', type: 'text', editable: true },
+          { key: 'accidentDescription', label: 'Incident Description', type: 'textarea', editable: true },
+          { key: 'injuryDescription', label: 'Particulars of Injuries', type: 'textarea', editable: true },
+          { key: 'doctorNameAddress', label: 'Doctor Name and Address', type: 'textarea', editable: true },
+          { key: 'isUsualDoctor', label: 'Is this your usual doctor?', type: 'text', editable: true, conditional: { dependsOn: 'doctorNameAddress', value: 'not_empty' } },
+          { key: 'totalIncapacityFrom', label: 'Total Incapacity From', type: 'date', editable: true },
+          { key: 'totalIncapacityTo', label: 'Total Incapacity To', type: 'date', editable: true },
+          { key: 'partialIncapacityFrom', label: 'Partial Incapacity From', type: 'date', editable: true },
+          { key: 'partialIncapacityTo', label: 'Partial Incapacity To', type: 'date', editable: true },
+          { key: 'otherInsurerName', label: 'Other Insurer Name', type: 'text', editable: true },
+          { key: 'otherInsurerAddress', label: 'Other Insurer Address', type: 'textarea', editable: true },
+          { key: 'otherInsurerPolicyNumber', label: 'Other Insurer Policy Number', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Witnesses',
+        fields: [
+          { key: 'witnesses', label: 'Witnesses', type: 'array', editable: true }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature', type: 'text', editable: false }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'smart-motorist-protection-claims': {
+    title: 'Smart Motorist Protection Claim',
+    sections: [
+      {
+        title: 'Policy Information',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
+          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Insured Details',
+        fields: [
+          { key: 'nameOfInsured', label: 'Insured Name', type: 'text', editable: true },
+          { key: 'address', label: 'Address', type: 'textarea', editable: true },
+          { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
+          { key: 'email', label: 'Email', type: 'email', editable: true }
+        ]
+      },
+      {
+        title: 'Details of Loss',
+        fields: [
+          { key: 'accidentDate', label: 'Date of Accident', type: 'date', editable: true },
+          { key: 'accidentTime', label: 'Time of Accident', type: 'text', editable: true },
+          { key: 'accidentLocation', label: 'Place of Accident', type: 'text', editable: true },
+          { key: 'accidentDescription', label: 'Incident Description', type: 'textarea', editable: true },
+          { key: 'injuryDescription', label: 'Particulars of Injuries', type: 'textarea', editable: true },
+          { key: 'doctorNameAddress', label: 'Doctor Name and Address', type: 'textarea', editable: true },
+          { key: 'isUsualDoctor', label: 'Is this your usual doctor?', type: 'text', editable: true, conditional: { dependsOn: 'doctorNameAddress', value: 'not_empty' } },
+          { key: 'totalIncapacityFrom', label: 'Total Incapacity From', type: 'date', editable: true },
+          { key: 'totalIncapacityTo', label: 'Total Incapacity To', type: 'date', editable: true },
+          { key: 'partialIncapacityFrom', label: 'Partial Incapacity From', type: 'date', editable: true },
+          { key: 'partialIncapacityTo', label: 'Partial Incapacity To', type: 'date', editable: true },
+          { key: 'otherInsurerName', label: 'Other Insurer Name', type: 'text', editable: true },
+          { key: 'otherInsurerAddress', label: 'Other Insurer Address', type: 'textarea', editable: true },
+          { key: 'otherInsurerPolicyNumber', label: 'Other Insurer Policy Number', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Witnesses',
+        fields: [
+          { key: 'witnesses', label: 'Witnesses', type: 'array', editable: true }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature', type: 'text', editable: false }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'smart-generation-z-protection-claims': {
+    title: 'Smart Generation Z Protection Claim',
+    sections: [
+      {
+        title: 'Policy Information',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'periodOfCoverFrom', label: 'Period of Cover From', type: 'date', editable: true },
+          { key: 'periodOfCoverTo', label: 'Period of Cover To', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Insured Details',
+        fields: [
+          { key: 'nameOfInsured', label: 'Insured Name', type: 'text', editable: true },
+          { key: 'address', label: 'Address', type: 'textarea', editable: true },
+          { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
+          { key: 'email', label: 'Email', type: 'email', editable: true }
+        ]
+      },
+      {
+        title: 'Details of Loss',
+        fields: [
+          { key: 'accidentDate', label: 'Date of Accident', type: 'date', editable: true },
+          { key: 'accidentTime', label: 'Time of Accident', type: 'text', editable: true },
+          { key: 'accidentLocation', label: 'Place of Accident', type: 'text', editable: true },
+          { key: 'accidentDescription', label: 'Incident Description', type: 'textarea', editable: true },
+          { key: 'injuryDescription', label: 'Particulars of Injuries', type: 'textarea', editable: true },
+          { key: 'doctorNameAddress', label: 'Doctor Name and Address', type: 'textarea', editable: true },
+          { key: 'isUsualDoctor', label: 'Is this your usual doctor?', type: 'text', editable: true, conditional: { dependsOn: 'doctorNameAddress', value: 'not_empty' } },
+          { key: 'totalIncapacityFrom', label: 'Total Incapacity From', type: 'date', editable: true },
+          { key: 'totalIncapacityTo', label: 'Total Incapacity To', type: 'date', editable: true },
+          { key: 'partialIncapacityFrom', label: 'Partial Incapacity From', type: 'date', editable: true },
+          { key: 'partialIncapacityTo', label: 'Partial Incapacity To', type: 'date', editable: true },
+          { key: 'otherInsurerName', label: 'Other Insurer Name', type: 'text', editable: true },
+          { key: 'otherInsurerAddress', label: 'Other Insurer Address', type: 'textarea', editable: true },
+          { key: 'otherInsurerPolicyNumber', label: 'Other Insurer Policy Number', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Witnesses',
+        fields: [
+          { key: 'witnesses', label: 'Witnesses', type: 'array', editable: true }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature', type: 'text', editable: false }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'nem-home-protection-claims': {
+    title: 'NEM Home Protection Policy Claim',
+    sections: [
+      {
+        title: 'Policy Information',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'periodOfCoverFrom', label: 'Period of Cover: From', type: 'date', editable: true },
+          { key: 'periodOfCoverTo', label: 'Period of Cover: To', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Insured Details',
+        fields: [
+          { key: 'title', label: 'Title', type: 'text', editable: true },
+          { key: 'surname', label: 'Surname', type: 'text', editable: true },
+          { key: 'firstName', label: 'First Name', type: 'text', editable: true },
+          { key: 'otherName', label: 'Other Name', type: 'text', editable: true },
+          { key: 'dateOfBirth', label: 'Date of Birth', type: 'date', editable: true },
+          { key: 'gender', label: 'Gender', type: 'text', editable: true },
+          { key: 'companyName', label: 'Name of the Company (if Applicable)', type: 'text', editable: true },
+          { key: 'address', label: 'Address', type: 'textarea', editable: true },
+          { key: 'phone', label: 'Phone Number', type: 'text', editable: true },
+          { key: 'email', label: 'Email', type: 'email', editable: true }
+        ]
+      },
+      {
+        title: 'Details of Loss',
+        fields: [
+          { key: 'lossAddress', label: 'Full Address of premises where the loss occurred', type: 'textarea', editable: true },
+          { key: 'perilType', label: 'Type of Peril', type: 'text', editable: true },
+          { key: 'dateOfLoss', label: 'Date of Loss', type: 'date', editable: true },
+          { key: 'timeOfLoss', label: 'Time of Loss', type: 'text', editable: true },
+          { key: 'medicalCertificateRequired', label: 'Medical Certificate Required', type: 'boolean', editable: true, conditional: { dependsOn: 'perilType', value: 'flood' } },
+          { key: 'extentOfDamage', label: 'Extent of Damage by the Peril', type: 'textarea', editable: true },
+          { key: 'propertyInterest', label: 'Your interest in the Property', type: 'text', editable: true },
+          { key: 'propertyInterestOther', label: 'Please state other interest', type: 'text', editable: true, conditional: { dependsOn: 'propertyInterest', value: 'other' } },
+          { key: 'isSoleOwner', label: 'Are you the sole owner of the property damaged?', type: 'text', editable: true },
+          { key: 'otherOwnerName', label: 'Name of other owners', type: 'text', editable: true, conditional: { dependsOn: 'isSoleOwner', value: 'no' } },
+          { key: 'otherOwnerPhone', label: 'Phone Number of other owners', type: 'text', editable: true, conditional: { dependsOn: 'isSoleOwner', value: 'no' } },
+          { key: 'otherOwnerAddress', label: 'Address of other owners', type: 'textarea', editable: true, conditional: { dependsOn: 'isSoleOwner', value: 'no' } },
+          { key: 'hasOtherInsurance', label: 'Is there any other insurance cover against this loss?', type: 'text', editable: true },
+          { key: 'otherInsurerName', label: 'Name of other Insurers', type: 'text', editable: true, conditional: { dependsOn: 'hasOtherInsurance', value: 'yes' } },
+          { key: 'otherInsurerAddress', label: 'Address of other Insurers', type: 'textarea', editable: true, conditional: { dependsOn: 'hasOtherInsurance', value: 'yes' } },
+          { key: 'destroyedPropertyItems', label: 'Detail of Property Destroyed', type: 'array', editable: true }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'declarationTrue', label: 'Declaration Confirmed', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Signature', type: 'text', editable: false }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'farm-property-produce-claims': {
+    title: 'Farm Property & Produce Insurance Claim',
+    sections: [
+      {
+        title: 'Policy & Insured Details',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'nameOfInsured', label: 'Name of the Insured', type: 'text', editable: true },
+          { key: 'phoneNumber', label: 'Phone Number', type: 'text', editable: true },
+          { key: 'farmAddress', label: 'Address of the farm where damage occurred', type: 'textarea', editable: true },
+          { key: 'dateOfIncident', label: 'Date of the incident', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Cause of Loss',
+        fields: [
+          { key: 'causeOfLoss', label: 'Cause of Loss', type: 'select', editable: true },
+          { key: 'additionalLossDetails', label: 'Additional details explaining the damage or loss', type: 'textarea', editable: true }
+        ]
+      },
+      {
+        title: 'Property Lost or Damaged',
+        fields: [
+          { key: 'damagedItems', label: 'Damaged Items', type: 'array', editable: true }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Full Name (Digital Signature)', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'livestock-claims': {
+    title: 'Livestock Insurance Claim',
+    sections: [
+      {
+        title: 'Policy & Insured Details',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'nameOfInsured', label: 'Name of the Insured', type: 'text', editable: true },
+          { key: 'farmNameAndAddress', label: 'Name and Address of the Farm', type: 'textarea', editable: true },
+          { key: 'phoneNumber', label: 'Phone Number', type: 'text', editable: true },
+          { key: 'lossDateFrom', label: 'Loss Period From', type: 'date', editable: true },
+          { key: 'lossDateTo', label: 'Loss Period To', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Cause of Loss',
+        fields: [
+          { key: 'causeOfDeath', label: 'Cause of Death', type: 'select', editable: true },
+          { 
+            key: 'diseaseSpecification', 
+            label: 'Please specify disease/pest', 
+            type: 'text', 
+            editable: true,
+            conditional: { dependsOn: 'causeOfDeath', value: 'Outbreak of Pest and Disease' }
+          },
+          { 
+            key: 'otherCauseExplanation', 
+            label: 'Please explain the cause', 
+            type: 'textarea', 
+            editable: true,
+            conditional: { dependsOn: 'causeOfDeath', value: 'Other cause of loss not listed' }
+          }
+        ]
+      },
+      {
+        title: 'Claim Details',
+        fields: [
+          { key: 'vetSurgeonDetails', label: 'Name and address of Veterinary Surgeon', type: 'textarea', editable: true },
+          { key: 'claimEstimate', label: 'Claim estimate (Naira)', type: 'text', editable: true },
+          { key: 'previousLossParticulars', label: 'Previous loss particulars', type: 'textarea', editable: true },
+          { key: 'contactDetailsAtLossPremises', label: 'Contact details at loss premises', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Full Name (Digital Signature)', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'poultry-claims': {
+    title: 'Poultry Claim',
+    sections: [
+      {
+        title: 'Policy & Insured Details',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'nameOfInsured', label: 'Name of the Insured', type: 'text', editable: true },
+          { key: 'farmNameAndAddress', label: 'Name and Address of the Farm', type: 'textarea', editable: true },
+          { key: 'phoneNumber', label: 'Phone Number', type: 'text', editable: true },
+          { key: 'lossDateFrom', label: 'Date of Loss (From)', type: 'date', editable: true },
+          { key: 'lossDateTo', label: 'Date of Loss (To)', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Cause of Loss',
+        fields: [
+          { key: 'causeOfDeath', label: 'Cause of Death', type: 'select', editable: true },
+          { 
+            key: 'diseaseSpecification', 
+            label: 'Please specify disease', 
+            type: 'text', 
+            editable: true,
+            conditional: { dependsOn: 'causeOfDeath', value: 'Outbreak of Pest and Disease' }
+          },
+          { 
+            key: 'otherCauseExplanation', 
+            label: 'Please explain the cause', 
+            type: 'textarea', 
+            editable: true,
+            conditional: { dependsOn: 'causeOfDeath', value: 'Other cause of loss not listed' }
+          }
+        ]
+      },
+      {
+        title: 'Claim Details',
+        fields: [
+          { key: 'vetSurgeonDetails', label: 'Name and address of Veterinary Surgeon', type: 'textarea', editable: true },
+          { key: 'numberOfBirdsDied', label: 'No of birds that died', type: 'number', editable: true },
+          { key: 'ageOfBirdsAtMortality', label: 'Age of the birds at mortality', type: 'text', editable: true },
+          { key: 'claimEstimate', label: 'Claim Estimate (Naira)', type: 'text', editable: true },
+          { key: 'previousLossParticulars', label: 'Previous loss particulars', type: 'textarea', editable: true },
+          { key: 'contactDetailsAtLossPremises', label: 'Contact details at loss premises', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Full Name (Digital Signature)', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'fishery-fish-farm-claims': {
+    title: 'Fishery and Fish Farm Insurance Claim',
+    sections: [
+      {
+        title: 'Policy & Insured Details',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'nameOfInsured', label: 'Name of the Insured', type: 'text', editable: true },
+          { key: 'farmNameAndAddress', label: 'Name and Address of the Farm', type: 'textarea', editable: true },
+          { key: 'phoneNumber', label: 'Phone Number', type: 'text', editable: true },
+          { key: 'dateOfLoss', label: 'Date of Loss', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Type & Cause of Loss',
+        fields: [
+          { key: 'typeOfLoss', label: 'Type of Loss', type: 'select', editable: true },
+          { 
+            key: 'dateAndPeriodLossOccurred', 
+            label: 'Date and Period loss occurred', 
+            type: 'text', 
+            editable: true,
+            conditional: { dependsOn: 'typeOfLoss', value: 'Death' }
+          },
+          { 
+            key: 'causeOfDeath', 
+            label: 'Cause of death', 
+            type: 'select', 
+            editable: true,
+            conditional: { dependsOn: 'typeOfLoss', value: 'Death' }
+          },
+          { 
+            key: 'diseaseSpecification', 
+            label: 'Please specify disease/pest', 
+            type: 'text', 
+            editable: true,
+            conditional: { dependsOn: 'causeOfDeath', value: 'Outbreak of Disease' }
+          },
+          { 
+            key: 'otherCauseExplanation', 
+            label: 'Please explain the cause', 
+            type: 'textarea', 
+            editable: true,
+            conditional: { dependsOn: 'causeOfDeath', value: 'Other cause of loss not listed' }
+          },
+          { 
+            key: 'vetOrFishExpertDetails', 
+            label: 'Name and address of Veterinary Surgeon / Fish Expert', 
+            type: 'textarea', 
+            editable: true,
+            conditional: { dependsOn: 'typeOfLoss', value: 'Death' }
+          }
+        ]
+      },
+      {
+        title: 'Claim Details',
+        fields: [
+          { key: 'claimEstimate', label: 'Claim estimate (Naira)', type: 'text', editable: true },
+          { key: 'previousLossParticulars', label: 'Previous loss particulars', type: 'textarea', editable: true },
+          { key: 'contactDetailsAtLossPremises', label: 'Contact details at loss premises', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Full Name (Digital Signature)', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'yield-index-claims': {
+    title: 'Yield Index Insurance Claim',
+    sections: [
+      {
+        title: 'Policy & Insured Details',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'nameOfInsured', label: 'Name of the Insured', type: 'text', editable: true },
+          { key: 'farmNameAndAddress', label: 'Address of the Farm', type: 'textarea', editable: true },
+          { key: 'phoneNumber', label: 'Phone Number', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Loss Period',
+        fields: [
+          { key: 'lossDateFrom', label: 'Loss Date From', type: 'date', editable: true },
+          { key: 'lossDateTo', label: 'Loss Date To', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Cause of Loss',
+        fields: [
+          { key: 'causeOfLoss', label: 'Cause of loss. Please tick the box that best describes the cause of loss.', type: 'array', editable: true },
+          { 
+            key: 'pestDiseaseSpecification', 
+            label: 'Please specify pest/disease', 
+            type: 'text', 
+            editable: true,
+            conditional: { dependsOn: 'causeOfLoss', value: 'Outbreak of Pest and Disease' }
+          },
+          { 
+            key: 'otherCauseExplanation', 
+            label: 'Please explain the cause', 
+            type: 'textarea', 
+            editable: true,
+            conditional: { dependsOn: 'causeOfLoss', value: 'Other cause of loss not listed' }
+          }
+        ]
+      },
+      {
+        title: 'Stage 3 Loss Assessment',
+        fields: [
+          { key: 'cropType', label: 'What type of crops were damaged', type: 'text', editable: true },
+          { key: 'cropGrowthStage', label: 'I/we hereby declare that the loss/damage occurred to the best of our knowledge at: Crop Growth Stage', type: 'text', editable: true },
+          { 
+            key: 'costOfLandPreparation', 
+            label: 'Cost of Land Preparation (₦)', 
+            type: 'currency', 
+            editable: true,
+            conditional: { dependsOn: 'cropGrowthStage', value: 'First Stage (Planting)' }
+          },
+          { 
+            key: 'costOfPlanting', 
+            label: 'Cost of Planting (₦)', 
+            type: 'currency', 
+            editable: true,
+            conditional: { dependsOn: 'cropGrowthStage', value: 'First Stage (Planting)' }
+          },
+          { 
+            key: 'costOfHerbicides', 
+            label: 'Cost of Herbicides (₦)', 
+            type: 'currency', 
+            editable: true,
+            conditional: { dependsOn: 'cropGrowthStage', value: 'First Stage (Planting)' }
+          },
+          { 
+            key: 'costOfFertilizer', 
+            label: 'Cost of Fertilizer (₦)', 
+            type: 'currency', 
+            editable: true,
+            conditional: { dependsOn: 'cropGrowthStage', value: 'First Stage (Planting)' }
+          },
+          { 
+            key: 'quantitySalvaged', 
+            label: 'Quantity Salvaged', 
+            type: 'text', 
+            editable: true,
+            conditional: { dependsOn: 'cropGrowthStage', value: 'First Stage (Planting)' }
+          },
+          { 
+            key: 'proportionOfLoss', 
+            label: 'Proportion of Loss', 
+            type: 'radio', 
+            editable: true,
+            conditional: { dependsOn: 'cropGrowthStage', value: 'Third Stage (At maturity but before harvest time)' }
+          },
+          { key: 'claimEstimate', label: 'Claim Estimate (Naira)', type: 'currency', editable: true },
+          { key: 'estimatedAreaOfDamage', label: 'Estimated Area of Damage (hectares)', type: 'text', editable: true },
+          { key: 'numberOfFarmersAffected', label: 'Number of Farmers Affected', type: 'number', editable: true },
+          { key: 'previousLossParticulars', label: 'Previous Loss Particulars', type: 'textarea', editable: true },
+          { key: 'contactDetailsAtLossPremises', label: 'Contact Details at Loss Premises', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Damage Description',
+        fields: [
+          { key: 'additionalLossDetails', label: 'Please provide additional details explaining how the damage or loss to your crops occurred', type: 'textarea', editable: true }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Full Name (Digital Signature)', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'System Information',
+        fields: [
+          { key: 'status', label: 'Status', type: 'text', editable: true },
+          { key: 'submittedAt', label: 'Submitted At', type: 'date', editable: false },
+          { key: 'submittedBy', label: 'Submitted By', type: 'text', editable: false },
+          { key: 'createdAt', label: 'Created At', type: 'date', editable: false },
+          { key: 'formType', label: 'Form Type', type: 'text', editable: false }
+        ]
+      }
+    ]
+  },
+
+  'multi-perils-crop-claims': {
+    title: 'Multi-Perils Crop Insurance Claim',
+    sections: [
+      {
+        title: 'Policy & Insured Details',
+        fields: [
+          { key: 'policyNumber', label: 'Policy Number', type: 'text', editable: true },
+          { key: 'nameOfInsured', label: 'Name of the Insured', type: 'text', editable: true },
+          { key: 'farmNameAndAddress', label: 'Address of the Farm', type: 'textarea', editable: true },
+          { key: 'phoneNumber', label: 'Phone Number', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Loss Period',
+        fields: [
+          { key: 'lossDateFrom', label: 'Loss Date From', type: 'date', editable: true },
+          { key: 'lossDateTo', label: 'Loss Date To', type: 'date', editable: true }
+        ]
+      },
+      {
+        title: 'Cause of Loss',
+        fields: [
+          { key: 'causeOfLoss', label: 'Cause of loss. Please tick the box that best describes the cause of loss.', type: 'array', editable: true },
+          { 
+            key: 'pestDiseaseSpecification', 
+            label: 'Please specify pest/disease', 
+            type: 'text', 
+            editable: true,
+            conditional: { dependsOn: 'causeOfLoss', value: 'Outbreak of Pest and Disease' }
+          },
+          { 
+            key: 'otherCauseExplanation', 
+            label: 'Please explain the cause', 
+            type: 'textarea', 
+            editable: true,
+            conditional: { dependsOn: 'causeOfLoss', value: 'Other cause of loss not listed' }
+          }
+        ]
+      },
+      {
+        title: 'Stage 3 Loss Assessment',
+        fields: [
+          { key: 'cropType', label: 'What type of crops were damaged', type: 'text', editable: true },
+          { key: 'cropGrowthStage', label: 'I/we hereby declare that the loss/damage occurred to the best of our knowledge at: Crop Growth Stage', type: 'text', editable: true },
+          { 
+            key: 'costOfLandPreparation', 
+            label: 'Cost of Land Preparation (₦)', 
+            type: 'currency', 
+            editable: true,
+            conditional: { dependsOn: 'cropGrowthStage', value: 'First Stage (Planting)' }
+          },
+          { 
+            key: 'costOfPlanting', 
+            label: 'Cost of Planting (₦)', 
+            type: 'currency', 
+            editable: true,
+            conditional: { dependsOn: 'cropGrowthStage', value: 'First Stage (Planting)' }
+          },
+          { 
+            key: 'costOfHerbicides', 
+            label: 'Cost of Herbicides (₦)', 
+            type: 'currency', 
+            editable: true,
+            conditional: { dependsOn: 'cropGrowthStage', value: 'First Stage (Planting)' }
+          },
+          { 
+            key: 'costOfFertilizer', 
+            label: 'Cost of Fertilizer (₦)', 
+            type: 'currency', 
+            editable: true,
+            conditional: { dependsOn: 'cropGrowthStage', value: 'First Stage (Planting)' }
+          },
+          { 
+            key: 'quantitySalvaged', 
+            label: 'Quantity Salvaged', 
+            type: 'text', 
+            editable: true,
+            conditional: { dependsOn: 'cropGrowthStage', value: 'First Stage (Planting)' }
+          },
+          { 
+            key: 'proportionOfLoss', 
+            label: 'Proportion of Loss', 
+            type: 'radio', 
+            editable: true,
+            conditional: { dependsOn: 'cropGrowthStage', value: 'Third Stage (At maturity but before harvest time)' }
+          },
+          { key: 'areaAffected', label: 'Area Affected (hectares)', type: 'text', editable: true },
+          { key: 'claimEstimate', label: 'Claim Estimate (Naira)', type: 'currency', editable: true },
+          { key: 'estimatedAreaOfDamage', label: 'Estimated Area of Damage (hectares)', type: 'text', editable: true },
+          { key: 'previousLossParticulars', label: 'Previous Loss Particulars', type: 'textarea', editable: true },
+          { key: 'contactDetailsAtLossPremises', label: 'Contact Details at Loss Premises', type: 'text', editable: true }
+        ]
+      },
+      {
+        title: 'Damage Description',
+        fields: [
+          { key: 'lossDescription', label: 'Please provide additional details explaining how the damage or loss to your crops occurred', type: 'textarea', editable: true }
+        ]
+      },
+      {
+        title: 'Declaration & Signature',
+        fields: [
+          { key: 'agreeToDataPrivacy', label: 'Agree to Data Privacy', type: 'boolean', editable: false },
+          { key: 'declarationTrue', label: 'Declaration True', type: 'boolean', editable: false },
+          { key: 'signature', label: 'Full Name (Digital Signature)', type: 'text', editable: true }
         ]
       },
       {

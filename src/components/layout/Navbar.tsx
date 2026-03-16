@@ -37,7 +37,11 @@ import {
   Truck,
   Wrench,
   LogOut,
-  LayoutDashboard
+  LayoutDashboard,
+  Wheat,
+  Beef,
+  Bird,
+  Fish
 } from 'lucide-react';
 // Logo is now served from public folder
 
@@ -104,7 +108,21 @@ const Navbar: React.FC = () => {
     { name: 'Fire & Special Perils', path: '/claims/fire-special-perils', icon: Flame },
     { name: 'Money Insurance', path: '/claims/money-insurance', icon: DollarSign },
     { name: 'Goods in Transit', path: '/claims/goods-in-transit', icon: Truck },
-    { name: 'Contractors Plant', path: '/claims/contractors-plant-machinery', icon: Wrench }
+    { name: 'Contractors Plant & Machinery', path: '/claims/contractors-plant-machinery', icon: Wrench },
+    // Smart Protection Claims
+    { name: 'Smart Motorist Protection', path: '/claims/smart-motorist-protection', icon: Car },
+    { name: 'Smart Students Protection', path: '/claims/smart-students-protection', icon: User },
+    { name: 'Smart Traveller Protection', path: '/claims/smart-traveller-protection', icon: Users },
+    { name: 'Smart Artisan Protection', path: '/claims/smart-artisan-protection', icon: Wrench },
+    { name: 'Smart Generation Z Protection', path: '/claims/smart-generation-z-protection', icon: Users },
+    { name: 'NEM Home Protection Policy', path: '/claims/nem-home-protection', icon: Home },
+    // Agricultural Claims
+    { name: 'Livestock Claim', path: '/claims/livestock', icon: Beef },
+    { name: 'Farm Property & Produce Claim', path: '/claims/farm-property-produce', icon: Wheat },
+    { name: 'Poultry Claim', path: '/claims/poultry', icon: Bird },
+    { name: 'Fishery & Fish Farm Claim', path: '/claims/fishery-fish-farm', icon: Fish },
+    { name: 'Yield Index Insurance Claim', path: '/claims/yield-index-insurance', icon: Wheat },
+    { name: 'Multi-Perils Crop Insurance Claim', path: '/claims/multi-perils-crop', icon: Wheat }
   ];
 
   return (

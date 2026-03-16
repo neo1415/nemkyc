@@ -350,7 +350,14 @@ const fetchForms = async () => {
       'fidelity-guarantee-claims': 'fidelity-guarantee-claims',
       'rent-assurance-claims': 'rent-assurance-claims',
       'contractors-plant-machinery-claims': 'contractors-plant-machinery-claims',
-      'combined-gpa-employers-liability-claims': 'combined-gpa-employers-liability-claims'
+      'combined-gpa-employers-liability-claims': 'combined-gpa-employers-liability-claims',
+      // NEM Smart Protection Claims - New claim types
+      'smart-motorist-protection-claims': 'smart-motorist-protection-claims',
+      'smart-students-protection-claims': 'smart-students-protection-claims',
+      'smart-traveller-protection-claims': 'smart-traveller-protection-claims',
+      'smart-artisan-protection-claims': 'smart-artisan-protection-claims',
+      'smart-generation-z-protection-claims': 'smart-generation-z-protection-claims',
+      'nem-home-protection-claims': 'nem-home-protection-claims'
     };
 
     const mappingKey = collectionMappings[collectionName];

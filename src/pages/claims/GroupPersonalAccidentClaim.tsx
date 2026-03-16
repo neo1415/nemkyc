@@ -71,6 +71,10 @@ const groupPersonalAccidentClaimSchema = yup.object().shape({
   otherInsurerAddress: yup.string().required("Other insurer address is required"),
   otherPolicyNumber: yup.string(),
 
+  // Witness Details
+  witnessName: yup.string(),
+  witnessAddress: yup.string(),
+
   // Witnesses
   witnesses: yup.array().of(
     yup.object().shape({
@@ -122,6 +126,10 @@ interface GroupPersonalAccidentClaimData {
   otherInsurerName?: string;
   otherInsurerAddress?: string;
   otherPolicyNumber?: string;
+
+  // Witness Details
+  witnessName?: string;
+  witnessAddress?: string;
 
   // Witnesses
   witnesses: Witness[];
@@ -284,6 +292,8 @@ const defaultValues: Partial<GroupPersonalAccidentClaimData> = {
   otherInsurerName: '',
   otherInsurerAddress: '',
   otherPolicyNumber: '',
+  witnessName: '',
+  witnessAddress: '',
   witnesses: [],
   agreeToDataPrivacy: false,
   declarationTrue: false,
@@ -388,7 +398,7 @@ const GroupPersonalAccidentClaim: React.FC = () => {
   const stepFieldMappings = {
     0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'companyName', 'address', 'phone', 'email'],
     1: ['accidentDate', 'accidentTime', 'accidentPlace', 'incidentDescription', 'particularsOfInjuries'],
-    2: ['witnesses', 'doctorName', 'doctorAddress', 'totalIncapacityFrom', 'totalIncapacityTo', 'partialIncapacityFrom', 'partialIncapacityTo', 'otherInsurerName', 'otherInsurerAddress', 'otherPolicyNumber'],
+    2: ['witnesses', 'doctorName', 'doctorAddress', 'totalIncapacityFrom', 'totalIncapacityTo', 'partialIncapacityFrom', 'partialIncapacityTo', 'otherInsurerName', 'otherInsurerAddress', 'otherPolicyNumber', 'witnessName', 'witnessAddress'],
     3: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
   };
 
@@ -461,13 +471,31 @@ const GroupPersonalAccidentClaim: React.FC = () => {
                 </TooltipProvider>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DatePickerField
+                  <FormField
+                    control={formMethods.control}
                     name="periodOfCoverFrom"
-                    label="Period of Cover From *"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Period of Cover From *</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                  <DatePickerField
+                  <FormField
+                    control={formMethods.control}
                     name="periodOfCoverTo"
-                    label="Period of Cover To *"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Period of Cover To *</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
               </div>
@@ -694,7 +722,7 @@ const GroupPersonalAccidentClaim: React.FC = () => {
                     name="doctorName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Name of doctor *</FormLabel>
+                        <FormLabel>Name of Doctor In Attendance *</FormLabel>
                         <FormControl>
                           <Input placeholder="Enter doctor's name" {...field} />
                         </FormControl>
@@ -708,7 +736,7 @@ const GroupPersonalAccidentClaim: React.FC = () => {
                     name="doctorAddress"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Address of doctor *</FormLabel>
+                        <FormLabel>Address of Doctor In Attendance *</FormLabel>
                         <FormControl>
                           <Textarea placeholder="Enter doctor's address" rows={2} {...field} />
                         </FormControl>
@@ -743,7 +771,7 @@ const GroupPersonalAccidentClaim: React.FC = () => {
               <h3 className="text-lg font-semibold mb-4">Incapacity Details</h3>
               <div className="space-y-6">
                 <div>
-                  <h4 className="font-medium mb-4">Total incapacity period:</h4>
+                  <h4 className="font-medium mb-4">How long have you been totally incapacitated from attending to your job?</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={formMethods.control}
@@ -776,7 +804,7 @@ const GroupPersonalAccidentClaim: React.FC = () => {
                 </div>
                 
                 <div>
-                  <h4 className="font-medium mb-4">Partial incapacity period:</h4>
+                  <h4 className="font-medium mb-4">How long have you been partially incapacitated in the sense of being necessarily prevented from attending to a substantial and essential part of your occupation?</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={formMethods.control}
@@ -812,7 +840,7 @@ const GroupPersonalAccidentClaim: React.FC = () => {
 
             {/* Other Insurers Section */}
             <div className="border rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-4">Other Insurers</h3>
+              <h3 className="text-lg font-semibold mb-4">Please provide name, address and policy number of any insurers concerned with this accident</h3>
               <div className="space-y-6">
                 <FormField
                   control={formMethods.control}
@@ -850,6 +878,40 @@ const GroupPersonalAccidentClaim: React.FC = () => {
                       <FormLabel>Policy Number</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter policy number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Name and Address of Witnesses Section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Name and Address of Witnesses</h3>
+              <div className="space-y-6">
+                <FormField
+                  control={formMethods.control}
+                  name="witnessName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name of Witness</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter witness name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={formMethods.control}
+                  name="witnessAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address of Witness</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter witness address" rows={3} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

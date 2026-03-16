@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Users, FileText, CheckCircle, Clock, TrendingUp, TrendingDown, RefreshCw, Activity, AlertTriangle, Banknote, BarChart3 } from 'lucide-react';
+import { Users, FileText, CheckCircle, Clock, TrendingUp, TrendingDown, RefreshCw, Activity, AlertTriangle, Banknote, BarChart3, Wheat, Beef } from 'lucide-react';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useAuth } from '../../contexts/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
@@ -411,6 +411,40 @@ const AdminDashboard: React.FC = () => {
                   >
                     <FileText className="h-4 w-4 mr-2" />
                     Corporate NFIU
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Agricultural Claims Section */}
+        {canViewClaims && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Agricultural Claims</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Manage NEM Insurance agricultural claim submissions
+                </p>
+                <div className="flex gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/admin/farm-property-produce-claims')}
+                    className="flex-1"
+                  >
+                    <Wheat className="h-4 w-4 mr-2" />
+                    Farm Property & Produce Claims
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/admin/livestock-claims')}
+                    className="flex-1"
+                  >
+                    <Beef className="h-4 w-4 mr-2" />
+                    Livestock Claims
                   </Button>
                 </div>
               </div>

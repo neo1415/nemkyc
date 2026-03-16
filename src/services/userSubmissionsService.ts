@@ -41,7 +41,14 @@ const FORM_COLLECTIONS = [
   'corporate-kyc',
   'brokers-kyc',
   'agentsCDD',
-  'partnersCDD'
+  'partnersCDD',
+  // NEM Smart Protection Claims - New collections
+  'smart-motorist-protection-claims',
+  'smart-students-protection-claims',
+  'smart-traveller-protection-claims',
+  'smart-artisan-protection-claims',
+  'smart-generation-z-protection-claims',
+  'nem-home-protection-claims'
 ];
 
 // KYC form collections for categorization

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Car, Shield, Users, Building, ArrowRight, UserCheck, Home, DollarSign, FileText, AlertTriangle, Flame, Truck, Wrench, AlertCircle, Copy, Check } from 'lucide-react';
+import { Car, Shield, Users, Building, ArrowRight, UserCheck, Home, DollarSign, FileText, AlertTriangle, Flame, Truck, Wrench, AlertCircle, Copy, Check, GraduationCap, Plane, Zap, Wheat, Beef, Bird, Fish } from 'lucide-react';
 
 const ClaimsForms: React.FC = () => {
   const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
@@ -118,6 +118,92 @@ const ClaimsForms: React.FC = () => {
       icon: <FileText className="h-8 w-8 text-red-600" />,
       path: '/claims/fidelity-guarantee',
       features: ['Employee dishonesty', 'Fraud protection', 'Financial loss coverage']
+    },
+    // NEM Smart Protection Claims - New claim types
+    {
+      title: 'Smart Motorist Protection Claim',
+      description: 'Personal accident coverage for motorists and drivers',
+      icon: <Car className="h-8 w-8 text-blue-600" />,
+      path: '/claims/smart-motorist-protection',
+      features: ['Motorist accidents', 'Driving injuries', 'Vehicle-related incidents']
+    },
+    {
+      title: 'Smart Students Protection Claim',
+      description: 'Personal accident coverage for students and educational activities',
+      icon: <GraduationCap className="h-8 w-8 text-blue-600" />,
+      path: '/claims/smart-students-protection',
+      features: ['Student accidents', 'Campus incidents', 'Educational activities']
+    },
+    {
+      title: 'Smart Traveller Protection Claim',
+      description: 'Personal accident coverage for travelers and tourists',
+      icon: <Plane className="h-8 w-8 text-blue-600" />,
+      path: '/claims/smart-traveller-protection',
+      features: ['Travel accidents', 'International coverage', 'Emergency medical']
+    },
+    {
+      title: 'Smart Artisan Protection Claim',
+      description: 'Personal accident coverage for artisans and craftspeople',
+      icon: <Wrench className="h-8 w-8 text-blue-600" />,
+      path: '/claims/smart-artisan-protection',
+      features: ['Workplace injuries', 'Tool-related accidents', 'Craft activities']
+    },
+    {
+      title: 'Smart Generation Z Protection Claim',
+      description: 'Personal accident coverage tailored for young adults',
+      icon: <Zap className="h-8 w-8 text-blue-600" />,
+      path: '/claims/smart-generation-z-protection',
+      features: ['Lifestyle activities', 'Sports injuries', 'Tech-related incidents']
+    },
+    {
+      title: 'NEM Home Protection Policy Claim',
+      description: 'Property damage coverage for homes and residential properties',
+      icon: <Home className="h-8 w-8 text-blue-600" />,
+      path: '/claims/nem-home-protection',
+      features: ['Property damage', 'Home contents', 'Multiple perils coverage']
+    },
+    // Agricultural Claims
+    {
+      title: 'Livestock Claim',
+      description: 'Insurance claims for livestock death or loss',
+      icon: <Beef className="h-8 w-8 text-green-600" />,
+      path: '/claims/livestock',
+      features: ['Livestock mortality', 'Disease coverage', 'Accident protection']
+    },
+    {
+      title: 'Farm Property & Produce Claim',
+      description: 'Claims for farm property damage and produce loss',
+      icon: <Wheat className="h-8 w-8 text-green-600" />,
+      path: '/claims/farm-property-produce',
+      features: ['Property damage', 'Crop loss', 'Farm equipment']
+    },
+    {
+      title: 'Poultry Claim',
+      description: 'Insurance claims for poultry mortality and loss',
+      icon: <Bird className="h-8 w-8 text-green-600" />,
+      path: '/claims/poultry',
+      features: ['Poultry mortality', 'Disease outbreak', 'Farm protection']
+    },
+    {
+      title: 'Fishery & Fish Farm Claim',
+      description: 'Claims for fishery and fish farm losses',
+      icon: <Fish className="h-8 w-8 text-green-600" />,
+      path: '/claims/fishery-fish-farm',
+      features: ['Fish mortality', 'Pond damage', 'Disease coverage']
+    },
+    {
+      title: 'Yield Index Insurance Claim',
+      description: 'Claims for crop yield shortfall based on index',
+      icon: <Wheat className="h-8 w-8 text-green-600" />,
+      path: '/claims/yield-index-insurance',
+      features: ['Yield index coverage', 'Crop loss protection', 'Weather-based claims']
+    },
+    {
+      title: 'Multi-Perils Crop Insurance Claim',
+      description: 'Comprehensive crop insurance for multiple perils',
+      icon: <Wheat className="h-8 w-8 text-green-600" />,
+      path: '/claims/multi-perils-crop',
+      features: ['Multiple peril coverage', 'Crop damage', 'Natural disaster protection']
     }
   ];
 

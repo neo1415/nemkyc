@@ -44,6 +44,10 @@ const contractorsSchema = yup.object().shape({
   plantMachineryItems: yup.array().of(yup.object().shape({
     itemNumber: yup.string().required('Item number is required'),
     yearOfManufacture: yup.number()
+      .transform((value, originalValue) => {
+        return originalValue === '' ? undefined : value;
+      })
+      .typeError('Please enter a valid year')
       .required('Year of manufacture is required')
       .min(1900, 'Year must be after 1900')
       .max(new Date().getFullYear(), 'Year cannot be in the future'),
@@ -51,11 +55,24 @@ const contractorsSchema = yup.object().shape({
     registrationNumber: yup.string(),
     dateOfPurchase: yup.date().required('Date of purchase is required'),
     costPrice: yup.number()
+      .transform((value, originalValue) => {
+        return originalValue === '' ? undefined : value;
+      })
+      .typeError('Please enter a valid amount')
       .required('Cost price is required')
       .min(0, 'Cost price must be positive'),
     deductionForAge: yup.number()
-      .min(0, 'Deduction cannot be negative'),
+      .transform((value, originalValue) => {
+        return originalValue === '' ? undefined : value;
+      })
+      .typeError('Please enter a valid amount')
+      .min(0, 'Deduction cannot be negative')
+      .nullable(),
     sumClaimed: yup.number()
+      .transform((value, originalValue) => {
+        return originalValue === '' ? undefined : value;
+      })
+      .typeError('Please enter a valid amount')
       .required('Sum claimed is required')
       .min(0, 'Sum claimed must be positive'),
     claimType: yup.string()
@@ -408,7 +425,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
   const formMethods = useForm<any>({
     resolver: yupResolver(contractorsSchema),
     defaultValues,
-    mode: 'onChange'
+    mode: 'onTouched'
   });
 
   // Make toast available globally for MultiStepForm
@@ -466,10 +483,10 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
 
   // Step field mappings for validation
   const stepFieldMappings = {
-    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'nameOfInsured', 'companyName', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'nameOfInsured', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
     1: ['plantMachineryItems'],
-    2: ['dateOfLoss', 'timeOfLoss', 'lastSeenIntact', 'whereDidLossOccur', 'partsDamaged', 'whereCanBeInspected', 'fullAccountCircumstances', 'suspicionInformation'],
-    3: ['policeInformed', 'policeStation', 'otherRecoveryActions', 'isSoleOwner', 'ownershipDetails', 'hasOtherInsurance', 'otherInsuranceDetails', 'thirdPartyInvolved', 'thirdPartyName', 'thirdPartyAddress', 'thirdPartyInsurer'],
+    2: ['dateOfLoss', 'timeOfLoss', 'whereDidLossOccur', 'partsDamaged', 'whereCanBeInspected', 'fullAccountCircumstances'],
+    3: ['policeInformed', 'isSoleOwner', 'hasOtherInsurance', 'thirdPartyInvolved'],
     4: ['agreeToDataPrivacy', 'signature']
   };
 
@@ -497,11 +514,10 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
     }
 
     const stepMap: Record<string, string[]> = {
-      policy: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo'],
-      insured: ['nameOfInsured', 'companyName', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
-      'loss-details': ['dateOfLoss', 'timeOfLoss', 'lastSeenIntact', 'whereDidLossOccur', 'partsDamaged', 'whereCanBeInspected', 'fullAccountCircumstances', 'suspicionInformation'],
-      'theft-third-party': ['policeInformed', 'policeStation', 'otherRecoveryActions', 'isSoleOwner', 'ownershipDetails', 'hasOtherInsurance', 'otherInsuranceDetails', 'thirdPartyInvolved', 'thirdPartyName', 'thirdPartyAddress', 'thirdPartyInsurer'],
-      declaration: ['agreeToDataPrivacy', 'signature']
+      'policy-insured': ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'nameOfInsured', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
+      'loss-details': ['dateOfLoss', 'timeOfLoss', 'whereDidLossOccur', 'partsDamaged', 'whereCanBeInspected', 'fullAccountCircumstances'],
+      'theft-third-party': ['policeInformed', 'isSoleOwner', 'hasOtherInsurance', 'thirdPartyInvolved'],
+      'declaration': ['agreeToDataPrivacy', 'signature']
     };
     const fields = stepMap[stepId] || [];
     const isValid = await formMethods.trigger(fields.length ? fields : undefined);
@@ -614,7 +630,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
                   />
                   <FormField 
                     name={`plantMachineryItems.${index}.deductionForAge`} 
-                    label="Deduction for Age" 
+                    label="Deduction for age, use and/or wear and tear" 
                     type="number" 
                     step="0.01" 
                   />
@@ -665,7 +681,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
               <FormDatePicker name="dateOfLoss" label="Date of Loss" required />
               <FormField name="timeOfLoss" label="Time of Loss" type="time" required />
             </div>
-            <FormTextarea name="lastSeenIntact" label="When was it last seen intact?" />
+            <FormTextarea name="lastSeenIntact" label="When and where was the property last seen intact" />
             <FormTextarea name="whereDidLossOccur" label="Where did the loss/damage occur?" required />
             <FormTextarea name="partsDamaged" label="Parts of Damage and Extent of Damage?" required />
             <FormTextarea name="whereCanBeInspected" label="Where can the plant/machinery be inspected?" required />

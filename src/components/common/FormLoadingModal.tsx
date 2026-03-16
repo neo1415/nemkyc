@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
@@ -44,6 +44,13 @@ const FormLoadingModal: React.FC<FormLoadingModalProps> = ({
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
+        <DialogTitle className="sr-only">
+          Form Processing
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          {message} {submessage ? submessage : ''}
+        </DialogDescription>
+        
         <div className="flex flex-col items-center justify-center space-y-4 py-6">
           {/* Spinner */}
           <Loader2 

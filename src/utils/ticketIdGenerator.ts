@@ -35,7 +35,14 @@ export const FORM_TYPE_PREFIXES: Record<string, string> = {
   'Corporate CDD': 'CCD',
   'Brokers CDD': 'BCD',
   'Agents CDD': 'ACD',
-  'Partners CDD': 'PCD'
+  'Partners CDD': 'PCD',
+  // NEM Smart Protection Claims - New claim types
+  'Smart Motorist Protection': 'SMP',
+  'Smart Students Protection': 'SSP',
+  'Smart Traveller Protection': 'STP',
+  'Smart Artisan Protection': 'SAP',
+  'Smart Generation Z Protection': 'SGP',
+  'NEM Home Protection Policy': 'HOP'
 };
 
 /**
@@ -140,7 +147,14 @@ const COLLECTIONS_TO_CHECK = [
   'corporate-kyc',
   'brokers-kyc',
   'agents-kyc',
-  'partners-kyc'
+  'partners-kyc',
+  // NEM Smart Protection Claims - New collections
+  'smart-motorist-protection-claims',
+  'smart-students-protection-claims',
+  'smart-traveller-protection-claims',
+  'smart-artisan-protection-claims',
+  'smart-generation-z-protection-claims',
+  'nem-home-protection-claims'
 ];
 
 /**

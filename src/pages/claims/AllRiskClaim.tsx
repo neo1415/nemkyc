@@ -88,25 +88,15 @@ const allRiskClaimSchema = yup.object().shape({
     then: (schema) => schema.required("Other insurance details required"),
     otherwise: (schema) => schema.notRequired()
   }),
-  hasPreviousLoss: yup.boolean().required("Please specify if previous loss occurred"),
-  previousLossDetails: yup.string().when('hasPreviousLoss', {
-    is: true,
-    then: (schema) => schema.required("Previous loss details required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
   totalPropertyValue: yup.number().required("Total property value is required"),
   hasOtherInsuranceAtTime: yup.boolean().required("Please specify if other insurance at time of incident"),
-  otherInsuranceAtTimeDetails: yup.string().when('hasOtherInsuranceAtTime', {
-    is: true,
-    then: (schema) => schema.required("Other insurance at time details required"),
-    otherwise: (schema) => schema.notRequired()
-  }),
   hasPriorClaims: yup.boolean().required("Please specify if prior claims exist"),
   priorClaimsDetails: yup.string().when('hasPriorClaims', {
     is: true,
     then: (schema) => schema.required("Prior claims details required"),
     otherwise: (schema) => schema.notRequired()
   }),
+  hasPreviousBurglaryLoss: yup.boolean().required("Please specify if previous burglary loss occurred"),
   policeInformed: yup.boolean().required("Please specify if police informed"),
   policeStationDetails: yup.string().when('policeInformed', {
     is: true,
@@ -161,13 +151,11 @@ interface AllRiskClaimData {
   recoveryStepsTaken: string;
   hasOtherInsurance: boolean;
   otherInsuranceDetails?: string;
-  hasPreviousLoss: boolean;
-  previousLossDetails?: string;
   totalPropertyValue: number;
   hasOtherInsuranceAtTime: boolean;
-  otherInsuranceAtTimeDetails?: string;
   hasPriorClaims: boolean;
   priorClaimsDetails?: string;
+  hasPreviousBurglaryLoss: boolean;
   policeInformed: boolean;
   policeStationDetails?: string;
 
@@ -337,10 +325,10 @@ const defaultValues: Partial<AllRiskClaimData> = {
   hasHirePurchase: false,
   recoveryStepsTaken: '',
   hasOtherInsurance: false,
-  hasPreviousLoss: false,
   totalPropertyValue: 0,
   hasOtherInsuranceAtTime: false,
   hasPriorClaims: false,
+  hasPreviousBurglaryLoss: false,
   policeInformed: false,
   agreeToDataPrivacy: false,
   signature: ''
@@ -444,7 +432,7 @@ const AllRiskClaim: React.FC = () => {
   const stepFieldMappings = {
     0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'nameOfInsured', 'address', 'phone', 'email'],
     1: ['typeOfClaim', 'locationOfClaim', 'dateOfOccurrence', 'timeOfOccurrence', 'propertyDescription', 'circumstancesOfLoss', 'estimateOfLoss', 'propertyItems'],
-    2: ['soleOwner', 'ownershipExplanation', 'hasHirePurchase', 'hirePurchaseCompany', 'hirePurchaseAddress', 'recoveryStepsTaken', 'hasOtherInsurance', 'otherInsuranceDetails', 'hasPreviousLoss', 'previousLossDetails', 'totalPropertyValue', 'hasOtherInsuranceAtTime', 'otherInsuranceAtTimeDetails', 'hasPriorClaims', 'priorClaimsDetails', 'policeInformed', 'policeStationDetails'],
+    2: ['soleOwner', 'ownershipExplanation', 'hasHirePurchase', 'hirePurchaseCompany', 'hirePurchaseAddress', 'recoveryStepsTaken', 'hasOtherInsurance', 'otherInsuranceDetails', 'totalPropertyValue', 'hasOtherInsuranceAtTime', 'hasPriorClaims', 'priorClaimsDetails', 'hasPreviousBurglaryLoss', 'policeInformed', 'policeStationDetails'],
     3: ['agreeToDataPrivacy', 'signature']
   };
 
@@ -622,12 +610,12 @@ const AllRiskClaim: React.FC = () => {
                       </Button>
                     </div>
                     
-                    <FormTextarea name={`propertyItems.${index}.description`} label="Description" required />
+                    <FormTextarea name={`propertyItems.${index}.description`} label="Description of the property for which this claim is made" required />
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormDatePicker
                         name={`propertyItems.${index}.dateOfPurchase`}
-                        label="Date of Purchase"
+                        label="Date of purchase or manufacture"
                         required
                       />
                       <FormField name={`propertyItems.${index}.costPrice`} label="Cost Price" type="number" required />
@@ -659,7 +647,7 @@ const AllRiskClaim: React.FC = () => {
       component: (
         <FormProvider {...formMethods}>
           <div className="space-y-4">
-            <FormBooleanSelect name="soleOwner" label="Are you the sole owner?" required />
+            <FormBooleanSelect name="soleOwner" label="Are you the sole owner of the property destroyed, stolen or damaged?" required />
             
             {watchedValues.soleOwner === false && (
               <FormTextarea name="ownershipExplanation" label="If no, explain" required />
@@ -682,25 +670,17 @@ const AllRiskClaim: React.FC = () => {
               <FormTextarea name="otherInsuranceDetails" label="If yes, details" required />
             )}
             
-            <FormBooleanSelect name="hasPreviousLoss" label="Ever sustained same loss before?" required />
-            
-            {watchedValues.hasPreviousLoss === true && (
-              <FormTextarea name="previousLossDetails" label="If yes, details" required />
-            )}
-            
             <FormField name="totalPropertyValue" label="Total value of insured property at time of loss" type="number" required />
             
-            <FormBooleanSelect name="hasOtherInsuranceAtTime" label="Other insurance in place at time of incident?" required />
+            <FormBooleanSelect name="hasOtherInsuranceAtTime" label="At the time of the incident, was there any other insurance cover in place?" required />
             
-            {watchedValues.hasOtherInsuranceAtTime === true && (
-              <FormTextarea name="otherInsuranceAtTimeDetails" label="If yes, insurer/policy details" required />
-            )}
-            
-            <FormBooleanSelect name="hasPriorClaims" label="Prior claims under any burglary/all risk policy?" required />
+            <FormBooleanSelect name="hasPriorClaims" label="Have you previously made a Claim with any Insurer in respect of risks covered by this policy?" required />
             
             {watchedValues.hasPriorClaims === true && (
-              <FormTextarea name="priorClaimsDetails" label="If yes, details" required />
+              <FormTextarea name="priorClaimsDetails" label="If yes, insurer/policy details" required />
             )}
+            
+            <FormBooleanSelect name="hasPreviousBurglaryLoss" label="Have you previously suffered a loss by Burglary, Theft or Housebreaking?" required />
             
             <FormBooleanSelect name="policeInformed" label="Informed police?" required />
             
