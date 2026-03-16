@@ -3,6 +3,9 @@
 ## Problem
 In production, the autofill feature (CAC and NIN verification) is trying to connect to `localhost:3000` instead of the production backend URL, causing `ERR_CONNECTION_REFUSED` errors.
 
+## Status
+✅ Fixed - Environment variables configured and package-lock.json synced (March 16, 2026)
+
 ## Root Cause
 The production build is not properly reading the `VITE_API_BASE_URL` environment variable from `.env.production`. This can happen when:
 1. The build was created without environment variables being injected
