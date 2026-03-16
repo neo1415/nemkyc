@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix User Roles</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .output {
+            background: #252526;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .success { color: #4ec9b0; }
+        .error { color: #f48771; }
+        .warning { color: #dcdcaa; }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1177bb;
+        }
+        button.danger {
+            background: #c5302f;
+        }
+        button.danger:hover {
+            background: #e03e3d;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        input, select {
+            background: #3c3c3c;
+            color: #d4d4d4;
+            border: 1px solid #555;
+            padding: 8px;
+            border-radius: 3px;
+            font-size: 14px;
+            margin: 5px;
+        }
+        label {
+            display: block;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Fix User Roles in Firestore</h1>
+    <p>This tool fixes role format issues in the Firestore database.</p>
+    
+    <div class="input-group">
+        <label>Email Address:</label>
+        <input type="email" id="emailInput" placeholder="user@example.com" style="width: 300px;">
+    </div>
+    
+    <div class="input-group">
+        <label>New Role:</label>
+        <select id="roleSelect">
+            <option value="super admin">super admin</option>
+            <option value="admin">admin</option>
+            <option value="claims">claims</option>
+            <option value="compliance">compliance</option>
+            <option value="broker">broker</option>
+            <option value="default">default</option>
+        </select>
+    </div>
+    
+    <button onclick="checkRole()">1. Check Current Role</button>
+    <button class="danger" onclick="fixRole()">2. Fix Role</button>
+    <button onclick="fixAllKnownUsers()">3. Fix All Known Users</button>
+    
+    <div id="output" class="output"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDTyrzbQ4xYV0IAvngwgCUBf6EPnflacSw",
+            authDomain: "nem-customer-feedback-8d3fb.firebaseapp.com",
+            projectId: "nem-customer-feedback-8d3fb",
+            storageBucket: "nem-customer-feedback-8d3fb.appspot.com",
+            messagingSenderId: "524975485983",
+            appId: "1:524975485983:web:3a859424a3314d53ab112a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                log(`<span class="success">✅ Logged in as: ${user.email}</span>`);
+                log(`<span class="success">✅ You can now fix roles</span>\n`);
+            } else {
+                log(`<span class="error">❌ Not logged in. Please log in as SUPER ADMIN first.</span>`);
+            }
+        });
+
+        function log(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += message + '\n';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        window.checkRole = async function() {
+            clearLog();
+            
+            if (!currentUser) {
+                log(`<span class="error">❌ Not logged in. Please log in as SUPER ADMIN first.</span>`);
+                return;
+            }
+
+            const email = document.getElementById('emailInput').value.trim();
+            if (!email) {
+                log(`<span class="error">❌ Please enter an email address</span>`);
+                return;
+            }
+
+            try {
+                log(`<span class="success">🔍 Checking role for: ${email}</span>\n`);
+
+                // We need to find the user by email - but we can only read our own document
+                // So we'll try to read the userroles collection if we're super admin
+                const userRoleRef = doc(db, 'userroles', currentUser.uid);
+                const userRoleDoc = await getDoc(userRoleRef);
+
+                if (userRoleDoc.exists()) {
+                    const data = userRoleDoc.data();
+                    log(`<span class="success">✅ Your current role: "${data.role}"</span>`);
+                    
+                    if (data.role !== 'super admin') {
+                        log(`<span class="error">❌ You must be logged in as SUPER ADMIN to fix other users' roles</span>`);
+                        return;
+                    }
+                }
+
+                log(`<span class="warning">⚠️  Note: Due to Firestore security rules, you can only check/fix your own role.</span>`);
+                log(`<span class="warning">⚠️  To fix other users, they need to run this tool themselves.</span>`);
+
+            } catch (error) {
+                log(`<span class="error">❌ Error: ${error.message}</span>`);
+                console.error('Full error:', error);
+            }
+        };
+
+        window.fixRole = async function() {
+            if (!currentUser) {
+                log(`<span class="error">❌ Not logged in. Please log in first.</span>`);
+                return;
+            }
+
+            const newRole = document.getElementById('roleSelect').value;
+            
+            if (!confirm(`Are you sure you want to change your role to "${newRole}"?`)) {
+                return;
+            }
+
+            try {
+                log(`\n<span class="warning">🔧 Fixing role for: ${currentUser.email}</span>`);
+                log(`<span class="warning">🔧 New role: "${newRole}"</span>\n`);
+
+                // Update userroles collection
+                const userRoleRef = doc(db, 'userroles', currentUser.uid);
+                await setDoc(userRoleRef, {
+                    role: newRole,
+                    dateModified: new Date()
+                }, { merge: true });
+
+                log(`<span class="success">✅ Updated userroles collection</span>`);
+
+                // Update users collection if it exists
+                try {
+                    const usersRef = doc(db, 'users', currentUser.uid);
+                    await setDoc(usersRef, {
+                        role: newRole,
+                        dateModified: new Date()
+                    }, { merge: true });
+                    log(`<span class="success">✅ Updated users collection</span>`);
+                } catch (e) {
+                    log(`<span class="warning">⚠️  Could not update users collection (may not exist): ${e.message}</span>`);
+                }
+
+                log(`\n<span class="success">✅ Role fixed successfully!</span>`);
+                log(`<span class="warning">⚠️  Please refresh your app to see the changes.</span>`);
+
+            } catch (error) {
+                log(`<span class="error">❌ Error: ${error.message}</span>`);
+                console.error('Full error:', error);
+            }
+        };
+
+        window.fixAllKnownUsers = async function() {
+            if (!currentUser) {
+                log(`<span class="error">❌ Not logged in. Please log in as SUPER ADMIN first.</span>`);
+                return;
+            }
+
+            // Check if current user is super admin
+            const userRoleRef = doc(db, 'userroles', currentUser.uid);
+            const userRoleDoc = await getDoc(userRoleRef);
+
+            if (!userRoleDoc.exists() || userRoleDoc.data().role !== 'super admin') {
+                log(`<span class="error">❌ You must be logged in as SUPER ADMIN to fix all users</span>`);
+                return;
+            }
+
+            const knownUsers = [
+                { email: 'adedaniel502@gmail.com', role: 'super admin' },
+                { email: 'ffivelife502@gmail.com', role: 'admin' },
+                { email: 'demolajunior687@gmail.com', role: 'claims' }
+            ];
+
+            if (!confirm(`This will fix roles for ${knownUsers.length} known users. Continue?`)) {
+                return;
+            }
+
+            clearLog();
+            log(`<span class="warning">🔧 Fixing roles for ${knownUsers.length} users...</span>\n`);
+
+            for (const user of knownUsers) {
+                log(`<span class="warning">Processing: ${user.email} → "${user.role}"</span>`);
+                
+                // Note: Due to Firestore rules, we can only update our own document
+                // This will only work if you're logged in as each user
+                log(`<span class="error">   ⚠️  Cannot update other users due to Firestore security rules</span>`);
+                log(`<span class="warning">   💡 Each user needs to run this tool themselves</span>\n`);
+            }
+
+            log(`<span class="warning">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+            log(`<span class="warning">SOLUTION: Share this file with each user and have them:</span>`);
+            log(`<span class="warning">1. Log in to the app</span>`);
+            log(`<span class="warning">2. Open this HTML file in their browser</span>`);
+            log(`<span class="warning">3. Select their correct role</span>`);
+            log(`<span class="warning">4. Click "Fix Role"</span>`);
+        };
+    </script>
+</body>
+</html>

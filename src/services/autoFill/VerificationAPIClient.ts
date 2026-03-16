@@ -18,7 +18,7 @@ import { auth } from '../../firebase/config';
 
 // API configuration
 const API_TIMEOUT = 15000; // 15 seconds timeout for auto-fill (increased from 5s to handle slow API responses)
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 /**
  * VerificationAPIClient class
