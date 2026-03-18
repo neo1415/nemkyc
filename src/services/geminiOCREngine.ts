@@ -269,8 +269,8 @@ export class GeminiOCREngine {
    * Make API call to Gemini via backend
    */
   private async makeApiCall(request: GeminiRequest): Promise<GeminiResponse> {
-    // Use absolute URL to backend server on port 3001
-    const url = 'http://localhost:3001/api/gemini/generate';
+    // Use environment variable for API URL
+    const url = `${import.meta.env.VITE_API_URL}/api/gemini/generate`;
 
     console.log('Making Gemini API call to backend:', url);
     console.log('Request payload structure:', {
@@ -287,7 +287,9 @@ export class GeminiOCREngine {
     });
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.config.timeoutMs);
+    const timeoutId = setTimeout(() => {
+      controller.abort(new Error(`Request timeout after ${this.config.timeoutMs}ms`));
+    }, this.config.timeoutMs);
 
     try {
       const response = await fetch(url, {
@@ -328,6 +330,13 @@ export class GeminiOCREngine {
 
     } catch (error) {
       clearTimeout(timeoutId);
+      
+      // Handle AbortError specifically
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Gemini API call aborted:', error.message);
+        throw new Error(`Request timeout: ${error.message || 'The request took too long to complete'}`);
+      }
+      
       console.error('Gemini API call failed:', error);
       throw error;
     }

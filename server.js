@@ -822,7 +822,93 @@ app.use((req, res, next) => {
   next();
 });
 
+// ============= FIRESTORE CONFIGURATION WITH TIMEOUTS =============
+// Configure Firestore with shorter timeouts to prevent blocking
 const db = admin.firestore();
+
+// Set Firestore client settings with reasonable timeouts
+const firestoreSettings = {
+  ignoreUndefinedProperties: true,
+  // Note: Firestore doesn't support direct timeout configuration in settings
+  // We'll implement timeout handling at the operation level
+};
+
+db.settings(firestoreSettings);
+
+// ============= FIRESTORE OPERATION WRAPPER WITH TIMEOUT =============
+/**
+ * Wrapper for Firestore operations with timeout
+ * Prevents operations from blocking indefinitely
+ * @param {Promise} operation - Firestore operation promise
+ * @param {number} timeoutMs - Timeout in milliseconds (default: 5000ms)
+ * @returns {Promise} Operation result or timeout error
+ */
+async function firestoreWithTimeout(operation, timeoutMs = 5000) {
+  return Promise.race([
+    operation,
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error(`Firestore operation timeout after ${timeoutMs}ms`)), timeoutMs)
+    )
+  ]);
+}
+
+// ============= CIRCUIT BREAKER FOR FIRESTORE =============
+/**
+ * Circuit breaker to prevent cascading failures when Firestore is down
+ */
+class CircuitBreaker {
+  constructor(threshold = 5, timeout = 60000) {
+    this.failureCount = 0;
+    this.threshold = threshold;
+    this.timeout = timeout;
+    this.state = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN
+    this.nextAttempt = Date.now();
+  }
+
+  async execute(operation) {
+    if (this.state === 'OPEN') {
+      if (Date.now() < this.nextAttempt) {
+        throw new Error('Circuit breaker is OPEN - Firestore unavailable');
+      }
+      this.state = 'HALF_OPEN';
+    }
+
+    try {
+      const result = await operation();
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure();
+      throw error;
+    }
+  }
+
+  onSuccess() {
+    this.failureCount = 0;
+    this.state = 'CLOSED';
+  }
+
+  onFailure() {
+    this.failureCount++;
+    if (this.failureCount >= this.threshold) {
+      this.state = 'OPEN';
+      this.nextAttempt = Date.now() + this.timeout;
+      console.error(`🔴 Circuit breaker OPEN - Firestore operations suspended for ${this.timeout}ms`);
+    }
+  }
+
+  getStatus() {
+    return {
+      state: this.state,
+      failureCount: this.failureCount,
+      nextAttempt: this.state === 'OPEN' ? new Date(this.nextAttempt).toISOString() : null
+    };
+  }
+}
+
+// Create circuit breaker instances for different operations
+const auditLogCircuitBreaker = new CircuitBreaker(5, 60000); // 5 failures, 60s timeout
+const healthMonitorCircuitBreaker = new CircuitBreaker(3, 30000); // 3 failures, 30s timeout
 
 // ✅ SECURITY: Enhanced multer configuration with size limits and file type validation
 const upload = multer({ 
@@ -1790,8 +1876,9 @@ const requestLoggingMiddleware = async (req, res, next) => {
     // Get location
     const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
     
-    // Log the request
-    await logAction({
+    // CRITICAL FIX: Fire-and-forget - don't await logAction
+    // This prevents blocking the response if Firestore is slow/down
+    logAction({
       action: action,
       severity: severity,
       actorUid: userDetails.uid,
@@ -1828,6 +1915,8 @@ const requestLoggingMiddleware = async (req, res, next) => {
         origin: req.headers.origin || null,
         acceptLanguage: req.headers['accept-language'] || null
       }
+    }).catch(err => {
+      // Silently catch errors - already logged in logAction
     });
   };
   
@@ -1922,115 +2011,133 @@ const getSeverity = (action) => {
 /**
  * Enhanced logAction function - SIEM-grade logging
  * Captures comprehensive event data for security monitoring and compliance
+ * 
+ * CRITICAL FIX: Fire-and-forget pattern with timeout and circuit breaker
+ * - Non-blocking: Does not await Firestore write
+ * - Short timeout: 5 seconds max (not 10 minutes)
+ * - Circuit breaker: Stops trying if Firestore is down
+ * - Error handling: Logs errors but doesn't crash
  */
 const logAction = async (actionData) => {
   if (!EVENTS_CONFIG.ENABLE_EVENTS_LOGGING) {
     return;
   }
 
-  try {
-    const severity = actionData.severity || getSeverity(actionData.action);
-    const riskScore = calculateRiskScore(actionData);
-    
-    // Helper function to remove undefined values from objects
-    const removeUndefined = (obj) => {
-      if (!obj || typeof obj !== 'object') return obj;
+  // Fire-and-forget: Don't await, don't block the response
+  setImmediate(async () => {
+    try {
+      const severity = actionData.severity || getSeverity(actionData.action);
+      const riskScore = calculateRiskScore(actionData);
       
-      const cleaned = {};
-      for (const [key, value] of Object.entries(obj)) {
-        if (value !== undefined) {
-          if (value && typeof value === 'object' && !Array.isArray(value)) {
-            cleaned[key] = removeUndefined(value);
-          } else {
-            cleaned[key] = value;
+      // Helper function to remove undefined values from objects
+      const removeUndefined = (obj) => {
+        if (!obj || typeof obj !== 'object') return obj;
+        
+        const cleaned = {};
+        for (const [key, value] of Object.entries(obj)) {
+          if (value !== undefined) {
+            if (value && typeof value === 'object' && !Array.isArray(value)) {
+              cleaned[key] = removeUndefined(value);
+            } else {
+              cleaned[key] = value;
+            }
           }
         }
-      }
-      return cleaned;
-    };
-    
-    const eventLog = {
-      // Timestamp
-      ts: admin.firestore.FieldValue.serverTimestamp(),
-      createdAt: new Date().toISOString(),
+        return cleaned;
+      };
       
-      // Action details
-      action: actionData.action,
-      severity: severity,
-      riskScore: riskScore,
-      
-      // Actor information (WHO did it)
-      actorUid: actionData.actorUid || null,
-      actorDisplayName: actionData.actorDisplayName || null,
-      actorEmail: actionData.actorEmail || null,
-      actorPhone: actionData.actorPhone || null,
-      actorRole: actionData.actorRole || null,
-      
-      // Target information
-      targetType: actionData.targetType,
-      targetId: actionData.targetId,
-      targetName: actionData.targetName || null,
-      
-      // Request details - remove undefined values
-      details: removeUndefined(actionData.details || {}),
-      requestMethod: actionData.requestMethod || null,
-      requestPath: actionData.requestPath || null,
-      requestBody: actionData.requestBody || null,
-      responseStatus: actionData.responseStatus || null,
-      responseTime: actionData.responseTime || null,
-      
-      // Network information - provide defaults for undefined values
-      ipMasked: actionData.ipMasked || 'Unknown',
-      ipHash: actionData.ipHash || 'unknown-hash',
-      location: actionData.location || 'Unknown',
-      userAgent: actionData.userAgent || 'Unknown',
-      deviceType: actionData.deviceType || 'Unknown',
-      browser: actionData.browser || 'Unknown',
-      os: actionData.os || 'Unknown',
-      
-      // Session tracking
-      sessionId: actionData.sessionId || null,
-      correlationId: actionData.correlationId || uuidv4(),
-      
-      // Security flags
-      isAnomaly: actionData.isAnomaly || false,
-      isSuspicious: riskScore > 50,
-      requiresReview: riskScore > 70,
-      
-      // Additional metadata - remove undefined values
-      meta: removeUndefined({
-        ...actionData.meta,
-        serverVersion: process.env.npm_package_version || '1.0.0',
-        nodeEnv: process.env.NODE_ENV || 'development',
-        timestamp: Date.now()
-      })
-    };
-
-    // Add raw IP with TTL for retention policy
-    if (actionData.rawIP && EVENTS_CONFIG.RAW_IP_RETENTION_DAYS > 0) {
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + EVENTS_CONFIG.RAW_IP_RETENTION_DAYS);
-      eventLog.rawIP = actionData.rawIP;
-      eventLog.rawIPExpiry = admin.firestore.Timestamp.fromDate(expiryDate);
-    }
-
-    // Write to Firestore
-    const docRef = await db.collection('eventLogs').add(eventLog);
-    
-    // Log critical events to console
-    if (severity === SEVERITY.CRITICAL || severity === SEVERITY.ERROR) {
-      console.error(`🚨 ${severity.toUpperCase()} EVENT:`, {
-        id: docRef.id,
+      const eventLog = {
+        // Timestamp
+        ts: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: new Date().toISOString(),
+        
+        // Action details
         action: actionData.action,
-        actor: actionData.actorEmail,
-        riskScore: riskScore
+        severity: severity,
+        riskScore: riskScore,
+        
+        // Actor information (WHO did it)
+        actorUid: actionData.actorUid || null,
+        actorDisplayName: actionData.actorDisplayName || null,
+        actorEmail: actionData.actorEmail || null,
+        actorPhone: actionData.actorPhone || null,
+        actorRole: actionData.actorRole || null,
+        
+        // Target information
+        targetType: actionData.targetType,
+        targetId: actionData.targetId,
+        targetName: actionData.targetName || null,
+        
+        // Request details - remove undefined values
+        details: removeUndefined(actionData.details || {}),
+        requestMethod: actionData.requestMethod || null,
+        requestPath: actionData.requestPath || null,
+        requestBody: actionData.requestBody || null,
+        responseStatus: actionData.responseStatus || null,
+        responseTime: actionData.responseTime || null,
+        
+        // Network information - provide defaults for undefined values
+        ipMasked: actionData.ipMasked || 'Unknown',
+        ipHash: actionData.ipHash || 'unknown-hash',
+        location: actionData.location || 'Unknown',
+        userAgent: actionData.userAgent || 'Unknown',
+        deviceType: actionData.deviceType || 'Unknown',
+        browser: actionData.browser || 'Unknown',
+        os: actionData.os || 'Unknown',
+        
+        // Session tracking
+        sessionId: actionData.sessionId || null,
+        correlationId: actionData.correlationId || uuidv4(),
+        
+        // Security flags
+        isAnomaly: actionData.isAnomaly || false,
+        isSuspicious: riskScore > 50,
+        requiresReview: riskScore > 70,
+        
+        // Additional metadata - remove undefined values
+        meta: removeUndefined({
+          ...actionData.meta,
+          serverVersion: process.env.npm_package_version || '1.0.0',
+          nodeEnv: process.env.NODE_ENV || 'development',
+          timestamp: Date.now()
+        })
+      };
+
+      // Add raw IP with TTL for retention policy
+      if (actionData.rawIP && EVENTS_CONFIG.RAW_IP_RETENTION_DAYS > 0) {
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + EVENTS_CONFIG.RAW_IP_RETENTION_DAYS);
+        eventLog.rawIP = actionData.rawIP;
+        eventLog.rawIPExpiry = admin.firestore.Timestamp.fromDate(expiryDate);
+      }
+
+      // Write to Firestore with timeout and circuit breaker
+      await auditLogCircuitBreaker.execute(async () => {
+        await firestoreWithTimeout(
+          db.collection('eventLogs').add(eventLog),
+          5000 // 5 second timeout (not 10 minutes!)
+        );
       });
+      
+      // Log critical events to console
+      if (severity === SEVERITY.CRITICAL || severity === SEVERITY.ERROR) {
+        console.error(`🚨 ${severity.toUpperCase()} EVENT:`, {
+          action: actionData.action,
+          actor: actionData.actorEmail,
+          riskScore: riskScore
+        });
+      }
+      
+    } catch (error) {
+      // Log error but don't throw - logging failures shouldn't break main functionality
+      console.error('💥 Failed to log event:', error.message);
+      
+      // If circuit breaker is open, log to console for visibility
+      if (error.message.includes('Circuit breaker is OPEN')) {
+        console.warn('⚠️  Audit logging suspended due to Firestore issues');
+      }
     }
-    
-  } catch (error) {
-    console.error('💥 Failed to log event:', error);
-    // Don't throw - logging failures shouldn't break main functionality
-  }
+  });
 };
 
 // ============= LOGGING HELPER FUNCTIONS =============

@@ -375,45 +375,69 @@ function pingVerifydataAPI() {
 
 /**
  * Save health status to Firestore
+ * CRITICAL FIX: Fire-and-forget with timeout to prevent blocking
  * @param {object} status - Health status data
  */
 async function saveHealthStatus(status) {
   if (!db) return;
   
-  try {
-    await db.collection('api-health-status').add({
-      ...status,
-      createdAt: new Date()
-    });
-    
-    // Also update the latest status document
-    await db.collection('api-health-status').doc('latest').set({
-      ...status,
-      updatedAt: new Date()
-    });
-  } catch (error) {
-    console.error(`[HealthMonitor] Failed to save health status: ${error.message}`);
-  }
+  // Fire-and-forget: Don't block if Firestore is slow
+  setImmediate(async () => {
+    try {
+      // Use Promise.race for timeout (5 seconds max)
+      await Promise.race([
+        (async () => {
+          await db.collection('api-health-status').add({
+            ...status,
+            createdAt: new Date()
+          });
+          
+          // Also update the latest status document
+          await db.collection('api-health-status').doc('latest').set({
+            ...status,
+            updatedAt: new Date()
+          });
+        })(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Health status save timeout after 5000ms')), 5000)
+        )
+      ]);
+    } catch (error) {
+      console.error(`[HealthMonitor] Failed to save health status: ${error.message}`);
+      // Don't throw - logging failures shouldn't break health monitoring
+    }
+  });
 }
 
 /**
  * Generate alert for critical issues
+ * CRITICAL FIX: Fire-and-forget with timeout to prevent blocking
  * @param {object} alert - Alert data
  */
 async function generateAlert(alert) {
   if (!db) return;
   
-  try {
-    await db.collection('system-alerts').add({
-      ...alert,
-      acknowledged: false,
-      createdAt: new Date()
-    });
-    
-    console.log(`[HealthMonitor] Alert generated: ${alert.type} - ${alert.message}`);
-  } catch (error) {
-    console.error(`[HealthMonitor] Failed to generate alert: ${error.message}`);
-  }
+  // Fire-and-forget: Don't block if Firestore is slow
+  setImmediate(async () => {
+    try {
+      // Use Promise.race for timeout (5 seconds max)
+      await Promise.race([
+        db.collection('system-alerts').add({
+          ...alert,
+          acknowledged: false,
+          createdAt: new Date()
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Alert generation timeout after 5000ms')), 5000)
+        )
+      ]);
+      
+      console.log(`[HealthMonitor] Alert generated: ${alert.type} - ${alert.message}`);
+    } catch (error) {
+      console.error(`[HealthMonitor] Failed to generate alert: ${error.message}`);
+      // Don't throw - logging failures shouldn't break health monitoring
+    }
+  });
 }
 
 /**

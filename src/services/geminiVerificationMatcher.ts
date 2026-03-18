@@ -104,8 +104,8 @@ export class VerificationMatcher {
       if (extractedDate !== officialDate) {
         mismatches.push({
           field: 'registrationDate',
-          extractedValue: extractedData.registrationDate,
-          expectedValue: officialData.data.registrationDate,
+          extractedValue: extractedDate || String(extractedData.registrationDate || ''),
+          expectedValue: officialDate || String(officialData.data.registrationDate || ''),
           similarity: 0,
           isCritical: true,
           reason: 'Registration date must match exactly'
@@ -240,8 +240,8 @@ export class VerificationMatcher {
       if (extractedDOB !== officialDOB) {
         mismatches.push({
           field: 'dateOfBirth',
-          extractedValue: extractedData.dateOfBirth,
-          expectedValue: officialData.data.dateOfBirth,
+          extractedValue: extractedDOB || String(extractedData.dateOfBirth || ''),
+          expectedValue: officialDOB || String(officialData.data.dateOfBirth || ''),
           similarity: 0,
           isCritical: true,
           reason: 'Date of birth must match exactly'
@@ -640,17 +640,34 @@ export class VerificationMatcher {
 
   /**
    * Normalize date string
+   * Handles Date objects, ISO strings, and DD/MM/YYYY format
+   * Uses local time methods to preserve the date as entered
    */
-  private normalizeDate(dateStr: string): string {
-    if (!dateStr) return '';
+  private normalizeDate(date: any): string {
+    if (!date) return '';
     
     try {
+      // If it's already a Date object
+      if (date instanceof Date) {
+        if (isNaN(date.getTime())) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
+      // If it's not a string, return empty
+      if (typeof date !== 'string') return '';
+      
+      const dateStr = date.trim();
+      if (!dateStr) return '';
+      
       // Handle various date formats
-      let date: Date;
+      let dateObj: Date;
       
       // Try parsing as ISO string first
       if (dateStr.includes('T') || dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        date = new Date(dateStr + 'T00:00:00.000Z'); // Force UTC
+        dateObj = new Date(dateStr); // Parse as local time
       } else {
         // Handle other formats like DD/MM/YYYY, MM/DD/YYYY, etc.
         const parts = dateStr.replace(/[^\d]/g, ' ').split(/\s+/).filter(p => p);
@@ -658,29 +675,29 @@ export class VerificationMatcher {
           // Assume YYYY-MM-DD or DD-MM-YYYY format
           if (parts[0].length === 4) {
             // YYYY-MM-DD
-            date = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
+            dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
           } else {
             // DD-MM-YYYY or MM-DD-YYYY - assume DD-MM-YYYY for consistency
-            date = new Date(Date.UTC(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])));
+            dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
           }
         } else {
-          date = new Date(dateStr + 'T00:00:00.000Z'); // Force UTC
+          dateObj = new Date(dateStr); // Parse as local time
         }
       }
       
       // Check if date is valid
-      if (isNaN(date.getTime())) {
+      if (isNaN(dateObj.getTime())) {
         return dateStr.replace(/[^\d-]/g, ''); // Keep only digits and dashes
       }
       
-      // Return in YYYY-MM-DD format using UTC to avoid timezone issues
-      const year = date.getUTCFullYear();
-      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(date.getUTCDate()).padStart(2, '0');
+      // Return in YYYY-MM-DD format using local time to preserve the date as entered
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
       
       return `${year}-${month}-${day}`;
     } catch {
-      return dateStr.replace(/[^\d-]/g, ''); // Keep only digits and dashes
+      return typeof date === 'string' ? date.replace(/[^\d-]/g, '') : ''; // Keep only digits and dashes
     }
   }
 
