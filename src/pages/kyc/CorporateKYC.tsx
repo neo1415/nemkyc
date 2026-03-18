@@ -286,6 +286,7 @@ const CorporateKYC: React.FC = () => {
   const isAuthenticated = user !== null && user !== undefined;
   const [currentStep, setCurrentStep] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [verificationResults, setVerificationResults] = useState<Record<string, any>>({});
   const [cacValidation, setCacValidation] = useState<FormatValidationResult | null>(null);
   const formRef = React.useRef<HTMLFormElement>(null);
   const cacInputRef = React.useRef<HTMLInputElement>(null);
@@ -1182,15 +1183,20 @@ const CorporateKYC: React.FC = () => {
             formId="kyc-corporate"
             documentType="cac"
             formData={{
-              companyName: formMethods.watch('insured'),
-              rcNumber: formMethods.watch('cacNumber'),
-              registrationDate: formMethods.watch('dateOfIncorporationRegistration'),
-              address: formMethods.watch('officeAddress'),
+              insured: formMethods.watch('insured'), // Company name - use 'insured' to match matcher expectations
+              cacNumber: formMethods.watch('cacNumber'), // Use cacNumber instead of rcNumber
+              incorporationDate: formMethods.watch('dateOfIncorporationRegistration'), // Use incorporationDate to match matcher
+              officeAddress: formMethods.watch('officeAddress'),
               directors: formMethods.watch('directors')?.map(d => `${d.firstName} ${d.lastName}`) || []
             }}
             currentFile={uploadedFiles.cacDocument || null}
+            verificationResult={verificationResults.cacDocument}
             onVerificationComplete={(result) => {
               console.log('CAC verification completed:', result);
+              setVerificationResults(prev => ({
+                ...prev,
+                cacDocument: result
+              }));
               // The DocumentUploadSection handles form submission blocking internally
             }}
             onStatusChange={(status) => {
@@ -1222,6 +1228,10 @@ const CorporateKYC: React.FC = () => {
               setUploadedFiles(prev => ({
                 ...prev,
                 cacDocument: null
+              }));
+              setVerificationResults(prev => ({
+                ...prev,
+                cacDocument: undefined
               }));
               formMethods.setValue('cacDocument', null);
             }}

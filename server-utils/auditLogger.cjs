@@ -38,6 +38,7 @@ function getDb() {
 
 /**
  * Log verification attempt
+ * CRITICAL FIX: Fire-and-forget with timeout to prevent blocking
  * 
  * @param {Object} params - Verification attempt parameters
  * @param {string} params.verificationType - Type of verification (NIN, BVN, CAC)
@@ -56,66 +57,75 @@ function getDb() {
  * @returns {Promise<void>}
  */
 async function logVerificationAttempt(params) {
-  try {
-    const {
-      verificationType,
-      identityNumber,
-      userId,
-      userEmail,
-      userName,
-      userType,
-      ipAddress,
-      result,
-      errorCode,
-      errorMessage,
-      apiProvider,
-      cost,
-      metadata = {}
-    } = params;
+  // Fire-and-forget: Don't block the response
+  setImmediate(async () => {
+    try {
+      const {
+        verificationType,
+        identityNumber,
+        userId,
+        userEmail,
+        userName,
+        userType,
+        ipAddress,
+        result,
+        errorCode,
+        errorMessage,
+        apiProvider,
+        cost,
+        metadata = {}
+      } = params;
 
-    const db = getDb();
-    const logEntry = {
-      // Event information
-      eventType: 'verification_attempt',
-      verificationType: verificationType || 'unknown',
-      
-      // Masked sensitive data
-      identityNumberMasked: maskSensitiveData(identityNumber),
-      
-      // User information
-      userId: userId || 'anonymous',
-      userEmail: userEmail || 'anonymous',
-      userName: userName || 'Anonymous',
-      userType: userType || 'customer', // 'user', 'customer', 'system'
-      ipAddress: ipAddress || 'unknown',
-      
-      // Result
-      result: result, // 'success', 'failure', 'error'
-      errorCode: errorCode || null,
-      errorMessage: errorMessage || null,
-      
-      // API provider and cost
-      apiProvider: apiProvider || 'unknown',
-      cost: cost || 0,
-      
-      // Metadata
-      metadata: {
-        ...metadata,
-        userAgent: metadata.userAgent || 'unknown',
-        timestamp: admin.firestore.FieldValue.serverTimestamp()
-      },
-      
-      // Timestamp
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
-    };
+      const db = getDb();
+      const logEntry = {
+        // Event information
+        eventType: 'verification_attempt',
+        verificationType: verificationType || 'unknown',
+        
+        // Masked sensitive data
+        identityNumberMasked: maskSensitiveData(identityNumber),
+        
+        // User information
+        userId: userId || 'anonymous',
+        userEmail: userEmail || 'anonymous',
+        userName: userName || 'Anonymous',
+        userType: userType || 'customer', // 'user', 'customer', 'system'
+        ipAddress: ipAddress || 'unknown',
+        
+        // Result
+        result: result, // 'success', 'failure', 'error'
+        errorCode: errorCode || null,
+        errorMessage: errorMessage || null,
+        
+        // API provider and cost
+        apiProvider: apiProvider || 'unknown',
+        cost: cost || 0,
+        
+        // Metadata
+        metadata: {
+          ...metadata,
+          userAgent: metadata.userAgent || 'unknown',
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        },
+        
+        // Timestamp
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      };
 
-    await db.collection('verification-audit-logs').add(logEntry);
-    
-    console.log(`📝 [AUDIT] Verification attempt logged: ${verificationType} - ${result}`);
-  } catch (error) {
-    console.error('❌ Failed to log verification attempt:', error.message);
-    // Don't throw - logging failures shouldn't break the application
-  }
+      // Use Promise.race for timeout (5 seconds max)
+      await Promise.race([
+        db.collection('verification-audit-logs').add(logEntry),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Audit log timeout after 5000ms')), 5000)
+        )
+      ]);
+      
+      console.log(`📝 [AUDIT] Verification attempt logged: ${verificationType} - ${result}`);
+    } catch (error) {
+      console.error('❌ Failed to log verification attempt:', error.message);
+      // Don't throw - logging failures shouldn't break the application
+    }
+  });
 }
 
 /**

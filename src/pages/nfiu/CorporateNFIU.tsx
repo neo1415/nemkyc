@@ -353,6 +353,7 @@ const CorporateNFIU: React.FC = () => {
   const { user } = useAuth();
   const isAuthenticated = user !== null && user !== undefined;
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [verificationResults, setVerificationResults] = useState<Record<string, any>>({});
   const formRef = useRef<HTMLFormElement>(null);
   const cacInputRef = useRef<HTMLInputElement>(null);
   
@@ -662,7 +663,7 @@ const CorporateNFIU: React.FC = () => {
       for (const [key, file] of Object.entries(uploadedFiles)) {
         if (file) {
           fileUploadPromises.push(
-            uploadFile(file, `corporate-nfiu`).then(url => [key, url])
+            uploadFile(file, `corporate-nfiu/${Date.now()}-${file.name}`).then(url => [key, url])
           );
         }
       }
@@ -1377,6 +1378,12 @@ const CorporateNFIU: React.FC = () => {
               formId="corporate-nfiu"
               documentType="cac"
               formData={watchedValues}
+              onVerificationComplete={(result) => {
+                setVerificationResults(prev => ({
+                  ...prev,
+                  verificationDocUrl: result
+                }));
+              }}
               onFileSelect={(file) => {
                 setUploadedFiles(prev => ({
                   ...prev,
@@ -1392,10 +1399,15 @@ const CorporateNFIU: React.FC = () => {
                   ...prev,
                   verificationDocUrl: undefined
                 }));
+                setVerificationResults(prev => ({
+                  ...prev,
+                  verificationDocUrl: undefined
+                }));
                 formMethods.setValue('verificationDocUrl', '');
                 formMethods.trigger('verificationDocUrl');
               }}
               currentFile={uploadedFiles.verificationDocUrl}
+              verificationResult={verificationResults.verificationDocUrl}
               disabled={isSubmitting}
             />
             {formMethods.formState.errors.verificationDocUrl && (

@@ -43,7 +43,7 @@ export const GEMINI_CONFIG: GeminiConfig = {
   model: 'gemini-2.5-flash',
   maxTokens: 2048,
   temperature: 0.1,
-  timeoutMs: 60000,
+  timeoutMs: 120000, // Increased to 120 seconds (2 minutes) for OCR processing
   retryAttempts: 3,
   rateLimitPerMinute: 60
 };
