@@ -18998,6 +18998,75 @@ app.post('/api/test-birthday-email', async (req, res) => {
 
 // ============= END BIRTHDAY EMAIL SYSTEM =============
 
+// ============= GEMINI API ENDPOINT =============
+app.post('/api/gemini/generate', async (req, res) => {
+  console.log('🤖 [GEMINI] Endpoint hit! Method:', req.method, 'Path:', req.path);
+  console.log('🤖 [GEMINI] Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('🤖 [GEMINI] Body keys:', Object.keys(req.body || {}));
+  
+  // CRITICAL: Always set Content-Type to application/json
+  res.setHeader('Content-Type', 'application/json');
+  
+  try {
+    const { contents } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      console.error('❌ Gemini API key not configured');
+      console.error('💡 Set GEMINI_API_KEY environment variable in production');
+      console.error('💡 Get your API key from: https://makersuite.google.com/app/apikey');
+      return res.status(500).json({ 
+        error: 'Gemini API key not configured',
+        message: 'The Gemini API key is missing. Please configure GEMINI_API_KEY environment variable.',
+        details: 'Contact your system administrator to set up the Gemini API key.'
+      });
+    }
+    
+    if (!contents || !Array.isArray(contents) || contents.length === 0) {
+      console.error('❌ Invalid request: contents missing or empty');
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'The request must include a non-empty contents array.',
+        details: 'Expected format: { contents: [{ parts: [...] }] }'
+      });
+    }
+
+    console.log('🤖 Making Gemini API call with', contents?.length || 0, 'content parts');
+
+    // Use global fetch (available in Node.js 18+)
+    const response = await globalThis.fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ contents })
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('❌ Gemini API error:', data);
+      return res.status(response.status).json({ 
+        error: data.error || 'Gemini API error',
+        message: 'The Gemini API returned an error.',
+        details: data
+      });
+    }
+
+    console.log('✅ Gemini API call successful');
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Gemini endpoint error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'An unexpected error occurred while processing your request.',
+      details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+    });
+  }
+});
+
+// ============= END GEMINI API ENDPOINT =============
+
 // ============= HEALTH CHECK ENDPOINTS =============
 
 // Root endpoint
@@ -19093,47 +19162,6 @@ app.use((err, req, res, next) => {
       stack: err.stack
     })
   });
-});
-
-// ============= GEMINI API ENDPOINT =============
-app.post('/api/gemini/generate', async (req, res) => {
-  console.log('🤖 [GEMINI] Endpoint hit! Method:', req.method, 'Path:', req.path);
-  console.log('🤖 [GEMINI] Headers:', JSON.stringify(req.headers, null, 2));
-  console.log('🤖 [GEMINI] Body keys:', Object.keys(req.body || {}));
-  
-  try {
-    const { contents } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
-    
-    if (!apiKey) {
-      console.error('❌ Gemini API key not configured');
-      return res.status(500).json({ error: 'Gemini API key not configured' });
-    }
-
-    console.log('🤖 Making Gemini API call with', contents?.length || 0, 'content parts');
-
-    // Use global fetch (available in Node.js 18+)
-    const response = await globalThis.fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ contents })
-    });
-
-    const data = await response.json();
-    
-    if (!response.ok) {
-      console.error('❌ Gemini API error:', data);
-      return res.status(response.status).json({ error: data.error || 'Gemini API error' });
-    }
-
-    console.log('✅ Gemini API call successful');
-    res.json(data);
-  } catch (error) {
-    console.error('❌ Gemini endpoint error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
 });
 
 // Handle 404 - Route not found
