@@ -269,8 +269,9 @@ export class GeminiOCREngine {
    * Make API call to Gemini via backend
    */
   private async makeApiCall(request: GeminiRequest): Promise<GeminiResponse> {
-    // Use environment variable for API URL
-    const url = `${import.meta.env.VITE_API_URL}/api/gemini/generate`;
+    // Use environment variable for API URL with proper fallback
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const url = `${apiBaseUrl}/api/gemini/generate`;
 
     console.log('Making Gemini API call to backend:', url);
     console.log('Request payload structure:', {

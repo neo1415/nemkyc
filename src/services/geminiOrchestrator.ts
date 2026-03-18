@@ -1,11 +1,11 @@
 // Main orchestrator service that coordinates all Gemini Document Verification components
 
-import { DocumentVerificationResult, ProcessingStatus, ExtractedDocumentData } from '@/types/geminiDocumentVerification';
+import { DocumentVerificationResult, ProcessingStatus } from '@/types/geminiDocumentVerification';
 import { geminiOCREngine } from './geminiOCREngine';
-import { geminiDocumentProcessor } from './geminiDocumentProcessor';
-import { geminiVerificationMatcher } from './geminiVerificationMatcher';
-import { geminiMismatchAnalyzer } from './geminiMismatchAnalyzer';
-import { geminiFormSubmissionController } from './geminiFormSubmissionController';
+import { documentProcessor } from './geminiDocumentProcessor';
+import { verificationMatcher } from './geminiVerificationMatcher';
+import { mismatchAnalyzer } from './geminiMismatchAnalyzer';
+import { formSubmissionController } from './geminiFormSubmissionController';
 import { geminiAuditLogger } from './geminiAuditLogger';
 import { geminiRealtimeUpdates } from './geminiRealtimeUpdates';
 import { geminiErrorRecovery } from './geminiErrorRecovery';
@@ -15,6 +15,7 @@ import { geminiProcessingQueue } from './geminiProcessingQueue';
 import { documentSecurity } from './geminiDocumentSecurity';
 import { geminiDataPrivacy } from './geminiDataPrivacy';
 import { GeminiErrorHandler, ErrorCode } from '@/utils/geminiErrorHandling';
+import { DocumentValidator } from '@/utils/geminiDocumentValidation';
 
 export interface VerificationRequest {
   file: File;
@@ -149,8 +150,12 @@ export class GeminiOrchestrator {
       );
 
       // Start real-time updates if enabled
-      if (this.config.enableRealTimeUpdates) {
-        geminiRealtimeUpdates.startStatusUpdates(documentId, request.onStatusUpdate);
+      if (this.config.enableRealTimeUpdates && request.onStatusUpdate) {
+        geminiRealtimeUpdates.subscribe(documentId, (update) => {
+          if (request.onStatusUpdate) {
+            request.onStatusUpdate(update.status);
+          }
+        });
       }
 
       // Wait for processing to complete or timeout
@@ -302,7 +307,11 @@ export class GeminiOrchestrator {
 
       // Stop real-time updates
       if (this.config.enableRealTimeUpdates) {
-        geminiRealtimeUpdates.stopAllUpdates();
+        // Clear all document statuses
+        const allStatuses = geminiRealtimeUpdates.getAllStatuses();
+        allStatuses.forEach((_, documentId) => {
+          geminiRealtimeUpdates.cleanup(documentId);
+        });
       }
 
       this.initialized = false;
@@ -339,11 +348,11 @@ export class GeminiOrchestrator {
     }
 
     // Validate file size and format
-    const result = await geminiDocumentProcessor.validateFile(request.file, request.documentType);
-    if (!result.success) {
+    const validation = DocumentValidator.validateFile(request.file);
+    if (!validation.isValid) {
       throw GeminiErrorHandler.createError(
-        result.error?.code || ErrorCode.CORRUPTED_FILE,
-        result.error?.message || 'File validation failed'
+        ErrorCode.CORRUPTED_FILE,
+        validation.errors.join(', ')
       );
     }
   }
@@ -390,15 +399,16 @@ export class GeminiOrchestrator {
    */
   private async logCacheHit(request: VerificationRequest, result: DocumentVerificationResult): Promise<void> {
     if (this.config.enableAuditLogging) {
-      await geminiAuditLogger.logEvent({
-        type: 'cache_hit',
-        userId: request.userId,
-        documentType: request.documentType,
-        details: {
+      await geminiAuditLogger.logSystemEvent(
+        'cache_hit',
+        'info',
+        {
+          userId: request.userId,
+          documentType: request.documentType,
           documentId: result.documentId,
           cacheHit: true
         }
-      });
+      );
     }
   }
 
@@ -411,24 +421,27 @@ export class GeminiOrchestrator {
   ): Promise<void> {
     // Log completion
     if (this.config.enableAuditLogging) {
-      await geminiAuditLogger.logEvent({
-        type: 'processing_completed',
-        userId: request.userId,
-        documentType: request.documentType,
-        details: {
+      await geminiAuditLogger.logSystemEvent(
+        'processing_completed',
+        'info',
+        {
+          userId: request.userId,
+          documentType: request.documentType,
           documentId: result.documentId,
           success: result.success,
           processingTime: result.processingTime
         }
-      });
+      );
     }
 
-    // Update form submission state
-    await geminiFormSubmissionController.updateVerificationStatus(
-      request.userId,
-      result.documentId,
-      result.success ? 'verified' : 'failed'
-    );
+    // Update form submission state if verification result is available
+    if (result.verificationResult && request.sessionId) {
+      await formSubmissionController.updateDocumentVerification(
+        request.sessionId,
+        request.documentType,
+        result.verificationResult
+      );
+    }
   }
 
   /**
@@ -437,15 +450,16 @@ export class GeminiOrchestrator {
   private async handleProcessingError(request: VerificationRequest, error: Error): Promise<void> {
     // Log error
     if (this.config.enableAuditLogging) {
-      await geminiAuditLogger.logEvent({
-        type: 'processing_error',
-        userId: request.userId,
-        documentType: request.documentType,
-        details: {
+      await geminiAuditLogger.logSystemEvent(
+        'processing_error',
+        'error',
+        {
+          userId: request.userId,
+          documentType: request.documentType,
           error: error.message,
           timestamp: new Date()
         }
-      });
+      );
     }
   }
 
