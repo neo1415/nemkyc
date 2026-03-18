@@ -220,7 +220,8 @@ const MFAModal: React.FC<MFAModalProps> = ({ isOpen, onClose, type, onSuccess })
             const idToken = await user.getIdToken();
             // Generate a 6-digit code for email (same as SMS would be ideal, but we can't get Firebase's code)
             // So we'll just send a notification email instead
-            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/auth/send-mfa-email`, {
+            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001';
+            await fetch(`${apiBaseUrl}/api/auth/send-mfa-email`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
