@@ -413,7 +413,7 @@ export class VerificationAPIClient {
    */
   cancelPendingRequest(): void {
     if (this.abortController && this.pendingRequest) {
-      this.abortController.abort();
+      this.abortController.abort(new Error('Request cancelled by user'));
       this.abortController = null;
       this.pendingRequest = false;
     }

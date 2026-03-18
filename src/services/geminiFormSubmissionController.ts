@@ -96,6 +96,7 @@ export class FormSubmissionController {
 
   /**
    * Update document verification result
+   * Creates session if it doesn't exist
    */
   async updateDocumentVerification(
     formId: string,
@@ -103,7 +104,25 @@ export class FormSubmissionController {
     verificationResult: VerificationResult
   ): Promise<FormVerificationState> {
     try {
-      const session = this.getSession(formId);
+      // Get or create session
+      let session = this.formSessions.get(formId);
+      
+      if (!session) {
+        // Auto-create session if it doesn't exist
+        console.log('📝 Auto-creating form session for formId:', formId);
+        
+        // Infer form type from documentType
+        const formType = documentType === 'cac' ? 'kyc' : 'kyc';
+        
+        // Initialize session
+        const verificationState = await this.initializeFormSession(
+          formId,
+          'current-user', // TODO: Get from auth context
+          formType
+        );
+        
+        session = this.formSessions.get(formId)!;
+      }
       
       // Find or create document verification
       let docVerification = session.verificationState.documentVerifications

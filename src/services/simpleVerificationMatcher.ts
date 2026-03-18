@@ -201,8 +201,8 @@ export class SimpleVerificationMatcher {
         if (extractedDate !== formDate) {
           mismatches.push({
             field: 'registrationDate',
-            extractedValue: extractedData.registrationDate,
-            expectedValue: formData.incorporationDate,
+            extractedValue: extractedDate || String(extractedData.registrationDate || ''),
+            expectedValue: formDate || String(formData.incorporationDate || ''),
             similarity: 0,
             isCritical: true,
             reason: 'Registration dates do not match'
@@ -329,17 +329,53 @@ export class SimpleVerificationMatcher {
 
   /**
    * Normalize date for comparison (YYYY-MM-DD format)
+   * Handles Date objects, ISO strings, and DD/MM/YYYY format
+   * Uses local time methods to preserve the date as entered
    */
-  private normalizeDate(dateStr: string): string {
-    if (!dateStr) return '';
+  private normalizeDate(date: any): string {
+    if (!date) return '';
     
     try {
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return dateStr; // Return original if invalid
+      // If it's already a Date object
+      if (date instanceof Date) {
+        if (isNaN(date.getTime())) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
       
-      return date.toISOString().split('T')[0]; // YYYY-MM-DD
+      // If it's a string, try to parse it
+      if (typeof date === 'string') {
+        const trimmed = date.trim();
+        if (!trimmed) return '';
+        
+        // Try DD/MM/YYYY format (common in OCR)
+        const ddmmyyyyMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (ddmmyyyyMatch) {
+          const [, day, month, year] = ddmmyyyyMatch;
+          return `${year}-${month}-${day}`;
+        }
+        
+        // Try YYYY-MM-DD format
+        const yyyymmddMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (yyyymmddMatch) {
+          return trimmed;
+        }
+        
+        // Try parsing as Date (handles ISO strings and other formats)
+        const parsed = new Date(trimmed);
+        if (!isNaN(parsed.getTime())) {
+          const year = parsed.getFullYear();
+          const month = String(parsed.getMonth() + 1).padStart(2, '0');
+          const day = String(parsed.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
+      }
+      
+      return '';
     } catch {
-      return dateStr; // Return original if parsing fails
+      return '';
     }
   }
 }

@@ -289,7 +289,8 @@ export class GeminiRealtimeUpdates {
     }
 
     try {
-      const ws = new WebSocket(`ws://localhost:3001/ws/document/${documentId}`);
+      const wsUrl = import.meta.env.VITE_WS_URL || `ws://${window.location.host}/ws/document/${documentId}`;
+      const ws = new WebSocket(wsUrl);
       
       ws.onopen = () => {
         console.log(`WebSocket connected for document ${documentId}`);

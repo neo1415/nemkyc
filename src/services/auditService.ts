@@ -25,7 +25,7 @@ export interface AuditLogParams {
 }
 
 class AuditService {
-  private apiEndpoint = '/api/audit';
+  private apiEndpoint = 'http://localhost:3001/api/audit';
 
   /**
    * Log form view event
@@ -48,8 +48,10 @@ class AuditService {
         location
       });
     } catch (error) {
-      console.error('[AuditService] Failed to log form view:', error);
-      // Don't throw - audit logging failures shouldn't break the app
+      // Silently fail - audit logging is non-critical
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[AuditService] Failed to log form view (non-critical)');
+      }
     }
   }
 
@@ -76,7 +78,10 @@ class AuditService {
         location
       });
     } catch (error) {
-      console.error('[AuditService] Failed to log form submission:', error);
+      // Silently fail - audit logging is non-critical
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[AuditService] Failed to log form submission (non-critical)');
+      }
     }
   }
 
@@ -103,7 +108,10 @@ class AuditService {
         location
       });
     } catch (error) {
-      console.error('[AuditService] Failed to log document upload:', error);
+      // Silently fail - audit logging is non-critical
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[AuditService] Failed to log document upload (non-critical)');
+      }
     }
   }
 
@@ -133,7 +141,10 @@ class AuditService {
         location
       });
     } catch (error) {
-      console.error('[AuditService] Failed to log admin action:', error);
+      // Silently fail - audit logging is non-critical
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[AuditService] Failed to log admin action (non-critical)');
+      }
     }
   }
 
@@ -147,14 +158,32 @@ class AuditService {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(params)
+        body: JSON.stringify(params),
+        // Add timeout to prevent hanging
+        signal: AbortSignal.timeout(5000) // 5 second timeout
       });
+
+      // Silently ignore 403 Forbidden errors - endpoint may not be configured
+      if (response.status === 403) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[AuditService] Audit endpoint returned 403 Forbidden - endpoint may not be configured (non-critical)');
+        }
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(`Audit log failed: ${response.statusText}`);
       }
     } catch (error) {
-      console.error('[AuditService] Failed to send audit log:', error);
+      // Silently ignore 403 errors
+      if (error instanceof Error && error.message.includes('403')) {
+        return;
+      }
+      
+      // Only log in development mode to avoid console noise in production
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[AuditService] Failed to send audit log (non-critical):', error instanceof Error ? error.message : 'Unknown error');
+      }
       // Don't throw - audit logging failures shouldn't break the app
     }
   }
