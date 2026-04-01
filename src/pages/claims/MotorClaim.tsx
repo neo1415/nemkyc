@@ -78,9 +78,7 @@ const motorClaimSchema = yup.object().shape({
   }),
   otherDriverPhone: yup.string().when('otherVehicleInvolved', {
     is: 'yes',
-    then: (schema) => createPhoneValidation(),
-      .required("Other driver phone number is required")
-      .matches(/^\+?[\d\s\-\(\)]{10,}$/, 'Please enter a valid phone number'),
+    then: (schema) => createPhoneValidation().required("Other driver phone number is required"),
     otherwise: (schema) => schema.notRequired()
   }),
   otherVehicleInjuryDamage: yup.string().when('otherVehicleInvolved', {
