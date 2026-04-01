@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,8 +38,8 @@ const goodsInTransitClaimSchema = yup.object().shape({
   // Insured Details
   companyName: yup.string().required("Company name is required"),
   address: yup.string().required("Address is required"),
-  phone: yup.string().required("Phone number is required"),
-  email: yup.string().email("Valid email is required").required("Email is required"),
+  phone: createPhoneValidation(),
+  email: createEmailValidation(),
   businessType: yup.string(),
 
   // Loss Details

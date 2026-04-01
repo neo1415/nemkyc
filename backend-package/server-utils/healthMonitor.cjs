@@ -132,73 +132,19 @@ async function performHealthCheck() {
 
 /**
  * Ping Datapro API to check if it's responding
+ * DISABLED: Health checks were causing unnecessary API calls and costs
  * @returns {Promise<{success: boolean, error?: string, errorCode?: string}>}
  */
 function pingDataproAPI() {
   return new Promise((resolve) => {
-    // Use a test NIN for health check (this will fail validation but confirms API is responding)
-    const testNIN = '12345678901';
-    const url = `${DATAPRO_API_URL}/verifynin/?regNo=${testNIN}`;
-    
-    const urlObj = new URL(url);
-    const options = {
-      hostname: urlObj.hostname,
-      port: urlObj.port || 443,
-      path: urlObj.pathname + urlObj.search,
-      method: 'GET',
-      headers: {
-        'SERVICEID': DATAPRO_SERVICE_ID,
-        'Content-Type': 'application/json'
-      },
-      timeout: 10000 // 10 second timeout for health checks
-    };
-    
-    const req = https.request(options, (res) => {
-      let data = '';
-      
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-      
-      res.on('end', () => {
-        // Any response (even error) means API is up
-        // We're just checking if the API is reachable
-        if (res.statusCode === 200 || res.statusCode === 400 || res.statusCode === 401) {
-          resolve({ success: true });
-        } else if (res.statusCode === 87 || res.statusCode === 88) {
-          resolve({ 
-            success: false, 
-            error: `API returned error code ${res.statusCode}`,
-            errorCode: res.statusCode.toString()
-          });
-        } else {
-          resolve({ 
-            success: false, 
-            error: `Unexpected status code: ${res.statusCode}`,
-            errorCode: res.statusCode.toString()
-          });
-        }
-      });
+    // DISABLED: Do not call the real API for health checks
+    // This was causing unnecessary API calls every 5 minutes with test NIN
+    // Health monitoring is now based on actual usage metrics instead
+    console.log('[HealthMonitor] Datapro health check disabled - using usage metrics instead');
+    resolve({ 
+      success: true,
+      message: 'Health check disabled - monitoring via usage metrics'
     });
-    
-    req.on('error', (error) => {
-      resolve({ 
-        success: false, 
-        error: `Network error: ${error.message}`,
-        errorCode: 'NETWORK_ERROR'
-      });
-    });
-    
-    req.on('timeout', () => {
-      req.destroy();
-      resolve({ 
-        success: false, 
-        error: 'Request timeout',
-        errorCode: 'TIMEOUT'
-      });
-    });
-    
-    req.end();
   });
 }
 
