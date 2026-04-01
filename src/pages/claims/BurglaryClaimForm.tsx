@@ -17,7 +17,7 @@ import { Calendar as ReactCalendar } from '@/components/ui/calendar';
 import { CalendarIcon, Plus, Trash2, Upload, Edit2, AlertTriangle, FileText, CheckCircle2, Loader2, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { createEmailValidation, createPhoneValidation, createDOBValidation } from '@/utils/validation';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
@@ -37,15 +37,15 @@ const burglaryClaimSchema = yup.object().shape({
   nameOfInsured: yup.string().required("Name of insured is required"),
   companyName: yup.string(),
   title: yup.string().required("Title is required"),
-  dateOfBirth: yup.date().required("Date of birth is required"),
+  dateOfBirth: createDOBValidation(),
   gender: yup.string().required("Gender is required"),
   address: yup.string().required("Address is required"),
-  phone: yup.string().required("Phone number is required"),
-  email: yup.string().email("Valid email is required").required("Email is required"),
+  phone: createPhoneValidation(),
+  email: createEmailValidation(),
 
   // Details of Loss
   premisesAddress: yup.string().required("Premises address is required"),
-  premisesTelephone: yup.string().required("Premises telephone is required"),
+  premisesTelephone: createPhoneValidation(),
   dateOfTheft: yup.date().required("Date of theft is required"),
   timeOfTheft: yup.string().required("Time of theft is required"),
   howEntryEffected: yup.string().required("How entry was effected is required"),
@@ -888,7 +888,7 @@ const BurglaryClaimForm: React.FC = () => {
               <h3 className="font-semibold mb-2">Data Privacy</h3>
               <div className="text-sm space-y-2">
                 <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Act 2023.</p>
                 <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
               </div>
             </div>

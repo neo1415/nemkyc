@@ -874,3 +874,265 @@ export const agentsCDDSchema = Yup.object({
   agreeToDataPrivacy: Yup.boolean().oneOf([true], 'You must agree to the data privacy policy'),
   signature: Yup.string().required('Signature is required'),
 });
+
+// ============================================================================
+// Centralized Validation Functions
+// ============================================================================
+
+export interface ValidationResult {
+  isValid: boolean;
+  error?: string;
+}
+
+/**
+ * Validates email addresses with international domain support
+ * Accepts: user@domain.com, user@subdomain.domain.co.uk
+ * Rejects: missing @, missing domain extension
+ */
+export function validateEmail(email: string): ValidationResult {
+  if (!email) {
+    return {
+      isValid: false,
+      error: 'Email is required'
+    };
+  }
+
+  // Simple but effective pattern: localpart@domain.tld
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  if (!emailRegex.test(email)) {
+    return {
+      isValid: false,
+      error: 'Please enter a valid email address'
+    };
+  }
+  
+  return { isValid: true };
+}
+
+/**
+ * Validates phone numbers for Nigerian and international formats
+ * Accepts: +234XXXXXXXXXX, 0XXXXXXXXXX, formats with spaces/hyphens/parentheses
+ * Requires: minimum 10 digits
+ */
+export function validatePhone(phone: string): ValidationResult {
+  if (!phone) {
+    return {
+      isValid: false,
+      error: 'Phone number is required'
+    };
+  }
+
+  // Remove spaces, hyphens, parentheses for digit counting
+  const digitsOnly = phone.replace(/[\s\-\(\)]/g, '');
+  
+  // Count actual digits
+  const digitCount = digitsOnly.replace(/\D/g, '').length;
+  if (digitCount < 10) {
+    return {
+      isValid: false,
+      error: 'Phone number must contain at least 10 digits'
+    };
+  }
+  
+  // Accept international format with + or local format
+  const phoneRegex = /^(\+\d{1,4}|0)[\d\s\-\(\)]{9,}$/;
+  if (!phoneRegex.test(phone)) {
+    return {
+      isValid: false,
+      error: 'Please enter a valid phone number (e.g., +234XXXXXXXXXX or 0XXXXXXXXXX)'
+    };
+  }
+  
+  return { isValid: true };
+}
+
+/**
+ * Validates date of birth with 18+ age requirement
+ * Rejects: future dates, ages under 18 years
+ * Uses: year, month, and day precision for age calculation
+ */
+export function validateDOB(dateOfBirth: string): ValidationResult {
+  if (!dateOfBirth) {
+    return {
+      isValid: false,
+      error: 'Date of birth is required'
+    };
+  }
+
+  const dob = new Date(dateOfBirth);
+  const today = new Date();
+  
+  // Check if date is in the future
+  if (dob > today) {
+    return {
+      isValid: false,
+      error: 'Date of birth cannot be in the future'
+    };
+  }
+  
+  // Calculate age with precision
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  const dayDiff = today.getDate() - dob.getDate();
+  
+  // Adjust age if birthday hasn't occurred this year
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+    age--;
+  }
+  
+  if (age < 18) {
+    return {
+      isValid: false,
+      error: 'You must be at least 18 years old to submit a claim'
+    };
+  }
+  
+  return { isValid: true };
+}
+
+/**
+ * Validates "from" date in date ranges
+ * Rejects: future dates
+ * Accepts: today or past dates
+ */
+export function validateFromDate(fromDate: string): ValidationResult {
+  if (!fromDate) {
+    return {
+      isValid: false,
+      error: 'Start date is required'
+    };
+  }
+
+  const date = new Date(fromDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset time for date-only comparison
+  date.setHours(0, 0, 0, 0);
+  
+  if (date > today) {
+    return {
+      isValid: false,
+      error: 'Start date cannot be in the future'
+    };
+  }
+  
+  return { isValid: true };
+}
+
+/**
+ * Validates "to" date in date ranges
+ * Rejects: past dates
+ * Accepts: today or future dates
+ */
+export function validateToDate(toDate: string): ValidationResult {
+  if (!toDate) {
+    return {
+      isValid: false,
+      error: 'End date is required'
+    };
+  }
+
+  const date = new Date(toDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset time for date-only comparison
+  date.setHours(0, 0, 0, 0);
+  
+  if (date < today) {
+    return {
+      isValid: false,
+      error: 'End date cannot be in the past'
+    };
+  }
+  
+  return { isValid: true };
+}
+
+/**
+ * Validates date range consistency
+ * Rejects: fromDate after toDate
+ * Accepts: fromDate before or equal to toDate
+ */
+export function validateDateRange(fromDate: string, toDate: string): ValidationResult {
+  if (!fromDate || !toDate) {
+    return {
+      isValid: false,
+      error: 'Both start and end dates are required'
+    };
+  }
+
+  const from = new Date(fromDate);
+  const to = new Date(toDate);
+  
+  if (from > to) {
+    return {
+      isValid: false,
+      error: 'Start date must be before or equal to end date'
+    };
+  }
+  
+  return { isValid: true };
+}
+
+// ============================================================================
+// Yup Integration Helpers
+// ============================================================================
+
+export const createEmailValidation = () => 
+  Yup.string()
+    .required('Email is required')
+    .test('email-format', function(value) {
+      if (!value) return false;
+      const result = validateEmail(value);
+      if (!result.isValid) {
+        return this.createError({ message: result.error });
+      }
+      return true;
+    });
+
+export const createPhoneValidation = () => 
+  Yup.string()
+    .required('Phone number is required')
+    .test('phone-format', function(value) {
+      if (!value) return false;
+      const result = validatePhone(value);
+      if (!result.isValid) {
+        return this.createError({ message: result.error });
+      }
+      return true;
+    });
+
+export const createDOBValidation = () => 
+  Yup.string()
+    .required('Date of birth is required')
+    .test('dob-valid', function(value) {
+      if (!value) return false;
+      const result = validateDOB(value);
+      if (!result.isValid) {
+        return this.createError({ message: result.error });
+      }
+      return true;
+    });
+
+export const createFromDateValidation = () => 
+  Yup.string()
+    .required('Start date is required')
+    .test('from-date-valid', function(value) {
+      if (!value) return false;
+      const result = validateFromDate(value);
+      if (!result.isValid) {
+        return this.createError({ message: result.error });
+      }
+      return true;
+    });
+
+export const createToDateValidation = () => 
+  Yup.string()
+    .required('End date is required')
+    .test('to-date-valid', function(value) {
+      if (!value) return false;
+      const result = validateToDate(value);
+      if (!result.isValid) {
+        return this.createError({ message: result.error });
+      }
+      return true;
+    });
