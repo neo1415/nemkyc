@@ -59,7 +59,7 @@ const CLAIMS_PROCEDURE = [
 
 const DATA_PRIVACY = [
   'Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.',
-  'Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.',
+  'Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Act 2023.',
   'Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.'
 ];
 

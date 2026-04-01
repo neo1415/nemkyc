@@ -192,6 +192,80 @@ async function ipBasedRateLimit(req, res, next) {
 const sessionCache = new Map();
 const SESSION_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache TTL
 
+// ========================================
+// EMAIL SECURITY HELPERS
+// ========================================
+
+/**
+ * Sanitize email address to prevent injection attacks
+ * @param {string} email - Email address to sanitize
+ * @returns {string} Sanitized email address
+ */
+function sanitizeEmail(email) {
+  if (!email || typeof email !== 'string') {
+    return '';
+  }
+  // Remove any newlines, carriage returns, and null bytes
+  return email.replace(/[\r\n\0]/g, '').trim();
+}
+
+/**
+ * Sanitize email subject to prevent header injection
+ * @param {string} subject - Email subject to sanitize
+ * @returns {string} Sanitized subject
+ */
+function sanitizeEmailSubject(subject) {
+  if (!subject || typeof subject !== 'string') {
+    return '';
+  }
+  // Remove newlines, carriage returns, and null bytes that could inject headers
+  return subject.replace(/[\r\n\0]/g, '').trim();
+}
+
+/**
+ * Validate email format
+ * @param {string} email - Email address to validate
+ * @returns {boolean} True if valid email format
+ */
+function isValidEmail(email) {
+  if (!email || typeof email !== 'string') {
+    return false;
+  }
+  // Basic email validation regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && !email.includes('\n') && !email.includes('\r');
+}
+
+// ========================================
+// ERROR SANITIZATION HELPERS
+// ========================================
+
+/**
+ * Sanitize error message for production
+ * Prevents leaking sensitive information in error responses
+ * @param {Error} error - The error object
+ * @param {string} genericMessage - Generic message to return in production
+ * @returns {object} Sanitized error response
+ */
+function sanitizeError(error, genericMessage = 'An error occurred') {
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  if (isProduction) {
+    // In production, return generic error
+    return {
+      error: genericMessage,
+      message: 'Please try again later or contact support if the problem persists.'
+    };
+  }
+  
+  // In development, return detailed error
+  return {
+    error: error.name || 'Error',
+    message: error.message,
+    stack: error.stack
+  };
+}
+
 /**
  * Get user session from cache or Firestore
  * @param {string} sessionToken - The session token
@@ -678,6 +752,11 @@ app.use(compression({
   threshold: 1024 // Only compress responses larger than 1KB
 }));
 
+// ============= CORS CONFIGURATION =============
+// SECURITY NOTE: CORS is configured to allow localhost in development mode
+// In production, ensure ADDITIONAL_ALLOWED_ORIGINS environment variable is set
+// to include only trusted domains. Never use '*' wildcard in production.
+// Example: ADDITIONAL_ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
 app.use(cors({
   origin: function (origin, callback) {
     // CORS library doesn't provide 'this.req', so we can't check method/path here
@@ -2609,10 +2688,17 @@ async function sendEmailToAdmins(adminEmails, formType, formData) {
     for (const email of adminEmails) {
       const mailOptions = {
         from: '"NEM FORMS Application" <kyc@nem-insurance.com>',
-        to: email, 
-        subject: `New ${formType} Submission`,
+        to: sanitizeEmail(email), 
+        subject: sanitizeEmailSubject(`New ${formType} Submission`),
         html: emailContent,
       };
+      
+      // Validate email before sending
+      if (!isValidEmail(email)) {
+        console.error('❌ Invalid admin email address:', email);
+        continue; // Skip this email and continue with others
+      }
+      
       await transporter.sendMail(mailOptions);
     }
     console.log('Emails sent to admins successfully');
@@ -2657,10 +2743,18 @@ async function sendEmail(to, subject, html, attachments = []) {
   // Handle sending individual emails if 'to' is an array
   if (Array.isArray(to)) {
     const emailPromises = to.map(email => {
+      const sanitizedEmail = sanitizeEmail(email);
+      
+      // Skip invalid emails
+      if (!isValidEmail(sanitizedEmail)) {
+        console.error('❌ Invalid email address in array:', email);
+        return Promise.resolve(); // Skip this email
+      }
+      
       const mailOptions = {
         from: '"NEM FORMS Application" <kyc@nem-insurance.com>',
-        to: email, // Send to individual email
-        subject,
+        to: sanitizedEmail,
+        subject: sanitizeEmailSubject(subject),
         html,
         attachments
       };
@@ -2670,10 +2764,18 @@ async function sendEmail(to, subject, html, attachments = []) {
   }
   
   // Single email recipient
+  const sanitizedEmail = sanitizeEmail(to);
+  
+  // Validate email before sending
+  if (!isValidEmail(sanitizedEmail)) {
+    console.error('❌ Invalid email address:', to);
+    throw new Error('Invalid email address format');
+  }
+  
   const mailOptions = {
     from: '"NEM FORMS Application" <kyc@nem-insurance.com>',
-    to,
-    subject,
+    to: sanitizedEmail,
+    subject: sanitizeEmailSubject(subject),
     html,
     attachments
   };
@@ -3530,8 +3632,8 @@ async function sendEmailWithRetry(emailData, maxRetries = 3) {
       // Use existing email sending infrastructure
       await transporter.sendMail({
         from: '"NEM Insurance" <kyc@nem-insurance.com>',
-        to: emailData.to,
-        subject: emailData.subject,
+        to: sanitizeEmail(emailData.to),
+        subject: sanitizeEmailSubject(emailData.subject),
         html: emailData.html
       });
 
@@ -8689,12 +8791,19 @@ app.post('/api/remediation/batches/:batchId/send-emails', requireAuth, requireAd
           expirationDate: expirationDate
         });
         
-        const emailSubject = `Action Required: Identity Verification for Policy ${record.policyNumber} - NEM Insurance`;
+        const emailSubject = sanitizeEmailSubject(`Action Required: Identity Verification for Policy ${record.policyNumber} - NEM Insurance`);
+        const sanitizedEmail = sanitizeEmail(record.email);
+        
+        // Validate email before sending
+        if (!isValidEmail(sanitizedEmail)) {
+          console.error('❌ Invalid email address:', record.email);
+          throw new Error('Invalid email address format');
+        }
         
         // Send email
         await transporter.sendMail({
           from: '"NEM Insurance" <kyc@nem-insurance.com>',
-          to: record.email,
+          to: sanitizedEmail,
           subject: emailSubject,
           html: emailHtml
         });
@@ -11546,10 +11655,25 @@ app.post('/api/identity/lists/:listId/send', requireAuth, requireBrokerOrAdmin, 
                              'Valued Customer';
         
         // Send verification email
+        const sanitizedEmail = sanitizeEmail(entry.email);
+        const sanitizedSubject = sanitizeEmailSubject(`Action Required: ${verificationType} Verification - NEM Insurance`);
+        
+        // Validate email before sending
+        if (!isValidEmail(sanitizedEmail)) {
+          console.error('❌ Invalid email address:', entry.email);
+          results.failed++;
+          results.errors.push({
+            entryId: entry.id,
+            email: entry.email,
+            error: 'Invalid email address format'
+          });
+          continue;
+        }
+        
         const mailOptions = {
           from: '"NEM Insurance" <kyc@nem-insurance.com>',
-          to: entry.email,
-          subject: `Action Required: ${verificationType} Verification - NEM Insurance`,
+          to: sanitizedEmail,
+          subject: sanitizedSubject,
           html: generateIdentityVerificationEmailHtml({
             recipientName,
             verificationUrl,
@@ -12538,7 +12662,7 @@ app.post('/api/identity/verify/:token', verificationRateLimiter, async (req, res
     }
     
     // Check if max attempts exceeded
-    if (entry.status === 'failed') {
+    if (entry.status === 'failed' || entry.status === 'verification_failed') {
       console.log('ℹ️ Entry marked as failed - max attempts exceeded');
       return res.json({
         success: false,
@@ -13518,10 +13642,22 @@ app.post('/api/identity/entries/:entryId/resend', requireAuth, requireBrokerOrAd
     const expirationDateStr = formatDateLong(newTokenExpiresAt);
     
     // Send verification email
+    const sanitizedEmail = sanitizeEmail(entry.email);
+    const sanitizedSubject = sanitizeEmailSubject(`Action Required: ${entry.verificationType} Verification - NEM Insurance`);
+    
+    // Validate email before sending
+    if (!isValidEmail(sanitizedEmail)) {
+      console.error('❌ Invalid email address for resend:', entry.email);
+      return res.status(400).json({
+        error: 'Invalid email',
+        message: 'Entry has an invalid email address format'
+      });
+    }
+    
     const mailOptions = {
       from: '"NEM Insurance" <kyc@nem-insurance.com>',
-      to: entry.email,
-      subject: `Action Required: ${entry.verificationType} Verification - NEM Insurance`,
+      to: sanitizedEmail,
+      subject: sanitizedSubject,
       html: generateIdentityVerificationEmailHtml({
         recipientName,
         verificationUrl,
@@ -18204,15 +18340,22 @@ async function sendBudgetAlert(threshold, currentSpending, budgetLimit, utilizat
     `;
     
     // Send email to all super admins
+    const sanitizedEmails = superAdminEmails.map(email => sanitizeEmail(email)).filter(email => isValidEmail(email));
+    
+    if (sanitizedEmails.length === 0) {
+      console.error('❌ No valid super admin emails after sanitization');
+      return;
+    }
+    
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: superAdminEmails.join(', '),
-      subject: `${alertIcon} ${alertLevel}: API Budget ${threshold}% Threshold Reached`,
+      to: sanitizedEmails.join(', '),
+      subject: sanitizeEmailSubject(`${alertIcon} ${alertLevel}: API Budget ${threshold}% Threshold Reached`),
       html: emailContent
     };
     
     await transporter.sendMail(mailOptions);
-    console.log(`✅ Budget alert email sent to ${superAdminEmails.length} super admin(s)`);
+    console.log(`✅ Budget alert email sent to ${sanitizedEmails.length} super admin(s)`);
     
   } catch (error) {
     console.error('❌ Error sending budget alert email:', error);
@@ -18853,14 +18996,23 @@ const isBirthdayToday = (dateOfBirth) => {
 
 // Function to send birthday email
 const sendBirthdayEmail = async (email, displayName) => {
+  const sanitizedEmail = sanitizeEmail(email);
+  const sanitizedDisplayName = displayName ? displayName.replace(/[\r\n\0]/g, '').trim() : 'Valued Customer';
+  
+  // Validate email before sending
+  if (!isValidEmail(sanitizedEmail)) {
+    console.error('❌ Invalid email address for birthday email:', email);
+    return false;
+  }
+  
   const mailOptions = {
     from: 'kyc@nem-insurance.com',
-    to: email,
-    subject: '🎉 Happy Birthday from NEM Insurance!',
+    to: sanitizedEmail,
+    subject: sanitizeEmailSubject(`🎉 Happy Birthday from NEM Insurance!`),
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(90deg, #8B4513, #DAA520); padding: 20px; text-align: center;">
-          <h1 style="color: white; margin: 0;">🎂 Happy Birthday ${displayName}! 🎂</h1>
+          <h1 style="color: white; margin: 0;">🎂 Happy Birthday ${sanitizedDisplayName}! 🎂</h1>
         </div>
         <div style="padding: 30px; background: #f9f9f9;">
           <h2 style="color: #8B4513;">Wishing you a wonderful day!</h2>
@@ -18895,7 +19047,7 @@ const sendBirthdayEmail = async (email, displayName) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`✅ Birthday email sent to ${email}`);
+    console.log(`✅ Birthday email sent to ${sanitizedEmail}`);
     return true;
   } catch (error) {
     console.error(`❌ Failed to send birthday email to ${email}:`, error);
@@ -19281,6 +19433,42 @@ app.post('/api/test-endpoint', (req, res) => {
 });
 
 // ============= END CONFIGURATION VALIDATION =============
+
+// ============= PRODUCTION ERROR HANDLER =============
+/**
+ * Global error handler middleware
+ * Sanitizes error messages in production to prevent information leakage
+ */
+app.use((err, req, res, next) => {
+  // Log full error details for debugging
+  console.error('❌ Error occurred:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+    ip: req.ip
+  });
+  
+  // In production, return generic error messages
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  if (isProduction) {
+    // Generic error response for production
+    return res.status(err.status || 500).json({
+      error: 'An error occurred',
+      message: 'Something went wrong. Please try again later or contact support if the problem persists.'
+    });
+  }
+  
+  // In development, return detailed error information
+  res.status(err.status || 500).json({
+    error: err.name || 'Error',
+    message: err.message,
+    stack: err.stack
+  });
+});
+
+// ============= END PRODUCTION ERROR HANDLER =============
 
 const server = app.listen(port, async () => {
   console.log('='.repeat(80));

@@ -16,7 +16,7 @@ import { Calendar as ReactCalendar } from '@/components/ui/calendar';
 import { Calendar, CalendarIcon, Upload, Edit2, Car, FileText, CheckCircle2, Loader2, Plus, Trash2, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
@@ -32,8 +32,8 @@ const motorClaimSchema = yup.object().shape({
   // Section 1: Insured Detail
   insuredSurname: yup.string().required("Insured surname is required"),
   insuredFirstName: yup.string().required("Insured first name is required"),
-  phone: yup.string().required("Phone number is required"),
-  email: yup.string().email("Valid email is required").required("Email is required"),
+  phone: createPhoneValidation(),
+  email: createEmailValidation(),
 
   // Section 2: Vehicle Details
   registrationNumber: yup.string().required("Registration number is required"),
@@ -78,7 +78,7 @@ const motorClaimSchema = yup.object().shape({
   }),
   otherDriverPhone: yup.string().when('otherVehicleInvolved', {
     is: 'yes',
-    then: (schema) => schema
+    then: (schema) => createPhoneValidation(),
       .required("Other driver phone number is required")
       .matches(/^\+?[\d\s\-\(\)]{10,}$/, 'Please enter a valid phone number'),
     otherwise: (schema) => schema.notRequired()
@@ -94,7 +94,7 @@ const motorClaimSchema = yup.object().shape({
     yup.object().shape({
       name: yup.string().required("Eye witness name is required"),
       address: yup.string().required("Eye witness address is required"),
-      phone: yup.string().required("Eye witness phone number is required")
+      phone: createPhoneValidation()
     })
   ),
 
@@ -597,7 +597,7 @@ const MotorClaim: React.FC = () => {
               <h3 className="font-semibold mb-2">Data Privacy</h3>
               <div className="text-sm space-y-2">
                 <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2023.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Act 2023.</p>
                 <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
               </div>
             </div>

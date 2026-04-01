@@ -3,6 +3,7 @@ import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
+import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,8 +34,8 @@ const smartTravellerProtectionSchema = yup.object().shape({
   // Section 2: Insured Details
   companyName: yup.string().required("Company name is required"),
   address: yup.string().required("Address is required"),
-  phone: yup.string().required("Phone number is required"),
-  email: yup.string().email("Valid email is required").required("Email is required"),
+  phone: createPhoneValidation(),
+  email: createEmailValidation(),
   
   // Section 3: Details of Loss
   accidentDate: yup.date().required("Accident date is required"),
@@ -412,7 +413,7 @@ const SmartTravellerProtectionClaim: React.FC = () => {
               <h3 className="font-semibold mb-2">Data Privacy</h3>
               <div className="text-sm space-y-2">
                 <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2023.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Act 2023.</p>
                 <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
               </div>
             </div>

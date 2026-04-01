@@ -3,6 +3,7 @@ import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
+import { createEmailValidation, createPhoneValidation, createDOBValidation } from '@/utils/validation';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,11 +35,11 @@ const contractorsSchema = yup.object().shape({
   nameOfInsured: yup.string().required('Name is required'),
   companyName: yup.string(),
   title: yup.string().required('Title is required'),
-  dateOfBirth: yup.date().required('Date of birth is required'),
+  dateOfBirth: createDOBValidation(),
   gender: yup.string().required('Gender is required'),
   address: yup.string().required('Address is required'),
-  phone: yup.string().required('Phone is required'),
-  email: yup.string().email('Invalid email').required('Email is required'),
+  phone: createPhoneValidation(),
+  email: createEmailValidation(),
   
   // Plant/Machinery Details
   plantMachineryItems: yup.array().of(yup.object().shape({
@@ -866,7 +867,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
               <h3 className="text-lg font-semibold mb-4">Data Privacy</h3>
               <div className="text-sm text-gray-700 space-y-3">
                 <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Act 2023.</p>
                 <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
               </div>
             </div>

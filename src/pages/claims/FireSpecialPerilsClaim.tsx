@@ -20,6 +20,7 @@ import { useFormDraft } from '@/hooks/useFormDraft';
 import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
+import { createDOBValidation } from '@/utils/validation';
 import { cn } from '@/lib/utils';
 
 interface FireSpecialPerilsClaimData {
@@ -32,8 +33,8 @@ interface FireSpecialPerilsClaimData {
   name: string;
   companyName: string;
   title: string;
-  // dateOfBirth: string;
-  // gender: string;
+  dateOfBirth: string;
+  gender: string;
   address: string;
   phone: string;
   email: string;
@@ -98,8 +99,8 @@ const schema = yup.object().shape({
   name: yup.string().required('Name is required'),
   companyName: yup.string(),
   title: yup.string().required('Title is required'),
-  // dateOfBirth: yup.string().required('Date of birth is required'),
-  // gender: yup.string().required('Gender is required'),
+  dateOfBirth: createDOBValidation(),
+  gender: yup.string().required('Gender is required'),
   address: yup.string().required('Address is required'),
   phone: yup.string().required('Phone number is required'),
   email: yup.string().email('Invalid email').required('Email is required'),
@@ -335,8 +336,8 @@ const FireSpecialPerilsClaim: React.FC = () => {
       name: '',
       companyName: '',
       title: '',
-      // dateOfBirth: '',
-      // gender: '',
+      dateOfBirth: '',
+      gender: '',
       address: '',
       phone: '',
       email: '',
@@ -506,7 +507,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
 
   // Step field mappings for validation (same approach as working Burglary form)
   const stepFieldMappings = {
-    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'name', 'title', 'address', 'phone', 'email'],
+    0: ['policyNumber', 'periodOfCoverFrom', 'periodOfCoverTo', 'name', 'title', 'dateOfBirth', 'gender', 'address', 'phone', 'email'],
     1: ['premisesAddress', 'premisesPhone', 'dateOfOccurrence', 'timeOfOccurrence', 'incidentDescription', 'causeOfFire', 'premisesUsedAsPerPolicy', 'premisesUsageDetails', 'purposeOfPremises', 'unallowedRiskIntroduced', 'unallowedRiskDetails', 'measuresWhenFireDiscovered'],
     2: ['soleOwner', 'otherOwnersName', 'otherOwnersAddress', 'hasOtherInsurance', 'otherInsuranceName', 'otherInsuranceAddress', 'premisesContentsValue', 'hasPreviousClaim', 'previousClaimDate', 'previousClaimAmount', 'itemsLost'],
     3: ['agreeToDataPrivacy', 'declarationTrue', 'signature']
@@ -546,6 +547,11 @@ const FireSpecialPerilsClaim: React.FC = () => {
                     <SelectItem value="Dr">Dr</SelectItem>
                     <SelectItem value="Chief">Chief</SelectItem>
                     <SelectItem value="Other">Other</SelectItem>
+                  </FormSelect>
+                  <FormField name="dateOfBirth" label="Date of Birth" type="date" required />
+                  <FormSelect name="gender" label="Gender" required placeholder="Select gender">
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
                   </FormSelect>
                 </div>
 
@@ -964,7 +970,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
                 <h3 className="font-semibold mb-2">Data Privacy</h3>
                 <div className="text-sm space-y-2">
                   <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-                  <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+                  <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Act 2023.</p>
                   <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
                 </div>
               </div>
