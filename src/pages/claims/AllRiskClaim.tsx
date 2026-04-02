@@ -3,7 +3,8 @@ import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
-import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
+import { createDOBValidation, createFromDateValidation, createToDateValidation, createEmailValidation, createPhoneValidation } from '@/utils/validation';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,8 +35,8 @@ import SuccessModal from '@/components/common/SuccessModal';
 const allRiskClaimSchema = yup.object().shape({
   // Policy Details
   policyNumber: yup.string().required("Policy number is required"),
-  periodOfCoverFrom: yup.date().required("Period of cover from is required"),
-  periodOfCoverTo: yup.date().required("Period of cover to is required"),
+  periodOfCoverFrom: createFromDateValidation(),
+  periodOfCoverTo: createToDateValidation(),
 
   // Insured Details
   nameOfInsured: yup.string().required("Name of insured is required"),
@@ -46,7 +47,7 @@ const allRiskClaimSchema = yup.object().shape({
   // Details of Loss
   typeOfClaim: yup.string().required("Type of claim is required"),
   locationOfClaim: yup.string().required("Location of claim is required"),
-  dateOfOccurrence: yup.date().required("Date of occurrence is required"),
+  dateOfOccurrence: createFromDateValidation(),
   timeOfOccurrence: yup.string().required("Time of occurrence is required"),
   propertyDescription: yup.string().required("Property description is required"),
   circumstancesOfLoss: yup.string().required("Circumstances of loss is required"),
@@ -56,7 +57,7 @@ const allRiskClaimSchema = yup.object().shape({
   propertyItems: yup.array().of(
     yup.object().shape({
       description: yup.string().required("Description is required"),
-      dateOfPurchase: yup.date().required("Date of purchase is required"),
+      dateOfPurchase: createFromDateValidation(),
       costPrice: yup.number().required("Cost price is required"),
       deductionForAge: yup.number().required("Deduction for age is required"),
       amountClaimed: yup.number().required("Amount claimed is required"),
@@ -229,36 +230,6 @@ const FormTextarea = ({ name, label, required = false, maxLength = 2500, ...prop
           {currentValue.length}/{maxLength}
         </span>
       </div>
-    </div>
-  );
-};
-
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name);
-  
-  return (
-    <div className="space-y-2">
-      <Label>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <Input
-        type="date"
-        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
-        onChange={(e) => {
-          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-          setValue(name, dateValue);
-          if (error) {
-            clearErrors(name);
-          }
-        }}
-        className={error ? 'border-destructive' : ''}
-      />
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
     </div>
   );
 };
@@ -460,12 +431,12 @@ const AllRiskClaim: React.FC = () => {
                 </Tooltip>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormDatePicker
+                  <DatePicker
                     name="periodOfCoverFrom"
                     label="Period of Cover From"
                     required
                   />
-                  <FormDatePicker
+                  <DatePicker
                     name="periodOfCoverTo"
                     label="Period of Cover To"
                     required
@@ -502,7 +473,19 @@ const AllRiskClaim: React.FC = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div>
-                        <FormField name="phone" label="Phone Number" required />
+                        <FormField 
+                          name="phone" 
+                          label="Phone Number" 
+                          required 
+                          type="tel"
+                          pattern="[0-9+\-\(\)\s]*"
+                          onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                            const allowedChars = /[0-9+\-\(\)\s]/;
+                            if (!allowedChars.test(e.key)) {
+                              e.preventDefault();
+                            }
+                          }}
+                        />
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -562,7 +545,7 @@ const AllRiskClaim: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormDatePicker
+                  <DatePicker
                     name="dateOfOccurrence"
                     label="Date of Occurrence"
                     required
@@ -614,7 +597,7 @@ const AllRiskClaim: React.FC = () => {
                     <FormTextarea name={`propertyItems.${index}.description`} label="Description of the property for which this claim is made" required />
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormDatePicker
+                      <DatePicker
                         name={`propertyItems.${index}.dateOfPurchase`}
                         label="Date of purchase or manufacture"
                         required

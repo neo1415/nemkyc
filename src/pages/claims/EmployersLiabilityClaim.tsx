@@ -3,7 +3,8 @@ import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
-import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
+import { createEmailValidation, createPhoneValidation, createFromDateValidation, createToDateValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,8 +35,8 @@ import SuccessModal from '@/components/common/SuccessModal';
 const employersLiabilityClaimSchema = yup.object().shape({
   // Policy Details
   policyNumber: yup.string().required("Policy number is required"),
-  periodOfCoverFrom: yup.date().required("Period of cover from is required"),
-  periodOfCoverTo: yup.date().required("Period of cover to is required"),
+  periodOfCoverFrom: createFromDateValidation(),
+  periodOfCoverTo: createToDateValidation(),
 
   // Insured Details
   name: yup.string().required("Name is required"),
@@ -50,7 +51,7 @@ const employersLiabilityClaimSchema = yup.object().shape({
   averageMonthlyEarnings: yup.number().required("Average monthly earnings is required"),
   occupation: yup.string().required("Occupation is required"),
   isInDirectEmployment: yup.boolean().required("Direct employment field is required"),
-  dateOfEmployment: yup.date().when('isInDirectEmployment', {
+  dateOfEmployment: createFromDateValidation().when('isInDirectEmployment', {
     is: true,
     then: (schema) => schema.required("Date of employment is required"),
     otherwise: (schema) => schema.notRequired()
@@ -71,12 +72,12 @@ const employersLiabilityClaimSchema = yup.object().shape({
   personInChargePosition: yup.string(),
 
   // Accident Details
-  accidentDate: yup.date().required("Accident date is required"),
+  accidentDate: createFromDateValidation(),
   accidentTime: yup.string().required("Accident time is required"),
   accidentPlace: yup.string().required("Accident place is required"),
-  dateReported: yup.date().required("Date reported is required"),
+  dateReported: createFromDateValidation(),
   reportedBy: yup.string().required("Reported by is required"),
-  dateStoppedWork: yup.date().required("Date stopped work is required"),
+  dateStoppedWork: createFromDateValidation(),
   workDescription: yup.string().required("Work description is required"),
   howAccidentOccurred: yup.string().required("How accident occurred is required"),
   soberOrIntoxicated: yup.string().required("Sober or intoxicated field is required"),
@@ -98,7 +99,7 @@ const employersLiabilityClaimSchema = yup.object().shape({
 
   // Disablement
   totallyDisabled: yup.string().required("Totally disabled field is required"),
-  dateStoppedWorking: yup.date().when('totallyDisabled', {
+  dateStoppedWorking: createFromDateValidation().when('totallyDisabled', {
     is: 'yes',
     then: (schema) => schema.required("Date stopped working required"),
     otherwise: (schema) => schema.notRequired()
@@ -148,6 +149,16 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
   const { register, formState: { errors }, clearErrors } = useFormContext();
   const error = get(errors, name);
   
+  // Phone input restrictions
+  const phoneProps = type === "tel" ? {
+    pattern: "[\\d\\+\\-\\(\\)\\s]*",
+    onKeyPress: (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!/[\d\+\-\(\)\s]/.test(e.key)) {
+        e.preventDefault();
+      }
+    }
+  } : {};
+  
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>
@@ -166,6 +177,7 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
           }
         })}
         className={error ? 'border-destructive' : ''}
+        {...phoneProps}
         {...props}
       />
       {error && (
@@ -549,8 +561,8 @@ const EmployersLiabilityClaim: React.FC = () => {
                 </TooltipProvider>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
-                  <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
+                  <DatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
+                  <DatePicker name="periodOfCoverTo" label="Period of Cover To" required />
                 </div>
               </div>
             </div>
@@ -586,7 +598,7 @@ const EmployersLiabilityClaim: React.FC = () => {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div>
-                          <FormField name="phone" label="Phone Number" required />
+                          <FormField name="phone" label="Phone Number" type="tel" required />
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -688,7 +700,7 @@ const EmployersLiabilityClaim: React.FC = () => {
                   </FormSelect>
                   
                   {watchedValues.isInDirectEmployment === true && (
-                    <FormDatePicker name="dateOfEmployment" label="Date of Employment" required />
+                    <DatePicker name="dateOfEmployment" label="Date of Employment" required />
                   )}
                   
                   <FormSelect name="maritalStatus" label="Injured Person's Marital Status" required placeholder="Select marital status">
@@ -759,7 +771,7 @@ const EmployersLiabilityClaim: React.FC = () => {
               <TooltipProvider>
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormDatePicker name="accidentDate" label="Accident Date" required />
+                    <DatePicker name="accidentDate" label="Accident Date" required />
                     
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -785,11 +797,11 @@ const EmployersLiabilityClaim: React.FC = () => {
                   </Tooltip>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormDatePicker name="dateReported" label="Date Reported" required />
+                    <DatePicker name="dateReported" label="Date Reported" required />
                     <FormField name="reportedBy" label="Reported By" required />
                   </div>
                   
-                  <FormDatePicker name="dateStoppedWork" label="Date Injured Party Stopped Work" required />
+                  <DatePicker name="dateStoppedWork" label="Date Injured Party Stopped Work" required />
                   
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -866,7 +878,7 @@ const EmployersLiabilityClaim: React.FC = () => {
                   </FormSelect>
                   
                   {watchedValues.totallyDisabled === 'yes' && (
-                    <FormDatePicker name="dateStoppedWorking" label="Date Stopped Working" required />
+                    <DatePicker name="dateStoppedWorking" label="Date Stopped Working" required />
                   )}
                   
                   <FormField name="estimatedDuration" label="Estimated Duration of Disablement" />

@@ -37,6 +37,7 @@ import { ValidationAnnouncer } from '@/components/validation/ValidationAnnouncer
 import { FieldValidationStatus } from '@/types/realtimeVerificationValidation';
 import { DocumentUploadSection } from '@/components/gemini/DocumentUploadSection';
 import { formSubmissionController } from '@/services/geminiFormSubmissionController';
+import { createDOBValidation, createPhoneValidation } from '@/utils/validation';
 
 
 // Form validation schema
@@ -49,20 +50,14 @@ const individualKYCSchema = yup.object().shape({
   contactAddress: yup.string().required("Contact address is required"),
   occupation: yup.string().required("Occupation is required"),
   gender: yup.string().required("Gender is required"),
-  dateOfBirth: yup.date()
-    .typeError("Please enter a valid date")
-    .required("Date of birth is required")
-    .max(new Date(new Date().setFullYear(new Date().getFullYear() - 18)), "You must be at least 18 years old"),
+  dateOfBirth: createDOBValidation(),
   mothersMaidenName: yup.string().required("Mother's maiden name is required"),
   city: yup.string().required("City is required"),
   state: yup.string().required("State is required"),
   country: yup.string().required("Country is required"),
   nationality: yup.string().required("Nationality is required"),
   residentialAddress: yup.string().required("Residential address is required"),
-  GSMno: yup.string()
-    .required("Mobile number is required")
-    .matches(/^[0-9+\-()]+$/, "Phone number can only contain numbers and +, -, (, ) characters")
-    .max(15, "Phone number cannot exceed 15 characters"),
+  GSMno: createPhoneValidation(),
   emailAddress: yup.string().email("Please enter a valid email address").required("Email is required"),
   NIN: yup.string()
     .required("NIN is required")
@@ -656,7 +651,33 @@ const IndividualKYC: React.FC = () => {
             <FormTextarea name="residentialAddress" label="Residential Address" required />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField name="GSMno" label="Mobile Number" required />
+              <div className="space-y-2">
+                <Label htmlFor="GSMno">
+                  Mobile Number
+                  <span className="required-asterisk">*</span>
+                </Label>
+                <Input
+                  id="GSMno"
+                  type="tel"
+                  pattern="[0-9+\-\(\)\s]*"
+                  onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                    if (!/[0-9+\-\(\)\s]/.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  {...formMethods.register('GSMno', {
+                    onChange: () => {
+                      if (formMethods.formState.errors.GSMno) {
+                        formMethods.clearErrors('GSMno');
+                      }
+                    }
+                  })}
+                  className={cn(formMethods.formState.errors.GSMno && "border-destructive")}
+                />
+                {formMethods.formState.errors.GSMno && (
+                  <p className="text-sm text-destructive">{formMethods.formState.errors.GSMno.message?.toString()}</p>
+                )}
+              </div>
               <FormField name="emailAddress" label="Email" type="email" required />
             </div>
 
@@ -967,7 +988,7 @@ const IndividualKYC: React.FC = () => {
               <h3 className="text-lg font-semibold">Data Privacy</h3>
               <div className="space-y-2 text-sm">
                 <p>i. Your data will solemnly be used for the purposes of this business contract and also to enable us reach you with the updates about our products and services.</p>
-                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Regulations 2019.</p>
+                <p>ii. Please note that your personal data will be treated with utmost respect and is well secured as required by Nigeria Data Protection Act 2023.</p>
                 <p>iii. Your personal data shall not be shared with or sold to any third-party without your consent unless we are compelled by law or regulator.</p>
               </div>
             </div>
@@ -1073,6 +1094,23 @@ const IndividualKYC: React.FC = () => {
             submitButtonText="Submit KYC Form"
             stepFieldMappings={stepFieldMappings}
             validateStep={async (stepId) => {
+              // First, validate the form fields for this step
+              const stepIndex = steps.findIndex(s => s.id === stepId);
+              const currentStepFields = stepFieldMappings[stepIndex] || [];
+              
+              if (currentStepFields.length > 0) {
+                const isValid = await formMethods.trigger(currentStepFields);
+                
+                if (!isValid) {
+                  toast({
+                    title: "Validation Error",
+                    description: "Please fill all required fields before proceeding",
+                    variant: "destructive"
+                  });
+                  return false;
+                }
+              }
+              
               // For personal information step, check real-time validation
               if (stepId === 'personal') {
                 if (!realtimeValidation.canProceedToNextStep) {

@@ -22,11 +22,19 @@
 .env.test.local
 .env.production
 .env.production.local
-.env.example
+.env.staging
+.env.staging.local
 
-# Firebase rules (security-sensitive)
+# Firebase rules (security-sensitive - environment-specific)
 firestore.rules
+firestore.rules.development
+firestore.rules.staging
+firestore.rules.production
 storage.rules
+storage.rules.development
+storage.rules.staging
+storage.rules.production
+firestore.indexes.json
 
 # misc
 .DS_Store
