@@ -26,6 +26,7 @@ import FormLoadingModal from '@/components/common/FormLoadingModal';
 import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SuccessModal from '@/components/common/SuccessModal';
+import { cn } from '@/lib/utils';
 
 // Motor Claim Schema
 const motorClaimSchema = yup.object().shape({
