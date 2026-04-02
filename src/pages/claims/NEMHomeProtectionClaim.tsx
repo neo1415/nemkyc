@@ -3,7 +3,8 @@ import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
-import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
+import { createEmailValidation, createPhoneValidation, createFromDateValidation, createToDateValidation } from '@/utils/validation';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,8 +28,8 @@ import { format } from 'date-fns';
 const nemHomeProtectionSchema = yup.object().shape({
   // Section 1: Policy Information
   policyNumber: yup.string().required("Policy number is required"),
-  periodOfCoverFrom: yup.date().required("Period of cover from is required"),
-  periodOfCoverTo: yup.date().required("Period of cover to is required"),
+  periodOfCoverFrom: createFromDateValidation(),
+  periodOfCoverTo: createToDateValidation(),
 
   // Section 2: Insured Details
   title: yup.string(),
@@ -45,7 +46,7 @@ const nemHomeProtectionSchema = yup.object().shape({
   // Section 3: Details of Loss
   lossAddress: yup.string().required("Loss address is required"),
   perilType: yup.string().required("Peril type is required"),
-  dateOfLoss: yup.date().required("Date of loss is required"),
+  dateOfLoss: createFromDateValidation(),
   timeOfLoss: yup.string().required("Time of loss is required"),
   medicalCertificateRequired: yup.boolean(),
   extentOfDamage: yup.string().required("Extent of damage is required"),
@@ -62,7 +63,7 @@ const nemHomeProtectionSchema = yup.object().shape({
     yup.object().shape({
       itemDescription: yup.string().required("Item description is required"),
       costOfItem: yup.string().required("Cost of item is required"),
-      dateOfPurchase: yup.date().required("Date of purchase is required"),
+      dateOfPurchase: createFromDateValidation(),
       valueAtTimeOfLoss: yup.string().required("Value at time of loss is required")
     })
   ).test('min-items', 'At least one property item is required', function(value) {
@@ -348,7 +349,19 @@ const NEMHomeProtectionClaim: React.FC = () => {
             
             <FormField name="companyName" label="Name of the Company (if Applicable)" />
             <FormTextarea name="address" label="Address" required />
-            <FormField name="phone" label="Phone Number" required type="tel" />
+            <FormField 
+              name="phone" 
+              label="Phone Number" 
+              required 
+              type="tel"
+              pattern="[0-9+\-\(\)\s]*"
+              onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                const allowedChars = /[0-9+\-\(\)\s]/;
+                if (!allowedChars.test(e.key)) {
+                  e.preventDefault();
+                }
+              }}
+            />
             <FormField name="email" label="Email" type="email" />
           </div>
         </FormProvider>
@@ -414,7 +427,19 @@ const NEMHomeProtectionClaim: React.FC = () => {
             {formMethods.watch('isSoleOwner') === 'no' && (
               <>
                 <FormField name="otherOwnerName" label="Name of other owners" placeholder="Enter names of other owners" />
-                <FormField name="otherOwnerPhone" label="Phone Number of other owners" placeholder="Enter phone number" type="tel" />
+                <FormField 
+                  name="otherOwnerPhone" 
+                  label="Phone Number of other owners" 
+                  placeholder="Enter phone number" 
+                  type="tel"
+                  pattern="[0-9+\-\(\)\s]*"
+                  onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                    const allowedChars = /[0-9+\-\(\)\s]/;
+                    if (!allowedChars.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                />
                 <FormTextarea name="otherOwnerAddress" label="Address of other owners" placeholder="Enter address of other owners" />
               </>
             )}

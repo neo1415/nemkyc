@@ -3,7 +3,8 @@ import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
-import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
+import { createDOBValidation, createFromDateValidation, createToDateValidation, createEmailValidation, createPhoneValidation } from '@/utils/validation';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import FormSection from '@/components/common/FormSection';
 import { Input } from '@/components/ui/input';
@@ -68,8 +69,8 @@ interface FidelityGuaranteeClaimData {
 
 const schema = yup.object().shape({
   policyNumber: yup.string().required('Policy number is required'),
-  periodOfCoverFrom: yup.date().required('Period of cover start date is required'),
-  periodOfCoverTo: yup.date().required('Period of cover end date is required'),
+  periodOfCoverFrom: createFromDateValidation(),
+  periodOfCoverTo: createToDateValidation(),
   companyName: yup.string().required('Company name is required'),
   address: yup.string().required('Address is required'),
   phone: createPhoneValidation(),
@@ -78,10 +79,10 @@ const schema = yup.object().shape({
   defaulterAge: yup.number().min(1, 'Age must be positive').required('Defaulter age is required'),
   defaulterAddress: yup.string().required('Defaulter address is required'),
   defaulterOccupation: yup.string().required('Defaulter occupation is required'),
-  dateOfDiscovery: yup.date().required('Date of discovery is required'),
+  dateOfDiscovery: createFromDateValidation(),
   defaultDetails: yup.string().required('Default details are required'),
   defaultAmount: yup.number().min(0, 'Amount must be positive').required('Default amount is required'),
-  lastCorrectCheckDate: yup.date().required('Last correct check date is required'),
+  lastCorrectCheckDate: createFromDateValidation(),
   previousIrregularityDetails: yup.string().when('hasPreviousIrregularity', {
     is: true,
     then: (schema) => schema.required('Please explain the previous irregularity'),
@@ -122,6 +123,19 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
   const { register, formState: { errors }, clearErrors } = useFormContext();
   const error = get(errors, name);
   
+  // Add phone restrictions if field name contains 'phone'
+  const isPhoneField = name.toLowerCase().includes('phone');
+  const phoneProps = isPhoneField ? {
+    type: "tel",
+    pattern: "[0-9+\\-\\(\\)\\s]*",
+    onKeyPress: (e: React.KeyboardEvent) => {
+      const allowedChars = /[0-9+\-\(\)\s]/;
+      if (!allowedChars.test(e.key)) {
+        e.preventDefault();
+      }
+    }
+  } : {};
+  
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>
@@ -140,6 +154,7 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
           }
         })}
         className={error ? 'border-destructive' : ''}
+        {...phoneProps}
         {...props}
       />
       {error && (
@@ -185,35 +200,6 @@ const FormTextarea = ({ name, label, required = false, maxLength = 2500, rows = 
   );
 };
 
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name);
-  
-  return (
-    <div className="space-y-2">
-      <Label>
-        {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
-      </Label>
-      <Input
-        type="date"
-        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
-        onChange={(e) => {
-          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-          setValue(name, dateValue);
-          if (error) {
-            clearErrors(name);
-          }
-        }}
-        className={error ? 'border-destructive' : ''}
-      />
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
 
 const YesNoCheckbox = ({ name, label, required = false }: any) => {
   const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
@@ -394,8 +380,8 @@ const FidelityGuaranteeClaim: React.FC = () => {
               <FormField name="policyNumber" label="Policy Number" required placeholder="Enter policy number" />
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
-                <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
+                <DatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
+                <DatePicker name="periodOfCoverTo" label="Period of Cover To" required />
               </div>
             </div>
 
@@ -430,7 +416,7 @@ const FidelityGuaranteeClaim: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField name="defaulterOccupation" label="Occupation" required placeholder="Enter occupation" />
-              <FormDatePicker name="dateOfDiscovery" label="Date of Discovery of Default" required />
+              <DatePicker name="dateOfDiscovery" label="Date of Discovery of Default" required />
             </div>
           </div>
         </FormProvider>
@@ -474,7 +460,7 @@ const FidelityGuaranteeClaim: React.FC = () => {
                 />
               )}
 
-              <FormDatePicker name="lastCorrectCheckDate" label="On what date was the account last checked and found correct?" required />
+              <DatePicker name="lastCorrectCheckDate" label="On what date was the account last checked and found correct?" required />
 
               <YesNoCheckbox name="hasDefaulterProperty" label="Any property/furniture of the defaulter known?" required />
 
@@ -519,7 +505,7 @@ const FidelityGuaranteeClaim: React.FC = () => {
               <YesNoCheckbox name="hasBeenDischarged" label="Has the defaulter been discharged?" required />
 
               {watchedValues.hasBeenDischarged === true && (
-                <FormDatePicker name="dischargeDate" label="Date of Discharge" required />
+                <DatePicker name="dischargeDate" label="Date of Discharge" required />
               )}
 
               <YesNoCheckbox name="hasSettlementProposal" label="Has a proposal for settlement been put forward?" required />

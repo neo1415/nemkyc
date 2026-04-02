@@ -3,7 +3,7 @@ import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
-import { createPhoneValidation } from '@/utils/validation';
+import { createFromDateValidation, createToDateValidation, createPhoneValidation } from '@/utils/validation';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,8 +30,8 @@ const poultrySchema = yup.object().shape({
   nameOfInsured: yup.string().required("Name of the Insured is required"),
   farmNameAndAddress: yup.string().required("Name and Address of the Farm is required"),
   phoneNumber: createPhoneValidation(),
-  lossDateFrom: yup.date().required("Loss period start date is required"),
-  lossDateTo: yup.date().required("Loss period end date is required"),
+  lossDateFrom: createFromDateValidation(),
+  lossDateTo: createToDateValidation(),
   
   // Section 2: Cause of Loss
   causeOfDeath: yup.string().required("Cause of death is required"),
@@ -247,7 +247,18 @@ const PoultryClaim: React.FC = () => {
             <FormField name="policyNumber" label="Policy Number" required />
             <FormField name="nameOfInsured" label="Name of the Insured" required />
             <FormTextarea name="farmNameAndAddress" label="Name and Address of the Farm" required />
-            <FormField name="phoneNumber" label="Phone Number" required type="tel" />
+            <FormField 
+              name="phoneNumber" 
+              label="Phone Number" 
+              required 
+              type="tel"
+              pattern="[0-9+\-\(\)\s]*"
+              onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                if (!/[0-9+\-\(\)\s]/.test(e.key)) {
+                  e.preventDefault();
+                }
+              }}
+            />
             
             <div className="space-y-2">
               <Label>Date and period of Loss <span className="required-asterisk">*</span></Label>

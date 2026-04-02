@@ -26,19 +26,19 @@ This plan implements centralized validation utilities and applies them across al
 
 - [ ] 5. Apply validation to claim forms - Batch 2
   - [ ] 5.1 Update EmployersLiabilityClaim
-  - [ ] 5.2 Update CombinedGPAEmployersLiabilityClaim
-  - [ ] 5.3 Update GroupPersonalAccidentClaim
-  - [ ] 5.4 Update AllRiskClaim
+  - [x] 5.2 Update CombinedGPAEmployersLiabilityClaim
+  - [x] 5.3 Update GroupPersonalAccidentClaim
+  - [x] 5.4 Update AllRiskClaim
 
 - [ ] 6. Apply validation to claim forms - Batch 3
-  - [ ] 6.1 Update MoneyInsuranceClaim
-  - [ ] 6.2 Update FidelityGuaranteeClaim
+  - [x] 6.1 Update MoneyInsuranceClaim
+  - [x] 6.2 Update FidelityGuaranteeClaim
   - [ ] 6.3 Update GoodsInTransitClaim
-  - [ ] 6.4 Update RentAssuranceClaim
+  - [x] 6.4 Update RentAssuranceClaim
 
 - [ ] 7. Apply validation to claim forms - Batch 4
-  - [ ] 7.1 Update ContractorsPlantMachineryClaim
-  - [ ] 7.2 Update NEMHomeProtectionClaim
+  - [x] 7.1 Update ContractorsPlantMachineryClaim
+  - [x] 7.2 Update NEMHomeProtectionClaim
   - [ ] 7.3 Update SmartMotoristProtectionClaim
   - [ ] 7.4 Update SmartTravellerProtectionClaim
 
@@ -48,14 +48,14 @@ This plan implements centralized validation utilities and applies them across al
   - [ ] 8.3 Update SmartArtisanProtectionClaim
   - [ ] 8.4 Update MultiPerilsCropClaim
 
-- [ ] 9. Apply validation to claim forms - Batch 6
-  - [ ] 9.1 Update YieldIndexInsuranceClaim
-  - [ ] 9.2 Update LivestockClaim
-  - [ ] 9.3 Update PoultryClaim
-  - [ ] 9.4 Update FisheryFishFarmClaim
+- [x] 9. Apply validation to claim forms - Batch 6
+  - [x] 9.1 Update YieldIndexInsuranceClaim
+  - [x] 9.2 Update LivestockClaim
+  - [x] 9.3 Update PoultryClaim
+  - [x] 9.4 Update FisheryFishFarmClaim
 
-- [ ] 10. Apply validation to remaining claim form - Batch 7
-  - [ ] 10.1 Update FarmPropertyProduceClaim
+- [x] 10. Apply validation to remaining claim form - Batch 7
+  - [x] 10.1 Update FarmPropertyProduceClaim
 
-- [ ] 11. Final verification
+- [x] 11. Final verification
   - Run diagnostics on all modified files

@@ -3,7 +3,8 @@ import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
-import { createEmailValidation, createPhoneValidation, createDOBValidation } from '@/utils/validation';
+import { createEmailValidation, createPhoneValidation, createDOBValidation, createFromDateValidation, createToDateValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,8 +43,8 @@ import {
 const professionalIndemnitySchema = yup.object().shape({
   // Policy Details
   policyNumber: yup.string().required('Policy number is required'),
-  coverageFromDate: yup.date().required('Coverage from date is required').typeError('Please enter a valid date'),
-  coverageToDate: yup.date().required('Coverage to date is required').typeError('Please enter a valid date'),
+  coverageFromDate: createFromDateValidation(),
+  coverageToDate: createToDateValidation(),
   
   // Insured Details
   insuredName: yup.string().required('Name of insured is required'),
@@ -67,8 +68,8 @@ const professionalIndemnitySchema = yup.object().shape({
     then: (schema) => schema.required('Contract details are required'),
     otherwise: (schema) => schema.notRequired()
   }),
-  workPerformedFrom: yup.date().required('Work performed from date is required').typeError('Please enter a valid date'),
-  workPerformedTo: yup.date().required('Work performed to date is required').typeError('Please enter a valid date'),
+  workPerformedFrom: createFromDateValidation(),
+  workPerformedTo: createToDateValidation(),
   
   // Work Performer Details
   workPerformerName: yup.string().required('Work performer name is required'),
@@ -78,8 +79,8 @@ const professionalIndemnitySchema = yup.object().shape({
   
   // Claim Details
   claimNature: yup.string().required('Nature of claim is required'),
-  firstAwareDate: yup.date().required('Date first became aware is required').typeError('Please enter a valid date'),
-  claimMadeDate: yup.date().required('Date claim was made is required').typeError('Please enter a valid date'),
+  firstAwareDate: createFromDateValidation(),
+  claimMadeDate: createFromDateValidation(),
   intimationMode: yup.string().required('Please specify if intimation was oral or written'),
   oralDetails: yup.string().when('intimationMode', {
     is: 'oral',
@@ -219,6 +220,16 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
   const { register, formState: { errors }, clearErrors } = useFormContext();
   const error = get(errors, name);
   
+  // Phone input restrictions
+  const phoneProps = type === "tel" ? {
+    pattern: "[\\d\\+\\-\\(\\)\\s]*",
+    onKeyPress: (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!/[\d\+\-\(\)\s]/.test(e.key)) {
+        e.preventDefault();
+      }
+    }
+  } : {};
+  
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>
@@ -237,6 +248,7 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
           }
         })}
         className={error ? 'border-destructive' : ''}
+        {...phoneProps}
         {...props}
       />
       {error && (
@@ -476,12 +488,12 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                 />
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormDatePicker
+                  <DatePicker
                     name="coverageFromDate"
                     label="Period of Cover - From"
                     required
                   />
-                  <FormDatePicker
+                  <DatePicker
                     name="coverageToDate"
                     label="Period of Cover - To"
                     required
@@ -522,7 +534,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                     <SelectItem value="Dr">Dr</SelectItem>
                     <SelectItem value="Other">Other</SelectItem>
                   </FormSelect>
-                  <FormDatePicker
+                  <DatePicker
                     name="dateOfBirth"
                     label="Date of Birth"
                     required
@@ -551,6 +563,7 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                   <FormField
                     name="phone"
                     label="Phone"
+                    type="tel"
                     placeholder="Enter phone number"
                     required
                   />
@@ -608,12 +621,12 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                 />
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormDatePicker
+                  <DatePicker
                     name="firstAwareDate"
                     label="On what date did you first become aware of the claim or circumstance?"
                     required
                   />
-                  <FormDatePicker
+                  <DatePicker
                     name="claimMadeDate"
                     label="On what date was the Claim or intimation of a Claim first made to you?"
                     required
@@ -711,12 +724,12 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                 )}
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormDatePicker
+                  <DatePicker
                     name="workPerformedFrom"
                     label="When did you perform the work giving rise to the claim? From"
                     required
                   />
-                  <FormDatePicker
+                  <DatePicker
                     name="workPerformedTo"
                     label="To"
                     required

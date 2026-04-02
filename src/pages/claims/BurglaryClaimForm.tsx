@@ -17,7 +17,8 @@ import { Calendar as ReactCalendar } from '@/components/ui/calendar';
 import { CalendarIcon, Plus, Trash2, Upload, Edit2, AlertTriangle, FileText, CheckCircle2, Loader2, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { createEmailValidation, createPhoneValidation, createDOBValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
+import { createEmailValidation, createPhoneValidation, createDOBValidation, createFromDateValidation, createToDateValidation } from '@/utils/validation';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
@@ -30,8 +31,8 @@ import SuccessModal from '@/components/common/SuccessModal';
 const burglaryClaimSchema = yup.object().shape({
   // Policy Details
   policyNumber: yup.string().required("Policy number is required"),
-  periodOfCoverFrom: yup.date().required("Period of cover from is required"),
-  periodOfCoverTo: yup.date().required("Period of cover to is required"),
+  periodOfCoverFrom: createFromDateValidation(),
+  periodOfCoverTo: createToDateValidation(),
 
   // Insured Details
   nameOfInsured: yup.string().required("Name of insured is required"),
@@ -46,7 +47,7 @@ const burglaryClaimSchema = yup.object().shape({
   // Details of Loss
   premisesAddress: yup.string().required("Premises address is required"),
   premisesTelephone: createPhoneValidation(),
-  dateOfTheft: yup.date().required("Date of theft is required"),
+  dateOfTheft: createFromDateValidation(),
   timeOfTheft: yup.string().required("Time of theft is required"),
   howEntryEffected: yup.string().required("How entry was effected is required"),
   roomsEntered: yup.string().required("Rooms entered is required"),
@@ -63,7 +64,7 @@ const burglaryClaimSchema = yup.object().shape({
     otherwise: (schema) => schema.notRequired()
   }),
   policeInformed: yup.boolean().required("Please specify if police informed"),
-  policeDate: yup.date().when('policeInformed', {
+  policeDate: createFromDateValidation().when('policeInformed', {
     is: true,
     then: (schema) => schema.required("Police date required"),
     otherwise: (schema) => schema.notRequired()
@@ -101,7 +102,7 @@ const burglaryClaimSchema = yup.object().shape({
     yup.object().shape({
       description: yup.string().required("Description is required"),
       costPrice: yup.number().required("Cost price is required"),
-      dateOfPurchase: yup.date().required("Date of purchase is required"),
+      dateOfPurchase: createFromDateValidation(),
       estimatedValue: yup.number().required("Estimated value is required"),
       netAmountClaimed: yup.number().required("Net amount claimed is required")
     })
@@ -117,6 +118,16 @@ const burglaryClaimSchema = yup.object().shape({
 const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
   const { register, formState: { errors }, clearErrors } = useFormContext();
   const error = get(errors, name);
+  
+  // Phone input restrictions
+  const phoneProps = type === "tel" ? {
+    pattern: "[\\d\\+\\-\\(\\)\\s]*",
+    onKeyPress: (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!/[\d\+\-\(\)\s]/.test(e.key)) {
+        e.preventDefault();
+      }
+    }
+  } : {};
   
   return (
     <div className="space-y-2">
@@ -136,6 +147,7 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
           }
         })}
         className={error ? 'border-destructive' : ''}
+        {...phoneProps}
         {...props}
       />
       {error && (
@@ -215,34 +227,6 @@ const FormSelect = ({ name, label, required = false, placeholder, children, ...p
   );
 };
 
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name);
-  
-  return (
-    <div className="space-y-2">
-      <Label>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <Input
-        type="date"
-        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
-        onChange={(e) => {
-          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-          setValue(name, dateValue);
-          if (error) {
-            clearErrors(name);
-          }
-        }}
-        className={error ? 'border-destructive' : ''}
-      />
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
 };
 
 // Validated Checkbox Component
@@ -478,8 +462,8 @@ const BurglaryClaimForm: React.FC = () => {
             <FormField name="policyNumber" label="Policy Number" required />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
-              <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
+              <DatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
+              <DatePicker name="periodOfCoverTo" label="Period of Cover To" required />
             </div>
           </div>
         </FormProvider>
@@ -505,7 +489,7 @@ const BurglaryClaimForm: React.FC = () => {
                 <SelectItem value="Other">Other</SelectItem>
               </FormSelect>
               
-              <FormDatePicker name="dateOfBirth" label="Date of Birth" required />
+              <DatePicker name="dateOfBirth" label="Date of Birth" required />
               
               <FormSelect name="gender" label="Gender" required placeholder="Select gender">
                 <SelectItem value="Male">Male</SelectItem>
@@ -517,7 +501,7 @@ const BurglaryClaimForm: React.FC = () => {
             <FormTextarea name="address" label="Address" required />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField name="phone" label="Phone Number" required />
+              <FormField name="phone" label="Phone Number" type="tel" required />
               <FormField name="email" label="Email Address" type="email" required />
             </div>
           </div>
@@ -531,10 +515,10 @@ const BurglaryClaimForm: React.FC = () => {
         <FormProvider {...formMethods}>
           <div className="space-y-4">
             <FormTextarea name="premisesAddress" label="Full address of premises involved" required />
-            <FormField name="premisesTelephone" label="Telephone" required />
+            <FormField name="premisesTelephone" label="Telephone" type="tel" required />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="dateOfTheft" label="Date of theft" required />
+              <DatePicker name="dateOfTheft" label="Date of theft" required />
               <FormField name="timeOfTheft" label="Time" type="time" required />
             </div>
             
@@ -665,7 +649,7 @@ const BurglaryClaimForm: React.FC = () => {
             
             {watchedValues.policeInformed === true && (
               <div className="space-y-4">
-                <FormDatePicker name="policeDate" label="Date of notification" required />
+                <DatePicker name="policeDate" label="Date of notification" required />
                 <FormTextarea name="policeStation" label="Station address" required />
               </div>
             )}
@@ -858,7 +842,7 @@ const BurglaryClaimForm: React.FC = () => {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField name={`propertyItems.${index}.costPrice`} label="Cost Price of Property or Articles Stolen (₦)" type="number" required />
-                    <FormDatePicker name={`propertyItems.${index}.dateOfPurchase`} label="Date of Purchase" required />
+                    <DatePicker name={`propertyItems.${index}.dateOfPurchase`} label="Date of Purchase" required />
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

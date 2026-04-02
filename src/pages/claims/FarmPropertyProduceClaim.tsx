@@ -3,7 +3,7 @@ import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
-import { createPhoneValidation } from '@/utils/validation';
+import { createFromDateValidation, createPhoneValidation } from '@/utils/validation';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,7 @@ const farmPropertyProduceSchema = yup.object().shape({
   nameOfInsured: yup.string().required("Name of the Insured is required"),
   phoneNumber: createPhoneValidation(),
   farmAddress: yup.string().required("Address of the farm where damage occurred is required"),
-  dateOfIncident: yup.date().required("Date of the incident is required"),
+  dateOfIncident: createFromDateValidation(),
   
   // Section 2: Cause of Loss
   causeOfLoss: yup.string().required("Cause of loss is required"),
@@ -250,7 +250,18 @@ const FarmPropertyProduceClaim: React.FC = () => {
           <div className="space-y-4">
             <FormField name="policyNumber" label="Policy Number" required />
             <FormField name="nameOfInsured" label="Name of the Insured" required />
-            <FormField name="phoneNumber" label="Phone Number" required type="tel" />
+            <FormField 
+              name="phoneNumber" 
+              label="Phone Number" 
+              required 
+              type="tel"
+              pattern="[0-9+\-\(\)\s]*"
+              onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                if (!/[0-9+\-\(\)\s]/.test(e.key)) {
+                  e.preventDefault();
+                }
+              }}
+            />
             <FormTextarea 
               name="farmAddress" 
               label="Address of the farm where damage occurred (if loss or damage occurred in transit please indicate)" 

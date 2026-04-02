@@ -3,7 +3,8 @@ import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
-import { createEmailValidation, createPhoneValidation, createDOBValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
+import { createEmailValidation, createPhoneValidation, createDOBValidation, createFromDateValidation, createToDateValidation } from '@/utils/validation';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,8 +29,8 @@ import PhoneInput from '@/components/common/PhoneInput';
 const contractorsSchema = yup.object().shape({
   // Policy Details
   policyNumber: yup.string().required('Policy number is required'),
-  periodOfCoverFrom: yup.date().required('Period start date is required'),
-  periodOfCoverTo: yup.date().required('Period end date is required'),
+  periodOfCoverFrom: createFromDateValidation(),
+  periodOfCoverTo: createToDateValidation(),
 
   // Insured Details
   nameOfInsured: yup.string().required('Name is required'),
@@ -54,7 +55,7 @@ const contractorsSchema = yup.object().shape({
       .max(new Date().getFullYear(), 'Year cannot be in the future'),
     make: yup.string().required('Make is required'),
     registrationNumber: yup.string(),
-    dateOfPurchase: yup.date().required('Date of purchase is required'),
+    dateOfPurchase: createFromDateValidation(),
     costPrice: yup.number()
       .transform((value, originalValue) => {
         return originalValue === '' ? undefined : value;
@@ -82,7 +83,7 @@ const contractorsSchema = yup.object().shape({
   })).min(1, 'At least one plant/machinery item is required'),
   
   // Loss/Damage Details
-  dateOfLoss: yup.date().required('Date of loss is required'),
+  dateOfLoss: createFromDateValidation(),
   timeOfLoss: yup.string().required('Time of loss is required'),
   lastSeenIntact: yup.string(),
   whereDidLossOccur: yup.string().required('Location of loss is required'),
@@ -290,36 +291,6 @@ const FormSelect = ({ name, label, required = false, placeholder, children, ...p
           {children}
         </SelectContent>
       </Select>
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
-
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name);
-  
-  return (
-    <div className="space-y-2">
-      <Label>
-        {label}
-        {required && <span className="text-destructive ml-1">*</span>}
-      </Label>
-      <Input
-        type="date"
-        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
-        onChange={(e) => {
-          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-          setValue(name, dateValue);
-          if (error) {
-            clearErrors(name);
-          }
-        }}
-        className={error ? 'border-destructive' : ''}
-      />
       {error && (
         <p className="text-sm text-destructive">{error.message?.toString()}</p>
       )}
@@ -539,8 +510,8 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
               <FormField name="policyNumber" label="Policy Number" required />
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
-                <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
+                <DatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
+                <DatePicker name="periodOfCoverTo" label="Period of Cover To" required />
               </div>
             </div>
 
@@ -560,7 +531,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
                   <SelectItem value="other">Other</SelectItem>
                 </FormSelect>
 
-                <FormDatePicker name="dateOfBirth" label="Date of Birth" required />
+                <DatePicker name="dateOfBirth" label="Date of Birth" required />
 
                 <FormSelect name="gender" label="Gender" required placeholder="Select gender">
                   <SelectItem value="male">Male</SelectItem>
@@ -621,7 +592,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
                   />
                   <FormField name={`plantMachineryItems.${index}.make`} label="Make" required />
                   <FormField name={`plantMachineryItems.${index}.registrationNumber`} label="Registration Number" />
-                  <FormDatePicker name={`plantMachineryItems.${index}.dateOfPurchase`} label="Date of Purchase" required />
+                  <DatePicker name={`plantMachineryItems.${index}.dateOfPurchase`} label="Date of Purchase" required />
                   <FormField 
                     name={`plantMachineryItems.${index}.costPrice`} 
                     label="Cost Price" 
@@ -679,7 +650,7 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
         <FormProvider {...formMethods}>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="dateOfLoss" label="Date of Loss" required />
+              <DatePicker name="dateOfLoss" label="Date of Loss" required />
               <FormField name="timeOfLoss" label="Time of Loss" type="time" required />
             </div>
             <FormTextarea name="lastSeenIntact" label="When and where was the property last seen intact" />

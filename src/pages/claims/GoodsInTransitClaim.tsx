@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
+import { createDOBValidation, createFromDateValidation, createToDateValidation, createEmailValidation, createPhoneValidation } from '@/utils/validation';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,8 +33,8 @@ import { Badge } from '@/components/ui/badge';
 const goodsInTransitClaimSchema = yup.object().shape({
   // Policy Details
   policyNumber: yup.string().required("Policy number is required"),
-  periodOfCoverFrom: yup.date().required("Period of cover from is required").typeError('Please select a valid date'),
-  periodOfCoverTo: yup.date().required("Period of cover to is required").typeError('Please select a valid date'),
+  periodOfCoverFrom: createFromDateValidation(),
+  periodOfCoverTo: createToDateValidation(),
 
   // Insured Details
   companyName: yup.string().required("Company name is required"),
@@ -43,7 +44,7 @@ const goodsInTransitClaimSchema = yup.object().shape({
   businessType: yup.string(),
 
   // Loss Details
-  dateOfLoss: yup.date().required("Date of loss is required").typeError('Please select a valid date'),
+  dateOfLoss: createFromDateValidation(),
   timeOfLoss: yup.string().required("Time of loss is required"),
   placeOfOccurrence: yup.string().required("Place of occurrence is required"),
   descriptionOfGoods: yup.string().required("Description of goods is required"),
@@ -75,7 +76,7 @@ const goodsInTransitClaimSchema = yup.object().shape({
     .nullable()
     .notRequired(),
   dispatchAddress: yup.string().required("Dispatch address is required"),
-  dispatchDate: yup.date().required("Dispatch date is required").typeError('Please select a valid date'),
+  dispatchDate: createFromDateValidation(),
   consigneeName: yup.string().required("Consignee name is required"),
   consigneeAddress: yup.string().required("Consignee address is required"),
 
@@ -163,7 +164,7 @@ const goodsInTransitClaimSchema = yup.object().shape({
   // Declaration
   declarationAgreed: yup.boolean().oneOf([true], "You must agree to the declaration"),
   signatureOfPolicyholder: yup.string().required("Signature is required"),
-  dateSigned: yup.date().required("Date signed is required").typeError('Please select a valid date')
+  dateSigned: createFromDateValidation()
 });
 
 interface GoodsItem {
@@ -476,22 +477,9 @@ const GoodsInTransitClaim: React.FC = () => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <FormField
-                    control={formMethods.control}
-                    name="periodOfCoverFrom"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1">
-                          Period of Cover From *
-                          <Info className="h-3 w-3" />
-                        </FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div>
+                    <DatePicker name="periodOfCoverFrom" label="Period of Cover From *" required />
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>The start date of your insurance policy coverage period</p>
@@ -502,22 +490,9 @@ const GoodsInTransitClaim: React.FC = () => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <FormField
-                    control={formMethods.control}
-                    name="periodOfCoverTo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1">
-                          Period of Cover To *
-                          <Info className="h-3 w-3" />
-                        </FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div>
+                    <DatePicker name="periodOfCoverTo" label="Period of Cover To *" required />
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>The end date of your insurance policy coverage period</p>
@@ -673,22 +648,9 @@ const GoodsInTransitClaim: React.FC = () => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <FormField
-                    control={formMethods.control}
-                    name="dateOfLoss"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1">
-                          Date of Loss *
-                          <Info className="h-3 w-3" />
-                        </FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div>
+                    <DatePicker name="dateOfLoss" label="Date of Loss *" required />
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Enter the exact date when the loss or damage to your goods occurred</p>
@@ -1244,22 +1206,9 @@ const GoodsInTransitClaim: React.FC = () => {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <FormField
-                  control={formMethods.control}
-                  name="dateReportedToPolice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1">
-                        Date Reported to Police
-                        <Info className="h-3 w-3" />
-                      </FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div>
+                  <DatePicker name="dateReportedToPolice" label="Date Reported to Police" />
+                </div>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Enter the date when the incident was reported to the police</p>
@@ -1296,22 +1245,9 @@ const GoodsInTransitClaim: React.FC = () => {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <FormField
-                  control={formMethods.control}
-                  name="dispatchDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1">
-                        Date Dispatched *
-                        <Info className="h-3 w-3" />
-                      </FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div>
+                  <DatePicker name="dispatchDate" label="Date Dispatched *" required />
+                </div>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Enter the date when the goods were dispatched or picked up for transport</p>
@@ -1811,22 +1747,9 @@ const GoodsInTransitClaim: React.FC = () => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <FormField
-                    control={formMethods.control}
-                    name="claimDateReceived"
-                    render={({ field }) => (
-                      <FormItem className="ml-6">
-                        <FormLabel className="flex items-center gap-1">
-                          Date Received *
-                          <Info className="h-3 w-3" />
-                        </FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="ml-6">
+                    <DatePicker name="claimDateReceived" label="Date Received *" required />
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Enter the date when you received the claim made against you</p>
@@ -1929,26 +1852,9 @@ const GoodsInTransitClaim: React.FC = () => {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <FormField
-                  control={formMethods.control}
-                  name="dateSigned"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1">
-                        Date Signed *
-                        <Info className="h-3 w-3" />
-                      </FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="date" 
-                          {...field}
-                          value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div>
+                  <DatePicker name="dateSigned" label="Date Signed *" required />
+                </div>
               </TooltipTrigger>
               <TooltipContent>
                 <p>The date when you are signing this claim form (defaults to today's date)</p>

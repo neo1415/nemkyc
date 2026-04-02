@@ -3,7 +3,8 @@ import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
-import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
+import { createDOBValidation, createFromDateValidation, createToDateValidation, createEmailValidation, createPhoneValidation } from '@/utils/validation';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,8 +36,8 @@ import SuccessModal from '@/components/common/SuccessModal';
 const combinedGPAEmployersLiabilityClaimSchema = yup.object().shape({
   // Policy Details
   policyNumber: yup.string().required("Policy number is required"),
-  periodOfCoverFrom: yup.date().required("Period of cover from is required"),
-  periodOfCoverTo: yup.date().required("Period of cover to is required"),
+  periodOfCoverFrom: createFromDateValidation(),
+  periodOfCoverTo: createToDateValidation(),
 
   // Insured Details
   name: yup.string().required("Name is required"),
@@ -50,7 +51,7 @@ const combinedGPAEmployersLiabilityClaimSchema = yup.object().shape({
   injuredPartyAddress: yup.string().required("Injured party address is required"),
   averageMonthlyEarnings: yup.number().required("Average monthly earnings is required"),
   occupation: yup.string().required("Occupation is required"),
-  dateOfEmployment: yup.date().required("Date of employment is required"),
+  dateOfEmployment: createFromDateValidation(),
   notDirectlyEmployed: yup.boolean(),
   employerName: yup.string().when('notDirectlyEmployed', {
     is: true,
@@ -76,10 +77,10 @@ const combinedGPAEmployersLiabilityClaimSchema = yup.object().shape({
   machineryInvolved: yup.string(),
 
   // Accident Details
-  accidentDate: yup.date().required("Accident date is required"),
+  accidentDate: createFromDateValidation(),
   accidentTime: yup.string().required("Accident time is required"),
   accidentPlace: yup.string().required("Accident place is required"),
-  dateReported: yup.date().required("Date reported is required"),
+  dateReported: createFromDateValidation(),
   dateTimeStoppedWork: yup.string().required("Date/time stopped work is required"),
   workAtTime: yup.string().required("Work at time is required"),
   howItOccurred: yup.string().required("How it occurred is required"),
@@ -342,36 +343,6 @@ const FormSelect = ({ name, label, required = false, options, placeholder, child
   );
 };
 
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name);
-  
-  return (
-    <div className="space-y-2">
-      <Label>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <Input
-        type="date"
-        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
-        onChange={(e) => {
-          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-          setValue(name, dateValue);
-          if (error) {
-            clearErrors(name);
-          }
-        }}
-        className={error ? 'border-destructive' : ''}
-      />
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
-
 const defaultValues: Partial<CombinedGPAEmployersLiabilityClaimData> = {
   policyNumber: '',
   name: '',
@@ -560,12 +531,12 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
                 </TooltipProvider>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormDatePicker
+                  <DatePicker
                     name="periodOfCoverFrom"
                     label="Period of Cover From"
                     required
                   />
-                  <FormDatePicker
+                  <DatePicker
                     name="periodOfCoverTo"
                     label="Period of Cover To"
                     required
@@ -605,7 +576,19 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div>
-                          <FormField name="phone" label="Phone Number" required />
+                          <FormField 
+                            name="phone" 
+                            label="Phone Number" 
+                            required 
+                            type="tel"
+                            pattern="[0-9+\-\(\)\s]*"
+                            onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                              const allowedChars = /[0-9+\-\(\)\s]/;
+                              if (!allowedChars.test(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
+                          />
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -701,7 +684,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
                     </Tooltip>
                   </div>
                   
-                  <FormDatePicker
+                  <DatePicker
                     name="dateOfEmployment"
                     label="Date of Employment"
                     required
@@ -785,7 +768,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
           <TooltipProvider>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormDatePicker
+                <DatePicker
                   name="accidentDate"
                   label="Accident Date"
                   required
@@ -815,7 +798,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
               </Tooltip>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormDatePicker
+                <DatePicker
                   name="dateReported"
                   label="Date Accident was Reported"
                   required
@@ -877,7 +860,7 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
                       </FormSelect>
                       
                       {watchedValues.stillInHospital === 'no' && (
-                        <FormDatePicker
+                        <DatePicker
                           name="dischargeDate"
                           label="Discharge Date"
                           required
@@ -954,7 +937,19 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
                     <div className="space-y-4">
                       <FormField name={`witnesses.${index}.name`} label="Witness Name" required />
                       <FormTextarea name={`witnesses.${index}.address`} label="Witness Address" required />
-                      <FormField name={`witnesses.${index}.phone`} label="Witness Phone" required />
+                      <FormField 
+                        name={`witnesses.${index}.phone`} 
+                        label="Witness Phone" 
+                        required 
+                        type="tel"
+                        pattern="[0-9+\-\(\)\s]*"
+                        onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                          const allowedChars = /[0-9+\-\(\)\s]/;
+                          if (!allowedChars.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                      />
                     </div>
                   </Card>
                 ))}
