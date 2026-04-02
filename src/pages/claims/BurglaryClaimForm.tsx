@@ -227,8 +227,6 @@ const FormSelect = ({ name, label, required = false, placeholder, children, ...p
   );
 };
 
-};
-
 // Validated Checkbox Component
 const FormCheckbox = ({ name, label, required = false, ...props }: any) => {
   const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
