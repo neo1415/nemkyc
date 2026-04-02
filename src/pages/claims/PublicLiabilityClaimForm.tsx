@@ -3,7 +3,8 @@ import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
-import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
+import { createEmailValidation, createPhoneValidation, createFromDateValidation, createToDateValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,8 +30,8 @@ import SuccessModal from '@/components/common/SuccessModal';
 const publicLiabilitySchema = yup.object().shape({
   // Policy Details
   policyNumber: yup.string().required('Policy number is required'),
-  coverageFromDate: yup.date().required('Coverage from date is required'),
-  coverageToDate: yup.date().required('Coverage to date is required'),
+  coverageFromDate: createFromDateValidation(),
+  coverageToDate: createToDateValidation(),
   
   // Insured Details
   companyName: yup.string(), // Optional field
@@ -39,7 +40,7 @@ const publicLiabilitySchema = yup.object().shape({
   email: createEmailValidation(),
   
   // Loss Details
-  accidentDate: yup.date().required('Accident date is required'),
+  accidentDate: createFromDateValidation(),
   accidentTime: yup.string().required('Accident time is required'),
   accidentPlace: yup.string().required('Place of accident is required'),
   accidentDetails: yup.string().required('Accident details are required'),
@@ -82,7 +83,7 @@ const publicLiabilitySchema = yup.object().shape({
     then: (schema) => schema.required('Notice from is required'),
     otherwise: (schema) => schema.notRequired()
   }),
-  noticeWhen: yup.date().when('claimNoticeReceived', {
+  noticeWhen: createFromDateValidation().when('claimNoticeReceived', {
     is: 'yes',
     then: (schema) => schema.required('Notice when is required'),
     otherwise: (schema) => schema.notRequired()
@@ -144,6 +145,16 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
   const { register, formState: { errors }, clearErrors } = useFormContext();
   const error = get(errors, name);
   
+  // Phone input restrictions
+  const phoneProps = type === "tel" ? {
+    pattern: "[\\d\\+\\-\\(\\)\\s]*",
+    onKeyPress: (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!/[\d\+\-\(\)\s]/.test(e.key)) {
+        e.preventDefault();
+      }
+    }
+  } : {};
+  
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>
@@ -162,6 +173,7 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
           }
         })}
         className={error ? 'border-destructive' : ''}
+        {...phoneProps}
         {...props}
       />
       {error && (
@@ -433,8 +445,8 @@ const PublicLiabilityClaimForm: React.FC = () => {
                 <FormField name="policyNumber" label="Policy Number" required />
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormDatePicker name="coverageFromDate" label="Period of Cover - From" required />
-                  <FormDatePicker name="coverageToDate" label="Period of Cover - To" required />
+                  <DatePicker name="coverageFromDate" label="Period of Cover - From" required />
+                  <DatePicker name="coverageToDate" label="Period of Cover - To" required />
                 </div>
               </div>
             </div>
@@ -447,7 +459,7 @@ const PublicLiabilityClaimForm: React.FC = () => {
                 <FormTextarea name="address" label="Address" required />
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField name="phone" label="Phone" required />
+                  <FormField name="phone" label="Phone" type="tel" required />
                   <FormField name="email" label="Email" type="email" required />
                 </div>
               </div>
@@ -463,7 +475,7 @@ const PublicLiabilityClaimForm: React.FC = () => {
         <FormProvider {...formMethods}>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="accidentDate" label="Date of Accident" required />
+              <DatePicker name="accidentDate" label="Date of Accident" required />
               <FormField name="accidentTime" label="Time of Accident" type="time" required />
             </div>
             
@@ -572,7 +584,7 @@ const PublicLiabilityClaimForm: React.FC = () => {
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField name="noticeFrom" label="From whom" required />
-                      <FormDatePicker name="noticeWhen" label="When" required />
+                      <DatePicker name="noticeWhen" label="When" required />
                     </div>
                     <FormField name="noticeForm" label="In what form" required />
                     <FileUpload

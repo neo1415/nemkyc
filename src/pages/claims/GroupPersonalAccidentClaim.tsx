@@ -4,7 +4,8 @@ import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
-import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
+import { createDOBValidation, createFromDateValidation, createToDateValidation, createEmailValidation, createPhoneValidation } from '@/utils/validation';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,8 +37,8 @@ import SuccessModal from '@/components/common/SuccessModal';
 const groupPersonalAccidentClaimSchema = yup.object().shape({
   // Policy Details
   policyNumber: yup.string().required("Policy number is required"),
-  periodOfCoverFrom: yup.date().required("Period of cover from is required"),
-  periodOfCoverTo: yup.date().required("Period of cover to is required"),
+  periodOfCoverFrom: createFromDateValidation(),
+  periodOfCoverTo: createToDateValidation(),
 
   // Insured Details
   companyName: yup.string().required("Company name is required"),
@@ -46,7 +47,7 @@ const groupPersonalAccidentClaimSchema = yup.object().shape({
   email: createEmailValidation(),
 
   // Accident Details
-  accidentDate: yup.date().required("Accident date is required"),
+  accidentDate: createFromDateValidation(),
   accidentTime: yup.string().required("Accident time is required"),
   accidentPlace: yup.string().required("Accident place is required"),
   incidentDescription: yup.string().required("Incident description is required"),
@@ -236,36 +237,6 @@ const FormSelectComponent = ({ name, label, required = false, options, placehold
           {children}
         </SelectContent>
       </Select>
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
-
-const FormDatePickerComponent = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name);
-  
-  return (
-    <div className="space-y-2">
-      <Label>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <Input
-        type="date"
-        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
-        onChange={(e) => {
-          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-          setValue(name, dateValue);
-          if (error) {
-            clearErrors(name);
-          }
-        }}
-        className={error ? 'border-destructive' : ''}
-      />
       {error && (
         <p className="text-sm text-destructive">{error.message?.toString()}</p>
       )}
@@ -472,31 +443,15 @@ const GroupPersonalAccidentClaim: React.FC = () => {
                 </TooltipProvider>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={formMethods.control}
+                  <DatePicker
                     name="periodOfCoverFrom"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Period of Cover From *</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    label="Period of Cover From"
+                    required
                   />
-                  <FormField
-                    control={formMethods.control}
+                  <DatePicker
                     name="periodOfCoverTo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Period of Cover To *</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    label="Period of Cover To"
+                    required
                   />
                 </div>
               </div>
@@ -533,7 +488,19 @@ const GroupPersonalAccidentClaim: React.FC = () => {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div>
-                          <FormFieldComponent name="phone" label="Phone Number" required />
+                          <FormFieldComponent 
+                            name="phone" 
+                            label="Phone Number" 
+                            required 
+                            type="tel"
+                            pattern="[0-9+\-\(\)\s]*"
+                            onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                              const allowedChars = /[0-9+\-\(\)\s]/;
+                              if (!allowedChars.test(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
+                          />
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -566,18 +533,10 @@ const GroupPersonalAccidentClaim: React.FC = () => {
         <FormProvider {...formMethods}>
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={formMethods.control}
+              <DatePicker
                 name="accidentDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Accident Date *</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                label="Accident Date"
+                required
               />
               
               <FormField
@@ -774,32 +733,14 @@ const GroupPersonalAccidentClaim: React.FC = () => {
                 <div>
                   <h4 className="font-medium mb-4">How long have you been totally incapacitated from attending to your job?</h4>
                   <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={formMethods.control}
+                    <DatePicker
                       name="totalIncapacityFrom"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>From</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      label="From"
                     />
                     
-                    <FormField
-                      control={formMethods.control}
+                    <DatePicker
                       name="totalIncapacityTo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>To</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      label="To"
                     />
                   </div>
                 </div>
@@ -807,32 +748,14 @@ const GroupPersonalAccidentClaim: React.FC = () => {
                 <div>
                   <h4 className="font-medium mb-4">How long have you been partially incapacitated in the sense of being necessarily prevented from attending to a substantial and essential part of your occupation?</h4>
                   <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={formMethods.control}
+                    <DatePicker
                       name="partialIncapacityFrom"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>From</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      label="From"
                     />
                     
-                    <FormField
-                      control={formMethods.control}
+                    <DatePicker
                       name="partialIncapacityTo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>To</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      label="To"
                     />
                   </div>
                 </div>

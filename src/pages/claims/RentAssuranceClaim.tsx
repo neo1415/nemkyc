@@ -3,7 +3,8 @@ import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
-import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
+import { createDOBValidation, createFromDateValidation, createToDateValidation, createEmailValidation, createPhoneValidation } from '@/utils/validation';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { useToast } from '@/hooks/use-toast';
 import { uploadFile } from '@/services/fileService';
@@ -21,16 +22,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Loader2, Home, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Calendar as ReactCalendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
 const rentAssuranceSchema = yup.object({
   policyNumber: yup.string().required('Policy number is required'),
-  periodOfCoverFrom: yup.date().required('Period of cover from is required'),
-  periodOfCoverTo: yup.date().required('Period of cover to is required'),
+  periodOfCoverFrom: createFromDateValidation(),
+  periodOfCoverTo: createToDateValidation(),
   nameOfInsured: yup.string().required('Name of insured is required'),
   address: yup.string().required('Address is required'),
   age: yup
@@ -41,23 +39,15 @@ const rentAssuranceSchema = yup.object({
   phone: createPhoneValidation(),
   nameOfLandlord: yup.string().required('Name of landlord is required'),
   addressOfLandlord: yup.string().required('Address of landlord is required'),
-  livingAtPremisesFrom: yup
-    .date()
-    .required('Living at premises from date is required'),
-  livingAtPremisesTo: yup
-    .date()
-    .required('Living at premises to date is required'),
-  periodOfDefaultFrom: yup
-    .date()
-    .required('Period of default from is required'),
-  periodOfDefaultTo: yup
-    .date()
-    .required('Period of default to is required'),
+  livingAtPremisesFrom: createFromDateValidation(),
+  livingAtPremisesTo: createToDateValidation(),
+  periodOfDefaultFrom: createFromDateValidation(),
+  periodOfDefaultTo: createToDateValidation(),
   amountDefaulted: yup
     .number()
     .required('Amount defaulted is required')
     .min(0),
-  rentDueDate: yup.date().required('Rent due date is required'),
+  rentDueDate: createFromDateValidation(),
   rentPaymentFrequency: yup
     .string()
     .required('Rent payment frequency is required'),
@@ -79,13 +69,8 @@ const rentAssuranceSchema = yup.object({
   beneficiaryAddress: yup
     .string()
     .required('Beneficiary address is required'),
-  beneficiaryEmail: yup
-    .string()
-    .email('Invalid email')
-    .required('Beneficiary email is required'),
-  beneficiaryPhone: yup
-    .string()
-    .required('Beneficiary phone is required'),
+  beneficiaryEmail: createEmailValidation(),
+  beneficiaryPhone: createPhoneValidation(),
   beneficiaryOccupation: yup
     .string()
     .required('Beneficiary occupation is required'),
@@ -104,9 +89,7 @@ const rentAssuranceSchema = yup.object({
   declarationDayMonth: yup
     .string()
     .required('Declaration day/month is required'),
-  declarationDate: yup
-    .date()
-    .required('Declaration date is required'),
+  declarationDate: createFromDateValidation(),
   agreeToDataPrivacy: yup
     .boolean()
     .oneOf([true], 'You must agree to the data privacy policy'),
@@ -369,63 +352,7 @@ const RentAssuranceClaim = () => {
     'declaration': ['agreeToDataPrivacy', 'declarationName', 'declarationPlace', 'declarationAmount', 'declarationDayMonth', 'declarationDate', 'signature'],
   };
 
-  const DatePickerField = ({ name, label }: { name: string; label: string }) => {
-    const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-    const value = watch(name);
-    const error = get(errors, name);
-    const required = label.includes('*');
-    
-    return (
-      <TooltipProvider>
-        <div className="space-y-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Label className="flex items-center gap-1">
-                {label}
-                {required && <span className="text-red-500">*</span>}
-                <Info className="h-3 w-3" />
-              </Label>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Select the {label.toLowerCase()}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !value && "text-muted-foreground",
-                  error && "border-destructive"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <ReactCalendar
-                mode="single"
-                selected={value ? new Date(value as any) : undefined}
-                onSelect={(date) => {
-                  setValue(name as any, date);
-                  if (error) {
-                    clearErrors(name);
-                  }
-                }}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-          {error && (
-            <p className="text-sm text-destructive">{error.message?.toString()}</p>
-          )}
-        </div>
-      </TooltipProvider>
-    );
-  };
+
 
   const validateStep = async (stepId: string) => {
     // Validate mapped fields for this step first
@@ -567,7 +494,15 @@ const RentAssuranceClaim = () => {
                       name="phone"
                       label="Phone"
                       required
+                      type="tel"
+                      pattern="[0-9+\-\(\)\s]*"
                       placeholder="Enter phone number"
+                      onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                        const allowedChars = /[0-9+\-\(\)\s]/;
+                        if (!allowedChars.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
                     />
                   </div>
                   
@@ -589,14 +524,8 @@ const RentAssuranceClaim = () => {
                   <div>
                     <Label>How long has insured been living at premises *</Label>
                     <div className="grid md:grid-cols-2 gap-4 mt-2">
-                      <DatePickerField
-                        name="livingAtPremisesFrom"
-                        label="From *"
-                      />
-                      <DatePickerField
-                        name="livingAtPremisesTo"
-                        label="To *"
-                      />
+                      <DatePicker name="livingAtPremisesFrom" label="From" required />
+                      <DatePicker name="livingAtPremisesTo" label="To" required />
                     </div>
                   </div>
                 </div>
@@ -620,14 +549,8 @@ const RentAssuranceClaim = () => {
                   <div>
                     <Label>Period of Default *</Label>
                     <div className="grid md:grid-cols-2 gap-4 mt-2">
-                      <DatePickerField
-                        name="periodOfDefaultFrom"
-                        label="From *"
-                      />
-                      <DatePickerField
-                        name="periodOfDefaultTo"
-                        label="To *"
-                      />
+                      <DatePicker name="periodOfDefaultFrom" label="From" required />
+                      <DatePicker name="periodOfDefaultTo" label="To" required />
                     </div>
                   </div>
                   
@@ -640,10 +563,7 @@ const RentAssuranceClaim = () => {
                       placeholder="Enter amount"
                       onChange={(e: any) => formMethods.setValue('amountDefaulted', Number(e.target.value))}
                     />
-                    <DatePickerField
-                      name="rentDueDate"
-                      label="Rent Due Date *"
-                    />
+                    <DatePicker name="rentDueDate" label="Rent Due Date" required />
                   </div>
                   
                   <FormSelect
@@ -735,7 +655,15 @@ const RentAssuranceClaim = () => {
                       name="beneficiaryPhone"
                       label="Phone"
                       required
+                      type="tel"
+                      pattern="[0-9+\-\(\)\s]*"
                       placeholder="Enter phone number"
+                      onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                        const allowedChars = /[0-9+\-\(\)\s]/;
+                        if (!allowedChars.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
                     />
                   </div>
                 </div>

@@ -3,7 +3,7 @@ import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
-import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
+import { createEmailValidation, createPhoneValidation, createFromDateValidation, createToDateValidation } from '@/utils/validation';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,8 +28,8 @@ import DatePicker from '@/components/common/DatePicker';
 const smartTravellerProtectionSchema = yup.object().shape({
   // Section 1: Policy Information
   policyNumber: yup.string().required("Policy number is required"),
-  periodOfCoverFrom: yup.date().required("Period of cover from is required"),
-  periodOfCoverTo: yup.date().required("Period of cover to is required"),
+  periodOfCoverFrom: createFromDateValidation(),
+  periodOfCoverTo: createToDateValidation(),
 
   // Section 2: Insured Details
   companyName: yup.string().required("Company name is required"),
@@ -38,7 +38,7 @@ const smartTravellerProtectionSchema = yup.object().shape({
   email: createEmailValidation(),
   
   // Section 3: Details of Loss
-  accidentDate: yup.date().required("Accident date is required"),
+  accidentDate: createFromDateValidation(),
   accidentTime: yup.string().required("Accident time is required"),
   accidentLocation: yup.string().required("Place of accident is required"),
   accidentDescription: yup.string().required("Please describe incident is required"),
@@ -51,10 +51,10 @@ const smartTravellerProtectionSchema = yup.object().shape({
   ),
   doctorNameAddress: yup.string(),
   isUsualDoctor: yup.string(),
-  totalIncapacityFrom: yup.date(),
-  totalIncapacityTo: yup.date(),
-  partialIncapacityFrom: yup.date(),
-  partialIncapacityTo: yup.date(),
+  totalIncapacityFrom: createFromDateValidation().optional(),
+  totalIncapacityTo: createToDateValidation().optional(),
+  partialIncapacityFrom: createFromDateValidation().optional(),
+  partialIncapacityTo: createToDateValidation().optional(),
   otherInsurerName: yup.string(),
   otherInsurerAddress: yup.string(),
   otherInsurerPolicyNumber: yup.string(),
@@ -307,7 +307,19 @@ const SmartTravellerProtectionClaim: React.FC = () => {
           <div className="space-y-4">
             <FormField name="companyName" label="Company Name" required />
             <FormTextarea name="address" label="Address" required />
-            <FormField name="phone" label="Phone" required type="tel" />
+            <FormField 
+              name="phone" 
+              label="Phone" 
+              required 
+              type="tel"
+              pattern="[0-9+\-\(\)\s]*"
+              onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                const allowedChars = /[0-9+\-\(\)\s]/;
+                if (!allowedChars.test(e.key)) {
+                  e.preventDefault();
+                }
+              }}
+            />
             <FormField name="email" label="Email" required type="email" />
           </div>
         </FormProvider>

@@ -20,7 +20,8 @@ import { useFormDraft } from '@/hooks/useFormDraft';
 import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
-import { createDOBValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
+import { createDOBValidation, createFromDateValidation, createToDateValidation, createEmailValidation, createPhoneValidation } from '@/utils/validation';
 import { cn } from '@/lib/utils';
 
 interface FireSpecialPerilsClaimData {
@@ -94,19 +95,19 @@ interface FireSpecialPerilsClaimData {
 
 const schema = yup.object().shape({
   policyNumber: yup.string().required('Policy number is required'),
-  periodOfCoverFrom: yup.string().required('Period of cover start date is required'),
-  periodOfCoverTo: yup.string().required('Period of cover end date is required'),
+  periodOfCoverFrom: createFromDateValidation(),
+  periodOfCoverTo: createToDateValidation(),
   name: yup.string().required('Name is required'),
   companyName: yup.string(),
   title: yup.string().required('Title is required'),
   dateOfBirth: createDOBValidation(),
   gender: yup.string().required('Gender is required'),
   address: yup.string().required('Address is required'),
-  phone: yup.string().required('Phone number is required'),
-  email: yup.string().email('Invalid email').required('Email is required'),
+  phone: createPhoneValidation(),
+  email: createEmailValidation(),
   premisesAddress: yup.string().required('Premises address is required'),
-  premisesPhone: yup.string().required('Premises phone is required'),
-  dateOfOccurrence: yup.string().required('Date of occurrence is required'),
+  premisesPhone: createPhoneValidation(),
+  dateOfOccurrence: createFromDateValidation(),
   timeOfOccurrence: yup.string().required('Time of occurrence is required'),
   incidentDescription: yup.string().required('Incident description is required'),
   causeOfFire: yup.string().required('Cause of fire is required'),
@@ -148,7 +149,7 @@ const schema = yup.object().shape({
   }),
   premisesContentsValue: yup.number().min(0, 'Value must be positive').required('Premises contents value is required'),
   hasPreviousClaim: yup.boolean(),
-  previousClaimDate: yup.string().when('hasPreviousClaim', {
+  previousClaimDate: createFromDateValidation().when('hasPreviousClaim', {
     is: true,
     then: (schema) => schema.required('Previous claim date required'),
     otherwise: (schema) => schema.notRequired()
@@ -163,7 +164,7 @@ const schema = yup.object().shape({
       sn: yup.number(),
       description: yup.string().required('Description is required'),
       costPrice: yup.number().min(0, 'Cost price must be positive').required('Cost price is required'),
-      dateOfPurchase: yup.string().required('Date of purchase is required'),
+      dateOfPurchase: createFromDateValidation(),
       estimatedValueAtOccurrence: yup.number().min(0, 'Estimated value must be positive').required('Estimated value is required'),
       valueOfSalvage: yup.number().min(0, 'Salvage value must be positive'),
       netAmountClaimed: yup.number().min(0, 'Net amount must be positive'),
@@ -178,6 +179,16 @@ const schema = yup.object().shape({
 const FormField = ({ name, label, required = false, type = "text", maxLength, placeholder, ...props }: any) => {
   const { register, formState: { errors }, clearErrors } = useFormContext();
   const error = get(errors, name);
+  
+  // Phone input restrictions
+  const phoneProps = type === "tel" ? {
+    pattern: "[\\d\\+\\-\\(\\)\\s]*",
+    onKeyPress: (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!/[\d\+\-\(\)\s]/.test(e.key)) {
+        e.preventDefault();
+      }
+    }
+  } : {};
   
   return (
     <div className="space-y-2">
@@ -198,6 +209,7 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, pl
           }
         })}
         className={cn(error ? 'border-destructive' : '')}
+        {...phoneProps}
         {...props}
       />
       {error && (
@@ -525,8 +537,8 @@ const FireSpecialPerilsClaim: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField name="policyNumber" label="Policy Number" required placeholder="Enter policy number" />
                 <div className="grid grid-cols-2 gap-2">
-                  <FormField name="periodOfCoverFrom" label="Period of Cover From" type="date" required />
-                  <FormField name="periodOfCoverTo" label="To" type="date" required />
+                  <DatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
+                  <DatePicker name="periodOfCoverTo" label="To" required />
                 </div>
               </div>
             </FormSection>
@@ -548,7 +560,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
                     <SelectItem value="Chief">Chief</SelectItem>
                     <SelectItem value="Other">Other</SelectItem>
                   </FormSelect>
-                  <FormField name="dateOfBirth" label="Date of Birth" type="date" required />
+                  <DatePicker name="dateOfBirth" label="Date of Birth" required />
                   <FormSelect name="gender" label="Gender" required placeholder="Select gender">
                     <SelectItem value="Male">Male</SelectItem>
                     <SelectItem value="Female">Female</SelectItem>
@@ -558,7 +570,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
                 <FormTextarea name="address" label="Address" required placeholder="Enter full address" rows={3} />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField name="phone" label="Phone Number" required placeholder="Enter phone number" />
+                  <FormField name="phone" label="Phone Number" type="tel" required placeholder="Enter phone number" />
                   <FormField name="email" label="Email Address" type="email" required placeholder="Enter email address" />
                 </div>
               </div>
@@ -578,10 +590,10 @@ const FireSpecialPerilsClaim: React.FC = () => {
               <div className="space-y-4">
                 <FormTextarea name="premisesAddress" label="Full Address of Premises Involved" required placeholder="Enter complete address of affected premises" rows={3} />
 
-                <FormField name="premisesPhone" label="Premises Telephone" required placeholder="Enter premises phone number" />
+                <FormField name="premisesPhone" label="Premises Telephone" type="tel" required placeholder="Enter premises phone number" />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField name="dateOfOccurrence" label="Date of Occurrence" type="date" required />
+                  <DatePicker name="dateOfOccurrence" label="Date of Occurrence" required />
                   <FormField name="timeOfOccurrence" label="Time of Occurrence" type="time" required />
                 </div>
 
@@ -758,7 +770,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
 
                 {watchedValues.hasPreviousClaim === true && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField name="previousClaimDate" label="Date of Loss" type="date" required />
+                    <DatePicker name="previousClaimDate" label="Date of Loss" required />
                     <FormNumber name="previousClaimAmount" label="Amount of Loss (₦)" required placeholder="0.00" />
                   </div>
                 )}
@@ -789,7 +801,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <FormNumber name={`itemsLost.${index}.costPrice`} label="Cost Price (₦)" required placeholder="0.00" />
-                        <FormField name={`itemsLost.${index}.dateOfPurchase`} label="Date of Purchase" type="date" required />
+                        <DatePicker name={`itemsLost.${index}.dateOfPurchase`} label="Date of Purchase" required />
                         <FormNumber name={`itemsLost.${index}.estimatedValueAtOccurrence`} label="Estimated Value at Occurrence (₦)" required placeholder="0.00" />
                       </div>
                       

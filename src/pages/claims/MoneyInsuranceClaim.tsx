@@ -3,7 +3,8 @@ import { useForm, useFieldArray, FormProvider, useFormContext } from 'react-hook
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
-import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
+import { createDOBValidation, createFromDateValidation, createToDateValidation, createEmailValidation, createPhoneValidation } from '@/utils/validation';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,8 +27,8 @@ import SuccessModal from '@/components/common/SuccessModal';
 const moneyInsuranceSchema = yup.object().shape({
   // Policy Details
   policyNumber: yup.string().required('Policy number is required'),
-  periodOfCoverFrom: yup.date().required('Period start date is required'),
-  periodOfCoverTo: yup.date().required('Period end date is required'),
+  periodOfCoverFrom: createFromDateValidation(),
+  periodOfCoverTo: createToDateValidation(),
 
   // Insured Details
   companyName: yup.string().required('Company name is required'),
@@ -36,7 +37,7 @@ const moneyInsuranceSchema = yup.object().shape({
   email: createEmailValidation(),
 
   // Loss Details
-  lossDate: yup.date().required('Loss date is required'),
+  lossDate: createFromDateValidation(),
   lossTime: yup.string().required('Loss time is required'),
   lossLocation: yup.string().required('Loss location is required'),
   moneyLocation: yup.string().oneOf(['transit', 'safe']).required('Money location is required'),
@@ -176,6 +177,19 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
   const { register, formState: { errors }, clearErrors } = useFormContext();
   const error = get(errors, name);
   
+  // Add phone restrictions if field name contains 'phone'
+  const isPhoneField = name.toLowerCase().includes('phone');
+  const phoneProps = isPhoneField ? {
+    type: "tel",
+    pattern: "[0-9+\\-\\(\\)\\s]*",
+    onKeyPress: (e: React.KeyboardEvent) => {
+      const allowedChars = /[0-9+\-\(\)\s]/;
+      if (!allowedChars.test(e.key)) {
+        e.preventDefault();
+      }
+    }
+  } : {};
+  
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>
@@ -194,6 +208,7 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
           }
         })}
         className={error ? 'border-destructive' : ''}
+        {...phoneProps}
         {...props}
       />
       {error && (
@@ -273,35 +288,6 @@ const FormSelect = ({ name, label, required = false, options, placeholder, child
   );
 };
 
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name);
-  
-  return (
-    <div className="space-y-2">
-      <Label>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <Input
-        type="date"
-        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
-        onChange={(e) => {
-          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-          setValue(name, dateValue);
-          if (error) {
-            clearErrors(name);
-          }
-        }}
-        className={error ? 'border-destructive' : ''}
-      />
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
 
 const defaultValues: Partial<MoneyInsuranceData> = {
   policyNumber: '',
@@ -499,8 +485,8 @@ const MoneyInsuranceClaim: React.FC = () => {
             <FormField name="policyNumber" label="Policy Number" required />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
-              <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
+              <DatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
+              <DatePicker name="periodOfCoverTo" label="Period of Cover To" required />
             </div>
           </div>
         </FormProvider>
@@ -530,7 +516,7 @@ const MoneyInsuranceClaim: React.FC = () => {
         <FormProvider {...formMethods}>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="lossDate" label="When did it happen?" required />
+              <DatePicker name="lossDate" label="When did it happen?" required />
               <FormField name="lossTime" label="Time" type="time" required />
             </div>
             

@@ -16,7 +16,8 @@ import { Calendar as ReactCalendar } from '@/components/ui/calendar';
 import { Calendar, CalendarIcon, Upload, Edit2, Car, FileText, CheckCircle2, Loader2, Plus, Trash2, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { createEmailValidation, createPhoneValidation } from '@/utils/validation';
+import DatePicker from '@/components/common/DatePicker';
+import { createEmailValidation, createPhoneValidation, createFromDateValidation, createToDateValidation } from '@/utils/validation';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
@@ -39,13 +40,13 @@ const motorClaimSchema = yup.object().shape({
   // Section 2: Vehicle Details
   registrationNumber: yup.string().required("Registration number is required"),
   policyNumber: yup.string().required("Policy number is required"),
-  periodOfCoverFrom: yup.date().required("Period of cover from is required"),
-  periodOfCoverTo: yup.date().required("Period of cover to is required"),
+  periodOfCoverFrom: createFromDateValidation(),
+  periodOfCoverTo: createToDateValidation(),
   trailerAttached: yup.string().required("Trailer attached field is required"),
 
   // Section 3: Incident Details
   incidentLocation: yup.string().required("Where did the incident occur is required"),
-  incidentDate: yup.date().required("Date of incident is required"),
+  incidentDate: createFromDateValidation(),
   incidentTime: yup.string().required("Time of incident is required"),
   policeReported: yup.string().required("Was incident reported to police is required"),
   policeStationDetails: yup.string().when('policeReported', {
@@ -154,6 +155,16 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
   const { register, formState: { errors }, clearErrors } = useFormContext();
   const error = get(errors, name);
   
+  // Phone input restrictions
+  const phoneProps = type === "tel" ? {
+    pattern: "[\\d\\+\\-\\(\\)\\s]*",
+    onKeyPress: (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!/[\d\+\-\(\)\s]/.test(e.key)) {
+        e.preventDefault();
+      }
+    }
+  } : {};
+  
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>
@@ -172,6 +183,7 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
           }
         })}
         className={error ? 'border-destructive' : ''}
+        {...phoneProps}
         {...props}
       />
       {error && (
@@ -244,36 +256,6 @@ const FormSelect = ({ name, label, required = false, options, placeholder, child
           {children}
         </SelectContent>
       </Select>
-      {error && (
-        <p className="text-sm text-destructive">{error.message?.toString()}</p>
-      )}
-    </div>
-  );
-};
-
-const FormDatePicker = ({ name, label, required = false }: any) => {
-  const { setValue, watch, formState: { errors }, clearErrors } = useFormContext();
-  const value = watch(name);
-  const error = get(errors, name);
-  
-  return (
-    <div className="space-y-2">
-      <Label>
-        {label}
-        {required && <span className="required-asterisk">*</span>}
-      </Label>
-      <Input
-        type="date"
-        value={value ? (typeof value === 'string' ? value : value.toISOString().split('T')[0]) : ''}
-        onChange={(e) => {
-          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-          setValue(name, dateValue);
-          if (error) {
-            clearErrors(name);
-          }
-        }}
-        className={error ? 'border-destructive' : ''}
-      />
       {error && (
         <p className="text-sm text-destructive">{error.message?.toString()}</p>
       )}
@@ -412,7 +394,7 @@ const MotorClaim: React.FC = () => {
               <FormField name="insuredSurname" label="Insured (Surname first)" required />
               <FormField name="insuredFirstName" label="First Name" required />
             </div>
-            <FormField name="phone" label="Phone Number" required />
+            <FormField name="phone" label="Phone Number" type="tel" required />
             <FormField name="email" label="Email Address" required />
           </div>
         </FormProvider>
@@ -428,8 +410,8 @@ const MotorClaim: React.FC = () => {
             <FormField name="policyNumber" label="Policy Number" required />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
-              <FormDatePicker name="periodOfCoverTo" label="Period of Cover To" required />
+              <DatePicker name="periodOfCoverFrom" label="Period of Cover From" required />
+              <DatePicker name="periodOfCoverTo" label="Period of Cover To" required />
             </div>
             
             <FormSelect name="trailerAttached" label="Was trailer attached?" required placeholder="Select Yes or No">
@@ -449,7 +431,7 @@ const MotorClaim: React.FC = () => {
             <FormField name="incidentLocation" label="Where did the incident occur?" required />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormDatePicker name="incidentDate" label="Date of incident" required />
+              <DatePicker name="incidentDate" label="Date of incident" required />
               <FormField name="incidentTime" label="Time of incident" required type="time" />
             </div>
             
@@ -510,7 +492,7 @@ const MotorClaim: React.FC = () => {
                 
                 <FormField name="otherDriverName" label="Driver's Name" required />
                 <FormTextarea name="otherDriverAddress" label="Driver Address" required />
-                <FormField name="otherDriverPhone" label="Driver's Phone Number" required type="tel" />
+                <FormField name="otherDriverPhone" label="Driver's Phone Number" type="tel" required />
                 <FormTextarea name="otherVehicleInjuryDamage" label="Injury or damage to the other vehicle" required />
                 
                 <div className="mt-6">
@@ -563,7 +545,7 @@ const MotorClaim: React.FC = () => {
                   <div className="space-y-4">
                     <FormField name={`witnesses.${index}.name`} label="Name" required />
                     <FormTextarea name={`witnesses.${index}.address`} label="Address" required />
-                    <FormField name={`witnesses.${index}.phone`} label="Phone Number" required />
+                    <FormField name={`witnesses.${index}.phone`} label="Phone Number" type="tel" required />
                   </div>
                 </Card>
               ))}
