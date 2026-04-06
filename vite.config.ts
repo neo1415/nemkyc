@@ -26,6 +26,17 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress jsx warnings from rolldown
+        if (warning.code === 'INVALID_OPTION' && warning.message.includes('jsx')) {
+          return;
+        }
+        warn(warning);
+      }
+    }
+  },
   test: {
     globals: true,
     environment: 'jsdom',

@@ -25,6 +25,11 @@
 .env.staging
 .env.staging.local
 
+# Google Cloud credentials (NEVER commit these!)
+google-cloud-credentials.json
+*-credentials.json
+service-account*.json
+
 # Firebase rules (security-sensitive - environment-specific)
 firestore.rules
 firestore.rules.development
@@ -46,6 +51,14 @@ pnpm-debug.log*
 
 # Documentation (internal notes)
 /docs/
+
+# Private documentation and tests (for files with real credentials/data)
+/docs-private/
+/tests-private/
+/notes-private/
+*.private.md
+*.private.test.ts
+*.private.test.js
 
 # IDE
 .vscode/

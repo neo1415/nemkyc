@@ -1,0 +1,49 @@
+#!/bin/bash
+# Pre-commit hook to prevent committing sensitive data
+
+echo "🔍 Scanning for sensitive data..."
+
+# Patterns to search for
+PATTERNS=(
+  "private_key"
+  "private_key_id"
+  "client_email.*@.*\.iam\.gserviceaccount\.com"
+  "AIza[0-9A-Za-z-_]{35}"
+  "AKIA[0-9A-Z]{16}"
+  "sk-[a-zA-Z0-9]{48}"
+  "ghp_[a-zA-Z0-9]{36}"
+  "glpat-[a-zA-Z0-9_-]{20}"
+)
+
+# Files to check (staged files only)
+FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+FOUND_SECRETS=0
+
+for FILE in $FILES; do
+  # Skip binary files
+  if file "$FILE" | grep -q "text"; then
+    for PATTERN in "${PATTERNS[@]}"; do
+      if grep -qiE "$PATTERN" "$FILE" 2>/dev/null; then
+        echo "❌ BLOCKED: Potential secret found in $FILE"
+        echo "   Pattern: $PATTERN"
+        FOUND_SECRETS=1
+      fi
+    done
+  fi
+done
+
+if [ $FOUND_SECRETS -eq 1 ]; then
+  echo ""
+  echo "🚨 COMMIT BLOCKED: Sensitive data detected!"
+  echo "Please remove secrets before committing."
+  echo ""
+  echo "If this is a false positive, you can:"
+  echo "  1. Remove the sensitive data"
+  echo "  2. Use placeholder values (e.g., 'YOUR_API_KEY_HERE')"
+  echo "  3. Skip this hook with: git commit --no-verify (NOT RECOMMENDED)"
+  exit 1
+fi
+
+echo "✅ No sensitive data detected"
+exit 0

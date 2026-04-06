@@ -37,6 +37,9 @@ export interface DirectorInfo {
 // Individual Document Models
 export interface IndividualData {
   fullName: string;
+  firstName?: string; // Parsed first name only
+  middleName?: string; // Parsed middle name
+  lastName?: string;  // Parsed last name (surname)
   dateOfBirth?: string; // Made optional since not all documents have DOB
   nin?: string;
   bvn?: string;
