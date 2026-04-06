@@ -23,6 +23,7 @@ import {
   GeminiError 
 } from '../utils/geminiErrorHandling';
 import { geminiOCREngine } from './geminiOCREngine';
+import { documentAIOCREngine } from './documentAIOCREngine';
 import { simpleVerificationMatcher } from './simpleVerificationMatcher';
 import { geminiAuditLogger } from './geminiAuditLogger';
 
@@ -264,9 +265,10 @@ export class DocumentProcessorService {
       console.log('📄 Starting OCR extraction...');
       
       if (verificationType === 'cac') {
-        const ocrResult = await geminiOCREngine.extractCACData(document);
+        // Use Document AI for CAC documents (NDPA compliant)
+        const ocrResult = await documentAIOCREngine.extractCACData(document);
         
-        console.log('📄 CAC OCR result:', {
+        console.log('📄 CAC OCR result (Document AI):', {
           success: ocrResult.success,
           confidence: ocrResult.confidence,
           hasData: !!ocrResult.data,
@@ -296,9 +298,10 @@ export class DocumentProcessorService {
         });
         
       } else {
-        const ocrResult = await geminiOCREngine.extractIndividualData(document);
+        // Use Document AI for individual documents (NDPA compliant)
+        const ocrResult = await documentAIOCREngine.extractIndividualData(document);
         
-        console.log('📄 Individual OCR result:', {
+        console.log('📄 Individual OCR result (Document AI):', {
           success: ocrResult.success,
           confidence: ocrResult.confidence,
           hasData: !!ocrResult.data,

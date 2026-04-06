@@ -1170,7 +1170,7 @@ const CorporateKYC: React.FC = () => {
                 <div>
                   <h4 className="font-medium text-blue-900">Upload Your CAC Certificate</h4>
                   <p className="text-sm text-blue-700 mt-1">
-                    Please upload a clear photo or scan of your Certificate of Incorporation (CAC) or Company Registration Certificate. 
+                    Upload a clear photo of your Certificate of Incorporation or Company Registration Certificate. Your document is processed securely and verified locally—no data is stored by third parties. 
                     This document will be automatically verified against the company information you provided in the form.
                   </p>
                 </div>

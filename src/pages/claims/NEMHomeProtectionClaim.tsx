@@ -21,7 +21,6 @@ import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
 import FormLoadingModal from '@/components/common/FormLoadingModal';
 import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
-import DatePicker from '@/components/common/DatePicker';
 import { format } from 'date-fns';
 
 // NEM Home Protection Claim Schema

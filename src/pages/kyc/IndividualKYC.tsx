@@ -843,9 +843,9 @@ const IndividualKYC: React.FC = () => {
                 <div className="flex items-start space-x-3">
                   <Info className="w-5 h-5 text-blue-600 mt-0.5" />
                   <div>
-                    <h4 className="font-medium text-blue-900">Upload Your NIN Document</h4>
-                    <p className="text-sm text-blue-700 mt-1">
-                      Please upload a clear photo or scan of your National Identification Number (NIN) slip or card. 
+                  <h4 className="font-medium text-blue-900">Upload Your NIN Document</h4>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Upload a clear photo of your NIN slip or card. Your document is processed securely and verified locally—no data is stored by third parties. 
                       This document will be automatically verified against the information you provided in the form.
                     </p>
                   </div>
