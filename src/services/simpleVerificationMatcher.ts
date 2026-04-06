@@ -42,12 +42,32 @@ export class SimpleVerificationMatcher {
         };
       }
 
-      // Extract names from full name
-      const extractedNames = this.parseFullName(extractedData.fullName);
+      // Extract names from document - use pre-parsed names from backend
+      const extractedNames = {
+        firstName: extractedData.firstName || '',
+        middleName: extractedData.middleName || '',
+        lastName: extractedData.lastName || ''
+      };
+      
       const formNames = {
         firstName: formData.firstName || formData.first_name || '',
+        middleName: formData.middleName || formData.middle_name || '',
         lastName: formData.lastName || formData.last_name || formData.surname || ''
       };
+
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📝 NIN DOCUMENT VERIFICATION - NAME MATCHING');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📄 Extracted from Document AI:');
+      console.log('   - Full Name:', extractedData.fullName);
+      console.log('   - First Name:', extractedNames.firstName);
+      console.log('   - Middle Name:', extractedNames.middleName);
+      console.log('   - Last Name:', extractedNames.lastName);
+      console.log('📋 From Form Data:');
+      console.log('   - First Name:', formNames.firstName);
+      console.log('   - Middle Name:', formNames.middleName);
+      console.log('   - Last Name:', formNames.lastName);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       // 1. Match NIN (exact)
       if (extractedData.nin && formData.nin) {
@@ -66,7 +86,11 @@ export class SimpleVerificationMatcher {
 
       // 2. Match First Name (case-insensitive)
       if (extractedNames.firstName && formNames.firstName) {
-        if (!this.namesMatch(extractedNames.firstName, formNames.firstName)) {
+        const firstNameMatches = this.namesMatch(extractedNames.firstName, formNames.firstName);
+        console.log('');
+        console.log('🔍 First Name Match Result:', firstNameMatches ? '✅ MATCH' : '❌ NO MATCH');
+        
+        if (!firstNameMatches) {
           mismatches.push({
             field: 'firstName',
             extractedValue: extractedNames.firstName,
@@ -79,9 +103,32 @@ export class SimpleVerificationMatcher {
         }
       }
 
-      // 3. Match Last Name (case-insensitive)
+      // 3. Match Middle Name (case-insensitive, optional)
+      if (extractedNames.middleName && formNames.middleName) {
+        const middleNameMatches = this.namesMatch(extractedNames.middleName, formNames.middleName);
+        console.log('');
+        console.log('🔍 Middle Name Match Result:', middleNameMatches ? '✅ MATCH' : '❌ NO MATCH');
+        
+        if (!middleNameMatches) {
+          mismatches.push({
+            field: 'middleName',
+            extractedValue: extractedNames.middleName,
+            expectedValue: formNames.middleName,
+            similarity: 0,
+            isCritical: false, // Middle name mismatch is not critical
+            reason: 'Middle names do not match'
+          });
+          // Note: Middle name mismatch doesn't fail verification, just noted
+        }
+      }
+
+      // 4. Match Last Name (case-insensitive)
       if (extractedNames.lastName && formNames.lastName) {
-        if (!this.namesMatch(extractedNames.lastName, formNames.lastName)) {
+        const lastNameMatches = this.namesMatch(extractedNames.lastName, formNames.lastName);
+        console.log('');
+        console.log('🔍 Last Name Match Result:', lastNameMatches ? '✅ MATCH' : '❌ NO MATCH');
+        
+        if (!lastNameMatches) {
           mismatches.push({
             field: 'lastName',
             extractedValue: extractedNames.lastName,
@@ -94,7 +141,7 @@ export class SimpleVerificationMatcher {
         }
       }
 
-      // 4. Match Gender (case-insensitive)
+      // 5. Match Gender (case-insensitive)
       if (extractedData.gender && formData.gender) {
         if (!this.genderMatch(extractedData.gender, formData.gender)) {
           mismatches.push({
@@ -108,6 +155,22 @@ export class SimpleVerificationMatcher {
           // Note: Gender mismatch doesn't fail verification, just noted
         }
       }
+
+      console.log('');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📊 VERIFICATION SUMMARY');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('Overall Match:', isMatch ? '✅ SUCCESS' : '❌ FAILED');
+      console.log('Mismatches Found:', mismatches.length);
+      if (mismatches.length > 0) {
+        console.log('Mismatch Details:');
+        mismatches.forEach(m => {
+          console.log(`  - ${m.field}: "${m.expectedValue}" (form) vs "${m.extractedValue}" (document)`);
+          console.log(`    Reason: ${m.reason}`);
+        });
+      }
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('');
 
       return {
         success: true,
@@ -237,7 +300,8 @@ export class SimpleVerificationMatcher {
 
   /**
    * Parse full name into first and last name
-   * Handles cases like "DANIEL ADEMOLA OYENIYI" -> firstName: "DANIEL", lastName: "OYENIYI"
+   * Nigerian NIN format: "SURNAME FIRSTNAME MIDDLENAME"
+   * Example: "OYENIYI DANIEL ADEMOLA" -> firstName: "DANIEL ADEMOLA", lastName: "OYENIYI"
    */
   private parseFullName(fullName: string): { firstName: string; lastName: string } {
     if (!fullName) {
@@ -245,26 +309,45 @@ export class SimpleVerificationMatcher {
       return { firstName: '', lastName: '' };
     }
     
-    const nameParts = fullName.trim().split(/\s+/);
+    const nameParts = fullName.trim().split(/\s+/).filter(part => part.length > 0);
     console.log('📝 Parsing full name:', fullName, '-> parts:', nameParts);
     
-    if (nameParts.length === 1) {
-      return { firstName: nameParts[0], lastName: '' };
+    if (nameParts.length === 0) {
+      return { firstName: '', lastName: '' };
+    } else if (nameParts.length === 1) {
+      // Only one name - treat as last name
+      return { firstName: '', lastName: nameParts[0] };
     } else if (nameParts.length === 2) {
-      return { firstName: nameParts[0], lastName: nameParts[1] };
-    } else {
-      // For names with middle names, take first and last
+      // Two names: SURNAME FIRSTNAME
       const result = { 
-        firstName: nameParts[0], 
-        lastName: nameParts[nameParts.length - 1] 
+        firstName: nameParts[1],  // Second part is first name
+        lastName: nameParts[0]    // First part is surname (last name)
       };
-      console.log('📝 Parsed name result:', result);
+      console.log('📝 Parsed name result (2 parts):', result);
+      return result;
+    } else {
+      // Three or more names: SURNAME FIRSTNAME MIDDLENAME(S)
+      // First part is surname, remaining parts are first name + middle name(s)
+      const result = { 
+        firstName: nameParts.slice(1).join(' '),  // All parts after surname
+        lastName: nameParts[0]                     // First part is surname
+      };
+      console.log('📝 Parsed name result (3+ parts):', result);
       return result;
     }
   }
 
   /**
    * Check if two names match (case-insensitive, handles middle names)
+   * 
+   * Matching Rules:
+   * 1. Exact match: "DANIEL" === "DANIEL" ✅
+   * 2. Contains match: "DANIEL" is in "DANIEL ADEMOLA" ✅
+   * 3. Word-level match: "DANIEL" matches first word of "DANIEL ADEMOLA" ✅
+   * 
+   * This handles Nigerian NIN documents where:
+   * - Form may have: firstName = "DANIEL"
+   * - Document AI extracts: firstName = "DANIEL ADEMOLA" (first + middle name)
    */
   private namesMatch(name1: string, name2: string): boolean {
     if (!name1 || !name2) {
@@ -277,20 +360,60 @@ export class SimpleVerificationMatcher {
     const n1 = normalize(name1);
     const n2 = normalize(name2);
     
-    console.log('🔍 Comparing names:', { n1, n2 });
+    console.log('🔍 Comparing names:');
+    console.log('  - Name 1 (extracted):', name1, '→', n1);
+    console.log('  - Name 2 (form):', name2, '→', n2);
     
     // Exact match
     if (n1 === n2) {
-      console.log('✅ Exact name match');
+      console.log('✅ MATCH: Exact match');
       return true;
     }
     
     // Check if one name is contained in the other (handles middle names)
-    // e.g., "Daniel" matches "Daniel Ademola" 
-    const containsMatch = n1.includes(n2) || n2.includes(n1);
-    console.log('🔍 Contains match:', containsMatch);
+    // e.g., "daniel" is contained in "daniel ademola"
+    if (n1.includes(n2)) {
+      console.log('✅ MATCH: Form name "' + n2 + '" is contained in extracted name "' + n1 + '"');
+      return true;
+    }
     
-    return containsMatch;
+    if (n2.includes(n1)) {
+      console.log('✅ MATCH: Extracted name "' + n1 + '" is contained in form name "' + n2 + '"');
+      return true;
+    }
+    
+    // Word-level matching: Check if shorter name matches first word(s) of longer name
+    // This handles: "DANIEL" matching "DANIEL ADEMOLA"
+    const words1 = n1.split(/\s+/);
+    const words2 = n2.split(/\s+/);
+    
+    // If one name is a single word and matches the first word of the other
+    if (words1.length === 1 && words2.length > 1 && words2[0] === words1[0]) {
+      console.log('✅ MATCH: Single word "' + words1[0] + '" matches first word of "' + n2 + '"');
+      return true;
+    }
+    
+    if (words2.length === 1 && words1.length > 1 && words1[0] === words2[0]) {
+      console.log('✅ MATCH: Single word "' + words2[0] + '" matches first word of "' + n1 + '"');
+      return true;
+    }
+    
+    // Check if all words from shorter name appear in longer name (in order)
+    const shorterWords = words1.length <= words2.length ? words1 : words2;
+    const longerWords = words1.length > words2.length ? words1 : words2;
+    
+    let matchIndex = 0;
+    for (const word of shorterWords) {
+      const foundIndex = longerWords.indexOf(word, matchIndex);
+      if (foundIndex === -1) {
+        console.log('❌ NO MATCH: Word "' + word + '" not found in longer name');
+        return false;
+      }
+      matchIndex = foundIndex + 1;
+    }
+    
+    console.log('✅ MATCH: All words from shorter name found in longer name (in order)');
+    return true;
   }
 
   /**
