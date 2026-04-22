@@ -6974,11 +6974,21 @@ app.get('/api/events-logs', requireAuth, requireClaims, async (req, res) => {
     console.log('🔄 Processed events:', events.length);
     console.log('🔍 Sample events:', events.slice(0, 2));
 
-    // Get total count for pagination (more efficient way)
-    console.log('🔢 Calculating total count...');
-    const totalCountSnapshot = await db.collection('eventLogs').select().get();
-    const totalCount = totalCountSnapshot.size;
-    console.log('📊 Total events in collection:', totalCount);
+    // Get total count for pagination
+    // NOTE: For large collections, consider using a counter document or aggregation query
+    // For now, we'll estimate based on the current page results
+    console.log('🔢 Estimating total count...');
+    let totalCount;
+    
+    // If we got fewer results than the limit, we're on the last page
+    if (snapshot.size < limitNum) {
+      totalCount = offset + snapshot.size;
+    } else {
+      // Estimate: if we have full pages, there's likely more data
+      // This avoids reading all documents
+      totalCount = (pageNum * limitNum) + 1; // +1 indicates "more pages available"
+    }
+    console.log('📊 Estimated total events:', totalCount);
 
     console.log(`✅ Returning ${events.length} events out of ${totalCount} total`);
 

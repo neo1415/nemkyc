@@ -93,15 +93,7 @@ export default function PasswordResetPage() {
         // Redirect to role-based dashboard
         setTimeout(() => {
           if (response.redirectUrl) {
-            // For brokers, redirect to /admin/identity with upload dialog state
-            if (response.role === 'broker' || user?.role === 'broker') {
-              navigate('/admin/identity', { 
-                replace: true, 
-                state: { openUploadDialog: true } 
-              });
-            } else {
-              navigate(response.redirectUrl, { replace: true });
-            }
+            navigate(response.redirectUrl, { replace: true });
           } else {
             // Fallback redirect based on role
             if (user?.role === 'broker') {
