@@ -1,16 +1,17 @@
 const { initializeApp } = require('firebase/app');
 const { getFirestore, doc, getDoc, collection, query, where, getDocs } = require('firebase/firestore');
 const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
+require('dotenv').config();
 
-// Firebase configuration from .env.local
+// Firebase configuration from environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyDTyrzbQ4xYV0IAvngwgCUBf6EPnflacSw",
-  authDomain: "nem-customer-feedback-8d3fb.firebaseapp.com",
-  projectId: "nem-customer-feedback-8d3fb",
-  storageBucket: "nem-customer-feedback-8d3fb.appspot.com",
-  messagingSenderId: "524975485983",
-  appId: "1:524975485983:web:3a859424a3314d53ab112a",
-  measurementId: "G-8BH08J5X7G"
+  apiKey: process.env.REACT_APP_FIREBASE_KEY || process.env.FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_AUTH_DOMAIN || process.env.FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.PROJECT_ID || process.env.FIREBASE_PROJECT_ID,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.FIREBASE_APP_ID,
+  measurementId: process.env.FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase

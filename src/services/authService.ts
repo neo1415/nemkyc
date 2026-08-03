@@ -12,6 +12,7 @@ export interface AuthResponse {
   message?: string;
   loginCount?: number;
   email?: string;
+  sessionToken?: string;
   user?: {
     uid: string;
     email: string;

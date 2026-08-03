@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { matchCACData, matchNINData } from '../utils/verificationMatcher';
+import { getCSRFToken } from '../utils/csrfToken';
+import { isPublicCustomerFormType } from '../config/customerForms';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -49,33 +50,18 @@ interface UseEnhancedFormSubmitReturn {
   formData: any;
 }
 
-// Helper function to get CSRF token
-const getCSRFToken = async (): Promise<string> => {
-  const attempts = 3;
-  let lastError: any = null;
-  for (let i = 0; i < attempts; i++) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/csrf-token`, { credentials: 'include' });
-      if (!response.ok) throw new Error(`CSRF fetch failed: ${response.status}`);
-      const data = await response.json();
-      if (!data?.csrfToken) throw new Error('Missing CSRF token');
-      return data.csrfToken;
-    } catch (err) {
-      lastError = err;
-      await new Promise(res => setTimeout(res, 500 * Math.pow(2, i)));
-    }
-  }
-  throw lastError || new Error('Unable to fetch CSRF token');
-};
-
 // Helper function to generate nonce
 const generateNonce = (): string => {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
 };
 
 // Helper function to make authenticated requests
-const makeAuthenticatedRequest = async (url: string, data: any, method: string = 'POST') => {
-  const csrfToken = await getCSRFToken();
+const makeAuthenticatedRequest = async (
+  url: string,
+  data: any,
+  method: string = 'POST',
+  skipCSRF: boolean = false,
+) => {
   const timestamp = Date.now().toString();
   const nonce = generateNonce();
   const idempotencyKey =
@@ -83,36 +69,58 @@ const makeAuthenticatedRequest = async (url: string, data: any, method: string =
     sessionStorage.getItem('pendingSubmissionKey') ||
     `idemp_${timestamp}_${Math.random().toString(36).slice(2, 8)}`;
 
+  if (!sessionStorage.getItem('pendingSubmissionKey')) {
+    sessionStorage.setItem('pendingSubmissionKey', idempotencyKey);
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-timestamp': timestamp,
+    'x-nonce': nonce,
+    'x-idempotency-key': idempotencyKey,
+    'x-request-id': idempotencyKey,
+  };
+
+  if (!skipCSRF) {
+    headers['CSRF-Token'] = await getCSRFToken();
+  }
+
   return fetch(url, {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      'CSRF-Token': csrfToken,
-      'x-timestamp': timestamp,
-      'x-nonce': nonce,
-      'x-idempotency-key': idempotencyKey,
-      'x-request-id': idempotencyKey,
-    },
+    headers,
     credentials: 'include',
     body: JSON.stringify({ ...data, idempotencyKey }),
   });
 };
 
+const getResponseErrorMessage = async (response: Response, fallback: string): Promise<string> => {
+  const errorData = await response.json().catch(() => ({}));
+
+  if (response.status === 429) {
+    return errorData.message || 'Too many attempts were made. Please wait a few minutes and try again.';
+  }
+
+  if (response.status >= 500) {
+    return errorData.message || 'The service is temporarily unavailable. Please wait a moment and try again.';
+  }
+
+  return errorData.message || errorData.error || fallback;
+};
+
 // Helper function to verify identity number (NIN or CAC)
-const verifyIdentity = async (identityNumber: string, identityType: 'NIN' | 'CAC', user: any) => {
+const verifyIdentity = async (identityNumber: string, identityType: 'NIN' | 'CAC', user?: any) => {
   const endpoint = identityType === 'NIN' 
     ? `${API_BASE_URL}/api/autofill/verify-nin`
     : `${API_BASE_URL}/api/autofill/verify-cac`;
   
   const payload = identityType === 'NIN'
-    ? { nin: identityNumber, userId: user.uid, userName: user.displayName, userEmail: user.email }
-    : { rc_number: identityNumber, userId: user.uid, userName: user.displayName, userEmail: user.email };
+    ? { nin: identityNumber, userId: user?.uid || 'anonymous', userName: user?.displayName, userEmail: user?.email }
+    : { rc_number: identityNumber, userId: user?.uid || 'anonymous', userName: user?.displayName, userEmail: user?.email };
 
-  const response = await makeAuthenticatedRequest(endpoint, payload);
+  const response = await makeAuthenticatedRequest(endpoint, payload, 'POST', true);
   
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || `${identityType} verification failed`);
+    throw new Error(await getResponseErrorMessage(response, `${identityType} verification failed. Please check the number and try again.`));
   }
   
   return await response.json();
@@ -150,7 +158,6 @@ export const useEnhancedFormSubmit = (
 ): UseEnhancedFormSubmitReturn => {
   const { formType, onSuccess, onError, customValidation, verificationData } = options;
   const { user } = useAuth();
-  const navigate = useNavigate();
   
   const [isValidating, setIsValidating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -318,8 +325,7 @@ export const useEnhancedFormSubmit = (
               });
 
               if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Form submission failed');
+                throw new Error(await getResponseErrorMessage(response, 'We could not submit your form. Please check your details and try again.'));
               }
 
               // Clear pending submission after successful submit
@@ -352,8 +358,7 @@ export const useEnhancedFormSubmit = (
               });
 
               if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Form submission failed');
+                throw new Error(await getResponseErrorMessage(response, 'We could not submit your form. Please check your details and try again.'));
               }
 
               // Clear pending submission after successful submit
@@ -439,23 +444,7 @@ export const useEnhancedFormSubmit = (
     // Mark as submitting immediately
     isSubmittingRef.current = true;
 
-    // Check authentication FIRST (preserve existing flow)
-    if (!user) {
-      // Store pending submission
-      sessionStorage.setItem('pendingSubmission', JSON.stringify({
-        formData,
-        formType,
-        timestamp: Date.now()
-      }));
-      
-      // Reset submission guard since we're redirecting
-      isSubmittingRef.current = false;
-      setShowSummary(false);
-      navigate('/auth/signin');
-      return;
-    }
-
-    // User is authenticated, now check if we need to verify identity
+    // Customer-facing KYC and CDD forms support guest submissions.
     // Get the CURRENT identity number from formData (not from the stale verificationData)
     let currentIdentityNumber: string | undefined;
     let currentIdentityType: 'NIN' | 'CAC' | undefined;
@@ -567,18 +556,18 @@ export const useEnhancedFormSubmit = (
         const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
           formData: enrichedFormData,
           formType,
-          userEmail: user.email,
-          userUid: user.uid
-        });
+          userEmail: user?.email || formData.email || formData.emailAddress,
+          userUid: user?.uid
+        }, 'POST', !user && isPublicCustomerFormType(formType));
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Form submission failed');
+          throw new Error(await getResponseErrorMessage(response, 'We could not submit your form. Please check your details and try again.'));
         }
 
         setIsSubmitting(false);
         isSubmittingRef.current = false; // Reset submission guard
-        setShowSummary(true);
+        sessionStorage.removeItem('pendingSubmissionKey');
+        setShowSuccess(true);
         toast.success('Form submitted successfully!');
         onSuccess?.();
       } catch (error: any) {
@@ -599,17 +588,17 @@ export const useEnhancedFormSubmit = (
         const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
           formData,
           formType,
-          userEmail: user.email,
-          userUid: user.uid
-        });
+          userEmail: user?.email || formData.email || formData.emailAddress,
+          userUid: user?.uid
+        }, 'POST', !user && isPublicCustomerFormType(formType));
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Form submission failed');
+          throw new Error(await getResponseErrorMessage(response, 'We could not submit your form. Please check your details and try again.'));
         }
 
         setIsSubmitting(false);
         isSubmittingRef.current = false; // Reset submission guard
+        sessionStorage.removeItem('pendingSubmissionKey');
         setShowSuccess(true);
         toast.success('Form submitted successfully!');
         onSuccess?.();

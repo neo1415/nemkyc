@@ -336,7 +336,7 @@ const IndividualKYC: React.FC = () => {
     userName: user?.name || undefined,
     userEmail: user?.email || undefined,
     reactHookFormSetValue: formMethods.setValue,
-    requireAuth: true // CRITICAL: Require authentication for autofill
+    requireAuth: false
   });
 
   // Initialize real-time verification validation
@@ -407,7 +407,7 @@ const IndividualKYC: React.FC = () => {
     console.log('[IndividualKYC] NIN input ID:', element?.id);
     console.log('[IndividualKYC] Is authenticated:', isAuthenticated);
     
-    if (element && isAuthenticated) {
+    if (element) {
       // Store the ref
       ninInputRef.current = element;
       
@@ -415,13 +415,13 @@ const IndividualKYC: React.FC = () => {
       
       // Attach handlers - these add native DOM event listeners
       autoFillState.attachToField(element);
-      realtimeValidation.attachToIdentifierField(element);
+      if (isAuthenticated) {
+        realtimeValidation.attachToIdentifierField(element);
+      }
       
       console.log('[IndividualKYC] ✅ Handlers attached successfully');
     } else if (!element) {
       console.log('[IndividualKYC] NIN ref callback: element unmounted');
-    } else {
-      console.log('[IndividualKYC] ⚠️ Cannot attach handlers: not authenticated');
     }
   }, [isAuthenticated, autoFillState.attachToField, realtimeValidation.attachToIdentifierField]);
 
@@ -436,10 +436,7 @@ const IndividualKYC: React.FC = () => {
     }
   };
 
-  // Authentication-based messaging for NIN field
-  const ninMessage = isAuthenticated
-    ? "Enter your NIN and press Tab to auto-fill"
-    : "Your NIN will be verified when you submit";
+  const ninMessage = "Enter your NIN and press Tab to auto-fill. It will be checked again when you submit.";
 
   const onFinalSubmit = async (data: any) => {
     try {
@@ -470,14 +467,13 @@ const IndividualKYC: React.FC = () => {
       
       // Log form submission
       const submissionId = `kyc-individual-${Date.now()}`;
-      await auditService.logFormSubmission({
+      void auditService.logFormSubmission({
         userId: user?.uid || 'anonymous',
         userRole: user?.role,
         userEmail: user?.email,
         formType: 'kyc',
         formVariant: 'individual',
-        submissionId,
-        formData: finalData
+        submissionId
       });
       
       // Use enhanced submit which will show loading immediately

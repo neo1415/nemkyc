@@ -2019,13 +2019,13 @@ app.post('/api/login', async (req, res) => {
       const { initializeApp, getApps } = require('firebase/app');
       const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
       
-      // Firebase config from environment or hardcoded (you should set these env vars)
+      // Firebase config from environment variables
       const firebaseConfig = {
-        apiKey: "AIzaSyDTyrzbQ4xYV0IAvngwgCUBf6EPnflacSw",
-        authDomain: "nem-customer-feedback-8d3fb.firebaseapp.com",
-        projectId: "nem-customer-feedback-8d3fb",
+        apiKey: process.env.REACT_APP_FIREBASE_KEY || process.env.FIREBASE_API_KEY,
+        authDomain: process.env.REACT_APP_AUTH_DOMAIN || process.env.FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.PROJECT_ID || process.env.FIREBASE_PROJECT_ID,
       };
-      
+
       // Initialize client app for validation
       let clientApp;
       const existingApps = getApps();

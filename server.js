@@ -266,15 +266,98 @@ function sanitizeError(error, genericMessage = 'An error occurred') {
   };
 }
 
+const SESSION_TOKEN_SECRET = process.env.SESSION_TOKEN_SECRET || process.env.CSRF_SECRET || process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+
+if (!process.env.SESSION_TOKEN_SECRET && !process.env.CSRF_SECRET && !process.env.JWT_SECRET) {
+  console.warn('⚠️ SESSION_TOKEN_SECRET is not configured. Using a temporary in-memory session signing secret.');
+}
+
+function getSessionSecret() {
+  return SESSION_TOKEN_SECRET;
+}
+
+function base64UrlEncode(value) {
+  return Buffer.from(value).toString('base64url');
+}
+
+function base64UrlDecode(value) {
+  return Buffer.from(value, 'base64url').toString('utf8');
+}
+
+function signSessionToken(uid) {
+  const now = Date.now();
+  const payload = {
+    typ: 'session',
+    uid,
+    iat: now,
+    exp: now + (2 * 60 * 60 * 1000)
+  };
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  const signature = crypto
+    .createHmac('sha256', getSessionSecret())
+    .update(encodedPayload)
+    .digest('base64url');
+  return `${encodedPayload}.${signature}`;
+}
+
+function verifySessionToken(sessionToken) {
+  if (!sessionToken || typeof sessionToken !== 'string') {
+    return null;
+  }
+
+  const [encodedPayload, signature, ...extraParts] = sessionToken.split('.');
+  if (!encodedPayload || !signature || extraParts.length > 0) {
+    return null;
+  }
+
+  const expectedSignature = crypto
+    .createHmac('sha256', getSessionSecret())
+    .update(encodedPayload)
+    .digest('base64url');
+
+  const providedSignature = Buffer.from(signature);
+  const expectedSignatureBuffer = Buffer.from(expectedSignature);
+  if (
+    providedSignature.length !== expectedSignatureBuffer.length ||
+    !crypto.timingSafeEqual(providedSignature, expectedSignatureBuffer)
+  ) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(base64UrlDecode(encodedPayload));
+    if (payload.typ !== 'session' || !payload.uid || !payload.exp || Date.now() > payload.exp) {
+      return null;
+    }
+    return payload;
+  } catch (error) {
+    return null;
+  }
+}
+
+function resolveSessionUid(sessionToken) {
+  const signedPayload = verifySessionToken(sessionToken);
+  if (signedPayload?.uid) {
+    return signedPayload.uid;
+  }
+
+  // Temporary migration escape hatch only. Production should use signed sessions.
+  if (process.env.ALLOW_LEGACY_UID_SESSIONS === 'true') {
+    return sessionToken;
+  }
+
+  return null;
+}
+
 /**
  * Get user session from cache or Firestore
- * @param {string} sessionToken - The session token
+ * @param {string} uid - The authenticated user ID
  * @param {object} db - Firestore database instance
  * @returns {Promise<object|null>} User data or null if not found
  */
-async function getCachedSession(sessionToken, db) {
+async function getCachedSession(uid, db) {
   const now = Date.now();
-  const cached = sessionCache.get(sessionToken);
+  const cached = sessionCache.get(uid);
   
   // Return cached data if still valid
   if (cached && (now - cached.timestamp) < SESSION_CACHE_TTL) {
@@ -282,18 +365,18 @@ async function getCachedSession(sessionToken, db) {
   }
   
   // Fetch from Firestore
-  const userDoc = await db.collection('userroles').doc(sessionToken).get();
+  const userDoc = await db.collection('userroles').doc(uid).get();
   
   if (!userDoc.exists) {
     // Remove from cache if exists
-    sessionCache.delete(sessionToken);
+    sessionCache.delete(uid);
     return null;
   }
   
   const userData = userDoc.data();
   
   // Cache the result
-  sessionCache.set(sessionToken, {
+  sessionCache.set(uid, {
     data: userData,
     timestamp: now
   });
@@ -303,10 +386,10 @@ async function getCachedSession(sessionToken, db) {
 
 /**
  * Invalidate session cache for a specific token
- * @param {string} sessionToken - The session token to invalidate
+ * @param {string} uid - The user ID to invalidate
  */
-function invalidateSessionCache(sessionToken) {
-  sessionCache.delete(sessionToken);
+function invalidateSessionCache(uid) {
+  sessionCache.delete(uid);
 }
 
 /**
@@ -1170,8 +1253,18 @@ const requireAuth = async (req, res, next) => {
 
     // If we reach here and it's not a Firebase ID token, try as session token
     if (!isFirebaseIdToken) {
+      const sessionUid = resolveSessionUid(sessionToken);
+      if (!sessionUid) {
+        console.log('❌ Auth failed: Invalid or unsigned session token');
+        res.clearCookie('__session');
+        return res.status(401).json({
+          error: 'Invalid session',
+          message: 'Your session has expired. Please sign in again.'
+        });
+      }
+
       // Get user data from cache or Firestore
-      const userData = await getCachedSession(sessionToken, db);
+      const userData = await getCachedSession(sessionUid, db);
       
       if (!userData) {
         console.log('❌ Auth failed: Invalid session token');
@@ -1203,11 +1296,20 @@ const requireAuth = async (req, res, next) => {
     
     // ✅ SESSION TIMEOUT CHECK (2 hours of inactivity) - only for session tokens
     if (!isFirebaseIdToken) {
+      const sessionUid = resolveSessionUid(sessionToken);
+      if (!sessionUid) {
+        res.clearCookie('__session');
+        return res.status(401).json({
+          error: 'Invalid session',
+          message: 'Your session has expired. Please sign in again.'
+        });
+      }
+
       const SESSION_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours (increased from 30 minutes)
       const ACTIVITY_UPDATE_INTERVAL = 5 * 60 * 1000; // Only update lastActivity every 5 minutes
       
       // Get user data from cache or Firestore
-      const userData = await getCachedSession(sessionToken, db);
+      const userData = await getCachedSession(sessionUid, db);
       
       // Check timeout if lastActivity exists
       if (userData.lastActivity) {
@@ -1216,7 +1318,7 @@ const requireAuth = async (req, res, next) => {
         if (timeSinceLastActivity > SESSION_TIMEOUT) {
           logger.warn(`Session expired due to inactivity: ${userData.email}`);
           // Don't delete the userroles document! Just clear the session cookie
-          invalidateSessionCache(sessionToken); // Clear from cache
+          invalidateSessionCache(sessionUid); // Clear from cache
           res.clearCookie('__session');
           return res.status(401).json({ 
             error: 'Session expired',
@@ -1227,26 +1329,26 @@ const requireAuth = async (req, res, next) => {
         // Only update lastActivity if it's been more than 5 minutes since last update
         if (timeSinceLastActivity > ACTIVITY_UPDATE_INTERVAL) {
           // Update in background (don't await to avoid slowing down requests)
-          db.collection('userroles').doc(sessionToken).update({
+          db.collection('userroles').doc(sessionUid).update({
             lastActivity: Date.now()
           }).then(() => {
             // Invalidate cache so next request gets fresh data
-            invalidateSessionCache(sessionToken);
+            invalidateSessionCache(sessionUid);
           }).catch(err => logger.error('Failed to update lastActivity:', err));
         }
       } else {
         // ✅ MIGRATION: If lastActivity doesn't exist, set it now (for existing sessions)
         logger.info(`Initializing lastActivity for existing session: ${userData.email}`);
-        db.collection('userroles').doc(sessionToken).update({
+        db.collection('userroles').doc(sessionUid).update({
           lastActivity: Date.now()
         }).then(() => {
-          invalidateSessionCache(sessionToken);
+          invalidateSessionCache(sessionUid);
         }).catch(err => logger.error('Failed to initialize lastActivity:', err));
       }
       
       // Attach user data to request for use in route handlers
       req.user = {
-        uid: sessionToken,
+        uid: sessionUid,
         email: userData.email,
         name: userData.name || userData.displayName,
         role: normalizeRole(userData.role),
@@ -3414,8 +3516,14 @@ app.get('/api/users', async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized: No session token' });
     }
 
+    const sessionUid = resolveSessionUid(sessionToken);
+    if (!sessionUid) {
+      res.clearCookie('__session');
+      return res.status(401).json({ error: 'Unauthorized: Invalid session token' });
+    }
+
     // Get authenticated user's role
-    const userDoc = await db.collection('userroles').doc(sessionToken).get();
+    const userDoc = await db.collection('userroles').doc(sessionUid).get();
     if (!userDoc.exists || !isSuperAdmin(userDoc.data().role)) {
       console.log('❌ Access denied - User role:', userDoc.exists ? userDoc.data().role : 'no doc', 'Normalized:', userDoc.exists ? normalizeRole(userDoc.data().role) : 'N/A');
       return res.status(403).json({ error: 'Forbidden: Super admin access required' });
@@ -3430,11 +3538,11 @@ app.get('/api/users', async (req, res) => {
     }));
 
     // 📝 LOG USERS FETCH EVENT
-    const viewerDetails = await getUserDetailsForLogging(sessionToken);
+    const viewerDetails = await getUserDetailsForLogging(sessionUid);
     const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
     await logAction({
       action: 'view-users-list',
-      actorUid: sessionToken,
+      actorUid: sessionUid,
       actorDisplayName: viewerDetails.displayName,
       actorEmail: viewerDetails.email,
       actorRole: viewerDetails.role,
@@ -3579,15 +3687,21 @@ app.delete('/api/users/:userId', async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized: No session token' });
     }
 
+    const sessionUid = resolveSessionUid(sessionToken);
+    if (!sessionUid) {
+      res.clearCookie('__session');
+      return res.status(401).json({ error: 'Unauthorized: Invalid session token' });
+    }
+
     // Get authenticated user's role
-    const authUserDoc = await db.collection('userroles').doc(sessionToken).get();
+    const authUserDoc = await db.collection('userroles').doc(sessionUid).get();
     if (!authUserDoc.exists || !isSuperAdmin(authUserDoc.data().role)) {
       console.log('❌ User deletion denied - User role:', authUserDoc.exists ? authUserDoc.data().role : 'no doc');
       return res.status(403).json({ error: 'Forbidden: Super admin access required' });
     }
 
     // Prevent self-deletion
-    if (sessionToken === userId) {
+    if (sessionUid === userId) {
       return res.status(400).json({ error: 'Cannot delete your own account' });
     }
 
@@ -3601,11 +3715,11 @@ app.delete('/api/users/:userId', async (req, res) => {
     await db.collection('userroles').doc(userId).delete();
 
     // 📝 LOG USER DELETION EVENT
-    const deleterDetails = await getUserDetailsForLogging(sessionToken);
+    const deleterDetails = await getUserDetailsForLogging(sessionUid);
     const location = await getLocationFromIP(req.ipData?.raw || '0.0.0.0');
     await logAction({
       action: 'delete-user',
-      actorUid: sessionToken,
+      actorUid: sessionUid,
       actorDisplayName: deleterDetails.displayName,
       actorEmail: deleterDetails.email,
       actorRole: deleterDetails.role,
@@ -4290,10 +4404,10 @@ app.post('/api/users/change-password', requireAuth, [
 
     // Determine redirect URL based on role
     const roleRedirects = {
-      'super admin': '/admin/dashboard',
-      'admin': '/admin/dashboard',
-      'compliance': '/admin/dashboard',
-      'claims': '/admin/dashboard',
+      'super admin': '/admin',
+      'admin': '/admin',
+      'compliance': '/admin',
+      'claims': '/admin',
       'broker': '/dashboard',
       'default': '/dashboard'
     };
@@ -5550,9 +5664,11 @@ app.post('/api/exchange-token', async (req, res) => {
     
     console.log('✅ Login successful (MFA disabled)\n');
 
-    // Set httpOnly session cookie with user UID for subsequent authenticated requests
+    const sessionToken = signSessionToken(uid);
+
+    // Set httpOnly signed session cookie for subsequent authenticated requests
     // Note: For localhost cross-port (8080 -> 3001), we use 'lax' which works for same-site different ports
-    res.cookie('__session', uid, {
+    res.cookie('__session', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production', // Secure only in production (HTTPS required)
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin in production
@@ -5561,7 +5677,7 @@ app.post('/api/exchange-token', async (req, res) => {
       // Don't set domain for localhost - let browser handle it
     });
 
-    console.log('🍪 Session cookie set for UID:', uid);
+    console.log('🍪 Signed session cookie set for user:', email);
     console.log('🔧 Cookie config:', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -5575,7 +5691,7 @@ app.post('/api/exchange-token', async (req, res) => {
       role: userData.role,
       user: { uid, email, displayName: userData.name },
       loginCount: loginCount,
-      sessionToken: uid // Send token in response for localStorage fallback
+      sessionToken // Send signed token in response for localStorage fallback
     });
 
   } catch (error) {
@@ -19361,7 +19477,10 @@ function extractIndividualData(document) {
   const text = document.text || '';
   const entities = document.entities || [];
   
-  console.log('📄 [EXTRACT] Raw text from Document AI:', text.substring(0, 500));
+  console.log('📄 [EXTRACT] Processing individual document text from Document AI:', {
+    textLength: text.length,
+    entityCount: entities.length
+  });
   
   const data = {
     fullName: '',
@@ -19398,7 +19517,7 @@ function extractIndividualData(document) {
     const ninMatch = text.match(/\b(\d{11})\b/);
     if (ninMatch) {
       data.nin = ninMatch[1];
-      console.log('📄 [EXTRACT] Found NIN:', data.nin);
+      console.log('📄 [EXTRACT] Found NIN field');
     }
   }
 
@@ -19406,27 +19525,27 @@ function extractIndividualData(document) {
   const surnameMatch = text.match(/Surname[:\s]+([A-Z]+)/i);
   if (surnameMatch) {
     data.lastName = surnameMatch[1].trim();
-    console.log('📄 [EXTRACT] Found surname (lastName):', data.lastName);
+    console.log('📄 [EXTRACT] Found surname field');
   }
 
   // Extract First Name - Nigerian NIN format has labeled field
   const firstNameMatch = text.match(/First\s+Name[:\s]+([A-Z]+)/i);
   if (firstNameMatch) {
     data.firstName = firstNameMatch[1].trim();
-    console.log('📄 [EXTRACT] Found first name:', data.firstName);
+    console.log('📄 [EXTRACT] Found first name field');
   }
 
   // Extract Middle Name - Nigerian NIN format has labeled field
   const middleNameMatch = text.match(/Middle\s+Name[:\s]+([A-Z]+)/i);
   if (middleNameMatch) {
     data.middleName = middleNameMatch[1].trim();
-    console.log('📄 [EXTRACT] Found middle name:', data.middleName);
+    console.log('📄 [EXTRACT] Found middle name field');
   }
 
   // Build full name from parts
   if (data.lastName || data.firstName || data.middleName) {
     data.fullName = [data.lastName, data.firstName, data.middleName].filter(n => n).join(' ');
-    console.log('📄 [EXTRACT] Built full name:', data.fullName);
+    console.log('📄 [EXTRACT] Built full name from extracted name fields');
   }
 
   // Fallback: If no labeled fields found, try to extract full name as before
@@ -19435,7 +19554,7 @@ function extractIndividualData(document) {
     if (nameMatch) {
       const fullName = nameMatch[1].trim();
       data.fullName = fullName;
-      console.log('📄 [EXTRACT] Found full name (fallback):', fullName);
+      console.log('📄 [EXTRACT] Found full name field via fallback');
       
       // Parse into first and last name (Nigerian format: SURNAME FIRSTNAME MIDDLENAME)
       const nameParts = fullName.split(/\s+/).filter(part => part.length > 0);
@@ -19444,11 +19563,11 @@ function extractIndividualData(document) {
         data.lastName = nameParts[0];
         data.firstName = nameParts[1];
         data.middleName = nameParts[2];
-        console.log('📄 [EXTRACT] Parsed - First:', data.firstName, 'Middle:', data.middleName, 'Last:', data.lastName);
+        console.log('📄 [EXTRACT] Parsed fallback name into first/middle/last fields');
       } else if (nameParts.length === 2) {
         data.lastName = nameParts[0];
         data.firstName = nameParts[1];
-        console.log('📄 [EXTRACT] Parsed - First:', data.firstName, 'Last:', data.lastName);
+        console.log('📄 [EXTRACT] Parsed fallback name into first/last fields');
       } else if (nameParts.length === 1) {
         data.lastName = nameParts[0];
       }
@@ -19467,7 +19586,7 @@ function extractIndividualData(document) {
     
     if (dobMatch) {
       data.dateOfBirth = dobMatch[1];
-      console.log('📄 [EXTRACT] Found DOB:', data.dateOfBirth);
+      console.log('📄 [EXTRACT] Found date of birth field');
     }
   }
 
@@ -19481,7 +19600,7 @@ function extractIndividualData(document) {
       if (gender === 'M') gender = 'MALE';
       if (gender === 'F') gender = 'FEMALE';
       data.gender = gender;
-      console.log('📄 [EXTRACT] Found gender:', data.gender);
+      console.log('📄 [EXTRACT] Found gender field');
     }
   }
 
@@ -19497,13 +19616,13 @@ function extractIndividualData(document) {
   }
 
   console.log('📄 [EXTRACT] Final extracted data:', {
-    fullName: data.fullName,
-    firstName: data.firstName,
-    middleName: data.middleName,
-    lastName: data.lastName,
-    nin: data.nin ? data.nin.substring(0, 4) + '*******' : 'not found',
-    dateOfBirth: data.dateOfBirth,
-    gender: data.gender
+    hasFullName: !!data.fullName,
+    hasFirstName: !!data.firstName,
+    hasMiddleName: !!data.middleName,
+    hasLastName: !!data.lastName,
+    hasNin: !!data.nin,
+    hasDateOfBirth: !!data.dateOfBirth,
+    hasGender: !!data.gender
   });
 
   return data;
@@ -19517,7 +19636,10 @@ function extractCACData(document) {
   const text = document.text || '';
   const entities = document.entities || [];
   
-  console.log('📄 [EXTRACT CAC] Raw text from Document AI:', text.substring(0, 500));
+  console.log('📄 [EXTRACT CAC] Processing CAC document text from Document AI:', {
+    textLength: text.length,
+    entityCount: entities.length
+  });
   
   const data = {
     companyName: '',
@@ -19563,7 +19685,7 @@ function extractCACData(document) {
     
     if (nameMatch) {
       data.companyName = nameMatch[1].trim();
-      console.log('📄 [EXTRACT CAC] Found company name:', data.companyName);
+      console.log('📄 [EXTRACT CAC] Found company name field');
     }
   }
 
@@ -19573,13 +19695,13 @@ function extractCACData(document) {
     let rcMatch = text.match(/RC[:\s-]*(\d+)/i);
     if (rcMatch) {
       data.rcNumber = 'RC' + rcMatch[1];
-      console.log('📄 [EXTRACT CAC] Found RC number:', data.rcNumber);
+      console.log('📄 [EXTRACT CAC] Found RC number field');
     } else {
       // Try to find standalone number that might be RC number (6-7 digits)
       rcMatch = text.match(/\b(\d{6,7})\b/);
       if (rcMatch) {
         data.rcNumber = 'RC' + rcMatch[1];
-        console.log('📄 [EXTRACT CAC] Found RC number (inferred):', data.rcNumber);
+        console.log('📄 [EXTRACT CAC] Found inferred RC number field');
       }
     }
   }
@@ -19603,7 +19725,7 @@ function extractCACData(document) {
       
       const month = monthMap[monthName.toLowerCase()] || '01';
       data.registrationDate = `${day}/${month}/${year}`;
-      console.log('📄 [EXTRACT CAC] Found registration date (Nigerian format):', data.registrationDate);
+      console.log('📄 [EXTRACT CAC] Found registration date field in Nigerian format');
     } else {
       // Pattern 2: Labeled field "Date of Incorporation:" or similar
       dateMatch = text.match(/(?:Registration\s+Date|Date\s+of\s+Registration|Incorporation\s+Date|Date\s+of\s+Incorporation)[:\s]+(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i);
@@ -19620,7 +19742,7 @@ function extractCACData(document) {
       
       if (dateMatch) {
         data.registrationDate = dateMatch[1];
-        console.log('📄 [EXTRACT CAC] Found registration date:', data.registrationDate);
+        console.log('📄 [EXTRACT CAC] Found registration date field');
       }
     }
   }
@@ -19630,7 +19752,7 @@ function extractCACData(document) {
     const addressMatch = text.match(/(?:Address|Registered\s+Office|Office\s+Address)[:\s]+([^\n]+)/i);
     if (addressMatch) {
       data.address = addressMatch[1].trim();
-      console.log('📄 [EXTRACT CAC] Found address:', data.address);
+      console.log('📄 [EXTRACT CAC] Found address field');
     }
   }
 
@@ -19649,10 +19771,10 @@ function extractCACData(document) {
   }
 
   console.log('📄 [EXTRACT CAC] Final extracted data:', {
-    companyName: data.companyName,
-    rcNumber: data.rcNumber,
-    registrationDate: data.registrationDate,
-    address: data.address ? data.address.substring(0, 50) + '...' : 'not found'
+    hasCompanyName: !!data.companyName,
+    hasRcNumber: !!data.rcNumber,
+    hasRegistrationDate: !!data.registrationDate,
+    hasAddress: !!data.address
   });
 
   return data;

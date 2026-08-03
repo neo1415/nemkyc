@@ -175,18 +175,13 @@ describe('VerificationAPIClient', () => {
     });
 
     it('should handle timeout scenarios', async () => {
-      global.fetch = vi.fn().mockImplementation(() => 
-        new Promise((resolve) => {
-          setTimeout(() => {
-            resolve({
-              ok: true,
-              json: async () => ({ success: true, data: {} })
-            });
-          }, 6000); // Exceeds 5 second timeout
-        })
-      );
+      vi.useFakeTimers();
+      global.fetch = vi.fn().mockImplementation(() => new Promise(() => {}));
 
-      const response = await client.verifyNIN('12345678901');
+      const responsePromise = client.verifyNIN('12345678901');
+      await vi.advanceTimersByTimeAsync(15001);
+      const response = await responsePromise;
+      vi.useRealTimers();
 
       expect(response.success).toBe(false);
       expect(response.error?.code).toBe('TIMEOUT');
@@ -276,18 +271,13 @@ describe('VerificationAPIClient', () => {
     });
 
     it('should handle timeout for CAC verification', async () => {
-      global.fetch = vi.fn().mockImplementation(() => 
-        new Promise((resolve) => {
-          setTimeout(() => {
-            resolve({
-              ok: true,
-              json: async () => ({ success: true, data: {} })
-            });
-          }, 6000);
-        })
-      );
+      vi.useFakeTimers();
+      global.fetch = vi.fn().mockImplementation(() => new Promise(() => {}));
 
-      const response = await client.verifyCAC('RC123456');
+      const responsePromise = client.verifyCAC('RC123456');
+      await vi.advanceTimersByTimeAsync(15001);
+      const response = await responsePromise;
+      vi.useRealTimers();
 
       expect(response.success).toBe(false);
       expect(response.error?.code).toBe('TIMEOUT');
