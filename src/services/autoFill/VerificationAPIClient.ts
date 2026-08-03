@@ -87,21 +87,18 @@ export class VerificationAPIClient {
 
       // Create fetch + parse promise - call new auto-fill endpoint
       const fetchPromise = (async () => {
-        // Get Firebase ID token for authentication
+        // Authentication is optional: public KYC/CDD users must be able to
+        // verify identifiers before they have an account or sign in.
         const user = auth.currentUser;
-        if (!user) {
-          throw new Error('User not authenticated');
-        }
-        
-        // Force token refresh to ensure it's valid
-        const idToken = await user.getIdToken(true);
+        const idToken = user ? await user.getIdToken(true) : null;
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        if (idToken) headers.Authorization = `Bearer ${idToken}`;
         
         return fetch(`${API_BASE_URL}/api/autofill/verify-nin`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`
-          },
+          headers,
           body: JSON.stringify({ 
             nin,
             userId,
@@ -136,7 +133,7 @@ export class VerificationAPIClient {
       }
 
       // Transform backend response to NINVerificationResponse format
-      if (data.status && data.data) {
+      if ((data.status === true || data.success === true) && data.data) {
         // Log full API response for debugging
         console.log('🔍 [DEBUG] Full NIN API response:', JSON.stringify(data.data, null, 2));
         
@@ -274,21 +271,17 @@ export class VerificationAPIClient {
 
       // Create fetch + parse promise - call new auto-fill endpoint
       const fetchPromise = (async () => {
-        // Get Firebase ID token for authentication
+        // Authentication is optional for the public corporate KYC flow.
         const user = auth.currentUser;
-        if (!user) {
-          throw new Error('User not authenticated');
-        }
-        
-        // Force token refresh to ensure it's valid
-        const idToken = await user.getIdToken(true);
+        const idToken = user ? await user.getIdToken(true) : null;
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        if (idToken) headers.Authorization = `Bearer ${idToken}`;
         
         return fetch(`${API_BASE_URL}/api/autofill/verify-cac`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`
-          },
+          headers,
           body: JSON.stringify({ 
             rc_number: rcNumber,
             userId,
@@ -323,7 +316,7 @@ export class VerificationAPIClient {
       }
 
       // Transform backend response to CACVerificationResponse format
-      if (data.status && data.data) {
+      if ((data.status === true || data.success === true) && data.data) {
         // Log full API response for debugging
         console.log('🔍 [DEBUG] Full CAC API response:', JSON.stringify(data.data, null, 2));
         

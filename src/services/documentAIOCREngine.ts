@@ -237,15 +237,17 @@ export class DocumentAIOCREngine {
         const errorData = await response.json().catch(() => ({}));
         console.error('Backend API error response:', errorData);
         
-        let errorMessage = `API request failed: ${response.status} ${response.statusText}`;
+        let errorMessage = errorData.message || `API request failed: ${response.status} ${response.statusText}`;
         if (response.status === 400) {
-          errorMessage = 'Bad Request - Invalid document format or parameters';
+          errorMessage = errorData.message || 'The document format or request is invalid. Please upload a PDF, JPG, or PNG.';
         } else if (response.status === 401) {
-          errorMessage = 'Unauthorized - Invalid credentials';
+          errorMessage = errorData.message || 'Document verification is temporarily unavailable. Please try again later.';
         } else if (response.status === 403) {
-          errorMessage = 'Forbidden - Access denied';
+          errorMessage = errorData.message || 'Document verification is temporarily unavailable. Please try again later.';
         } else if (response.status === 429) {
-          errorMessage = 'Rate limit exceeded - Too many requests';
+          errorMessage = errorData.message || 'Document verification is temporarily busy. Please wait a few minutes and try again.';
+        } else if (response.status >= 500) {
+          errorMessage = errorData.message || 'Document verification is temporarily unavailable. Please try again later.';
         }
         
         throw new Error(errorMessage);

@@ -25,7 +25,7 @@ export interface AuditLogParams {
 }
 
 class AuditService {
-  private apiEndpoint = 'http://localhost:3001/api/audit';
+  private apiEndpoint = `${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/audit`;
 
   /**
    * Log form view event
@@ -160,7 +160,7 @@ class AuditService {
         },
         body: JSON.stringify(params),
         // Add timeout to prevent hanging
-        signal: AbortSignal.timeout(5000) // 5 second timeout
+        signal: AbortSignal.timeout(3000)
       });
 
       // Silently ignore 403 Forbidden errors - endpoint may not be configured

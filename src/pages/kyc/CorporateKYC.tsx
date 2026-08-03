@@ -316,7 +316,7 @@ const CorporateKYC: React.FC = () => {
     userName: user?.name || undefined,
     userEmail: user?.email || undefined,
     reactHookFormSetValue: formMethods.setValue,
-    requireAuth: true // CRITICAL: Require authentication for autofill
+    requireAuth: false
   });
 
   // Initialize real-time verification validation
@@ -342,7 +342,7 @@ const CorporateKYC: React.FC = () => {
     userName: user?.name || undefined,
     userEmail: user?.email || undefined,
     reactHookFormSetValue: formMethods.setValue,
-    requireAuth: true,
+    requireAuth: false,
     fieldPrefix: 'directors.0.'
   });
   
@@ -368,7 +368,7 @@ const CorporateKYC: React.FC = () => {
     userName: user?.name || undefined,
     userEmail: user?.email || undefined,
     reactHookFormSetValue: formMethods.setValue,
-    requireAuth: true,
+    requireAuth: false,
     fieldPrefix: 'directors.1.'
   });
   
@@ -394,7 +394,7 @@ const CorporateKYC: React.FC = () => {
     userName: user?.name || undefined,
     userEmail: user?.email || undefined,
     reactHookFormSetValue: formMethods.setValue,
-    requireAuth: true,
+    requireAuth: false,
     fieldPrefix: 'directors.2.'
   });
   
@@ -479,7 +479,7 @@ const CorporateKYC: React.FC = () => {
     console.log('[CorporateKYC] CAC input ID:', element?.id);
     console.log('[CorporateKYC] Is authenticated:', isAuthenticated);
     
-    if (element && isAuthenticated) {
+    if (element) {
       // Store the ref
       cacInputRef.current = element;
       
@@ -487,13 +487,13 @@ const CorporateKYC: React.FC = () => {
       
       // Attach handlers - these add native DOM event listeners
       autoFillState.attachToField(element);
-      realtimeValidation.attachToIdentifierField(element);
+      if (isAuthenticated) {
+        realtimeValidation.attachToIdentifierField(element);
+      }
       
       console.log('[CorporateKYC] ✅ Handlers attached successfully');
     } else if (!element) {
       console.log('[CorporateKYC] CAC ref callback: element unmounted');
-    } else {
-      console.log('[CorporateKYC] ⚠️ Cannot attach handlers: not authenticated');
     }
   }, [isAuthenticated, autoFillState.attachToField, realtimeValidation.attachToIdentifierField]);
 
@@ -508,10 +508,7 @@ const CorporateKYC: React.FC = () => {
     }
   };
 
-  // Authentication-based messaging for CAC field
-  const cacMessage = isAuthenticated
-    ? "Enter your CAC and press Tab to auto-fill"
-    : "Your CAC will be verified when you submit";
+  const cacMessage = "Enter your CAC and press Tab to auto-fill. It will be checked again when you submit.";
 
   const onFinalSubmit = async (data: any) => {
     try {
@@ -555,14 +552,13 @@ const CorporateKYC: React.FC = () => {
 
       // Log form submission
       const submissionId = `kyc-corporate-${Date.now()}`;
-      await auditService.logFormSubmission({
+      void auditService.logFormSubmission({
         userId: user?.uid,
         userRole: user?.role,
         userEmail: user?.email,
         formType: 'kyc',
         formVariant: 'corporate',
-        submissionId,
-        formData: sanitizedData
+        submissionId
       });
 
       await handleEnhancedSubmit(finalData);
@@ -978,7 +974,7 @@ const CorporateKYC: React.FC = () => {
                               console.log(`[CorporateKYC] Director ${index} NIN input ID:`, element?.id);
                               console.log('[CorporateKYC] Is authenticated:', isAuthenticated);
                               
-                              if (element && isAuthenticated) {
+                              if (element) {
                                 console.log(`[CorporateKYC] Attaching handlers for director ${index}...`);
                                 
                                 // Get the hooks for this director
@@ -986,7 +982,9 @@ const CorporateKYC: React.FC = () => {
                                 if (hooks) {
                                   // Attach handlers - these add native DOM event listeners
                                   hooks.autoFill.attachToField(element);
-                                  hooks.validation.attachToIdentifierField(element);
+                                  if (isAuthenticated) {
+                                    hooks.validation.attachToIdentifierField(element);
+                                  }
                                   
                                   console.log(`[CorporateKYC] ✅ Handlers attached successfully for director ${index}`);
                                 } else {
@@ -994,8 +992,6 @@ const CorporateKYC: React.FC = () => {
                                 }
                               } else if (!element) {
                                 console.log(`[CorporateKYC] Director ${index} NIN ref callback: element unmounted`);
-                              } else {
-                                console.log(`[CorporateKYC] ⚠️ Cannot attach handlers for director ${index}: not authenticated`);
                               }
                             };
                             directorNinRefCallback(e);
@@ -1026,9 +1022,7 @@ const CorporateKYC: React.FC = () => {
                   </div>
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <Info className="h-3 w-3" />
-                    {isAuthenticated 
-                      ? "Enter NIN and press Tab to auto-fill" 
-                      : "NIN will be verified when you submit"}
+                    Enter NIN and press Tab to auto-fill. It will be checked again when you submit.
                   </p>
                   {(() => {
                     const hooks = getDirectorHooks(index);

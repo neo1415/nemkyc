@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { getCSRFToken } from '../utils/csrfToken';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -10,25 +11,6 @@ interface PendingSubmission {
   formType: string;
   submitFunction: (data: any) => Promise<void>;
 }
-
-// Helper function to get CSRF token
-const getCSRFToken = async (): Promise<string> => {
-  const attempts = 3;
-  let lastError: any = null;
-  for (let i = 0; i < attempts; i++) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/csrf-token`, { credentials: 'include' });
-      if (!response.ok) throw new Error(`CSRF fetch failed: ${response.status}`);
-      const data = await response.json();
-      if (!data?.csrfToken) throw new Error('Missing CSRF token');
-      return data.csrfToken;
-    } catch (err) {
-      lastError = err;
-      await new Promise(res => setTimeout(res, 500 * Math.pow(2, i)));
-    }
-  }
-  throw lastError || new Error('Unable to fetch CSRF token');
-};
 
 // Helper function to generate nonce
 const generateNonce = (): string => {

@@ -289,7 +289,9 @@ export class GeminiRealtimeUpdates {
     }
 
     try {
-      const wsUrl = import.meta.env.VITE_WS_URL || `ws://${window.location.host}/ws/document/${documentId}`;
+      // Use secure WebSocket (wss://) in production, ws:// only in development
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = import.meta.env.VITE_WS_URL || `${protocol}//${window.location.host}/ws/document/${documentId}`;
       const ws = new WebSocket(wsUrl);
       
       ws.onopen = () => {
