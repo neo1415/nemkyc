@@ -1,6 +1,11 @@
 'use strict';
 
-const DEFAULT_ADMIN_NOTIFICATION_RECIPIENTS = Object.freeze(['adedaniel502@gmail.com']);
+const ADMIN_NOTIFICATION_ROLE_VARIANTS = Object.freeze([
+  'admin',
+  'super admin',
+  'super-admin',
+  'superadmin'
+]);
 const CUSTOMER_FORM_CONFIGS = Object.freeze([
   { formType: 'Individual KYC', collection: 'Individual-kyc-form', ticketPrefix: 'IKY' },
   { formType: 'Corporate KYC', collection: 'corporate-kyc-form', ticketPrefix: 'CKY' },
@@ -16,13 +21,17 @@ const CUSTOMER_FORM_CONFIG_BY_NAME = new Map(
   CUSTOMER_FORM_CONFIGS.map(config => [config.formType.toLowerCase(), config])
 );
 
-function getAdminNotificationRecipients(configuredRecipients) {
-  const source = configuredRecipients
-    ? configuredRecipients.split(',')
-    : DEFAULT_ADMIN_NOTIFICATION_RECIPIENTS;
+function buildNotificationRoleQuery(requestedRoles = []) {
+  const roles = Array.isArray(requestedRoles) ? requestedRoles : [];
 
-  return [...new Set(source
-    .map(email => String(email).trim().toLowerCase())
+  return [...new Set([...roles, ...ADMIN_NOTIFICATION_ROLE_VARIANTS]
+    .map(role => String(role).trim().toLowerCase())
+    .filter(Boolean))];
+}
+
+function normalizeNotificationEmails(emails = []) {
+  return [...new Set(emails
+    .map(email => String(email || '').trim().toLowerCase())
     .filter(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))];
 }
 
@@ -32,8 +41,9 @@ function getCustomerFormConfig(formType) {
 }
 
 module.exports = {
-  DEFAULT_ADMIN_NOTIFICATION_RECIPIENTS,
+  ADMIN_NOTIFICATION_ROLE_VARIANTS,
   CUSTOMER_FORM_CONFIGS,
-  getAdminNotificationRecipients,
+  buildNotificationRoleQuery,
+  normalizeNotificationEmails,
   getCustomerFormConfig
 };
