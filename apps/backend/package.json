@@ -1,0 +1,41 @@
+{
+  "name": "n-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "firebase.js",
+  "scripts": {
+    "test": "node --test server-utils/__tests__/cacDocumentExtractor.test.cjs server-utils/__tests__/naicomDocumentExtractor.test.cjs server-utils/__tests__/contentTypePolicy.test.cjs server-utils/__tests__/csrfConfiguration.test.cjs server-utils/__tests__/customerFormPolicy.test.cjs server-utils/__tests__/firebaseAdminCompat.test.cjs server-utils/__tests__/googleCredentials.test.cjs server-utils/__tests__/securityRoutePolicy.test.cjs",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@google-cloud/documentai": "^9.6.0",
+    "axios": "^1.7.7",
+    "compression": "^1.8.1",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "csrf-csrf": "^4.0.3",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^7.2.0",
+    "express-validator": "^7.1.0",
+    "firebase-admin": "14.2.0",
+    "helmet": "^7.1.0",
+    "hpp": "^0.2.3",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.1",
+    "nodemailer": "^9.0.3",
+    "xss-clean": "^0.1.4"
+  },
+  "overrides": {
+    "tar": "7.5.22",
+    "@tootallnate/once": "^3.0.1",
+    "http-proxy-agent": "^7.0.0"
+  }
+}

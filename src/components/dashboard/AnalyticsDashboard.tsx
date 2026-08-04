@@ -54,12 +54,12 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ analytics }) =>
           </CardContent>
         </Card>
 
-        {/* KYC Forms */}
+        {/* Compliance Forms */}
         <Card className="border-2 border-[#DAA520] bg-gradient-to-br from-white to-amber-50">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-[#DAA520]" />
-              KYC Forms
+              KYC / CDD / NFIU
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -67,7 +67,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ analytics }) =>
               {analytics.kycForms}
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Know Your Customer forms
+              Compliance submissions
             </p>
           </CardContent>
         </Card>
@@ -156,7 +156,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ analytics }) =>
               </div>
               <div className="text-center px-4 border-l border-white/30">
                 <div className="text-2xl font-bold">{analytics.kycForms}</div>
-                <div className="text-xs opacity-90">KYC</div>
+                <div className="text-xs opacity-90">Compliance</div>
               </div>
               <div className="text-center px-4 border-l border-white/30">
                 <div className="text-2xl font-bold">{analytics.claimForms}</div>

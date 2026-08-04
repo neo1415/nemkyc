@@ -479,8 +479,8 @@ const FireSpecialPerilsClaim: React.FC = () => {
       formType: 'Fire Special Perils Claim'
     };
 
-    await handleSubmitWithAuth(finalData, 'Fire Special Perils Claim');
-    clearDraft();
+    const submitted = await handleSubmitWithAuth(finalData, 'Fire Special Perils Claim');
+    if (submitted) clearDraft();
     setShowSummary(false);
   };
 

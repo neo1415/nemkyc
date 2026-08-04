@@ -126,6 +126,11 @@ const FormViewer: React.FC = () => {
         }
         return 'partners-cdd';
       },
+      'partnersCDD': (data: any) => {
+        if (data.naicomField || data.typeOfEntity === 'naicom') return 'naicom-partners-cdd';
+        return 'partners-kyc';
+      },
+      'agentsCDD': 'agents-kyc',
       'formSubmissions': (data: any) => {
         // Detect NFIU forms from legacy formSubmissions collection
         const formType = data.formType?.toLowerCase() || '';

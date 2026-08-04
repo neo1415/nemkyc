@@ -223,10 +223,10 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
     setEditingCell(null);
   };
 
-  const handleDownloadTemplate = (type: 'individual' | 'corporate') => {
+  const handleDownloadTemplate = async (type: 'individual' | 'corporate') => {
     // Pass user name to template generator for filename
     const userName = user?.email?.split('@')[0] || 'User';
-    downloadTemplate(type, userName);
+    await downloadTemplate(type, userName);
     setShowTemplateMenu(false);
     
     // Advance tour when template is downloaded
@@ -258,7 +258,7 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
       setParseResult(result);
       
       // Set default list name from filename
-      const nameWithoutExt = uploadedFile.name.replace(/\.(csv|xlsx|xls)$/i, '');
+      const nameWithoutExt = uploadedFile.name.replace(/\.(csv|xlsx)$/i, '');
       setListName(nameWithoutExt);
 
       // Set detected email column or empty for manual selection
@@ -322,7 +322,6 @@ export function UploadDialog({ open, onClose, onSuccess }: UploadDialogProps) {
     accept: {
       'text/csv': ['.csv'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-      'application/vnd.ms-excel': ['.xls'],
     },
     maxFiles: 1,
     disabled: loading || parsing,

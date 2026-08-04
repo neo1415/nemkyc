@@ -30,7 +30,7 @@ import { geminiAuditLogger } from './geminiAuditLogger';
 interface ProcessingJob {
   id: string;
   document: ProcessedDocument;
-  verificationType: 'cac' | 'individual';
+  verificationType: 'cac' | 'individual' | 'naicom';
   status: 'pending' | 'processing' | 'completed' | 'failed';
   startTime: Date;
   endTime?: Date;
@@ -48,7 +48,7 @@ export class DocumentProcessorService {
    */
   async processDocument(
     file: File, 
-    verificationType: 'cac' | 'individual',
+    verificationType: 'cac' | 'individual' | 'naicom',
     formData?: any
   ): Promise<ProcessingResult> {
     const processingId = this.generateProcessingId();
@@ -297,7 +297,7 @@ export class DocumentProcessorService {
           timestamp: new Date()
         });
         
-      } else {
+      } else if (verificationType === 'individual') {
         // Use Document AI for individual documents (NDPA compliant)
         const ocrResult = await documentAIOCREngine.extractIndividualData(document);
         
@@ -329,6 +329,12 @@ export class DocumentProcessorService {
           apiCost: 0.01, // TODO: Calculate actual cost
           timestamp: new Date()
         });
+      } else {
+        const ocrResult = await documentAIOCREngine.extractNAICOMData(document);
+        if (!ocrResult.success) {
+          throw GeminiErrorHandler.createError(ErrorCode.OCR_FAILED, ocrResult.error || 'NAICOM certificate extraction failed');
+        }
+        extractedData = ocrResult.data!;
       }
 
       console.log('✅ OCR extraction completed successfully');
@@ -345,11 +351,13 @@ export class DocumentProcessorService {
               extractedData as any,
               formData
             );
-          } else {
+          } else if (verificationType === 'individual') {
             verificationResult = await simpleVerificationMatcher.verifyIndividualDocument(
               extractedData as any,
               formData
             );
+          } else {
+            verificationResult = await simpleVerificationMatcher.verifyNAICOMDocument(extractedData as any, formData);
           }
 
           console.log('🔍 Verification result:', {

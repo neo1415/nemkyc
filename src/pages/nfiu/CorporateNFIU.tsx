@@ -432,7 +432,7 @@ const CorporateNFIU: React.FC = () => {
     userName: user?.name || undefined,
     userEmail: user?.email || undefined,
     reactHookFormSetValue: formMethods.setValue,
-    requireAuth: true // CRITICAL: Require authentication for autofill
+    requireAuth: false
   });
 
   // Initialize real-time verification validation
@@ -458,7 +458,7 @@ const CorporateNFIU: React.FC = () => {
     userName: user?.name || undefined,
     userEmail: user?.email || undefined,
     reactHookFormSetValue: formMethods.setValue,
-    requireAuth: true,
+    requireAuth: false,
     fieldPrefix: 'directors.0.'
   });
   
@@ -484,7 +484,7 @@ const CorporateNFIU: React.FC = () => {
     userName: user?.name || undefined,
     userEmail: user?.email || undefined,
     reactHookFormSetValue: formMethods.setValue,
-    requireAuth: true,
+    requireAuth: false,
     fieldPrefix: 'directors.1.'
   });
   
@@ -510,7 +510,7 @@ const CorporateNFIU: React.FC = () => {
     userName: user?.name || undefined,
     userEmail: user?.email || undefined,
     reactHookFormSetValue: formMethods.setValue,
-    requireAuth: true,
+    requireAuth: false,
     fieldPrefix: 'directors.2.'
   });
   

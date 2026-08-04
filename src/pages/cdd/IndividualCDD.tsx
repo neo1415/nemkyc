@@ -11,24 +11,30 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
 import FormLoadingModal from '@/components/common/FormLoadingModal';
 import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import DatePicker from '@/components/common/DatePicker';
 import { format } from 'date-fns';
 import { formatDate } from '@/utils/dateFormatter';
+import VerifiedDocumentUpload from '@/components/common/VerifiedDocumentUpload';
+import VerifiedIdentifierField from '@/components/common/VerifiedIdentifierField';
 
 // FORM COMPONENTS DEFINED OUTSIDE TO PREVENT FOCUS LOSS
-const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
+const FormField = ({ name, label, required = false, type = "text", maxLength, inputRef, ...props }: any) => {
   const { register, formState: { errors }, clearErrors } = useFormContext();
   const error = get(errors, name);
+  const registration = register(name, {
+    onChange: () => {
+      if (error) clearErrors(name);
+    }
+  });
   
   return (
     <div className="space-y-2">
@@ -40,13 +46,11 @@ const FormField = ({ name, label, required = false, type = "text", maxLength, ..
         id={name}
         type={type}
         maxLength={maxLength}
-        {...register(name, {
-          onChange: () => {
-            if (error) {
-              clearErrors(name);
-            }
-          }
-        })}
+        {...registration}
+        ref={(element) => {
+          registration.ref(element);
+          inputRef?.(element);
+        }}
         className={error ? 'border-destructive' : ''}
         {...props}
       />
@@ -282,6 +286,9 @@ const IndividualCDD: React.FC = () => {
     showLoading,
     loadingMessage,
     showSuccess,
+    showError,
+    errorMessage,
+    closeError,
     confirmSubmit,
     closeSuccess,
     formData: submissionData,
@@ -448,7 +455,7 @@ const IndividualCDD: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField name="BVNNumber" label="BVN" required={true} maxLength={11} />
-            <FormField name="NINNumber" label="NIN (National Identification Number)" required={true} maxLength={11} />
+            <VerifiedIdentifierField name="NINNumber" label="NIN (National Identification Number)" formId="cdd-individual" formType="Individual CDD" identifierType="NIN" required maxLength={11} />
           </div>
           
           <FormSelect
@@ -511,34 +518,21 @@ const IndividualCDD: React.FC = () => {
             <FormField name="premiumPaymentSourceOther" label="Please specify payment source" required={true} />
           )}
           
-          <div>
-            <Label>Valid Means of Identification <span className="required-asterisk">*</span></Label>
-            <FileUpload
-              accept=".png,.jpg,.jpeg,.pdf"
-              onFileSelect={(file) => {
-                setUploadedFiles(prev => ({
-                  ...prev,
-                  identification: file
-                }));
-                formMethods.setValue('identification', file);
-                if (formMethods.formState.errors.identification) {
-                  formMethods.clearErrors('identification');
-                }
-              }}
-              maxSize={5}
-            />
-            {uploadedFiles.identification && (
-              <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                <Check className="h-4 w-4" />
-                {uploadedFiles.identification.name}
-              </div>
-            )}
-            {formMethods.formState.errors.identification && (
-              <p className="text-sm text-destructive">
-                {formMethods.formState.errors.identification.message?.toString()}
-              </p>
-            )}
-          </div>
+          <VerifiedDocumentUpload
+            fieldName="identification"
+            formId="cdd-individual"
+            label="Valid Means of Identification"
+            documentType="individual"
+            verificationFormData={{
+              fullName: [watchedValues.firstName, watchedValues.middleName, watchedValues.lastName].filter(Boolean).join(' '),
+              dateOfBirth: watchedValues.dateOfBirth,
+              nin: watchedValues.NINNumber,
+              gender: watchedValues.gender,
+            }}
+            formMethods={formMethods}
+            uploadedFiles={uploadedFiles}
+            setUploadedFiles={setUploadedFiles}
+          />
         </div>
       )
     },
@@ -671,12 +665,45 @@ const IndividualCDD: React.FC = () => {
                 </div>
 
                 <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Contact & Employment</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div><span className="font-medium text-gray-600">Residential Address:</span><p className="text-gray-900">{data.residentialAddress || 'Not provided'}</p></div>
+                    <div><span className="font-medium text-gray-600">Contact Address:</span><p className="text-gray-900">{data.contactAddress || 'Not provided'}</p></div>
+                    <div><span className="font-medium text-gray-600">Business Type:</span><p className="text-gray-900">{data.businessTypeOther || data.businessType || 'Not provided'}</p></div>
+                    <div><span className="font-medium text-gray-600">Employer:</span><p className="text-gray-900">{data.employersName || 'Not provided'}</p></div>
+                    <div><span className="font-medium text-gray-600">Employer Email:</span><p className="text-gray-900">{data.employersEmail || 'Not provided'}</p></div>
+                    <div><span className="font-medium text-gray-600">Employer Telephone:</span><p className="text-gray-900">{data.employersTelephoneNumber || 'Not provided'}</p></div>
+                    <div className="md:col-span-2"><span className="font-medium text-gray-600">Employer Address:</span><p className="text-gray-900">{data.employersAddress || 'Not provided'}</p></div>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Identification & Financial Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div><span className="font-medium text-gray-600">Identification Type:</span><p className="text-gray-900">{data.identificationType || 'Not provided'}</p></div>
+                    <div><span className="font-medium text-gray-600">Identification Number:</span><p className="text-gray-900">{data.identificationNumber || 'Not provided'}</p></div>
+                    <div><span className="font-medium text-gray-600">Issuing Country:</span><p className="text-gray-900">{data.issuingCountry || 'Not provided'}</p></div>
+                    <div><span className="font-medium text-gray-600">Tax Identification Number:</span><p className="text-gray-900">{data.taxidentificationNumber || 'Not provided'}</p></div>
+                    <div><span className="font-medium text-gray-600">Annual Income:</span><p className="text-gray-900">{data.annualIncomeRange || 'Not provided'}</p></div>
+                    <div><span className="font-medium text-gray-600">Premium Payment Source:</span><p className="text-gray-900">{data.premiumPaymentSourceOther || data.premiumPaymentSource || 'Not provided'}</p></div>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-4">
                   <h3 className="font-semibold text-lg mb-3">Uploaded Documents</h3>
                   <div className="grid grid-cols-1 gap-2 text-sm">
                     <div>
                       <span className="font-medium text-gray-600">Identification:</span>
-                      <p className="text-gray-900">{data.identification ? '✓ Uploaded' : 'Not uploaded'}</p>
+                      <p className="text-gray-900">{data.identification ? '✓ Uploaded and verified' : 'Not uploaded'}</p>
                     </div>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">Declaration</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div><span className="font-medium text-gray-600">Privacy Consent:</span><p className="text-gray-900">{data.agreeToDataPrivacy ? 'Agreed' : 'Not agreed'}</p></div>
+                    <div><span className="font-medium text-gray-600">Digital Signature:</span><p className="text-gray-900">{data.signature || 'Not provided'}</p></div>
                   </div>
                 </div>
               </div>
@@ -690,6 +717,7 @@ const IndividualCDD: React.FC = () => {
           title="Individual CDD Submitted Successfully!"
           message="Your Individual Customer Due Diligence form has been submitted and is being processed. You will receive a confirmation email shortly."
         />
+        <ErrorModal isOpen={showError} onClose={closeError} title="Submission Error" message={errorMessage} />
 
         {/* Old Dialog - Remove */}
         <Dialog open={false} onOpenChange={() => {}}>

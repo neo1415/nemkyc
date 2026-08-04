@@ -216,7 +216,10 @@ export function useAutoFill(config: UseAutoFillConfig): UseAutoFillReturn {
           setState(prev => ({
             ...prev,
             status: 'error',
-            error: { code: 'VERIFICATION_FAILED', message: 'Verification failed' }
+            error: {
+              code: 'VERIFICATION_FAILED',
+              message: `We could not verify this ${identifierType === IdentifierType.NIN ? 'NIN' : 'CAC/RC number'}. Check the number and try again, or contact support if it is correct.`
+            }
           }));
         }
       },

@@ -138,4 +138,50 @@ describe('NIN Verification Matching', () => {
     expect(result.matches).toBe(true);
     expect(result.mismatches).toHaveLength(0);
   });
+
+  it('normalizes legacy cached DataPro field names', () => {
+    const result = matchNINData(
+      { firstName: 'Daniel', lastName: 'Oyeniyi', gender: 'Male' },
+      {
+        ResponseData: {
+          FirstName: 'DANIEL',
+          Surname: 'OYENIYI',
+          Sex: 'M',
+        },
+      },
+    );
+
+    expect(result.matches).toBe(true);
+    expect(result.mismatches).toHaveLength(0);
+  });
+
+  it('accepts provider name-order differences only when both entered names are present', () => {
+    const result = matchNINData(
+      { firstName: 'Daniel', lastName: 'Oyeniyi' },
+      { firstName: 'OYENIYI', lastName: 'DANIEL ADEMOLA' },
+    );
+
+    expect(result.matches).toBe(true);
+    expect(result.mismatches).toHaveLength(0);
+  });
+
+  it('still rejects a genuinely different identity', () => {
+    const result = matchNINData(
+      { firstName: 'Daniel', lastName: 'Oyeniyi' },
+      { firstName: 'JANE', lastName: 'SMITH' },
+    );
+
+    expect(result.matches).toBe(false);
+    expect(result.mismatches).toHaveLength(2);
+  });
+
+  it('fails closed when the provider returns no usable name data', () => {
+    const result = matchNINData(
+      { firstName: 'Daniel', lastName: 'Oyeniyi' },
+      { status: 'verified' },
+    );
+
+    expect(result.matches).toBe(false);
+    expect(result.mismatches).toHaveLength(2);
+  });
 });

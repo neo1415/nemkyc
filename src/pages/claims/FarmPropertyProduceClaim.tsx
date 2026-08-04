@@ -16,7 +16,6 @@ import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
-import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import FormLoadingModal from '@/components/common/FormLoadingModal';
 import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
@@ -217,9 +216,6 @@ const FarmPropertyProduceClaim: React.FC = () => {
 
     await handleEnhancedSubmit(finalData);
   };
-
-  // Handle authentication-required submission
-  useAuthRequiredSubmit(formMethods, onFinalSubmit);
 
   // Step field mappings for validation
   const stepFieldMappings = {

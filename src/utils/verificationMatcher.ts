@@ -224,6 +224,42 @@ export interface NINMatchResult {
   warnings: string[];
 }
 
+export interface NormalizedNINVerificationData {
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  fullName: string;
+  birthdate: string;
+  dateOfBirth: string;
+  gender: string;
+}
+
+const firstString = (source: Record<string, any>, keys: string[]): string => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+};
+
+/** Normalize current and legacy DataPro/cache response shapes before matching. */
+export const normalizeNINVerificationData = (rawData: any): NormalizedNINVerificationData => {
+  let source = rawData?.ResponseData || rawData?.responseData || rawData?.data || rawData || {};
+  if (source?.ResponseData || source?.responseData) {
+    source = source.ResponseData || source.responseData;
+  }
+
+  return {
+    firstName: firstString(source, ['firstName', 'firstname', 'FirstName', 'first_name', 'givenName', 'forename']),
+    middleName: firstString(source, ['middleName', 'middlename', 'MiddleName', 'middle_name', 'otherNames']),
+    lastName: firstString(source, ['lastName', 'lastname', 'LastName', 'last_name', 'surname', 'Surname', 'familyName']),
+    fullName: firstString(source, ['fullName', 'fullname', 'FullName', 'full_name', 'name', 'Name']),
+    birthdate: firstString(source, ['birthdate', 'birthDate', 'BirthDate', 'date_of_birth']),
+    dateOfBirth: firstString(source, ['dateOfBirth', 'DateOfBirth', 'dob', 'DOB']),
+    gender: firstString(source, ['gender', 'Gender', 'sex', 'Sex']),
+  };
+};
+
 /**
  * Match NIN verification data against user-entered data
  * 
@@ -239,7 +275,10 @@ export const matchNINData = (
     gender?: string;
   },
   verificationData: {
+    [key: string]: any;
     firstName?: string;
+    middleName?: string;
+    fullName?: string;
     lastname?: string;
     surname?: string;
     birthdate?: string;
@@ -249,27 +288,46 @@ export const matchNINData = (
 ): NINMatchResult => {
   const mismatches: string[] = [];
   const warnings: string[] = [];
+  const normalizedVerification = normalizeNINVerificationData(verificationData);
+  const verifiedNameTokens = normalizeText([
+    normalizedVerification.firstName,
+    normalizedVerification.middleName,
+    normalizedVerification.lastName,
+    normalizedVerification.fullName,
+  ].filter(Boolean).join(' ')).split(' ').filter(Boolean);
+  const allTokensPresent = (value?: string) => normalizeText(value)
+    .split(' ')
+    .filter(Boolean)
+    .every(token => verifiedNameTokens.includes(token));
+  const enteredNamesPresent = Boolean(
+    userEnteredData.firstName && userEnteredData.lastName &&
+    allTokensPresent(userEnteredData.firstName) && allTokensPresent(userEnteredData.lastName)
+  );
   
   // Match first name (critical field) - don't reveal actual verified name
-  if (userEnteredData.firstName && verificationData.firstName) {
-    const similarity = calculateSimilarity(userEnteredData.firstName, verificationData.firstName);
+  if (userEnteredData.firstName && normalizedVerification.firstName) {
+    const similarity = calculateSimilarity(userEnteredData.firstName, normalizedVerification.firstName);
     
     console.log('🔍 First name comparison:', {
       userEntered: userEnteredData.firstName,
-      verified: verificationData.firstName,
+      verified: normalizedVerification.firstName,
       similarity
     });
     
-    if (similarity < 0.6) {
+    if (similarity < 0.6 && !enteredNamesPresent) {
       mismatches.push(
         `The first name you entered does not match the NIN verification records. Please verify the first name is correct.`
       );
     }
+  } else if (userEnteredData.firstName && !allTokensPresent(userEnteredData.firstName)) {
+    mismatches.push(
+      `The verification service could not confirm the first name. Please retry the verification before submitting.`
+    );
   }
   
   // Match last name (critical field) - don't reveal actual verified name
   // Try both lastName and surname fields for compatibility
-  const verifiedLastName = verificationData.lastName || verificationData.lastname || verificationData.surname;
+  const verifiedLastName = normalizedVerification.lastName;
   if (userEnteredData.lastName && verifiedLastName) {
     const similarity = calculateSimilarity(userEnteredData.lastName, verifiedLastName);
     
@@ -279,16 +337,20 @@ export const matchNINData = (
       similarity
     });
     
-    if (similarity < 0.6) {
+    if (similarity < 0.6 && !enteredNamesPresent) {
       mismatches.push(
         `The last name you entered does not match the NIN verification records. Please verify the last name is correct.`
       );
     }
+  } else if (userEnteredData.lastName && !allTokensPresent(userEnteredData.lastName)) {
+    mismatches.push(
+      `The verification service could not confirm the last name. Please retry the verification before submitting.`
+    );
   }
   
   // Match date of birth (critical field) - don't reveal actual verified date
   // Try both birthdate and dateOfBirth fields for compatibility
-  const verifiedDOB = verificationData.birthdate || verificationData.dateOfBirth;
+  const verifiedDOB = normalizedVerification.birthdate || normalizedVerification.dateOfBirth;
   if (userEnteredData.dateOfBirth && verifiedDOB) {
     console.log('🔍 Date matching debug:', {
       userEntered: userEnteredData.dateOfBirth,
@@ -307,9 +369,9 @@ export const matchNINData = (
   }
   
   // Match gender (warning only)
-  if (userEnteredData.gender && verificationData.gender) {
+  if (userEnteredData.gender && normalizedVerification.gender) {
     const userGender = normalizeText(userEnteredData.gender);
-    const verifiedGender = normalizeText(verificationData.gender);
+    const verifiedGender = normalizeText(normalizedVerification.gender);
     
     // Handle common variations
     const genderMap: Record<string, string[]> = {

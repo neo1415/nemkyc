@@ -23,7 +23,7 @@ interface DocumentAIRequest {
     content: string; // Base64 encoded document
     mimeType: string;
   };
-  documentType: 'individual' | 'cac';
+  documentType: 'individual' | 'cac' | 'naicom';
 }
 
 interface DocumentAIResponse {
@@ -173,10 +173,33 @@ export class DocumentAIOCREngine {
     }
   }
 
+  /** Extract the licensed company name from a NAICOM certificate. */
+  async extractNAICOMData(document: ProcessedDocument): Promise<CACExtractionResult> {
+    const startTime = Date.now();
+    try {
+      await this.checkRateLimit();
+      const response = await withRetry(() => this.makeApiCall(this.buildRequest(document, 'naicom')), 3);
+      const companyName = response.extractedData?.companyName?.trim();
+      if (!response.success || !companyName) {
+        throw GeminiErrorHandler.createError(ErrorCode.EXTRACTION_FAILED, response.error || 'The company name could not be read from this NAICOM certificate.');
+      }
+      return {
+        success: true,
+        data: sanitizeExtractedData(response.extractedData) as CACData,
+        confidence: response.confidence,
+        error: undefined,
+      };
+    } catch (error) {
+      const geminiError = error instanceof Error ? GeminiErrorHandler.handleApiError(error) : error as any;
+      GeminiErrorHandler.logError(geminiError, { documentId: document.id, fileName: document.metadata.fileName, processingTime: Date.now() - startTime });
+      return { success: false, data: undefined, confidence: 0, error: geminiError.userMessage || geminiError.message || 'NAICOM certificate verification failed.' };
+    }
+  }
+
   /**
    * Build Document AI request
    */
-  private buildRequest(document: ProcessedDocument, documentType: 'individual' | 'cac'): DocumentAIRequest {
+  private buildRequest(document: ProcessedDocument, documentType: 'individual' | 'cac' | 'naicom'): DocumentAIRequest {
     // Convert Uint8Array to base64 (browser-compatible)
     const base64Data = this.uint8ArrayToBase64(document.processedContent);
 

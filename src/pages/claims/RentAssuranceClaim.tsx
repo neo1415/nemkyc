@@ -335,8 +335,8 @@ const RentAssuranceClaim = () => {
       formType: 'Rent Assurance Claim'
     };
 
-    await handleSubmitWithAuth(finalData, 'Rent Assurance Claim');
-    clearDraft();
+    const submitted = await handleSubmitWithAuth(finalData, 'Rent Assurance Claim');
+    if (submitted) clearDraft();
     setShowSummary(false);
   };
 

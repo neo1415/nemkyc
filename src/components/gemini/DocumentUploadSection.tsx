@@ -13,7 +13,7 @@ import {
 
 interface DocumentUploadSectionProps {
   formId: string;
-  documentType: 'cac' | 'individual';
+  documentType: 'cac' | 'individual' | 'naicom';
   formData?: any;
   onVerificationComplete?: (result: VerificationResult) => void;
   onStatusChange?: (status: 'idle' | 'uploading' | 'processing' | 'verified' | 'failed') => void;
@@ -54,6 +54,7 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+  const previousCurrentFileRef = useRef<File | null | undefined>(currentFile);
 
   // Debug: Log component state changes (for development only)
   React.useEffect(() => {
@@ -74,6 +75,9 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
 
   // Check for existing file on mount or when currentFile changes
   React.useEffect(() => {
+    const previousCurrentFile = previousCurrentFileRef.current;
+    previousCurrentFileRef.current = currentFile;
+
     if (currentFile && uploadState.status === 'idle' && !uploadState.file) {
       // Check if we have a verification result to restore
       if (verificationResult && verificationResult.isMatch) {
@@ -97,9 +101,9 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
           progress: 0
         });
       }
-    } else if (!currentFile && uploadState.file && uploadState.status !== 'uploading' && uploadState.status !== 'processing' && uploadState.status !== 'verified') {
-      // Only reset to idle if we're not in the middle of processing or already verified
-      // This prevents race conditions during the upload/verification workflow
+    } else if (previousCurrentFile && !currentFile && uploadState.status !== 'uploading' && uploadState.status !== 'processing') {
+      // Reset only for an actual parent-driven file removal. A failed verification
+      // must remain visible even when the parent started with no currentFile.
       setUploadState({
         status: 'idle',
         progress: 0
@@ -162,16 +166,16 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
     });
 
     onStatusChange?.('uploading');
+    // Persist the accepted file immediately. Verification can fail independently,
+    // but the UI and eventual form submission must retain the selected filename.
+    onFileSelect?.(file);
 
     try {
       // Simulate upload progress with more visible steps
-      await new Promise(resolve => setTimeout(resolve, 800));
       setUploadState(prev => ({ ...prev, progress: 15 }));
 
-      await new Promise(resolve => setTimeout(resolve, 600));
       setUploadState(prev => ({ ...prev, progress: 25 }));
 
-      await new Promise(resolve => setTimeout(resolve, 400));
       setUploadState(prev => ({ ...prev, progress: 35 }));
 
       // Start processing
@@ -179,10 +183,8 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
       onStatusChange?.('processing');
 
       // Simulate OCR processing progress with longer delays
-      await new Promise(resolve => setTimeout(resolve, 1000));
       setUploadState(prev => ({ ...prev, progress: 55 }));
 
-      await new Promise(resolve => setTimeout(resolve, 800));
       setUploadState(prev => ({ ...prev, progress: 65 }));
 
       // Process document with error handling
@@ -222,7 +224,6 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
 
       // Simulate verification progress
       setUploadState(prev => ({ ...prev, progress: 80 }));
-      await new Promise(resolve => setTimeout(resolve, 600));
 
       if (result.success) {
         // Only log detailed info in development mode
@@ -258,10 +259,6 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
         if (result.verificationResult?.mismatches && result.verificationResult.mismatches.length > 0) {
           analysis = mismatchAnalyzer.analyzeMismatches(result.verificationResult.mismatches);
         }
-
-        // ALWAYS save the file first, regardless of verification result
-        // This ensures the file is available for Firebase Storage upload during form submission
-        onFileSelect?.(file);
 
         // Check verification result BEFORE updating form session
         if (result.verificationResult) {
@@ -316,7 +313,6 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
 
         // Final progress update with longer delay
         setUploadState(prev => ({ ...prev, progress: 95 }));
-        await new Promise(resolve => setTimeout(resolve, 800));
 
         // SUCCESS CASE: Show success UI when isMatch is true
         // Set the verified state with all necessary data
@@ -507,6 +503,14 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
     }
   }, [uploadState.file, handleFileSelect, onStatusChange]);
 
+  const handleSelectDifferentDocument = useCallback(() => {
+    setUploadState({ status: 'idle', progress: 0 });
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    onFileRemove?.();
+    onStatusChange?.('idle');
+    window.setTimeout(() => fileInputRef.current?.click(), 0);
+  }, [onFileRemove, onStatusChange]);
+
   // Get status icon
   const getStatusIcon = () => {
     switch (uploadState.status) {
@@ -578,7 +582,7 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
       case 'failed':
         return getDetailedErrorMessage();
       default:
-        return `Upload your ${documentType === 'cac' ? 'CAC certificate' : 'identification document'} here or click to browse`;
+        return `Upload your ${documentType === 'cac' ? 'CAC certificate' : documentType === 'naicom' ? 'NAICOM certificate' : 'identification document'} here or click to browse`;
     }
   };
 
@@ -698,7 +702,7 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
             
             {uploadState.status === 'idle' && (
               <p className="text-sm text-gray-500 mt-2">
-                Upload your {documentType === 'cac' ? 'CAC certificate' : 'identification document'} for verification. 
+                Upload your {documentType === 'cac' ? 'CAC certificate' : documentType === 'naicom' ? 'NAICOM certificate' : 'identification document'} for verification.
                 Supports PDF, JPG, PNG files up to 5MB
               </p>
             )}
@@ -755,12 +759,8 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
               </div>
               
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setUploadState({ status: 'idle', progress: 0 });
-                  onFileRemove?.();
-                  onStatusChange?.('idle');
-                }}
+                type="button"
+                onClick={handleSelectDifferentDocument}
                 className="text-sm text-red-600 hover:text-red-800 hover:underline transition-colors"
               >
                 Remove and upload different document
@@ -782,7 +782,8 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
               <p className="text-sm text-yellow-700 mt-1">{uploadState.error}</p>
               
               <button
-                onClick={handleRetry}
+                type="button"
+                onClick={handleSelectDifferentDocument}
                 className="mt-3 text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-1 rounded transition-colors"
               >
                 Try Different Document
@@ -822,12 +823,22 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
                 </div>
               )}
               
-              <button
-                onClick={handleRetry}
-                className="mt-3 text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded transition-colors"
-              >
-                Try Again
-              </button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded transition-colors"
+                >
+                  Retry same document
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSelectDifferentDocument}
+                  className="text-sm bg-white hover:bg-red-50 border border-red-300 text-red-800 px-3 py-1 rounded transition-colors"
+                >
+                  Choose a different document
+                </button>
+              </div>
             </div>
           </div>
         </div>

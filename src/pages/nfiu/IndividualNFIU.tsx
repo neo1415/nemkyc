@@ -303,7 +303,7 @@ const IndividualNFIU: React.FC = () => {
     userName: user?.name || undefined,
     userEmail: user?.email || undefined,
     reactHookFormSetValue: formMethods.setValue,
-    requireAuth: true
+    requireAuth: false
   });
 
   const realtimeValidation = useRealtimeVerificationValidation({

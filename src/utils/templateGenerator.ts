@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import { createExcelTemplateBuffer } from './excelWorkbook';
 
 /**
  * Template headers for Individual client identity collection
@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
  */
 export const INDIVIDUAL_TEMPLATE_HEADERS = [
   'Policy Number',      // Required for IES integration - FIRST COLUMN
+  'Title',              // Required customer title
   'First Name',         // Required
   'Last Name',          // Required
   'Date of Birth',      // Required
@@ -35,7 +36,10 @@ export const CORPORATE_TEMPLATE_HEADERS = [
   'Email Address',          // Required
   'Phone Number',           // Required
   'Company Address',        // Optional
-  'CAC Number'              // Optional - if already available
+  'Registration Number',    // Required registration identifier
+  'Business Address',       // Required operational address
+  'CAC',                    // Optional compatibility column
+  'CAC Number'              // Optional explicit CAC identifier
 ];
 
 /**
@@ -43,24 +47,13 @@ export const CORPORATE_TEMPLATE_HEADERS = [
  * @param type - The type of template to generate ('individual' or 'corporate')
  * @returns Blob containing the Excel file
  */
-export function generateExcelTemplate(type: 'individual' | 'corporate'): Blob {
+export async function generateExcelTemplate(type: 'individual' | 'corporate'): Promise<Blob> {
   // Select appropriate headers based on template type
   const headers = type === 'individual' 
     ? INDIVIDUAL_TEMPLATE_HEADERS 
     : CORPORATE_TEMPLATE_HEADERS;
   
-  // Create worksheet from array of arrays (headers in first row)
-  const worksheet = XLSX.utils.aoa_to_sheet([headers]);
-  
-  // Create a new workbook and append the worksheet
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
-  
-  // Generate Excel file as array buffer
-  const excelBuffer = XLSX.write(workbook, { 
-    bookType: 'xlsx', 
-    type: 'array' 
-  });
+  const excelBuffer = await createExcelTemplateBuffer(headers);
   
   // Create and return Blob with proper MIME type
   return new Blob(
@@ -74,8 +67,8 @@ export function generateExcelTemplate(type: 'individual' | 'corporate'): Blob {
  * @param type - The type of template to download
  * @param userName - Optional user name to include in filename
  */
-export function downloadTemplate(type: 'individual' | 'corporate', userName?: string): void {
-  const blob = generateExcelTemplate(type);
+export async function downloadTemplate(type: 'individual' | 'corporate', userName?: string): Promise<void> {
+  const blob = await generateExcelTemplate(type);
   
   // Format date as YYYY-MM-DD
   const today = new Date();

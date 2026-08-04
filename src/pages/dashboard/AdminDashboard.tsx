@@ -23,11 +23,7 @@ const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-
-  // Redirect non-admin users (users with default role or broker role)
-  if (!user || rolesMatch(user.role, 'default') || rolesMatch(user.role, 'broker')) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  const canAccessAdminDashboard = Boolean(user && !rolesMatch(user.role, 'default') && !rolesMatch(user.role, 'broker'));
 
   // Use React Query hooks for cached data fetching
   const { 
@@ -35,39 +31,43 @@ const AdminDashboard: React.FC = () => {
     isLoading: statsLoading, 
     error: statsError,
     refetch: refetchStats 
-  } = useAdminDashboardStats(user?.role || '');
+  } = useAdminDashboardStats(canAccessAdminDashboard ? user?.role || '' : '');
 
   const { 
     data: monthlyData, 
     isLoading: monthlyLoading,
     error: monthlyError,
     refetch: refetchMonthly 
-  } = useMonthlySubmissionData(user?.role || '');
+  } = useMonthlySubmissionData(canAccessAdminDashboard ? user?.role || '' : '');
 
   // Health monitoring data
   const {
     data: healthStatus,
     isLoading: healthLoading,
     refetch: refetchHealth
-  } = useHealthStatus();
+  } = useHealthStatus(canAccessAdminDashboard);
 
   const {
     data: errorRate,
     isLoading: errorRateLoading,
     refetch: refetchErrorRate
-  } = useErrorRate(24);
+  } = useErrorRate(24, canAccessAdminDashboard);
 
   const {
     data: apiUsage,
     isLoading: apiUsageLoading,
     refetch: refetchAPIUsage
-  } = useAPIUsage('day');
+  } = useAPIUsage('day', canAccessAdminDashboard);
 
   const {
     data: alerts,
     isLoading: alertsLoading,
     refetch: refetchAlerts
-  } = useSystemAlerts();
+  } = useSystemAlerts(canAccessAdminDashboard);
+
+  if (!canAccessAdminDashboard) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const isLoading = statsLoading || monthlyLoading;
 
@@ -626,14 +626,14 @@ const AdminDashboard: React.FC = () => {
                         let url = '';
                         
                         // CDD Forms
-                        if (submission.collection === 'partners-kyc') {
+                        if (submission.collection === 'partners-kyc' || submission.collection === 'partnersCDD') {
                           url = '/admin/cdd/partners';
-                        } else if (submission.collection === 'agents-kyc') {
+                        } else if (submission.collection === 'agents-kyc' || submission.collection === 'agentsCDD') {
                           url = '/admin/cdd/agents';
                         } else if (submission.collection === 'brokers-kyc') {
                           url = '/admin/cdd/brokers';
                         } else if (submission.collection === 'individual-kyc') {
-                          url = 'admin/cdd/individual';
+                          url = '/admin/cdd/individual';
                         } else if (submission.collection === 'corporate-kyc') {
                           url = '/admin/cdd/corporate';
                         }

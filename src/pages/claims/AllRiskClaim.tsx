@@ -391,8 +391,8 @@ const AllRiskClaim: React.FC = () => {
       formType: 'All Risk Claim'
     };
 
-    await handleSubmitWithAuth(finalData, 'All Risk Claim');
-    clearDraft();
+    const submitted = await handleSubmitWithAuth(finalData, 'All Risk Claim');
+    if (submitted) clearDraft();
     setShowSummary(false);
   };
 

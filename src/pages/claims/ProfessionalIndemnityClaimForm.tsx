@@ -447,8 +447,8 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
         formType: 'Professional Indemnity Claim'
       };
 
-      await handleSubmitWithAuth(finalData, 'Professional Indemnity Claim');
-      clearDraft();
+      const submitted = await handleSubmitWithAuth(finalData, 'Professional Indemnity Claim');
+      if (submitted) clearDraft();
       setShowSummary(false);
     } catch (error) {
       console.error('Error submitting form:', error);

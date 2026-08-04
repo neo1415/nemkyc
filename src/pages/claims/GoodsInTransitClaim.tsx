@@ -380,8 +380,8 @@ const GoodsInTransitClaim: React.FC = () => {
       formType: 'Goods In Transit Claim'
     };
 
-    await handleSubmitWithAuth(finalData, 'Goods In Transit Claim');
-    clearDraft();
+    const submitted = await handleSubmitWithAuth(finalData, 'Goods In Transit Claim');
+    if (submitted) clearDraft();
     setShowSummary(false);
   };
 

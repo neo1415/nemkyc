@@ -444,8 +444,8 @@ const ContractorsPlantMachineryClaim: React.FC = () => {
       formType: 'Contractors Plant & Machinery Claim'
     };
 
-    await handleSubmitWithAuth(finalData, 'Contractors Plant & Machinery Claim');
-    clearDraft();
+    const submitted = await handleSubmitWithAuth(finalData, 'Contractors Plant & Machinery Claim');
+    if (submitted) clearDraft();
     setShowSummary(false);
   };
 

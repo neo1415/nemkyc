@@ -26,6 +26,54 @@ interface FormFieldWithValue extends FormField {
   section: string;
 }
 
+const normalizeFieldKey = (key: string) => key.replace(/[^a-z0-9]/gi, '').toLowerCase();
+
+const FIELD_ALIASES: Record<string, string[]> = {
+  firstname: ['firstName', 'firstname', 'first_name', 'givenName'],
+  lastname: ['lastName', 'lastname', 'last_name', 'surname'],
+  middlename: ['middleName', 'middlename', 'middle_name'],
+  email: ['email', 'emailAddress', 'email_address'],
+  emailaddress: ['emailAddress', 'email', 'email_address'],
+  phonenumber: ['phoneNumber', 'telephoneNumber', 'contactPersonNo', 'mobileNumber', 'gsmNumber'],
+  telephonenumber: ['telephoneNumber', 'phoneNumber', 'contactPersonNo', 'mobileNumber'],
+  nin: ['nin', 'NIN', 'ninNumber', 'NINNumber'],
+  ninnumber: ['NINNumber', 'ninNumber', 'nin', 'NIN'],
+  bvn: ['bvn', 'BVN', 'bvnNumber', 'BVNNumber'],
+  bvnnumber: ['BVNNumber', 'bvnNumber', 'bvn', 'BVN'],
+  companyname: ['companyName', 'insured', 'nameOfInsured', 'organizationName'],
+  insured: ['insured', 'companyName', 'nameOfInsured', 'fullName'],
+  incorporationnumber: ['incorporationNumber', 'cacNumber', 'rcNumber', 'registrationNumber'],
+  cacnumber: ['cacNumber', 'incorporationNumber', 'rcNumber', 'registrationNumber'],
+};
+
+const resolveDashboardFieldValue = (data: Record<string, any>, fieldKey: string): any => {
+  if (data[fieldKey] !== undefined && data[fieldKey] !== null) return data[fieldKey];
+
+  const normalizedTarget = normalizeFieldKey(fieldKey);
+  const candidates = FIELD_ALIASES[normalizedTarget] || [fieldKey];
+  for (const candidate of candidates) {
+    if (data[candidate] !== undefined && data[candidate] !== null) return data[candidate];
+  }
+
+  const matchingKey = Object.keys(data).find(key => normalizeFieldKey(key) === normalizedTarget);
+  return matchingKey ? data[matchingKey] : undefined;
+};
+
+const isSubmissionOwner = (
+  data: Record<string, any>,
+  user: { uid?: string | null; email?: string | null } | null | undefined,
+): boolean => {
+  if (!user) return false;
+  const ownerUids = [data.userUid, data.submittedByUid, data.userId, data.uid].filter(Boolean);
+  if (user.uid && ownerUids.includes(user.uid)) return true;
+
+  const userEmail = user.email?.trim().toLowerCase();
+  const ownerEmails = [data.submittedBy, data.userEmail, data.email, data.emailAddress]
+    .filter((value): value is string => typeof value === 'string')
+    .map(value => value.trim().toLowerCase());
+  return Boolean(userEmail && ownerEmails.includes(userEmail));
+};
+
 const UserFormViewer: React.FC = () => {
   const { collection, id } = useParams<{ collection: string; id: string }>();
   const { user } = useAuth();
@@ -64,7 +112,7 @@ const UserFormViewer: React.FC = () => {
         };
         
         // Verify user owns this submission
-        if (data.submittedBy !== user?.email && data.userUid !== user?.uid) {
+        if (!isSubmissionOwner(data, user)) {
           toast({
             title: 'Access Denied',
             description: 'You do not have permission to view this submission',
@@ -112,7 +160,7 @@ const UserFormViewer: React.FC = () => {
         if (data.naicomField || data.typeOfEntity === 'naicom') {
           return 'naicom-corporate-cdd';
         }
-        return 'corporate-kyc';
+        return 'corporate-cdd';
       },
       'partners-kyc': (data: any) => {
         if (data.naicomField || data.typeOfEntity === 'naicom') {
@@ -120,11 +168,23 @@ const UserFormViewer: React.FC = () => {
         }
         return 'partners-cdd';
       },
-      'Individual-kyc-form': 'Individual-kyc-form',
+      'partnersCDD': (data: any) => {
+        if (data.naicomField || data.typeOfEntity === 'naicom') return 'naicom-partners-cdd';
+        return 'partners-kyc';
+      },
+      'Individual-kyc-form': 'individual-cdd',
       'corporate-kyc-form': 'corporate-kyc',
+      'individual-kyc': 'individual-cdd',
+      'individual-nfiu-form': 'individual-nfiu-form',
+      'corporate-nfiu-form': 'corporate-nfiu-form',
+      'agents-kyc': 'agents-kyc',
+      'agentsCDD': 'agents-kyc',
+      'brokers-kyc': 'brokers-kyc',
       'motor-claims': 'motor-claims',
       'fire-claims': 'fire-special-perils-claims',
+      'fire-special-perils-claims': 'fire-special-perils-claims',
       'professional-indemnity': 'professional-indemnity-claims',
+      'professional-indemnity-claims': 'professional-indemnity-claims',
       'burglary-claims': 'burglary-claims',
       'all-risk-claims': 'all-risk-claims',
       'goods-in-transit-claims': 'goods-in-transit-claims',
@@ -134,7 +194,8 @@ const UserFormViewer: React.FC = () => {
       'group-personal-accident-claims': 'group-personal-accident-claims',
       'fidelity-guarantee-claims': 'fidelity-guarantee-claims',
       'rent-assurance-claims': 'rent-assurance-claims',
-      'contractors-plant-machinery-claims': 'contractors-plant-machinery-claims',
+      'contractors-plant-machinery-claims': 'contractors-claims',
+      'contractors-claims': 'contractors-claims',
       'combined-gpa-employers-liability-claims': 'combined-gpa-employers-liability-claims'
     };
 
@@ -175,7 +236,7 @@ const UserFormViewer: React.FC = () => {
         
         // Check if field should be shown based on conditional logic
         if (shouldShowField(field, data)) {
-          let value = data[field.key];
+          let value = resolveDashboardFieldValue(data, field.key);
           
           // Handle array normalization
           if (field.type === 'array' && value !== null && value !== undefined) {
@@ -466,7 +527,8 @@ const UserFormViewer: React.FC = () => {
     );
   }
 
-  const mapping = FORM_MAPPINGS[collection || ''];
+  const mappingKey = getFormMappingKey(collection || '', formData);
+  const mapping = FORM_MAPPINGS[mappingKey];
   const formTitle = mapping?.title || collection?.replace(/[-_]/g, ' ').toUpperCase();
 
   return (

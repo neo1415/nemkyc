@@ -410,8 +410,8 @@ const MoneyInsuranceClaim: React.FC = () => {
       formType: 'Money Insurance Claim'
     };
 
-    await handleSubmitWithAuth(finalData, 'Money Insurance Claim');
-    clearDraft();
+    const submitted = await handleSubmitWithAuth(finalData, 'Money Insurance Claim');
+    if (submitted) clearDraft();
     setShowSummary(false);
   };
 

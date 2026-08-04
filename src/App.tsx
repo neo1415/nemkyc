@@ -2,6 +2,7 @@ import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/toaster';
+import { Toaster as SonnerToaster } from './components/ui/sonner';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import Layout from './components/layout/Layout';
 import Index from './pages/Index';
@@ -731,6 +732,7 @@ function App() {
             </Routes>
           </Suspense>
           <Toaster />
+          <SonnerToaster richColors closeButton />
         </Router>
         </InactivityHandler>
       </AuthProvider>

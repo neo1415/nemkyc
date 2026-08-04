@@ -4,10 +4,11 @@ import { Box, Button, Typography, Chip } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { collection, query, getDocs, orderBy } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { Eye } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
+import { maskSensitiveRecord } from '../../utils/sensitiveDataMasking';
 
 const theme = createTheme({
   palette: {
@@ -45,30 +46,40 @@ const AdminCDDTable: React.FC<AdminCDDTableProps> = ({ formType }) => {
           'corporate-kyc',
           'corporate-kyc-form',
           'partners-kyc',
+          'partnersCDD',
           'naicom-partners-cdd',
           'individual-kyc',
           'individual-kyc-form',
           'agents-kyc',
+          'agentsCDD',
           'brokers-kyc'
         ];
 
       const allForms: any[] = [];
       for (const name of cddCollections) {
-        const snapshot = await getDocs(query(collection(db, name), orderBy('createdAt', 'desc')));
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          allForms.push({
-            id: doc.id,
-            collection: name,
-            type: name.replace('-cdd', '').replace(/-/g, ' '),
-            ...data,
-            createdAt: data.createdAt?.toDate?.() ?? null,
-            updatedAt: data.updatedAt?.toDate?.() ?? null,
+        try {
+          // Read unordered so documents using submittedAt/timestamp are not silently omitted.
+          const snapshot = await getDocs(collection(db, name));
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            const createdAt = data.createdAt || data.submittedAt || data.timestamp || null;
+            allForms.push({
+              id: doc.id,
+              collection: name,
+              type: name.replace('-cdd', '').replace(/-/g, ' '),
+              ...data,
+              createdAt: createdAt?.toDate?.() ?? createdAt,
+              updatedAt: data.updatedAt?.toDate?.() ?? data.updatedAt ?? null,
+            });
           });
-        });
+        } catch (collectionError) {
+          console.warn(`Unable to read CDD collection ${name}:`, collectionError);
+        }
       }
-      setCddForms(allForms);
-      generateColumns(allForms);
+      allForms.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      const maskedForms = allForms.map(form => maskSensitiveRecord(form));
+      setCddForms(maskedForms);
+      generateColumns(maskedForms);
     } catch (err) {
       console.error('Error fetching CDD forms:', err);
       toast({ title: 'Error', description: 'Failed to fetch CDD forms data', variant: 'destructive' });

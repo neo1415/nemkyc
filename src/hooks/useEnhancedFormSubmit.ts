@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { matchCACData, matchNINData } from '../utils/verificationMatcher';
+import { matchCACData, matchNINData, normalizeNINVerificationData } from '../utils/verificationMatcher';
 import { getCSRFToken } from '../utils/csrfToken';
-import { isPublicCustomerFormType } from '../config/customerForms';
+import type { User as FirebaseUser } from 'firebase/auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -61,6 +62,7 @@ const makeAuthenticatedRequest = async (
   data: any,
   method: string = 'POST',
   skipCSRF: boolean = false,
+  firebaseUser?: FirebaseUser | null,
 ) => {
   const timestamp = Date.now().toString();
   const nonce = generateNonce();
@@ -83,6 +85,10 @@ const makeAuthenticatedRequest = async (
 
   if (!skipCSRF) {
     headers['CSRF-Token'] = await getCSRFToken();
+  }
+
+  if (firebaseUser) {
+    headers.Authorization = `Bearer ${await firebaseUser.getIdToken()}`;
   }
 
   return fetch(url, {
@@ -123,7 +129,78 @@ const verifyIdentity = async (identityNumber: string, identityType: 'NIN' | 'CAC
     throw new Error(await getResponseErrorMessage(response, `${identityType} verification failed. Please check the number and try again.`));
   }
   
-  return await response.json();
+  const result = await response.json();
+  if (identityType === 'NIN' && result?.data) {
+    result.data = normalizeNINVerificationData(result.data);
+  }
+  return result;
+};
+
+type PendingSubmissionState = 'ready' | 'needs-review';
+
+type VerifiedDocumentRequirement = { field: string; label: string; required?: boolean };
+const VERIFIED_DOCUMENT_REQUIREMENTS: Record<string, VerifiedDocumentRequirement[]> = {
+  'Individual CDD': [{ field: 'identification', label: 'means of identification' }],
+  'Agents CDD': [
+    { field: 'agentId', label: 'agent identification' },
+    { field: 'naicomCertificate', label: 'NAICOM certificate' },
+  ],
+  'Corporate CDD': [
+    { field: 'cac', label: 'CAC certificate' },
+    { field: 'identification', label: 'Director 1 identification' },
+  ],
+  'NAICOM Corporate CDD': [
+    { field: 'cac', label: 'CAC certificate' },
+    { field: 'identification', label: 'Director 1 identification' },
+    { field: 'cacForm', label: 'NAICOM licence certificate' },
+  ],
+  'Partners CDD': [
+    { field: 'certificateOfIncorporation', label: 'certificate of incorporation' },
+    { field: 'directorId1', label: 'Director 1 identification' },
+    { field: 'directorId2', label: 'Director 2 identification', required: false },
+    { field: 'cacStatusReport', label: 'CAC status report' },
+  ],
+  'NAICOM Partners CDD': [
+    { field: 'certificateOfIncorporation', label: 'certificate of incorporation' },
+    { field: 'directorId1', label: 'Director 1 identification' },
+    { field: 'directorId2', label: 'Director 2 identification', required: false },
+    { field: 'cacStatusReport', label: 'CAC status report' },
+    { field: 'naicomLicenseCertificate', label: 'NAICOM licence certificate' },
+  ],
+  'Brokers CDD': [
+    { field: 'Incorporation', label: 'certificate of incorporation' },
+    { field: 'identification', label: 'Director 1 identification' },
+    { field: 'identification2', label: 'Director 2 identification', required: false },
+    { field: 'NAICOMForm', label: 'NAICOM licence certificate', required: false },
+  ],
+};
+
+const persistPendingSubmission = (
+  formData: any,
+  formType: string,
+  resumeState: PendingSubmissionState = 'ready',
+) => {
+  sessionStorage.setItem('pendingSubmission', JSON.stringify({
+    formData,
+    formType,
+    timestamp: Date.now(),
+    resumeState,
+  }));
+};
+
+const markPendingSubmissionForReview = () => {
+  const raw = sessionStorage.getItem('pendingSubmission');
+  if (!raw) return;
+
+  try {
+    const pending = JSON.parse(raw);
+    sessionStorage.setItem('pendingSubmission', JSON.stringify({
+      ...pending,
+      resumeState: 'needs-review',
+    }));
+  } catch {
+    sessionStorage.removeItem('pendingSubmission');
+  }
 };
 
 /**
@@ -157,7 +234,8 @@ export const useEnhancedFormSubmit = (
   options: UseEnhancedFormSubmitOptions
 ): UseEnhancedFormSubmitReturn => {
   const { formType, onSuccess, onError, customValidation, verificationData } = options;
-  const { user } = useAuth();
+  const { user, firebaseUser } = useAuth();
+  const navigate = useNavigate();
   
   const [isValidating, setIsValidating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -197,13 +275,20 @@ export const useEnhancedFormSubmit = (
       const pendingData = sessionStorage.getItem('pendingSubmission');
       
       if (pendingData && user) {
-        // Add a small delay to ensure session cookie is set
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const { formData: savedFormData, formType: savedFormType, timestamp } = JSON.parse(pendingData);
+        const {
+          formData: savedFormData,
+          formType: savedFormType,
+          timestamp,
+          resumeState = 'ready',
+        } = JSON.parse(pendingData);
         
         // Only process if it's for this form type and not expired (30 minutes)
         if (savedFormType === formType && Date.now() - timestamp < 30 * 60 * 1000) {
+          if (resumeState === 'needs-review') {
+            setFormData(savedFormData);
+            return;
+          }
+
           // Mark as processed to prevent duplicates
           hasProcessedPending.current = true;
           
@@ -214,12 +299,14 @@ export const useEnhancedFormSubmit = (
           let currentIdentityType: 'NIN' | 'CAC' | undefined;
           let currentIsVerified = verificationData?.isVerified || false;
 
-          if (formType === 'Individual KYC' || formType === 'Individual NFIU') {
-            currentIdentityNumber = savedFormData.NIN;
+          if (['Individual KYC', 'Individual NFIU', 'Individual CDD', 'Agents CDD'].includes(formType)) {
+            currentIdentityNumber = savedFormData.NIN || savedFormData.NINNumber;
             currentIdentityType = 'NIN';
-          } else if (formType === 'Corporate KYC' || formType === 'Corporate NFIU') {
-            // Support both cacNumber (CorporateKYC) and incorporationNumber (CorporateNFIU)
-            currentIdentityNumber = savedFormData.cacNumber || savedFormData.incorporationNumber;
+          } else if ([
+            'Corporate KYC', 'Corporate NFIU', 'Corporate CDD', 'NAICOM Corporate CDD',
+            'Partners CDD', 'NAICOM Partners CDD', 'Brokers CDD'
+          ].includes(formType)) {
+            currentIdentityNumber = savedFormData.cacNumber || savedFormData.incorporationNumber || savedFormData.registrationNumber;
             currentIdentityType = 'CAC';
           }
 
@@ -254,17 +341,17 @@ export const useEnhancedFormSubmit = (
               if (currentIdentityType === 'CAC') {
                 console.log('🔍 Matching CAC data:');
                 console.log('  User entered:', {
-                  insured: savedFormData.insured,
-                  dateOfIncorporationRegistration: savedFormData.dateOfIncorporationRegistration,
-                  officeAddress: savedFormData.officeAddress
+                  insured: savedFormData.insured || savedFormData.companyName,
+                  dateOfIncorporationRegistration: savedFormData.dateOfIncorporationRegistration || savedFormData.incorporationDate,
+                  officeAddress: savedFormData.officeAddress || savedFormData.registeredCompanyAddress || savedFormData.registeredAddress || savedFormData.companyAddress
                 });
                 console.log('  Verification data:', verificationResult.data);
                 
                 matchResult = matchCACData(
                   {
-                    insured: savedFormData.insured,
-                    dateOfIncorporationRegistration: savedFormData.dateOfIncorporationRegistration,
-                    officeAddress: savedFormData.officeAddress
+                    insured: savedFormData.insured || savedFormData.companyName,
+                    dateOfIncorporationRegistration: savedFormData.dateOfIncorporationRegistration || savedFormData.incorporationDate,
+                    officeAddress: savedFormData.officeAddress || savedFormData.registeredCompanyAddress || savedFormData.registeredAddress || savedFormData.companyAddress
                   },
                   verificationResult.data
                 );
@@ -285,8 +372,7 @@ export const useEnhancedFormSubmit = (
               // Check for mismatches
               if (matchResult && !matchResult.matches) {
                 console.log('❌ Verification data mismatch:', matchResult.mismatches);
-                sessionStorage.removeItem('pendingSubmission');
-                sessionStorage.removeItem('pendingSubmissionKey');
+                markPendingSubmissionForReview();
                 setIsSubmitting(false);
                 
                 // Show verification mismatch modal
@@ -322,7 +408,7 @@ export const useEnhancedFormSubmit = (
                 formType: savedFormType,
                 userEmail: user.email,
                 userUid: user.uid
-              });
+              }, 'POST', false, firebaseUser);
 
               if (!response.ok) {
                 throw new Error(await getResponseErrorMessage(response, 'We could not submit your form. Please check your details and try again.'));
@@ -337,8 +423,7 @@ export const useEnhancedFormSubmit = (
               onSuccess?.();
             } catch (error: any) {
               console.error('❌ Error processing pending submission:', error);
-              sessionStorage.removeItem('pendingSubmission');
-              sessionStorage.removeItem('pendingSubmissionKey');
+              markPendingSubmissionForReview();
               setIsSubmitting(false);
               setErrorMessage(error.message || 'Failed to verify identity or submit form. Please try again.');
               setShowError(true);
@@ -355,7 +440,7 @@ export const useEnhancedFormSubmit = (
                 formType: savedFormType,
                 userEmail: user.email,
                 userUid: user.uid
-              });
+              }, 'POST', false, firebaseUser);
 
               if (!response.ok) {
                 throw new Error(await getResponseErrorMessage(response, 'We could not submit your form. Please check your details and try again.'));
@@ -370,8 +455,7 @@ export const useEnhancedFormSubmit = (
               onSuccess?.();
             } catch (error: any) {
               console.error('Error processing pending submission:', error);
-              sessionStorage.removeItem('pendingSubmission');
-              sessionStorage.removeItem('pendingSubmissionKey');
+              markPendingSubmissionForReview();
               setIsSubmitting(false);
               setErrorMessage(error.message || 'Failed to submit form. Please try again.');
               setShowError(true);
@@ -402,6 +486,16 @@ export const useEnhancedFormSubmit = (
     setFormData(data);
 
     try {
+      const documentRequirements = VERIFIED_DOCUMENT_REQUIREMENTS[formType] || [];
+      for (const requirement of documentRequirements) {
+        if (requirement.required === false && !data[requirement.field]) continue;
+        const verificationStatus = data[`${requirement.field}VerificationStatus`];
+        const verificationResult = data[`${requirement.field}Verification`];
+        if (verificationStatus !== 'verified' || verificationResult?.isMatch !== true) {
+          throw new Error(`Please upload and successfully verify the ${requirement.label} before reviewing your submission.`);
+        }
+      }
+
       // Custom validation if provided
       if (customValidation) {
         console.log('Running custom validation...');
@@ -444,18 +538,48 @@ export const useEnhancedFormSubmit = (
     // Mark as submitting immediately
     isSubmittingRef.current = true;
 
-    // Customer-facing KYC and CDD forms support guest submissions.
+    // Forms can be completed as a guest, but the final durable submission must
+    // belong to an authenticated account. Save the already-validated payload,
+    // redirect to authentication, and resume automatically on this form page.
+    if (!user) {
+      persistPendingSubmission(formData, formType);
+
+      isSubmittingRef.current = false;
+      setShowSummary(false);
+      navigate('/auth/signin');
+      return;
+    }
+
+    // Preserve uploaded document URLs from the previous attempt while allowing
+    // corrected field values from this attempt to replace older values.
+    let submissionFormData = formData;
+    const recoverablePending = sessionStorage.getItem('pendingSubmission');
+    if (recoverablePending) {
+      try {
+        const parsedPending = JSON.parse(recoverablePending);
+        if (parsedPending.formType === formType && parsedPending.formData) {
+          submissionFormData = { ...parsedPending.formData, ...formData };
+        }
+      } catch {
+        // Malformed legacy recovery data will be replaced below.
+      }
+    }
+    persistPendingSubmission(submissionFormData, formType);
+    setFormData(submissionFormData);
+
     // Get the CURRENT identity number from formData (not from the stale verificationData)
     let currentIdentityNumber: string | undefined;
     let currentIdentityType: 'NIN' | 'CAC' | undefined;
     let currentIsVerified = verificationData?.isVerified || false;
 
-    if (formType === 'Individual KYC' || formType === 'Individual NFIU') {
-      currentIdentityNumber = formData.NIN;
+    if (['Individual KYC', 'Individual NFIU', 'Individual CDD', 'Agents CDD'].includes(formType)) {
+      currentIdentityNumber = submissionFormData.NIN || submissionFormData.NINNumber;
       currentIdentityType = 'NIN';
-    } else if (formType === 'Corporate KYC' || formType === 'Corporate NFIU') {
-      // Support both cacNumber (CorporateKYC) and incorporationNumber (CorporateNFIU)
-      currentIdentityNumber = formData.cacNumber || formData.incorporationNumber;
+    } else if ([
+      'Corporate KYC', 'Corporate NFIU', 'Corporate CDD', 'NAICOM Corporate CDD',
+      'Partners CDD', 'NAICOM Partners CDD', 'Brokers CDD'
+    ].includes(formType)) {
+      currentIdentityNumber = submissionFormData.cacNumber || submissionFormData.incorporationNumber || submissionFormData.registrationNumber;
       currentIdentityType = 'CAC';
     }
 
@@ -491,17 +615,17 @@ export const useEnhancedFormSubmit = (
         if (currentIdentityType === 'CAC') {
           console.log('🔍 Matching CAC data (confirmSubmit):');
           console.log('  User entered:', {
-            insured: formData.insured,
-            dateOfIncorporationRegistration: formData.dateOfIncorporationRegistration,
-            officeAddress: formData.officeAddress
+            insured: submissionFormData.insured || submissionFormData.companyName,
+            dateOfIncorporationRegistration: submissionFormData.dateOfIncorporationRegistration || submissionFormData.incorporationDate,
+            officeAddress: submissionFormData.officeAddress || submissionFormData.registeredCompanyAddress || submissionFormData.registeredAddress || submissionFormData.companyAddress
           });
           console.log('  Verification data:', verificationResult.data);
           
           matchResult = matchCACData(
             {
-              insured: formData.insured,
-              dateOfIncorporationRegistration: formData.dateOfIncorporationRegistration,
-              officeAddress: formData.officeAddress
+              insured: submissionFormData.insured || submissionFormData.companyName,
+              dateOfIncorporationRegistration: submissionFormData.dateOfIncorporationRegistration || submissionFormData.incorporationDate,
+              officeAddress: submissionFormData.officeAddress || submissionFormData.registeredCompanyAddress || submissionFormData.registeredAddress || submissionFormData.companyAddress
             },
             verificationResult.data
           );
@@ -510,10 +634,10 @@ export const useEnhancedFormSubmit = (
         } else if (currentIdentityType === 'NIN') {
           matchResult = matchNINData(
             {
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-              dateOfBirth: formData.dateOfBirth,
-              gender: formData.gender
+              firstName: submissionFormData.firstName,
+              lastName: submissionFormData.lastName,
+              dateOfBirth: submissionFormData.dateOfBirth,
+              gender: submissionFormData.gender
             },
             verificationResult.data
           );
@@ -521,6 +645,7 @@ export const useEnhancedFormSubmit = (
 
         // Check for mismatches
         if (matchResult && !matchResult.matches) {
+          markPendingSubmissionForReview();
           console.log('❌ Verification data mismatch:', matchResult.mismatches);
           setIsSubmitting(false);
           isSubmittingRef.current = false;
@@ -546,7 +671,7 @@ export const useEnhancedFormSubmit = (
 
         // Verification succeeded, add verification data to formData
         const enrichedFormData = {
-          ...formData,
+          ...submissionFormData,
           verificationData: verificationResult.data,
           verified: true
         };
@@ -556,9 +681,9 @@ export const useEnhancedFormSubmit = (
         const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
           formData: enrichedFormData,
           formType,
-          userEmail: user?.email || formData.email || formData.emailAddress,
-          userUid: user?.uid
-        }, 'POST', !user && isPublicCustomerFormType(formType));
+          userEmail: user.email,
+          userUid: user.uid
+        }, 'POST', false, firebaseUser);
 
         if (!response.ok) {
           throw new Error(await getResponseErrorMessage(response, 'We could not submit your form. Please check your details and try again.'));
@@ -567,11 +692,13 @@ export const useEnhancedFormSubmit = (
         setIsSubmitting(false);
         isSubmittingRef.current = false; // Reset submission guard
         sessionStorage.removeItem('pendingSubmissionKey');
+        sessionStorage.removeItem('pendingSubmission');
         setShowSuccess(true);
         toast.success('Form submitted successfully!');
         onSuccess?.();
       } catch (error: any) {
         console.error('❌ Verification or submission error:', error);
+        markPendingSubmissionForReview();
         setIsSubmitting(false);
         isSubmittingRef.current = false; // Reset submission guard
         setErrorMessage(error.message || 'Failed to verify identity or submit form. Please try again.');
@@ -586,11 +713,11 @@ export const useEnhancedFormSubmit = (
 
       try {
         const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
-          formData,
+          formData: submissionFormData,
           formType,
-          userEmail: user?.email || formData.email || formData.emailAddress,
-          userUid: user?.uid
-        }, 'POST', !user && isPublicCustomerFormType(formType));
+          userEmail: user.email,
+          userUid: user.uid
+        }, 'POST', false, firebaseUser);
 
         if (!response.ok) {
           throw new Error(await getResponseErrorMessage(response, 'We could not submit your form. Please check your details and try again.'));
@@ -599,10 +726,12 @@ export const useEnhancedFormSubmit = (
         setIsSubmitting(false);
         isSubmittingRef.current = false; // Reset submission guard
         sessionStorage.removeItem('pendingSubmissionKey');
+        sessionStorage.removeItem('pendingSubmission');
         setShowSuccess(true);
         toast.success('Form submitted successfully!');
         onSuccess?.();
       } catch (error: any) {
+        markPendingSubmissionForReview();
         setIsSubmitting(false);
         isSubmittingRef.current = false; // Reset submission guard
         setErrorMessage(error.message || 'Failed to submit form. Please try again.');

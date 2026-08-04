@@ -43,6 +43,7 @@ import {
 import { db } from '@/firebase/config';
 // CSV export - no PDF library needed
 import { format } from 'date-fns';
+import { maskSensitiveRecord } from '@/utils/sensitiveDataMasking';
 
 // Custom theme
 const theme = createTheme({
@@ -98,7 +99,7 @@ const CorporateCDDTable: React.FC = () => {
         ...doc.data()
       }));
       
-      setForms(formsData);
+      setForms(formsData.map(form => maskSensitiveRecord(form)));
     } catch (error) {
       console.error('Error fetching forms:', error);
       toast({

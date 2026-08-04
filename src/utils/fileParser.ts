@@ -9,7 +9,7 @@
  */
 
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
+import { parseExcelRecords } from './excelWorkbook';
 import type { FileParseResult, NameColumns, FileType, TemplateValidationResult } from '../types/remediation';
 
 // ========== Template Schemas ==========
@@ -323,36 +323,10 @@ export function parseExcel(file: File): Promise<FileParseResult> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const data = e.target?.result;
-        // Requirements 28.3, 28.4: Use raw: true and cellDates: false to preserve original values
-        const workbook = XLSX.read(data, { 
-          type: 'array',
-          raw: true,           // Preserve raw cell values
-          cellDates: false     // Don't auto-convert to Date objects
-        });
-        
-        // Get the first sheet
-        const firstSheetName = workbook.SheetNames[0];
-        if (!firstSheetName) {
-          reject(new Error('Excel file contains no sheets'));
-          return;
-        }
-
-        const worksheet = workbook.Sheets[firstSheetName];
-        
-        // Convert to JSON with header row
-        // Requirements 28.3, 28.4: Use raw: true to get original cell values
-        const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, {
-          defval: '', // Default value for empty cells
-          raw: true   // Preserve raw values (don't format)
-        });
-
-        if (jsonData.length === 0) {
-          reject(new Error('Excel file contains no data'));
-          return;
-        }
+        const data = e.target?.result as ArrayBuffer;
+        const jsonData = await parseExcelRecords(data) as Record<string, any>[];
 
         // Extract columns from the first row's keys
         const columns = Object.keys(jsonData[0]);
@@ -841,7 +815,7 @@ export async function parseFile(file: File): Promise<FileParseResult> {
   
   if (fileName.endsWith('.csv')) {
     return parseCSV(file);
-  } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+  } else if (fileName.endsWith('.xlsx')) {
     return parseExcel(file);
   } else {
     throw new Error('Unsupported file format. Please upload a CSV or Excel (.xlsx) file.');
@@ -853,7 +827,7 @@ export async function parseFile(file: File): Promise<FileParseResult> {
  */
 export function isValidFileType(file: File): boolean {
   const fileName = file.name.toLowerCase();
-  return fileName.endsWith('.csv') || fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+  return fileName.endsWith('.csv') || fileName.endsWith('.xlsx');
 }
 
 /**

@@ -8,6 +8,7 @@ import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { Eye, Download } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
+import { maskSensitiveRecord } from '../../utils/sensitiveDataMasking';
 
 const theme = createTheme({
   palette: {
@@ -65,7 +66,7 @@ const AdminKYCTable: React.FC<AdminKYCTableProps> = ({ formType }) => {
         });
       }
 
-      setKycForms(allForms);
+      setKycForms(allForms.map(form => maskSensitiveRecord(form)));
     } catch (error) {
       console.error('Error fetching KYC forms:', error);
       toast({

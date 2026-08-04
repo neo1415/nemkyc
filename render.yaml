@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: nem-server-rhdb
+    runtime: node
+    rootDir: apps/backend
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CSRF_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DATAPRO_SERVICE_ID
+        sync: false
+      - key: VERIFYDATA_SECRET_KEY
+        sync: false

@@ -40,6 +40,7 @@ import {
   deleteDoc
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
+import { maskSensitiveRecord } from '@/utils/sensitiveDataMasking';
 // CSV export - no PDF library needed
 
 // Custom theme with burgundy and gold
@@ -122,7 +123,7 @@ const CorporateKYCTable: React.FC = () => {
         };
       });
 
-      setForms(formsData);
+      setForms(formsData.map(form => maskSensitiveRecord(form)));
     } catch (error) {
       console.error('Error fetching forms:', error);
       toast({ title: 'Error fetching data', variant: 'destructive' });

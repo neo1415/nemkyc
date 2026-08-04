@@ -55,7 +55,7 @@ This feature integrates Google Gemini 2.5 Flash API for document OCR and verific
 
 #### Acceptance Criteria
 
-1. THE Gemini_API SHALL authenticate using the provided API key AIzaSyCaC6K3pvOiyzVzF3hsYmTovOJ-mp35-xg
+1. THE Gemini_API SHALL authenticate using the API key from environment variable GEMINI_API_KEY
 2. THE Gemini_API SHALL process documents using the 2.5 Flash model
 3. WHEN API rate limits are exceeded, THE Gemini_API SHALL implement exponential backoff retry logic
 4. WHEN API requests fail, THE Gemini_API SHALL log the error and return a user-friendly message
@@ -187,7 +187,7 @@ This feature integrates Google Gemini 2.5 Flash API for document OCR and verific
 
 #### Acceptance Criteria
 
-1. THE System_Configuration SHALL store the Gemini API key: AIzaSyCaC6K3pvOiyzVzF3hsYmTovOJ-mp35-xg
+1. THE System_Configuration SHALL store the Gemini API key in environment variable GEMINI_API_KEY
 2. THE System_Configuration SHALL encrypt API keys at rest using AES-256 encryption
 3. THE System_Configuration SHALL validate API key format before making requests
 4. WHEN API key is invalid or expired, THE System_Configuration SHALL alert administrators
