@@ -8,7 +8,7 @@
  */
 
 import { SimpleVerificationMatcher } from '../simpleVerificationMatcher';
-import { IndividualData } from '../../types/geminiDocumentVerification';
+import { CACData, IndividualData } from '../../types/geminiDocumentVerification';
 
 describe('SimpleVerificationMatcher - Nigerian NIN Name Matching', () => {
   let matcher: SimpleVerificationMatcher;
@@ -159,6 +159,57 @@ describe('SimpleVerificationMatcher - Nigerian NIN Name Matching', () => {
       expect(result.success).toBe(true);
       expect(result.isMatch).toBe(false);
       expect(result.mismatches.some(m => m.field === 'nin')).toBe(true);
+    });
+  });
+
+  describe('CAC registration number matching', () => {
+    test('uses the CDD companyName and rcNumber aliases', async () => {
+      const result = await matcher.verifyCACDocument({ companyName: 'NEM INSURANCE PLC', rcNumber: 'RC6971' }, {
+        companyName: 'NEM Insurance Plc',
+        rcNumber: '6971',
+      });
+      expect(result.isMatch).toBe(true);
+    });
+    test('matches equivalent RC formats from Document AI and the form', async () => {
+      const extractedData: CACData = {
+        companyName: 'NEM INSURANCE PLC',
+        rcNumber: 'RC6971',
+        registrationDate: '01/04/1970'
+      };
+
+      const result = await matcher.verifyCACDocument(extractedData, {
+        insured: 'NEM Insurance Plc',
+        cacNumber: '00 6971',
+        incorporationDate: '1970-04-01'
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.isMatch).toBe(true);
+      expect(result.mismatches).toHaveLength(0);
+    });
+
+    test('still rejects genuinely different registration numbers', async () => {
+      const result = await matcher.verifyCACDocument({ rcNumber: 'RC6971' }, {
+        cacNumber: 'RC6972'
+      });
+
+      expect(result.isMatch).toBe(false);
+      expect(result.mismatches).toEqual(expect.arrayContaining([
+        expect.objectContaining({ field: 'cacNumber', isCritical: true })
+      ]));
+    });
+  });
+
+  describe('NAICOM certificate matching', () => {
+    test('matches the licensed company name', async () => {
+      const result = await matcher.verifyNAICOMDocument({ companyName: 'NEM INSURANCE PLC' }, { companyName: 'NEM Insurance Plc' });
+      expect(result.isMatch).toBe(true);
+    });
+
+    test('rejects a certificate issued to another company', async () => {
+      const result = await matcher.verifyNAICOMDocument({ companyName: 'OTHER INSURANCE PLC' }, { companyName: 'NEM Insurance Plc' });
+      expect(result.isMatch).toBe(false);
+      expect(result.mismatches[0].field).toBe('companyName');
     });
   });
 

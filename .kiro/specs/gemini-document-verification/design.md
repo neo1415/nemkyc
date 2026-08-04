@@ -420,7 +420,7 @@ interface ProcessingLimits {
 ### Google Gemini 2.5 Flash Integration
 
 **Authentication**:
-- API Key: `AIzaSyCaC6K3pvOiyzVzF3hsYmTovOJ-mp35-xg`
+- API Key: `[REDACTED - Use environment variable GEMINI_API_KEY]`
 - Stored securely in environment variables with AES-256 encryption
 - Key validation on service initialization
 

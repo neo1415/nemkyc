@@ -130,7 +130,8 @@ service cloud.firestore {
       // Super admins can update any document (for role changes)
       // Tour fields: onboardingTourStep, onboardingTourStartedAt, onboardingTourLastAction, onboardingTourCompleted
       allow update: if request.auth != null && (
-        request.auth.uid == userId ||
+        (request.auth.uid == userId &&
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'email', 'uid', 'createdBy', 'createdAt'])) ||
         (exists(/databases/$(database)/documents/userroles/$(request.auth.uid)) &&
          get(/databases/$(database)/documents/userroles/$(request.auth.uid)).data.role in ['super admin', 'superAdmin', 'super-admin', 'SuperAdmin'])
       );
@@ -144,28 +145,28 @@ service cloud.firestore {
     // ========== KYC & CDD Collections ==========
 
     match /partners-kyc/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser();
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /individual-kyc/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser();
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /individual-kyc-forms/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser();
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /Individual-kyc-form/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser() && 
                       (request.resource.data.formType == 'kyc' || 
                        request.resource.data.formType == 'legacy');
@@ -174,14 +175,14 @@ service cloud.firestore {
     }
 
     match /corporate-kyc/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser();
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /corporate-kyc-form/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser() && 
                       (request.resource.data.formType == 'kyc' || 
                        request.resource.data.formType == 'legacy');
@@ -190,14 +191,14 @@ service cloud.firestore {
     }
 
     match /corporate-kyc-forms/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser();
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /agents-kyc/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser();
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();
@@ -205,7 +206,7 @@ service cloud.firestore {
 
     // NFIU Forms - Individual
     match /individual-nfiu-form/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser() && 
                       request.resource.data.formType == 'nfiu' &&
                       request.resource.data.formVariant == 'individual';
@@ -215,7 +216,7 @@ service cloud.firestore {
 
     // NFIU Forms - Corporate
     match /corporate-nfiu-form/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser() && 
                       request.resource.data.formType == 'nfiu' &&
                       request.resource.data.formVariant == 'corporate';
@@ -224,42 +225,42 @@ service cloud.firestore {
     }
 
     match /brokers-kyc/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser();
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /naicom-partners-cdd/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser();
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /naicom-corporate-cdd/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser();
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /brokers-cdd/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser();
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /agentsCDD/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser();
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /partnersCDD/{docId} {
-      allow read: if isAdminOrCompliance() || isClaims() || isDefault();
+      allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow create: if isAuthenticatedUser();
       allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
       allow delete: if isAdminOrSuperAdmin();

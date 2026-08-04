@@ -432,8 +432,8 @@ const BurglaryClaimForm: React.FC = () => {
       formType: 'Burglary Claim'
     };
 
-    await handleSubmitWithAuth(finalData, 'Burglary Claim');
-    clearDraft();
+    const submitted = await handleSubmitWithAuth(finalData, 'Burglary Claim');
+    if (submitted) clearDraft();
     setShowSummary(false);
   };
 

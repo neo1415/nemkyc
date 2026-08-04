@@ -325,7 +325,7 @@ const fetchMonthlyData = async (userRole: string): Promise<Array<{ month: string
   // Merge all month counts
   allMonthCounts.forEach(monthCounts => {
     Object.keys(monthCounts).forEach(month => {
-      if (monthlyData.hasOwnProperty(month)) {
+      if (Object.prototype.hasOwnProperty.call(monthlyData, month)) {
         monthlyData[month] += monthCounts[month];
       }
     });
@@ -407,10 +407,11 @@ const fetchAlerts = async (): Promise<SystemAlert[]> => {
 /**
  * Hook to get API health status
  */
-export const useHealthStatus = () => {
+export const useHealthStatus = (enabled = true) => {
   return useQuery({
     queryKey: ['healthStatus'],
     queryFn: fetchHealthStatus,
+    enabled,
     staleTime: 1000 * 60, // 1 minute cache
     gcTime: 1000 * 60 * 5, // 5 minutes garbage collection
     retry: 1,
@@ -422,10 +423,11 @@ export const useHealthStatus = () => {
 /**
  * Hook to get error rate statistics
  */
-export const useErrorRate = (hours: number = 24) => {
+export const useErrorRate = (hours: number = 24, enabled = true) => {
   return useQuery({
     queryKey: ['errorRate', hours],
     queryFn: () => fetchErrorRate(hours),
+    enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes cache
     gcTime: 1000 * 60 * 10, // 10 minutes garbage collection
     retry: 1,
@@ -436,10 +438,11 @@ export const useErrorRate = (hours: number = 24) => {
 /**
  * Hook to get API usage statistics
  */
-export const useAPIUsage = (period: 'day' | 'month' = 'day') => {
+export const useAPIUsage = (period: 'day' | 'month' = 'day', enabled = true) => {
   return useQuery({
     queryKey: ['apiUsage', period],
     queryFn: () => fetchAPIUsage(period),
+    enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes cache
     gcTime: 1000 * 60 * 10, // 10 minutes garbage collection
     retry: 1,
@@ -450,10 +453,11 @@ export const useAPIUsage = (period: 'day' | 'month' = 'day') => {
 /**
  * Hook to get system alerts
  */
-export const useSystemAlerts = () => {
+export const useSystemAlerts = (enabled = true) => {
   return useQuery({
     queryKey: ['systemAlerts'],
     queryFn: fetchAlerts,
+    enabled,
     staleTime: 1000 * 60, // 1 minute cache
     gcTime: 1000 * 60 * 5, // 5 minutes garbage collection
     retry: 1,

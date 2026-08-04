@@ -1,5 +1,6 @@
 import { collection, query, where, getDocs, Timestamp, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { COMPLIANCE_COLLECTION_NAMES, SUBMISSION_COLLECTION_NAMES } from '../config/submissionCatalog';
 
 export interface SubmissionCard {
   id: string;
@@ -20,47 +21,21 @@ export interface UserAnalytics {
 }
 
 // All form collections to query
-const FORM_COLLECTIONS = [
-  'motor-claims',
-  'fire-special-perils-claims',
-  'burglary-claims',
-  'all-risk-claims',
-  'goods-in-transit-claims',
-  'money-insurance-claims',
-  'public-liability-claims',
-  'employers-liability-claims',
-  'group-personal-accident-claims',
-  'fidelity-guarantee-claims',
-  'rent-assurance-claims',
-  'contractors-claims',
-  'combined-gpa-employers-liability-claims',
-  'professional-indemnity-claims',
-  'Individual-kyc-form',
-  'corporate-kyc-form',
-  'individual-kyc',
-  'corporate-kyc',
-  'brokers-kyc',
-  'agentsCDD',
-  'partnersCDD',
-  // NEM Smart Protection Claims - New collections
-  'smart-motorist-protection-claims',
-  'smart-students-protection-claims',
-  'smart-traveller-protection-claims',
-  'smart-artisan-protection-claims',
-  'smart-generation-z-protection-claims',
-  'nem-home-protection-claims'
-];
+const FORM_COLLECTIONS = SUBMISSION_COLLECTION_NAMES;
 
-// KYC form collections for categorization
-const KYC_COLLECTIONS = [
-  'Individual-kyc-form',
-  'corporate-kyc-form',
-  'individual-kyc',
-  'corporate-kyc',
-  'brokers-kyc',
-  'agentsCDD',
-  'partnersCDD'
-];
+const toSubmissionCard = (collectionName: string, id: string, data: any): SubmissionCard => {
+  const rawDate = data.submittedAt || data.createdAt || data.timestamp;
+  return {
+    id,
+    ticketId: data.ticketId || data.formId || id,
+    formType: data.formType || collectionName.replace(/[-_]/g, ' '),
+    submittedAt: rawDate instanceof Timestamp
+      ? rawDate.toDate()
+      : rawDate?.toDate?.() || new Date(rawDate || Date.now()),
+    status: data.status || 'processing',
+    collection: collectionName,
+  };
+};
 
 /**
  * Get all submissions for a user across all form collections
@@ -91,16 +66,7 @@ export const getUserSubmissions = async (userEmail: string): Promise<SubmissionC
       
       snapshot.docs.forEach(doc => {
         const data = doc.data();
-        submissions.push({
-          id: doc.id,
-          ticketId: data.ticketId || 'N/A',
-          formType: data.formType || collectionName,
-          submittedAt: data.submittedAt instanceof Timestamp 
-            ? data.submittedAt.toDate() 
-            : new Date(data.submittedAt || Date.now()),
-          status: data.status || 'processing',
-          collection: collectionName
-        });
+        submissions.push(toSubmissionCard(collectionName, doc.id, data));
       });
     } catch (error: any) {
       // Log the actual error for debugging
@@ -124,7 +90,7 @@ export const getUserAnalytics = (submissions: SubmissionCard[]): UserAnalytics =
   
   // Count KYC vs Claims forms
   const kycForms = submissions.filter(sub => 
-    KYC_COLLECTIONS.includes(sub.collection)
+    COMPLIANCE_COLLECTION_NAMES.has(sub.collection)
   ).length;
   const claimForms = totalSubmissions - kycForms;
   
@@ -194,16 +160,7 @@ export const subscribeToUserSubmissions = (
           snapshot.docs.forEach(doc => {
             const data = doc.data();
             const key = `${collectionName}-${doc.id}`;
-            submissionsMap.set(key, {
-              id: doc.id,
-              ticketId: data.ticketId || 'N/A',
-              formType: data.formType || collectionName,
-              submittedAt: data.submittedAt instanceof Timestamp 
-                ? data.submittedAt.toDate() 
-                : new Date(data.submittedAt || Date.now()),
-              status: data.status || 'processing',
-              collection: collectionName
-            });
+            submissionsMap.set(key, toSubmissionCard(collectionName, doc.id, data));
           });
 
           // Remove deleted documents

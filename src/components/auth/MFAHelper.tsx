@@ -10,16 +10,7 @@ interface MFAHelperProps {
  * Component to handle MFA redirects and state management
  */
 const MFAHelper: React.FC<MFAHelperProps> = ({ children }) => {
-  // Use try-catch to handle context issues gracefully
-  let authState;
-  try {
-    authState = useAuth();
-  } catch (error) {
-    console.warn('MFAHelper: AuthContext not available yet, rendering children without MFA logic');
-    return <>{children}</>;
-  }
-  
-  const { mfaRequired, mfaEnrollmentRequired, user, loading } = authState;
+  const { mfaRequired, mfaEnrollmentRequired, user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 

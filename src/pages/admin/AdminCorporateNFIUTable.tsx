@@ -9,6 +9,7 @@ import { collection, query, getDocs, orderBy, doc, deleteDoc } from 'firebase/fi
 import { db } from '../../firebase/config';
 import { useToast } from '../../hooks/use-toast';
 import { auditService } from '../../services/auditService';
+import { maskSensitiveRecord } from '../../utils/sensitiveDataMasking';
 
 const theme = createTheme({
   palette: {
@@ -95,7 +96,7 @@ const AdminCorporateNFIUTable: React.FC = () => {
         return dateB.getTime() - dateA.getTime();
       });
 
-      setNfiuForms(allForms);
+      setNfiuForms(allForms.map(form => maskSensitiveRecord(form)));
     } catch (error) {
       console.error('Error fetching Corporate NFIU forms:', error);
       toast({

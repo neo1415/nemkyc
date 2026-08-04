@@ -1,275 +1,88 @@
-/**
- * Property-Based Tests for Template Generation
- * 
- * Property 21: Template Download Completeness
- * For any template download request (Individual or Corporate), the generated Excel file 
- * must contain all required column headers in the first row, properly formatted.
- * 
- * Validates: Requirements 17.3, 17.4, 17.7
- */
-
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as fc from 'fast-check';
-import * as XLSX from 'xlsx';
-import { 
-  INDIVIDUAL_TEMPLATE_HEADERS, 
-  CORPORATE_TEMPLATE_HEADERS 
+import ExcelJS from 'exceljs';
+import {
+  CORPORATE_TEMPLATE_HEADERS,
+  INDIVIDUAL_TEMPLATE_HEADERS,
 } from '../../utils/templateGenerator';
+import { createExcelTemplateBuffer } from '../../utils/excelWorkbook';
 
-/**
- * Helper function to generate Excel workbook directly for testing
- * This bypasses the Blob creation to work in Node.js test environment
- */
-function generateTestWorkbook(type: 'individual' | 'corporate'): XLSX.WorkBook {
-  const headers = type === 'individual' 
-    ? INDIVIDUAL_TEMPLATE_HEADERS 
-    : CORPORATE_TEMPLATE_HEADERS;
-  
-  const worksheet = XLSX.utils.aoa_to_sheet([headers]);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
-  
-  return workbook;
+type TemplateType = 'individual' | 'corporate';
+
+async function readTemplate(type: TemplateType) {
+  const headersForType = type === 'individual' ? INDIVIDUAL_TEMPLATE_HEADERS : CORPORATE_TEMPLATE_HEADERS;
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(await createExcelTemplateBuffer(headersForType) as any);
+  const worksheet = workbook.worksheets[0];
+  const headers = (worksheet.getRow(1).values as unknown[])
+    .slice(1)
+    .map(value => String(value));
+  return { workbook, worksheet, headers };
 }
 
 describe('Property 21: Template Download Completeness', () => {
-  /**
-   * Property: For any template type (individual or corporate), the generated Excel file
-   * must contain all required headers in the first row
-   */
-  it('should generate Excel files with all required headers in first row', () => {
-    fc.assert(
-      fc.property(
-        fc.constantFrom('individual' as const, 'corporate' as const),
-        (templateType) => {
-          // Generate the workbook
-          const workbook = generateTestWorkbook(templateType);
-          
-          // Verify workbook has at least one sheet
-          expect(workbook.SheetNames.length).toBeGreaterThan(0);
-          
-          // Get the first sheet
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          
-          // Convert to array of arrays to check headers
-          const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
-          
-          // Verify we have at least one row (the header row)
-          expect(data.length).toBeGreaterThan(0);
-          
-          // Get the expected headers based on template type
-          const expectedHeaders = templateType === 'individual' 
-            ? INDIVIDUAL_TEMPLATE_HEADERS 
-            : CORPORATE_TEMPLATE_HEADERS;
-          
-          // Verify first row contains all expected headers
-          const actualHeaders = data[0];
-          expect(actualHeaders).toEqual(expectedHeaders);
-          
-          // Verify all headers are present
-          expectedHeaders.forEach((header) => {
-            expect(actualHeaders).toContain(header);
-          });
-          
-          // Verify no extra headers
-          expect(actualHeaders.length).toBe(expectedHeaders.length);
-          
-          return true;
-        }
-      ),
-      { numRuns: 10 } // Run 10 times (5 for each template type)
-    );
+  it('generates the correct first-row headers for every template type', async () => {
+    await fc.assert(fc.asyncProperty(
+      fc.constantFrom<TemplateType>('individual', 'corporate'),
+      async type => {
+        const { headers } = await readTemplate(type);
+        const expected = type === 'individual'
+          ? INDIVIDUAL_TEMPLATE_HEADERS
+          : CORPORATE_TEMPLATE_HEADERS;
+        expect(headers).toEqual(expected);
+      },
+    ), { numRuns: 6 });
   });
 
-  /**
-   * Property: Individual template must contain all required columns for individual clients
-   */
-  it('should generate Individual template with all required columns', () => {
-    const workbook = generateTestWorkbook('individual');
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
-    const headers = data[0];
-    
-    // Verify all required individual columns are present
-    const requiredColumns = [
-      'Title',
-      'First Name',
-      'Last Name',
-      'Phone Number',
-      'Email',
-      'Address',
-      'Gender',
-      'Policy Number',
-      'BVN',
-    ];
-    
-    requiredColumns.forEach((col) => {
-      expect(headers).toContain(col);
+  it('includes every required Individual column', async () => {
+    const { headers } = await readTemplate('individual');
+    [
+      'Title', 'First Name', 'Last Name', 'Phone Number', 'Email', 'Address',
+      'Gender', 'Policy Number', 'BVN', 'Date of Birth', 'Occupation',
+      'Nationality', 'NIN',
+    ].forEach(column => expect(headers).toContain(column));
+  });
+
+  it('includes every required Corporate column', async () => {
+    const { headers } = await readTemplate('corporate');
+    [
+      'Company Name', 'Company Address', 'Email Address', 'Company Type',
+      'Phone Number', 'Policy Number', 'Registration Number',
+      'Registration Date', 'Business Address', 'CAC',
+    ].forEach(column => expect(headers).toContain(column));
+  });
+
+  it('creates exactly one sheet named Template', async () => {
+    const { workbook } = await readTemplate('individual');
+    expect(workbook.worksheets).toHaveLength(1);
+    expect(workbook.worksheets[0].name).toBe('Template');
+  });
+
+  it('creates only the header row', async () => {
+    const { worksheet } = await readTemplate('corporate');
+    expect(worksheet.rowCount).toBe(1);
+  });
+
+  it('uses non-empty, unique string headers', async () => {
+    const { headers } = await readTemplate('individual');
+    headers.forEach(header => {
+      expect(typeof header).toBe('string');
+      expect(header.trim().length).toBeGreaterThan(0);
     });
-    
-    // Verify optional columns are present
-    const optionalColumns = [
-      'Date of Birth',
-      'Occupation',
-      'Nationality',
-      'NIN'
-    ];
-    
-    optionalColumns.forEach((col) => {
-      expect(headers).toContain(col);
-    });
+    expect(new Set(headers.map(header => header.toLowerCase())).size).toBe(headers.length);
   });
 
-  /**
-   * Property: Corporate template must contain all required columns for corporate clients
-   */
-  it('should generate Corporate template with all required columns', () => {
-    const workbook = generateTestWorkbook('corporate');
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
-    const headers = data[0];
-    
-    // Verify all required corporate columns are present
-    const requiredColumns = [
-      'Company Name',
-      'Company Address',
-      'Email Address',
-      'Company Type',
-      'Phone Number',
-      'Policy Number',
-      'Registration Number',
-      'Registration Date',
-      'Business Address',
-    ];
-    
-    requiredColumns.forEach((col) => {
-      expect(headers).toContain(col);
-    });
-    
-    // Verify optional columns are present
-    expect(headers).toContain('CAC');
+  it('uses the exported header contracts', async () => {
+    expect((await readTemplate('individual')).headers).toEqual(INDIVIDUAL_TEMPLATE_HEADERS);
+    expect((await readTemplate('corporate')).headers).toEqual(CORPORATE_TEMPLATE_HEADERS);
   });
 
-  /**
-   * Property: Generated templates should have exactly one sheet named "Template"
-   */
-  it('should generate workbook with single sheet named "Template"', () => {
-    fc.assert(
-      fc.property(
-        fc.constantFrom('individual' as const, 'corporate' as const),
-        (templateType) => {
-          const workbook = generateTestWorkbook(templateType);
-          
-          // Verify exactly one sheet
-          expect(workbook.SheetNames.length).toBe(1);
-          
-          // Verify sheet is named "Template"
-          expect(workbook.SheetNames[0]).toBe('Template');
-          
-          return true;
-        }
-      ),
-      { numRuns: 10 }
-    );
-  });
-
-  /**
-   * Property: Generated templates should have only headers (no data rows)
-   */
-  it('should generate templates with only header row (no data)', () => {
-    fc.assert(
-      fc.property(
-        fc.constantFrom('individual' as const, 'corporate' as const),
-        (templateType) => {
-          const workbook = generateTestWorkbook(templateType);
-          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-          const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
-          
-          // Should have exactly 1 row (the header row)
-          expect(data.length).toBe(1);
-          
-          return true;
-        }
-      ),
-      { numRuns: 10 }
-    );
-  });
-
-  /**
-   * Property: Headers should be strings and non-empty
-   */
-  it('should generate templates with valid string headers', () => {
-    fc.assert(
-      fc.property(
-        fc.constantFrom('individual' as const, 'corporate' as const),
-        (templateType) => {
-          const workbook = generateTestWorkbook(templateType);
-          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-          const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
-          const headers = data[0];
-          
-          // All headers should be strings
-          headers.forEach((header) => {
-            expect(typeof header).toBe('string');
-            expect(header.length).toBeGreaterThan(0);
-          });
-          
-          return true;
-        }
-      ),
-      { numRuns: 10 }
-    );
-  });
-
-  /**
-   * Property: Template headers should match exported constants
-   */
-  it('should use correct header constants for each template type', () => {
-    const individualWorkbook = generateTestWorkbook('individual');
-    const corporateWorkbook = generateTestWorkbook('corporate');
-    
-    const individualSheet = individualWorkbook.Sheets[individualWorkbook.SheetNames[0]];
-    const corporateSheet = corporateWorkbook.Sheets[corporateWorkbook.SheetNames[0]];
-    
-    const individualData = XLSX.utils.sheet_to_json(individualSheet, { header: 1 }) as string[][];
-    const corporateData = XLSX.utils.sheet_to_json(corporateSheet, { header: 1 }) as string[][];
-    
-    // Verify Individual template uses INDIVIDUAL_TEMPLATE_HEADERS
-    expect(individualData[0]).toEqual(INDIVIDUAL_TEMPLATE_HEADERS);
-    
-    // Verify Corporate template uses CORPORATE_TEMPLATE_HEADERS
-    expect(corporateData[0]).toEqual(CORPORATE_TEMPLATE_HEADERS);
-  });
-
-  /**
-   * Property: Individual and Corporate templates should have different headers
-   */
-  it('should generate different headers for Individual vs Corporate templates', () => {
-    const individualWorkbook = generateTestWorkbook('individual');
-    const corporateWorkbook = generateTestWorkbook('corporate');
-    
-    const individualSheet = individualWorkbook.Sheets[individualWorkbook.SheetNames[0]];
-    const corporateSheet = corporateWorkbook.Sheets[corporateWorkbook.SheetNames[0]];
-    
-    const individualData = XLSX.utils.sheet_to_json(individualSheet, { header: 1 }) as string[][];
-    const corporateData = XLSX.utils.sheet_to_json(corporateSheet, { header: 1 }) as string[][];
-    
-    const individualHeaders = individualData[0];
-    const corporateHeaders = corporateData[0];
-    
-    // Headers should be different
-    expect(individualHeaders).not.toEqual(corporateHeaders);
-    
-    // Individual should have "First Name", "Last Name"
-    expect(individualHeaders).toContain('First Name');
-    expect(individualHeaders).toContain('Last Name');
-    
-    // Corporate should have "Company Name"
-    expect(corporateHeaders).toContain('Company Name');
-    
-    // Corporate should NOT have "First Name", "Last Name"
-    expect(corporateHeaders).not.toContain('First Name');
-    expect(corporateHeaders).not.toContain('Last Name');
+  it('keeps Individual and Corporate schemas distinct', async () => {
+    const individual = (await readTemplate('individual')).headers;
+    const corporate = (await readTemplate('corporate')).headers;
+    expect(individual).not.toEqual(corporate);
+    expect(individual).toContain('First Name');
+    expect(corporate).toContain('Company Name');
+    expect(corporate).not.toContain('First Name');
   });
 });

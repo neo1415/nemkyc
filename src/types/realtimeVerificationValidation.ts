@@ -48,7 +48,14 @@ export type FormTypeWithValidation =
   | 'Corporate KYC' 
   | 'Corporate NFIU' 
   | 'Individual KYC' 
-  | 'Individual NFIU';
+  | 'Individual NFIU'
+  | 'Individual CDD'
+  | 'Agents CDD'
+  | 'Corporate CDD'
+  | 'NAICOM Corporate CDD'
+  | 'Partners CDD'
+  | 'NAICOM Partners CDD'
+  | 'Brokers CDD';
 
 // ============================================================================
 // Field Configuration Interfaces

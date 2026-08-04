@@ -208,6 +208,12 @@ export class GeminiOCREngine {
    * Validate API key format and availability
    */
   async validateApiKey(): Promise<boolean> {
+    // Browser clients call the backend proxy; production credentials must never
+    // be embedded in the Vite bundle.
+    if (this.config.apiKey === 'backend-managed') {
+      return true;
+    }
+
     if (!this.config.apiKey || this.config.apiKey.length < 10) {
       console.error('Gemini API key is missing or too short:', this.config.apiKey?.length || 0, 'characters');
       return false;

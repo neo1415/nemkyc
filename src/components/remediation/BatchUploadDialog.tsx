@@ -28,8 +28,8 @@ import {
 } from '@mui/material';
 import { CloudUpload, CheckCircle, Error as ErrorIcon } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
-import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
+import { parseExcelRecords } from '@/utils/excelWorkbook';
 import type { ParsedUploadRow, IdentityType } from '@/types/remediation';
 import { formatDate } from '../../utils/dateFormatter';
 
@@ -185,23 +185,13 @@ const BatchUploadDialog: React.FC<BatchUploadDialogProps> = ({
             reject(new Error(`CSV parsing error: ${error.message}`));
           },
         });
-      } else if (extension === 'xlsx' || extension === 'xls') {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const data = new Uint8Array(e.target?.result as ArrayBuffer);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-            resolve(jsonData as Record<string, any>[]);
-          } catch (err) {
-            reject(new Error('Failed to parse Excel file'));
-          }
-        };
-        reader.onerror = () => reject(new Error('Failed to read file'));
-        reader.readAsArrayBuffer(file);
+      } else if (extension === 'xlsx') {
+        file.arrayBuffer()
+          .then(parseExcelRecords)
+          .then(rows => resolve(rows as Record<string, any>[]))
+          .catch(error => reject(new Error(error instanceof Error ? error.message : 'Failed to parse Excel file')));
       } else {
-        reject(new Error('Unsupported file format. Please upload CSV or Excel file.'));
+        reject(new Error('Unsupported file format. Please upload CSV or Excel (.xlsx) file.'));
       }
     });
   };
@@ -264,7 +254,6 @@ const BatchUploadDialog: React.FC<BatchUploadDialogProps> = ({
     accept: {
       'text/csv': ['.csv'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-      'application/vnd.ms-excel': ['.xls'],
     },
     maxFiles: 1,
     disabled: loading,
@@ -346,7 +335,7 @@ const BatchUploadDialog: React.FC<BatchUploadDialogProps> = ({
                   : 'Drag & drop a file here, or click to select'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Supported formats: Excel (.xlsx, .xls) or CSV (.csv)
+                Supported formats: Excel (.xlsx) or CSV (.csv)
               </Typography>
             </Box>
 

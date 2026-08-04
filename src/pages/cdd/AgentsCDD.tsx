@@ -19,14 +19,16 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
 import FormLoadingModal from '@/components/common/FormLoadingModal';
 import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import DatePicker from '@/components/common/DatePicker';
+import VerifiedDocumentUpload from '@/components/common/VerifiedDocumentUpload';
+import VerifiedIdentifierField from '@/components/common/VerifiedIdentifierField';
 
 const agentsCDDSchema = yup.object().shape({
   // Personal Info
@@ -338,6 +340,9 @@ const AgentsCDD: React.FC = () => {
     showLoading,
     loadingMessage,
     showSuccess,
+    showError,
+    errorMessage,
+    closeError,
     confirmSubmit,
     closeSuccess,
     formData: submissionData,
@@ -537,12 +542,7 @@ const AgentsCDD: React.FC = () => {
               required={true}
               maxLength={11}
             />
-            <FormField
-              name="NINNumber"
-              label="NIN (National Identification Number)"
-              required={true}
-              maxLength={11}
-            />
+            <VerifiedIdentifierField name="NINNumber" label="NIN (National Identification Number)" formId="cdd-agents" formType="Agents CDD" identifierType="NIN" required maxLength={11} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -709,63 +709,27 @@ const AgentsCDD: React.FC = () => {
 
           <h3 className="text-lg font-semibold mt-6">Required Documents</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Upload Agent ID <span className="required-asterisk">*</span></Label>
-              <FileUpload
-                accept=".png,.jpg,.jpeg,.pdf"
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({
-                    ...prev,
-                    agentId: file
-                  }));
-                  formMethods.setValue('agentId', file);
-                  if (formMethods.formState.errors.agentId) {
-                    formMethods.clearErrors('agentId');
-                  }
-                }}
-                maxSize={5}
-              />
-              {uploadedFiles.agentId && (
-                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                  <Check className="h-4 w-4" />
-                  {uploadedFiles.agentId.name}
-                </div>
-              )}
-              {formMethods.formState.errors.agentId && (
-                <p className="text-sm text-destructive">
-                  {formMethods.formState.errors.agentId.message?.toString()}
-                </p>
-              )}
-            </div>
+            <VerifiedDocumentUpload
+              fieldName="agentId"
+              formId="cdd-agents"
+              label="Upload Agent ID"
+              documentType="individual"
+              verificationFormData={{ fullName: [watchedValues.firstName, watchedValues.middleName, watchedValues.lastName].filter(Boolean).join(' '), dateOfBirth: watchedValues.dateOfBirth, nin: watchedValues.NINNumber, gender: watchedValues.gender }}
+              formMethods={formMethods}
+              uploadedFiles={uploadedFiles}
+              setUploadedFiles={setUploadedFiles}
+            />
 
-            <div>
-              <Label>Upload NAICOM Certificate <span className="required-asterisk">*</span></Label>
-              <FileUpload
-                accept=".png,.jpg,.jpeg,.pdf"
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({
-                    ...prev,
-                    naicomCertificate: file
-                  }));
-                  formMethods.setValue('naicomCertificate', file);
-                  if (formMethods.formState.errors.naicomCertificate) {
-                    formMethods.clearErrors('naicomCertificate');
-                  }
-                }}
-                maxSize={5}
-              />
-              {uploadedFiles.naicomCertificate && (
-                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                  <Check className="h-4 w-4" />
-                  {uploadedFiles.naicomCertificate.name}
-                </div>
-              )}
-              {formMethods.formState.errors.naicomCertificate && (
-                <p className="text-sm text-destructive">
-                  {formMethods.formState.errors.naicomCertificate.message?.toString()}
-                </p>
-              )}
-            </div>
+            <VerifiedDocumentUpload
+              fieldName="naicomCertificate"
+              formId="cdd-agents-naicom"
+              label="NAICOM Certificate"
+              documentType="naicom"
+              verificationFormData={{ companyName: watchedValues.agentsName }}
+              formMethods={formMethods}
+              uploadedFiles={uploadedFiles}
+              setUploadedFiles={setUploadedFiles}
+            />
           </div>
         </div>
       )
@@ -1137,6 +1101,7 @@ const AgentsCDD: React.FC = () => {
           title="Agents CDD Submitted Successfully!"
           message="Your Agents Customer Due Diligence form has been submitted successfully."
         />
+        <ErrorModal isOpen={showError} onClose={closeError} title="Submission Error" message={errorMessage} />
       </div>
     </div>
   );

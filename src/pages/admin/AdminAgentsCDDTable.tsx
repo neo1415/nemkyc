@@ -4,7 +4,7 @@ import AdminUnifiedTable from './AdminUnifiedTable';
 const AdminAgentsCDDTable: React.FC = () => {
   return (
     <AdminUnifiedTable 
-      collectionName="agents-kyc"
+      collectionName="agentsCDD"
       title="Agents CDD Management"
       isClaim={false}
     />

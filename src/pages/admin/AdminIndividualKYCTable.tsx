@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { collection, query, getDocs, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useToast } from '../../hooks/use-toast';
+import { maskSensitiveRecord } from '../../utils/sensitiveDataMasking';
 // CSV export - no PDF library needed
 
 const theme = createTheme({
@@ -57,7 +58,7 @@ const AdminIndividualKYCTable: React.FC = () => {
         };
       });
 
-      setKycForms(forms);
+      setKycForms(forms.map(form => maskSensitiveRecord(form)));
     } catch (error) {
       console.error('Error fetching Individual KYC forms:', error);
       toast({

@@ -489,8 +489,8 @@ const CombinedGPAEmployersLiabilityClaim: React.FC = () => {
       formType: 'Combined GPA Employers Liability Claim'
     };
 
-    await handleSubmitWithAuth(finalData, 'Combined GPA Employers Liability Claim');
-    clearDraft();
+    const submitted = await handleSubmitWithAuth(finalData, 'Combined GPA Employers Liability Claim');
+    if (submitted) clearDraft();
     setShowSummary(false);
   };
 

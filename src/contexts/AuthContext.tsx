@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { 
   User as FirebaseUser, 
   signInWithEmailAndPassword,
@@ -22,6 +22,7 @@ import { User } from '../types';
 import { normalizeRole, isAdminRole, rolesMatch } from '../utils/roleNormalization';
 import { exchangeToken } from '../services/authService';
 import { toast } from 'sonner';
+import { secureStorageGet, secureStorageRemove, secureStorageSet } from '../utils/secureStorage';
 
 interface AuthContextType {
   user: User | null;
@@ -37,8 +38,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   hasRole: (role: string) => boolean;
   isAdmin: () => boolean;
-  saveFormDraft: (formType: string, data: any) => void;
-  getFormDraft: (formType: string) => any;
+  saveFormDraft: (formType: string, data: any) => Promise<void>;
+  getFormDraft: (formType: string) => Promise<any>;
   clearFormDraft: (formType: string) => void;
   sendVerificationEmail: () => Promise<void>;
   checkEmailVerification: () => Promise<boolean>;
@@ -825,41 +826,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Secure storage functions for form drafts
   // ✅ FIXED: Now uses proper AES-GCM encryption
-  const saveFormDraft = (formType: string, data: any) => {
+  const saveFormDraft = useCallback(async (formType: string, data: any) => {
     try {
-      // Use dynamic import for secure storage with proper encryption
-      import('../utils/secureStorage').then(async ({ secureStorageSet }) => {
-        const key = `formDraft_${formType}`;
-        await secureStorageSet(key, data);
-      });
+      await secureStorageSet(`formDraft_${formType}`, data);
     } catch (error) {
       console.error('Error saving form draft:', error);
     }
-  };
+  }, []);
 
-  const getFormDraft = (formType: string) => {
+  const getFormDraft = useCallback(async (formType: string) => {
     try {
-      // Use secure storage with proper decryption
-      import('../utils/secureStorage').then(async ({ secureStorageGet }) => {
-        const key = `formDraft_${formType}`;
-        return await secureStorageGet(key);
-      });
+      return await secureStorageGet(`formDraft_${formType}`);
     } catch (error) {
       console.error('Error getting form draft:', error);
       return null;
     }
-  };
+  }, []);
 
-  const clearFormDraft = (formType: string) => {
+  const clearFormDraft = useCallback((formType: string) => {
     try {
-      import('../utils/secureStorage').then(({ secureStorageRemove }) => {
-        const key = `formDraft_${formType}`;
-        secureStorageRemove(key);
-      });
+      secureStorageRemove(`formDraft_${formType}`);
     } catch (error) {
       console.error('Error clearing form draft:', error);
     }
-  };
+  }, []);
 
   const value = {
     user,

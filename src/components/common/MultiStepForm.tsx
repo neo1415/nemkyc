@@ -3,6 +3,7 @@ import { FormProvider } from 'react-hook-form';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface Step {
   id: string;
@@ -37,6 +38,40 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [isValidating, setIsValidating] = useState(false);
 
+  const describeValidationErrors = (errors: Record<string, any>) => {
+    const messages: string[] = [];
+
+    const visit = (value: any) => {
+      if (!value || messages.length >= 3) return;
+      if (typeof value.message === 'string') {
+        messages.push(value.message);
+        return;
+      }
+      if (typeof value === 'object') Object.values(value).forEach(visit);
+    };
+
+    visit(errors);
+    return messages.length > 0
+      ? messages.join(' ')
+      : 'Please complete the highlighted required fields before continuing.';
+  };
+
+  const showValidationErrors = (errors = formMethods.formState.errors) => {
+    toast({
+      title: 'Please review the form',
+      description: describeValidationErrors(errors),
+      variant: 'destructive'
+    });
+
+    window.setTimeout(() => {
+      const firstInvalidField = document.querySelector<HTMLElement>(
+        '[aria-invalid="true"], [data-invalid="true"], .text-destructive'
+      );
+      firstInvalidField?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if ('focus' in (firstInvalidField || {})) firstInvalidField?.focus();
+    }, 0);
+  };
+
   const nextStep = async () => {
     // Use custom validation function if provided
     if (validateStep) {
@@ -44,7 +79,8 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
       if (currentStepId) {
         const isValid = await validateStep(currentStepId);
         if (!isValid) {
-          return; // validateStep function handles error display
+          showValidationErrors();
+          return;
         }
       }
     } else if (stepFieldMappings) {
@@ -55,14 +91,7 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
         const isValid = await formMethods.trigger(currentStepFields);
         
         if (!isValid) {
-          // Use toast if available
-          if (typeof window !== 'undefined' && (window as any).toast) {
-            (window as any).toast({
-              title: "Validation Error",
-              description: "Please fill all required fields before proceeding",
-              variant: "destructive"
-            });
-          }
+          showValidationErrors();
           return;
         }
       }
@@ -71,14 +100,7 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
       const isValid = await formMethods.trigger();
       
       if (!isValid) {
-        // Use toast if available
-        if (typeof window !== 'undefined' && (window as any).toast) {
-          (window as any).toast({
-            title: "Validation Error",
-            description: "Please fill all required fields before proceeding",
-            variant: "destructive"
-          });
-        }
+        showValidationErrors();
         return;
       }
     }
@@ -160,19 +182,17 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
                     (errors) => {
                       console.error('Form validation failed with errors:', errors);
                       setIsValidating(false);
-                      // Show toast for validation errors
-                      if ((window as any).toast) {
-                        (window as any).toast({
-                          title: 'Validation Error',
-                          description: 'Please fix the errors in the form before submitting.',
-                          variant: 'destructive'
-                        });
-                      }
+                      showValidationErrors(errors);
                     }
                   )();
                 } catch (error) {
                   console.error('Error during form submission:', error);
                   setIsValidating(false);
+                  toast({
+                    title: 'We could not validate your form',
+                    description: 'Your entries are still saved. Please review the highlighted fields and try again.',
+                    variant: 'destructive'
+                  });
                 }
               }}
               disabled={!canProceed || isSubmitting || isValidating}

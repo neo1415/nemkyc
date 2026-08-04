@@ -50,6 +50,7 @@ import {
 import { db } from '@/firebase/config';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
 import { FORM_MAPPINGS } from '@/config/formMappings';
+import { maskSensitiveRecord } from '@/utils/sensitiveDataMasking';
 
 // Custom theme with burgundy and gold
 const theme = createTheme({
@@ -152,7 +153,7 @@ const fetchForms = async () => {
     });
 
     console.log(`AdminUnifiedTable: Processed ${formsData.length} forms`);
-    setForms(formsData);
+    setForms(formsData.map(form => maskSensitiveRecord(form)));
 
     if (formsData.length > 0) {
       generateColumns(formsData);
@@ -327,13 +328,15 @@ const fetchForms = async () => {
   // Collection to form mapping (handles overlapping collections)
   const getFormMappingKey = (collectionName: string, formData?: FormData): string => {
     const collectionMappings: Record<string, string | ((data: FormData) => string)> = {
-      'agents-kyc': 'agents-c-d-d',
-      'brokers-kyc': 'brokers-c-d-d',
-      'corporate-kyc': 'corporate-c-d-d',
-      'individual-kyc': 'individual-c-d-d',
-      'partners-kyc': 'partners-c-d-d',
-      'Individual-kyc-form': 'Individual-kyc-form',
-      'corporate-kyc-form': 'corporate-k-y-c',
+      'agents-kyc': 'agents-kyc',
+      'agentsCDD': 'agents-kyc',
+      'brokers-kyc': 'brokers-kyc',
+      'corporate-kyc': 'corporate-cdd',
+      'individual-kyc': 'individual-cdd',
+      'partners-kyc': 'partners-kyc',
+      'partnersCDD': 'partners-kyc',
+      'Individual-kyc-form': 'individual-cdd',
+      'corporate-kyc-form': 'corporate-kyc',
       'corporate-nfiu-form': 'corporate-nfiu-form',
       'naicom-corporate-cdd': 'naicom-corporate-c-d-d',
       'naicom-partners-cdd': 'naicom-partners-c-d-d',

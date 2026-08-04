@@ -357,8 +357,8 @@ const GroupPersonalAccidentClaim: React.FC = () => {
       formType: 'Group Personal Accident Claim'
     };
 
-    await handleSubmitWithAuth(finalData, 'Group Personal Accident Claim');
-    clearDraft();
+    const submitted = await handleSubmitWithAuth(finalData, 'Group Personal Accident Claim');
+    if (submitted) clearDraft();
     setShowSummary(false);
   };
 

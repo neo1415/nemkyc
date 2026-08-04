@@ -190,7 +190,7 @@ export function generateFormSummary(
  */
 const getNestedValue = (obj: any, path: string): any => {
   // Try direct key first
-  if (obj.hasOwnProperty(path)) {
+  if (Object.prototype.hasOwnProperty.call(obj, path)) {
     return obj[path];
   }
 

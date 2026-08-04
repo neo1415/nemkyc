@@ -218,6 +218,96 @@ describe('DocumentUploadSection - Success UI Display', () => {
     expect(finalStatus).toBe('verified');
   });
 
+  it('keeps the selected file and a useful failure message visible after a mismatch', async () => {
+    const mismatchResult: VerificationResult = {
+      success: true,
+      isMatch: false,
+      confidence: 0,
+      mismatches: [{
+        field: 'companyName',
+        extractedValue: 'ANOTHER COMPANY LTD',
+        expectedValue: 'NEM INSURANCE PLC',
+        similarity: 0,
+        isCritical: true,
+        reason: 'Company names do not match'
+      }]
+    };
+
+    vi.mocked(documentProcessor.processDocument).mockResolvedValue({
+      success: true,
+      processingId: 'mismatch_123',
+      verificationResult: mismatchResult,
+      extractedData: { companyName: 'ANOTHER COMPANY LTD' }
+    });
+
+    const onFileSelect = vi.fn();
+    const onStatusChange = vi.fn();
+    const { container } = render(
+      <DocumentUploadSection
+        formId="test-form"
+        documentType="cac"
+        formData={{ insured: 'NEM INSURANCE PLC' }}
+        onFileSelect={onFileSelect}
+        onStatusChange={onStatusChange}
+      />
+    );
+
+    const testFile = new File(['test content'], 'nem-cac.pdf', { type: 'application/pdf' });
+    fireEvent.change(container.querySelector('input[type="file"]') as HTMLInputElement, {
+      target: { files: [testFile] }
+    });
+
+    // The parent receives the file as soon as it is accepted, rather than only
+    // after verification succeeds.
+    expect(onFileSelect).toHaveBeenCalledWith(testFile);
+
+    await waitFor(() => {
+      expect(screen.getByText('Document Verification Failed')).toBeInTheDocument();
+      expect(screen.getByText('nem-cac.pdf')).toBeInTheDocument();
+      expect(screen.getByText('Company names do not match')).toBeInTheDocument();
+    }, { timeout: 10000 });
+
+    const statusCalls = onStatusChange.mock.calls.map(call => call[0]);
+    expect(statusCalls.at(-1)).toBe('failed');
+    expect(screen.queryByText(/Upload your CAC certificate here/i)).not.toBeInTheDocument();
+  });
+
+  it('lets the customer remove a failed file and choose a replacement', async () => {
+    vi.mocked(documentProcessor.processDocument).mockResolvedValue({
+      success: false,
+      processingId: 'failed_123',
+      error: 'This is not the requested document.'
+    });
+
+    const onFileRemove = vi.fn();
+    const onStatusChange = vi.fn();
+    const { container } = render(
+      <DocumentUploadSection
+        formId="test-form"
+        documentType="individual"
+        formData={{ firstName: 'Ada', lastName: 'Okafor' }}
+        onFileRemove={onFileRemove}
+        onStatusChange={onStatusChange}
+      />
+    );
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const wrongFile = new File(['wrong content'], 'wrong-document.pdf', { type: 'application/pdf' });
+    fireEvent.change(fileInput, { target: { files: [wrongFile] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Document Verification Failed')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /choose a different document/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /choose a different document/i }));
+
+    expect(onFileRemove).toHaveBeenCalledOnce();
+    expect(onStatusChange).toHaveBeenLastCalledWith('idle');
+    expect(fileInput.value).toBe('');
+    expect(screen.queryByText('Document Verification Failed')).not.toBeInTheDocument();
+  });
+
   it('should restore verified state when currentFile and verificationResult are provided', () => {
     // Arrange: Create a file and verification result
     const testFile = new File(['test content'], 'test-document.pdf', { type: 'application/pdf' });

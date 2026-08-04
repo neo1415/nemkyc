@@ -224,6 +224,12 @@ export const INDIVIDUAL_NFIU_NIN_FIELDS_CONFIG: FieldValidationConfig[] = [
   }
 ];
 
+const corporateCDDFields = (dateField: string, addressField: string): FieldValidationConfig[] => [
+  { fieldName: 'companyName', fieldLabel: 'Company Name', verificationKey: 'name', normalizer: normalizeCompanyName },
+  { fieldName: dateField, fieldLabel: 'Incorporation Date', verificationKey: 'registrationDate', normalizer: normalizeDate },
+  { fieldName: addressField, fieldLabel: 'Registered Address', verificationKey: 'address', normalizer: normalizeText },
+];
+
 // ============================================================================
 // Form Type Configuration Map
 // ============================================================================
@@ -257,6 +263,27 @@ export const FIELD_VALIDATION_CONFIGS: Record<FormTypeWithValidation, FormValida
     identifierFieldName: 'NIN',
     identifierType: 'NIN',
     fieldsToValidate: INDIVIDUAL_NFIU_NIN_FIELDS_CONFIG
+  },
+  'Individual CDD': {
+    identifierFieldName: 'NINNumber', identifierType: 'NIN', fieldsToValidate: NIN_FIELDS_CONFIG
+  },
+  'Agents CDD': {
+    identifierFieldName: 'NINNumber', identifierType: 'NIN', fieldsToValidate: NIN_FIELDS_CONFIG
+  },
+  'Corporate CDD': {
+    identifierFieldName: 'cacNumber', identifierType: 'CAC', fieldsToValidate: corporateCDDFields('dateOfIncorporationRegistration', 'registeredCompanyAddress')
+  },
+  'NAICOM Corporate CDD': {
+    identifierFieldName: 'cacNumber', identifierType: 'CAC', fieldsToValidate: corporateCDDFields('dateOfIncorporationRegistration', 'registeredCompanyAddress')
+  },
+  'Partners CDD': {
+    identifierFieldName: 'incorporationNumber', identifierType: 'CAC', fieldsToValidate: corporateCDDFields('incorporationDate', 'registeredAddress')
+  },
+  'NAICOM Partners CDD': {
+    identifierFieldName: 'incorporationNumber', identifierType: 'CAC', fieldsToValidate: corporateCDDFields('incorporationDate', 'registeredAddress')
+  },
+  'Brokers CDD': {
+    identifierFieldName: 'incorporationNumber', identifierType: 'CAC', fieldsToValidate: corporateCDDFields('dateOfIncorporationRegistration', 'companyAddress')
   }
 };
 

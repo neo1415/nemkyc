@@ -19,14 +19,16 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
 import FormLoadingModal from '@/components/common/FormLoadingModal';
 import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import DatePicker from '@/components/common/DatePicker';
+import VerifiedDocumentUpload from '@/components/common/VerifiedDocumentUpload';
+import VerifiedIdentifierField from '@/components/common/VerifiedIdentifierField';
 
 const brokersCDDSchema = yup.object().shape({
   // Company Info
@@ -374,6 +376,9 @@ const BrokersCDD: React.FC = () => {
     showLoading,
     loadingMessage,
     showSuccess,
+    showError,
+    errorMessage,
+    closeError,
     confirmSubmit,
     closeSuccess,
     formData: submissionData,
@@ -531,11 +536,7 @@ const BrokersCDD: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField
-              name="incorporationNumber"
-              label="Incorporation/RC Number"
-              required={true}
-            />
+            <VerifiedIdentifierField name="incorporationNumber" label="Incorporation/RC Number" formId="cdd-brokers" formType="Brokers CDD" identifierType="CAC" required />
             <FormField
               name="registrationNumber"
               label="Registration Number"
@@ -932,108 +933,51 @@ const BrokersCDD: React.FC = () => {
           </div>
           
           <div className="space-y-4">
-            <div>
-              <Label>Certificate of Incorporation <span className="required-asterisk">*</span></Label>
-              <FileUpload
-                accept=".png,.jpg,.jpeg,.pdf"
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({
-                    ...prev,
-                    Incorporation: file
-                  }));
-                  formMethods.setValue('Incorporation', file);
-                  if (formMethods.formState.errors.Incorporation) {
-                    formMethods.clearErrors('Incorporation');
-                  }
-                }}
-                maxSize={5}
-              />
-              {uploadedFiles.Incorporation && (
-                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                  <Check className="h-4 w-4" />
-                  {uploadedFiles.Incorporation.name}
-                </div>
-              )}
-              {formMethods.formState.errors.Incorporation && (
-                <p className="text-sm text-destructive">
-                  {formMethods.formState.errors.Incorporation.message?.toString()}
-                </p>
-              )}
-            </div>
+            <VerifiedDocumentUpload
+              fieldName="Incorporation"
+              formId="cdd-brokers"
+              label="Certificate of Incorporation"
+              documentType="cac"
+              verificationFormData={{ companyName: watchedValues.companyName, rcNumber: watchedValues.incorporationNumber || watchedValues.registrationNumber, registrationDate: watchedValues.dateOfIncorporationRegistration, address: watchedValues.companyAddress }}
+              formMethods={formMethods}
+              uploadedFiles={uploadedFiles}
+              setUploadedFiles={setUploadedFiles}
+            />
             
-            <div>
-              <Label>Identification Means for Director 1 <span className="required-asterisk">*</span></Label>
-              <FileUpload
-                accept=".png,.jpg,.jpeg,.pdf"
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({
-                    ...prev,
-                    identification: file
-                  }));
-                  formMethods.setValue('identification', file);
-                  if (formMethods.formState.errors.identification) {
-                    formMethods.clearErrors('identification');
-                  }
-                }}
-                maxSize={5}
-              />
-              {uploadedFiles.identification && (
-                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                  <Check className="h-4 w-4" />
-                  {uploadedFiles.identification.name}
-                </div>
-              )}
-              {formMethods.formState.errors.identification && (
-                <p className="text-sm text-destructive">
-                  {formMethods.formState.errors.identification.message?.toString()}
-                </p>
-              )}
-            </div>
+            <VerifiedDocumentUpload
+              fieldName="identification"
+              formId="cdd-brokers-director-1"
+              label="Identification Means for Director 1"
+              documentType="individual"
+              verificationFormData={{ firstName: watchedValues.directors?.[0]?.firstName, middleName: watchedValues.directors?.[0]?.middleName, lastName: watchedValues.directors?.[0]?.lastName }}
+              formMethods={formMethods}
+              uploadedFiles={uploadedFiles}
+              setUploadedFiles={setUploadedFiles}
+            />
             
-            <div>
-              <Label>Identification Means for Director 2 (Optional)</Label>
-              <FileUpload
-                accept=".png,.jpg,.jpeg,.pdf"
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({
-                    ...prev,
-                    identification2: file
-                  }));
-                  formMethods.setValue('identification2', file);
-                  if (formMethods.formState.errors.identification2) {
-                    formMethods.clearErrors('identification2');
-                  }
-                }}
-                maxSize={5}
-              />
-              {uploadedFiles.identification2 && (
-                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                  <Check className="h-4 w-4" />
-                  {uploadedFiles.identification2.name}
-                </div>
-              )}
-            </div>
+            <VerifiedDocumentUpload
+              fieldName="identification2"
+              formId="cdd-brokers-director-2"
+              label="Identification Means for Director 2 (Optional)"
+              documentType="individual"
+              verificationFormData={{ firstName: watchedValues.directors?.[1]?.firstName, middleName: watchedValues.directors?.[1]?.middleName, lastName: watchedValues.directors?.[1]?.lastName }}
+              formMethods={formMethods}
+              uploadedFiles={uploadedFiles}
+              setUploadedFiles={setUploadedFiles}
+              required={false}
+            />
             
-            <div>
-              <Label>NAICOM License Certificate</Label>
-              <FileUpload
-                accept=".png,.jpg,.jpeg,.pdf"
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({
-                    ...prev,
-                    NAICOMForm: file
-                  }));
-                  formMethods.setValue('NAICOMForm', file);
-                }}
-                maxSize={5}
-              />
-              {uploadedFiles.NAICOMForm && (
-                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                  <Check className="h-4 w-4" />
-                  {uploadedFiles.NAICOMForm.name}
-                </div>
-              )}
-            </div>
+            <VerifiedDocumentUpload
+              fieldName="NAICOMForm"
+              formId="cdd-brokers-naicom"
+              label="NAICOM License Certificate"
+              documentType="naicom"
+              verificationFormData={{ companyName: watchedValues.companyName }}
+              formMethods={formMethods}
+              uploadedFiles={uploadedFiles}
+              setUploadedFiles={setUploadedFiles}
+              required={false}
+            />
           </div>
         </div>
       )
@@ -1446,6 +1390,7 @@ const BrokersCDD: React.FC = () => {
         title="Brokers CDD Submitted Successfully!"
         message="Your Brokers Customer Due Diligence form has been submitted successfully."
       />
+      <ErrorModal isOpen={showError} onClose={closeError} title="Submission Error" message={errorMessage} />
 
       </div>
     </FormProvider>

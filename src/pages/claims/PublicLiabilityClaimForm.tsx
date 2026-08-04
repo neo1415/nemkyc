@@ -412,8 +412,8 @@ const PublicLiabilityClaimForm: React.FC = () => {
       formType: 'Public Liability Claim'
     };
 
-    await handleSubmitWithAuth(finalData, 'Public Liability Claim');
-    clearDraft();
+    const submitted = await handleSubmitWithAuth(finalData, 'Public Liability Claim');
+    if (submitted) clearDraft();
     setShowSummary(false);
   };
 

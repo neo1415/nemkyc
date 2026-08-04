@@ -17,13 +17,15 @@ import { Plus, Trash2, Loader2, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
 import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
 import FormLoadingModal from '@/components/common/FormLoadingModal';
 import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import DatePicker from '@/components/common/DatePicker';
+import VerifiedDocumentUpload from '@/components/common/VerifiedDocumentUpload';
+import VerifiedIdentifierField from '@/components/common/VerifiedIdentifierField';
 
 // ========== FORM COMPONENTS (OUTSIDE Main Component) ==========
 const FormField = ({ name, label, required = false, type = "text", maxLength, ...props }: any) => {
@@ -429,6 +431,9 @@ const NaicomCorporateCDD: React.FC = () => {
     showLoading,
     loadingMessage,
     showSuccess,
+    showError,
+    errorMessage,
+    closeError,
     confirmSubmit,
     closeSuccess,
     formData: submissionData,
@@ -609,11 +614,7 @@ const NaicomCorporateCDD: React.FC = () => {
             required={true}
           />
 
-          <FormField
-            name="cacNumber"
-            label="CAC Number"
-            required={true}
-          />
+          <VerifiedIdentifierField name="cacNumber" label="CAC Number" formId="cdd-naicom-corporate" formType="NAICOM Corporate CDD" identifierType="CAC" required />
           
           <FormTextarea
             name="natureOfBusiness"
@@ -972,92 +973,38 @@ const NaicomCorporateCDD: React.FC = () => {
       title: 'Document Upload',
       component: (
         <div className="space-y-4">
-          <div>
-            <Label>Upload CAC Certificate <span className="required-asterisk">*</span></Label>
-            <FileUpload
-              accept=".png,.jpg,.jpeg,.pdf"
-              onFileSelect={(file) => {
-                setUploadedFiles(prev => ({
-                  ...prev,
-                  cac: file
-                }));
-                formMethods.setValue('cac', file);
-                if (formMethods.formState.errors.cac) {
-                  formMethods.clearErrors('cac');
-                }
-              }}
-              maxSize={10}
-            />
-            {uploadedFiles.cac && (
-              <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                <Check className="h-4 w-4" />
-                {uploadedFiles.cac.name}
-              </div>
-            )}
-            {formMethods.formState.errors.cac && (
-              <p className="text-sm text-destructive">
-                {formMethods.formState.errors.cac.message?.toString()}
-              </p>
-            )}
-          </div>
+          <VerifiedDocumentUpload
+            fieldName="cac"
+            formId="cdd-naicom-corporate"
+            label="Upload CAC Certificate"
+            documentType="cac"
+            verificationFormData={{ companyName: watchedValues.companyName, rcNumber: watchedValues.cacNumber || watchedValues.incorporationNumber, registrationDate: watchedValues.dateOfIncorporationRegistration, address: watchedValues.registeredCompanyAddress }}
+            formMethods={formMethods}
+            uploadedFiles={uploadedFiles}
+            setUploadedFiles={setUploadedFiles}
+          />
 
-          <div>
-            <Label>Upload Means of Identification <span className="required-asterisk">*</span></Label>
-            <FileUpload
-              accept=".png,.jpg,.jpeg,.pdf"
-              onFileSelect={(file) => {
-                setUploadedFiles(prev => ({
-                  ...prev,
-                  identification: file
-                }));
-                formMethods.setValue('identification', file);
-                if (formMethods.formState.errors.identification) {
-                  formMethods.clearErrors('identification');
-                }
-              }}
-              maxSize={10}
-            />
-            {uploadedFiles.identification && (
-              <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                <Check className="h-4 w-4" />
-                {uploadedFiles.identification.name}
-              </div>
-            )}
-            {formMethods.formState.errors.identification && (
-              <p className="text-sm text-destructive">
-                {formMethods.formState.errors.identification.message?.toString()}
-              </p>
-            )}
-          </div>
+          <VerifiedDocumentUpload
+            fieldName="identification"
+            formId="cdd-naicom-corporate-director-1"
+            label="Means of Identification for Director 1"
+            documentType="individual"
+            verificationFormData={{ firstName: watchedValues.directors?.[0]?.firstName, middleName: watchedValues.directors?.[0]?.middleName, lastName: watchedValues.directors?.[0]?.lastName }}
+            formMethods={formMethods}
+            uploadedFiles={uploadedFiles}
+            setUploadedFiles={setUploadedFiles}
+          />
 
-          <div>
-            <Label>Upload NAICOM License Certificate <span className="required-asterisk">*</span></Label>
-            <FileUpload
-              accept=".png,.jpg,.jpeg,.pdf"
-              onFileSelect={(file) => {
-                setUploadedFiles(prev => ({
-                  ...prev,
-                  cacForm: file
-                }));
-                formMethods.setValue('cacForm', file);
-                if (formMethods.formState.errors.cacForm) {
-                  formMethods.clearErrors('cacForm');
-                }
-              }}
-              maxSize={10}
-            />
-            {uploadedFiles.cacForm && (
-              <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                <Check className="h-4 w-4" />
-                {uploadedFiles.cacForm.name}
-              </div>
-            )}
-            {formMethods.formState.errors.cacForm && (
-              <p className="text-sm text-destructive">
-                {formMethods.formState.errors.cacForm.message?.toString()}
-              </p>
-            )}
-          </div>
+          <VerifiedDocumentUpload
+            fieldName="cacForm"
+            formId="cdd-naicom-corporate-license"
+            label="NAICOM License Certificate"
+            documentType="naicom"
+            verificationFormData={{ companyName: watchedValues.companyName }}
+            formMethods={formMethods}
+            uploadedFiles={uploadedFiles}
+            setUploadedFiles={setUploadedFiles}
+          />
         </div>
       )
     },
@@ -1300,6 +1247,7 @@ const NaicomCorporateCDD: React.FC = () => {
           title="NAICOM Corporate CDD Submitted Successfully!"
           message="Your NAICOM Corporate CDD form has been submitted successfully and is now being processed."
         />
+        <ErrorModal isOpen={showError} onClose={closeError} title="Submission Error" message={errorMessage} />
       </div>
     </FormProvider>
   );

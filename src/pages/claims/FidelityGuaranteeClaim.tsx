@@ -350,8 +350,8 @@ const FidelityGuaranteeClaim: React.FC = () => {
       formType: 'Fidelity Guarantee Claim'
     };
 
-    await handleSubmitWithAuth(finalData, 'Fidelity Guarantee Claim');
-    clearDraft();
+    const submitted = await handleSubmitWithAuth(finalData, 'Fidelity Guarantee Claim');
+    if (submitted) clearDraft();
     setShowSummary(false);
   };
 

@@ -39,7 +39,7 @@ export interface ProcessingLimits {
 
 // Default configuration
 export const GEMINI_CONFIG: GeminiConfig = {
-  apiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
+  apiKey: 'backend-managed',
   model: 'gemini-2.5-flash',
   maxTokens: 2048,
   temperature: 0.1,

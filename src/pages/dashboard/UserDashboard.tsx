@@ -36,13 +36,15 @@ const UserDashboard: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  if (!user) return null;
-
   // Check if user is a broker
-  const isBroker = rolesMatch(user.role, 'broker');
+  const isBroker = rolesMatch(user?.role, 'broker');
 
   // Load user submissions on mount and subscribe to real-time updates
   useEffect(() => {
+    if (!user?.email) {
+      setLoading(false);
+      return;
+    }
     const loadSubmissions = async () => {
       try {
         setLoading(true);
@@ -79,7 +81,9 @@ const UserDashboard: React.FC = () => {
     return () => {
       unsubscribe();
     };
-  }, [user.email, toast]);
+  }, [user?.email, toast]);
+
+  if (!user) return null;
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();

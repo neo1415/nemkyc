@@ -49,6 +49,7 @@ import {
 import { db } from '@/firebase/config';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
 import { format } from 'date-fns';
+import { maskSensitiveRecord } from '@/utils/sensitiveDataMasking';
 
 // Custom theme with burgundy and gold
 const theme = createTheme({
@@ -103,8 +104,9 @@ const AdminIndividualCDDTable: React.FC = () => {
         ...doc.data()
       })) as FormData[];
 
-      setForms(formsData);
-      generateColumns(formsData);
+      const maskedForms = formsData.map(form => maskSensitiveRecord(form));
+      setForms(maskedForms);
+      generateColumns(maskedForms);
     } catch (error) {
       console.error('Error fetching forms:', error);
       toast({

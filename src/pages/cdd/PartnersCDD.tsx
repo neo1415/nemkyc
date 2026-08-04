@@ -14,7 +14,10 @@ import { useEnhancedFormSubmit } from '@/hooks/useEnhancedFormSubmit';
 import FormLoadingModal from '@/components/common/FormLoadingModal';
 import FormSummaryDialog from '@/components/common/FormSummaryDialog';
 import SuccessModal from '@/components/common/SuccessModal';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import DatePicker from '@/components/common/DatePicker';
+import VerifiedDocumentUpload from '@/components/common/VerifiedDocumentUpload';
+import VerifiedIdentifierField from '@/components/common/VerifiedIdentifierField';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -370,6 +373,9 @@ const PartnersCDD: React.FC = () => {
     showLoading,
     loadingMessage,
     showSuccess,
+    showError,
+    errorMessage,
+    closeError,
     confirmSubmit,
     closeSuccess,
     formData: submissionData,
@@ -547,11 +553,7 @@ const PartnersCDD: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField
-              name="incorporationNumber"
-              label="Incorporation/RC Number"
-              required={true}
-            />
+            <VerifiedIdentifierField name="incorporationNumber" label="Incorporation/RC Number" formId="cdd-partners" formType="Partners CDD" identifierType="CAC" required />
             <DatePicker
               name="incorporationDate"
               label="Date of Incorporation"
@@ -874,121 +876,50 @@ const PartnersCDD: React.FC = () => {
       component: (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label>Certificate of Incorporation <span className="required-asterisk">*</span></Label>
-              <FileUpload
-                accept=".png,.jpg,.jpeg,.pdf"
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({
-                    ...prev,
-                    certificateOfIncorporation: file
-                  }));
-                  formMethods.setValue('certificateOfIncorporation', file);
-                  if (formMethods.formState.errors.certificateOfIncorporation) {
-                    formMethods.clearErrors('certificateOfIncorporation');
-                  }
-                }}
-                maxSize={5}
-              />
-              {uploadedFiles.certificateOfIncorporation && (
-                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                  <Check className="h-4 w-4" />
-                  {uploadedFiles.certificateOfIncorporation.name}
-                </div>
-              )}
-              {formMethods.formState.errors.certificateOfIncorporation && (
-                <p className="text-sm text-destructive">
-                  {formMethods.formState.errors.certificateOfIncorporation.message?.toString()}
-                </p>
-              )}
-            </div>
+            <VerifiedDocumentUpload
+              fieldName="certificateOfIncorporation"
+              formId="cdd-partners"
+              label="Certificate of Incorporation"
+              documentType="cac"
+              verificationFormData={{ companyName: watchedValues.companyName, rcNumber: watchedValues.incorporationNumber, registrationDate: watchedValues.incorporationDate, address: watchedValues.registeredAddress }}
+              formMethods={formMethods}
+              uploadedFiles={uploadedFiles}
+              setUploadedFiles={setUploadedFiles}
+            />
             
-            <div>
-              <Label>Identification Means for Director 1 <span className="required-asterisk">*</span></Label>
-              <FileUpload
-                accept=".png,.jpg,.jpeg,.pdf"
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({
-                    ...prev,
-                    directorId1: file
-                  }));
-                  formMethods.setValue('directorId1', file);
-                  if (formMethods.formState.errors.directorId1) {
-                    formMethods.clearErrors('directorId1');
-                  }
-                }}
-                maxSize={5}
-              />
-              {uploadedFiles.directorId1 && (
-                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                  <Check className="h-4 w-4" />
-                  {uploadedFiles.directorId1.name}
-                </div>
-              )}
-              {formMethods.formState.errors.directorId1 && (
-                <p className="text-sm text-destructive">
-                  {formMethods.formState.errors.directorId1.message?.toString()}
-                </p>
-              )}
-            </div>
+            <VerifiedDocumentUpload
+              fieldName="directorId1"
+              formId="cdd-partners-director-1"
+              label="Identification Means for Director 1"
+              documentType="individual"
+              verificationFormData={{ firstName: watchedValues.directors?.[0]?.firstName, middleName: watchedValues.directors?.[0]?.middleName, lastName: watchedValues.directors?.[0]?.lastName }}
+              formMethods={formMethods}
+              uploadedFiles={uploadedFiles}
+              setUploadedFiles={setUploadedFiles}
+            />
             
-            <div>
-              <Label>Identification Means for Director 2 (Optional)</Label>
-              <FileUpload
-                accept=".png,.jpg,.jpeg,.pdf"
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({
-                    ...prev,
-                    directorId2: file
-                  }));
-                  formMethods.setValue('directorId2', file);
-                  if (formMethods.formState.errors.directorId2) {
-                    formMethods.clearErrors('directorId2');
-                  }
-                }}
-                maxSize={5}
-              />
-              {uploadedFiles.directorId2 && (
-                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                  <Check className="h-4 w-4" />
-                  {uploadedFiles.directorId2.name}
-                </div>
-              )}
-              {formMethods.formState.errors.directorId2 && (
-                <p className="text-sm text-destructive">
-                  {formMethods.formState.errors.directorId2.message?.toString()}
-                </p>
-              )}
-            </div>
+            <VerifiedDocumentUpload
+              fieldName="directorId2"
+              formId="cdd-partners-director-2"
+              label="Identification Means for Director 2 (Optional)"
+              documentType="individual"
+              verificationFormData={{ firstName: watchedValues.directors?.[1]?.firstName, middleName: watchedValues.directors?.[1]?.middleName, lastName: watchedValues.directors?.[1]?.lastName }}
+              formMethods={formMethods}
+              uploadedFiles={uploadedFiles}
+              setUploadedFiles={setUploadedFiles}
+              required={false}
+            />
             
-            <div>
-              <Label>CAC Status Report <span className="required-asterisk">*</span></Label>
-              <FileUpload
-                accept=".png,.jpg,.jpeg,.pdf"
-                onFileSelect={(file) => {
-                  setUploadedFiles(prev => ({
-                    ...prev,
-                    cacStatusReport: file
-                  }));
-                  formMethods.setValue('cacStatusReport', file);
-                  if (formMethods.formState.errors.cacStatusReport) {
-                    formMethods.clearErrors('cacStatusReport');
-                  }
-                }}
-                maxSize={5}
-              />
-              {uploadedFiles.cacStatusReport && (
-                <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                  <Check className="h-4 w-4" />
-                  {uploadedFiles.cacStatusReport.name}
-                </div>
-              )}
-              {formMethods.formState.errors.cacStatusReport && (
-                <p className="text-sm text-destructive">
-                  {formMethods.formState.errors.cacStatusReport.message?.toString()}
-                </p>
-              )}
-            </div>
+            <VerifiedDocumentUpload
+              fieldName="cacStatusReport"
+              formId="cdd-partners-cac-status"
+              label="CAC Status Report"
+              documentType="cac"
+              verificationFormData={{ companyName: watchedValues.companyName, rcNumber: watchedValues.incorporationNumber, registrationDate: watchedValues.incorporationDate, address: watchedValues.registeredAddress }}
+              formMethods={formMethods}
+              uploadedFiles={uploadedFiles}
+              setUploadedFiles={setUploadedFiles}
+            />
             
             <div>
               <Label>VAT Registration License (Optional)</Label>
@@ -1343,6 +1274,7 @@ const PartnersCDD: React.FC = () => {
           title="Partners CDD Submitted Successfully!"
           message="Your Partners CDD form has been submitted successfully."
         />
+        <ErrorModal isOpen={showError} onClose={closeError} title="Submission Error" message={errorMessage} />
       </div>
     </FormProvider>
   );

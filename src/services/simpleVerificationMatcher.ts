@@ -49,10 +49,11 @@ export class SimpleVerificationMatcher {
         lastName: extractedData.lastName || ''
       };
       
+      const suppliedFullName = String(formData.fullName || '').trim().split(/\s+/);
       const formNames = {
-        firstName: formData.firstName || formData.first_name || '',
+        firstName: formData.firstName || formData.first_name || suppliedFullName[0] || '',
         middleName: formData.middleName || formData.middle_name || '',
-        lastName: formData.lastName || formData.last_name || formData.surname || ''
+        lastName: formData.lastName || formData.last_name || formData.surname || suppliedFullName.at(-1) || ''
       };
 
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -226,13 +227,17 @@ export class SimpleVerificationMatcher {
         };
       }
 
+      const expectedCompanyName = formData.insured || formData.companyName || formData.agentsName;
+      const expectedCACNumber = formData.cacNumber || formData.rcNumber || formData.incorporationNumber || formData.registrationNumber;
+      const expectedIncorporationDate = formData.incorporationDate || formData.registrationDate;
+
       // 1. Match Company Name (case-insensitive, normalized)
-      if (extractedData.companyName && formData.insured) {
-        if (!this.companyNamesMatch(extractedData.companyName, formData.insured)) {
+      if (extractedData.companyName && expectedCompanyName) {
+        if (!this.companyNamesMatch(extractedData.companyName, expectedCompanyName)) {
           mismatches.push({
             field: 'companyName',
             extractedValue: extractedData.companyName,
-            expectedValue: formData.insured,
+            expectedValue: expectedCompanyName,
             similarity: 0,
             isCritical: true,
             reason: 'Company names do not match'
@@ -241,13 +246,14 @@ export class SimpleVerificationMatcher {
         }
       }
 
-      // 2. Match CAC Number (exact)
-      if (extractedData.rcNumber && formData.cacNumber) {
-        if (extractedData.rcNumber !== formData.cacNumber) {
+      // 2. Match CAC Number after removing presentation differences such as
+      // "RC", spaces, punctuation and leading zeroes.
+      if (extractedData.rcNumber && expectedCACNumber) {
+        if (this.normalizeRegistrationNumber(extractedData.rcNumber) !== this.normalizeRegistrationNumber(expectedCACNumber)) {
           mismatches.push({
             field: 'cacNumber',
             extractedValue: extractedData.rcNumber,
-            expectedValue: formData.cacNumber,
+            expectedValue: expectedCACNumber,
             similarity: 0,
             isCritical: true,
             reason: 'CAC numbers do not match'
@@ -257,9 +263,9 @@ export class SimpleVerificationMatcher {
       }
 
       // 3. Match Registration Date (normalized date comparison)
-      if (extractedData.registrationDate && formData.incorporationDate) {
+      if (extractedData.registrationDate && expectedIncorporationDate) {
         const extractedDate = this.normalizeDate(extractedData.registrationDate);
-        const formDate = this.normalizeDate(formData.incorporationDate);
+        const formDate = this.normalizeDate(expectedIncorporationDate);
         
         if (extractedDate !== formDate) {
           mismatches.push({
@@ -455,6 +461,37 @@ export class SimpleVerificationMatcher {
    * Handles Date objects, ISO strings, and DD/MM/YYYY format
    * Uses local time methods to preserve the date as entered
    */
+  private normalizeRegistrationNumber(value: unknown): string {
+    const normalized = String(value ?? '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .replace(/^RC/, '');
+
+    return normalized.replace(/^0+(?=\d)/, '');
+  }
+
+  /** NAICOM certificates are verified against the company/agent name only. */
+  async verifyNAICOMDocument(extractedData: CACData, formData: any): Promise<VerificationResult> {
+    const expectedCompanyName = formData?.companyName || formData?.insured || formData?.agentsName;
+    const extractedCompanyName = extractedData?.companyName;
+    const isMatch = Boolean(expectedCompanyName && extractedCompanyName && this.companyNamesMatch(extractedCompanyName, expectedCompanyName));
+    return {
+      success: true,
+      isMatch,
+      confidence: isMatch ? 100 : 0,
+      mismatches: isMatch ? [] : [{
+        field: 'companyName',
+        extractedValue: extractedCompanyName || 'Not found',
+        expectedValue: expectedCompanyName || 'Not provided',
+        similarity: 0,
+        isCritical: true,
+        reason: extractedCompanyName ? 'The company name on the NAICOM certificate does not match the form.' : 'No company name was found on the NAICOM certificate.',
+      }],
+      officialData: extractedData,
+      processingTime: 0,
+    };
+  }
+
   private normalizeDate(date: any): string {
     if (!date) return '';
     

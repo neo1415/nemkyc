@@ -401,12 +401,12 @@ export class GeminiConfigManager {
   private loadDefaultConfig(): GeminiConfig {
     return {
       api: {
-        geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
+        geminiApiKey: 'backend-managed',
         geminiModel: 'gemini-2.5-flash',
         geminiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
-        verifydataApiKey: import.meta.env.VITE_VERIFYDATA_API_KEY || '',
+        verifydataApiKey: 'backend-managed',
         verifydataEndpoint: 'https://api.verifydata.ng/v1',
-        dataproApiKey: import.meta.env.VITE_DATAPRO_API_KEY || '',
+        dataproApiKey: 'backend-managed',
         dataproEndpoint: 'https://api.datapro.ng/v1',
         requestTimeout: 30000,
         maxRetries: 3,
