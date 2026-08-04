@@ -4,18 +4,25 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   CUSTOMER_FORM_CONFIGS,
-  getAdminNotificationRecipients,
+  buildNotificationRoleQuery,
+  normalizeNotificationEmails,
   getCustomerFormConfig
 } = require('../customerFormPolicy.cjs');
 
-test('admin notifications default only to Ade Daniel', () => {
-  assert.deepEqual(getAdminNotificationRecipients(), ['adedaniel502@gmail.com']);
+test('notification role queries include requested staff, admins, and super admins', () => {
+  assert.deepEqual(buildNotificationRoleQuery([' Compliance ', 'admin']), [
+    'compliance',
+    'admin',
+    'super admin',
+    'super-admin',
+    'superadmin'
+  ]);
 });
 
-test('configured recipients are normalized, validated, and deduplicated', () => {
+test('notification emails are normalized, validated, and deduplicated', () => {
   assert.deepEqual(
-    getAdminNotificationRecipients(' ADEDaniel502@gmail.com,invalid,adedaniel502@gmail.com '),
-    ['adedaniel502@gmail.com']
+    normalizeNotificationEmails([' Admin@Nem.com ', 'invalid', 'admin@nem.com', null]),
+    ['admin@nem.com']
   );
 });
 

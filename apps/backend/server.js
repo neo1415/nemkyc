@@ -29,7 +29,8 @@ if (process.env.NODE_ENV === 'production' && !process.env.CSRF_SECRET) {
 const {
   CUSTOMER_FORM_CONFIGS,
   getCustomerFormConfig,
-  getAdminNotificationRecipients: resolveAdminNotificationRecipients
+  buildNotificationRoleQuery,
+  normalizeNotificationEmails
 } = require('./server-utils/customerFormPolicy.cjs');
 
 // Import verification error handling utility
@@ -2641,21 +2642,8 @@ try {
   };
 }
 
-// Fetch all admin emails from Firebase
-function getAdminNotificationRecipients() {
-  const recipients = resolveAdminNotificationRecipients(process.env.ADMIN_NOTIFICATION_RECIPIENTS);
-  if (recipients.length === 0) {
-    console.error('No valid ADMIN_NOTIFICATION_RECIPIENTS configured; admin notifications are disabled.');
-    return [];
-  }
-
-  return recipients;
-}
-
 async function getAllAdminEmails() {
-  const recipients = getAdminNotificationRecipients();
-  console.log(`Admin submission notifications restricted to ${recipients.length} configured recipient(s).`);
-  return recipients;
+  return getEmailsByRoles(['compliance']);
 }
 
 // Function to send email to admins
@@ -2701,9 +2689,22 @@ async function sendEmailToAdmins(adminEmails, formType, formData) {
 
 //  Reusable helper
 async function getEmailsByRoles(rolesArray) {
-  const recipients = getAdminNotificationRecipients();
-  console.log(`Admin/staff notification for roles [${rolesArray.join(', ')}] restricted to ${recipients.length} configured recipient(s).`);
-  return recipients;
+  try {
+    const roles = buildNotificationRoleQuery(rolesArray);
+    const usersSnapshot = await admin.firestore()
+      .collection('userroles')
+      .where('role', 'in', roles)
+      .get();
+
+    const emails = normalizeNotificationEmails(
+      usersSnapshot.docs.map(doc => doc.data().email)
+    );
+    console.log(`Admin/staff notifications enabled for ${emails.length} recipient(s) with roles:`, roles);
+    return emails;
+  } catch (error) {
+    console.error('Error fetching notification recipients from Firestore:', error);
+    return [];
+  }
 }
 
 async function sendEmail(to, subject, html, attachments = []) {
