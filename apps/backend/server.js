@@ -29,6 +29,11 @@ if (process.env.NODE_ENV === 'production' && !process.env.CSRF_SECRET) {
 const {
   CUSTOMER_FORM_CONFIGS,
   getCustomerFormConfig,
+  resolveClaimFormConfig,
+  resolveClaimNotificationEmails,
+  buildAdminSubmissionDeepLink,
+  isClaimFormType,
+  resolveAssignedClaimCollections,
   buildNotificationRoleQuery,
   normalizeNotificationEmails
 } = require('./server-utils/customerFormPolicy.cjs');
@@ -5045,21 +5050,35 @@ app.post('/api/submit-form', publicFormSubmissionLimiter, requireAuth, validateF
         console.log('📧 User confirmation email sent to:', submitterEmail);
       }
 
-      // Send admin notification with PDF
-      const isClaimsForm = ['claim', 'motor', 'burglary', 'fire', 'allrisk', 'goods', 'money',
-        'employers', 'public', 'professional', 'fidelity', 'contractors', 'group', 'rent', 'combined']
-        .some(keyword => formType.toLowerCase().includes(keyword));
+      const claimRouting = resolveClaimFormConfig(formType, collectionName);
+      const isClaimsForm = isClaimFormType(formType, collectionName);
 
-      const adminRoles = isClaimsForm ? ['claims'] : ['compliance'];
-      const adminEmails = await getEmailsByRoles(adminRoles);
-      
-      if (adminEmails.length > 0) {
-        await sendEmail(adminEmails, 
+      let notificationEmails = claimRouting
+        ? resolveClaimNotificationEmails(formType, collectionName)
+        : [];
+
+      if (notificationEmails.length === 0) {
+        const adminRoles = isClaimsForm ? ['claims'] : ['compliance'];
+        notificationEmails = await getEmailsByRoles(adminRoles);
+      }
+
+      if (notificationEmails.length > 0) {
+        await sendEmail(
+          notificationEmails,
           `New ${formType} Submission - Ticket #${ticketId} - Review Required`,
-          generateAdminNotificationHTML(formType, formData, docRef.id, ticketId, submitterName, submitterEmail));
-        console.log('📧 Admin notification email sent to:', adminEmails);
+          generateAdminNotificationHTML(
+            formType,
+            formData,
+            docRef.id,
+            ticketId,
+            submitterName,
+            submitterEmail,
+            collectionName
+          )
+        );
+        console.log('📧 Staff notification email sent to:', notificationEmails);
       } else {
-        console.warn('⚠️ No admin emails found for roles:', adminRoles);
+        console.warn('⚠️ No notification recipients found for submission:', { formType, collectionName });
       }
 
       // 📝 LOG EMAIL NOTIFICATIONS
@@ -5070,13 +5089,18 @@ app.post('/api/submit-form', publicFormSubmissionLimiter, requireAuth, validateF
         actorEmail: 'system@nem-insurance.com',
         actorRole: 'system',
         targetType: 'email',
-        targetId: (submitterEmail || 'unknown') + ',' + adminEmails.join(','),
+        targetId: (submitterEmail || 'unknown') + ',' + notificationEmails.join(','),
         details: {
           emailType: 'submission-notification',
           formType: formType,
           ticketId: ticketId,
           userEmail: submitterEmail,
-          adminEmails: adminEmails
+          adminEmails: notificationEmails,
+          claimRouting: claimRouting ? {
+            policyRisk: claimRouting.policyRisk,
+            unitRecipientEmail: claimRouting.unitRecipientEmail,
+            unitAdminEmail: claimRouting.unitAdminEmail
+          } : null
         },
         ipMasked: req.ipData?.masked,
         ipHash: req.ipData?.hash,
@@ -5086,7 +5110,7 @@ app.post('/api/submit-form', publicFormSubmissionLimiter, requireAuth, validateF
         meta: {
           relatedSubmission: docRef.id,
           ticketId: ticketId,
-          emailCount: adminEmails.length + 1
+          emailCount: notificationEmails.length + 1
         }
       });
 
@@ -5184,43 +5208,44 @@ const getFirestoreCollection = (formType) => {
   console.log('🔍 getFirestoreCollection called with formType:', formType);
   console.log('🔍 formTypeLower:', formTypeLower);
   
+  const claimFormConfig = resolveClaimFormConfig(formType);
   const customerFormConfig = getCustomerFormConfig(formType);
-  let collection = customerFormConfig?.collection;
+  let collection = claimFormConfig?.collection || customerFormConfig?.collection;
   
-  // Claims forms
-  if (collection) {
+  if (claimFormConfig) {
+    console.log('Matched claim form routing:', claimFormConfig);
+  } else if (customerFormConfig?.collection) {
     console.log('Matched customer form routing:', customerFormConfig);
-  }
-  else if (formTypeLower.includes('combined')) collection = 'combined-gpa-employers-liability-claims';
-  else if (formTypeLower.includes('motor') && !formTypeLower.includes('smart')) collection = 'motor-claims';
-  else if (formTypeLower.includes('burglary')) collection = 'burglary-claims';
-  else if (formTypeLower.includes('fire')) collection = 'fire-special-perils-claims';
-  else if (formTypeLower.includes('allrisk') || formTypeLower.includes('all risk')) collection = 'all-risk-claims';
-  else if (formTypeLower.includes('goods')) collection = 'goods-in-transit-claims';
-  else if (formTypeLower.includes('money')) collection = 'money-insurance-claims';
-  else if (formTypeLower.includes('employers')) collection = 'employers-liability-claims';
-  else if (formTypeLower.includes('public')) collection = 'public-liability-claims';
-  else if (formTypeLower.includes('professional')) collection = 'professional-indemnity-claims';
-  else if (formTypeLower.includes('fidelity')) collection = 'fidelity-guarantee-claims';
-  else if (formTypeLower.includes('contractors')) collection = 'contractors-claims';
-  else if (formTypeLower.includes('group')) collection = 'group-personal-accident-claims';
-  else if (formTypeLower.includes('rent')) collection = 'rent-assurance-claims';
+  } else if (!collection && formTypeLower.includes('combined')) collection = 'combined-gpa-employers-liability-claims';
+  else if (!collection && formTypeLower.includes('motor') && !formTypeLower.includes('smart')) collection = 'motor-claims';
+  else if (!collection && formTypeLower.includes('burglary')) collection = 'burglary-claims';
+  else if (!collection && formTypeLower.includes('fire')) collection = 'fire-special-perils-claims';
+  else if (!collection && (formTypeLower.includes('allrisk') || formTypeLower.includes('all risk'))) collection = 'all-risk-claims';
+  else if (!collection && formTypeLower.includes('goods')) collection = 'goods-in-transit-claims';
+  else if (!collection && formTypeLower.includes('money')) collection = 'money-insurance-claims';
+  else if (!collection && formTypeLower.includes('employers')) collection = 'employers-liability-claims';
+  else if (!collection && formTypeLower.includes('public')) collection = 'public-liability-claims';
+  else if (!collection && formTypeLower.includes('professional')) collection = 'professional-indemnity-claims';
+  else if (!collection && formTypeLower.includes('fidelity')) collection = 'fidelity-guarantee-claims';
+  else if (!collection && formTypeLower.includes('contractors')) collection = 'contractors-claims';
+  else if (!collection && formTypeLower.includes('group')) collection = 'group-personal-accident-claims';
+  else if (!collection && formTypeLower.includes('rent')) collection = 'rent-assurance-claims';
   
   // NEM Smart Protection Claims
-  else if (formTypeLower.includes('smart motorist protection')) collection = 'smart-motorist-protection-claims';
-  else if (formTypeLower.includes('smart students protection')) collection = 'smart-students-protection-claims';
-  else if (formTypeLower.includes('smart traveller protection')) collection = 'smart-traveller-protection-claims';
-  else if (formTypeLower.includes('smart artisan protection')) collection = 'smart-artisan-protection-claims';
-  else if (formTypeLower.includes('smart generation z protection')) collection = 'smart-generation-z-protection-claims';
-  else if (formTypeLower.includes('nem home protection')) collection = 'nem-home-protection-claims';
+  else if (!collection && formTypeLower.includes('smart motorist protection')) collection = 'smart-motorist-protection-claims';
+  else if (!collection && formTypeLower.includes('smart students protection')) collection = 'smart-students-protection-claims';
+  else if (!collection && formTypeLower.includes('smart traveller protection')) collection = 'smart-traveller-protection-claims';
+  else if (!collection && formTypeLower.includes('smart artisan protection')) collection = 'smart-artisan-protection-claims';
+  else if (!collection && formTypeLower.includes('smart generation z protection')) collection = 'smart-generation-z-protection-claims';
+  else if (!collection && formTypeLower.includes('nem home protection')) collection = 'nem-home-protection-claims';
   
   // NEM Agricultural Claims
-  else if (formTypeLower.includes('livestock')) collection = 'livestock-claims';
-  else if (formTypeLower.includes('poultry') || formTypeLower === 'poultry claim') collection = 'poultry-claims';
-  else if (formTypeLower.includes('fishery') || formTypeLower.includes('fish farm') || formTypeLower === 'fishery fish farm') collection = 'fishery-fish-farm-claims';
-  else if (formTypeLower.includes('farm') && (formTypeLower.includes('property') || formTypeLower.includes('produce'))) collection = 'farm-property-produce-claims';
-  else if (formTypeLower.includes('yield index')) collection = 'yield-index-claims';
-  else if (formTypeLower.includes('multi-perils crop') || formTypeLower.includes('multi perils crop')) collection = 'multi-perils-crop-claims';
+  else if (!collection && formTypeLower.includes('livestock')) collection = 'livestock-claims';
+  else if (!collection && (formTypeLower.includes('poultry') || formTypeLower === 'poultry claim')) collection = 'poultry-claims';
+  else if (!collection && (formTypeLower.includes('fishery') || formTypeLower.includes('fish farm') || formTypeLower === 'fishery fish farm')) collection = 'fishery-fish-farm-claims';
+  else if (!collection && formTypeLower.includes('farm') && (formTypeLower.includes('property') || formTypeLower.includes('produce'))) collection = 'farm-property-produce-claims';
+  else if (!collection && formTypeLower.includes('yield index')) collection = 'yield-index-claims';
+  else if (!collection && (formTypeLower.includes('multi-perils crop') || formTypeLower.includes('multi perils crop'))) collection = 'multi-perils-crop-claims';
   
   // KYC forms
   else if (formTypeLower.includes('individual') && formTypeLower.includes('kyc')) {
@@ -5308,8 +5333,9 @@ const generateConfirmationEmailHTML = (formType, ticketId, userName = 'Valued Cu
   `;
 };
 
-const generateAdminNotificationHTML = (formType, formData, documentId, ticketId, submitterName, submitterEmail) => {
+const generateAdminNotificationHTML = (formType, formData, documentId, ticketId, submitterName, submitterEmail, collectionName) => {
   const adminDashboardUrl = process.env.FRONTEND_URL || 'https://nemforms.com';
+  const reviewUrl = buildAdminSubmissionDeepLink(collectionName, documentId, adminDashboardUrl);
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <div style="background: linear-gradient(90deg, #800020, #DAA520); padding: 20px; text-align: center;">
@@ -5348,14 +5374,17 @@ const generateAdminNotificationHTML = (formType, formData, documentId, ticketId,
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${adminDashboardUrl}/signin" style="background: #800020; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-            Access Admin Dashboard
+          <a href="${reviewUrl}" style="background: #800020; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+            Review Submission Securely
           </a>
         </div>
+        <p style="color: #666; font-size: 12px; text-align: center;">
+          Sign in to view the full submission, uploaded documents, and download the PDF from the platform.
+        </p>
         
         <hr style="border: 1px solid #ddd; margin: 20px 0;">
         <p style="color: #666; font-size: 12px;">
-          This is an automated notification from NEM Forms System.
+          This is an automated notification from NEM Forms System. Sensitive details are not attached to this email.
         </p>
         <p>Best regards,<br><strong>NEM Forms System</strong></p>
       </div>
@@ -5681,12 +5710,19 @@ app.post('/api/exchange-token', async (req, res) => {
       path: '/'
     });
 
+    const assignedClaimCollections = resolveAssignedClaimCollections({
+      email,
+      role: userData.role,
+      assignedClaimCollections: userData.assignedClaimCollections
+    });
+
     res.json({
       success: true,
       role: userData.role,
       user: { uid, email, displayName: userData.name },
       loginCount: loginCount,
-      sessionToken: uid // Send token in response for localStorage fallback
+      sessionToken: uid, // Send token in response for localStorage fallback
+      assignedClaimCollections
     });
 
   } catch (error) {

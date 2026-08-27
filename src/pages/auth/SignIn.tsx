@@ -15,6 +15,29 @@ import MFAModal from '../../components/auth/MFAModal';
 import EmailVerificationModal from '../../components/auth/EmailVerificationModal';
 import logoImage from '../../assets/NEMs-Logo.jpg';
 
+function resolvePostAuthRedirect(redirectParam: string | null): string | null {
+  if (!redirectParam || redirectParam === 'dashboard') {
+    return redirectParam === 'dashboard' ? '/dashboard' : null;
+  }
+
+  let candidate = redirectParam;
+  try {
+    candidate = decodeURIComponent(redirectParam);
+  } catch {
+    candidate = redirectParam;
+  }
+
+  if (!candidate.startsWith('/')) {
+    candidate = `/${candidate}`;
+  }
+
+  if (!candidate.startsWith('/') || candidate.startsWith('//') || candidate.includes('://')) {
+    return null;
+  }
+
+  return candidate;
+}
+
 // Helper function to translate Firebase errors to user-friendly messages
 const getErrorMessage = (error: any): string => {
   // Handle nested error structure from Firebase
@@ -103,10 +126,11 @@ const SignIn: React.FC = () => {
         return;
       }
 
-      // Check for redirect parameter (e.g., from email link)
-      if (redirectParam === 'dashboard') {
-        console.log('🎯 Redirect parameter detected, redirecting to /dashboard');
-        navigate('/dashboard', { replace: true });
+      // Check for redirect parameter (e.g., from email deep link)
+      const secureRedirect = resolvePostAuthRedirect(redirectParam);
+      if (secureRedirect) {
+        console.log('🎯 Redirect parameter detected, redirecting to:', secureRedirect);
+        navigate(secureRedirect, { replace: true });
         return;
       }
 
@@ -152,10 +176,11 @@ const SignIn: React.FC = () => {
         return;
       }
       
-      // PRIORITY 3: Check for redirect parameter (e.g., from email link)
-      if (redirectParam === 'dashboard') {
-        console.log('🎯 Redirect parameter detected, redirecting to /dashboard');
-        navigate('/dashboard', { replace: true });
+      // PRIORITY 3: Check for redirect parameter (e.g., from email deep link)
+      const secureRedirect = resolvePostAuthRedirect(redirectParam);
+      if (secureRedirect) {
+        console.log('🎯 Redirect parameter detected, redirecting to:', secureRedirect);
+        navigate(secureRedirect, { replace: true });
         return;
       }
       

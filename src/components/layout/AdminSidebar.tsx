@@ -20,6 +20,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/colla
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { normalizeRole, hasAnyRole } from '../../utils/roleNormalization';
+import { filterAccessibleClaimNavItems } from '../../config/claimAccessPolicy';
 
 interface AdminSidebarProps {
   open: boolean;
@@ -86,36 +87,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
     { name: 'Brokers CDD', href: '/admin/cdd/brokers' }
   ];
 
-  const claimsItems = [
-    { name: 'Motor Claims', href: '/admin/motor-claims' },
-    { name: 'Fire & Special Perils', href: '/admin/fire-special-perils-claims' },
-    { name: 'Employers Liability', href: '/admin/employers-liability-claims' },
-    { name: 'All Risk Claims', href: '/admin/all-risk-claims' },
-    { name: 'Professional Indemnity', href: '/admin/professional-indemnity-claims' },
-    { name: 'Public Liability', href: '/admin/public-liability-claims' },
-    { name: 'Combined GPA Employers Liability', href: '/admin/combined-gpa-employers-liability-claims' },
-    { name: 'Group Personal Accident', href: '/admin/group-personal-accident-claims' },
-    { name: 'Goods In Transit', href: '/admin/goods-in-transit-claims' },
-    { name: 'Rent Assurance', href: '/admin/rent-assurance-claims' },
-    { name: 'Money Insurance', href: '/admin/money-insurance-claims' },
-    { name: 'Burglary Claims', href: '/admin/burglary-claims' },
-    { name: 'Contractors Plant Machinery', href: '/admin/contractors-plant-machinery-claims' },
-    { name: 'Fidelity Guarantee', href: '/admin/fidelity-guarantee-claims' },
-    // NEM Smart Protection Claims
-    { name: 'Smart Motorist Protection', href: '/admin/smart-motorist-protection-claims' },
-    { name: 'Smart Students Protection', href: '/admin/smart-students-protection-claims' },
-    { name: 'Smart Traveller Protection', href: '/admin/smart-traveller-protection-claims' },
-    { name: 'Smart Artisan Protection', href: '/admin/smart-artisan-protection-claims' },
-    { name: 'Smart Generation Z Protection', href: '/admin/smart-generation-z-protection-claims' },
-    { name: 'NEM Home Protection', href: '/admin/nem-home-protection-claims' },
-    // NEM Agricultural Claims
-    { name: 'Farm Property & Produce', href: '/admin/farm-property-produce-claims' },
-    { name: 'Livestock Claims', href: '/admin/livestock-claims' },
-    { name: 'Poultry Claims', href: '/admin/poultry-claims' },
-    { name: 'Fishery & Fish Farm Claims', href: '/admin/fishery-fish-farm-claims' },
-    { name: 'Yield Index Claims', href: '/admin/yield-index-claims' },
-    { name: 'Multi-Perils Crop Claims', href: '/admin/multi-perils-crop-claims' }
-  ];
+  const claimsItems = filterAccessibleClaimNavItems(user);
 
   return (
     <>

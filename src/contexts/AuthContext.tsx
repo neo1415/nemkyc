@@ -20,6 +20,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { auth, db } from '../firebase/config';
 import { User } from '../types';
 import { normalizeRole, isAdminRole, rolesMatch } from '../utils/roleNormalization';
+import { resolveAssignedClaimCollections } from '../config/claimAccessPolicy';
 import { exchangeToken } from '../services/authService';
 import { toast } from 'sonner';
 import { secureStorageGet, secureStorageRemove, secureStorageSet } from '../utils/secureStorage';
@@ -52,6 +53,18 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const buildUserState = (
+  base: Omit<User, 'assignedClaimCollections'> & Partial<Pick<User, 'assignedClaimCollections'>>,
+  profileAssignments?: string[] | null
+): User => ({
+  ...base,
+  assignedClaimCollections: resolveAssignedClaimCollections({
+    email: base.email,
+    role: base.role,
+    assignedClaimCollections: profileAssignments ?? base.assignedClaimCollections
+  })
+});
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -121,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             console.log('✅ Auth: Setting user with role:', userRole, 'for email:', firebaseUser.email);
             
-            setUser({
+            setUser(buildUserState({
               uid: firebaseUser.uid,
               email: firebaseUser.email!,
               name: userRoleData.name,
@@ -131,7 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               createdAt: userRoleData.dateCreated?.toDate(),
               updatedAt: userRoleData.dateModified?.toDate(),
               mustChangePassword
-            });
+            }, userRoleData.assignedClaimCollections));
           } else {
             console.log('⚠️ Auth: User NOT found in userroles collection, checking users collection...');
             
@@ -163,7 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
             console.log('✅ Auth: Created userroles document with role:', normalizedRole);
             
-            setUser({
+            setUser(buildUserState({
               uid: firebaseUser.uid,
               email: firebaseUser.email!,
               name: existingName,
@@ -172,7 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               phone: null,
               createdAt: new Date(),
               updatedAt: new Date()
-            });
+            }));
           }
           setFirebaseUser(firebaseUser);
         } catch (error: any) {
@@ -196,7 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 console.log('✅ Auth: Retry successful, found user data');
                 const userRole = normalizeRole(userData.role || 'default');
                 
-                setUser({
+                setUser(buildUserState({
                   uid: firebaseUser.uid,
                   email: firebaseUser.email!,
                   name: userData.name || userData.displayName || '',
@@ -205,7 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   phone: userData.phone || null,
                   createdAt: userData.dateCreated?.toDate() || new Date(),
                   updatedAt: userData.dateModified?.toDate() || new Date()
-                });
+                }, userData.assignedClaimCollections));
                 setFirebaseUser(firebaseUser);
                 setLoading(false);
                 return;
@@ -218,7 +231,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Even if Firestore read fails, the user IS authenticated in Firebase
           // Set a minimal user object so they're not kicked out
           console.log('⚠️ Auth: Setting minimal user from Firebase Auth data');
-          setUser({
+          setUser(buildUserState({
             uid: firebaseUser.uid,
             email: firebaseUser.email!,
             name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
@@ -227,7 +240,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             phone: null,
             createdAt: new Date(),
             updatedAt: new Date()
-          });
+          }));
           setFirebaseUser(firebaseUser);
         }
       } else {
