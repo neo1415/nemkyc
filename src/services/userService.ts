@@ -11,6 +11,8 @@ export interface UserRole {
   role: string;
   dateCreated?: any;
   dateModified?: any;
+  assignedClaimCollections?: string[] | null;
+  claimAccessAll?: boolean;
 }
 
 // Helper function to get CSRF token

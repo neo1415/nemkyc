@@ -35,7 +35,11 @@ const {
   isClaimFormType,
   resolveAssignedClaimCollections,
   buildNotificationRoleQuery,
-  normalizeNotificationEmails
+  normalizeNotificationEmails,
+  getAllClaimCollections,
+  getClaimUnitGroups,
+  validateAssignedClaimCollectionsInput,
+  buildUserRoleClaimAccessUpdate
 } = require('./server-utils/customerFormPolicy.cjs');
 
 // Import verification error handling utility
@@ -1648,6 +1652,31 @@ const validateRoleUpdate = [
   
   handleValidationErrors
 ];
+
+function buildClaimAccessRoleFields(role, claimAccessAll = false, assignedClaimCollections = []) {
+  const result = buildUserRoleClaimAccessUpdate(role, { claimAccessAll, assignedClaimCollections });
+  if (!result.valid) {
+    return result;
+  }
+
+  if (result.clearClaimAccess) {
+    return {
+      valid: true,
+      fields: {
+        assignedClaimCollections: admin.firestore.FieldValue.delete(),
+        claimAccessAll: admin.firestore.FieldValue.delete()
+      }
+    };
+  }
+
+  return {
+    valid: true,
+    fields: {
+      assignedClaimCollections: result.assignedClaimCollections,
+      claimAccessAll: result.claimAccessAll
+    }
+  };
+}
 
 /**
  * Validation chains for pagination parameters
@@ -3432,7 +3461,7 @@ app.get('/api/users', requireAuth, requireSuperAdmin, async (req, res) => {
 app.put('/api/users/:userId/role', requireAuth, requireRole('admin', 'super admin'), validateRoleUpdate, async (req, res) => {
   try {
     const { userId } = req.params;
-    const { role } = req.body;
+    const { role, claimAccessAll, assignedClaimCollections } = req.body;
     
     console.log('👤 Role update by:', req.user.email, 'Role:', req.user.role);
 
@@ -3440,11 +3469,31 @@ app.put('/api/users/:userId/role', requireAuth, requireRole('admin', 'super admi
     const targetUserDoc = await db.collection('userroles').doc(userId).get();
     const oldRole = targetUserDoc.exists ? targetUserDoc.data().role : 'unknown';
 
-    // Update user role
-    await db.collection('userroles').doc(userId).update({
+    const hasClaimAccessPayload = claimAccessAll !== undefined || assignedClaimCollections !== undefined;
+    const updatePayload = {
       role,
-      dateModified: new Date(),
-    });
+      dateModified: new Date()
+    };
+
+    if (role === 'claims' && hasClaimAccessPayload) {
+      const claimAccessResult = buildClaimAccessRoleFields(
+        role,
+        claimAccessAll ?? false,
+        assignedClaimCollections ?? []
+      );
+
+      if (!claimAccessResult.valid) {
+        return res.status(400).json({ error: claimAccessResult.error || 'Invalid claim access configuration' });
+      }
+
+      Object.assign(updatePayload, claimAccessResult.fields);
+    } else if (role !== 'claims') {
+      const claimAccessResult = buildClaimAccessRoleFields(role, false, []);
+      Object.assign(updatePayload, claimAccessResult.fields);
+    }
+
+    // Update user role
+    await db.collection('userroles').doc(userId).update(updatePayload);
 
     // 📝 LOG ROLE UPDATE EVENT
     const targetDetails = await getUserDetailsForLogging(userId);
@@ -3480,12 +3529,57 @@ app.put('/api/users/:userId/role', requireAuth, requireRole('admin', 'super admi
   }
 });
 
+app.put('/api/users/:userId/claim-access', requireAuth, requireSuperAdmin, [
+  param('userId').trim().notEmpty().withMessage('User ID is required'),
+  body('claimAccessAll').isBoolean().withMessage('claimAccessAll must be a boolean'),
+  body('assignedClaimCollections').optional().isArray().withMessage('assignedClaimCollections must be an array')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ error: errors.array()[0].msg });
+    }
+
+    const { userId } = req.params;
+    const { claimAccessAll, assignedClaimCollections = [] } = req.body;
+    const targetUserDoc = await db.collection('userroles').doc(userId).get();
+
+    if (!targetUserDoc.exists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const targetRole = targetUserDoc.data().role;
+    if (String(targetRole || '').trim().toLowerCase() !== 'claims') {
+      return res.status(400).json({ error: 'Claim access can only be assigned to users with the claims role' });
+    }
+
+    const claimAccessResult = buildClaimAccessRoleFields('claims', claimAccessAll, assignedClaimCollections);
+    if (!claimAccessResult.valid) {
+      return res.status(400).json({ error: claimAccessResult.error || 'Invalid claim access configuration' });
+    }
+
+    await db.collection('userroles').doc(userId).update({
+      dateModified: new Date(),
+      ...claimAccessResult.fields
+    });
+
+    res.status(200).json({
+      success: true,
+      assignedClaimCollections: claimAccessResult.fields.assignedClaimCollections ?? null,
+      claimAccessAll: claimAccessResult.fields.claimAccessAll === true
+    });
+  } catch (error) {
+    console.error('Error updating claim access:', error);
+    res.status(500).json({ error: 'Failed to update claim access' });
+  }
+});
+
 // ✅ PROTECTED: Requires admin or super admin role (PATCH alias for PUT)
 // ✅ VALIDATED: Input validation applied
 app.patch('/api/users/:userId/role', requireAuth, requireRole('admin', 'super admin'), validateRoleUpdate, async (req, res) => {
   try {
     const { userId } = req.params;
-    const { role } = req.body;
+    const { role, claimAccessAll, assignedClaimCollections } = req.body;
     
     console.log('👤 Role update (PATCH) by:', req.user.email, 'Role:', req.user.role);
 
@@ -3493,11 +3587,31 @@ app.patch('/api/users/:userId/role', requireAuth, requireRole('admin', 'super ad
     const targetUserDoc = await db.collection('userroles').doc(userId).get();
     const oldRole = targetUserDoc.exists ? targetUserDoc.data().role : 'unknown';
 
-    // Update user role
-    await db.collection('userroles').doc(userId).update({
+    const hasClaimAccessPayload = claimAccessAll !== undefined || assignedClaimCollections !== undefined;
+    const updatePayload = {
       role,
-      dateModified: new Date(),
-    });
+      dateModified: new Date()
+    };
+
+    if (role === 'claims' && hasClaimAccessPayload) {
+      const claimAccessResult = buildClaimAccessRoleFields(
+        role,
+        claimAccessAll ?? false,
+        assignedClaimCollections ?? []
+      );
+
+      if (!claimAccessResult.valid) {
+        return res.status(400).json({ error: claimAccessResult.error || 'Invalid claim access configuration' });
+      }
+
+      Object.assign(updatePayload, claimAccessResult.fields);
+    } else if (role !== 'claims') {
+      const claimAccessResult = buildClaimAccessRoleFields(role, false, []);
+      Object.assign(updatePayload, claimAccessResult.fields);
+    }
+
+    // Update user role
+    await db.collection('userroles').doc(userId).update(updatePayload);
 
     // 📝 LOG ROLE UPDATE EVENT
     const targetDetails = await getUserDetailsForLogging(userId);
@@ -3654,7 +3768,9 @@ async function sendEmailWithRetry(emailData, maxRetries = 3) {
 app.post('/api/users/create', requireAuth, requireSuperAdmin, userCreationRateLimit, [
   body('fullName').trim().notEmpty().withMessage('Full name is required'),
   body('email').trim().isEmail().withMessage('Invalid email format'),
-  body('role').trim().isIn(['default', 'broker', 'admin', 'compliance', 'claims', 'super admin']).withMessage('Invalid role')
+  body('role').trim().isIn(['default', 'broker', 'admin', 'compliance', 'claims', 'super admin']).withMessage('Invalid role'),
+  body('claimAccessAll').optional().isBoolean().withMessage('claimAccessAll must be a boolean'),
+  body('assignedClaimCollections').optional().isArray().withMessage('assignedClaimCollections must be an array')
 ], async (req, res) => {
   try {
     // Validate input
@@ -3667,7 +3783,16 @@ app.post('/api/users/create', requireAuth, requireSuperAdmin, userCreationRateLi
       });
     }
 
-    const { fullName, email, role } = req.body;
+    const { fullName, email, role, claimAccessAll = false, assignedClaimCollections = [] } = req.body;
+    const claimAccessResult = buildUserRoleClaimAccessUpdate(role, { claimAccessAll, assignedClaimCollections });
+
+    if (!claimAccessResult.valid) {
+      return res.status(400).json({
+        success: false,
+        error: claimAccessResult.error || 'Invalid claim access configuration',
+        code: 'VALIDATION_ERROR'
+      });
+    }
     const superAdminId = req.user.uid;
     const superAdminEmail = req.user.email;
 
@@ -3712,14 +3837,21 @@ app.post('/api/users/create', requireAuth, requireSuperAdmin, userCreationRateLi
 
       // Create role document
       const roleRef = db.collection('userroles').doc(firebaseUser.uid);
-      batch.set(roleRef, {
+      const roleDocument = {
         uid: firebaseUser.uid,
         email,
         name: fullName,
         role,
         dateCreated: admin.firestore.FieldValue.serverTimestamp(),
         dateModified: admin.firestore.FieldValue.serverTimestamp()
-      });
+      };
+
+      if (claimAccessResult.shouldInclude) {
+        roleDocument.assignedClaimCollections = claimAccessResult.assignedClaimCollections;
+        roleDocument.claimAccessAll = claimAccessResult.claimAccessAll;
+      }
+
+      batch.set(roleRef, roleDocument);
 
       await batch.commit();
 
@@ -3771,7 +3903,9 @@ app.post('/api/users/create', requireAuth, requireSuperAdmin, userCreationRateLi
         user: {
           uid: firebaseUser.uid,
           email,
-          role
+          role,
+          assignedClaimCollections: claimAccessResult.shouldInclude ? claimAccessResult.assignedClaimCollections : null,
+          claimAccessAll: claimAccessResult.shouldInclude ? claimAccessResult.claimAccessAll : false
         }
       });
 
@@ -5713,7 +5847,8 @@ app.post('/api/exchange-token', async (req, res) => {
     const assignedClaimCollections = resolveAssignedClaimCollections({
       email,
       role: userData.role,
-      assignedClaimCollections: userData.assignedClaimCollections
+      assignedClaimCollections: userData.assignedClaimCollections,
+      claimAccessAll: userData.claimAccessAll
     });
 
     res.json({
@@ -5722,7 +5857,8 @@ app.post('/api/exchange-token', async (req, res) => {
       user: { uid, email, displayName: userData.name },
       loginCount: loginCount,
       sessionToken: uid, // Send token in response for localStorage fallback
-      assignedClaimCollections
+      assignedClaimCollections,
+      claimAccessAll: userData.claimAccessAll === true
     });
 
   } catch (error) {

@@ -85,7 +85,9 @@ test('claim form detection covers configured and legacy form names', () => {
 test('assigned claim collections scope unit admins by email', () => {
   const {
     getAssignedClaimCollectionsForEmail,
-    resolveAssignedClaimCollections
+    resolveAssignedClaimCollections,
+    validateAssignedClaimCollectionsInput,
+    getClaimUnitGroups
   } = require('../customerFormPolicy.cjs');
 
   assert.deepEqual(
@@ -107,5 +109,23 @@ test('assigned claim collections scope unit admins by email', () => {
       role: 'admin'
     }),
     null
+  );
+
+  assert.equal(getClaimUnitGroups().length, 4);
+
+  assert.equal(
+    validateAssignedClaimCollectionsInput('claims', {
+      claimAccessAll: false,
+      assignedClaimCollections: []
+    }).valid,
+    false
+  );
+
+  assert.deepEqual(
+    validateAssignedClaimCollectionsInput('claims', {
+      claimAccessAll: false,
+      assignedClaimCollections: ['motor-claims']
+    }).value,
+    ['motor-claims']
   );
 });

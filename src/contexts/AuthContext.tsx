@@ -55,14 +55,17 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const buildUserState = (
-  base: Omit<User, 'assignedClaimCollections'> & Partial<Pick<User, 'assignedClaimCollections'>>,
-  profileAssignments?: string[] | null
+  base: Omit<User, 'assignedClaimCollections' | 'claimAccessAll'> & Partial<Pick<User, 'assignedClaimCollections' | 'claimAccessAll'>>,
+  profileAssignments?: string[] | null,
+  claimAccessAll?: boolean
 ): User => ({
   ...base,
+  claimAccessAll: claimAccessAll ?? base.claimAccessAll,
   assignedClaimCollections: resolveAssignedClaimCollections({
     email: base.email,
     role: base.role,
-    assignedClaimCollections: profileAssignments ?? base.assignedClaimCollections
+    assignedClaimCollections: profileAssignments ?? base.assignedClaimCollections,
+    claimAccessAll: claimAccessAll ?? base.claimAccessAll
   })
 });
 
@@ -144,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               createdAt: userRoleData.dateCreated?.toDate(),
               updatedAt: userRoleData.dateModified?.toDate(),
               mustChangePassword
-            }, userRoleData.assignedClaimCollections));
+            }, userRoleData.assignedClaimCollections, userRoleData.claimAccessAll));
           } else {
             console.log('⚠️ Auth: User NOT found in userroles collection, checking users collection...');
             
@@ -218,7 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   phone: userData.phone || null,
                   createdAt: userData.dateCreated?.toDate() || new Date(),
                   updatedAt: userData.dateModified?.toDate() || new Date()
-                }, userData.assignedClaimCollections));
+                }, userData.assignedClaimCollections, userData.claimAccessAll));
                 setFirebaseUser(firebaseUser);
                 setLoading(false);
                 return;

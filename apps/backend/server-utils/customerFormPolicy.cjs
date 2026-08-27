@@ -355,7 +355,11 @@ function getAssignedClaimCollectionsForEmail(email) {
   )];
 }
 
-function resolveAssignedClaimCollections({ email, role, assignedClaimCollections }) {
+function resolveAssignedClaimCollections({ email, role, assignedClaimCollections, claimAccessAll }) {
+  if (claimAccessAll === true) {
+    return null;
+  }
+
   const profileAssignments = Array.isArray(assignedClaimCollections)
     ? assignedClaimCollections.filter(Boolean)
     : [];
@@ -378,6 +382,96 @@ function resolveAssignedClaimCollections({ email, role, assignedClaimCollections
   return [];
 }
 
+const CLAIM_COLLECTION_SET = new Set(CLAIM_FORM_CONFIGS.map((config) => config.collection));
+
+const CLAIM_UNIT_LABELS = Object.freeze({
+  'motorclaimunit@nem-insurance.com': 'Motor Claims Unit',
+  'genaccidentclaims@nem-insurance.com': 'General Accident Claims Unit',
+  'fire&marineclaims@nem-insurance.com': 'Fire & Marine Claims Unit',
+  'specialriskclaims@nem-insurance.com': 'Special Risk & Agriculture Claims Unit'
+});
+
+function getAllClaimCollections() {
+  return [...CLAIM_COLLECTION_SET];
+}
+
+function getClaimUnitGroups() {
+  const groups = new Map();
+
+  CLAIM_FORM_CONFIGS.forEach((config) => {
+    const unitKey = String(config.unitRecipientEmail || '').trim().toLowerCase();
+    if (!groups.has(unitKey)) {
+      groups.set(unitKey, {
+        id: unitKey.replace(/[^a-z0-9]+/g, '-'),
+        label: CLAIM_UNIT_LABELS[unitKey] || config.unitRecipientEmail,
+        unitRecipientEmail: config.unitRecipientEmail,
+        unitAdminEmail: config.unitAdminEmail,
+        collections: []
+      });
+    }
+
+    groups.get(unitKey).collections.push({
+      collection: config.collection,
+      formType: config.formType,
+      policyRisk: config.policyRisk
+    });
+  });
+
+  return [...groups.values()];
+}
+
+function validateAssignedClaimCollectionsInput(role, { claimAccessAll = false, assignedClaimCollections = [] } = {}) {
+  const normalizedRole = String(role || '').trim().toLowerCase();
+
+  if (normalizedRole !== 'claims') {
+    return { valid: true, shouldInclude: false, value: null };
+  }
+
+  if (claimAccessAll) {
+    return { valid: true, shouldInclude: true, value: null };
+  }
+
+  const cleaned = [...new Set(
+    (Array.isArray(assignedClaimCollections) ? assignedClaimCollections : [])
+      .filter((collection) => CLAIM_COLLECTION_SET.has(collection))
+  )];
+
+  if (cleaned.length === 0) {
+    return {
+      valid: false,
+      shouldInclude: false,
+      value: null,
+      error: 'Select at least one claim type or enable full claim access.'
+    };
+  }
+
+  return { valid: true, shouldInclude: true, value: cleaned };
+}
+
+function buildUserRoleClaimAccessUpdate(role, { claimAccessAll = false, assignedClaimCollections = [] } = {}) {
+  const validation = validateAssignedClaimCollectionsInput(role, { claimAccessAll, assignedClaimCollections });
+
+  if (!validation.valid) {
+    return validation;
+  }
+
+  if (!validation.shouldInclude) {
+    return {
+      valid: true,
+      clearClaimAccess: true,
+      assignedClaimCollections: null,
+      claimAccessAll: false
+    };
+  }
+
+  return {
+    valid: true,
+    clearClaimAccess: false,
+    assignedClaimCollections: validation.value,
+    claimAccessAll: validation.value === null
+  };
+}
+
 module.exports = {
   ADMIN_NOTIFICATION_ROLE_VARIANTS,
   CUSTOMER_FORM_CONFIGS,
@@ -392,5 +486,9 @@ module.exports = {
   buildAdminSubmissionDeepLink,
   isClaimFormType,
   getAssignedClaimCollectionsForEmail,
-  resolveAssignedClaimCollections
+  resolveAssignedClaimCollections,
+  getAllClaimCollections,
+  getClaimUnitGroups,
+  validateAssignedClaimCollectionsInput,
+  buildUserRoleClaimAccessUpdate
 };

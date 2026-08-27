@@ -15,6 +15,8 @@ export interface CreateUserRequest {
   fullName: string;
   email: string;
   role: UserRole;
+  claimAccessAll?: boolean;
+  assignedClaimCollections?: string[];
 }
 
 export interface CreateUserResponse {
@@ -44,6 +46,8 @@ export interface User {
   createdAt: string;
   createdBy: string;
   mustChangePassword: boolean;
+  assignedClaimCollections?: string[] | null;
+  claimAccessAll?: boolean;
 }
 
 export interface ListUsersResponse {
@@ -128,6 +132,28 @@ export async function listUsers(filters: ListUsersQuery = {}): Promise<ListUsers
       `${API_BASE_URL}/api/users/list?${params.toString()}`,
       {
         withCredentials: true
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export async function updateUserClaimAccess(
+  userId: string,
+  data: { claimAccessAll: boolean; assignedClaimCollections: string[] }
+): Promise<{ success: boolean; error?: string; code?: string }> {
+  try {
+    const response = await axios.put(
+      `${API_BASE_URL}/api/users/${userId}/claim-access`,
+      data,
+      {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
+        }
       }
     );
 
@@ -278,6 +304,7 @@ export default {
   createUser,
   listUsers,
   updateUserRole,
+  updateUserClaimAccess,
   toggleUserStatus,
   resetUserPassword,
   changePassword
