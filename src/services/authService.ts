@@ -14,6 +14,7 @@ export interface AuthResponse {
   email?: string;
   sessionToken?: string;
   assignedClaimCollections?: string[] | null;
+  claimAccessAll?: boolean;
   user?: {
     uid: string;
     email: string;

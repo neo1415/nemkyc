@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import { toast } from 'sonner';
 import { createUser, type CreateUserRequest, type UserRole } from '../../services/userManagementService';
+import { ClaimAccessSelector } from './ClaimAccessSelector';
 
 interface CreateUserModalProps {
   open: boolean;
@@ -32,6 +33,7 @@ interface FormErrors {
   fullName?: string;
   email?: string;
   role?: string;
+  claimAccess?: string;
   general?: string;
 }
 
@@ -48,6 +50,8 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<UserRole | ''>('');
+  const [claimAccessAll, setClaimAccessAll] = useState(true);
+  const [assignedClaimCollections, setAssignedClaimCollections] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState({
@@ -64,6 +68,8 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
         setFullName('');
         setEmail('');
         setRole('');
+        setClaimAccessAll(true);
+        setAssignedClaimCollections([]);
         setErrors({});
         setTouched({
           fullName: false,
@@ -138,6 +144,10 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
         break;
       case 'role':
         setRole(value as UserRole);
+        if (value !== 'claims') {
+          setClaimAccessAll(true);
+          setAssignedClaimCollections([]);
+        }
         break;
     }
 
@@ -158,8 +168,11 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
     const fullNameError = validateField('fullName', fullName);
     const emailError = validateField('email', email);
     const roleError = validateField('role', role);
+    const claimAccessError = role === 'claims' && !claimAccessAll && assignedClaimCollections.length === 0
+      ? 'Select at least one claim type or enable full claim access.'
+      : undefined;
 
-    return !fullNameError && !emailError && !roleError;
+    return !fullNameError && !emailError && !roleError && !claimAccessError;
   };
 
   // Handle form submission
@@ -175,15 +188,19 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
     const fullNameError = validateField('fullName', fullName);
     const emailError = validateField('email', email);
     const roleError = validateField('role', role);
+    const claimAccessError = role === 'claims' && !claimAccessAll && assignedClaimCollections.length === 0
+      ? 'Select at least one claim type or enable full claim access.'
+      : undefined;
 
     setErrors({
       fullName: fullNameError,
       email: emailError,
       role: roleError,
+      claimAccess: claimAccessError,
     });
 
     // Stop if validation fails
-    if (fullNameError || emailError || roleError) {
+    if (fullNameError || emailError || roleError || claimAccessError) {
       return;
     }
 
@@ -194,6 +211,10 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
         fullName: fullName.trim(),
         email: email.trim().toLowerCase(),
         role: role as UserRole,
+        ...(role === 'claims' ? {
+          claimAccessAll,
+          assignedClaimCollections
+        } : {})
       };
 
       const response = await createUser(data);
@@ -233,7 +254,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ bgcolor: '#800020', color: 'white', py: 2 }}>
         Create New User
       </DialogTitle>
@@ -296,6 +317,17 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
               </MenuItem>
             ))}
           </TextField>
+
+          {role === 'claims' && (
+            <ClaimAccessSelector
+              claimAccessAll={claimAccessAll}
+              assignedClaimCollections={assignedClaimCollections}
+              onClaimAccessAllChange={setClaimAccessAll}
+              onAssignedCollectionsChange={setAssignedClaimCollections}
+              disabled={loading}
+              error={errors.claimAccess}
+            />
+          )}
 
           {/* Info Message */}
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>

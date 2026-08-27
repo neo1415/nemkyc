@@ -32,9 +32,11 @@ import {
 } from '../../components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { ChevronDown, Trash2, UserPlus } from 'lucide-react';
+import { ChevronDown, Trash2, UserPlus, Shield } from 'lucide-react';
 import { normalizeRole, isAdminRole } from '../../utils/roleNormalization';
 import { CreateUserModal } from '../../components/admin/CreateUserModal';
+import { EditUserClaimAccessModal } from '../../components/admin/EditUserClaimAccessModal';
+import { formatClaimAccessSummary } from '../../config/claimAccessPolicy';
 
 interface UserRole {
   id: string;
@@ -52,6 +54,8 @@ const AdminUsersTable: React.FC = () => {
   const [users, setUsers] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [claimAccessModalOpen, setClaimAccessModalOpen] = useState(false);
+  const [selectedClaimsUser, setSelectedClaimsUser] = useState<UserRole | null>(null);
 
   const [roleChangeDialog, setRoleChangeDialog] = useState<{
     open: boolean;
@@ -216,6 +220,7 @@ const AdminUsersTable: React.FC = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Claim Access</TableHead>
                 <TableHead>Date Created</TableHead>
                 <TableHead>Date Modified</TableHead>
                 <TableHead>Actions</TableHead>
@@ -246,6 +251,33 @@ const AdminUsersTable: React.FC = () => {
                         </SelectContent>
                       </Select>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {normalizeRole(userRole.role) === 'claims' ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">
+                          {formatClaimAccessSummary(
+                            userRole.role,
+                            userRole.email,
+                            userRole.assignedClaimCollections,
+                            userRole.claimAccessAll
+                          )}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedClaimsUser(userRole);
+                            setClaimAccessModalOpen(true);
+                          }}
+                        >
+                          <Shield className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell>{formatDateTime(userRole.dateCreated)}</TableCell>
                   <TableCell>{formatDateTime(userRole.dateModified)}</TableCell>
@@ -370,6 +402,22 @@ const AdminUsersTable: React.FC = () => {
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         onSuccess={handleCreateSuccess}
+      />
+
+      <EditUserClaimAccessModal
+        open={claimAccessModalOpen}
+        onClose={() => {
+          setClaimAccessModalOpen(false);
+          setSelectedClaimsUser(null);
+        }}
+        onSuccess={fetchUsers}
+        user={selectedClaimsUser ? {
+          id: selectedClaimsUser.id,
+          name: selectedClaimsUser.name,
+          email: selectedClaimsUser.email,
+          assignedClaimCollections: selectedClaimsUser.assignedClaimCollections,
+          claimAccessAll: selectedClaimsUser.claimAccessAll
+        } : null}
       />
     </div>
   );

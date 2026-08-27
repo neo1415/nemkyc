@@ -104,12 +104,18 @@ export function getAssignedClaimCollectionsForEmail(email: string): string[] {
 export function resolveAssignedClaimCollections({
   email,
   role,
-  assignedClaimCollections
+  assignedClaimCollections,
+  claimAccessAll
 }: {
   email?: string;
   role?: UserRole | string;
   assignedClaimCollections?: string[] | null;
+  claimAccessAll?: boolean;
 }): string[] | null {
+  if (claimAccessAll === true) {
+    return null;
+  }
+
   const profileAssignments = Array.isArray(assignedClaimCollections)
     ? assignedClaimCollections.filter(Boolean)
     : [];
@@ -170,4 +176,95 @@ export function filterAccessibleClaimNavItems(
   }
 
   return CLAIM_NAV_ITEMS.filter((item) => assignments.includes(item.collection));
+}
+
+export const CLAIM_UNIT_GROUPS = [
+  {
+    id: 'motor',
+    label: 'Motor Claims Unit',
+    collections: ['motor-claims']
+  },
+  {
+    id: 'general-accident',
+    label: 'General Accident Claims Unit',
+    collections: [
+      'professional-indemnity-claims',
+      'public-liability-claims',
+      'employers-liability-claims',
+      'combined-gpa-employers-liability-claims',
+      'group-personal-accident-claims',
+      'money-insurance-claims',
+      'goods-in-transit-claims',
+      'contractors-claims',
+      'all-risk-claims',
+      'fidelity-guarantee-claims',
+      'smart-motorist-protection-claims',
+      'smart-students-protection-claims',
+      'smart-traveller-protection-claims',
+      'smart-artisan-protection-claims',
+      'smart-generation-z-protection-claims'
+    ]
+  },
+  {
+    id: 'fire-marine',
+    label: 'Fire & Marine Claims Unit',
+    collections: [
+      'burglary-claims',
+      'fire-special-perils-claims',
+      'rent-assurance-claims',
+      'nem-home-protection-claims'
+    ]
+  },
+  {
+    id: 'special-risk',
+    label: 'Special Risk & Agriculture Claims Unit',
+    collections: [
+      'livestock-claims',
+      'farm-property-produce-claims',
+      'poultry-claims',
+      'fishery-fish-farm-claims',
+      'yield-index-claims',
+      'multi-perils-crop-claims'
+    ]
+  }
+] as const;
+
+const CLAIM_NAME_BY_COLLECTION = new Map(CLAIM_NAV_ITEMS.map((item) => [item.collection, item.name]));
+
+export function getClaimTypeLabel(collection: string): string {
+  return CLAIM_NAME_BY_COLLECTION.get(normalizeClaimCollection(collection)) || collection;
+}
+
+export function formatClaimAccessSummary(
+  role: UserRole | string | undefined,
+  email: string | undefined,
+  assignedClaimCollections?: string[] | null,
+  claimAccessAll?: boolean
+): string {
+  const normalizedRole = normalizeRole(role);
+  if (normalizedRole !== 'claims') {
+    return '—';
+  }
+
+  const resolved = resolveAssignedClaimCollections({
+    email,
+    role: normalizedRole,
+    assignedClaimCollections,
+    claimAccessAll
+  });
+
+  if (resolved === null) {
+    return 'All claim types';
+  }
+
+  if (resolved.length === 0) {
+    return 'No claim types assigned';
+  }
+
+  const labels = resolved.map((collection) => getClaimTypeLabel(collection));
+  if (labels.length <= 2) {
+    return labels.join(', ');
+  }
+
+  return `${labels.slice(0, 2).join(', ')} +${labels.length - 2} more`;
 }
