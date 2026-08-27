@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { canAccessClaimCollection } from '../../config/claimAccessPolicy';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { Button, Typography, Box, Paper, Divider, Chip, TextField, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText } from '@mui/material';
@@ -51,6 +52,10 @@ const FormViewer: React.FC = () => {
 
   useEffect(() => {
     if (!user || !isAdmin()) {
+      navigate('/unauthorized');
+      return;
+    }
+    if (collection && !canAccessClaimCollection(user, collection)) {
       navigate('/unauthorized');
       return;
     }

@@ -35,6 +35,7 @@ import {
   GetApp
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
+import { canAccessClaimCollection } from '@/config/claimAccessPolicy';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { 
@@ -105,6 +106,10 @@ const AdminUnifiedTable: React.FC<AdminUnifiedTableProps> = ({
 
   useEffect(() => {
     if (!user || !isAdmin()) {
+      navigate('/unauthorized');
+      return;
+    }
+    if (!canAccessClaimCollection(user, collectionName)) {
       navigate('/unauthorized');
       return;
     }

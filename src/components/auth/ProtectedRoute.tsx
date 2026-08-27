@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import MFAEnrollment from './MFAEnrollment';
 import MFAVerification from './MFAVerification';
@@ -11,13 +11,20 @@ export interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading, mfaRequired, mfaEnrollmentRequired } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
   if (!user) {
-    return <Navigate to="/auth/signin" replace />;
+    const redirectTarget = `${location.pathname}${location.search}`;
+    return (
+      <Navigate
+        to={`/auth/signin?redirect=${encodeURIComponent(redirectTarget)}`}
+        replace
+      />
+    );
   }
 
   // Show MFA enrollment if required

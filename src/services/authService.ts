@@ -13,6 +13,7 @@ export interface AuthResponse {
   loginCount?: number;
   email?: string;
   sessionToken?: string;
+  assignedClaimCollections?: string[] | null;
   user?: {
     uid: string;
     email: string;
