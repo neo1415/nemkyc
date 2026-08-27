@@ -2,6 +2,11 @@ import React from 'react';
 import jsPDF from 'jspdf';
 import { FORM_MAPPINGS, FormField, FormSection } from '../../config/formMappings';
 import logoImage from '../../assets/NEMs-Logo.jpg';
+import {
+  collectPdfAttachmentLabels,
+  isStorageOrFileUrl,
+  shouldOmitFieldFromPdfBody
+} from '../../utils/pdfFieldPolicy';
 
 export interface PDFSubmissionData {
   [key: string]: any;
@@ -46,11 +51,6 @@ const LETTERHEAD = {
   emails: 'Email: nem@nem-insurance.com • claims@nem-insurance.com'
 };
 
-const IMPORTANT_NOTICE = [
-  'This form should be filled in by the person named as the \'Insured\' on the policy schedule.',
-  'Form is to be filled in CAPITAL LETTER and signed by the Insured. All asterisked (*) items must be filled to completion.',
-  'The issue of this form does not imply admission of liability.'
-];
 
 const CLAIMS_PROCEDURE = [
   'NEM Insurance should be notified immediately.',
@@ -77,11 +77,12 @@ const EXCLUDED_FIELDS = [
 
 // File fields to handle as attachments only
 const FILE_FIELDS = [
-  'identificationUrl', 'cacCertificateUrl', 'memoOfAssociationUrl', 
+  'identificationUrl', 'cacCertificateUrl', 'memoOfAssociationUrl',
   'articlesOfAssociationUrl', 'certificateOfIncorporationUrl', 'taxClearanceUrl',
   'auditedAccountsUrl', 'boardResolutionUrl', 'signatureCardUrl', 'rentAgreement',
   'demandNote', 'quitNotice', 'fireBrigadeReport', 'picturesOfLoss', 'policeReport',
-  'additionalDocuments'
+  'additionalDocuments', 'thirdPartyDamagePhotos', 'damagePhotos', 'vehiclePhotos',
+  'supportingDocuments', 'uploadedDocuments', 'claimDocuments', 'evidencePhotos'
 ];
 
 const BURGUNDY = { r: 128, g: 0, b: 32 };
@@ -182,10 +183,13 @@ export class DynamicPDFGenerator {
   private convertMappingToBlueprint(mapping: any, formType: string): PDFBlueprint {
     const blueprint: PDFBlueprint = {
       title: mapping.title || formType.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      sections: mapping.sections.map((section: any) => ({
+      sections: mapping.sections
+        .filter((section: FormSection) => !shouldOmitFieldFromPdfBody('', undefined, undefined, section.title))
+        .map((section: any) => ({
         title: section.title,
         fields: section.fields
           .filter((field: FormField) => !EXCLUDED_FIELDS.includes(field.key))
+          .filter((field: FormField) => !shouldOmitFieldFromPdfBody(field.key, undefined, field.type, section.title))
           .map((field: FormField) => ({
             key: field.key,
             label: field.label,
@@ -209,6 +213,10 @@ export class DynamicPDFGenerator {
     Object.keys(data).forEach(key => {
       if (!EXCLUDED_FIELDS.includes(key) && !FILE_FIELDS.includes(key)) {
         const normalizedLabel = this.formatFieldLabel(key).toLowerCase();
+        const value = data[key];
+        if (shouldOmitFieldFromPdfBody(key, value)) {
+          return;
+        }
         // Enhanced filtering for "Agree to Data Privacy" field variations
         if ((normalizedLabel.includes('agree') && normalizedLabel.includes('data') && normalizedLabel.includes('privacy')) ||
             normalizedLabel.includes('dataPrivacyAgreement'.toLowerCase()) ||
@@ -271,57 +279,6 @@ export class DynamicPDFGenerator {
     }
   }
 
-  private addImportantNotice(): void {
-    // Center the Important Notice box (60% width) with reduced visual weight
-    const contentPadding = 3.75; // Reduced by 25%
-    const boxWidth = (this.pageWidth - (this.margin * 2)) * 0.6;
-    const boxStartX = this.margin + ((this.pageWidth - (this.margin * 2)) - boxWidth) / 2;
-
-    // Prepare content to measure height - reduced font size to 9pt
-    const contentFontSize = 9; // Reduced from 10pt
-    const lineHeight = 3.6; // Reduced proportionally
-
-    // Measure content height
-    let contentLines: string[] = [];
-    IMPORTANT_NOTICE.forEach(item => {
-      const lines = this.pdf.splitTextToSize(`* ${item}`, boxWidth - contentPadding * 2);
-      contentLines.push(...lines);
-    });
-    const titleHeight = 5;
-    const contentHeight = contentLines.length * lineHeight;
-    const boxHeight = contentPadding * 2 + titleHeight + contentHeight + 2;
-
-    // Ensure there's enough space on the page
-    this.checkPageBreak(boxHeight + 2);
-
-    const startY = this.yPosition;
-
-    // Draw burgundy border
-    setBurgundyDraw(this.pdf);
-    this.pdf.setLineWidth(0.5);
-    this.pdf.rect(boxStartX, startY, boxWidth, boxHeight, 'S');
-
-    // Title - reduced font size
-    this.pdf.setFontSize(11); // Reduced from 12
-    this.pdf.setFont(undefined, 'bold');
-    setBurgundyText(this.pdf);
-    this.pdf.text('IMPORTANT', boxStartX + contentPadding, startY + contentPadding + 3);
-
-    // Content
-    this.pdf.setFontSize(contentFontSize);
-    this.pdf.setFont(undefined, 'normal');
-    this.pdf.setTextColor(0, 0, 0);
-
-    let textY = startY + contentPadding + 3 + titleHeight;
-    IMPORTANT_NOTICE.forEach(item => {
-      const lines = this.pdf.splitTextToSize(`* ${item}`, boxWidth - contentPadding * 2);
-      this.pdf.text(lines, boxStartX + contentPadding, textY);
-      textY += lines.length * lineHeight;
-    });
-
-    this.yPosition = startY + boxHeight + 8;
-  }
-
   private async addHeader(): Promise<void> {
     try {
       // Add centered logo - smaller and more rectangular
@@ -373,15 +330,11 @@ export class DynamicPDFGenerator {
     const titleWidth = this.pdf.getTextWidth(title);
     const centerX = (this.pageWidth - titleWidth) / 2;
     this.pdf.text(title, centerX, this.yPosition);
-    this.yPosition += 10;
-    
-    // Add Important Notice right after title
-    this.addImportantNotice();
+    this.yPosition += 8;
   }
 
   private addPolicyMeta(): void {
-    // Remove the policy meta box - this information will be shown in the form data
-    this.yPosition += 10;
+    // Policy details are rendered in the mapped form sections.
   }
 
   private async addFormContent(): Promise<void> {
@@ -445,9 +398,12 @@ export class DynamicPDFGenerator {
   }
 
   private async addField(field: PDFBlueprintField): Promise<void> {
-    this.checkPageBreak(12);
-
     const value = this.submissionData[field.key];
+    if (shouldOmitFieldFromPdfBody(field.key, value, field.type, field.section)) {
+      return;
+    }
+
+    this.checkPageBreak(12);
 
     // Handle complex data structures
     if (this.isComplexArrayData(value)) {
@@ -500,10 +456,14 @@ export class DynamicPDFGenerator {
   }
 
   private async addArrayField(label: string, value: any[]): Promise<void> {
+    const printableItems = Array.isArray(value)
+      ? value.filter((item) => !isStorageOrFileUrl(item))
+      : [];
+
     this.pdf.setFont(undefined, 'bold');
     this.pdf.text(`${label}:`, this.margin, this.yPosition);
     
-    if (!Array.isArray(value) || value.length === 0) {
+    if (printableItems.length === 0) {
       this.pdf.setFont(undefined, 'normal');
       this.pdf.text('N/A', this.margin + 70, this.yPosition);
       this.yPosition += 6;
@@ -512,7 +472,7 @@ export class DynamicPDFGenerator {
 
     this.yPosition += 6;
 
-    value.forEach((item, index) => {
+    printableItems.forEach((item, index) => {
       this.checkPageBreak(8);
       this.pdf.setFont(undefined, 'normal');
       const itemText = typeof item === 'object' ? JSON.stringify(item) : String(item);
@@ -652,6 +612,10 @@ export class DynamicPDFGenerator {
   private sanitizeAndFormatValue(value: any, type: FormField['type']): string {
     if (value === null || value === undefined || value === '') {
       return 'N/A';
+    }
+
+    if (isStorageOrFileUrl(value)) {
+      return 'Attached document';
     }
 
     // Handle boolean-like strings from form submissions first
@@ -873,7 +837,9 @@ export class DynamicPDFGenerator {
         // Format and display value
         let displayValue = '';
         if (cellValue !== null && cellValue !== undefined && cellValue !== '') {
-          if (col.toLowerCase().includes('amount') || col.toLowerCase().includes('value') || typeof cellValue === 'number') {
+          if (isStorageOrFileUrl(cellValue)) {
+            displayValue = 'Attached document';
+          } else if (col.toLowerCase().includes('amount') || col.toLowerCase().includes('value') || typeof cellValue === 'number') {
             displayValue = this.formatCurrency(cellValue);
             if (typeof cellValue === 'number' || !isNaN(parseFloat(cellValue))) {
               rowTotal += parseFloat(cellValue) || 0;
@@ -1001,7 +967,7 @@ export class DynamicPDFGenerator {
 
       if (typeof item === 'object' && item !== null) {
         Object.entries(item).forEach(([key, value]) => {
-          if (!EXCLUDED_FIELDS.includes(key) && value !== null && value !== undefined && value !== '') {
+          if (!EXCLUDED_FIELDS.includes(key) && value !== null && value !== undefined && value !== '' && !isStorageOrFileUrl(value)) {
             this.checkPageBreak(5);
             const fieldLabel = this.formatFieldLabel(key);
             this.pdf.setFont(undefined, 'bold');
@@ -1040,20 +1006,7 @@ export class DynamicPDFGenerator {
   }
 
   private async addAttachments(): Promise<void> {
-    const attachments: string[] = [];
-    
-    FILE_FIELDS.forEach(field => {
-      const value = this.submissionData[field];
-      if (value) {
-        if (Array.isArray(value)) {
-          value.forEach((item, index) => {
-            attachments.push(`${this.formatFieldLabel(field)} ${index + 1}`);
-          });
-        } else {
-          attachments.push(this.formatFieldLabel(field));
-        }
-      }
-    });
+    const attachments = collectPdfAttachmentLabels(this.submissionData, FILE_FIELDS);
 
     if (attachments.length > 0) {
       this.checkPageBreak(20);
@@ -1191,41 +1144,40 @@ export class DynamicPDFGenerator {
   
   private addSignatureAndDateRow(): void {
     this.checkPageBreak(15);
-    
+
     const signatureValue = this.getSignatureValue();
     const dateValue = this.getSubmissionDate();
-    
+
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(10);
     this.pdf.setTextColor(0, 0, 0);
-    
-    const baseY = this.yPosition;
-    
-    // Left side - Signature (justify-between layout as specified)
+
+    const rowY = this.yPosition;
+    const signatureLabelX = this.margin;
+    const signatureLineStart = this.margin + 22;
+    const signatureLineEnd = this.margin + (this.contentWidth * 0.52);
+    const dateLabelX = this.margin + (this.contentWidth * 0.56);
+    const dateLineStart = dateLabelX + 12;
+    const dateLineEnd = this.margin + this.contentWidth;
+
+    this.pdf.text('Signature:', signatureLabelX, rowY);
+    setBurgundyDraw(this.pdf);
+    this.pdf.setLineWidth(0.3);
+    this.pdf.line(signatureLineStart, rowY + 1.5, signatureLineEnd, rowY + 1.5);
+
     if (signatureValue && signatureValue !== '________________') {
-      // Render signature value centered above the signature line
-      const signatureWidth = this.pdf.getTextWidth(signatureValue);
-      const signatureCenterX = this.margin + 15; // Center above 30-char underline
-      this.pdf.text(signatureValue, signatureCenterX - (signatureWidth / 2), baseY);
+      this.pdf.setTextColor(0, 0, 0);
+      this.pdf.text(signatureValue, signatureLineStart + 1, rowY - 1);
     }
-    
-    // Signature line on the left
-    this.pdf.text('Signature: ____________________________', this.margin, baseY + (signatureValue && signatureValue !== '________________' ? 5 : 0));
-    
-    // Right side - Date (justify-between layout)
-    const dateX = this.margin + this.contentWidth - 40; // Right-aligned position for 30-char underline
-    
+
+    this.pdf.text('Date:', dateLabelX, rowY);
+    this.pdf.line(dateLineStart, rowY + 1.5, dateLineEnd, rowY + 1.5);
+
     if (dateValue) {
-      // Render date value centered above the date line (DD/MM/YYYY format as specified)
-      const dateWidth = this.pdf.getTextWidth(dateValue);
-      const dateCenterX = dateX + 15; // Center above 30-char underline  
-      this.pdf.text(dateValue, dateCenterX - (dateWidth / 2), baseY);
+      this.pdf.text(dateValue, dateLineStart + 1, rowY - 1);
     }
-    
-    // Date line on the right
-    this.pdf.text('Date: ____________________________', dateX, baseY + (dateValue ? 5 : 0));
-    
-    this.yPosition = baseY + 12;
+
+    this.yPosition = rowY + 12;
   }
 
   private getSignatureValue(): string {
