@@ -19,8 +19,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Calendar as ReactCalendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
-import { Loader2, Home, Info } from 'lucide-react';
+import { CalendarIcon, Loader2, Home, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -423,11 +425,11 @@ const RentAssuranceClaim = () => {
                   <div>
                     <Label>Period of Cover *</Label>
                     <div className="grid md:grid-cols-2 gap-4 mt-2">
-                      <DatePickerField
+                      <DatePicker
                         name="periodOfCoverFrom"
                         label="From *"
                       />
-                      <DatePickerField
+                      <DatePicker
                         name="periodOfCoverTo"
                         label="To *"
                       />

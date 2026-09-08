@@ -32,12 +32,28 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
+  const acceptedMimeTypes = new Set(
+    accept.split(',').map(value => value.trim().toLowerCase()).flatMap(value => {
+      switch (value) {
+        case '.jpg':
+        case '.jpeg': return ['image/jpeg', 'image/jpg'];
+        case '.png': return ['image/png'];
+        case '.gif': return ['image/gif'];
+        case '.pdf': return ['application/pdf'];
+        case '.doc': return ['application/msword'];
+        case '.docx': return ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        case 'image/*': return ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        default: return value.includes('/') ? [value] : [];
+      }
+    })
+  );
+
   const getDetailedErrorMessage = (errorType: string, details?: any) => {
     switch (errorType) {
       case 'INVALID_TYPE':
         return {
           title: 'Invalid File Format',
-          description: 'Only PDF, PNG, JPG, and JPEG files are supported. Please convert your file to one of these formats.',
+          description: `This form accepts: ${accept}. Please choose one of those file formats.`,
           suggestions: [
             'Use PDF for scanned documents',
             'Use PNG or JPG for photos',
@@ -94,8 +110,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
     const file = files[0];
     
     // Validate file type
-    const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'application/pdf'];
-    if (!allowedTypes.includes(file.type)) {
+    if (!acceptedMimeTypes.has(file.type.toLowerCase())) {
       showDetailedError('INVALID_TYPE');
       return;
     }
@@ -143,6 +158,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
   const fileName = getFileName();
 
+  const removeFile = () => {
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    onFileRemove?.();
+  };
+
   return (
     <div className="space-y-2">
       {label && (
@@ -169,7 +189,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={onFileRemove}
+                  onClick={removeFile}
                   className="h-8 w-8 p-0"
                 >
                   <X className="h-4 w-4" />
@@ -196,7 +216,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                   or drag and drop your file here
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
-                  Max size: {maxSize}MB. Supported: PDF, JPG, JPEG, PNG
+                  Max size: {maxSize}MB. Supported: {accept}
                 </p>
               </div>
             </div>

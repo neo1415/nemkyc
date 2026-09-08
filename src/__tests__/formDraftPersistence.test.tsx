@@ -1,5 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { useFormDraft } from '../hooks/useFormDraft';
 
 const draftMocks = vi.hoisted(() => ({
@@ -17,6 +19,14 @@ describe('shared form draft persistence', () => {
     vi.clearAllMocks();
     draftMocks.saveFormDraft.mockResolvedValue(undefined);
     draftMocks.getFormDraft.mockResolvedValue(null);
+  });
+
+  it('uses a stable fallback salt so encrypted drafts survive page reloads', () => {
+    const source = readFileSync(join(process.cwd(), 'src', 'utils', 'secureStorage.ts'), 'utf8');
+    const saltFallback = source.slice(source.indexOf('const SALT'), source.indexOf('async function getDerivedKey'));
+    expect(saltFallback).toContain('nem-forms-secure-storage-v1');
+    expect(saltFallback).not.toContain('Date.now()');
+    expect(saltFallback).not.toContain('Math.random()');
   });
 
   it('waits for encrypted draft storage and restores every saved field', async () => {
