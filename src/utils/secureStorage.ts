@@ -22,9 +22,11 @@ const STORAGE_KEY = 'nem_forms_key';
 const SALT = (() => {
   const envSalt = import.meta.env.VITE_STORAGE_SALT;
   if (!envSalt) {
-    console.error('❌ VITE_STORAGE_SALT not set! Using fallback (not recommended for production)');
-    // Generate a session-specific salt as fallback
-    return `nem-forms-${Date.now()}-${Math.random().toString(36)}`;
+    // Vite environment values are public in the browser, so this salt is not a
+    // secret. It must be stable: a random per-load salt makes saved drafts
+    // impossible to decrypt after refresh or an authentication redirect.
+    console.warn('VITE_STORAGE_SALT not set; using the stable versioned application salt.');
+    return 'nem-forms-secure-storage-v1';
   }
   return envSalt;
 })();

@@ -6,7 +6,26 @@ export const CSRF_UNAVAILABLE_MESSAGE =
 const delay = (milliseconds: number) =>
   new Promise(resolve => setTimeout(resolve, milliseconds));
 
+// A form can upload several documents in parallel. Without a single-flight
+// request, each /csrf-token response may set a different CSRF cookie and all
+// but the last returned token become invalid before their uploads begin.
+let csrfTokenRequest: Promise<string> | null = null;
+
 export const getCSRFToken = async (): Promise<string> => {
+  if (csrfTokenRequest) {
+    return csrfTokenRequest;
+  }
+
+  csrfTokenRequest = fetchCSRFToken();
+
+  try {
+    return await csrfTokenRequest;
+  } finally {
+    csrfTokenRequest = null;
+  }
+};
+
+const fetchCSRFToken = async (): Promise<string> => {
   const attempts = 3;
 
   for (let attempt = 0; attempt < attempts; attempt++) {

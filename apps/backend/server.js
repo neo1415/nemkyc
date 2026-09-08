@@ -4975,7 +4975,10 @@ const ALLOWED_PUBLIC_UPLOAD_ROOTS = new Set([
   'fire-special-perils-claims', 'all-risk-claims', 'goods-in-transit-claims',
   'money-insurance-claims', 'employers-liability-claims', 'public-liability-claims',
   'professional-indemnity-claims', 'fidelity-guarantee-claims', 'contractors-claims',
-  'group-personal-accident-claims', 'rent-assurance-claims'
+  'group-personal-accident-claims', 'rent-assurance-claims',
+  // Keep uploads aligned with the canonical claims registry so new and existing
+  // Smart, Home, and agricultural claim forms cannot fail at the upload boundary.
+  ...getAllClaimCollections()
 ]);
 
 // Upload customer documents through the backend so Firebase Storage can deny

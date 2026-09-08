@@ -69,6 +69,13 @@ const verifiedDocumentState = (fields: readonly string[] = []) => Object.fromEnt
   [`${field}Verification`, { isMatch: true }],
 ]));
 
+const authenticate = () => {
+  testState.user = { uid: 'user-123', email: 'customer@example.com', displayName: 'Test Customer' };
+  testState.firebaseUser = { getIdToken: vi.fn().mockResolvedValue('fresh-firebase-token') };
+};
+
+const ENHANCED_CLAIM_TYPES = ACCOUNT_BOUND_FORM_TYPES.filter(formType => formType.includes('Claim'));
+
 describe('account-bound customer submission flow', () => {
   beforeEach(() => {
     sessionStorage.clear();
@@ -145,6 +152,28 @@ describe('account-bound customer submission flow', () => {
     expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe('Bearer fresh-firebase-token');
   });
 
+  it.each(ENHANCED_CLAIM_TYPES)(
+    'submits authenticated %s end to end through the shared endpoint',
+    async formType => {
+      authenticate();
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce(successResponse({ csrfToken: 'csrf-token' }))
+        .mockResolvedValueOnce(successResponse({ success: true, ticketId: 'CLM-123' }));
+      vi.stubGlobal('fetch', fetchMock);
+      const { result } = renderHook(() => useEnhancedFormSubmit({ formType }));
+
+      await act(async () => { await result.current.handleSubmit({ policyNumber: 'POL-123' }); });
+      expect(result.current.showSummary).toBe(true);
+      await act(async () => { await result.current.confirmSubmit(); });
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock.mock.calls[1][0]).toContain('/api/submit-form');
+      expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe('Bearer fresh-firebase-token');
+      expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ formType });
+      expect(result.current.showSuccess).toBe(true);
+    },
+  );
+
   it('blocks an Individual CDD summary until its identity document is verified', async () => {
     const { result } = renderHook(() => useEnhancedFormSubmit({ formType: 'Individual CDD' }));
 
@@ -173,7 +202,7 @@ describe('account-bound customer submission flow', () => {
   it.each(CDD_VERIFICATION_CASES)(
     'verifies identity before submitting $formType',
     async ({ formType, documents, identityType, data }) => {
-      testState.user = { uid: 'user-123', email: 'customer@example.com', displayName: 'Test Customer' };
+      authenticate();
       const verificationResponse = identityType === 'NIN'
         ? { status: true, data: { firstName: 'Ada', surname: 'Okafor', birthdate: '1990-05-15', gender: 'Female' } }
         : { status: true, data: { name: 'Example Limited', registrationDate: '2020-01-15', address: '1 Marina Road Lagos' } };
@@ -204,6 +233,7 @@ describe('account-bound customer submission flow', () => {
     testState.user = {
       uid: 'firebase-user-123', email: 'ada@example.com', displayName: 'Ada Okafor'
     };
+    testState.firebaseUser = { getIdToken: vi.fn().mockResolvedValue('fresh-firebase-token') };
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(successResponse({
         status: true,
@@ -230,6 +260,7 @@ describe('account-bound customer submission flow', () => {
     testState.user = {
       uid: 'firebase-user-123', email: 'company@example.com', displayName: 'Company Owner'
     };
+    testState.firebaseUser = { getIdToken: vi.fn().mockResolvedValue('fresh-firebase-token') };
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(successResponse({
         status: true,
@@ -270,6 +301,7 @@ describe('account-bound customer submission flow', () => {
     testState.user = {
       uid: 'firebase-user-123', email: 'daniel@example.com', displayName: 'Daniel Oyeniyi'
     };
+    testState.firebaseUser = { getIdToken: vi.fn().mockResolvedValue('fresh-firebase-token') };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(successResponse({
       status: true,
       data: { firstName: 'Jane', lastName: 'Smith' },

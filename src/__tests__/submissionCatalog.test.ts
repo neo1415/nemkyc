@@ -5,6 +5,36 @@ import {
   COMPLIANCE_COLLECTION_NAMES,
   SUBMISSION_COLLECTION_NAMES,
 } from '../config/submissionCatalog';
+import { getFormPageUrl } from '../hooks/useAuthRequiredSubmit';
+
+const CLAIM_FORM_PAGES = [
+  ['Motor Claim', 'MotorClaim.tsx', '/claims/motor', 'useEnhancedFormSubmit'],
+  ['Professional Indemnity Claim', 'ProfessionalIndemnityClaimForm.tsx', '/claims/professional-indemnity', 'useAuthRequiredSubmit'],
+  ['Public Liability Claim', 'PublicLiabilityClaimForm.tsx', '/claims/public-liability', 'useAuthRequiredSubmit'],
+  ['Employers Liability Claim', 'EmployersLiabilityClaim.tsx', '/claims/employers-liability', 'useAuthRequiredSubmit'],
+  ['Combined GPA Employers Liability Claim', 'CombinedGPAEmployersLiabilityClaim.tsx', '/claims/combined-gpa-employers-liability', 'useAuthRequiredSubmit'],
+  ['Burglary Claim', 'BurglaryClaimForm.tsx', '/claims/burglary', 'useAuthRequiredSubmit'],
+  ['Group Personal Accident Claim', 'GroupPersonalAccidentClaim.tsx', '/claims/group-personal-accident', 'useAuthRequiredSubmit'],
+  ['Fire Special Perils Claim', 'FireSpecialPerilsClaim.tsx', '/claims/fire-special-perils', 'useAuthRequiredSubmit'],
+  ['Rent Assurance Claim', 'RentAssuranceClaim.tsx', '/claims/rent-assurance', 'useAuthRequiredSubmit'],
+  ['Money Insurance Claim', 'MoneyInsuranceClaim.tsx', '/claims/money-insurance', 'useAuthRequiredSubmit'],
+  ['Goods In Transit Claim', 'GoodsInTransitClaim.tsx', '/claims/goods-in-transit', 'useAuthRequiredSubmit'],
+  ['Contractors Plant & Machinery Claim', 'ContractorsPlantMachineryClaim.tsx', '/claims/contractors-plant-machinery', 'useAuthRequiredSubmit'],
+  ['All Risk Claim', 'AllRiskClaim.tsx', '/claims/all-risk', 'useAuthRequiredSubmit'],
+  ['Fidelity Guarantee Claim', 'FidelityGuaranteeClaim.tsx', '/claims/fidelity-guarantee', 'useAuthRequiredSubmit'],
+  ['Smart Motorist Protection Claim', 'SmartMotoristProtectionClaim.tsx', '/claims/smart-motorist-protection', 'useEnhancedFormSubmit'],
+  ['Smart Students Protection Claim', 'SmartStudentsProtectionClaim.tsx', '/claims/smart-students-protection', 'useEnhancedFormSubmit'],
+  ['Smart Traveller Protection Claim', 'SmartTravellerProtectionClaim.tsx', '/claims/smart-traveller-protection', 'useEnhancedFormSubmit'],
+  ['Smart Artisan Protection Claim', 'SmartArtisanProtectionClaim.tsx', '/claims/smart-artisan-protection', 'useEnhancedFormSubmit'],
+  ['Smart Generation Z Protection Claim', 'SmartGenerationZProtectionClaim.tsx', '/claims/smart-generation-z-protection', 'useEnhancedFormSubmit'],
+  ['NEM Home Protection Claim', 'NEMHomeProtectionClaim.tsx', '/claims/nem-home-protection', 'useEnhancedFormSubmit'],
+  ['Farm Property and Produce Insurance Claim', 'FarmPropertyProduceClaim.tsx', '/claims/farm-property-produce', 'useEnhancedFormSubmit'],
+  ['Livestock Insurance Claim', 'LivestockClaim.tsx', '/claims/livestock', 'useEnhancedFormSubmit'],
+  ['Poultry Claim', 'PoultryClaim.tsx', '/claims/poultry', 'useEnhancedFormSubmit'],
+  ['Fishery and Fish Farm Insurance Claim', 'FisheryFishFarmClaim.tsx', '/claims/fishery-fish-farm', 'useEnhancedFormSubmit'],
+  ['Yield Index Insurance Claim', 'YieldIndexInsuranceClaim.tsx', '/claims/yield-index-insurance', 'useEnhancedFormSubmit'],
+  ['Multi-Perils Crop Insurance Claim', 'MultiPerilsCropClaim.tsx', '/claims/multi-perils-crop', 'useEnhancedFormSubmit'],
+] as const;
 
 describe('customer dashboard submission catalog', () => {
   it('contains each durable collection exactly once', () => {
@@ -83,5 +113,29 @@ describe('global customer feedback', () => {
     const source = readFileSync(join(process.cwd(), 'src', 'App.tsx'), 'utf8');
     expect(source).toContain('Toaster as SonnerToaster');
     expect(source).toContain('<SonnerToaster');
+  });
+});
+
+describe('all claims form flow parity', () => {
+  it('covers all 26 claim forms', () => {
+    expect(CLAIM_FORM_PAGES).toHaveLength(26);
+  });
+
+  it.each(CLAIM_FORM_PAGES)(
+    '%s has the expected route, auth-aware submission, drafts, validation, summary, and success UX',
+    (formType, page, route, submissionHook) => {
+      const source = readFileSync(join(process.cwd(), 'src', 'pages', 'claims', page), 'utf8');
+      expect(getFormPageUrl(formType)).toBe(route);
+      expect(source).toContain(submissionHook);
+      expect(source).toContain('useFormDraft');
+      expect(source).toContain('MultiStepForm');
+      expect(source).toMatch(/FormSummaryDialog|setShowSummary\(true\)/);
+      expect(source).toContain('SuccessModal');
+    },
+  );
+
+  it('derives every backend claim upload root from the canonical claims registry', () => {
+    const serverSource = readFileSync(join(process.cwd(), 'apps', 'backend', 'server.js'), 'utf8');
+    expect(serverSource).toContain('...getAllClaimCollections()');
   });
 });

@@ -189,8 +189,10 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
                   console.error('Error during form submission:', error);
                   setIsValidating(false);
                   toast({
-                    title: 'We could not validate your form',
-                    description: 'Your entries are still saved. Please review the highlighted fields and try again.',
+                    title: 'We could not continue your submission',
+                    description: error instanceof Error
+                      ? error.message
+                      : 'Your entries are still saved. Please check your connection and try again.',
                     variant: 'destructive'
                   });
                 }

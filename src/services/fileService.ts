@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '@/config/constants';
+import { CSRF_UNAVAILABLE_MESSAGE, getCSRFToken } from '@/utils/csrfToken';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const ALLOWED_UPLOAD_TYPES = new Set([
@@ -11,16 +12,9 @@ const ALLOWED_UPLOAD_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]);
 
-const getCsrfToken = async (): Promise<string> => {
-  const response = await fetch(`${API_BASE_URL}/csrf-token`, { credentials: 'include' });
-  if (!response.ok) {
-    throw new Error('Could not initialize a secure upload');
-  }
-  const body = await response.json();
-  if (!body.csrfToken) {
-    throw new Error('Secure upload token was not returned');
-  }
-  return body.csrfToken;
+const isCsrfRejection = (response: Response, result: Record<string, unknown>) => {
+  const detail = `${result.code ?? ''} ${result.error ?? ''} ${result.message ?? ''}`.toLowerCase();
+  return response.status === 403 && (detail.includes('csrf') || detail.includes('ebadcsrftoken'));
 };
 
 export const uploadFile = async (file: File, path: string): Promise<string> => {
@@ -32,23 +26,40 @@ export const uploadFile = async (file: File, path: string): Promise<string> => {
   }
 
   try {
-    const csrfToken = await getCsrfToken();
     const formData = new FormData();
     formData.append('file', file, file.name);
     formData.append('path', path);
 
-    const response = await fetch(`${API_BASE_URL}/api/public/upload`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'CSRF-Token': csrfToken },
-      body: formData,
-    });
-    const result = await response.json().catch(() => ({}));
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const csrfToken = await getCSRFToken();
+      const response = await fetch(`${API_BASE_URL}/api/public/upload`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'CSRF-Token': csrfToken },
+        body: formData,
+      });
+      const result = await response.json().catch(() => ({})) as Record<string, unknown>;
 
-    if (!response.ok || typeof result.url !== 'string') {
-      throw new Error(result.message || result.error || 'Document upload failed');
+      if (response.ok && typeof result.url === 'string') {
+        return result.url;
+      }
+
+      if (attempt === 0 && isCsrfRejection(response, result)) {
+        continue;
+      }
+
+      if (isCsrfRejection(response, result)) {
+        throw new Error(CSRF_UNAVAILABLE_MESSAGE);
+      }
+
+      throw new Error(
+        (typeof result.message === 'string' && result.message) ||
+        (typeof result.error === 'string' && result.error) ||
+        'Document upload failed',
+      );
     }
-    return result.url;
+
+    throw new Error('Document upload failed');
   } catch (error) {
     console.error('Error uploading file:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to upload file');

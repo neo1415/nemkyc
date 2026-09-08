@@ -26,6 +26,7 @@ import { uploadFile } from '@/services/fileService';
 import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SuccessModal from '@/components/common/SuccessModal';
+import { cn } from '@/lib/utils';
 
 // Burglary Claim Schema - Same validation structure as Motor Claim
 const burglaryClaimSchema = yup.object().shape({

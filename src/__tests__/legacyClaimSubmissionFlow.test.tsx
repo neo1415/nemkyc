@@ -4,11 +4,12 @@ import { useAuthRequiredSubmit } from '../hooks/useAuthRequiredSubmit';
 
 const testState = vi.hoisted(() => ({
   user: null as null | { uid: string; email: string },
+  firebaseUser: null as null | { getIdToken: ReturnType<typeof vi.fn> },
   navigate: vi.fn(),
 }));
 
 vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({ user: testState.user }),
+  useAuth: () => ({ user: testState.user, firebaseUser: testState.firebaseUser }),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -44,6 +45,7 @@ describe('legacy claims account-bound submission flow', () => {
   beforeEach(() => {
     sessionStorage.clear();
     testState.user = null;
+    testState.firebaseUser = null;
     testState.navigate.mockReset();
   });
 
@@ -76,6 +78,7 @@ describe('legacy claims account-bound submission flow', () => {
 
   it('retains an authenticated claim for review when the backend fails', async () => {
     testState.user = { uid: 'user-123', email: 'customer@example.com' };
+    testState.firebaseUser = { getIdToken: vi.fn().mockResolvedValue('firebase-token') };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
@@ -92,5 +95,26 @@ describe('legacy claims account-bound submission flow', () => {
       resumeState: 'needs-review',
     });
     expect(sessionStorage.getItem('pendingSubmissionKey')).toBeTruthy();
+  });
+
+  it.each(LEGACY_CLAIMS)('submits authenticated %s with a Firebase bearer token', async formType => {
+    testState.user = { uid: 'user-123', email: 'customer@example.com' };
+    testState.firebaseUser = { getIdToken: vi.fn().mockResolvedValue('firebase-token') };
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ success: true, ticketId: 'CLM-123' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { result } = renderHook(() => useAuthRequiredSubmit());
+
+    await act(async () => {
+      expect(await result.current.handleSubmitWithAuth({ policyNumber: 'POL-123' }, formType)).toBe(true);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer firebase-token');
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ formType });
+    expect(sessionStorage.getItem('pendingSubmission')).toBeNull();
   });
 });

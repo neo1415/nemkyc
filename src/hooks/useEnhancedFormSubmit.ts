@@ -274,7 +274,10 @@ export const useEnhancedFormSubmit = (
       
       const pendingData = sessionStorage.getItem('pendingSubmission');
       
-      if (pendingData && user) {
+      // Wait for the actual Firebase credential as well as the application profile.
+      // On sign-in these two values can settle on different renders; submitting in
+      // between them sends neither a reliable bearer token nor (cross-site) cookie.
+      if (pendingData && user && firebaseUser) {
         const {
           formData: savedFormData,
           formType: savedFormType,
@@ -472,7 +475,7 @@ export const useEnhancedFormSubmit = (
 
     checkAndProcessPendingSubmission();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, formType]); // Only depend on user and formType - verificationData causes infinite loops
+  }, [user, firebaseUser, formType]);
 
   /**
    * Handle initial submit - shows loading immediately, then validates
@@ -541,12 +544,17 @@ export const useEnhancedFormSubmit = (
     // Forms can be completed as a guest, but the final durable submission must
     // belong to an authenticated account. Save the already-validated payload,
     // redirect to authentication, and resume automatically on this form page.
-    if (!user) {
+    if (!user || !firebaseUser) {
       persistPendingSubmission(formData, formType);
 
       isSubmittingRef.current = false;
       setShowSummary(false);
-      navigate('/auth/signin');
+      if (!user) {
+        navigate('/auth/signin');
+      } else {
+        setErrorMessage('Your secure sign-in is still being completed. Please wait a moment and submit again.');
+        setShowError(true);
+      }
       return;
     }
 

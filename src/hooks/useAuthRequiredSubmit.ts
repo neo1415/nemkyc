@@ -120,7 +120,9 @@ export const useAuthRequiredSubmit = (currentStep?: number) => {
     const checkAndProcessPendingSubmission = async () => {
       const pendingData = sessionStorage.getItem('pendingSubmission');
       
-      if (pendingData && user) {
+      // Do not resume until Firebase can provide the bearer token. The application
+      // profile and Firebase user can become available on separate renders.
+      if (pendingData && user && firebaseUser) {
         const { formData, formType, timestamp, resumeState = 'ready' } = JSON.parse(pendingData);
         
         // Check if submission is not expired (30 minutes)
@@ -177,6 +179,13 @@ export const useAuthRequiredSubmit = (currentStep?: number) => {
       return false;
     }
 
+    if (!firebaseUser) {
+      savePendingSubmission(formData, formType, typeof currentStep === 'number' ? currentStep : 0);
+      const message = 'Your secure sign-in is still being completed. Please wait a moment and submit again.';
+      toast.error(message);
+      throw new Error(message);
+    }
+
     try {
       setIsSubmitting(true);
       savePendingSubmission(formData, formType, typeof currentStep === 'number' ? currentStep : 0);
@@ -201,6 +210,7 @@ export const useAuthRequiredSubmit = (currentStep?: number) => {
     } catch (error) {
       markPendingForReview();
       setIsSubmitting(false);
+      toast.error(error instanceof Error ? error.message : 'We could not submit this claim. Please try again.');
       throw error;
     }
   };
