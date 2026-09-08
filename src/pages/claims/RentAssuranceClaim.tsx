@@ -12,6 +12,7 @@ import { useAuthRequiredSubmit } from '@/hooks/useAuthRequiredSubmit';
 import SuccessModal from '@/components/common/SuccessModal';
 
 import MultiStepForm from '@/components/common/MultiStepForm';
+import CompleteFormReview from '@/components/common/CompleteFormReview';
 import FileUpload from '@/components/common/FileUpload';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -896,6 +897,7 @@ const RentAssuranceClaim = () => {
             </DialogHeader>
             
 
+            <CompleteFormReview formData={watchedValues} />
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Review Again

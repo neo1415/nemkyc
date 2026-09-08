@@ -32,6 +32,7 @@ const {
   resolveClaimFormConfig,
   resolveClaimNotificationEmails,
   buildAdminSubmissionDeepLink,
+  buildCustomerDashboardLink,
   isClaimFormType,
   resolveAssignedClaimCollections,
   buildNotificationRoleQuery,
@@ -4982,8 +4983,8 @@ const ALLOWED_PUBLIC_UPLOAD_ROOTS = new Set([
 ]);
 
 // Upload customer documents through the backend so Firebase Storage can deny
-// anonymous writes. The returned download token is unguessable and the object
-// itself remains inaccessible through the Firebase client SDK to guests.
+// anonymous writes. Return an internal gs:// reference instead of issuing a
+// permanent bearer download token.
 app.post('/api/public/upload', publicUploadLimiter, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -5001,7 +5002,6 @@ app.post('/api/public/upload', publicUploadLimiter, upload.single('file'), async
       .replace(/[^a-zA-Z0-9._-]/g, '_')
       .slice(-120);
     const objectName = `${root}/${uuidv4()}/${Date.now()}_${safeName}`;
-    const downloadToken = uuidv4();
     const object = bucket.file(objectName);
 
     await object.save(req.file.buffer, {
@@ -5009,13 +5009,11 @@ app.post('/api/public/upload', publicUploadLimiter, upload.single('file'), async
       validation: 'crc32c',
       metadata: {
         contentType: req.file.mimetype,
-        cacheControl: 'private, max-age=0, no-store',
-        metadata: { firebaseStorageDownloadTokens: downloadToken }
+        cacheControl: 'private, max-age=0, no-store'
       }
     });
 
-    const downloadURL = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(objectName)}?alt=media&token=${downloadToken}`;
-    return res.status(201).json({ url: downloadURL });
+    return res.status(201).json({ url: `gs://${bucket.name}/${objectName}` });
   } catch (error) {
     console.error('Public document upload failed:', error);
     return res.status(500).json({
@@ -5432,6 +5430,7 @@ const getFirestoreCollection = (formType) => {
 // Helper functions for email HTML generation
 const generateConfirmationEmailHTML = (formType, ticketId, userName = 'Valued Customer') => {
   const dashboardUrl = process.env.FRONTEND_URL || 'https://nemforms.com';
+  const customerDashboardLink = buildCustomerDashboardLink(dashboardUrl);
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <div style="background: linear-gradient(90deg, #800020, #DAA520); padding: 20px; text-align: center;">
@@ -5452,7 +5451,7 @@ const generateConfirmationEmailHTML = (formType, ticketId, userName = 'Valued Cu
         <p>You can track your submission status by logging into your dashboard:</p>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${dashboardUrl}/signin?redirect=dashboard" style="background: #800020; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+          <a href="${customerDashboardLink}" style="background: #800020; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
             View or Track Submission
           </a>
         </div>
@@ -6878,6 +6877,114 @@ app.get('/api/forms/:collection', requireAuth, requireClaims, async (req, res) =
   } catch (error) {
     console.error(`Error fetching forms data from ${req.params.collection}:`, error);
     res.status(500).json({ error: 'Failed to fetch forms data', details: error.message });
+  }
+});
+
+const resolveManagedStorageObject = (storedValue, expectedBucketName) => {
+  const rawValue = typeof storedValue === 'string' ? storedValue : storedValue?.url;
+  if (!rawValue || typeof rawValue !== 'string') return null;
+
+  if (rawValue.startsWith('gs://')) {
+    const withoutScheme = rawValue.slice(5);
+    const slashIndex = withoutScheme.indexOf('/');
+    if (slashIndex < 1) return null;
+    const bucketName = withoutScheme.slice(0, slashIndex);
+    return bucketName === expectedBucketName ? withoutScheme.slice(slashIndex + 1) : null;
+  }
+
+  try {
+    const parsed = new URL(rawValue);
+    if (parsed.hostname === 'firebasestorage.googleapis.com') {
+      const match = parsed.pathname.match(/^\/v0\/b\/([^/]+)\/o\/(.+)$/);
+      if (!match || decodeURIComponent(match[1]) !== expectedBucketName) return null;
+      return decodeURIComponent(match[2]);
+    }
+    if (parsed.hostname === 'storage.googleapis.com') {
+      const parts = parsed.pathname.split('/').filter(Boolean);
+      if (parts.shift() !== expectedBucketName || parts.length === 0) return null;
+      return decodeURIComponent(parts.join('/'));
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+};
+
+// Download stored submission documents through the authenticated application.
+// Raw Firebase token URLs are never opened in the browser or placed in its address bar.
+app.get('/api/forms/:collection/:id/documents/:field', requireAuth, async (req, res) => {
+  try {
+    const { collection, id, field } = req.params;
+    validateCollectionName(collection);
+    if (!/^[A-Za-z0-9_-]{1,100}$/.test(field)) {
+      return res.status(400).json({ error: 'Invalid document field' });
+    }
+
+    const claimConfig = resolveClaimFormConfig(null, collection);
+    const staffRoles = new Set(['claims', 'compliance', 'admin', 'super admin']);
+    if (req.user.role === 'claims') {
+      if (!claimConfig) {
+        return res.status(403).json({ error: 'You do not have access to this document' });
+      }
+      const assignments = resolveAssignedClaimCollections(req.user);
+      if (assignments !== null && !assignments.includes(collection)) {
+        return res.status(403).json({ error: 'You do not have access to this claim type' });
+      }
+    }
+
+    const submission = await db.collection(collection).doc(id).get();
+    if (!submission.exists) {
+      return res.status(404).json({ error: 'Submission not found' });
+    }
+
+    const submissionData = submission.data();
+    if (!staffRoles.has(req.user.role)) {
+      const ownerIds = [submissionData.userUid, submissionData.userId, submissionData.uid,
+        submissionData.submittedByUid, submissionData.submittedBy].filter(Boolean);
+      const ownerEmails = [submissionData.userEmail, submissionData.email, submissionData.emailAddress,
+        submissionData.submittedByEmail, submissionData.submittedBy]
+        .filter(Boolean)
+        .map((value) => String(value).trim().toLowerCase());
+      const isOwner = ownerIds.includes(req.user.uid)
+        || ownerEmails.includes(String(req.user.email || '').trim().toLowerCase());
+      if (!isOwner) {
+        return res.status(403).json({ error: 'You do not have access to this document' });
+      }
+    }
+
+    const bucket = getStorage().bucket();
+    const objectName = resolveManagedStorageObject(submissionData[field], bucket.name);
+    if (!objectName || objectName.includes('\0')) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    const storageFile = bucket.file(objectName);
+    const [exists] = await storageFile.exists();
+    if (!exists) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    const [metadata] = await storageFile.getMetadata();
+    const safeName = (objectName.split('/').pop() || 'document')
+      .replace(/[\r\n"\\]/g, '_')
+      .slice(0, 180);
+    res.set({
+      'Content-Type': metadata.contentType || 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${safeName}"`,
+      'Cache-Control': 'private, no-store, max-age=0',
+      'X-Content-Type-Options': 'nosniff'
+    });
+    storageFile.createReadStream()
+      .on('error', (error) => {
+        console.error('Secure document stream failed:', error.message);
+        if (!res.headersSent) res.status(500).json({ error: 'Document download failed' });
+        else res.destroy(error);
+      })
+      .pipe(res);
+  } catch (error) {
+    console.error('Secure document download failed:', error.message);
+    if (!res.headersSent) res.status(500).json({ error: 'Document download failed' });
   }
 });
 

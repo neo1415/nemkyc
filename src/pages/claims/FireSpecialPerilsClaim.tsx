@@ -4,6 +4,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { get } from 'lodash';
 import MultiStepForm from '@/components/common/MultiStepForm';
+import CompleteFormReview from '@/components/common/CompleteFormReview';
 import FormSection from '@/components/common/FormSection';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -1178,7 +1179,7 @@ const FireSpecialPerilsClaim: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <div className="flex items-start space-x-3">
                     <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
                     <div>
@@ -1188,10 +1189,11 @@ const FireSpecialPerilsClaim: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                </div>
               </div>
+              <CompleteFormReview formData={watchedValues} />
+            </div>
 
-              <DialogFooter>
+            <DialogFooter>
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
                   Review Again
                 </Button>

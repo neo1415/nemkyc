@@ -328,6 +328,11 @@ function buildAdminSubmissionDeepLink(collection, documentId, frontendUrl = 'htt
   return `${base}/signin?redirect=${encodeURIComponent(reviewPath)}`;
 }
 
+function buildCustomerDashboardLink(frontendUrl = 'https://nemforms.com') {
+  const base = String(frontendUrl || 'https://nemforms.com').replace(/\/$/, '');
+  return `${base}/signin?redirect=${encodeURIComponent('/dashboard')}`;
+}
+
 function isClaimFormType(formType, collection) {
   if (resolveClaimFormConfig(formType, collection)) return true;
   if (typeof formType !== 'string') return false;
@@ -484,6 +489,7 @@ module.exports = {
   resolveClaimFormConfig,
   resolveClaimNotificationEmails,
   buildAdminSubmissionDeepLink,
+  buildCustomerDashboardLink,
   isClaimFormType,
   getAssignedClaimCollectionsForEmail,
   resolveAssignedClaimCollections,

@@ -138,4 +138,33 @@ describe('all claims form flow parity', () => {
     const serverSource = readFileSync(join(process.cwd(), 'apps', 'backend', 'server.js'), 'utf8');
     expect(serverSource).toContain('...getAllClaimCollections()');
   });
+
+  it.each(CLAIM_FORM_PAGES)('%s renders entered information in its final review', (_formType, page) => {
+    const source = readFileSync(join(process.cwd(), 'src', 'pages', 'claims', page), 'utf8');
+    expect(source).toMatch(/FormSummaryDialog|CompleteFormReview/);
+
+    if (!source.includes('FormSummaryDialog')) {
+      expect(source).toContain('<CompleteFormReview formData={watchedValues} />');
+    }
+  });
+
+  it('downloads admin documents through the authenticated application endpoint', () => {
+    const viewerPaths = [
+      ['pages', 'admin', 'FormViewer.tsx'],
+      ['pages', 'admin', 'AgentsCDDViewer.tsx'],
+      ['pages', 'admin', 'PartnersCDDViewer.tsx'],
+      ['pages', 'dashboard', 'UserFormViewer.tsx'],
+    ];
+    const viewers = viewerPaths.map((parts) =>
+      readFileSync(join(process.cwd(), 'src', ...parts), 'utf8'));
+    const service = readFileSync(join(process.cwd(), 'src', 'services', 'secureDocumentService.ts'), 'utf8');
+    for (const viewer of viewers) {
+      expect(viewer).toContain('downloadSubmissionDocument');
+      expect(viewer).not.toContain('getDownloadURL');
+      expect(viewer).not.toMatch(/window\.open\([^)]*(?:file|url)/i);
+    }
+    expect(service).toContain('/documents/');
+    expect(service).toContain("'CSRF-Token'");
+    expect(service).toContain('Authorization');
+  });
 });
