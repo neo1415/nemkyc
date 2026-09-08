@@ -12,6 +12,7 @@ const {
   getClaimFormConfigByCollection,
   resolveClaimNotificationEmails,
   buildAdminSubmissionDeepLink,
+  buildCustomerDashboardLink,
   isClaimFormType
 } = require('../customerFormPolicy.cjs');
 
@@ -74,6 +75,13 @@ test('admin submission deep links require sign-in before opening the record', ()
   assert.equal(
     link,
     'https://nemforms.com/signin?redirect=%2Fadmin%2Fform%2Fmotor-claims%2Fabc123'
+  );
+});
+
+test('confirmation links always return the submitter to their customer dashboard', () => {
+  assert.equal(
+    buildCustomerDashboardLink('https://nemforms.com/'),
+    'https://nemforms.com/signin?redirect=%2Fdashboard'
   );
 });
 

@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { downloadSubmissionDocument } from '@/services/secureDocumentService';
 
 interface FormData {
   id: string;
@@ -299,7 +300,7 @@ const AgentsCDDViewer: React.FC = () => {
     );
   };
 
-  const renderFileField = (label: string, fileUrl: string) => (
+  const renderFileField = (label: string, fieldKey: string, fileUrl: string) => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 py-2">
       <Label className="font-medium text-sm lg:text-base">{label}</Label>
       <div className="lg:col-span-2">
@@ -307,7 +308,8 @@ const AgentsCDDViewer: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open(fileUrl, '_blank')}
+            onClick={() => id && downloadSubmissionDocument('agentsCDD', id, fieldKey, `${label}.pdf`)
+              .catch(() => toast({ title: 'Download Error', description: 'Failed to download file', variant: 'destructive' }))}
             className="flex items-center gap-2 text-sm lg:text-base"
           >
             <ExternalLink className="w-4 h-4" />
@@ -704,8 +706,8 @@ const AgentsCDDViewer: React.FC = () => {
             <div>
               <h4 className="font-medium mb-3">Document Uploads</h4>
               <div className="space-y-1">
-                {renderFileField("Agent ID Document", formData.agentId)}
-                {renderFileField("NAICOM Certificate", formData.naicomCertificate)}
+                {renderFileField("Agent ID Document", 'agentId', formData.agentId)}
+                {renderFileField("NAICOM Certificate", 'naicomCertificate', formData.naicomCertificate)}
               </div>
             </div>
           </CardContent>

@@ -20,6 +20,7 @@ import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
+import CompleteFormReview from '@/components/common/CompleteFormReview';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
@@ -733,6 +734,7 @@ const PublicLiabilityClaimForm: React.FC = () => {
                 <p>Please Ensure all Information is correct before submitting</p>
               </DialogHeader>
           
+              <CompleteFormReview formData={watchedValues} />
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
                   Back to Edit

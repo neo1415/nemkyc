@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Calendar, CalendarIcon, Upload, Edit2, DollarSign, FileText, CheckCircle2, Loader2, Plus, Trash2, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MultiStepForm from '@/components/common/MultiStepForm';
+import CompleteFormReview from '@/components/common/CompleteFormReview';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
@@ -793,6 +794,7 @@ const MoneyInsuranceClaim: React.FC = () => {
                 </p>
             </DialogHeader>
             
+            <CompleteFormReview formData={watchedValues} />
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Review Again

@@ -11,8 +11,7 @@ import { useToast } from '../../hooks/use-toast';
 import { downloadDynamicPDF } from '../../services/dynamicPdfService';
 import { FORM_MAPPINGS, FormField } from '../../config/formMappings';
 import { sendStatusUpdateNotification } from '../../services/emailService';
-import { ref, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../firebase/config';
+import { downloadSubmissionDocument } from '../../services/secureDocumentService';
 import CorporateKYCViewer from './CorporateKYCViewer';
 import CorporateNFIUViewer from './CorporateNFIUViewer';
 import IndividualKYCViewer from './IndividualKYCViewer';
@@ -495,15 +494,13 @@ const FormViewer: React.FC = () => {
     return String(time);
   };
 
-  const handleDownloadFile = async (url: string, fileName: string) => {
+  const handleDownloadFile = async (fieldKey: string, fileName: string) => {
     try {
-      if (url.startsWith('gs://')) {
-        const storageRef = ref(storage, url);
-        const downloadUrl = await getDownloadURL(storageRef);
-        window.open(downloadUrl, '_blank');
-      } else {
-        window.open(url, '_blank');
+      if (!collection || !id) {
+        throw new Error('Submission details are unavailable');
       }
+
+      await downloadSubmissionDocument(collection, id, fieldKey, fileName);
     } catch (error) {
       console.error('Error downloading file:', error);
       toast({
@@ -723,7 +720,7 @@ const FormViewer: React.FC = () => {
               size="small"
               variant="outlined"
               startIcon={<Download />}
-              onClick={() => handleDownloadFile(file.url, `${file.name}.pdf`)}
+              onClick={() => handleDownloadFile(`${singularKey}${index + 1}`, `${file.name}.pdf`)}
               sx={{ alignSelf: 'flex-start' }}
             >
               Download {file.name}
@@ -748,7 +745,7 @@ const FormViewer: React.FC = () => {
           size="small"
           variant="outlined"
           startIcon={<Download />}
-          onClick={() => handleDownloadFile(value, `${fieldLabel}.pdf`)}
+          onClick={() => handleDownloadFile(key, `${fieldLabel}.pdf`)}
           sx={{ mt: 1 }}
         >
           Download {fieldLabel}

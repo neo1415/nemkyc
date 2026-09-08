@@ -19,11 +19,19 @@ test('sensitive legacy routes require server-side authorization', () => {
     "app.post('/api/test-birthday-email', requireAuth, requireSuperAdmin",
     "app.get('/api/auth/mfa-status/:uid', requireAuth",
     "app.post('/api/submit-form', publicFormSubmissionLimiter, requireAuth",
+    "app.get('/api/forms/:collection/:id/documents/:field', requireAuth",
   ];
 
   for (const fragment of requiredFragments) {
     assert.ok(source.includes(fragment), `Missing authorization policy: ${fragment}`);
   }
+});
+
+test('document downloads proxy only files referenced by an authorized submission', () => {
+  assert.ok(source.includes('resolveManagedStorageObject(submissionData[field], bucket.name)'));
+  assert.ok(source.includes('if (!staffRoles.has(req.user.role))'));
+  assert.ok(source.includes("'Content-Disposition': `attachment; filename=\"${safeName}\"`"));
+  assert.ok(source.includes("'Cache-Control': 'private, no-store, max-age=0'"));
 });
 
 test('customer submissions are account-bound by server-derived identity', () => {
@@ -38,6 +46,14 @@ test('costly and upload endpoints are rate limited', () => {
   assert.ok(source.includes("app.post('/api/gemini/generate', verificationRateLimiter"));
   assert.ok(source.includes("app.post('/api/public/upload', publicUploadLimiter"));
   assert.ok(source.includes("upload.single('file')"));
+});
+
+test('new customer uploads do not mint permanent Firebase bearer URLs', () => {
+  const start = source.indexOf("app.post('/api/public/upload'");
+  const end = source.indexOf("app.post('/api/submit-form'", start);
+  const uploadRoute = source.slice(start, end);
+  assert.ok(uploadRoute.includes('gs://${bucket.name}/${objectName}'));
+  assert.ok(!uploadRoute.includes('firebaseStorageDownloadTokens'));
 });
 
 test('deprecated submission endpoints cannot write data', () => {

@@ -9,8 +9,7 @@ import { Download, ArrowLeft } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { downloadDynamicPDF } from '../../services/dynamicPdfService';
 import { FORM_MAPPINGS, FormField } from '../../config/formMappings';
-import { ref, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../firebase/config';
+import { downloadSubmissionDocument } from '../../services/secureDocumentService';
 import { formatDate as formatDateUtil } from '../../utils/dateFormatter';
 
 const theme = createTheme({
@@ -325,15 +324,12 @@ const UserFormViewer: React.FC = () => {
     return String(date);
   };
 
-  const handleDownloadFile = async (url: string, fileName: string) => {
+  const handleDownloadFile = async (fieldKey: string, fileName: string) => {
     try {
-      if (url.startsWith('gs://')) {
-        const storageRef = ref(storage, url);
-        const downloadUrl = await getDownloadURL(storageRef);
-        window.open(downloadUrl, '_blank');
-      } else {
-        window.open(url, '_blank');
+      if (!collection || !id) {
+        throw new Error('Submission details are unavailable');
       }
+      await downloadSubmissionDocument(collection, id, fieldKey, fileName);
     } catch (error) {
       console.error('Error downloading file:', error);
       toast({
@@ -385,7 +381,7 @@ const UserFormViewer: React.FC = () => {
           size="small"
           variant="outlined"
           startIcon={<Download />}
-          onClick={() => handleDownloadFile(value, `${fieldLabel}.pdf`)}
+          onClick={() => handleDownloadFile(key, `${fieldLabel}.pdf`)}
           sx={{ mt: 1 }}
         >
           Download {fieldLabel}

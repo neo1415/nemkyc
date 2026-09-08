@@ -20,6 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import DatePicker from '@/components/common/DatePicker';
 import { createEmailValidation, createPhoneValidation, createDOBValidation, createFromDateValidation, createToDateValidation } from '@/utils/validation';
 import MultiStepForm from '@/components/common/MultiStepForm';
+import CompleteFormReview from '@/components/common/CompleteFormReview';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import FileUpload from '@/components/common/FileUpload';
 import { uploadFile } from '@/services/fileService';
@@ -1010,6 +1011,7 @@ const BurglaryClaimForm: React.FC = () => {
                 </p>
               </div>
             </div>
+            <CompleteFormReview formData={watchedValues} />
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Back to Edit

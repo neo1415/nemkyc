@@ -6,6 +6,7 @@ import { get } from 'lodash';
 import DatePicker from '@/components/common/DatePicker';
 import { createDOBValidation, createFromDateValidation, createToDateValidation, createEmailValidation, createPhoneValidation } from '@/utils/validation';
 import MultiStepForm from '@/components/common/MultiStepForm';
+import CompleteFormReview from '@/components/common/CompleteFormReview';
 import FormSection from '@/components/common/FormSection';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -708,6 +709,7 @@ const FidelityGuaranteeClaim: React.FC = () => {
               </div>
             </div>
 
+            <CompleteFormReview formData={watchedValues} />
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSummary(false)}>
                 Review Again
