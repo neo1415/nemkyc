@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   COMPLIANCE_COLLECTION_NAMES,
@@ -135,8 +135,18 @@ describe('all claims form flow parity', () => {
   );
 
   it('derives every backend claim upload root from the canonical claims registry', () => {
-    const serverSource = readFileSync(join(process.cwd(), 'apps', 'backend', 'server.js'), 'utf8');
-    expect(serverSource).toContain('...getAllClaimCollections()');
+    // server.js is being split into apps/backend/src/**; read the whole backend.
+    const backendRoot = join(process.cwd(), 'apps', 'backend');
+    const sources: string[] = [readFileSync(join(backendRoot, 'server.js'), 'utf8')];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(cjs|js)$/.test(entry.name)) sources.push(readFileSync(full, 'utf8'));
+      }
+    };
+    if (existsSync(join(backendRoot, 'src'))) walk(join(backendRoot, 'src'));
+    expect(sources.join(String.fromCharCode(10))).toContain('...getAllClaimCollections()');
   });
 
   it.each(CLAIM_FORM_PAGES)('%s renders entered information in its final review', (_formType, page) => {

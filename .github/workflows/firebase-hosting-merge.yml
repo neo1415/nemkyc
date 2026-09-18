@@ -7,6 +7,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  checks: write
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
@@ -32,3 +35,12 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_NEM_CUSTOMER_FEEDBACK_8D3FB }}'
           channelId: live
           projectId: nem-customer-feedback-8d3fb
+      # Security rules are part of the deployable: ship the same firestore.rules / storage.rules as main.
+      - name: Deploy Firestore and Storage rules
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NEM_CUSTOMER_FEEDBACK_8D3FB }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-sa.json"
+          npx --yes firebase-tools@latest deploy --only firestore:rules,storage --project nem-customer-feedback-8d3fb --non-interactive
+          rm -f "$RUNNER_TEMP/firebase-sa.json"

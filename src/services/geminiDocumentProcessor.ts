@@ -22,7 +22,6 @@ import {
   ErrorCode, 
   GeminiError 
 } from '../utils/geminiErrorHandling';
-import { geminiOCREngine } from './geminiOCREngine';
 import { documentAIOCREngine } from './documentAIOCREngine';
 import { simpleVerificationMatcher } from './simpleVerificationMatcher';
 import { geminiAuditLogger } from './geminiAuditLogger';

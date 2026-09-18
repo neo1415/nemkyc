@@ -1,6 +1,24 @@
 // Document Upload Section Component - drag-and-drop interface with real-time verification
 
 import React, { useState, useCallback, useRef } from 'react';
+
+/**
+ * verified     - Document AI read the document and it matches the form.
+ * failed       - Document AI read the document and it contradicts the form (blocks submission).
+ * inconclusive - verification could not be completed (service outage, timeout, unreadable scan,
+ *                or a bug). Submission continues and compliance reviews the document manually.
+ */
+export type DocumentVerificationStatus = 'idle' | 'uploading' | 'processing' | 'verified' | 'failed' | 'inconclusive';
+
+// Definitive rejections of what the customer uploaded (wrong document, unreadable format). Everything
+// else (outage, timeout, bug) is our problem and must never block the customer.
+/** Thrown when the processor has definitively rejected the customer's document (their problem to fix). */
+class DefinitiveRejection extends Error {}
+
+const DEFINITIVE_ERROR_CODES = new Set(['VERIFICATION_FAILED', 'UNSUPPORTED_FORMAT', 'FILE_TOO_LARGE', 'CORRUPTED_FILE', 'INVALID_DOCUMENT_TYPE']);
+
+const isClientSideRejection = (message: string) =>
+  /invalid|unsupported|format|too large|corrupt|password|not the requested|wrong document|does not appear to be|not a valid/i.test(message);
 import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { documentProcessor } from '../../services/geminiDocumentProcessor';
 import { formSubmissionController } from '../../services/geminiFormSubmissionController';
@@ -16,7 +34,7 @@ interface DocumentUploadSectionProps {
   documentType: 'cac' | 'individual' | 'naicom';
   formData?: any;
   onVerificationComplete?: (result: VerificationResult) => void;
-  onStatusChange?: (status: 'idle' | 'uploading' | 'processing' | 'verified' | 'failed') => void;
+  onStatusChange?: (status: DocumentVerificationStatus) => void;
   onFileSelect?: (file: File) => void; // New: for form integration
   onFileRemove?: () => void; // New: for form integration
   currentFile?: File | null; // New: for showing existing file
@@ -26,7 +44,7 @@ interface DocumentUploadSectionProps {
 }
 
 interface UploadState {
-  status: 'idle' | 'uploading' | 'processing' | 'verified' | 'failed';
+  status: DocumentVerificationStatus;
   file?: File;
   progress: number;
   result?: ProcessingResult;
@@ -261,24 +279,34 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
         }
 
         // Check verification result BEFORE updating form session
-        if (result.verificationResult) {
+                if (result.verificationResult) {
           if (!result.verificationResult.isMatch) {
-            // Document doesn't match - show specific mismatch reasons
-            const mismatchReasons = result.verificationResult.mismatches
-              ?.filter((m: any) => m.isCritical)
-              ?.map((m: any) => m.reason)
-              ?.join(', ') || 'Document data does not match form data';
-            
+            const criticalMismatches = (result.verificationResult.mismatches || []).filter((m: any) => m.isCritical);
+            if (criticalMismatches.length > 0) {
+              // The document was read and definitively contradicts what was typed: block and explain.
+              const mismatchReasons = criticalMismatches.map((m: any) => m.reason).join(', ');
+              setUploadState({
+                status: 'failed',
+                file,
+                progress: 100,
+                result,
+                analysis,
+                error: `Verification failed: ${mismatchReasons}`
+              });
+              onStatusChange?.('failed');
+              return;
+            }
+            // No definitive contradiction (low confidence, partial read): do not block.
             setUploadState({
-              status: 'failed',
+              status: 'inconclusive',
               file,
               progress: 100,
               result,
               analysis,
-              error: `Verification failed: ${mismatchReasons}`
+              error: result.verificationResult.error || 'We could not confirm this document automatically. You can continue; our team will check it.'
             });
-
-            onStatusChange?.('failed');
+            onStatusChange?.('inconclusive');
+            onFileSelect?.(file);
             return;
           }
         }
@@ -342,8 +370,15 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
         }
 
       } else {
-        // Processing failed - show specific error message
-        let errorMessage = result.error?.message || 'Document processing failed';
+        // Processing failed - show specific error message. The processor reports either an error
+        // object { code, message, retryable } or a plain string.
+        const rawError: any = result.error;
+        const errorCode: string | undefined = typeof rawError === 'object' && rawError ? rawError.code : undefined;
+        const rawMessage: string = typeof rawError === 'string' ? rawError : rawError?.message || '';
+        let errorMessage = rawMessage || 'Document processing failed';
+        const definitive = (errorCode ? DEFINITIVE_ERROR_CODES.has(errorCode) : false)
+          || (rawError?.retryable === false && Boolean(errorCode))
+          || isClientSideRejection(rawMessage);
         
         // Provide user-friendly error messages
         if (result.error?.code === 'OCR_FAILED') {
@@ -363,12 +398,10 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
                    result.error?.message?.includes('429') ||
                    result.error?.message?.includes('quota') ||
                    result.error?.message?.includes('RESOURCE_EXHAUSTED')) {
-          errorMessage = 'Service is temporarily busy. Please wait a few minutes and try again.';
+                    errorMessage = 'Service is temporarily busy. Please wait a few minutes and try again.';
         }
-        
-        throw new Error(errorMessage);
+        throw definitive ? new DefinitiveRejection(errorMessage) : new Error(errorMessage);
       }
-
     } catch (error) {
       // Always log errors for debugging, but keep them concise
       console.error('❌ Document processing failed:', {
@@ -392,14 +425,25 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
         errorMessage = 'Connection issue. Please check your internet and try again.';
       }
       
+            if (error instanceof DefinitiveRejection || isClientSideRejection(errorMessage)) {
+        setUploadState({
+          status: 'failed',
+          file,
+          progress: 0,
+          error: errorMessage
+        });
+        onStatusChange?.('failed');
+        return;
+      }
+      // Anything else is our problem, not the customer's: keep the file and let them continue.
       setUploadState({
-        status: 'failed',
+        status: 'inconclusive',
         file,
-        progress: 0,
-        error: errorMessage
+        progress: 100,
+        error: `${errorMessage} You can continue; our team will check this document manually.`
       });
-      
-      onStatusChange?.('failed');
+      onStatusChange?.('inconclusive');
+      onFileSelect?.(file);
     }
   }, [disabled, documentType, formId, formData, onFileSelect, onStatusChange, onVerificationComplete]);
 
@@ -539,6 +583,8 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
         }
       case 'failed':
         return <XCircle className="w-10 h-10 text-red-500" />;
+      case 'inconclusive':
+        return <AlertCircle className="w-10 h-10 text-yellow-500" />;
       default:
         return <Upload className="w-10 h-10 text-gray-400" />;
     }
@@ -626,6 +672,8 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
         }
       case 'failed':
         return 'border-red-300';
+      case 'inconclusive':
+        return 'border-yellow-300';
       case 'processing':
       case 'uploading':
         return 'border-blue-300';
@@ -793,6 +841,26 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
         </div>
       )}
 
+      {uploadState.status === 'inconclusive' && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-medium text-yellow-900">Document kept, automatic check unavailable</h4>
+              <p className="text-sm text-yellow-800 mt-1">{uploadState.error}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-900 px-3 py-1 rounded transition-colors"
+                >
+                  Try the check again
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Error Display */}
       {uploadState.status === 'failed' && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">

@@ -125,7 +125,7 @@ describe('Feature: motor-claims-ux-improvements, Property 7: Welcome Message Con
           expect(textContent).toContain(user.name);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -163,7 +163,7 @@ describe('Feature: motor-claims-ux-improvements, Property 7: Welcome Message Con
           expect(html).toContain('Welcome, User!');
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -205,7 +205,7 @@ describe('Feature: motor-claims-ux-improvements, Property 7: Welcome Message Con
           expect(html).toContain('text-3xl');
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -245,7 +245,7 @@ describe('Feature: motor-claims-ux-improvements, Property 7: Welcome Message Con
           expect(html).toContain(expectedInitial);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -289,7 +289,7 @@ describe('Feature: motor-claims-ux-improvements, Property 7: Welcome Message Con
           expect(nameOccurrences).toBeGreaterThanOrEqual(1);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

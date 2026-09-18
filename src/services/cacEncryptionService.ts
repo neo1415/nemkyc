@@ -12,6 +12,7 @@
  */
 
 import { EncryptionMetadata } from '../types/cacDocuments';
+import { API_BASE_URL } from '../config/constants';
 
 /**
  * Encryption result containing encrypted data and metadata
@@ -148,17 +149,8 @@ async function callBackendEncryption(data: string): Promise<{
       timestamp: new Date().toISOString()
     });
 
-    // Use absolute URL in production to avoid routing issues
-    const baseUrl = window.location.origin;
-    let apiUrl = `${baseUrl}/api/cac-documents/encrypt`;
-    
-    // In production, try the direct server URL first if we're on the main domain
-    if (baseUrl.includes('nemforms.com')) {
-      apiUrl = `https://nem-server-rhdb.onrender.com/api/cac-documents/encrypt`;
-      console.log('🔐 [Encryption] Using direct server URL for production:', apiUrl);
-    } else {
-      console.log('🔐 [Encryption] Using relative URL:', apiUrl);
-    }
+    // Always talk to the configured backend; a relative URL would resolve to Firebase Hosting.
+    const apiUrl = `${API_BASE_URL}/api/cac-documents/encrypt`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -228,17 +220,8 @@ async function callBackendDecryption(
       timestamp: new Date().toISOString()
     });
 
-    // Use absolute URL in production to avoid routing issues
-    const baseUrl = window.location.origin;
-    let apiUrl = `${baseUrl}/api/cac-documents/decrypt`;
-    
-    // In production, try the direct server URL first if we're on the main domain
-    if (baseUrl.includes('nemforms.com')) {
-      apiUrl = `https://nem-server-rhdb.onrender.com/api/cac-documents/decrypt`;
-      console.log('🔓 [Decryption] Using direct server URL for production:', apiUrl);
-    } else {
-      console.log('🔓 [Decryption] Using relative URL:', apiUrl);
-    }
+    // Always talk to the configured backend; a relative URL would resolve to Firebase Hosting.
+    const apiUrl = `${API_BASE_URL}/api/cac-documents/decrypt`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',

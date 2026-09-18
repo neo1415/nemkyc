@@ -1,16 +1,6 @@
 import { API_BASE_URL } from '@/config/constants';
+import { isAllowedFile } from '@/config/filePolicy';
 import { CSRF_UNAVAILABLE_MESSAGE, getCSRFToken } from '@/utils/csrfToken';
-
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-const ALLOWED_UPLOAD_TYPES = new Set([
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/gif',
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-]);
 
 const isCsrfRejection = (response: Response, result: Record<string, unknown>) => {
   const detail = `${result.code ?? ''} ${result.error ?? ''} ${result.message ?? ''}`.toLowerCase();
@@ -18,11 +8,9 @@ const isCsrfRejection = (response: Response, result: Record<string, unknown>) =>
 };
 
 export const uploadFile = async (file: File, path: string): Promise<string> => {
-  if (!ALLOWED_UPLOAD_TYPES.has(file.type)) {
-    throw new Error('Please upload a PDF, Word document, JPEG, PNG, or GIF file.');
-  }
-  if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
-    throw new Error('The document must be smaller than 10 MB.');
+  const policy = isAllowedFile(file);
+  if (!policy.ok) {
+    throw new Error(policy.reason);
   }
 
   try {

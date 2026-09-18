@@ -445,7 +445,7 @@ function clearCompletedJobs() {
 }
 
 // Periodic cleanup of completed jobs
-setInterval(clearCompletedJobs, 60000); // Every minute
+setInterval(clearCompletedJobs, 60000).unref(); // Every minute
 
 module.exports = {
   enqueue,

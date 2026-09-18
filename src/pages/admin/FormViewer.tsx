@@ -1,12 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { canAccessClaimCollection } from '../../config/claimAccessPolicy';
+import { canAccessClaimCollection, isClaimCollection } from '../../config/claimAccessPolicy';
+import { SUBMISSION_COLLECTIONS } from '../../config/submissionCatalog';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { Button, Typography, Box, Paper, Divider, Chip, TextField, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText } from '@mui/material';
+import { Alert, AlertTitle, Button, Typography, Box, Paper, Divider, Chip, TextField, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { Download, Edit, ArrowLeft, Save, X } from 'lucide-react';
+import { Download, Edit, ArrowLeft, Save, X, ArrowRightCircle } from 'lucide-react';
+import ClaimTransitionDialog from '../../components/admin/ClaimTransitionDialog';
+import {
+  ClaimBlock,
+  CUSTOMER_STAGES,
+  LegacyStatus,
+  STAGE_LABELS,
+  STEPS,
+  daysSinceNotification,
+  resolveClaimBlock,
+  stageIndex,
+} from '../../lib/claimLifecycle';
 import { useToast } from '../../hooks/use-toast';
 import { downloadDynamicPDF } from '../../services/dynamicPdfService';
 import { FORM_MAPPINGS, FormField } from '../../config/formMappings';
@@ -48,6 +60,18 @@ const FormViewer: React.FC = () => {
   const [status, setStatus] = useState<string>('processing');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string>('');
+  const [transitionOpen, setTransitionOpen] = useState(false);
+
+  const isClaim = Boolean(collection) && (
+    SUBMISSION_COLLECTIONS.some((entry) => entry.collection === collection && entry.category === 'claim') ||
+    isClaimCollection(collection as string)
+  );
+
+  const handleClaimUpdated = (claim: ClaimBlock, newStatus: LegacyStatus) => {
+    setFormData((prev: any) => (prev ? { ...prev, claim, status: newStatus } : prev));
+    setStatus(newStatus);
+    toast({ title: 'Claim moved', description: STEPS[claim.step].label });
+  };
 
   useEffect(() => {
     if (!user || !isAdmin()) {
@@ -890,6 +914,168 @@ const FormViewer: React.FC = () => {
     );
   }
 
+  // Manual document check flags set by the submission backend (reviewRequired / <field>ReviewRequired).
+  const reviewReasons: string[] = Array.isArray(formData.reviewReasons)
+    ? formData.reviewReasons.map((reason: unknown) => String(reason))
+    : formData.reviewReasons
+      ? [String(formData.reviewReasons)]
+      : [];
+  const flaggedReviewFields = Object.keys(formData).filter(
+    (key) => key !== 'reviewRequired' && /ReviewRequired$/.test(key) && Boolean(formData[key])
+  );
+  const needsManualReview = Boolean(formData.reviewRequired) || flaggedReviewFields.length > 0;
+  const reviewAlert = needsManualReview ? (
+    <Alert severity="warning" sx={{ mb: 3, border: '1px solid', borderColor: 'warning.main' }} data-testid="manual-review-alert">
+      <AlertTitle sx={{ fontWeight: 'bold' }}>Needs manual document check</AlertTitle>
+      {reviewReasons.length > 0 && (
+        <Box component="ul" sx={{ m: 0, pl: 2 }}>
+          {reviewReasons.map((reason, index) => (
+            <li key={index}><Typography variant="body2">{reason}</Typography></li>
+          ))}
+        </Box>
+      )}
+      {flaggedReviewFields.length > 0 && (
+        <Typography variant="body2" sx={{ mt: reviewReasons.length ? 1 : 0 }}>
+          Flagged fields: {flaggedReviewFields.map((key) => formatFieldLabel(key.replace(/ReviewRequired$/, ''))).join(', ')}
+        </Typography>
+      )}
+      {reviewReasons.length === 0 && flaggedReviewFields.length === 0 && (
+        <Typography variant="body2">The uploaded documents could not be verified automatically.</Typography>
+      )}
+    </Alert>
+  ) : null;
+
+  // Read-only claim lifecycle panel (claims only). Transitions go through ClaimTransitionDialog.
+  const claimBlock = isClaim ? resolveClaimBlock(formData) : null;
+  const claimDays = claimBlock ? daysSinceNotification(claimBlock) : null;
+  const formatMillis = (value?: number | null) => (value ? new Date(value).toLocaleDateString() : 'N/A');
+  const formatNaira = (value?: number | null) => (value === null || value === undefined ? 'N/A' : `₦${value.toLocaleString()}`);
+  const waitingOnLabel = claimBlock
+    ? claimBlock.waitingOn === 'customer' ? 'Customer' : claimBlock.waitingOn === 'nem' ? 'NEM' : '—'
+    : '';
+  const renderDetail = (label: string, value: React.ReactNode) => (
+    <Box>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{label}</Typography>
+      <Typography variant="body1" component="div" sx={{ fontWeight: 'medium' }}>{value}</Typography>
+    </Box>
+  );
+  const claimPanel = claimBlock ? (
+    <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 3 }} data-testid="claim-lifecycle-panel">
+      <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+        Claim progress
+      </Typography>
+      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+        {CUSTOMER_STAGES.map((stage, index) => {
+          const currentIndex = stageIndex(claimBlock.stage);
+          const active = claimBlock.stage === stage;
+          const done = currentIndex > index;
+          return (
+            <Chip
+              key={stage}
+              size="small"
+              label={`${index + 1}. ${STAGE_LABELS[stage]}`}
+              color={active ? 'primary' : done ? 'success' : 'default'}
+              variant={active || done ? 'filled' : 'outlined'}
+            />
+          );
+        })}
+        {claimBlock.stage === 'closed' && <Chip size="small" label="Closed" />}
+        {claimBlock.stage === 'declined' && <Chip size="small" label="Declined" color="error" />}
+      </Box>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2, mb: 2 }}>
+        {renderDetail('Current step', STEPS[claimBlock.step].label)}
+        {renderDetail('Waiting on', waitingOnLabel)}
+        {renderDetail(
+          'Days since notification',
+          claimDays === null ? 'N/A' : (
+            <Box component="span" sx={{ color: claimDays > 45 ? 'error.main' : 'inherit', fontWeight: claimDays > 60 ? 700 : 500 }}>
+              {claimDays}
+            </Box>
+          )
+        )}
+        {renderDetail('Target date', formatMillis(claimBlock.targetDate))}
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
+      <Typography variant="subtitle2" gutterBottom>Outstanding documents</Typography>
+      {claimBlock.outstandingDocuments.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">None requested.</Typography>
+      ) : (
+        <Box component="ul" sx={{ m: 0, pl: 2 }}>
+          {claimBlock.outstandingDocuments.map((document) => (
+            <li key={document.key}>
+              <Typography variant="body2">
+                {document.label}{document.required ? ' (required)' : ''} —{' '}
+                {document.receivedAt ? `received ${formatMillis(document.receivedAt)}` : 'awaiting customer'}
+                {document.url && (
+                  <> · <a href={document.url} target="_blank" rel="noreferrer">open</a></>
+                )}
+              </Typography>
+            </li>
+          ))}
+        </Box>
+      )}
+
+      <Divider sx={{ my: 2 }} />
+      <Typography variant="subtitle2" gutterBottom>Settlement offers</Typography>
+      {claimBlock.offers.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">No offer issued yet.</Typography>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {claimBlock.offers.map((offer) => (
+            <Paper key={offer.version} variant="outlined" sx={{ p: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 0.5 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                  Offer v{offer.version} · {formatNaira(offer.amount)}
+                </Typography>
+                <Chip
+                  size="small"
+                  label={offer.status}
+                  color={offer.status === 'accepted' ? 'success' : offer.status === 'queried' ? 'warning' : offer.status === 'offered' ? 'primary' : 'default'}
+                />
+                <Typography variant="caption" color="text.secondary">issued {formatMillis(offer.issuedAt)}</Typography>
+              </Box>
+              {offer.basis && <Typography variant="body2">Basis: {offer.basis}</Typography>}
+              {offer.excess !== null && offer.excess !== undefined && (
+                <Typography variant="body2">Excess: {formatNaira(offer.excess)}</Typography>
+              )}
+              {offer.deductions?.length > 0 && (
+                <Typography variant="body2">
+                  Deductions: {offer.deductions.map((d) => `${d.label} ${formatNaira(d.amount)}`).join(', ')}
+                </Typography>
+              )}
+              {offer.queryReason && <Typography variant="body2" color="warning.dark">Customer query: {offer.queryReason}</Typography>}
+              {offer.dvUrl && (
+                <Typography variant="body2"><a href={offer.dvUrl} target="_blank" rel="noreferrer">Discharge voucher</a></Typography>
+              )}
+            </Paper>
+          ))}
+        </Box>
+      )}
+
+      {(claimBlock.decision || claimBlock.payment) && <Divider sx={{ my: 2 }} />}
+      {claimBlock.decision && (
+        <Box sx={{ mb: claimBlock.payment ? 2 : 0 }}>
+          <Typography variant="subtitle2" gutterBottom>Decision</Typography>
+          <Typography variant="body2">
+            <strong>{claimBlock.decision.outcome === 'decline' ? 'Declined' : 'Proceed'}</strong>
+            {' · '}{formatMillis(claimBlock.decision.at)}
+          </Typography>
+          {claimBlock.decision.reason && <Typography variant="body2">{claimBlock.decision.reason}</Typography>}
+        </Box>
+      )}
+      {claimBlock.payment && (
+        <Box>
+          <Typography variant="subtitle2" gutterBottom>Payment</Typography>
+          <Typography variant="body2">
+            Ref {claimBlock.payment.reference} · {formatNaira(claimBlock.payment.amount)} · paid {formatMillis(claimBlock.payment.paidAt)}
+            {claimBlock.payment.confirmedAt ? ` · confirmed ${formatMillis(claimBlock.payment.confirmedAt)}` : ' · awaiting confirmation'}
+          </Typography>
+        </Box>
+      )}
+    </Paper>
+  ) : null;
+
   // Use specialized viewers for specific form types
   if (collection === 'corporate-kyc-form') {
     return (
@@ -908,7 +1094,8 @@ const FormViewer: React.FC = () => {
           >
             Back
           </Button>
-          <CorporateKYCViewer 
+          {reviewAlert}
+          <CorporateKYCViewer
             data={formData} 
             onClose={() => navigate(-1)} 
           />
@@ -934,7 +1121,8 @@ const FormViewer: React.FC = () => {
           >
             Back
           </Button>
-          <CorporateNFIUViewer 
+          {reviewAlert}
+          <CorporateNFIUViewer
             data={formData} 
             onClose={() => navigate(-1)} 
           />
@@ -960,7 +1148,8 @@ const FormViewer: React.FC = () => {
           >
             Back
           </Button>
-          <IndividualKYCViewer 
+          {reviewAlert}
+          <IndividualKYCViewer
             data={formData} 
             onClose={() => navigate(-1)} 
           />
@@ -986,7 +1175,8 @@ const FormViewer: React.FC = () => {
           >
             Back
           </Button>
-          <IndividualNFIUViewer 
+          {reviewAlert}
+          <IndividualNFIUViewer
             data={formData} 
             onClose={() => navigate(-1)} 
           />
@@ -1012,7 +1202,8 @@ const FormViewer: React.FC = () => {
           >
             Back
           </Button>
-          <IndividualCDDViewer 
+          {reviewAlert}
+          <IndividualCDDViewer
             data={formData} 
             onClose={() => navigate(-1)} 
           />
@@ -1038,7 +1229,8 @@ const FormViewer: React.FC = () => {
           >
             Back
           </Button>
-          <BrokersCDDViewer 
+          {reviewAlert}
+          <BrokersCDDViewer
             data={formData} 
           />
         </Box>
@@ -1047,7 +1239,16 @@ const FormViewer: React.FC = () => {
   }
 
   if (collection === 'agents-kyc') {
-    return <AgentsCDDViewer />;
+    return (
+      <>
+        {reviewAlert && (
+          <ThemeProvider theme={theme}>
+            <Box sx={{ px: { xs: 2, sm: 3 }, pt: 2, maxWidth: '1200px', mx: 'auto' }}>{reviewAlert}</Box>
+          </ThemeProvider>
+        )}
+        <AgentsCDDViewer />
+      </>
+    );
   }
 
   const mapping = FORM_MAPPINGS[collection || ''];
@@ -1062,10 +1263,11 @@ const FormViewer: React.FC = () => {
         width: '100%',
         minHeight: '100vh'
       }}>
-        <Box sx={{ 
-          display: 'flex', 
+        {reviewAlert}
+        <Box sx={{
+          display: 'flex',
           flexDirection: { xs: 'column', md: 'row' },
-          alignItems: { xs: 'stretch', md: 'center' }, 
+          alignItems: { xs: 'stretch', md: 'center' },
           mb: 3,
           gap: 2
         }}>
@@ -1104,13 +1306,24 @@ const FormViewer: React.FC = () => {
             >
               {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
             </Button>
-            {collection?.includes('claim') && (
-              <Box sx={{ 
-                display: 'flex', 
+            {isClaim && (
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<ArrowRightCircle />}
+                onClick={() => setTransitionOpen(true)}
+                fullWidth={true}
+              >
+                Move claim
+              </Button>
+            )}
+            {!isClaim && (
+              <Box sx={{
+                display: 'flex',
                 flexDirection: { xs: 'column', sm: 'row' },
                 gap: 1
               }}>
-                <Button 
+                <Button
                   onClick={() => handleStatusUpdate('processing')}
                   variant={status === 'processing' ? 'contained' : 'outlined'}
                   size="small"
@@ -1141,6 +1354,8 @@ const FormViewer: React.FC = () => {
             )}
           </Box>
         </Box>
+
+        {claimPanel}
 
         <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
           <Box sx={{ mb: 3 }}>
@@ -1190,12 +1405,20 @@ const FormViewer: React.FC = () => {
                 size="small" 
                 sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
               />
-              <Chip 
-                label={`Status: ${status || 'pending'}`} 
-                size="small" 
+              <Chip
+                label={`Status: ${status || 'pending'}`}
+                size="small"
                 color={status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'default'}
                 sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
               />
+              {claimBlock && (
+                <Chip
+                  label={`Stage: ${STAGE_LABELS[claimBlock.stage]} · ${STEPS[claimBlock.step].label}`}
+                  size="small"
+                  color="primary"
+                  sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                />
+              )}
               {formData.createdAt && (
                 <Chip 
                   label={`Submitted: ${formatDate(formData.createdAt)}`} 
@@ -1300,6 +1523,17 @@ const FormViewer: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {isClaim && collection && id && (
+          <ClaimTransitionDialog
+            open={transitionOpen}
+            onClose={() => setTransitionOpen(false)}
+            collection={collection}
+            id={id}
+            doc={formData}
+            onUpdated={handleClaimUpdated}
+          />
+        )}
       </Box>
     </ThemeProvider>
   );

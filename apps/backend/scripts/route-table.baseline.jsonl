@@ -1,0 +1,196 @@
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"query"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"expressInit"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"compression"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"corsMiddleware"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"logger"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"helmetMiddleware"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"strictTransportSecurityMiddleware"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"referrerPolicyMiddleware"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"xPermittedCrossDomainPoliciesMiddleware"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"xDnsPrefetchControlMiddleware"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"contentSecurityPolicyMiddleware"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"xFrameOptionsMiddleware"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"hpp"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"stripServiceId"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"additionalSecurityHeaders"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"validateOrigin"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"jsonParser"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"urlencodedParser"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"cookieParser"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"processIPMiddleware"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"requestLoggingMiddleware"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"jsonParser"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/api\\/exchange-token\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/api\\/login\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/api\\/register\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/api\\/auth\\/verify-mfa\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/api\\/submit-form\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/submit-kyc-individual\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/submit-kyc-corporate\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/submit-cdd-individual\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/submit-cdd-corporate\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/submit-cdd-agents\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/submit-cdd-brokers\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/submit-cdd-partners\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/submit-claim-motor\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/submit-claim-fire\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/submit-claim-burglary\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/submit-claim-all-risk\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/send-to-admin-and-compliance\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/send-to-admin-and-claims\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/send-to-user\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/send-status-update-email\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/send-claim-approval-email\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/api\\/update-claim-status\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/api\\/users(?:\\/([^/]+?))\\/role\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/api\\/users(?:\\/([^/]+?))\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/api\\/cleanup-expired-ips\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/api\\/remediation\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/api\\/identity\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/api\\/events-logs\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/api\\/users\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/api\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/csrf-token","handlers":["<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/update-claim-status","handlers":["requireAuth","requireRole(claims|compliance|admin|super admin)","middleware","middleware","middleware","middleware","middleware","middleware","middleware","handleValidationErrors","sanitizeHtmlFields","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/send-to-admin-and-compliance","handlers":["requireAuth","requireRole(compliance|admin|super admin)","<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/send-to-admin-and-claims","handlers":["requireAuth","requireRole(claims|compliance|admin|super admin)","<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/send-to-user","handlers":["requireAuth","requireRole(compliance|admin|super admin)","<anonymous>","middleware","middleware","middleware","handleValidationErrors","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/send-status-update-email","handlers":["requireAuth","requireRole(claims|compliance|admin|super admin)","<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/send-claim-approval-email","handlers":["requireAuth","requireRole(claims|compliance|admin|super admin)","<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/users","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["PUT"],"path":"/api/users/:userId/role","handlers":["requireAuth","requireRole(super admin)","middleware","middleware","handleValidationErrors","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["PUT"],"path":"/api/users/:userId/claim-access","handlers":["requireAuth","requireRole(super admin)","middleware","middleware","middleware","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["PATCH"],"path":"/api/users/:userId/role","handlers":["requireAuth","requireRole(super admin)","middleware","middleware","handleValidationErrors","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["DELETE"],"path":"/api/users/:userId","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/users/create","handlers":["requireAuth","requireRole(super admin)","userCreationRateLimit","middleware","middleware","middleware","middleware","middleware","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/users/list","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["PUT"],"path":"/api/users/:userId/status","handlers":["requireAuth","requireRole(super admin)","middleware","middleware","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/users/:userId/reset-password","handlers":["requireAuth","requireRole(super admin)","middleware","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/users/change-password","handlers":["requireAuth","middleware","middleware","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/submit-kyc-individual","handlers":["rejectDeprecatedSubmissionRoute","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/submit-kyc-corporate","handlers":["rejectDeprecatedSubmissionRoute","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/submit-cdd-individual","handlers":["rejectDeprecatedSubmissionRoute","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/submit-cdd-corporate","handlers":["rejectDeprecatedSubmissionRoute","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/submit-cdd-agents","handlers":["rejectDeprecatedSubmissionRoute","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/submit-cdd-brokers","handlers":["rejectDeprecatedSubmissionRoute","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/submit-cdd-partners","handlers":["rejectDeprecatedSubmissionRoute","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/submit-claim-motor","handlers":["rejectDeprecatedSubmissionRoute","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/submit-claim-fire","handlers":["rejectDeprecatedSubmissionRoute","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/submit-claim-burglary","handlers":["rejectDeprecatedSubmissionRoute","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/submit-claim-all-risk","handlers":["rejectDeprecatedSubmissionRoute","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/register-user","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/download/:fileType/:documentId","handlers":["requireAuth","requireRole(compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/generate-sample-events","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/public/upload","handlers":["<anonymous>","multerMiddleware","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/submit-form","handlers":["<anonymous>","<anonymous>","requireAuthOrGuest","middleware","middleware","middleware","middleware","middleware","middleware","middleware","middleware","middleware","middleware","middleware","middleware","handleValidationErrors","sanitizeHtmlFields","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/login","handlers":["<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/logout","handlers":["<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/exchange-token","handlers":["<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/auth/mfa-status/:uid","handlers":["requireAuth","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/verify/cac","handlers":["<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/autofill/verify-nin","handlers":["<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/autofill/verify-cac","handlers":["<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/register","handlers":["middleware","middleware","middleware","middleware","middleware","handleValidationErrors","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/forms/:collection","handlers":["requireAuth","requireRole(claims|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/forms/:collection/:id/documents/:field","handlers":["requireAuth","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/forms/:collection/:id","handlers":["requireAuth","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/claims/:collection/:id/transition","handlers":["requireAuth","requireRole(claims|compliance|admin|super admin)","<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/claims/:collection/:id/offer/:version/accept","handlers":["requireAuth","<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/claims/:collection/:id/offer/:version/query","handlers":["requireAuth","<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/claims/:collection/:id/documents/:key","handlers":["requireAuth","<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["PUT"],"path":"/api/forms/:collection/:id/status","handlers":["requireAuth","requireRole(claims|compliance|admin|super admin)","middleware","middleware","middleware","middleware","middleware","handleValidationErrors","sanitizeHtmlFields","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/events-logs","handlers":["requireAuth","requireRole(claims|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/events-logs/:id","handlers":["requireAuth","requireRole(claims|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/cleanup-expired-ips","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/admin/rate-limit/reset","handlers":["requireAuth","requireRole(super admin)","middleware","middleware","handleValidationErrors","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/generate-test-events","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/forms/multiple","handlers":["requireAuth","requireRole(claims|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["DELETE"],"path":"/api/forms/:collectionName/:formId","handlers":["requireAuth","requireRole(claims|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/pdf/download","handlers":["requireAuth","requireRole(claims|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/remediation/batches","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/remediation/batches","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/remediation/batches/:batchId","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["DELETE"],"path":"/api/remediation/batches/:batchId","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/remediation/batches/:batchId/records","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["PATCH"],"path":"/api/remediation/records/:recordId","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/remediation/records/:recordId/resend","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/remediation/batches/:batchId/send-emails","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/remediation/verify/:token","handlers":["<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/remediation/verify/:token","handlers":["<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/remediation/audit-logs","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/remediation/batches/:batchId/export","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/identity/lists","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/identity/lists","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/identity/lists/:listId","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/identity/lists/:listId/entries","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["DELETE"],"path":"/api/identity/lists/:listId","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/identity/lists/:listId/analyze-send-links","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/identity/lists/:listId/send","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["OPTIONS"],"path":"/api/identity/verify/:token","handlers":["<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/identity/verify/:token","handlers":["<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/identity/verify/:token/upload-document","handlers":["multerMiddleware","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/identity/verify/:token","handlers":["<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/identity/lists/:listId/export","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/identity/entries/:entryId/resend","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/identity/entries/:entryId/retry-verification","handlers":["requireAuth","requireRole(compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/identity/lists/:listId/activity","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/identity/rate-limit-status","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/identity/api-usage/monthly/:month","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/identity/api-usage/stats","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/identity/api-usage/alerts","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/identity/lists/:listId/analyze-bulk-verify","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/identity/lists/:listId/bulk-verify","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/identity/bulk-verify/:jobId/status","handlers":["requireAuth","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/identity/bulk-verify/:jobId/pause","handlers":["requireAuth","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/identity/bulk-verify/:jobId/resume","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/identity/queue/status/:queueId","handlers":["requireAuth","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/identity/queue/user","handlers":["requireAuth","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/identity/queue/stats","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/cac-documents/upload","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/cac-documents/:documentId","handlers":["requireAuth","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/cac-documents/identity/:identityId","handlers":["requireAuth","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["PUT"],"path":"/api/cac-documents/:documentId/replace","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["DELETE"],"path":"/api/cac-documents/:documentId","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/cac-documents/:documentId/download","handlers":["requireAuth","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/cac-documents/encrypt","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/cac-documents/decrypt","handlers":["requireAuth","requireRole(broker|compliance|admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/audit/logs","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/audit/stats","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/health/status","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/health/history","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/health/error-rate","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/health/usage","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/health/alerts","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/health/alerts/:alertId/acknowledge","handlers":["requireAuth","requireRole(admin|super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/analytics/health","handlers":["<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/analytics/overview","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/analytics/daily-usage","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/analytics/user-attribution","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/analytics/cost-tracking","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/analytics/budget-config","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/analytics/budget-config","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/analytics/check-budget-alerts","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/analytics/export","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/api/analytics/audit-logs","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/audit/form_view","handlers":["<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/audit/form_submission","handlers":["<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/audit/document_upload","handlers":["<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/audit/admin_action","handlers":["requireAuth","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/check-birthdays","handlers":["requireAuth","requireRole(super admin)","<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/test-birthday-email","handlers":["requireAuth","requireRole(super admin)","<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/document-ai/process","handlers":["<anonymous>","<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/","handlers":["<anonymous>"]}
+{"kind":"route","mounts":[],"methods":["GET"],"path":"/health","handlers":["<anonymous>"]}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"route","mounts":[],"methods":["POST"],"path":"/api/test-endpoint","handlers":["requireAuth","requireRole(super admin)","<anonymous>"]}
+{"kind":"use","mounts":[],"mount":"^\\/?(?=\\/|$)","handler":"<anonymous>"}
+{"kind":"use","mounts":[],"mount":"^(.*)\\/?(?=\\/|$)","handler":"<anonymous>"}

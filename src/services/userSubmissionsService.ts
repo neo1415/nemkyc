@@ -1,6 +1,7 @@
 import { collection, query, where, getDocs, Timestamp, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { COMPLIANCE_COLLECTION_NAMES, SUBMISSION_COLLECTION_NAMES } from '../config/submissionCatalog';
+import type { ClaimBlock } from '../lib/claimLifecycle';
 
 export interface SubmissionCard {
   id: string;
@@ -9,16 +10,10 @@ export interface SubmissionCard {
   submittedAt: Date;
   status: 'processing' | 'approved' | 'rejected' | 'pending';
   collection: string;
+  /** Claim lifecycle block when present; resolveClaimBlock() synthesises one from status for legacy claims. */
+  claim?: Partial<ClaimBlock> | null;
 }
 
-export interface UserAnalytics {
-  totalSubmissions: number;
-  kycForms: number;
-  claimForms: number;
-  pendingCount: number;
-  approvedCount: number;
-  rejectedCount: number;
-}
 
 // All form collections to query
 const FORM_COLLECTIONS = SUBMISSION_COLLECTION_NAMES;
@@ -34,6 +29,7 @@ const toSubmissionCard = (collectionName: string, id: string, data: any): Submis
       : rawDate?.toDate?.() || new Date(rawDate || Date.now()),
     status: data.status || 'processing',
     collection: collectionName,
+    claim: data.claim && typeof data.claim === 'object' ? (data.claim as Partial<ClaimBlock>) : null,
   };
 };
 
@@ -80,40 +76,6 @@ export const getUserSubmissions = async (userEmail: string): Promise<SubmissionC
   return submissions.sort((a, b) => b.submittedAt.getTime() - a.submittedAt.getTime());
 };
 
-/**
- * Calculate analytics from user submissions
- * @param submissions - Array of submission cards
- * @returns Analytics object with counts and breakdowns
- */
-export const getUserAnalytics = (submissions: SubmissionCard[]): UserAnalytics => {
-  const totalSubmissions = submissions.length;
-  
-  // Count KYC vs Claims forms
-  const kycForms = submissions.filter(sub => 
-    COMPLIANCE_COLLECTION_NAMES.has(sub.collection)
-  ).length;
-  const claimForms = totalSubmissions - kycForms;
-  
-  // Count by status
-  const pendingCount = submissions.filter(sub => 
-    sub.status === 'pending' || sub.status === 'processing'
-  ).length;
-  const approvedCount = submissions.filter(sub => 
-    sub.status === 'approved'
-  ).length;
-  const rejectedCount = submissions.filter(sub => 
-    sub.status === 'rejected'
-  ).length;
-  
-  return {
-    totalSubmissions,
-    kycForms,
-    claimForms,
-    pendingCount,
-    approvedCount,
-    rejectedCount
-  };
-};
 
 /**
  * Subscribe to real-time updates for user submissions

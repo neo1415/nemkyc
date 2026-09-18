@@ -389,31 +389,26 @@ service firebase.storage {
     // Document types: certificate_of_incorporation, particulars_of_directors, share_allotment
     // Security: Encrypted documents with access control enforced at application level
     match /cac-documents/{identityId}/{documentType}/{fileName} {
-      // Upload: Authenticated users only
-      // Note: Detailed access control is enforced at the application level
-      allow create: if request.auth != null
+      // Only staff (admin, compliance, super admin) and brokers take part in the CAC flow.
+      // Plain customers must never be able to read, overwrite or delete other companies' documents.
+      allow create: if (isBroker() || isAdminOrCompliance())
                     && isValidCACDocumentType()
                     && isValidCACDocumentSize()
                     && (documentType == 'certificate_of_incorporation' 
                         || documentType == 'particulars_of_directors' 
                         || documentType == 'share_allotment');
       
-      // Read: Authenticated users only
-      // Note: Documents are encrypted, and detailed access control is enforced at application level
-      allow read: if request.auth != null;
+      allow read: if isBroker() || isAdminOrCompliance();
       
-      // Update/Replace: Authenticated users only
-      // Note: Detailed access control is enforced at the application level
-      allow update: if request.auth != null
+      allow update: if (isBroker() || isAdminOrCompliance())
                     && isValidCACDocumentType()
                     && isValidCACDocumentSize()
                     && (documentType == 'certificate_of_incorporation' 
                         || documentType == 'particulars_of_directors' 
                         || documentType == 'share_allotment');
       
-      // Delete: Authenticated users only
-      // Note: Detailed access control is enforced at the application level
-      allow delete: if request.auth != null;
+      // Deletion is an admin action; brokers replace documents via update instead.
+      allow delete: if isAdminOrSuperAdmin();
     }
     
     // ========== Deny Everything Else ==========

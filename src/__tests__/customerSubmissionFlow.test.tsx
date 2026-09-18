@@ -6,10 +6,15 @@ const testState = vi.hoisted(() => ({
   user: null as null | { uid: string; email: string; displayName: string },
   firebaseUser: null as null | { getIdToken: ReturnType<typeof vi.fn> },
   navigate: vi.fn(),
+  requestGuestIdentity: vi.fn(),
 }));
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: testState.user, firebaseUser: testState.firebaseUser }),
+}));
+
+vi.mock('../contexts/GuestIdentityContext', () => ({
+  useGuestIdentity: () => ({ requestGuestIdentity: testState.requestGuestIdentity }),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -18,7 +23,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 vi.mock('sonner', () => ({
-  toast: { success: vi.fn(), warning: vi.fn(), error: vi.fn() },
+  toast: { success: vi.fn(), warning: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
 const successResponse = (body: unknown) => ({
@@ -82,6 +87,8 @@ describe('account-bound customer submission flow', () => {
     testState.user = null;
     testState.firebaseUser = null;
     testState.navigate.mockReset();
+    testState.requestGuestIdentity.mockReset();
+    testState.requestGuestIdentity.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -90,7 +97,7 @@ describe('account-bound customer submission flow', () => {
   });
 
   it.each(ACCOUNT_BOUND_FORM_TYPES)(
-    'pauses %s and redirects a guest to sign in without submitting',
+    'asks a guest for their identity on %s and submits nothing when they dismiss the dialog',
     async formType => {
       const fetchMock = vi.fn();
       vi.stubGlobal('fetch', fetchMock);
@@ -110,15 +117,87 @@ describe('account-bound customer submission flow', () => {
       expect(result.current.showSummary).toBe(true);
       await act(async () => { await result.current.confirmSubmit(); });
 
+      expect(testState.requestGuestIdentity).toHaveBeenCalledWith({ formLabel: formType });
       expect(fetchMock).not.toHaveBeenCalled();
       expect(result.current.showSuccess).toBe(false);
-      expect(testState.navigate).toHaveBeenCalledWith('/auth/signin');
-      expect(JSON.parse(sessionStorage.getItem('pendingSubmission')!)).toMatchObject({
-        formType,
-        formData: submittedData,
-      });
+      expect(testState.navigate).not.toHaveBeenCalledWith('/auth/signin');
     },
   );
+
+  it('submits as a guest with the captured identity and no bearer token', async () => {
+    const fetchMock = vi.fn(async (url: string) => (
+      String(url).includes('/csrf-token')
+        ? successResponse({ csrfToken: 'csrf-token' })
+        : successResponse({ success: true, ticketId: 'CDD-1' })
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+    testState.requestGuestIdentity.mockResolvedValue({
+      kind: 'guest',
+      identity: { name: 'Ada Obi', email: 'ada@example.com' },
+    });
+    const formType = 'Individual CDD';
+    const submittedData = {
+      emailAddress: 'ada@example.com',
+      verified: true,
+      ...verifiedDocumentState(CDD_VERIFIED_DOCUMENT_FIELDS[formType]),
+    };
+
+    const { result } = renderHook(() => useEnhancedFormSubmit({
+      formType,
+      verificationData: { isVerified: true },
+    }));
+    await act(async () => { await result.current.handleSubmit(submittedData); });
+    await act(async () => { await result.current.confirmSubmit(); });
+
+    const submitCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes('/api/submit-form'));
+    expect(submitCalls).toHaveLength(1);
+    const [, init] = submitCalls[0];
+    expect(init.headers.Authorization).toBeUndefined();
+    const body = JSON.parse(init.body);
+    expect(body.guest).toEqual({ name: 'Ada Obi', email: 'ada@example.com' });
+    expect(body.userEmail).toBe('ada@example.com');
+    expect(body.userUid).toBeUndefined();
+    expect(result.current.showSuccess).toBe(true);
+    expect(sessionStorage.getItem('pendingSubmission')).toBeNull();
+  });
+
+  it('asks for the password when the guest email already has an account, then defers to the resume flow', async () => {
+    const conflict = {
+      ok: false,
+      status: 409,
+      clone() { return this; },
+      json: async () => ({ code: 'ACCOUNT_EXISTS' }),
+    };
+    const fetchMock = vi.fn(async (url: string) => (
+      String(url).includes('/csrf-token') ? successResponse({ csrfToken: 'csrf-token' }) : conflict
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+    testState.requestGuestIdentity
+      .mockResolvedValueOnce({ kind: 'guest', identity: { name: 'Ada Obi', email: 'ada@example.com' } })
+      .mockResolvedValueOnce({ kind: 'signed-in', email: 'ada@example.com' });
+    const formType = 'Individual CDD';
+    const submittedData = {
+      emailAddress: 'ada@example.com',
+      verified: true,
+      ...verifiedDocumentState(CDD_VERIFIED_DOCUMENT_FIELDS[formType]),
+    };
+
+    const { result } = renderHook(() => useEnhancedFormSubmit({
+      formType,
+      verificationData: { isVerified: true },
+    }));
+    await act(async () => { await result.current.handleSubmit(submittedData); });
+    await act(async () => { await result.current.confirmSubmit(); });
+
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/api/submit-form'))).toHaveLength(1);
+    expect(testState.requestGuestIdentity).toHaveBeenLastCalledWith(expect.objectContaining({
+      accountExists: true,
+      initialIdentity: { name: 'Ada Obi', email: 'ada@example.com' },
+    }));
+    expect(result.current.showSuccess).toBe(false);
+    expect(result.current.showError).toBe(false);
+    expect(JSON.parse(sessionStorage.getItem('pendingSubmission')!)).toMatchObject({ formType });
+  });
 
   it('automatically resumes a pending submission after authentication', async () => {
     sessionStorage.setItem('pendingSubmission', JSON.stringify({
@@ -174,20 +253,73 @@ describe('account-bound customer submission flow', () => {
     },
   );
 
-  it('blocks an Individual CDD summary until its identity document is verified', async () => {
+  it('blocks an Individual CDD summary when the identity document definitively mismatches', async () => {
     const { result } = renderHook(() => useEnhancedFormSubmit({ formType: 'Individual CDD' }));
 
     await act(async () => {
       await result.current.handleSubmit({
         NINNumber: '12345678901',
         identification: { name: 'nin.pdf' },
+        identificationVerificationStatus: 'failed',
+        identificationVerification: {
+          isMatch: false,
+          mismatches: [{ field: 'lastName', reason: 'Surname on the document is OKAFOR, form says OBI', isCritical: true }],
+        },
       });
     });
 
     expect(result.current.showSummary).toBe(false);
     expect(result.current.showError).toBe(true);
-    expect(result.current.errorMessage).toContain('successfully verify');
+    expect(result.current.errorMessage).toContain('does not match');
+    expect(result.current.errorMessage).toContain('OKAFOR');
   });
+
+  it('waits while the identity document is still being checked', async () => {
+    const { result } = renderHook(() => useEnhancedFormSubmit({ formType: 'Individual CDD' }));
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        NINNumber: '12345678901',
+        identification: { name: 'nin.pdf' },
+        identificationVerificationStatus: 'processing',
+      });
+    });
+
+    expect(result.current.showSummary).toBe(false);
+    expect(result.current.errorMessage).toContain('still checking');
+  });
+
+  it('still requires the document itself to be attached', async () => {
+    const { result } = renderHook(() => useEnhancedFormSubmit({ formType: 'Individual CDD' }));
+
+    await act(async () => {
+      await result.current.handleSubmit({ NINNumber: '12345678901' });
+    });
+
+    expect(result.current.showSummary).toBe(false);
+    expect(result.current.errorMessage).toContain('Please upload');
+  });
+
+  it.each(['inconclusive', undefined])(
+    'never blocks the customer when verification could not complete (status %s): flags for review instead',
+    async status => {
+      const { result } = renderHook(() => useEnhancedFormSubmit({ formType: 'Individual CDD' }));
+
+      await act(async () => {
+        await result.current.handleSubmit({
+          NINNumber: '12345678901',
+          identification: { name: 'nin.pdf' },
+          ...(status ? { identificationVerificationStatus: status } : {}),
+        });
+      });
+
+      expect(result.current.showError).toBe(false);
+      expect(result.current.showSummary).toBe(true);
+      expect(result.current.formData.reviewRequired).toBe(true);
+      expect(result.current.formData.identificationReviewRequired).toBe(true);
+      expect(result.current.formData.reviewReasons[0]).toMatch(/means of identification: automatic check/);
+    },
+  );
 
   const CDD_VERIFICATION_CASES = [
     { formType: 'Individual CDD', documents: ['identification'], identityType: 'NIN', data: { NINNumber: '12345678901', firstName: 'Ada', lastName: 'Okafor', dateOfBirth: '1990-05-15', gender: 'Female' } },

@@ -9,6 +9,7 @@
  */
 
 import type { AuditLogEntry, BrokerUsage } from '../../types/analytics';
+import { API_BASE_URL } from '../../config/constants';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -52,7 +53,7 @@ export class DataFetcher {
         params.append('offset', offset.toString());
       }
 
-      const response = await fetch(`/api/audit/logs?${params.toString()}`);
+      const response = await fetch(`${API_BASE_URL}/api/audit/logs?${params.toString()}`, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch audit logs: ${response.statusText}`);
@@ -103,7 +104,7 @@ export class DataFetcher {
         params.append('offset', offset.toString());
       }
 
-      const response = await fetch(`/api/analytics/user-attribution?${params.toString()}`);
+      const response = await fetch(`${API_BASE_URL}/api/analytics/user-attribution?${params.toString()}`, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch broker attribution: ${response.statusText}`);

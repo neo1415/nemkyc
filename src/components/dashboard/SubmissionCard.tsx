@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Calendar, FileText, Hash } from 'lucide-react';
 import { SubmissionCard as SubmissionCardType } from '../../services/userSubmissionsService';
+import { isClaimCollection } from '../../lib/submissionFamilies';
+import ClaimProgress from '../claims/ClaimProgress';
 
 interface SubmissionCardProps {
   submission: SubmissionCardType;
@@ -11,6 +13,7 @@ interface SubmissionCardProps {
 
 const SubmissionCard: React.FC<SubmissionCardProps> = ({ submission }) => {
   const navigate = useNavigate();
+  const isClaim = isClaimCollection(submission.collection);
 
   // Format the submission date
   const formatDate = (date: Date): string => {
@@ -18,7 +21,7 @@ const SubmissionCard: React.FC<SubmissionCardProps> = ({ submission }) => {
     if (!date || isNaN(date.getTime())) {
       return 'Invalid Date';
     }
-    
+
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
       month: 'short',
@@ -60,19 +63,33 @@ const SubmissionCard: React.FC<SubmissionCardProps> = ({ submission }) => {
   };
 
   return (
-    <Card 
+    <Card
       className="cursor-pointer hover:shadow-lg transition-shadow duration-200 border-2 hover:border-[#800020]"
       onClick={handleClick}
+      data-testid="submission-card"
+      data-kind={isClaim ? 'claim' : 'compliance'}
     >
       <CardHeader className="pb-3">
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-start gap-2">
           <CardTitle className="text-lg font-semibold text-[#800020]">
             {submission.formType}
           </CardTitle>
-          {getStatusBadge(submission.status)}
+          {!isClaim && getStatusBadge(submission.status)}
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {isClaim && (
+          <ClaimProgress
+            compact
+            doc={{
+              claim: submission.claim,
+              status: submission.status,
+              submittedAt: submission.submittedAt,
+            }}
+            className="pb-2 border-b border-gray-100"
+          />
+        )}
+
         {/* Ticket ID */}
         <div className="flex items-center gap-2 text-sm">
           <Hash className="h-4 w-4 text-[#DAA520]" />

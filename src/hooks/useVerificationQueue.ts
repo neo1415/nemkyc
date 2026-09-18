@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config/constants';
 
 interface QueueStatus {
   queueId: string;
@@ -62,7 +63,7 @@ export function useVerificationQueue() {
     setError(null);
     
     try {
-      const response = await axios.get('/api/identity/queue/user');
+      const response = await axios.get(`${API_BASE_URL}/api/identity/queue/user`, { withCredentials: true });
       setUserQueueItems(response.data.items || []);
       return response.data.items;
     } catch (err: any) {
@@ -80,7 +81,7 @@ export function useVerificationQueue() {
    */
   const getQueueStats = useCallback(async (): Promise<QueueStats | null> => {
     try {
-      const response = await axios.get('/api/identity/queue/stats');
+      const response = await axios.get(`${API_BASE_URL}/api/identity/queue/stats`, { withCredentials: true });
       return response.data;
     } catch (err: any) {
       console.error('Error getting queue stats:', err);

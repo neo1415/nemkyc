@@ -45,8 +45,10 @@ const VerifiedDocumentUpload: React.FC<VerifiedDocumentUploadProps> = ({
         verificationResult={formMethods.watch(resultField) || null}
         onVerificationComplete={(result: VerificationResult) => {
           formMethods.setValue(resultField, result, { shouldDirty: true });
-          formMethods.setValue(statusField, result.isMatch ? 'verified' : 'failed', { shouldDirty: true });
-          if (result.isMatch) formMethods.clearErrors(fieldName);
+          const hasCriticalMismatch = (result.mismatches || []).some((m) => m.isCritical);
+          const status = result.isMatch ? 'verified' : hasCriticalMismatch ? 'failed' : 'inconclusive';
+          formMethods.setValue(statusField, status, { shouldDirty: true });
+          if (status !== 'failed') formMethods.clearErrors(fieldName);
         }}
         onStatusChange={(status) => {
           formMethods.setValue(statusField, status, { shouldDirty: true });
@@ -55,6 +57,8 @@ const VerifiedDocumentUpload: React.FC<VerifiedDocumentUploadProps> = ({
               type: 'document-verification',
               message: 'The uploaded document does not match the information entered in the form.',
             });
+          } else {
+            formMethods.clearErrors(fieldName);
           }
         }}
         onFileSelect={(file) => {

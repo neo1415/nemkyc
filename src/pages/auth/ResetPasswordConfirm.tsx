@@ -10,6 +10,7 @@ import { Label } from '../../components/ui/label';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Lock, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { validatePasswordStrength } from '../../utils/passwordValidation';
 import logoImage from '../../assets/NEMs-Logo.jpg';
 
 const ResetPasswordConfirm: React.FC = () => {
@@ -57,8 +58,9 @@ const ResetPasswordConfirm: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
+    const strength = validatePasswordStrength(newPassword);
+    if (!strength.isValid) {
+      setError(strength.errors[0] || 'Choose a stronger password');
       return;
     }
 

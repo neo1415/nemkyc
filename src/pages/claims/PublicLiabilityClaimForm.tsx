@@ -593,7 +593,6 @@ const PublicLiabilityClaimForm: React.FC = () => {
                       onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, noticeDocument: file }))}
                       currentFile={uploadedFiles.noticeDocument}
                       accept=".pdf,.jpg,.png"
-                      maxSize={3}
                     />
                   </div>
                 )}

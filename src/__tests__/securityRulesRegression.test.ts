@@ -15,10 +15,16 @@ describe('deployed Firebase security rules', () => {
     );
   });
 
-  it('prevents users from promoting their own userroles document', () => {
+  it('prevents users from promoting their own userroles document or widening claim scope', () => {
     expect(firestoreRules).toContain(
-      "affectedKeys().hasAny(['role', 'email', 'uid', 'createdBy', 'createdAt'])",
+      "affectedKeys().hasAny(['role', 'email', 'uid', 'createdBy', 'createdAt', 'claimAccessAll', 'assignedClaimCollections', 'disabled', 'mustChangePassword'])",
     );
+  });
+
+  it('keeps CAC document bytes off-limits to plain customers', () => {
+    const cacBlock = storageRules.slice(storageRules.indexOf('match /cac-documents/'));
+    expect(cacBlock).toMatch(/allow read: if isBroker\(\) \|\| isAdminOrCompliance\(\);/);
+    expect(cacBlock).not.toMatch(/allow (read|delete): if request\.auth != null;/);
   });
 
   it('requires authentication for direct customer-document uploads', () => {

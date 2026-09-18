@@ -85,8 +85,8 @@ export const FormRenderer: React.FC<FormRendererProps> = ({
         return (
           <FormFileUpload
             {...commonProps}
-            accept={field.accept || '.pdf,.jpg,.jpeg,.png'}
-            maxSize={field.maxSize || 3}
+            accept={field.accept}
+            maxSize={field.maxSize}
             onFileSelect={(file) => onFileSelect?.(field.name, file)}
             onFileRemove={() => onFileRemove?.(field.name)}
             currentFile={uploadedFiles[field.name]}

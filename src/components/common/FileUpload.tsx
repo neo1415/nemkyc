@@ -5,12 +5,23 @@ import { Card, CardContent } from '../ui/card';
 import { Upload, File, X, Check, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { toast } from '@/hooks/use-toast';
+import {
+  FILE_ACCEPT,
+  MAX_FILE_SIZE_MB,
+  FILE_SIZE_ERROR,
+  FILE_EMPTY_ERROR,
+  getFileExtension,
+  isAllowedFile,
+  mimeTypesForAccept,
+} from '@/config/filePolicy';
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
   onFileRemove?: () => void;
+  /** Narrower list of formats for this field; never wider than the shared policy. */
   accept?: string;
-  maxSize?: number; // in MB
+  /** Size ceiling in MB; capped at the shared policy maximum. */
+  maxSize?: number;
   currentFile?: File | string;
   label?: string;
   required?: boolean;
@@ -21,8 +32,8 @@ interface FileUploadProps {
 const FileUpload: React.FC<FileUploadProps> = ({
   onFileSelect,
   onFileRemove,
-  accept = '.pdf,.jpg,.jpeg,.png',
-  maxSize = 10,
+  accept = FILE_ACCEPT,
+  maxSize: requestedMaxSize,
   currentFile,
   label,
   required = false,
@@ -32,21 +43,12 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
-  const acceptedMimeTypes = new Set(
-    accept.split(',').map(value => value.trim().toLowerCase()).flatMap(value => {
-      switch (value) {
-        case '.jpg':
-        case '.jpeg': return ['image/jpeg', 'image/jpg'];
-        case '.png': return ['image/png'];
-        case '.gif': return ['image/gif'];
-        case '.pdf': return ['application/pdf'];
-        case '.doc': return ['application/msword'];
-        case '.docx': return ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-        case 'image/*': return ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-        default: return value.includes('/') ? [value] : [];
-      }
-    })
+  const maxSize = Math.min(
+    typeof requestedMaxSize === 'number' && requestedMaxSize > 0 ? requestedMaxSize : MAX_FILE_SIZE_MB,
+    MAX_FILE_SIZE_MB,
   );
+
+  const acceptedMimeTypes = mimeTypesForAccept(accept);
 
   const getDetailedErrorMessage = (errorType: string, details?: any) => {
     switch (errorType) {
@@ -108,25 +110,30 @@ const FileUpload: React.FC<FileUploadProps> = ({
     if (!files || files.length === 0) return;
     
     const file = files[0];
-    
-    // Validate file type
-    if (!acceptedMimeTypes.has(file.type.toLowerCase())) {
+
+    // Shared policy first: anything the backend would reject is rejected here.
+    const policy = isAllowedFile(file);
+    if (!policy.ok) {
+      if (policy.reason === FILE_SIZE_ERROR) showDetailedError('FILE_TOO_LARGE');
+      else if (policy.reason === FILE_EMPTY_ERROR) showDetailedError('CORRUPTED_FILE');
+      else showDetailedError('INVALID_TYPE');
+      return;
+    }
+
+    // Then this field's (possibly narrower) accept list and size ceiling.
+    const matchesAccept = file.type
+      ? acceptedMimeTypes.has(file.type.toLowerCase())
+      : accept.toLowerCase().split(',').map(v => v.trim()).includes(getFileExtension(file.name));
+    if (acceptedMimeTypes.size > 0 && !matchesAccept) {
       showDetailedError('INVALID_TYPE');
       return;
     }
-    
-    // Validate file size
+
     if (file.size > maxSize * 1024 * 1024) {
       showDetailedError('FILE_TOO_LARGE');
       return;
     }
-    
-    // Try to validate file integrity (basic check)
-    if (file.size === 0) {
-      showDetailedError('CORRUPTED_FILE');
-      return;
-    }
-    
+
     onFileSelect(file);
   };
 

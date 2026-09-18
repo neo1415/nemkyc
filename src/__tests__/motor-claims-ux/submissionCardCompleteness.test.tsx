@@ -13,6 +13,7 @@ import { render } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import SubmissionCard from '../../components/dashboard/SubmissionCard';
 import { SubmissionCard as SubmissionCardType } from '../../services/userSubmissionsService';
+import { isClaimCollection } from '../../lib/submissionFamilies';
 
 // Arbitrary generator for SubmissionCard data
 const submissionCardArbitrary = fc.record({
@@ -76,13 +77,18 @@ describe('Feature: motor-claims-ux-improvements, Property 5: Submission Card Com
           // Check that ticket ID is displayed (use textContent to avoid HTML escaping issues)
           expect(textContent).toContain(submission.ticketId);
 
-          // Check that status is displayed (as text in badge)
-          const statusText = submission.status === 'processing' || submission.status === 'pending' 
-            ? 'Processing' 
-            : submission.status === 'approved' 
-            ? 'Approved' 
-            : 'Rejected';
-          expect(html).toContain(statusText);
+          // Check that status is displayed: claims render the compact lifecycle tracker,
+          // compliance forms render the plain status badge
+          if (isClaimCollection(submission.collection)) {
+            expect(html).toContain('data-testid="claim-progress"');
+          } else {
+            const statusText = submission.status === 'processing' || submission.status === 'pending'
+              ? 'Processing'
+              : submission.status === 'approved'
+              ? 'Approved'
+              : 'Rejected';
+            expect(html).toContain(statusText);
+          }
 
           // Check that date-related text is present (we format dates, so check for common date elements)
           const year = submission.submittedAt.getFullYear().toString();
@@ -147,6 +153,19 @@ describe('Feature: motor-claims-ux-improvements, Property 5: Submission Card Com
           );
 
           const html = container.innerHTML;
+
+          // Claims show the lifecycle tracker instead of a status badge; its stage follows the legacy status
+          if (isClaimCollection(submission.collection)) {
+            const expectedStage = submission.status === 'approved'
+              ? 'accept'
+              : submission.status === 'rejected'
+                ? 'declined'
+                : submission.status === 'processing'
+                  ? 'review'
+                  : 'report';
+            expect(html).toContain(`data-stage="${expectedStage}"`);
+            return;
+          }
 
           // Check for appropriate color classes based on status
           if (submission.status === 'approved') {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { isAllowedFile } from '@/config/filePolicy';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -119,12 +120,13 @@ const individualNFIUSchema = yup.object().shape({
     return value;
   }).max(new Date(), "Account opening date cannot be in the future"),
   identification: yup.mixed().required("Identification document is required").test(
-    'fileType',
-    'Only PNG, JPG, JPEG, or PDF files are allowed',
-    (value: any) => {
+    'filePolicy',
+    'Please upload a valid document',
+    function (value: any) {
       if (!value) return false;
-      const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'application/pdf'];
-      return allowedTypes.includes(value?.type);
+      if (typeof value === 'string') return true; // Already-uploaded document URL
+      const result = isAllowedFile(value);
+      return result.ok || this.createError({ message: result.reason });
     }
   ),
   agreeToDataPrivacy: yup.boolean().oneOf([true], "You must agree to the data privacy policy and declaration"),

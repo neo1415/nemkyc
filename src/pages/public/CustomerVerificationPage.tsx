@@ -23,6 +23,7 @@ import {
   Phone
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { isAllowedFile } from '@/config/filePolicy';
 import logoImage from '../../assets/NEMs-Logo.jpg';
 import type { 
   PublicRecordInfo, 
@@ -236,22 +237,12 @@ const CustomerVerificationPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-    if (!validTypes.includes(file.type)) {
+    // Validate against the shared upload policy (type and size)
+    const policy = isAllowedFile(file);
+    if (!policy.ok) {
       setDocumentErrors(prev => ({
         ...prev,
-        [documentType]: 'Please upload a PDF, JPEG, or PNG file'
-      }));
-      return;
-    }
-
-    // Validate file size (10MB max)
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      setDocumentErrors(prev => ({
-        ...prev,
-        [documentType]: 'File size must not exceed 10MB'
+        [documentType]: policy.reason ?? 'Please choose a valid document'
       }));
       return;
     }
